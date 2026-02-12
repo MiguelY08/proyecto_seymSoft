@@ -1,16 +1,24 @@
 import { Routes, Route } from 'react-router-dom'
-import sidebar from '../router/appRouter.jsx';
-const appRouter = () => {
+import Sidebar from '../../Features/layouts/Sidebar.jsx';
+import Home from '../../Features/landing/home/Home.jsx';
+import Users from '../../Features/users/users/Users.jsx';
+
+const AppRouter = () => {
   return (
     <div>
       {/* <Routes>
-        <Route element={}>
-          <Route path="/" element={<sidebar/>} />
-        </Route>
+        <Routes>
+          <Route path="/" element={<Sidebar/>} />
+        </Routes>
       </Routes> */}
-      
-    </div>
-  )
-}
 
-export default appRouter
+      <Routes>
+        <Route path='/' element={ <Home/> } />
+
+        <Route path='/users' element={ <Home/> } />
+      </Routes>
+    </div>
+  );
+};
+
+export default AppRouter
