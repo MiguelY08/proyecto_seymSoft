@@ -19,6 +19,8 @@ import PrivateRoute from "./PrivateRoute";
 import Sidebar from "../../Features/layouts/sidebar";
 import DashboardPage from "../../Features/layouts/DashboardPage";
 import AdminLayout from "../../Features/layouts/AdminLayout";
+import Home from '../../Features/landing/home/Home.jsx';
+import Users from '../../Features/users/users/Users.jsx';
 
 
 const AppRouter = () => {
@@ -26,6 +28,8 @@ const AppRouter = () => {
         <Routes>
           {/* RUTA DE DESARROLLO */}
           <Route path="/sidebar" element={<AdminLayout />} />
+          <Route path='/' element={ <Home/> } />
+          <Route path='/users' element={ <Home/> } />
 
           {/* RUTAS REALES */}
           {/* <Route element={<PrivateRoute />}>
@@ -37,4 +41,5 @@ const AppRouter = () => {
   );
 };
 
-export default AppRouter;
+
+
