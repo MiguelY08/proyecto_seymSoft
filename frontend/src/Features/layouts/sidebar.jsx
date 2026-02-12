@@ -12,14 +12,14 @@ import {
   Bell,
   Search,
 } from "lucide-react";
-const sidebar = () => {
+
+const Sidebar = () => {
   return (
     <div className="flex h-screen bg-gray-100 font-sans">
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
         <div className="p-6 border-b border-gray-100 flex items-center gap-2">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
-            M
           </div>
           <span className="text-xl font-bold text-gray-800">
             Papelería Magic
@@ -27,14 +27,14 @@ const sidebar = () => {
         </div>
 
         <nav className="flex-1 py-4 overflow-y-auto">
-          <SidebarItem icon={LayoutDashboard} label="Inicio" />
-          <SidebarItem icon={Users} label="Usuarios" hasSubmenu />
-          <SidebarItem icon={UserSquare2} label="Clientes" />
-          <SidebarItem icon={ShoppingCart} label="Ventas" hasSubmenu />
-          <SidebarItem icon={ShoppingBag} label="Compras" hasSubmenu />
-          <SidebarItem icon={Tags} label="Categorías" />
-          <SidebarItem icon={Package} label="Productos" />
-          <SidebarItem icon={Palette} label="Apariencia" hasSubmenu />
+          <div icon={LayoutDashboard} label="Inicio" />
+          <div icon={Users} label="Usuarios" hasSubmenu />
+          <div icon={UserSquare2} label="Clientes" />
+          <div icon={ShoppingCart} label="Ventas" hasSubmenu />
+          <div icon={ShoppingBag} label="Compras" hasSubmenu />
+          <div icon={Tags} label="Categorías" />
+          <div icon={Package} label="Productos" />
+          <div icon={Palette} label="Apariencia" hasSubmenu />
         </nav>
 
         <div className="p-4 border-t border-gray-100 text-xs text-center text-gray-400">
@@ -84,7 +84,7 @@ const sidebar = () => {
 
         {/* Content Area */}
         <section className="flex-1 p-8 overflow-y-auto">
-          <div className="bg-white rounded-xl border border-gray-200 border-dashed min-h-[500px] flex items-center justify-center text-gray-400">
+          <div className="bg-white rounded-xl border border-gray-200 border-dashed min-h-125 flex items-center justify-center text-gray-400">
             <div className="text-center">
               <Package size={48} className="mx-auto mb-4 opacity-20" />
               <p className="text-lg">
@@ -98,4 +98,4 @@ const sidebar = () => {
   );
 };
 
-export default sidebar;
+export default Sidebar;
