@@ -1,101 +1,119 @@
 import {
-  LayoutDashboard,
+  Home,
   Users,
-  UserSquare2,
-  ShoppingCart,
   ShoppingBag,
-  Tags,
+  LayoutGrid,
   Package,
-  Palette,
-  ChevronDown,
-  ChevronRight,
-  Bell,
-  Search,
+  Truck,
+  ShoppingCart,
+  RefreshCcw,
+  ThumbsDown,
+  DollarSign,
+  ClipboardList,
+  UserRound,
+  Settings,
+  ImagePlay,
+  SlidersHorizontal,
 } from "lucide-react";
 
-const Sidebar = () => {
+import SidebarItem from "./SidebarItem";
+
+export default function Sidebar({ activePath = "/" }) {
+
+  const navItems = [
+    {
+      label: "Inicio",
+      icon: Home,
+      href: "/",
+    },
+    {
+      label: "Usuarios",
+      icon: Users,
+      children: [
+        { label: "Usuarios", href: "/usuarios", icon: Users },
+      ],
+    },
+    {
+      label: "Compras",
+      icon: ShoppingBag,
+      children: [
+        { label: "Categorías", href: "/compras/categorias", icon: LayoutGrid },
+        { label: "Productos", href: "/compras/productos", icon: Package },
+        { label: "Proveedores", href: "/compras/proveedores", icon: Truck },
+        { label: "Compras", href: "/compras", icon: ShoppingBag },
+        { label: "Devoluciones", href: "/compras/devoluciones", icon: RefreshCcw },
+        { label: "Prod. no conforme", href: "/compras/no-conforme", icon: ThumbsDown },
+      ],
+    },
+    {
+      label: "Ventas",
+      icon: DollarSign,
+      children: [
+        { label: "Clientes", href: "/ventas/clientes", icon: UserRound },
+        { label: "Pedidos", href: "/ventas/pedidos", icon: ClipboardList },
+        { label: "Ventas", href: "/ventas", icon: ShoppingCart },
+        { label: "Devoluciones", href: "/ventas/devoluciones", icon: RefreshCcw },
+        { label: "Pagos y abonos", href: "/ventas/pagos", icon: DollarSign },
+      ],
+    },
+
+    // 🔹 NUEVO MÓDULO INDEPENDIENTE
+    {
+      label: "Apariencia",
+      icon: ImagePlay,
+      children: [
+        { label: "Carrusel", href: "/apariencia/carrusel", icon: ImagePlay },
+      ],
+    },
+  ];
+
+  const configChildren = [
+    { label: "Gest. roles", href: "/configuracion/roles", icon: SlidersHorizontal },
+  ];
+
   return (
-    <div className="flex h-screen bg-gray-100 font-sans">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-        <div className="p-6 border-b border-gray-100 flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
-          </div>
-          <span className="text-xl font-bold text-gray-800">
-            Papelería Magic
-          </span>
+    <aside className="w-48 min-h-screen flex flex-col bg-[#F0F0F0] border-r border-slate-200">
+
+      {/* Logo */}
+      <div className="flex items-center gap-2.5 px-4 py-4 border-b border-slate-100">
+        <div className="w-9 h-9 rounded-full bg-blue-900 flex items-center justify-center overflow-hidden shrink-0">
+          <span className="text-white text-xs font-bold">PM</span>
         </div>
+        <span className="text-sm font-semibold text-blue-900 leading-tight">
+          Papelería<br />Magic
+        </span>
+      </div>
 
-        <nav className="flex-1 py-4 overflow-y-auto">
-          <div icon={LayoutDashboard} label="Inicio" />
-          <div icon={Users} label="Usuarios" hasSubmenu />
-          <div icon={UserSquare2} label="Clientes" />
-          <div icon={ShoppingCart} label="Ventas" hasSubmenu />
-          <div icon={ShoppingBag} label="Compras" hasSubmenu />
-          <div icon={Tags} label="Categorías" />
-          <div icon={Package} label="Productos" />
-          <div icon={Palette} label="Apariencia" hasSubmenu />
-        </nav>
+      {/* Navegación */}
+      <nav className="flex-1 px-2 py-3 flex flex-col gap-0.5 overflow-y-auto">
+        {navItems.map((item) => (
+          <SidebarItem
+            key={item.label}
+            icon={item.icon}
+            label={item.label}
+            href={item.href}
+            children={item.children ?? []}
+            active={!item.children && activePath === item.href}
+            activePath={activePath}
+          />
+        ))}
+      </nav>
 
-        <div className="p-4 border-t border-gray-100 text-xs text-center text-gray-400">
-          v1.0.0 - 2024
-        </div>
-      </aside>
+      {/* Configuración */}
+      <div className="border-t border-slate-100 px-2 py-3">
+        <SidebarItem
+          icon={Settings}
+          label="Configuración"
+          href="/configuracion"
+          children={configChildren}
+          active={activePath === "/configuracion"}
+          activePath={activePath}
+        />
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>Opción sidebar</span>
-            <ChevronRight size={14} />
-            <span className="font-semibold text-blue-600">opción submenu</span>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <div className="relative flex items-center">
-              <Search className="absolute left-3 text-gray-400" size={18} />
-              <input
-                type="text"
-                placeholder="Buscar..."
-                className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
-              />
-            </div>
-            <button className="relative text-gray-500 hover:text-blue-600">
-              <Bell size={20} />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
-
-            <div className="flex items-center gap-3 border-l pl-6 border-gray-200">
-              <div className="text-right">
-                <p className="text-sm font-bold text-gray-800 leading-none">
-                  Yorman Alirio O...
-                </p>
-                <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">
-                  Administrador
-                </p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-blue-100 border-2 border-blue-200 flex items-center justify-center text-blue-600 font-bold overflow-hidden">
-                YA
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Content Area */}
-        <section className="flex-1 p-8 overflow-y-auto">
-          <div className="bg-white rounded-xl border border-gray-200 border-dashed min-h-125 flex items-center justify-center text-gray-400">
-            <div className="text-center">
-              <Package size={48} className="mx-auto mb-4 opacity-20" />
-              <p className="text-lg">
-                El contenido de la sección aparecerá aquí
-              </p>
-            </div>
-          </div>
-        </section>
-      </main>
-    </div>
+        <p className="text-[10px] text-slate-400 text-center mt-2">
+          Powered by SeymsSoft © 2025
+        </p>
+      </div>
+    </aside>
   );
-};
-
-export default Sidebar;
+}
