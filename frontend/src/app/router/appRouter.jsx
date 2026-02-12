@@ -1,4 +1,3 @@
-
 import {  Routes, Route } from "react-router-dom";
 
 import PrivateRoute from "./PrivateRoute";
@@ -29,7 +28,7 @@ const AppRouter = () => {
           {/* RUTA DE DESARROLLO */}
           <Route path="/sidebar" element={<AdminLayout />} />
           <Route path='/' element={ <Home/> } />
-          <Route path='/users' element={ <Home/> } />
+          <Route path='/users' element={ <Users/> } />
 
           {/* RUTAS REALES */}
           {/* <Route element={<PrivateRoute />}>
@@ -41,5 +40,4 @@ const AppRouter = () => {
   );
 };
 
-
-
+export default AppRouter;

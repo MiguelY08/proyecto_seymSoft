@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ShoppingBag, Briefcase, ClipboardPen, FileText, Palette } from 'lucide-react';
 
-import Header from '../../layouts/Header.jsx';
+import Header from '../../layouts/HeaderLanding.jsx';
 import Footer from '../../layouts/Footer.jsx';
 
 import img01 from '../../../assets/carrusel/01.png';
