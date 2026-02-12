@@ -1,7 +1,7 @@
 // src/layout/AdminLayout.jsx
 import { Outlet } from "react-router-dom";
 import Sidebar from "./sidebar";
-import Header from "./HeaderLanding";
+import Header from "./HeaderSidebar";
 
 const AdminLayout = () => {
   return (
