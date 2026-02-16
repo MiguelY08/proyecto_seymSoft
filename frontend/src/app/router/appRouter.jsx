@@ -1,21 +1,12 @@
-import {  Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 
 import PrivateRoute from "./PrivateRoute";
-// import AdminLayout from "../../layout/AdminLayout";
 
-// Auth
-
-
-// Pages
-// import DashboardPage from "../../features/dashboard/pages/DashboardPage";
-// import UsersPage from "../../features/users/pages/UsersPage";
-// import ClientsPage from "../../features/clients/pages/ClientsPage";
-// import SalesPage from "../../features/sales/pages/SalesPage";
-// import PurchasesPage from "../../features/purchases/pages/PurchasesPage";
-// import CategoriesPage from "../../features/categories/pages/CategoriesPage";
-// import ProductsPage from "../../features/products/pages/ProductsPage";
-// import AppearancePage from "../../features/appearance/pages/AppearancePage";
-import Sidebar from "../../Features/layouts/sidebar";
+// ACCESO
+import LoginPage from "../../Features/access/pages/LoginPage.jsx";
+import RegisterPage from "../../Features/access/pages/RegisterPage.jsx";
+import ForgotPasswordPage from "../../Features/access/pages/ForgotPasswordPage.jsx";
+import ResetPasswordPage from "../../Features/access/pages/ResetPasswordPage.jsx";
 
 // LANDING
 import Landing from "../../Features/landing/Landing.jsx";
@@ -47,71 +38,58 @@ import PaymentAndCredits from '../../Features/administrtivePanel/sales/paymentsA
 
 import Appearance from '../../Features/administrtivePanel/appearance/Appearance.jsx';
 
-import Roles from '../../Features/administrtivePanel/configuration/roles/Roles.jsx';
+import RolesTable from '../../Features/administrtivePanel/configuration/roles/components/RolesTable.jsx';
 
 
 const AppRouter = () => {
   return (
-        <Routes>
-          {/* RUTA DE DESARROLLO */}
-          <Route element={<PrivateRoute />}>
-            <Route element={<AdminLayout />}>
-              <Route path="/" element={<DashboardPage />} />
+    <Routes>
+      {/* RUTA DE DESARROLLO */}
+      <Route element={<PrivateRoute />}>
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<DashboardPage />} />
 
-              <Route path="indicators" element={ <Indicators /> } />
+          <Route path="indicators" element={ <Indicators /> } />
 
-              <Route path="users" element={<Users />}>
-                <Route path="form-user" element={ <FormUser /> } />
-                <Route path="info-user" element={ <InfoUser /> } />
-              </Route>
-
-              <Route path="categories" element={ <Categories /> } />
-              <Route path="products" element={ <Products /> } />
-              <Route path="providers" element={ <Providers /> } />
-              <Route path="purchases" element={ <Purchases /> } />
-              <Route path="returns-p" element={ <ReturnsP /> } />
-              <Route path="non-conforming-products" element={ <NonConformingProducts /> } />
-
-              <Route path="clients" element={ <Clients /> } />
-              <Route path="orders" element={ <Orders /> } />
-              <Route path="sales" element={ <Sales /> } />
-              <Route path="returns-s" element={ <ReturnsS /> } />
-              <Route path="payments-and-credits" element={ <PaymentAndCredits /> } />
-
-              <Route path="carousel" element={ <Appearance /> } />
-              <Route path="roles" element={ <Roles /> } />
-            </Route>
+          <Route path="users" element={<Users />}>
+            <Route path="form-user" element={ <FormUser /> } />
+            <Route path="info-user" element={ <InfoUser /> } />
           </Route>
 
-          <Route path="/" element={<Landing />}>
-            <Route path='home' element={ <Home/> } />
-            {/* <Route path='store' element={ <Store/> }/> */}
-            {/* <Route path='orders-l' element={ <Orders/> } /> */}
-            {/* <Route path='favorites' element={ <Favorites/> } /> */}
-            {/* <Route path='cart' element={ <Cart/> }/> */}
+          <Route path="purchases/categories" element={ <Categories /> } />
+          <Route path="purchases/products" element={ <Products /> } />
+          <Route path="purchases/providers" element={ <Providers /> } />
+          <Route path="purchases" element={ <Purchases /> } />
+          <Route path="purchases/returns-p" element={ <ReturnsP /> } />
+          <Route path="purchases/non-conforming-products" element={ <NonConformingProducts /> } />
 
-            {/* <Route path='/log-in' element={ <LogIn/> }/> */}
-            {/* <Route path='/register' element={ <Register/> }/> */}
+          <Route path="sales/clients" element={ <Clients /> } />
+          <Route path="sales/orders" element={ <Orders /> } />
+          <Route path="sales" element={ <Sales /> } />
+          <Route path="sales/returns-s" element={ <ReturnsS /> } />
+          <Route path="sales/payments-and-credits" element={ <PaymentAndCredits /> } />
+
+          <Route path="appearance/carousel" element={ <Appearance /> } />
+
+          <Route path="configuration">
+            <Route path="roles" element={<RolesTable />} />
           </Route>
+        </Route>
+      </Route>
 
-          {/* RUTAS REALES */}
-          {/* <Route element={<PrivateRoute />}>
-            <Route element={<AdminLayout />}>
-              <Route path="/" element={<Dashboard />} />
-            </Route>
-          </Route>
+      <Route path="/" element={<Landing />}>
+        <Route path='home' element={ <Home/> } />
+        {/* <Route path='store' element={ <Store/> }/> */}
+        {/* <Route path='orders-l' element={ <Orders/> } /> */}
+        {/* <Route path='favorites' element={ <Favorites/> } /> */}
+        {/* <Route path='cart' element={ <Cart/> }/> */}
 
-          <Route path="/" element={<Landing />}/>
-            <Route path='/home' element={ <Home/> } />
-            <Route path='/store' element={ <Store/> }/>
-            <Route path='/orders' element={ <Orders/> } />
-            <Route path='/favorites' element={ <Favorites/> } />
-            <Route path='/cart' element={ <Cart/> }/>
-
-            <Route path='/log-in' element={ <LogIn/> }/>
-            <Route path='/register' element={ <Register/> }>
-          </Route> */}
-        </Routes>
+        <Route path="/log-inn" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/rescue-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+      </Route>
+    </Routes>
   );
 };
 
