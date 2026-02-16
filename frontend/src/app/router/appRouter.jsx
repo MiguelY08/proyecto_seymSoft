@@ -1,42 +1,40 @@
-import {  Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 
-import PrivateRoute from "./PrivateRoute";
-// import AdminLayout from "../../layout/AdminLayout";
-
-// Auth
-
-
-// Pages
-// import DashboardPage from "../../features/dashboard/pages/DashboardPage";
-// import UsersPage from "../../features/users/pages/UsersPage";
-// import ClientsPage from "../../features/clients/pages/ClientsPage";
-// import SalesPage from "../../features/sales/pages/SalesPage";
-// import PurchasesPage from "../../features/purchases/pages/PurchasesPage";
-// import CategoriesPage from "../../features/categories/pages/CategoriesPage";
-// import ProductsPage from "../../features/products/pages/ProductsPage";
-// import AppearancePage from "../../features/appearance/pages/AppearancePage";
-import Sidebar from "../../Features/layouts/sidebar";
-import DashboardPage from "../../Features/layouts/DashboardPage";
 import AdminLayout from "../../Features/layouts/AdminLayout";
-import Home from '../../Features/landing/home/Home.jsx';
-import Users from '../../Features/users/users/Users.jsx';
-
+import Home from "../../Features/landing/home/Home.jsx";
+import Users from "../../Features/users/users/Users.jsx";
+import LoginPage from "../../Features/access/pages/LoginPage.jsx";
+import RegisterPage from "../../Features/access/pages/RegisterPage.jsx";
+import ForgotPasswordPage from "../../Features/access/pages/ForgotPasswordPage.jsx";
+import ResetPasswordPage from "../../Features/access/pages/ResetPasswordPage.jsx";
+import RolesTable from "../../Features/configuration/roles/components/RolesTable.jsx";
+import DashboardPage from "../../Features/layouts/DashboardPage";
 
 const AppRouter = () => {
   return (
-        <Routes>
-          {/* RUTA DE DESARROLLO */}
-          <Route path="/sidebar" element={<AdminLayout />} />
-          <Route path='/' element={ <Home/> } />
-          <Route path='/users' element={ <Users/> } />
+    <Routes>
 
-          {/* RUTAS REALES */}
-          {/* <Route element={<PrivateRoute />}>
-            <Route element={<AdminLayout />}>
-              <Route path="/" element={<Dashboard />} />
-            </Route>
-          </Route> */}
-        </Routes>
+      {/* 🌍 RUTAS PÚBLICAS */}
+      <Route path="/" element={<Home />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/registrar" element={<RegisterPage />} />
+      <Route path="/recuperar" element={<ForgotPasswordPage />} />
+      <Route path="/restablecer" element={<ResetPasswordPage />} />
+
+      {/* 🔐 PANEL ADMIN */}
+      <Route path="/admin" element={<AdminLayout />}>
+
+        {/* Dashboard */}
+        <Route index element={<DashboardPage />} />
+
+        {/* Configuración */}
+        <Route path="configuracion">
+          <Route path="roles" element={<RolesTable />} />
+        </Route>
+
+      </Route>
+
+    </Routes>
   );
 };
 
