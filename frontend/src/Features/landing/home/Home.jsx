@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ShoppingBag, Briefcase, ClipboardPen, FileText, Palette } from 'lucide-react';
-
-import Header from '../../layouts/HeaderLanding.jsx';
-import Footer from '../../layouts/Footer.jsx';
 
 import img01 from '../../../assets/carrusel/01.png';
 import img02 from '../../../assets/carrusel/02.png';
 import img03 from '../../../assets/carrusel/03.png';
 
-import ProductCard from '../../layouts/ProductCard.jsx';
+import ProductCard from '../../shared/ProductCard.jsx';
 import nacional from '../../../assets/products/atlNacional.png';
 import mayoristaBg from '../../../assets/mayoristasBg.png';
 
@@ -53,8 +51,6 @@ function Home() {
 
   return (
     <>
-      <Header />
-
       {/* Sección Carrusel */}
       <section className="w-full flex items-center justify-center py-2 sm:py-4">
         <div className="w-full sm:w-[98%] lg:w-[95%] h-auto lg:h-[80vh] relative overflow-hidden rounded-none sm:rounded-lg lg:rounded-2xl shadow-2xl">
@@ -98,7 +94,7 @@ function Home() {
 
       {/* Sección Categorías */}
       <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
-        <h2 className="text-2xl sm:text-3xl font-serif italic font-semibold text-blue-900 tracking-tight text-center mb-6 sm:mb-8">
+        <h2 className="text-2xl sm:text-3xl font-serif italic font-semibold text-[#004D77] tracking-tight text-center mb-6 sm:mb-8">
           Categorías
         </h2>
 
@@ -109,7 +105,7 @@ function Home() {
               href={category.href}
               className="bg-white border-2 border-gray-200 rounded-xl sm:rounded-2xl flex flex-row sm:flex-col items-center justify-start sm:justify-center gap-4 hover:shadow-lg hover:border-gray-300 transition-all duration-300 cursor-pointer group sm:aspect-square p-4 lg:p-6"
             >
-              <category.icon className="w-10 h-10 lg:w-14 lg:h-14 text-blue-700 group-hover:scale-110 transition-transform duration-300 shrink-0" strokeWidth={1.5} />
+              <category.icon className="w-10 h-10 lg:w-14 lg:h-14 text-[#004D77] group-hover:scale-110 transition-transform duration-300 shrink-0" strokeWidth={1.5} />
               <span className="text-sm sm:text-[10px] lg:text-xs font-bold text-gray-700 uppercase tracking-wide sm:text-center leading-tight">
                 {category.name}
               </span>
@@ -118,7 +114,7 @@ function Home() {
         </div>
 
         <div className="flex justify-center mt-6 sm:mt-8">
-          <a href="/categorias" className="px-6 sm:px-8 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm rounded-full transition-colors duration-200 cursor-pointer">
+          <a href="/categorias" className="px-6 sm:px-8 py-2.5 sm:py-3 bg-[#004D77] hover:bg-[#003d5e] text-white font-semibold text-xs sm:text-sm rounded-full transition-colors duration-200 cursor-pointer">
             Ver más categorías
           </a>
         </div>
@@ -129,7 +125,7 @@ function Home() {
       {/* Sección Nuestros Productos */}
       <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
         <div className="text-center mb-6 sm:mb-8">
-          <h2 className="text-2xl sm:text-3xl font-serif italic font-semibold text-blue-900 tracking-tight">
+          <h2 className="text-2xl sm:text-3xl font-serif italic font-semibold text-[#004D77] tracking-tight">
             Nuestros productos
           </h2>
           <p className="text-gray-500 text-xs sm:text-sm mt-1 sm:mt-2">
@@ -152,9 +148,9 @@ function Home() {
         </div>
 
         <div className="flex justify-center mt-6 sm:mt-8">
-          <a href="/tienda" className="px-6 sm:px-8 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm rounded-full transition-colors duration-200 cursor-pointer">
+          <Link to="/tienda" className="px-6 sm:px-8 py-2.5 sm:py-3 bg-[#004D77] hover:bg-[#003d5e] text-white font-semibold text-xs sm:text-sm rounded-full transition-colors duration-200 cursor-pointer">
             Ver más productos
-          </a>
+          </Link>
         </div>
 
         <div className="h-px bg-gray-200 mt-8 sm:mt-10" />
@@ -164,16 +160,9 @@ function Home() {
       <section className="w-full flex items-center justify-center py-2 sm:py-6">
         <div className="w-full sm:w-[98%] lg:w-[95%] h-[50vh] sm:h-[60vh] lg:h-[90vh] relative overflow-hidden rounded-none sm:rounded-lg lg:rounded-2xl">
           
-          {/* Imagen de fondo */}
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${mayoristaBg})` }}
-          />
+          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${mayoristaBg})` }} />
+          <div className="absolute inset-0 bg-[#004D77]/80" />
 
-          {/* Overlay oscuro */}
-          <div className="absolute inset-0 bg-blue-950/75" />
-
-          {/* Contenido */}
           <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-4 sm:px-8 text-center gap-4 sm:gap-6">
             <h2 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white leading-tight">
               ¿Eres mayorista?
@@ -189,15 +178,13 @@ function Home() {
               href="https://wa.me/573002936722"
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 px-8 sm:px-10 py-2.5 sm:py-3 border-2 border-white text-white text-xs sm:text-sm font-semibold uppercase tracking-widest hover:bg-white hover:text-blue-900 transition-all duration-300 cursor-pointer rounded-sm"
+              className="mt-2 px-8 sm:px-10 py-2.5 sm:py-3 border-2 border-white text-white text-xs sm:text-sm font-semibold uppercase tracking-widest hover:bg-white hover:text-[#004D77] transition-all duration-300 cursor-pointer rounded-sm"
             >
               Contáctanos
             </a>
           </div>
         </div>
       </section>
-
-      <Footer />
     </>
   );
 }

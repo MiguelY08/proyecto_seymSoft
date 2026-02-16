@@ -120,7 +120,7 @@ export default function HeaderSidebar({
                 <SquarePen size={16} strokeWidth={1.8} />
                 Editar Mi Perfil
               </a>
- 
+
               <button
                 onClick={() => {}}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"

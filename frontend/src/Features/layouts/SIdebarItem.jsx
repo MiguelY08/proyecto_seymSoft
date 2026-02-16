@@ -88,8 +88,6 @@ export default function SidebarItem({
               isItemActive || open
                 ? "bg-[#004D77] text-white"
                 : "text-[#004D77] hover:bg-[#004D77] hover:text-white"
-
-
             }
           `}
         >

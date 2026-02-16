@@ -3,13 +3,14 @@ import LoginCard from "../components/LoginCard"
 import imagenBanner from "../../../assets/imagenBanner.png"
 import HeaderLanding from "../../layouts/HeaderLanding"
 import Footer from "../../layouts/Footer"
+
 export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col">
 
       <HeaderLanding />
 
-      <main className="flex-grow flex flex-col">
+      <main className="grow flex flex-col">
 
         <LoginBanner 
           titulo="Iniciar Sesión"
@@ -17,7 +18,7 @@ export default function LoginPage() {
         />
 
         {/* Contenedor optimizado */}
-        <div className="flex justify-center items-center bg-gray-100 py-6 px-4 flex-grow">
+        <div className="flex justify-center items-center bg-gray-100 py-6 px-4 grow">
           <LoginCard />
         </div>
 
@@ -26,5 +27,5 @@ export default function LoginPage() {
       <Footer />
 
     </div>
-  )
-}
+  );
+};

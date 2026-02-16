@@ -39,37 +39,37 @@ export default function Sidebar() {
       label: "Usuarios",
       icon: Users,
       children: [
-        { label: "Usuarios", href: `${ADMIN_BASE}/usuarios`, icon: Users },
+        { label: "Usuarios", href: `${ADMIN_BASE}/users`, icon: Users },
       ],
     },
     {
       label: "Compras",
       icon: ShoppingBag,
       children: [
-        { label: "Categorías", href: `${ADMIN_BASE}/compras/categorias`, icon: LayoutGrid },
-        { label: "Productos", href: `${ADMIN_BASE}/compras/productos`, icon: Package },
-        { label: "Proveedores", href: `${ADMIN_BASE}/compras/proveedores`, icon: Truck },
-        { label: "Compras", href: `${ADMIN_BASE}/compras`, icon: ShoppingBag },
-        { label: "Devoluciones", href: `${ADMIN_BASE}/compras/devoluciones`, icon: RefreshCcw },
-        { label: "Prod. no conforme", href: `${ADMIN_BASE}/compras/no-conforme`, icon: ThumbsDown },
+        { label: "Categorías", href: `${ADMIN_BASE}/purchases/categories`, icon: LayoutGrid },
+        { label: "Productos", href: `${ADMIN_BASE}/purchases/products`, icon: Package },
+        { label: "Proveedores", href: `${ADMIN_BASE}/purchases/providers`, icon: Truck },
+        { label: "Compras", href: `${ADMIN_BASE}/purchases`, icon: ShoppingBag },
+        { label: "Devoluciones", href: `${ADMIN_BASE}/purchases/returns-p`, icon: RefreshCcw },
+        { label: "Prod. no conforme", href: `${ADMIN_BASE}/purchases/non-conforming-products`, icon: ThumbsDown },
       ],
     },
     {
       label: "Ventas",
       icon: DollarSign,
       children: [
-        { label: "Clientes", href: `${ADMIN_BASE}/ventas/clientes`, icon: UserRound },
-        { label: "Pedidos", href: `${ADMIN_BASE}/ventas/pedidos`, icon: ClipboardList },
-        { label: "Ventas", href: `${ADMIN_BASE}/ventas`, icon: ShoppingCart },
-        { label: "Devoluciones", href: `${ADMIN_BASE}/ventas/devoluciones`, icon: RefreshCcw },
-        { label: "Pagos y abonos", href: `${ADMIN_BASE}/ventas/pagos`, icon: DollarSign },
+        { label: "Clientes", href: `${ADMIN_BASE}/sales/clients`, icon: UserRound },
+        { label: "Pedidos", href: `${ADMIN_BASE}/sales/orders`, icon: ClipboardList },
+        { label: "Ventas", href: `${ADMIN_BASE}/sales`, icon: ShoppingCart },
+        { label: "Devoluciones", href: `${ADMIN_BASE}/sales/returns-s`, icon: RefreshCcw },
+        { label: "Pagos y abonos", href: `${ADMIN_BASE}/sales/payments-and-credits`, icon: DollarSign },
       ],
     },
     {
       label: "Apariencia",
       icon: ImagePlay,
       children: [
-        { label: "Carrusel", href: `${ADMIN_BASE}/apariencia/carrusel`, icon: ImagePlay },
+        { label: "Carrusel", href: `${ADMIN_BASE}/appearance/carousel`, icon: ImagePlay },
       ],
     },
   ];
@@ -77,7 +77,7 @@ export default function Sidebar() {
   const configChildren = [
     {
       label: "Gest. roles",
-      href: `${ADMIN_BASE}/configuracion/roles`,
+      href: `${ADMIN_BASE}/configuration/roles`,
       icon: SlidersHorizontal,
     },
   ];
@@ -138,7 +138,7 @@ export default function Sidebar() {
             <X size={20} />
           </button>
 
-          <div className="mt-2 h-[2px] w-full bg-[#004D77]" />
+          <div className="mt-2 h-2px w-full bg-[#004D77]" />
         </div>
 
         {/* Navegación */}
@@ -160,7 +160,7 @@ export default function Sidebar() {
           <SidebarItem
             icon={Settings}
             label="Configuración"
-            href={`${ADMIN_BASE}/configuracion`}
+            href={`${ADMIN_BASE}/configuration`}
             children={configChildren}
             activePath={pathname}
           />
