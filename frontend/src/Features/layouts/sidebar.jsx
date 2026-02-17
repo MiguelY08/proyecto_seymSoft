@@ -27,7 +27,8 @@ const ADMIN_BASE = "/admin";
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
-  const { pathname } = useLocation(); // 🔥 Detecta ruta actual automáticamente
+  const [openItem, setOpenItem] = useState(null);
+  const { pathname } = useLocation();
 
   const navItems = [
     {
@@ -84,7 +85,7 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Botón móvil */}
+      {/* BOTÓN MÓVIL */}
       <button
         onClick={() => setIsOpen(true)}
         className="md:hidden p-3"
@@ -92,7 +93,7 @@ export default function Sidebar() {
         <Menu size={24} />
       </button>
 
-      {/* Overlay móvil */}
+      {/* OVERLAY */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-40 md:hidden"
@@ -100,9 +101,10 @@ export default function Sidebar() {
         />
       )}
 
-      {/* Sidebar */}
+      {/* SIDEBAR */}
       <aside
         className={`
+          font-lexend
           fixed md:static top-0 left-0 z-50
           w-64 min-h-screen flex flex-col
           bg-[#F0F0F0] border-r border-slate-200
@@ -110,8 +112,8 @@ export default function Sidebar() {
           ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}
       >
-        {/* Header Logo */}
-        <div className="px-4 pt-1 pb-4 relative">
+        {/* HEADER */}
+        <div className="px-1 pt-1 pb-4 relative">
           <div className="flex items-center gap-3">
             <div className="w-20 h-20 rounded-full overflow-hidden">
               <img
@@ -122,10 +124,10 @@ export default function Sidebar() {
             </div>
 
             <div className="leading-tight">
-              <h1 className="text-xl font-serif italic text-[#004D77] font-semibold">
+              <h1 className="text-xl italic text-[#004D77] font-semibold">
                 Papelería
               </h1>
-              <h2 className="text-xl font-serif italic text-[#004D77] font-semibold">
+              <h2 className="text-xl italic text-[#004D77] font-semibold">
                 Magic
               </h2>
             </div>
@@ -138,10 +140,10 @@ export default function Sidebar() {
             <X size={20} />
           </button>
 
-          <div className="mt-2 h-2px w-full bg-[#004D77]" />
+          <div className="mt-3 h-[2px] w-full bg-[#004D77]" />
         </div>
 
-        {/* Navegación */}
+        {/* NAV */}
         <nav className="flex-1 px-2 py-3 flex flex-col gap-0.5 overflow-y-auto">
           {navItems.map((item) => (
             <SidebarItem
@@ -150,19 +152,21 @@ export default function Sidebar() {
               label={item.label}
               href={item.href}
               children={item.children ?? []}
-              activePath={pathname}
+              openItem={openItem}
+              setOpenItem={setOpenItem}
             />
           ))}
         </nav>
 
-        {/* Configuración */}
+        {/* CONFIGURACIÓN */}
         <div className="border-t border-slate-100 px-2 py-3">
           <SidebarItem
             icon={Settings}
             label="Configuración"
             href={`${ADMIN_BASE}/configuration`}
             children={configChildren}
-            activePath={pathname}
+            openItem={openItem}
+            setOpenItem={setOpenItem}
           />
 
           <p className="text-[10px] text-slate-400 text-center mt-2">
