@@ -12,6 +12,9 @@ import ResetPasswordPage from "../../Features/access/pages/ResetPasswordPage.jsx
 import Landing from "../../Features/landing/Landing.jsx";
 import Home from '../../Features/landing/home/Home.jsx';
 import Shop from "../../Features/landing/shop/Shop.jsx";
+import OrdersL from "../../Features/landing/orders/Orders.jsx";
+import Favorites from "../../Features/landing/favorites/Favorites.jsx";
+import ShoppingCart from "../../Features/landing/shoppingCart/ShoppingCart.jsx";
 
 
 // PANEL ADMINISTRATIVO
@@ -33,7 +36,7 @@ import ReturnsP from '../../Features/administrtivePanel/purchases/returns/Return
 import NonConformingProducts from '../../Features/administrtivePanel/purchases/nonConformingProducts/NonConformingProducts.jsx';
 
 import Clients from '../../Features/administrtivePanel/sales/clients/Clients.jsx';
-import Orders from '../../Features/administrtivePanel/sales/orders/Orders.jsx';
+import OrdersA from '../../Features/administrtivePanel/sales/orders/Orders.jsx';
 import Sales from '../../Features/administrtivePanel/sales/sales/Sales.jsx';
 import ReturnsS from '../../Features/administrtivePanel/sales/returns/Returns.jsx';
 import PaymentAndCredits from '../../Features/administrtivePanel/sales/paymentsAndCredits/PaymentAndCredits.jsx';
@@ -67,7 +70,7 @@ const AppRouter = () => {
           <Route path="purchases/non-conforming-products" element={ <NonConformingProducts /> } />
 
           <Route path="sales/clients" element={ <Clients /> } />
-          <Route path="sales/orders" element={ <Orders /> } />
+          <Route path="sales/orders" element={ <OrdersA/> } />
           <Route path="sales" element={ <Sales /> } />
           <Route path="sales/returns-s" element={ <ReturnsS /> } />
           <Route path="sales/payments-and-credits" element={ <PaymentAndCredits /> } />
@@ -83,9 +86,9 @@ const AppRouter = () => {
       <Route path="/" element={<Landing />}>
         <Route path='home' element={ <Home/> } />
         <Route path='shop' element={ <Shop/> }/>
-        {/* <Route path='orders-l' element={ <Orders/> } /> */}
-        {/* <Route path='favorites' element={ <Favorites/> } /> */}
-        {/* <Route path='cart' element={ <Cart/> }/> */}
+        <Route path='orders-l' element={ <OrdersL/> } /> 
+         <Route path='favorites' element={ <Favorites/> } /> 
+         <Route path='cart' element={ <ShoppingCart/> }/> 
 
         <Route path="/log-inn" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -96,4 +99,4 @@ const AppRouter = () => {
   );
 };
 
- export default AppRouter
+export default AppRouter
