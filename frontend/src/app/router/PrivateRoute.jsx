@@ -3,7 +3,7 @@ import { Outlet } from "react-router-dom"
 const PrivateRoute = () => {
   return (
     <div>
-       <Outlet />;
+      <Outlet />
     </div>
   )
 }

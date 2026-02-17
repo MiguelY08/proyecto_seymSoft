@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   Search,
   Home,
@@ -8,27 +9,41 @@ import {
   ShoppingCart,
   User,
   Menu,
+  LogIn,
+  UserPlus,
+  X,
 } from "lucide-react";
 import logo from "../../assets/PapeleriaMagicLogo.png";
 
 function HeaderLanding() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeNav, setActiveNav] = useState("Inicio");
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [profileModal, setProfileModal] = useState(false);
+  const modalRef = useRef(null);
+  const location = useLocation();
+
+  const isActive = (path) => location.pathname === path;
 
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 50) {
-        setScrolled(true);
-      } else {
-        setScrolled(false);
-      }
-    };
-
+    const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (modalRef.current && !modalRef.current.contains(e.target)) {
+        setProfileModal(false);
+      }
+    };
+    if (profileModal) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [profileModal]);
+
+  useEffect(() => {
+    setProfileModal(false);
+  }, [location]);
 
   return (
     <>
@@ -46,28 +61,14 @@ function HeaderLanding() {
             }`}
           >
             {/* Logo Section */}
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              <div
-                className={`rounded-full overflow-hidden cursor-pointer transition-all duration-150 ${
-                  scrolled
-                    ? "w-8 h-8 sm:w-12 sm:h-12"
-                    : "w-10 h-10 sm:w-20 sm:h-20"
-                }`}
-              >
-                <img
-                  src={logo}
-                  alt="Logo Papelería Magic"
-                  className="w-full h-full object-cover"
-                />
+            <Link to="/home" className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <div className={`rounded-full overflow-hidden cursor-pointer transition-all duration-150 ${scrolled ? "w-8 h-8 sm:w-12 sm:h-12" : "w-10 h-10 sm:w-20 sm:h-20"}`}>
+                <img src={logo} alt="Logo Papelería Magic" className="w-full h-full object-cover" />
               </div>
-              <h1
-                className={`font-serif italic text-blue-900 font-semibold tracking-tight hidden md:block transition-all duration-150 ${
-                  scrolled ? "text-lg sm:text-xl" : "text-lg sm:text-2xl"
-                }`}
-              >
+              <h1 className={`font-serif italic text-[#004D77] font-semibold tracking-tight hidden md:block transition-all duration-150 ${scrolled ? "text-lg sm:text-xl" : "text-lg sm:text-2xl"}`}>
                 Papelería Magic
               </h1>
-            </div>
+            </Link>
 
             {/* Search Bar */}
             <div className="flex-1 max-w-xs sm:max-w-md lg:max-w-2xl">
@@ -77,17 +78,11 @@ function HeaderLanding() {
                   placeholder="Buscar"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className={`w-full pl-3 sm:pl-4 pr-10 sm:pr-12 rounded-full border-2 border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-150 text-sm sm:text-base text-gray-700 placeholder-gray-400 bg-white shadow-sm ${
-                    scrolled ? "h-8 sm:h-9" : "h-9 sm:h-11"
-                  }`}
+                  className={`w-full pl-3 sm:pl-4 pr-10 sm:pr-12 rounded-full border-2 border-gray-300 focus:border-[#004D77] focus:ring-4 focus:ring-[#004D77]/20 outline-none transition-all duration-150 text-sm sm:text-base text-gray-700 placeholder-gray-400 bg-white shadow-sm ${scrolled ? "h-8 sm:h-9" : "h-9 sm:h-11"}`}
                 />
                 <button className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 cursor-pointer">
                   <Search
-                    className={`text-gray-500 hover:text-blue-600 transition-all duration-150 ${
-                      scrolled
-                        ? "w-3.5 h-3.5 sm:w-4 sm:h-4"
-                        : "w-4 h-4 sm:w-5 sm:h-5"
-                    }`}
+                    className={`text-gray-500 hover:text-[#004D77] transition-all duration-150 ${scrolled ? "w-3.5 h-3.5 sm:w-4 sm:h-4" : "w-4 h-4 sm:w-5 sm:h-5"}`}
                     strokeWidth={2}
                   />
                 </button>
@@ -96,55 +91,78 @@ function HeaderLanding() {
 
             {/* Navigation Links - Desktop */}
             <nav className="hidden lg:flex items-center gap-1">
-              <NavLink
-                icon={Home}
-                label="Inicio"
-                active={activeNav === "Inicio"}
-                onClick={() => setActiveNav("Inicio")}
-                scrolled={scrolled}
-              />
-              <NavLink
-                icon={Store}
-                label="Tienda"
-                active={activeNav === "Tienda"}
-                onClick={() => setActiveNav("Tienda")}
-                scrolled={scrolled}
-              />
-              <NavLink
-                icon={Package}
-                label="Pedidos"
-                active={activeNav === "Pedidos"}
-                onClick={() => setActiveNav("Pedidos")}
-                scrolled={scrolled}
-              />
+              <NavLink icon={Home}    label="Inicio"  to="/home"   active={isActive("/home")}   scrolled={scrolled} />
+              <NavLink icon={Store}   label="Tienda"  to="/shop"  active={isActive("/shop")}  scrolled={scrolled} />
+              <NavLink icon={Package} label="Pedidos" to="/orders-l" active={isActive("/orders-l")} scrolled={scrolled} />
             </nav>
 
             {/* Action Icons */}
             <div className="flex items-center gap-1 sm:gap-2">
-              <IconButton
-                icon={Heart}
-                badge={8}
-                className="hidden sm:block"
-                scrolled={scrolled}
-              />
-              <IconButton icon={ShoppingCart} badge={0} scrolled={scrolled} />
-              <IconButton
-                icon={User}
-                className="hidden sm:block"
-                scrolled={scrolled}
-              />
+              <IconButton icon={Heart}        to="/favorites" badge={0} className="hidden sm:block" scrolled={scrolled} />
+              <IconButton icon={ShoppingCart} to="/cart"      badge={0} scrolled={scrolled} />
+
+              {/* Botón Perfil con modal */}
+              <div className="relative hidden sm:block" ref={modalRef}>
+                <button
+                  onClick={() => setProfileModal(!profileModal)}
+                  className={`relative rounded-full hover:bg-[#004D77]/10 transition-all duration-150 group cursor-pointer flex items-center justify-center ${
+                    scrolled ? "p-1.5 sm:p-2" : "p-2 sm:p-2.5"
+                  } ${profileModal ? "bg-[#004D77]/10" : ""}`}
+                >
+                  <User
+                    className={`transition-all duration-150 ${
+                      profileModal ? "text-[#004D77]" : "text-gray-700 group-hover:text-[#004D77]"
+                    } ${scrolled ? "w-4 h-4" : "w-5 h-5"}`}
+                    strokeWidth={2}
+                  />
+                </button>
+
+                {/* Modal desplegable */}
+                {profileModal && (
+                  <div className="absolute right-0 top-full mt-3 w-52 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50">
+                    <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                      <span className="text-sm font-semibold text-gray-700">Mi cuenta</span>
+                      <button
+                        onClick={() => setProfileModal(false)}
+                        className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="p-2 flex flex-col gap-1">
+                      <Link
+                        to="/log-in"
+                        className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-[#004D77]/10 hover:text-[#004D77] transition-all duration-200 cursor-pointer group"
+                      >
+                        <LogIn className="w-5 h-5 text-gray-400 group-hover:text-[#004D77] transition-colors" strokeWidth={2} />
+                        <div>
+                          <p className="text-sm font-semibold">Iniciar sesión</p>
+                          <p className="text-[10px] text-gray-400">Accede a tu cuenta</p>
+                        </div>
+                      </Link>
+
+                      <Link
+                        to="/register"
+                        className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-[#004D77]/10 hover:text-[#004D77] transition-all duration-200 cursor-pointer group"
+                      >
+                        <UserPlus className="w-5 h-5 text-gray-400 group-hover:text-[#004D77] transition-colors" strokeWidth={2} />
+                        <div>
+                          <p className="text-sm font-semibold">Registrarse</p>
+                          <p className="text-[10px] text-gray-400">Crea una cuenta nueva</p>
+                        </div>
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Menu hamburguesa - Mobile/Tablet */}
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="lg:hidden p-2 rounded-full hover:bg-blue-50 transition-colors cursor-pointer"
+                className="lg:hidden p-2 rounded-full hover:bg-[#004D77]/10 transition-colors cursor-pointer"
               >
-                <Menu
-                  className={`text-gray-700 transition-all duration-150 ${
-                    scrolled ? "w-4 h-4 sm:w-5 sm:h-5" : "w-5 h-5 sm:w-6 sm:h-6"
-                  }`}
-                  strokeWidth={2}
-                />
+                <Menu className={`text-gray-700 transition-all duration-150 ${scrolled ? "w-4 h-4 sm:w-5 sm:h-5" : "w-5 h-5 sm:w-6 sm:h-6"}`} strokeWidth={2} />
               </button>
             </div>
           </div>
@@ -153,129 +171,79 @@ function HeaderLanding() {
           {menuOpen && (
             <div className="lg:hidden border-t border-gray-200 py-3">
               <nav className="flex flex-col gap-2">
-                <NavLinkMobile
-                  icon={Home}
-                  label="Inicio"
-                  active={activeNav === "Inicio"}
-                  onClick={() => {
-                    setActiveNav("Inicio");
-                    setMenuOpen(false);
-                  }}
-                />
-                <NavLinkMobile
-                  icon={Store}
-                  label="Tienda"
-                  active={activeNav === "Tienda"}
-                  onClick={() => {
-                    setActiveNav("Tienda");
-                    setMenuOpen(false);
-                  }}
-                />
-                <NavLinkMobile
-                  icon={Package}
-                  label="Pedidos"
-                  active={activeNav === "Pedidos"}
-                  onClick={() => {
-                    setActiveNav("Pedidos");
-                    setMenuOpen(false);
-                  }}
-                />
+                <NavLinkMobile icon={Home}    label="Inicio"  to="/home"   active={isActive("/home")}   onClick={() => setMenuOpen(false)} />
+                <NavLinkMobile icon={Store}   label="Tienda"  to="/store"  active={isActive("/store")}  onClick={() => setMenuOpen(false)} />
+                <NavLinkMobile icon={Package} label="Pedidos" to="/orders" active={isActive("/orders")} onClick={() => setMenuOpen(false)} />
               </nav>
 
-              {/* Action Icons adicionales en mobile */}
               <div className="flex items-center gap-4 mt-4 pt-3 border-t border-gray-200">
-                <button className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors cursor-pointer">
+                <Link to="/favorites" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-gray-700 hover:text-[#004D77] transition-colors cursor-pointer">
                   <Heart className="w-5 h-5" strokeWidth={2} />
                   <span className="text-sm">Favoritos (8)</span>
-                </button>
-                <button className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors cursor-pointer">
-                  <User className="w-5 h-5" strokeWidth={2} />
-                  <span className="text-sm">Perfil</span>
-                </button>
+                </Link>
+                <Link to="/log-in" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-gray-700 hover:text-[#004D77] transition-colors cursor-pointer">
+                  <LogIn className="w-5 h-5" strokeWidth={2} />
+                  <span className="text-sm">Iniciar sesión</span>
+                </Link>
+                <Link to="/register" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-gray-700 hover:text-[#004D77] transition-colors cursor-pointer">
+                  <UserPlus className="w-5 h-5" strokeWidth={2} />
+                  <span className="text-sm">Registrarse</span>
+                </Link>
               </div>
             </div>
           )}
         </div>
       </header>
 
-      {/* Spacer para evitar que el contenido quede debajo del header */}
-      <div
-        className={`transition-all duration-150 ${scrolled ? "h-12 sm:h-14" : "h-16 sm:h-20"}`}
-      ></div>
+      {/* Spacer */}
+      <div className={`transition-all duration-150 ${scrolled ? "h-12 sm:h-14" : "h-16 sm:h-20"}`} />
     </>
   );
 }
 
-const NavLink = ({ icon: Icon, label, active, onClick, scrolled }) => {
-  return (
-    <a
-      onClick={onClick}
-      className={`
-        flex items-center gap-2 rounded-lg transition-all duration-200 cursor-pointer
-        ${scrolled ? "px-3 py-1.5" : "px-4 py-2"}
-        ${
-          active
-            ? "text-blue-700 font-semibold bg-blue-100"
-            : "text-gray-700 hover:text-blue-600 hover:bg-blue-50"
-        }
-      `}
-    >
-      <Icon
-        className={`transition-all duration-150 ${scrolled ? "w-4 h-4" : "w-5 h-5"}`}
-        strokeWidth={active ? 2.5 : 2}
-      />
-      <span
-        className={`transition-all duration-150 ${scrolled ? "text-xs" : "text-sm"}`}
-      >
-        {label}
+const NavLink = ({ icon: Icon, label, to, active, scrolled }) => (
+  <Link
+    to={to}
+    className={`flex items-center gap-2 rounded-lg transition-all duration-200 cursor-pointer ${scrolled ? "px-3 py-1.5" : "px-4 py-2"} ${
+      active
+        ? "text-[#004D77] font-semibold bg-[#004D77]/10"
+        : "text-gray-700 hover:text-[#004D77] hover:bg-[#004D77]/5"
+    }`}
+  >
+    <Icon className={`transition-all duration-150 ${scrolled ? "w-4 h-4" : "w-5 h-5"}`} strokeWidth={active ? 2.5 : 2} />
+    <span className={`transition-all duration-150 ${scrolled ? "text-xs" : "text-sm"}`}>{label}</span>
+  </Link>
+);
+
+const NavLinkMobile = ({ icon: Icon, label, to, active, onClick }) => (
+  <Link
+    to={to}
+    onClick={onClick}
+    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 cursor-pointer ${
+      active
+        ? "text-[#004D77] font-semibold bg-[#004D77]/10"
+        : "text-gray-700 hover:text-[#004D77] hover:bg-[#004D77]/5"
+    }`}
+  >
+    <Icon className="w-5 h-5" strokeWidth={active ? 2.5 : 2} />
+    <span className="text-base">{label}</span>
+  </Link>
+);
+
+const IconButton = ({ icon: Icon, to, badge, className = "", scrolled }) => (
+  <Link
+    to={to}
+    className={`relative rounded-full hover:bg-[#004D77]/10 transition-all duration-150 group cursor-pointer flex items-center justify-center ${
+      scrolled ? "p-1.5 sm:p-2" : "p-2 sm:p-2.5"
+    } ${className}`}
+  >
+    <Icon className={`text-gray-700 group-hover:text-[#004D77] transition-all duration-150 ${scrolled ? "w-4 h-4" : "w-5 h-5"}`} strokeWidth={2} />
+    {badge !== undefined && badge > 0 && (
+      <span className={`absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-md ring-2 ring-white transition-all duration-150 ${scrolled ? "w-3.5 h-3.5 text-[9px]" : "w-4 h-4 sm:w-5 sm:h-5"}`}>
+        {badge}
       </span>
-    </a>
-  );
-};
-
-const NavLinkMobile = ({ icon: Icon, label, active, onClick }) => {
-  return (
-    <a
-      onClick={onClick}
-      className={`
-        flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 cursor-pointer
-        ${
-          active
-            ? "text-blue-700 font-semibold bg-blue-100"
-            : "text-gray-700 hover:text-blue-600 hover:bg-blue-50"
-        }
-      `}
-    >
-      <Icon className="w-5 h-5" strokeWidth={active ? 2.5 : 2} />
-      <span className="text-base">{label}</span>
-    </a>
-  );
-};
-
-const IconButton = ({ icon: Icon, badge, className = "", scrolled }) => {
-  return (
-    <button
-      className={`relative rounded-full hover:bg-blue-50 transition-all duration-150 group cursor-pointer ${
-        scrolled ? "p-1.5 sm:p-2" : "p-2 sm:p-2.5"
-      } ${className}`}
-    >
-      <Icon
-        className={`text-gray-700 group-hover:text-blue-600 transition-all duration-150 ${
-          scrolled ? "w-4 h-4" : "w-5 h-5"
-        }`}
-        strokeWidth={2}
-      />
-      {badge !== undefined && badge > 0 && (
-        <span
-          className={`absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-md ring-2 ring-white transition-all duration-150 ${
-            scrolled ? "w-3.5 h-3.5 text-[9px]" : "w-4 h-4 sm:w-5 sm:h-5"
-          }`}
-        >
-          {badge}
-        </span>
-      )}
-    </button>
-  );
-};
+    )}
+  </Link>
+);
 
 export default HeaderLanding;
