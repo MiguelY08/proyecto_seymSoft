@@ -11,6 +11,7 @@ import ResetPasswordPage from "../../Features/access/pages/ResetPasswordPage.jsx
 // LANDING
 import Landing from "../../Features/landing/Landing.jsx";
 import Home from '../../Features/landing/home/Home.jsx';
+import Shop from "../../Features/landing/shop/Shop.jsx";
 
 
 // PANEL ADMINISTRATIVO
@@ -26,7 +27,8 @@ import InfoUser from '../../Features/administrtivePanel/users/users/modals/InfoU
 import Categories from '../../Features/administrtivePanel/purchases/categories/Categories.jsx';
 import Products from '../../Features/administrtivePanel/purchases/products/Products.jsx';
 import Providers from '../../Features/administrtivePanel/purchases/providers/Providers.jsx';
-import Purchases from '../../Features/administrtivePanel/purchases/purchases/Purchases.jsx';
+import Purchases from "../../Features/administrtivePanel/purchases/purchases/Purchases.jsx";
+import CreatePurchase from "../../Features/administrtivePanel/purchases/purchases/CreatePurchase.jsx";
 import ReturnsP from '../../Features/administrtivePanel/purchases/returns/Returns.jsx';
 import NonConformingProducts from '../../Features/administrtivePanel/purchases/nonConformingProducts/NonConformingProducts.jsx';
 
@@ -60,6 +62,7 @@ const AppRouter = () => {
           <Route path="purchases/products" element={ <Products /> } />
           <Route path="purchases/providers" element={ <Providers /> } />
           <Route path="purchases" element={ <Purchases /> } />
+          <Route path="purchases/create" element={ <CreatePurchase /> } />
           <Route path="purchases/returns-p" element={ <ReturnsP /> } />
           <Route path="purchases/non-conforming-products" element={ <NonConformingProducts /> } />
 
@@ -79,7 +82,7 @@ const AppRouter = () => {
 
       <Route path="/" element={<Landing />}>
         <Route path='home' element={ <Home/> } />
-        {/* <Route path='store' element={ <Store/> }/> */}
+        <Route path='shop' element={ <Shop/> }/>
         {/* <Route path='orders-l' element={ <Orders/> } /> */}
         {/* <Route path='favorites' element={ <Favorites/> } /> */}
         {/* <Route path='cart' element={ <Cart/> }/> */}
@@ -93,4 +96,4 @@ const AppRouter = () => {
   );
 };
 
-export default AppRouter;
+ export default AppRouter

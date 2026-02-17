@@ -92,7 +92,7 @@ function HeaderLanding() {
             {/* Navigation Links - Desktop */}
             <nav className="hidden lg:flex items-center gap-1">
               <NavLink icon={Home}    label="Inicio"  to="/home"   active={isActive("/home")}   scrolled={scrolled} />
-              <NavLink icon={Store}   label="Tienda"  to="/store"  active={isActive("/store")}  scrolled={scrolled} />
+              <NavLink icon={Store}   label="Tienda"  to="/shop"  active={isActive("/shop")}  scrolled={scrolled} />
               <NavLink icon={Package} label="Pedidos" to="/orders-l" active={isActive("/orders-l")} scrolled={scrolled} />
             </nav>
 
