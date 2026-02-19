@@ -2,17 +2,24 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Heart, HeartCrack } from 'lucide-react';
 
+
 function ProductCard({ image, name, category, price, productId, onAddToFavorites }) {
   const [isFavorite, setIsFavorite] = useState(false);
   const [isHoveringHeart, setIsHoveringHeart] = useState(false);
 
-  const handleFavorite = () => {
-    setIsFavorite(!isFavorite);
-    onAddToFavorites?.();
-  };
+  const handleFavorite = (e) => {
+  e.preventDefault();      // 🔥 evita navegación
+  e.stopPropagation();     // 🔥 evita que el click suba al Link
+
+  setIsFavorite(!isFavorite);
+  onAddToFavorites?.();
+};
 
   return (
-    <div className="bg-white rounded-2xl border-2 border-gray-200 transition-all duration-200 hover:shadow-lg hover:border-gray-300 overflow-hidden">
+<div className="bg-white rounded-2xl border-2 border-gray-200 transition-all duration-200 hover:shadow-lg hover:border-gray-300 overflow-hidden active:scale-95 active:shadow-md cursor-pointer">      <Link
+            to={`/${productId || 'shop/detail'}`}
+            className="  duration-300  items-center justify-center gap-1 sm:gap-2 cursor-pointer"
+        >  
       {/* Imagen del producto */}
       <div className="relative bg-white aspect-square flex items-center justify-center p-1 overflow-hidden">
         <img 
@@ -56,7 +63,7 @@ function ProductCard({ image, name, category, price, productId, onAddToFavorites
 
           {/* Botón de favoritos */}
           <button
-            onClick={handleFavorite}
+            onClick={(e) => handleFavorite(e)}
             onMouseEnter={() => setIsHoveringHeart(true)}
             onMouseLeave={() => setIsHoveringHeart(false)}
             className="w-7 h-7 sm:w-9 sm:h-9 lg:w-10 lg:h-10 flex items-center justify-center cursor-pointer shrink-0 relative"
@@ -78,6 +85,7 @@ function ProductCard({ image, name, category, price, productId, onAddToFavorites
           </button>
         </div>
       </div>
+      </Link>
     </div>
   );
 }
