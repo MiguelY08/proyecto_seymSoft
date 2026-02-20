@@ -1,10 +1,10 @@
 
 
 import imagenBanner from "../../../assets/imagenBanner.png"
-import LoginBanner from "../components/LoginBannjer"
+import LoginBanner from "../components/LoginBanner"
 import HeaderLanding from "../../layouts/HeaderLanding"
 import Footer from "../../layouts/Footer"
-import ForgotPasswordForm from "../components/ForgotPasswordForm"
+import ResetPasswordForm from "../components/ForgotPasswordForm"
 
 export default function ResetPasswordPage() {
   return (
@@ -21,7 +21,7 @@ export default function ResetPasswordPage() {
 
         {/* Contenedor optimizado */}
         <div className="flex justify-center items-center bg-gray-100 py-6 px-4 flex-grow">
-          <ForgotPasswordForm />
+          <ResetPasswordForm />
         </div>
 
       </main>

@@ -1,4 +1,6 @@
 import { ChevronDown } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 
 export default function SidebarItem({
   icon: Icon,
@@ -8,8 +10,20 @@ export default function SidebarItem({
   openItem,
   setOpenItem,
 }) {
+  const { pathname } = useLocation();
+
   const hasChildren = children.length > 0;
   const isOpen = openItem === label;
+
+  const isActiveParent = children.some(child =>
+    pathname.startsWith(child.href)
+  );
+
+  useEffect(() => {
+    if (isActiveParent) {
+      setOpenItem(label);
+    }
+  }, [pathname]);
 
   const handleClick = () => {
     if (hasChildren) {
@@ -19,6 +33,7 @@ export default function SidebarItem({
 
   return (
     <div className="font-lexend text-[15px]">
+
       {/* ITEM PADRE */}
       <div
         onClick={handleClick}
@@ -29,18 +44,15 @@ export default function SidebarItem({
         }`}
       >
         <div className="flex items-center gap-3">
-          {Icon && (
-            <Icon size={20} className="text-current" />
-          )}
+          {Icon && <Icon size={20} className="text-current" />}
           <span className="font-medium">{label}</span>
         </div>
 
         {hasChildren && (
           <ChevronDown
             size={16}
-            color={isOpen ? "white" : "#004D77"}
             className={`transition-transform duration-200 ${
-              isOpen ? "rotate-180" : ""
+              isOpen ? "rotate-180 text-white" : ""
             }`}
           />
         )}
@@ -49,16 +61,25 @@ export default function SidebarItem({
       {/* SUBMENU */}
       {hasChildren && isOpen && (
         <div className="ml-6 mt-2 flex flex-col gap-1">
-          {children.map((child) => (
-            <a
-              key={child.href}
-              href={child.href}
-              className="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-200 text-[#004D77] hover:bg-[#004D77]/20"
-            >
-              {child.icon && <child.icon size={18} />}
-              {child.label}
-            </a>
-          ))}
+          {children.map((child) => {
+
+            const isActiveChild = pathname === child.href;
+
+            return (
+              <Link
+                key={child.href}
+                to={child.href}
+                className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-200 ${
+                  isActiveChild
+                    ? "bg-[#004D77]/20 text-[#004D77]"
+                    : "text-[#004D77] hover:bg-[#004D77]/20"
+                }`}
+              >
+                {child.icon && <child.icon size={18} />}
+                {child.label}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

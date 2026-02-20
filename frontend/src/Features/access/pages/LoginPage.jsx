@@ -1,4 +1,4 @@
-import LoginBanner from "../components/LoginBannjer"
+import LoginBanner from "../components/LoginBanner"
 import LoginCard from "../components/LoginCard"
 import imagenBanner from "../../../assets/imagenBanner.png"
 import HeaderLanding from "../../layouts/HeaderLanding"

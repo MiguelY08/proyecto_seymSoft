@@ -1,84 +1,139 @@
-// Mock data (simula respuesta de API)
-const mockRoles = [
-  {
-    id: 1,
-    name: "Administrador",
-    description: "Control total del sistema",
-    date: "2026-02-15"
-  },
-  {
-    id: 2,
-    name: "Vendedor",
-    description: "Gestión de ventas y clientes",
-    date: "2026-02-10"
+import { Info, SquarePen, Trash2 } from "lucide-react"
+
+export default function RolesTable({
+  roles = [],
+  onEdit,
+  onView,
+  onToggleActive
+}) {
+
+  if (!roles.length) {
+    return (
+      <div className="text-center py-10 text-gray-500">
+        No hay roles disponibles
+      </div>
+    )
   }
-];
 
-export default function RolesTable({ roles = mockRoles }) {
   return (
-    <div className="w-full overflow-x-auto bg-white rounded-xl shadow-md">
-      <table className="min-w-full text-sm font-lexend">
+    <div className="flex-1 overflow-x-auto rounded-xl shadow-md font-lexend">
 
-        {/* Header */}
-        <thead className="bg-[#0f4c6e] text-white">
+      <table className="min-w-max w-full">
+
+        {/* HEADER */}
+        <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="px-4 py-3 text-left">Nro</th>
-            <th className="px-4 py-3 text-left">Nombre del Rol</th>
-            <th className="px-4 py-3 text-left">Descripción</th>
-            <th className="px-4 py-3 text-left">Fecha Creación</th>
-            <th className="px-4 py-3 text-center">Funciones</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+              #
+            </th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+              Nombre del Rol
+            </th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+              Descripción
+            </th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+              Fecha Creación
+            </th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+              Funciones
+            </th>
           </tr>
         </thead>
 
-        {/* Body */}
-        <tbody className="divide-y">
+        {/* BODY */}
+        <tbody>
+          {roles.map((role, index) => {
 
-          {roles.length === 0 ? (
-            <tr>
-              <td colSpan="5" className="text-center py-6 text-gray-500">
-                No hay roles registrados
-              </td>
-            </tr>
-          ) : (
-            roles.map((rol, index) => (
-              <tr key={rol.id} className="hover:bg-gray-50 transition">
+            const rowBg =
+              index % 2 === 0 ? "bg-white" : "bg-gray-100"
 
-                <td className="px-4 py-3">{index + 1}</td>
+            return (
+              <tr
+                key={role.id}
+                className={`${rowBg} transition-colors`}
+              >
 
-                <td className="px-4 py-3 font-medium">
-                  {rol.name}
+                <td className="px-3 py-2 text-center text-xs">
+                  {index + 1}
                 </td>
 
-                <td className="px-4 py-3 text-gray-600">
-                  {rol.description}
+                <td className="px-3 py-2 text-center text-xs font-semibold">
+                  {role.name}
                 </td>
 
-                <td className="px-4 py-3">
-                  {rol.date}
+                <td className="px-3 py-2 text-center text-xs">
+                  {role.description}
                 </td>
 
-                <td className="px-4 py-3 flex justify-center gap-3">
+                <td className="px-3 py-2 text-center text-xs">
+                  {role.createdAt}
+                </td>
 
-                  <button className="text-blue-600 hover:text-blue-800 transition">
-                    ✏️
-                  </button>
+                {/* FUNCIONES */}
+                <td className="px-3 py-2">
+                  <div className="flex items-center justify-center gap-3">
 
-                  <button className="text-green-600 hover:text-green-800 transition">
-                    ⏻
-                  </button>
+                    {/* Toggle Activo */}
+                    <button
+                      onClick={() =>
+                        onToggleActive && onToggleActive(role.id)
+                      }
+                      className={`relative w-11 h-5 rounded-full transition-colors duration-300 cursor-pointer ${
+                        role.active
+                          ? "bg-green-500"
+                          : "bg-red-400"
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-1/2 -translate-y-1/2 text-white text-[9px] font-bold transition-all duration-300 ${
+                          role.active
+                            ? "left-1.5"
+                            : "right-1.5"
+                        }`}
+                      >
+                        {role.active ? "A" : "I"}
+                      </span>
 
-                  <button className="text-red-600 hover:text-red-800 transition">
-                    🗑️
-                  </button>
+                      <span
+                        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
+                          role.active
+                            ? "left-6"
+                            : "left-0.5"
+                        }`}
+                      />
+                    </button>
 
+                    {/* Ver */}
+                    <Info
+                      size={16}
+                      onClick={() => onView && onView(role)}
+                      className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-[#004D77]"
+                    />
+
+                    {/* Editar */}
+                    <SquarePen
+                      size={16}
+                      onClick={() => onEdit && onEdit(role)}
+                      className="text-gray-400 cursor-pointer hover:scale-110 hover:text-[#004D77] transition"
+                    />
+
+                    {/* Eliminar */}
+                    <Trash2
+                      size={16}
+                      className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-red-500"
+                    />
+
+                  </div>
                 </td>
 
               </tr>
-            ))
-          )}
-
+            )
+          })}
         </tbody>
+
       </table>
+
     </div>
-  );
+  )
 }

@@ -1,6 +1,6 @@
 import RegisterForm from "../components/RegisterForm"
 import imagenBanner from "../../../assets/imagenBanner.png"
-import LoginBanner from "../components/LoginBannjer"
+import LoginBanner from "../components/LoginBanner"
 import HeaderLanding from "../../layouts/HeaderLanding"
 import Footer from "../../layouts/Footer"
 

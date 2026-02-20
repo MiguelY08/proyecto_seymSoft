@@ -41,9 +41,10 @@ import Sales from '../../Features/administrtivePanel/sales/sales/Sales.jsx';
 import ReturnsS from '../../Features/administrtivePanel/sales/returns/Returns.jsx';
 import PaymentAndCredits from '../../Features/administrtivePanel/sales/paymentsAndCredits/PaymentAndCredits.jsx';
 
-import Appearance from '../../Features/administrtivePanel/appearance/Appearance.jsx';
+import RolesPage from "../../Features/administrtivePanel/configuration/roles/page/RolesPage.jsx";
+import Banners from "../../Features/administrtivePanel/appearance/Banners.jsx";
 
-import RolesTable from '../../Features/administrtivePanel/configuration/roles/components/RolesTable.jsx';
+
 
 
 const AppRouter = () => {
@@ -75,10 +76,11 @@ const AppRouter = () => {
           <Route path="sales/returns-s" element={ <ReturnsS /> } />
           <Route path="sales/payments-and-credits" element={ <PaymentAndCredits /> } />
 
-          <Route path="appearance/carousel" element={ <Appearance /> } />
+      
 
           <Route path="configuration">
-            <Route path="roles" element={<RolesTable />} />
+            <Route path="roles" element={<RolesPage />} />
+            <Route path="banners" element={ <Banners /> } />
           </Route>
         </Route>
       </Route>
@@ -96,7 +98,8 @@ const AppRouter = () => {
         {/* <Route path='favorites' element={ <Favorites/> } /> */}
         {/* <Route path='cart' element={ <Cart/> }/> */}
 
-        <Route path="/log-in" element={<LoginPage />} />
+        <Route path="/login" element={<LoginPage />} />
+
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/rescue-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />

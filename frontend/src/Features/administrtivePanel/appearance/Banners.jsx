@@ -1,6 +1,6 @@
 
 
-function Appearance() {
+function Banners() {
   return (
     <>
       <h1>GESTIÓN DE CARRUSEL</h1>
@@ -8,4 +8,4 @@ function Appearance() {
   );
 };
 
-export default Appearance;
+export default Banners;
