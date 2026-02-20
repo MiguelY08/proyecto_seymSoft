@@ -8,7 +8,6 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col">
 
-      <HeaderLanding />
 
       <main className="grow flex flex-col">
 
@@ -24,7 +23,6 @@ export default function LoginPage() {
 
       </main>
 
-      <Footer />
 
     </div>
   );

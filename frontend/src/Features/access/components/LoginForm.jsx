@@ -64,7 +64,7 @@ export default function LoginForm() {
           </label>
 
           <Link 
-            to="/forgot-password"
+            to="/forgotpassword"
             className="text-blue-700 hover:underline"
           >
             ¿Olvidaste tu contraseña?
@@ -72,12 +72,14 @@ export default function LoginForm() {
         </div>
 
         {/* Botón */}
-        <button
-          type="submit"
-          className="w-full bg-blue-900 text-white py-2 rounded-lg hover:bg-blue-800 transition cursor-pointer mt-4 text-sm"
-        >
-          Ingresar
-        </button>
+        <Link to="/admin">
+          <button
+            type="button"
+            className="w-full bg-blue-900 text-white py-2 rounded-lg hover:bg-blue-800 transition cursor-pointer mt-4 text-sm"
+          >
+            Ingresar
+          </button>
+        </Link>
 
         {/* Crear cuenta */}
         <div className="text-center text-xs mt-3">

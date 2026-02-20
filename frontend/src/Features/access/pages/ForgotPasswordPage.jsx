@@ -10,7 +10,6 @@ export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen flex flex-col">
 
-      <HeaderLanding />
 
       <main className="flex-grow flex flex-col">
 
@@ -26,7 +25,6 @@ export default function ResetPasswordPage() {
 
       </main>
 
-      <Footer />
 
     </div>
   )

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 
 export default function ForgotPasswordForm() {
 
@@ -51,12 +51,14 @@ export default function ForgotPasswordForm() {
             )}
           </div>
 
-          <button
-            type="submit"
-            className="bg-blue-900 text-white py-2 rounded-lg hover:bg-blue-800 transition cursor-pointer"
-          >
-            Enviar
-          </button>
+            <Link to="/resetpassword">
+              <button
+                type="button"
+                className="bg-[#004D77] w-full text-white py-2 rounded-lg hover:bg-[#004D77]/90 transition cursor-pointer"
+              >
+                Enviar
+              </button>
+            </Link>
 
         </form>
 
