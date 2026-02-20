@@ -1,6 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { X, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
+import { swalWarning } from '../../../shared/Alerts.js';
 
 function FormUser() {
   const navigate   = useNavigate();
@@ -18,29 +19,94 @@ function FormUser() {
     rol:       userToEdit?.rol       ?? '',
   });
 
+  const [errors, setErrors] = useState({});
+
   const tiposDocumento = ['CC', 'CE', 'NIT', 'TI', 'PP'];
   const roles          = ['Administrador', 'Empleado', 'Cliente'];
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    // Limpiar el error del campo al corregirlo
+    if (errors[e.target.name]) {
+      setErrors({ ...errors, [e.target.name]: '' });
+    }
+  };
+
+  // ─── Validaciones ───────────────────────────────────────────────────────────
+  const validate = () => {
+    const newErrors = {};
+
+    if (!form.tipo)
+      newErrors.tipo = 'Seleccione un tipo de documento.';
+
+    if (!form.documento.trim())
+      newErrors.documento = 'El documento es obligatorio.';
+    else if (!/^\d+$/.test(form.documento.trim()))
+      newErrors.documento = 'El documento solo debe contener números.';
+
+    if (!form.nombres.trim())
+      newErrors.nombres = 'Los nombres son obligatorios.';
+
+    if (!form.correo.trim())
+      newErrors.correo = 'El correo electrónico es obligatorio.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo.trim()))
+      newErrors.correo = 'Ingrese un correo electrónico válido. Ej: ejemplo@correo.com';
+
+    if (!form.telefono.trim())
+      newErrors.telefono = 'El teléfono es obligatorio.';
+
+    if (!form.rol)
+      newErrors.rol = 'Seleccione un rol.';
+
+    return newErrors;
   };
 
   const handleSubmit = () => {
+    const newErrors = validate();
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      swalWarning(
+        'Formulario incompleto',
+        'Por favor revisa los campos marcados en rojo antes de continuar.'
+      );
+      return;
+    }
+
     console.log(isEditing ? 'Editar usuario:' : 'Nuevo usuario:', form);
-    navigate('/users');
+    navigate('/admin/users');
   };
 
   const handleCancel = () => {
-    navigate('/users');
+    navigate('/admin/users');
   };
 
+  // ─── Clases de input según error ────────────────────────────────────────────
+  const inputClass = (field) =>
+    `w-full px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm border rounded-lg outline-none text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
+      errors[field]
+        ? 'border-red-400 focus:border-red-400 focus:ring-2 focus:ring-red-400/20'
+        : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
+    }`;
+
+  const selectClass = (field) =>
+    `appearance-none w-full pl-2 sm:pl-3 pr-8 sm:pr-10 py-2 sm:py-2.5 text-xs sm:text-sm border rounded-lg outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 ${
+      errors[field]
+        ? 'border-red-400 focus:border-red-400 focus:ring-2 focus:ring-red-400/20'
+        : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
+    }`;
+
+  // ─── Mensaje de error bajo el campo ─────────────────────────────────────────
+  const ErrorMsg = ({ field }) =>
+    errors[field]
+      ? <p className="text-red-500 text-[10px] sm:text-xs mt-0.5">{errors[field]}</p>
+      : null;
+
   return (
-    // ── Backdrop ──────────────────────────────────────────────────────────
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
       onClick={handleCancel}
     >
-      {/* ── Modal ───────────────────────────────────────────────────────── */}
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-lg overflow-hidden"
         onClick={(e) => e.stopPropagation()}
@@ -72,7 +138,11 @@ function FormUser() {
                   name="tipo"
                   value={form.tipo}
                   onChange={handleChange}
-                  className="appearance-none w-20 sm:w-24 pl-2 sm:pl-3 pr-6 sm:pr-8 py-2 sm:py-2.5 text-xs sm:text-sm border border-gray-300 rounded-lg focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 cursor-pointer"
+                  className={`appearance-none w-20 sm:w-24 pl-2 sm:pl-3 pr-6 sm:pr-8 py-2 sm:py-2.5 text-xs sm:text-sm border rounded-lg outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 ${
+                    errors.tipo
+                      ? 'border-red-400 focus:border-red-400 focus:ring-2 focus:ring-red-400/20'
+                      : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
+                  }`}
                 >
                   {tiposDocumento.map((t) => (
                     <option key={t} value={t}>{t}</option>
@@ -80,6 +150,7 @@ function FormUser() {
                 </select>
                 <ChevronDown className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
               </div>
+              <ErrorMsg field="tipo" />
             </div>
 
             <div className="flex flex-col gap-1 flex-1">
@@ -92,8 +163,9 @@ function FormUser() {
                 value={form.documento}
                 onChange={handleChange}
                 placeholder="Ingrese su número de documento"
-                className="w-full px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm border border-gray-300 rounded-lg focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none text-gray-700 placeholder-gray-400"
+                className={inputClass('documento')}
               />
+              <ErrorMsg field="documento" />
             </div>
           </div>
 
@@ -109,8 +181,9 @@ function FormUser() {
                 value={form.nombres}
                 onChange={handleChange}
                 placeholder="Nombres"
-                className="w-full px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm border border-gray-300 rounded-lg focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none text-gray-700 placeholder-gray-400"
+                className={inputClass('nombres')}
               />
+              <ErrorMsg field="nombres" />
             </div>
             <div className="flex flex-col gap-1 flex-1">
               <label className="text-xs sm:text-sm font-semibold text-gray-700">
@@ -122,7 +195,7 @@ function FormUser() {
                 value={form.apellidos}
                 onChange={handleChange}
                 placeholder="Apellidos"
-                className="w-full px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm border border-gray-300 rounded-lg focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none text-gray-700 placeholder-gray-400"
+                className={inputClass('apellidos')}
               />
             </div>
           </div>
@@ -138,8 +211,9 @@ function FormUser() {
               value={form.correo}
               onChange={handleChange}
               placeholder="ejemplo123@gmail.com"
-              className="w-full px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm border border-gray-300 rounded-lg focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none text-gray-700 placeholder-gray-400"
+              className={inputClass('correo')}
             />
+            <ErrorMsg field="correo" />
           </div>
 
           {/* Teléfono */}
@@ -153,8 +227,9 @@ function FormUser() {
               value={form.telefono}
               onChange={handleChange}
               placeholder="000-000-0000"
-              className="w-full px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm border border-gray-300 rounded-lg focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none text-gray-700 placeholder-gray-400"
+              className={inputClass('telefono')}
             />
+            <ErrorMsg field="telefono" />
           </div>
 
           {/* Rol */}
@@ -167,7 +242,7 @@ function FormUser() {
                 name="rol"
                 value={form.rol}
                 onChange={handleChange}
-                className="appearance-none w-full pl-2 sm:pl-3 pr-8 sm:pr-10 py-2 sm:py-2.5 text-xs sm:text-sm border border-gray-300 rounded-lg focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 cursor-pointer"
+                className={selectClass('rol')}
               >
                 <option value="" disabled>Seleccione un rol</option>
                 {roles.map((r) => (
@@ -176,6 +251,7 @@ function FormUser() {
               </select>
               <ChevronDown className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
             </div>
+            <ErrorMsg field="rol" />
           </div>
         </div>
 
