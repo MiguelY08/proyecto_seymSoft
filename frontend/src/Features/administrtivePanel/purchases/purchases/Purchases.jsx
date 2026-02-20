@@ -149,7 +149,7 @@ return (
 
 </div>  
 
-  </div>
+</div>
 
   {/* BOTÓN separado */}
   <Link

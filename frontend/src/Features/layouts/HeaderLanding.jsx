@@ -132,7 +132,7 @@ function HeaderLanding() {
 
                     <div className="p-2 flex flex-col gap-1">
                       <Link
-                        to="/log-in"
+                        to="/login"
                         className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-[#004D77]/10 hover:text-[#004D77] transition-all duration-200 cursor-pointer group"
                       >
                         <LogIn className="w-5 h-5 text-gray-400 group-hover:text-[#004D77] transition-colors" strokeWidth={2} />

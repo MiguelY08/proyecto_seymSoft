@@ -66,13 +66,7 @@ export default function Sidebar() {
         { label: "Pagos y abonos", href: `${ADMIN_BASE}/sales/payments-and-credits`, icon: DollarSign },
       ],
     },
-    {
-      label: "Apariencia",
-      icon: ImagePlay,
-      children: [
-        { label: "Carrusel", href: `${ADMIN_BASE}/appearance/carousel`, icon: ImagePlay },
-      ],
-    },
+
   ];
 
   const configChildren = [
@@ -80,6 +74,14 @@ export default function Sidebar() {
       label: "Gest. roles",
       href: `${ADMIN_BASE}/configuration/roles`,
       icon: SlidersHorizontal,
+    },
+    {
+      label: "Banner",
+      href: `${ADMIN_BASE}/configuration/banners`,
+      icon: ImagePlay,
+      children: [
+        { label: "Banners", href: `${ADMIN_BASE}/appearance/banners`, icon: ImagePlay },
+      ],
     },
   ];
 
