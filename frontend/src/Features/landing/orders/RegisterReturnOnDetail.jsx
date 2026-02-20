@@ -2,8 +2,6 @@ import { ChevronRight, X, AlertTriangle, Phone } from 'lucide-react';
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaInstagram, FaTiktok } from 'react-icons/fa';
-import HeaderLanding from '../../layouts/HeaderLanding.jsx';
-import Footer from '../../layouts/Footer.jsx';
 import BgPedidos from '../../../assets/BgPedidos.png';
 
 function RegisterReturnOnDetail() {
@@ -66,7 +64,6 @@ function RegisterReturnOnDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <HeaderLanding />
 
       {/* Banner */}
       <div className="px-4 sm:px-6 lg:px-8 py-4">
@@ -89,7 +86,7 @@ function RegisterReturnOnDetail() {
         {/* Botón volver y Breadcrumb */}
         <div className="mb-6">
           <button 
-            onClick={() => navigate(`/pedidos/${id}`)}
+            onClick={() => navigate(`/orders-l`)}
             className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors mb-4"
           >
             <X className="w-4 h-4" />
@@ -97,7 +94,7 @@ function RegisterReturnOnDetail() {
           </button>
 
           <div className="flex items-center gap-2 text-sm text-gray-600">
-            <a href="/devoluciones" className="hover:text-blue-600">Devoluciones</a>
+            <a href="/returnsOnOrders" className="hover:text-blue-600">Devoluciones</a>
             <ChevronRight className="w-4 h-4" />
             <span className="text-gray-900">Registrando devolución en el pedido No. {pedido.id}</span>
           </div>
@@ -223,7 +220,6 @@ function RegisterReturnOnDetail() {
         </div>
       </div>
 
-      <Footer />
     </div>
   );
 }

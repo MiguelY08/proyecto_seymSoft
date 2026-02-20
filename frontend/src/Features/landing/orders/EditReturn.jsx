@@ -2,8 +2,6 @@ import { ChevronRight, X, AlertTriangle, Phone, Upload, Plus, Minus, ChevronDown
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaInstagram, FaTiktok } from 'react-icons/fa';
-import HeaderLanding from '../../layouts/HeaderLanding.jsx';
-import Footer from '../../layouts/Footer.jsx';
 import BgPedidos from '../../../assets/BgPedidos.png';
 
 function EditReturn() {
@@ -96,7 +94,6 @@ function EditReturn() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <HeaderLanding />
 
       {/* Banner */}
       <div className="px-4 sm:px-6 lg:px-8 py-4">
@@ -119,7 +116,7 @@ function EditReturn() {
         {/* Botón volver y Breadcrumb */}
         <div className="mb-6">
           <button 
-            onClick={() => navigate(`/devoluciones/${id}`)}
+            onClick={() => navigate(`/returns/${id}`)}
             className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors mb-4"
           >
             <X className="w-4 h-4" />
@@ -362,7 +359,6 @@ function EditReturn() {
         </div>
       </div>
 
-      <Footer />
     </div>
   );
 }

@@ -1,8 +1,9 @@
 import { Search, ChevronDown, Package, MapPin, CreditCard } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import HeaderLanding from '../../layouts/HeaderLanding.jsx';
-import Footer from '../../layouts/Footer.jsx'
 import BgPedidos from '../../../assets/BgPedidos.png';
+import cuaderno from '../../../assets/products/cuadernoprimaverax100h.png';
+import { PurchasesFilters } from '../../shared/DateFilter';
 
 function Orders() {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ function Orders() {
   const pedidos = [
     {
       id: '123456789',
-      fecha: '7 de septiembre',
+      fecha: '7 de septiembre 2025',
       estado: 'En proceso',
       titulo: 'El pedido ha sido recibido',
       metodoEnvio: 'Entrega',
@@ -64,20 +65,24 @@ function Orders() {
   ];
 
   const handleVerPedido = (pedidoId) => {
-    navigate(`/pedidos/${pedidoId}`);
+    navigate(`/orders-l/${pedidoId}`);
   };
 
   const handleGenerarDevolucion = (pedidoId) => {
-    navigate(`/registrar`);
+    navigate(`/registerReturn`);
   };
 
   const handleVerDevoluciones = () => {
-    navigate('/devoluciones');
+    navigate('/returnsOnOrders');
   };
+
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [fechaInicial, setFechaInicial] = useState("");
+  const [fechaFinal, setFechaFinal] = useState("");
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <HeaderLanding />
 
       {/* Banner Pedidos */}
       <div className="px-4 sm:px-6 lg:px-8 py-4">
@@ -104,21 +109,19 @@ function Orders() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Barra de búsqueda y filtros */}
         <div className="flex items-center gap-4 mb-6">
-          <div className="relative w-80">
-            <input
-              type="text"
-              placeholder="Busca por pedido y más..."
-              className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-600"
-            />
-            <Search className="absolute right-3 top-2.5 w-5 h-5 text-gray-400" />
-          </div>
+          
           
           <div className="h-10 w-px bg-gray-300"></div>
           
-          <button className="flex items-center gap-1 text-gray-700 hover:text-gray-900">
-            Fecha
-            <ChevronDown className="w-4 h-4" />
-          </button>
+          <PurchasesFilters
+          search={search}
+          setSearch={setSearch}
+          fechaInicial={fechaInicial}
+          setFechaInicial={setFechaInicial}
+          fechaFinal={fechaFinal}
+          setFechaFinal={setFechaFinal}
+          setCurrentPage={setCurrentPage}
+        />
           
           <div className="h-10 w-px bg-gray-300"></div>
           
@@ -157,7 +160,7 @@ function Orders() {
                   {/* Icono del pedido */}
                   <div className="flex-shrink-0">
                     <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                      <Package className="w-8 h-8 text-gray-400" />
+                      <img src={cuaderno} alt="Cuaderno" className="w-full h-full" />
                     </div>
                   </div>
 
@@ -218,7 +221,6 @@ function Orders() {
         </div>
       </div>
       
-      <Footer />
     </div>
   );
 }

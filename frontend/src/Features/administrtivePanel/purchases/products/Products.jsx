@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Eye, SquarePen, Search, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import DetailProduct from './modals/DetailProduct.jsx';
+import CreateProduct from './modals/CreateProduct.jsx';
+import EditProduct from './modals/EditProduct.jsx';
 
 const sampleProducts = [
   { id: 1, nombre: 'Resma de papel A4 500 hojas', codBarras: '23243532', referencia: '5052', categoria: 'Oficina', stock: 120, precio: 50000, activo: true },
@@ -17,9 +19,6 @@ const sampleProducts = [
   { id: 11, nombre: 'Grapadora metálica grande', codBarras: '6575465', referencia: '34589', categoria: 'Oficina', stock: 40, precio: 6000, activo: false },
   { id: 12, nombre: 'Bloc de dibujo tamaño carta', codBarras: '33465464', referencia: '4871', categoria: 'Artes/Escolar', stock: 55, precio: 4000, activo: true },
   { id: 13, nombre: 'Corrector de cinta', codBarras: '5474546', referencia: '5476', categoria: 'Escolar', stock: 3, precio: 5000, activo: false },
-  { id: 14, nombre: 'Cinta de enmascarar mediana', codBarras: '23345642', referencia: '2332', categoria: 'Artes', stock: 11, precio: 4500, activo: true },
-  { id: 15, nombre: 'Cortachera 3 bolsillos', codBarras: '90456406', referencia: '9006', categoria: 'Escolar', stock: 27, precio: 11000, activo: true },
-  { id: 16, nombre: 'Micropunta negra 0.5mm', codBarras: '78545641', referencia: '7831', categoria: 'Escolar/Oficina', stock: 18, precio: 2500, activo: true },
 ];
 
 const RECORDS_PER_PAGE = 16;
@@ -35,10 +34,45 @@ function ActiveToggle({ activo, onChange }) {
         activo ? 'bg-green-500' : 'bg-red-400'
       }`}
     >
-      <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
-        activo ? 'left-5.75' : 'left-0.5'
-      }`} />
+      {/* Letra A o I */}
+      <span
+        className={`absolute top-0 h-full flex items-center text-white font-bold text-[9px] transition-all duration-300 ${
+          activo ? 'left-1.5' : 'right-1.5'
+        }`}
+      >
+        {activo ? 'A' : 'I'}
+      </span>
+      {/* Círculo deslizante */}
+      <span
+        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
+          activo ? 'left-[1.4rem]' : 'left-0.5'
+        }`}
+      />
     </button>
+  );
+}
+
+// ─── Función para resaltar texto ──────────────────────────────────────────────
+function HighlightText({ text, highlight }) {
+  if (!highlight.trim()) {
+    return <span>{text}</span>;
+  }
+
+  const regex = new RegExp(`(${highlight})`, 'gi');
+  const parts = text.toString().split(regex);
+
+  return (
+    <span>
+      {parts.map((part, index) =>
+        regex.test(part) ? (
+          <span key={index} className="bg-[#004d7726] text-[#004D77] font-semibold">
+            {part}
+          </span>
+        ) : (
+          <span key={index}>{part}</span>
+        )
+      )}
+    </span>
   );
 }
 
@@ -99,17 +133,32 @@ function Products({ data: initialData = sampleProducts }) {
   const [data, setData]               = useState(initialData);
   const [search, setSearch]           = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [showModal, setShowModal]     = useState(false); // Estado del modal
-  const [selectedProduct, setSelectedProduct] = useState(null); // Producto seleccionado
+  const [showModal, setShowModal]     = useState(false);
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const navigate                      = useNavigate();
+
+  // ── Filtrado por búsqueda ─────────────────────────────────────────────────
+  const filteredData = data.filter((row) => {
+    const query = search.toLowerCase().trim();
+    if (!query) return true;
+    return (
+      row.nombre.toLowerCase().includes(query) ||
+      row.codBarras.toLowerCase().includes(query) ||
+      row.referencia.toLowerCase().includes(query) ||
+      row.categoria.toLowerCase().includes(query) ||
+      row.precio.toString().includes(query) ||
+      row.stock.toString().includes(query)
+    );
+  });
 
   const handleToggle = (id) => {
     setData((prev) => prev.map((row) => row.id === id ? { ...row, activo: !row.activo } : row));
   };
 
   const handleNuevoProducto = () => {
-    console.log('Crear nuevo producto');
-    // navigate('/products/new');
+    setShowFormModal(true);
   };
 
   const handleVerDetalles = (producto) => {
@@ -117,29 +166,54 @@ function Products({ data: initialData = sampleProducts }) {
     setShowModal(true);
   };
 
+  const handleEditarProducto = (producto) => {
+    setSelectedProduct(producto);
+    setShowEditModal(true);
+  };
+
   const handleCloseModal = () => {
     setShowModal(false);
     setSelectedProduct(null);
   };
 
+  const handleCloseFormModal = () => {
+    setShowFormModal(false);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setSelectedProduct(null);
+  };
+
+  const handleEditFromDetail = (producto) => {
+    setSelectedProduct(producto);
+    setShowEditModal(true);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       
-      <div className={`h-full flex flex-col gap-3 p-3 sm:p-4 ${showModal ? 'blur-sm' : ''}`}>
+      <div className={`h-full flex flex-col gap-3 p-3 sm:p-4 ${showModal || showFormModal || showEditModal ? 'blur-sm' : ''}`}>
         
         {/* ── Barra superior ───────────────────────────────────────────────── */}
         <div className="flex items-center justify-between gap-2 sm:gap-4 shrink-0">
 
           {/* Buscador */}
-          <div className="relative flex-1 sm:flex-none sm:w-72 md:w-96">
+          <div className="relative w-full sm:w-80">
             <input
               type="text"
-              placeholder="Buscar Producto"
+              placeholder="Buscar"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-4 pr-10 py-2 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400"
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full pl-4 pr-10 py-2.5 bg-white rounded-xl border border-gray-300 shadow-sm outline-none focus:ring-2 focus:ring-sky-900 text-black text-sm"
             />
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" strokeWidth={2} />
+            <Search
+              size={18}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
+            />
           </div>
 
           {/* Botón Nuevo */}
@@ -147,8 +221,7 @@ function Products({ data: initialData = sampleProducts }) {
             <button
               onClick={handleNuevoProducto}
               title="Crear nuevo producto"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm rounded-lg text-white transition-colors cursor-pointer"
-              style={{ backgroundColor: '#004D77' }}
+              className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-sky-700 rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
             >
               <span className="hidden sm:inline">Crear nuevo producto</span>
               <span className="sm:hidden">Nuevo</span>
@@ -173,17 +246,29 @@ function Products({ data: initialData = sampleProducts }) {
             </thead>
 
             <tbody>
-              {data.map((row, index) => {
+              {filteredData.map((row, index) => {
                 const rowBg = index % 2 === 0 ? 'bg-white' : 'bg-gray-100';
                 return (
                   <tr key={row.id} className={`transition-colors duration-150 ${rowBg}`}>
 
-                    <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">{row.nombre}</td>
-                    <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">{row.codBarras}</td>
-                    <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">{row.referencia}</td>
-                    <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">{row.categoria}</td>
-                    <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">{row.stock}</td>
-                    <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">{row.precio.toLocaleString()} COP</td>
+                    <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">
+                      <HighlightText text={row.nombre} highlight={search} />
+                    </td>
+                    <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                      <HighlightText text={row.codBarras} highlight={search} />
+                    </td>
+                    <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                      <HighlightText text={row.referencia} highlight={search} />
+                    </td>
+                    <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                      <HighlightText text={row.categoria} highlight={search} />
+                    </td>
+                    <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                      <HighlightText text={row.stock.toString()} highlight={search} />
+                    </td>
+                    <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                      <HighlightText text={row.precio.toLocaleString()} highlight={search} />
+                    </td>
                     
                     <td className="px-3 py-1.5">
                       <div className="flex items-center justify-center gap-1 sm:gap-1.5">
@@ -195,7 +280,7 @@ function Products({ data: initialData = sampleProducts }) {
                           <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                         </button>
                         <button
-                          onClick={() => console.log('Editar', row.id)}
+                          onClick={() => handleEditarProducto(row)}
                           className="text-gray-400 hover:text-[#004D77] transition-colors cursor-pointer"
                           title="Editar"
                         >
@@ -214,13 +299,22 @@ function Products({ data: initialData = sampleProducts }) {
         {/* ── Footer: registros + paginador ────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
           <p className="text-xs sm:text-sm font-semibold text-gray-700">
-            Mostrando{' '}
-            <span className="text-[#004D77]">1</span>
-            {' '}a{' '}
-            <span className="text-[#004D77]">{RECORDS_PER_PAGE}</span>
-            {' '}de{' '}
-            <span className="text-[#004D77]">{TOTAL_RECORDS}</span>
-            {' '}productos
+            {search.trim() ? (
+              <>
+                <span className="text-[#004D77]">{filteredData.length}</span>
+                {' '}resultado{filteredData.length !== 1 ? 's' : ''} encontrado{filteredData.length !== 1 ? 's' : ''}
+              </>
+            ) : (
+              <>
+                Mostrando{' '}
+                <span className="text-[#004D77]">1</span>
+                {' '}a{' '}
+                <span className="text-[#004D77]">{RECORDS_PER_PAGE}</span>
+                {' '}de{' '}
+                <span className="text-[#004D77]">{TOTAL_RECORDS}</span>
+                {' '}productos
+              </>
+            )}
           </p>
 
           <div className="bg-white shadow-md rounded-xl px-3 py-2">
@@ -240,6 +334,20 @@ function Products({ data: initialData = sampleProducts }) {
         producto={selectedProduct}
         isOpen={showModal}
         onClose={handleCloseModal}
+        onEdit={handleEditFromDetail}
+      />
+
+      {/* Modal de crear producto */}
+      <CreateProduct
+        isOpen={showFormModal}
+        onClose={handleCloseFormModal}
+      />
+
+      {/* Modal de editar producto */}
+      <EditProduct
+        producto={selectedProduct}
+        isOpen={showEditModal}
+        onClose={handleCloseEditModal}
       />
 
     </div>
