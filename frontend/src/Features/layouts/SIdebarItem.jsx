@@ -30,7 +30,7 @@ export default function SidebarItem({
       >
         <div className="flex items-center gap-3">
           {Icon && (
-           <Icon size={20} className="text-current" />
+            <Icon size={20} className="text-current" />
           )}
           <span className="font-medium">{label}</span>
         </div>
