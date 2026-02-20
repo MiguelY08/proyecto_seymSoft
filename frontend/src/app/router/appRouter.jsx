@@ -11,7 +11,8 @@ import ResetPasswordPage from "../../Features/access/pages/ResetPasswordPage.jsx
 // LANDING
 import Landing from "../../Features/landing/Landing.jsx";
 import Home from '../../Features/landing/home/Home.jsx';
-import Shop from "../../Features/landing/shop/Shop.jsx";
+import Shop from "../../Features/landing/shop/pages/Shop.jsx";
+import ShopDetail from "../../Features/landing/shop/pages/ShopDetails.jsx";
 import OrdersL from "../../Features/landing/orders/Orders.jsx";
 import Favorites from "../../Features/landing/favorites/Favorites.jsx";
 import ShoppingCart from "../../Features/landing/shoppingCart/ShoppingCart.jsx";
@@ -27,11 +28,11 @@ import Users from '../../Features/administrtivePanel/users/users/Users.jsx';
 import FormUser from '../../Features/administrtivePanel/users/users/modals/FormUser.jsx';
 import InfoUser from '../../Features/administrtivePanel/users/users/modals/InfoUser.jsx';
 
-import Categories from '../../Features/administrtivePanel/purchases/categories/Categories.jsx';
+import Categories from "../../Features/administrtivePanel/purchases/categories/pages/Categories.jsx";
 import Products from '../../Features/administrtivePanel/purchases/products/Products.jsx';
 import Providers from '../../Features/administrtivePanel/purchases/providers/Providers.jsx';
-import Purchases from "../../Features/administrtivePanel/purchases/purchases/Purchases.jsx";
-import CreatePurchase from "../../Features/administrtivePanel/purchases/purchases/CreatePurchase.jsx";
+import Purchases from "../../Features/administrtivePanel/purchases/purchases/pages/Purchases.jsx";
+import CreatePurchase from "../../Features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx";
 import ReturnsP from '../../Features/administrtivePanel/purchases/returns/Returns.jsx';
 import NonConformingProducts from '../../Features/administrtivePanel/purchases/nonConformingProducts/NonConformingProducts.jsx';
 
@@ -91,6 +92,10 @@ const AppRouter = () => {
         <Route path='orders-l' element={ <OrdersL/> } /> 
          <Route path='favorites' element={ <Favorites/> } /> 
          <Route path='cart' element={ <ShoppingCart/> }/> 
+        <Route path='shop/detail' element={ <ShopDetail/> }/>
+        {/* <Route path='orders-l' element={ <Orders/> } /> */}
+        {/* <Route path='favorites' element={ <Favorites/> } /> */}
+        {/* <Route path='cart' element={ <Cart/> }/> */}
 
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

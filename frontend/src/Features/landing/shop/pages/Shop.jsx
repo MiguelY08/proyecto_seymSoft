@@ -1,19 +1,21 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
-import Header from "../../layouts/HeaderLanding";
-import Footer from "../../layouts/Footer";
-import BgTienda from "../../../assets/BgTienda.png";
-import ProductCard from "../../shared/ProductCard";
-import nacional from "../../../assets/products/atlNacional.png";
-import Pagination from "../../shared/PaginationLanding";
-import notebookPen from "../../../assets/products/notebookAndPen.png";
-import correctorcinta from "../../../assets/products/correctorencinta.png";
-import cuadernoprimavera from "../../../assets/products/cuadernoprimaverax100h.png";
-import setsharpie from "../../../assets/products/setsharpiex30.png";
-import sewingmachine from "../../../assets/products/sewingmachine.png";
-import Tijeraspunta from "../../../assets/products/Tijeraspuntaroma.png";
-import vinilopq from "../../../assets/products/vinilopqpowercolorrojo.png";
 
+import Header from "../../../layouts/HeaderLanding";
+import Footer from "../../../layouts/Footer";
+import Filters from "../components/FilterLanding";
+import SortDropdown from "../components/SortDropdown";
+import ProductCard from "../../../shared/ProductCard";
+import Pagination from "../../../shared/PaginationLanding";
+
+import BgTienda from "../../../../assets/BgTienda.png";
+import nacional from "../../../../assets/products/atlNacional.png";
+import notebookPen from "../../../../assets/products/notebookAndPen.png";
+import correctorcinta from "../../../../assets/products/correctorencinta.png";
+import cuadernoprimavera from "../../../../assets/products/cuadernoprimaverax100h.png";
+import setsharpie from "../../../../assets/products/setsharpiex30.png";
+import sewingmachine from "../../../../assets/products/sewingmachine.png";
+import Tijeraspunta from "../../../../assets/products/Tijeraspuntaroma.png";
+import vinilopq from "../../../../assets/products/vinilopqpowercolorrojo.png";
 
 function Shop() {
 
@@ -39,7 +41,6 @@ function Shop() {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedBrands, setSelectedBrands] = useState([]);
 
-  // 🔽 ORDEN
   const [selectedSort, setSelectedSort] = useState("relevant");
   const [sortOpen, setSortOpen] = useState(false);
 
@@ -69,7 +70,7 @@ function Shop() {
     setCurrentPage(1);
   };
 
-  // 🔎 FILTRO
+  // FILTRO
   const filteredProducts = products.filter(product => {
     const matchCategory =
       selectedCategories.length === 0 ||
@@ -82,7 +83,7 @@ function Shop() {
     return matchCategory && matchBrand;
   });
 
-  // 🔽 ORDENAMIENTO
+  // ORDEN
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     if (selectedSort === "price_high") return b.price - a.price;
     if (selectedSort === "price_low") return a.price - b.price;
@@ -101,7 +102,6 @@ function Shop() {
 
   return (
     <>
-      <Header />
 
       {/* HERO */}
       <section className="mt-2 w-full flex items-center justify-center">
@@ -121,104 +121,30 @@ function Shop() {
         <div className="flex flex-col lg:flex-row gap-6">
 
           {/* FILTROS */}
-          <div className="w-64 bg-white border border-gray-200 rounded-lg p-4">
-            <h2 className="text-xl font-semibold">Filtros</h2>
-            <p className="text-sm text-gray-500">{totalProducts} resultados</p>
-
-            {/* Categorías */}
-            <button
-              onClick={() => setCategoryOpen(!categoryOpen)}
-              className="flex justify-between w-full py-2 mt-4"
-            >
-              <span className="font-medium">Categorías</span>
-              {categoryOpen ? <ChevronUp /> : <ChevronDown />}
-            </button>
-
-            {categoryOpen && (
-              <div className="space-y-2 mt-2">
-                {categories.map(cat => (
-                  <label key={cat} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedCategories.includes(cat)}
-                      onChange={() => handleCategoryChange(cat)}
-                      className="mr-2"
-                    />
-                    {cat}
-                  </label>
-                ))}
-              </div>
-            )}
-
-            <hr className="my-4" />
-
-            {/* Marcas */}
-            <button
-              onClick={() => setBrandOpen(!brandOpen)}
-              className="flex justify-between w-full py-2"
-            >
-              <span className="font-medium">Marca</span>
-              {brandOpen ? <ChevronUp /> : <ChevronDown />}
-            </button>
-
-            {brandOpen && (
-              <div className="space-y-2 mt-2">
-                {brands.map(brand => (
-                  <label key={brand} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedBrands.includes(brand)}
-                      onChange={() => handleBrandChange(brand)}
-                      className="mr-2"
-                    />
-                    {brand}
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
+          <Filters
+            totalProducts={totalProducts}
+            categories={categories}
+            brands={brands}
+            categoryOpen={categoryOpen}
+            brandOpen={brandOpen}
+            setCategoryOpen={setCategoryOpen}
+            setBrandOpen={setBrandOpen}
+            selectedCategories={selectedCategories}
+            selectedBrands={selectedBrands}
+            handleCategoryChange={handleCategoryChange}
+            handleBrandChange={handleBrandChange}
+          />
 
           {/* PRODUCTOS */}
           <div className="flex-1">
 
-            {/* ORDENAR */}
-            <div className="flex justify-end mb-4 relative">
-              <button
-                onClick={() => setSortOpen(!sortOpen)}
-                className="flex items-center gap-2 text-[#000000]"
-              >
-                Ordenar por:{" "}
-                <span className="text-[#004D77] font-medium">
-                  {sortOptions.find(opt => opt.value === selectedSort)?.label}
-                </span>
-                <ChevronDown
-                  className={`w-5 h-5 transition-transform ${
-                    sortOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-
-              {sortOpen && (
-                <div className="absolute right-0 mt-10 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
-                  {sortOptions.map(option => (
-                    <button
-                      key={option.value}
-                      onClick={() => {
-                        setSelectedSort(option.value);
-                        setSortOpen(false);
-                      }}
-                      className={`w-full text-left px-4 py-3 hover:bg-gray-50 ${
-                        selectedSort === option.value
-                          ? "bg-blue-50 text-blue-600 font-medium"
-                          : "text-gray-700"
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <SortDropdown
+              selectedSort={selectedSort}
+              setSelectedSort={setSelectedSort}
+              sortOpen={sortOpen}
+              setSortOpen={setSortOpen}
+              sortOptions={sortOptions}
+            />
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {currentProducts.map(product => (
