@@ -111,7 +111,7 @@ function HeaderLanding() {
               <IconButton icon={ShoppingCart} to="/cart"      badge={0} scrolled={scrolled} />
 
               {/* ── Perfil: versión SESIÓN INICIADA (pruebas) ─────────────── */}
-              <div className="relative hidden sm:block" ref={modalRef}>
+              {/* <div className="relative hidden sm:block" ref={modalRef}>
                 <button
                   onClick={() => setProfileModal(!profileModal)}
                   className={`relative rounded-full bg-[#004D77] hover:bg-[#003d5e] transition-all duration-150 cursor-pointer flex items-center justify-center font-bold text-white ${
@@ -157,10 +157,10 @@ function HeaderLanding() {
                     </div>
                   </div>
                 )}
-              </div>
+              </div> */}
 
               {/* ── Perfil: versión SIN SESIÓN (original — comentado) ──────── */}
-              {/* <div className="relative hidden sm:block" ref={modalRef}>
+              <div className="relative hidden sm:block" ref={modalRef}>
                 <button
                   onClick={() => setProfileModal(!profileModal)}
                   className={`relative rounded-full hover:bg-[#004D77]/10 transition-all duration-150 group cursor-pointer flex items-center justify-center ${
@@ -210,7 +210,7 @@ function HeaderLanding() {
                     </div>
                   </div>
                 )}
-              </div> */}
+              </div>
               {/* ─────────────────────────────────────────────────────────────── */}
 
               {/* Menú hamburguesa */}

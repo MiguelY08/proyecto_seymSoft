@@ -14,8 +14,11 @@ import Home from '../../Features/landing/home/Home.jsx';
 import Shop from "../../Features/landing/shop/pages/Shop.jsx";
 import ShopDetail from "../../Features/landing/shop/pages/ShopDetails.jsx";
 import OrdersL from "../../Features/landing/orders/Orders.jsx";
+import OrderDetail from "../../Features/landing/orders/OrderDetail.jsx";
 import Favorites from "../../Features/landing/favorites/Favorites.jsx";
 import ShoppingCart from "../../Features/landing/shoppingCart/ShoppingCart.jsx";
+import ReturnsOnOrders from "../../Features/landing/orders/Returns_On_Orders.jsx"
+import RegisterReturn from "../../Features/landing/orders/RegisterReturnOnDetail.jsx"
 
 // PANEL ADMINISTRATIVO
 import AdminLayout from "../../Features/layouts/AdminLayout";
@@ -45,6 +48,13 @@ import RolesPage from "../../Features/administrtivePanel/configuration/roles/pag
 import Banners from "../../Features/administrtivePanel/appearance/Banners.jsx";
 
 
+import RolesTable from '../../Features/administrtivePanel/configuration/roles/components/RolesTable.jsx';
+import RegisterReturnOnDetail from "../../Features/landing/orders/RegisterReturnOnDetail.jsx";
+import DetailReturnsOnOrders from "../../Features/landing/orders/DetailReturnsOnOrders.jsx";
+import EditReturn from "../../Features/landing/orders/EditReturn.jsx";
+import CreateProduct from "../../Features/administrtivePanel/purchases/products/modals/CreateProduct.jsx";
+import FormProduct from "../../Features/administrtivePanel/purchases/products/modals/CreateProduct.jsx";
+import EditProduct from "../../Features/administrtivePanel/purchases/products/modals/EditProduct.jsx";
 
 
 const AppRouter = () => {
@@ -99,6 +109,20 @@ const AppRouter = () => {
         {/* <Route path='cart' element={ <Cart/> }/> */}
 
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/orders-l/:id" element={<OrderDetail />} />    
+        <Route path='returnsOnOrders' element={ <ReturnsOnOrders/> } />
+         <Route path='registerReturn' element={ <RegisterReturn/> } />
+         <Route path='favorites' element={ <Favorites/> } /> 
+         <Route path='cart' element={ <ShoppingCart/> }/> 
+         <Route path='returns/:id' element={ <DetailReturnsOnOrders/> }/> 
+         <Route path='edit/:id' element={ <EditReturn/> }/>
+         <Route path="/returns/:id" element={<RegisterReturnOnDetail />} />
+         <Route path="create" element={<FormProduct/>} />
+         <Route path="edit" element={<EditProduct/>} />
+
+
+
+
 
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/rescue-password" element={<ForgotPasswordPage />} />

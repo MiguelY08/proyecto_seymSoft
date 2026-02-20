@@ -4,8 +4,10 @@ function DetailProduct({ producto, isOpen, onClose }) {
   if (!isOpen || !producto) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full shadow-2xl relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="bg-white rounded-lg max-w-2xl w-full shadow-2xl relative z-10">
         {/* Header del modal */}
         <div className="flex items-center justify-between p-4 border-b" style={{ backgroundColor: '#004D77' }}>
           <h3 className="text-lg font-bold text-white">Detalles del producto</h3>

@@ -1,8 +1,7 @@
 import { Search, ChevronDown, Package, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import HeaderLanding from '../../layouts/HeaderLanding.jsx';
-import Footer from '../../layouts/Footer.jsx';
 import BgPedidos from '../../../assets/BgPedidos.png';
+import ReturnDetail from '../orders/DetailReturnsOnOrders.jsx';
 
 function Return_On_Orders() {
   const navigate = useNavigate();
@@ -42,7 +41,7 @@ function Return_On_Orders() {
   ];
 
   const handleVerDevolucion = (devolucionId) => {
-    navigate(`/devoluciones/${devolucionId}`);
+    navigate(`/returns/${devolucionId}`);
   };
 
   const handleSolicitarCancelacion = (devolucionId) => {
@@ -52,7 +51,6 @@ function Return_On_Orders() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <HeaderLanding />
 
       {/* Banner */}
       <div className="px-4 sm:px-6 lg:px-8 py-4">
@@ -76,7 +74,7 @@ function Return_On_Orders() {
         {/* Botón volver y barra de búsqueda */}
         <div className="flex items-center gap-4 mb-6">
           <button 
-            onClick={() => navigate('/pedidos')}
+            onClick={() => navigate('/orders-l')}
             className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
           >
             <X className="w-4 h-4" />
@@ -183,7 +181,6 @@ function Return_On_Orders() {
         </div>
       </div>
 
-      <Footer />
     </div>
   );
 }
