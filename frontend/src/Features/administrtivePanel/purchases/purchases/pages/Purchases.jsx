@@ -382,16 +382,18 @@ export const Purchases = () => {
       )}
 
       {!loading && !error && filteredProducts.length > 0 && (
-        <PurchasesTable
-          currentData={currentData}
-          filteredProducts={filteredProducts}
-          currentPage={currentPage}
-          setCurrentPage={setCurrentPage}
-          totalPages={totalPages}
-          startIndex={startIndex}
-          endIndex={endIndex}
-          handleCancel={handleCancel}
-        />
+       <PurchasesTable
+      currentData={currentData}
+      filteredProducts={filteredProducts}
+      currentPage={currentPage}
+      setCurrentPage={setCurrentPage}
+      totalPages={totalPages}
+      startIndex={startIndex}
+      endIndex={endIndex}
+      handleCancel={handleCancel}
+      search={search}   // 👈 agregar esto
+      />
+
       )}
     </div>
   );

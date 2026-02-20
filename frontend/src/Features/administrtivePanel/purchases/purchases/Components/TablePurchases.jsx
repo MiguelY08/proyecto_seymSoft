@@ -1,6 +1,25 @@
 import React from "react";
 import { Info, RefreshCw, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
 
+
+const highlightText = (text, search) => {
+  if (!search) return text;
+
+  const regex = new RegExp(`(${search})`, "gi");
+  const parts = text.split(regex);
+
+  return parts.map((part, index) =>
+    part.toLowerCase() === search.toLowerCase() ? (
+      <span key={index} className="bg-[#004d7726] text-[#004D77]  rounded px-1">
+        {part}
+      </span>
+    ) : (
+      part
+    )
+  );
+};
+
+
 export const PurchasesTable = ({
   currentData,
   filteredProducts,
@@ -10,7 +29,9 @@ export const PurchasesTable = ({
   startIndex,
   endIndex,
   handleCancel,
+  search,  // 👈 agregar
 }) => {
+
   return (
     <>
       <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
@@ -57,13 +78,13 @@ export const PurchasesTable = ({
                     {startIndex + index + 1}
                   </td>
                   <td className="px-3 py-2.5">
-                    {compra.numeroFacturacion}
+                     {highlightText(compra.numeroFacturacion || "", search)}
                   </td>
                   <td className="px-3 py-2.5">
                     {compra.fechaCompra}
                   </td>
                   <td className="px-3 py-2.5">
-                    {compra.proveedor}
+                    {highlightText(compra.proveedor || "", search)}
                   </td>
                   <td className="px-3 py-2.5 text-center">
                     {compra.cantidadProductos}
@@ -81,25 +102,28 @@ export const PurchasesTable = ({
                           : "bg-yellow-100 text-yellow-700"
                       }`}
                     >
-                      {compra.estado || "Devuelta"}
+                      {highlightText(compra.estado || "Devuelta", search)}
                     </span>
                   </td>
                   <td className="px-3 py-2.5 text-center">
                     <div className="flex justify-center gap-2">
-                      <button className="hover:text-blue-600 transition-colors">
+                      <button className="text-gray-400 hover:text-blue-600 transition-colors">
                         <Info size={16} />
                       </button>
-                      <button className="hover:text-yellow-600 transition-colors">
+
+                      <button className="text-gray-400 hover:text-yellow-600 transition-colors">
                         <RefreshCw size={16} />
                       </button>
+
                       <button
                         onClick={() => handleCancel(compra.id)}
-                        className="hover:text-red-600 transition-colors"
+                        className="text-gray-400 hover:text-red-600 transition-colors"
                       >
                         <XCircle size={16} />
                       </button>
                     </div>
                   </td>
+
                 </tr>
               ))}
             </tbody>

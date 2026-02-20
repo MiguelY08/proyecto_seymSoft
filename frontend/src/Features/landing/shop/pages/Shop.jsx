@@ -6,6 +6,7 @@ import Filters from "../components/FilterLanding";
 import SortDropdown from "../components/SortDropdown";
 import ProductCard from "../../../shared/ProductCard";
 import Pagination from "../../../shared/PaginationLanding";
+import ShopHero from "../components/ShopHero";
 
 import BgTienda from "../../../../assets/BgTienda.png";
 import nacional from "../../../../assets/products/atlNacional.png";
@@ -104,18 +105,11 @@ function Shop() {
     <>
 
       {/* HERO */}
-      <section className="mt-2 w-full flex items-center justify-center">
-        <div className="w-full sm:w-[98%] lg:w-[95%] h-[20vh] relative overflow-hidden rounded-lg">
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${BgTienda})` }}
-          />
-          <div className="absolute inset-0 bg-blue-950/75" />
-          <div className="relative z-10 w-full h-full flex items-center justify-center">
-            <h2 className="text-5xl font-bold text-white">Tienda</h2>
-          </div>
-        </div>
-      </section>
+      <ShopHero
+        image={BgTienda}
+        title="Tienda"
+      />
+
 
       <section className="w-full max-w-7xl mx-auto px-4 py-10">
         <div className="flex flex-col lg:flex-row gap-6">
