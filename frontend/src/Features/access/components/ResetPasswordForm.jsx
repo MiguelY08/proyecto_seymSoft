@@ -156,7 +156,7 @@ export default function ResetPasswordForm() {
 
           <button
             type="submit"
-            className="bg-blue-900 text-white py-2 rounded-lg hover:bg-blue-800 transition cursor-pointer"
+            className="bg-[#004D77] text-white py-2 rounded-lg hover:bg-[#004D77]/90 transition cursor-pointer"
           >
             Restablecer Contraseña
           </button>

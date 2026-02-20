@@ -8,7 +8,6 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex flex-col">
 
-      <HeaderLanding />
 
       <main className="flex-grow flex flex-col">
 
@@ -24,7 +23,6 @@ export default function RegisterPage() {
 
       </main>
 
-      <Footer />
 
     </div>
   )

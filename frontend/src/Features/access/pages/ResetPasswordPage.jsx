@@ -7,7 +7,6 @@ import ResetPasswordForm from "../components/ResetPasswordForm";
 export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen flex flex-col">
-      <HeaderLanding />
 
       <main className="flex-grow flex flex-col">
         <LoginBanner titulo="Restablecer Contraseña" imagen={imagenBanner} />
@@ -18,7 +17,6 @@ export default function ResetPasswordPage() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

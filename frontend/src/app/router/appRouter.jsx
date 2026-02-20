@@ -127,8 +127,8 @@ const AppRouter = () => {
 
 
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/rescue-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/forgotpassword" element={<ForgotPasswordPage />} />
+        <Route path="/resetpassword" element={<ResetPasswordPage />} />
       </Route>
     </Routes>
   );
