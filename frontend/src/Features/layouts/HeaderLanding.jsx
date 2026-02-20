@@ -227,9 +227,9 @@ function HeaderLanding() {
           {menuOpen && (
             <div className="lg:hidden border-t border-gray-200 py-3">
               <nav className="flex flex-col gap-2">
-                <NavLinkMobile icon={Home}    label="Inicio"  to="/home"   active={isActive("/home")}   onClick={() => setMenuOpen(false)} />
-                <NavLinkMobile icon={Store}   label="Tienda"  to="/store"  active={isActive("/store")}  onClick={() => setMenuOpen(false)} />
-                <NavLinkMobile icon={Package} label="Pedidos" to="/orders" active={isActive("/orders")} onClick={() => setMenuOpen(false)} />
+                <NavLinkMobile icon={Home}    label="Inicio"  to="/"        active={isActive("/")}        onClick={() => setMenuOpen(false)} />
+                <NavLinkMobile icon={Store}   label="Tienda"  to="/shop"    active={isActive("/shop")}    onClick={() => setMenuOpen(false)} />
+                <NavLinkMobile icon={Package} label="Pedidos" to="/orders-l" active={isActive("/orders-l")} onClick={() => setMenuOpen(false)} />
               </nav>
               <div className="flex items-center gap-4 mt-4 pt-3 border-t border-gray-200">
                 <Link to="/favorites" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-gray-700 hover:text-[#004D77] transition-colors cursor-pointer">
