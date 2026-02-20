@@ -6,7 +6,7 @@ function InfoUser() {
   const location  = useLocation();
   const user      = location.state?.user ?? null;
 
-  const handleClose = () => navigate('/users');
+  const handleClose = () => navigate('/admin/users');
 
   if (!user) return null;
 

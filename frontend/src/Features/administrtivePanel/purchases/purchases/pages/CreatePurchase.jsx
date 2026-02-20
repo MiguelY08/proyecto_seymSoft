@@ -108,11 +108,14 @@ const CreatePurchase = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 p-6">
-      <div className="max-w-[1400px] mx-auto">
-        <div className="grid grid-cols-12 gap-6">
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 px-4 py-6 sm:px-6 lg:px-8">
+    <div className="max-w-[1400px] mx-auto w-full">
 
-          {/* SIDEBAR */}
+      {/* GRID RESPONSIVE */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        {/* SIDEBAR */}
+        <div className="lg:col-span-3">
           <CreateSidebar
             selectedProvider={selectedProvider}
             setSelectedProvider={setSelectedProvider}
@@ -128,63 +131,75 @@ const CreatePurchase = () => {
             handleAddProduct={handleAddProduct}
             purchaseItems={purchaseItems}
           />
+        </div>
 
-          {/* PANEL DERECHO */}
-          <div className="col-span-9">
-            <div className="bg-white rounded-2xl shadow-lg p-6">
+        {/* PANEL DERECHO */}
+        <div className="lg:col-span-9 w-full">
+          <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
 
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-800">
-                  Detalle productos
-                </h2>
+            {/* HEADER */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800">
+                Detalle productos
+              </h2>
+            </div>
+
+            {/* TOTALES RESPONSIVE */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
+
+              <div className="w-full sm:w-auto px-5 py-3 bg-white border-2 border-gray-300 rounded-full text-center sm:text-left">
+                <span className="text-sm font-semibold text-gray-800">
+                  Total De La Compra: {totalCompra.toLocaleString()}
+                </span>
               </div>
 
-              <div className="flex gap-4 mb-6">
-                <div className="px-5 py-2.5 bg-white border-2 border-gray-300 rounded-full">
-                  <span className="text-sm font-semibold text-gray-800">
-                    Total De La Compra: {totalCompra.toLocaleString()}
-                  </span>
-                </div>
-
-                <div className="px-5 py-2.5 bg-white border-2 border-gray-300 rounded-full">
-                  <span className="text-sm font-semibold text-gray-800">
-                    Impuestos totales(IVA): {totalIVA.toLocaleString()}
-                  </span>
-                </div>
+              <div className="w-full sm:w-auto px-5 py-3 bg-white border-2 border-gray-300 rounded-full text-center sm:text-left">
+                <span className="text-sm font-semibold text-gray-800">
+                  Impuestos totales (IVA): {totalIVA.toLocaleString()}
+                </span>
               </div>
 
+            </div>
+
+            {/* TABLA */}
+            <div className="w-full overflow-x-auto">
               <CreateTable
                 currentData={currentData}
                 handleDeleteItem={handleDeleteItem}
               />
-
-              <CreatePagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                setCurrentPage={setCurrentPage}
-                purchaseItems={purchaseItems}
-              />
-
             </div>
 
-            <div className="flex justify-end gap-4 mt-6">
-              <Link
-                to="/compras"
-                className="px-8 py-3 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-all shadow-lg"
-              >
-                Cancelar
-              </Link>
+            {/* PAGINACIÓN */}
+            <CreatePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              setCurrentPage={setCurrentPage}
+              purchaseItems={purchaseItems}
+            />
+          </div>
 
-              <button className="px-8 py-3 bg-[#004D77] text-white font-semibold rounded-lg hover:bg-[#003a5c] transition-all shadow-lg hover:shadow-xl">
-                Guardar Compra
-              </button>
-            </div>
+          {/* BOTONES */}
+          <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
+
+            <Link
+              to="/compras"
+              className="w-full sm:w-auto px-8 py-3 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-all shadow-lg text-center"
+            >
+              Cancelar
+            </Link>
+
+            <button className="w-full sm:w-auto px-8 py-3 bg-[#004D77] text-white font-semibold rounded-lg hover:bg-[#003a5c] transition-all shadow-lg hover:shadow-xl">
+              Guardar Compra
+            </button>
 
           </div>
+
         </div>
       </div>
     </div>
-  );
+  </div>
+);
+
 };
 
 export default CreatePurchase;

@@ -19,7 +19,6 @@ export default function SidebarItem({
     pathname.startsWith(child.href)
   );
 
-  // 🔥 Abrir automáticamente si la ruta pertenece al padre
   useEffect(() => {
     if (isActiveParent) {
       setOpenItem(label);

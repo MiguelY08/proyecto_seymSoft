@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ShoppingBag, Briefcase, ClipboardPen, FileText, Palette } from 'lucide-react';
+import { swalSuccess } from '../../shared/Alerts.js';
 
 import img01 from '../../../assets/carrusel/01.png';
 import img02 from '../../../assets/carrusel/02.png';
 import img03 from '../../../assets/carrusel/03.png';
 
 import ProductCard from '../../shared/ProductCard.jsx';
-import nacional from '../../../assets/products/atlNacional.png';
+import correctorCinta      from '../../../assets/products/correctorencinta.png';
+import cuadernoPrimavera   from '../../../assets/products/cuadernoprimaverax100h.png';
+import notebookPen         from '../../../assets/products/notebookAndPen.png';
+import setSharpie30        from '../../../assets/products/setsharpiex30.png';
+import cosedora            from '../../../assets/products/sewingmachine.png';
+import tijeraPuntaRoma     from '../../../assets/products/Tijeraspuntaroma.png';
+import viniloRojo          from '../../../assets/products/vinilopqpowercolorrojo.png';
+import marcadorEterna      from '../../../assets/products/marcadoreseterna.png';
+
 import mayoristaBg from '../../../assets/mayoristasBg.png';
 
 function Home() {
@@ -28,14 +37,14 @@ function Home() {
   ];
 
   const products = [
-    { id: 1, image: nacional, name: 'Atletico Nacional', category: 'MEJOR DE COLOMBIA', price: 1000000 },
-    { id: 2, image: nacional, name: 'Atletico Nacional', category: 'MEJOR DE COLOMBIA', price: 1000000 },
-    { id: 3, image: nacional, name: 'Atletico Nacional', category: 'MEJOR DE COLOMBIA', price: 1000000 },
-    { id: 4, image: nacional, name: 'Atletico Nacional', category: 'MEJOR DE COLOMBIA', price: 1000000 },
-    { id: 5, image: nacional, name: 'Atletico Nacional', category: 'MEJOR DE COLOMBIA', price: 1000000 },
-    { id: 6, image: nacional, name: 'Atletico Nacional', category: 'MEJOR DE COLOMBIA', price: 1000000 },
-    { id: 7, image: nacional, name: 'Atletico Nacional', category: 'MEJOR DE COLOMBIA', price: 1000000 },
-    { id: 8, image: nacional, name: 'Atletico Nacional', category: 'MEJOR DE COLOMBIA', price: 1000000 },
+    { id: 1, image: correctorCinta,    name: 'Corrector en Cinta',          category: 'ESCRITURA',        price: 4500   },
+    { id: 2, image: cuadernoPrimavera, name: 'Cuaderno Primavera x100h',    category: 'ESCOLAR',          price: 8900   },
+    { id: 3, image: notebookPen,       name: 'Notebook con Bolígrafo',      category: 'OFICINA',          price: 15900  },
+    { id: 4, image: setSharpie30,      name: 'Set Sharpie x30 Colores',     category: 'ARTE',             price: 62000  },
+    { id: 5, image: cosedora,          name: 'Cosedora Metálica',           category: 'OFICINA',          price: 18500  },
+    { id: 6, image: tijeraPuntaRoma,   name: 'Tijeras Punta Roma',          category: 'ESCOLAR',          price: 6200   },
+    { id: 7, image: viniloRojo,        name: 'Vinilo Power Color Rojo',     category: 'ARTE',             price: 9800   },
+    { id: 8, image: marcadorEterna,    name: 'Marcadores Eterna x12',       category: 'ESCRITURA',        price: 13500  },
   ];
 
   useEffect(() => {
@@ -141,8 +150,8 @@ function Home() {
               name={product.name}
               category={product.category}
               price={product.price}
-              onAddToCart={() => console.log(`Añadido al carrito: ${product.name}`)}
-              onAddToFavorites={() => console.log(`Añadido a favoritos: ${product.name}`)}
+              onAddToCart={      () => swalSuccess('Añadido al carrito',  `${product.name} se ha agregado al carrito.`)      }
+              onAddToFavorites={ () => swalSuccess('Añadido a favoritos', `${product.name} se ha agregado a tus favoritos.`) }
             />
           ))}
         </div>
@@ -159,7 +168,6 @@ function Home() {
       {/* Sección Mayoristas */}
       <section className="w-full flex items-center justify-center py-2 sm:py-6">
         <div className="w-full sm:w-[98%] lg:w-[95%] h-[50vh] sm:h-[60vh] lg:h-[90vh] relative overflow-hidden rounded-none sm:rounded-lg lg:rounded-2xl">
-          
           <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${mayoristaBg})` }} />
           <div className="absolute inset-0 bg-[#004D77]/80" />
 
@@ -167,13 +175,10 @@ function Home() {
             <h2 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white leading-tight">
               ¿Eres mayorista?
             </h2>
-
             <p className="text-sm sm:text-base lg:text-xl text-gray-200 max-w-xl">
               Comunícate con nosotros y con gusto te atenderemos
             </p>
-
             <div className="w-24 sm:w-32 h-px bg-white/60 my-1 sm:my-2" />
-
             <a
               href="https://wa.me/573002936722"
               target="_blank"
