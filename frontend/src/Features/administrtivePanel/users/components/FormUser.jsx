@@ -1,13 +1,16 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { X, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
-import { swalWarning } from '../../../shared/Alerts.js';
+import { useAlert } from '../../../shared/alerts/useAlert';
+
+const STORAGE_KEY = 'pm_users';
 
 function FormUser() {
-  const navigate   = useNavigate();
-  const location   = useLocation();
-  const userToEdit = location.state?.user ?? null;
-  const isEditing  = userToEdit !== null;
+  const navigate        = useNavigate();
+  const location        = useLocation();
+  const { showWarning, showSuccess } = useAlert();
+  const userToEdit      = location.state?.user ?? null;
+  const isEditing       = userToEdit !== null;
 
   const [form, setForm] = useState({
     tipo:      userToEdit?.tipo      ?? 'CC',
@@ -24,82 +27,122 @@ function FormUser() {
   const tiposDocumento = ['CC', 'CE', 'NIT', 'TI', 'PP'];
   const roles          = ['Administrador', 'Empleado', 'Cliente'];
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    // Limpiar el error del campo al corregirlo
-    if (errors[e.target.name]) {
-      setErrors({ ...errors, [e.target.name]: '' });
-    }
-  };
+  // ─── Validación de un campo individual ──────────────────────────────────────
+    const validateField = (name, value) => {
+      switch (name) {
+        case 'documento':
+          if (!value.trim())               return 'El documento es obligatorio.';
+          if (!/^\d+$/.test(value.trim())) return 'El documento solo debe contener números.';
+          return '';
+        case 'nombres':
+          if (!value.trim())                        return 'Los nombres son obligatorios.';
+          if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(value.trim())) return 'Los nombres solo deben contener letras.';
+          return '';
+        case 'apellidos':
+          if (!value.trim())                        return 'Los apellidos son obligatorios.';
+          if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(value.trim())) return 'Los apellidos solo deben contener letras.';
+          return '';
+        case 'correo':
+          if (!value.trim())                                      return 'El correo electrónico es obligatorio.';
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) return 'Ingrese un correo válido. Ej: ejemplo@correo.com';
+          return '';
+        case 'telefono':
+          if (!value.trim())               return 'El teléfono es obligatorio.';
+          if (!/^\d+$/.test(value.trim())) return 'El teléfono solo debe contener números.';
+          return '';
+        case 'rol':
+          if (!value) return 'Seleccione un rol.';
+          return '';
+        default:
+          return '';
+      }
+    };
 
-  // ─── Validaciones ───────────────────────────────────────────────────────────
+    // ─── Validación en tiempo real + bloqueo de caracteres inválidos ────────────
+    const handleChange = (e) => {
+      const { name, value } = e.target;
+
+      // ─── Filtrar caracteres no permitidos antes de actualizar el estado ──────
+      let filtered = value;
+      if (name === 'documento' || name === 'telefono') {
+        filtered = value.replace(/\D/g, '');                        // Solo dígitos
+      } else if (name === 'nombres' || name === 'apellidos') {
+        filtered = value.replace(/[^a-zA-ZÀ-ÿ\s]/g, '');           // Solo letras y espacios
+      }
+
+      setForm({ ...form, [name]: filtered });
+      setErrors({ ...errors, [name]: validateField(name, filtered) });
+    };
+
   const validate = () => {
     const newErrors = {};
-
-    if (!form.tipo)
-      newErrors.tipo = 'Seleccione un tipo de documento.';
-
-    if (!form.documento.trim())
-      newErrors.documento = 'El documento es obligatorio.';
-    else if (!/^\d+$/.test(form.documento.trim()))
-      newErrors.documento = 'El documento solo debe contener números.';
-
-    if (!form.nombres.trim())
-      newErrors.nombres = 'Los nombres son obligatorios.';
-
-    if (!form.correo.trim())
-      newErrors.correo = 'El correo electrónico es obligatorio.';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo.trim()))
-      newErrors.correo = 'Ingrese un correo electrónico válido. Ej: ejemplo@correo.com';
-
-    if (!form.telefono.trim())
-      newErrors.telefono = 'El teléfono es obligatorio.';
-
-    if (!form.rol)
-      newErrors.rol = 'Seleccione un rol.';
-
+    Object.keys(form).forEach((field) => {
+      const error = validateField(field, form[field]);
+      if (error) newErrors[field] = error;
+    });
     return newErrors;
   };
 
+  // ─── Guardar en localStorage ─────────────────────────────────────────────
   const handleSubmit = () => {
     const newErrors = validate();
-
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      swalWarning(
-        'Formulario incompleto',
-        'Por favor revisa los campos marcados en rojo antes de continuar.'
-      );
+      showWarning('Formulario incompleto', 'Por favor revisa los campos marcados en rojo antes de continuar.');
       return;
     }
 
-    console.log(isEditing ? 'Editar usuario:' : 'Nuevo usuario:', form);
+    const stored  = localStorage.getItem(STORAGE_KEY);
+    const users   = stored ? JSON.parse(stored) : [];
+    const nombre  = `${form.nombres.trim()} ${form.apellidos.trim()}`.trim();
+
+    if (isEditing) {
+      const updated = users.map((u) =>
+        u.id === userToEdit.id
+          ? { ...u, tipo: form.tipo, documento: form.documento, nombre, correo: form.correo, telefono: form.telefono, rol: form.rol }
+          : u
+      );
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      showSuccess('Usuario actualizado', 'Los datos del usuario han sido actualizados.');
+    } else {
+      const newId   = users.length > 0 ? Math.max(...users.map((u) => u.id)) + 1 : 1;
+      const newUser = {
+        id:       newId,
+        tipo:     form.tipo,
+        documento: form.documento,
+        nombre,
+        correo:   form.correo,
+        telefono: form.telefono,
+        rol:      form.rol,
+        activo:   true,
+        registradoDesde: new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([...users, newUser]));
+      showSuccess('Usuario creado', 'El nuevo usuario ha sido registrado exitosamente.');
+    }
+
     navigate('/admin/users');
   };
 
-  const handleCancel = () => {
-    navigate('/admin/users');
-  };
+  const handleCancel = () => navigate('/admin/users');
 
-  // ─── Clases de input según error ────────────────────────────────────────────
   const inputClass = (field) =>
-    `w-full px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm border rounded-lg outline-none text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
+    `w-full px-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
       errors[field]
-        ? 'border-red-400 focus:border-red-400 focus:ring-2 focus:ring-red-400/20'
+        ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
 
   const selectClass = (field) =>
-    `appearance-none w-full pl-2 sm:pl-3 pr-8 sm:pr-10 py-2 sm:py-2.5 text-xs sm:text-sm border rounded-lg outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 ${
+    `appearance-none w-full px-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 ${
       errors[field]
-        ? 'border-red-400 focus:border-red-400 focus:ring-2 focus:ring-red-400/20'
+        ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
 
-  // ─── Mensaje de error bajo el campo ─────────────────────────────────────────
   const ErrorMsg = ({ field }) =>
     errors[field]
-      ? <p className="text-red-500 text-[10px] sm:text-xs mt-0.5">{errors[field]}</p>
+      ? <p className="mt-1 text-sm text-red-600">{errors[field]}</p>
       : null;
 
   return (
@@ -108,29 +151,26 @@ function FormUser() {
       onClick={handleCancel}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-lg overflow-hidden"
+        className="bg-white rounded-lg shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-lg overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 bg-[#004D77]">
-          <h2 className="text-white font-semibold text-base sm:text-lg">
+        <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
+          <h2 className="text-white font-semibold text-lg">
             {isEditing ? 'Editar usuario' : 'Nuevo usuario'}
           </h2>
-          <button
-            onClick={handleCancel}
-            className="text-white hover:text-gray-200 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />
+          <button onClick={handleCancel} className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer">
+            <X className="w-5 h-5" strokeWidth={2} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="px-4 sm:px-6 py-4 sm:py-5 flex flex-col gap-3 sm:gap-4">
+        <div className="px-6 py-5 flex flex-col gap-4 overflow-y-auto">
 
           {/* Tipo + Documento */}
-          <div className="flex gap-2 sm:gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs sm:text-sm font-semibold text-gray-700">
+          <div className="flex gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="block text-sm font-medium text-gray-700">
                 Tipo<span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -138,9 +178,9 @@ function FormUser() {
                   name="tipo"
                   value={form.tipo}
                   onChange={handleChange}
-                  className={`appearance-none w-20 sm:w-24 pl-2 sm:pl-3 pr-6 sm:pr-8 py-2 sm:py-2.5 text-xs sm:text-sm border rounded-lg outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 ${
+                  className={`appearance-none w-24 px-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 ${
                     errors.tipo
-                      ? 'border-red-400 focus:border-red-400 focus:ring-2 focus:ring-red-400/20'
+                      ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
                       : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
                   }`}
                 >
@@ -148,126 +188,81 @@ function FormUser() {
                     <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
               </div>
               <ErrorMsg field="tipo" />
             </div>
 
-            <div className="flex flex-col gap-1 flex-1">
-              <label className="text-xs sm:text-sm font-semibold text-gray-700">
+            <div className="flex flex-col gap-1.5 flex-1">
+              <label className="block text-sm font-medium text-gray-700">
                 Documento<span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                name="documento"
-                value={form.documento}
-                onChange={handleChange}
-                placeholder="Ingrese su número de documento"
-                className={inputClass('documento')}
-              />
+              <input type="text" name="documento" value={form.documento} onChange={handleChange} placeholder="Ingrese su número de documento" className={inputClass('documento')} />
               <ErrorMsg field="documento" />
             </div>
           </div>
 
           {/* Nombres + Apellidos */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-            <div className="flex flex-col gap-1 flex-1">
-              <label className="text-xs sm:text-sm font-semibold text-gray-700">
+          <div className="flex gap-3">
+            <div className="flex flex-col gap-1.5 flex-1">
+              <label className="block text-sm font-medium text-gray-700">
                 Nombres<span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                name="nombres"
-                value={form.nombres}
-                onChange={handleChange}
-                placeholder="Nombres"
-                className={inputClass('nombres')}
-              />
+              <input type="text" name="nombres" value={form.nombres} onChange={handleChange} placeholder="Nombres" className={inputClass('nombres')} />
               <ErrorMsg field="nombres" />
             </div>
-            <div className="flex flex-col gap-1 flex-1">
-              <label className="text-xs sm:text-sm font-semibold text-gray-700">
-                Apellidos
+            <div className="flex flex-col gap-1.5 flex-1">
+              <label className="block text-sm font-medium text-gray-700">
+                Apellidos<span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                name="apellidos"
-                value={form.apellidos}
-                onChange={handleChange}
-                placeholder="Apellidos"
-                className={inputClass('apellidos')}
-              />
+              <input type="text" name="apellidos" value={form.apellidos} onChange={handleChange} placeholder="Apellidos" className={inputClass('apellidos')} />
+              <ErrorMsg field="apellidos" />
             </div>
           </div>
 
           {/* Correo */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs sm:text-sm font-semibold text-gray-700">
+          <div className="flex flex-col gap-1.5">
+            <label className="block text-sm font-medium text-gray-700">
               Correo electrónico<span className="text-red-500">*</span>
             </label>
-            <input
-              type="email"
-              name="correo"
-              value={form.correo}
-              onChange={handleChange}
-              placeholder="ejemplo123@gmail.com"
-              className={inputClass('correo')}
-            />
+            <input type="email" name="correo" value={form.correo} onChange={handleChange} placeholder="ejemplo123@gmail.com" className={inputClass('correo')} />
             <ErrorMsg field="correo" />
           </div>
 
           {/* Teléfono */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs sm:text-sm font-semibold text-gray-700">
+          <div className="flex flex-col gap-1.5">
+            <label className="block text-sm font-medium text-gray-700">
               Teléfono - Celular<span className="text-red-500">*</span>
             </label>
-            <input
-              type="tel"
-              name="telefono"
-              value={form.telefono}
-              onChange={handleChange}
-              placeholder="000-000-0000"
-              className={inputClass('telefono')}
-            />
+            <input type="tel" name="telefono" value={form.telefono} onChange={handleChange} placeholder="000-000-0000" className={inputClass('telefono')} />
             <ErrorMsg field="telefono" />
           </div>
 
           {/* Rol */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs sm:text-sm font-semibold text-gray-700">
+          <div className="flex flex-col gap-1.5">
+            <label className="block text-sm font-medium text-gray-700">
               Rol<span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <select
-                name="rol"
-                value={form.rol}
-                onChange={handleChange}
-                className={selectClass('rol')}
-              >
+              <select name="rol" value={form.rol} onChange={handleChange} className={selectClass('rol')}>
                 <option value="" disabled>Seleccione un rol</option>
                 {roles.map((r) => (
                   <option key={r} value={r}>{r}</option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
             </div>
             <ErrorMsg field="rol" />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="grid grid-cols-2 px-4 sm:px-0 pb-4 sm:pb-0 gap-2 sm:gap-0 mt-1 sm:mt-0">
-          <button
-            onClick={handleSubmit}
-            className="py-3 sm:py-3.5 bg-[#004D77] hover:bg-[#003d5e] text-white font-semibold text-xs sm:text-sm transition-colors duration-200 cursor-pointer rounded-bl-2xl sm:rounded-none"
-          >
-            {isEditing ? 'Guardar cambios' : 'Crear'}
-          </button>
-          <button
-            onClick={handleCancel}
-            className="py-3 sm:py-3.5 bg-gray-400 hover:bg-gray-500 text-white font-semibold text-xs sm:text-sm transition-colors duration-200 cursor-pointer rounded-br-2xl sm:rounded-none"
-          >
+        <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
+          <button onClick={handleCancel} className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer">
             Cancelar
+          </button>
+          <button onClick={handleSubmit} className="px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer">
+            {isEditing ? 'Guardar cambios' : 'Crear'}
           </button>
         </div>
       </div>
