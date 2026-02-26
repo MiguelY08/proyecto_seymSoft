@@ -44,7 +44,8 @@ import Clients from '../../Features/administrtivePanel/sales/clients/Clients.jsx
 import OrdersA from '../../Features/administrtivePanel/sales/orders/Orders.jsx';
 import Sales from '../../Features/administrtivePanel/sales/sales/Sales.jsx';
 import ReturnsS from '../../Features/administrtivePanel/sales/returns/Returns.jsx';
-import PaymentAndCredits from '../../Features/administrtivePanel/sales/paymentsAndCredits/PaymentAndCredits.jsx';
+import PaymentsPage from "../../Features/administrtivePanel/sales/paymentsAndCredits/pages/PaymentsPage.jsx";
+import AccountDetailsPage from "../../Features/administrtivePanel/sales/paymentsAndCredits/pages/AccountDetailsPage.jsx";
 
 import RolesPage from "../../Features/administrtivePanel/configuration/roles/page/RolesPage.jsx";
 import Banners from "../../Features/administrtivePanel/appearance/Banners.jsx";
@@ -57,6 +58,7 @@ import EditReturn from "../../Features/landing/orders/EditReturn.jsx";
 import CreateProduct from "../../Features/administrtivePanel/purchases/products/modals/CreateProduct.jsx";
 import FormProduct from "../../Features/administrtivePanel/purchases/products/modals/CreateProduct.jsx";
 import EditProduct from "../../Features/administrtivePanel/purchases/products/modals/EditProduct.jsx";
+
 
 
 const AppRouter = () => {
@@ -82,11 +84,22 @@ const AppRouter = () => {
           <Route path="purchases/returns-p" element={ <ReturnsP /> } />
           <Route path="purchases/non-conforming-products" element={ <NonConformingProducts /> } />
 
-          <Route path="sales/clients" element={ <Clients /> } />
-          <Route path="sales/orders" element={ <OrdersA/> } />
-          <Route path="sales" element={ <Sales /> } />
-          <Route path="sales/returns-s" element={ <ReturnsS /> } />
-          <Route path="sales/payments-and-credits" element={ <PaymentAndCredits /> } />
+          <Route path="sales/clients" element={<Clients />} />
+          <Route path="sales/orders" element={<OrdersA/>} />
+          <Route path="sales" element={<Sales />} />
+          <Route path="sales/returns-s" element={<ReturnsS />} />
+
+          <Route path="sales/payments-and-credits" element={<PaymentsPage />} />
+
+          <Route 
+            path="sales/payments-and-credits/:id" 
+            element={<AccountDetailsPage mode="view" />} 
+          />
+
+          <Route 
+            path="sales/payments-and-credits/:id/payment" 
+            element={<AccountDetailsPage mode="payment" />} 
+          />
 
       
 
