@@ -1,35 +1,79 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Download, Plus } from 'lucide-react';
-import { swalConfirm, swalTimer } from '../../../shared/Alerts.js';
+import { useAlert } from '../../../shared/alerts/useAlert';
+import * as XLSX from 'xlsx';
+
+const STORAGE_KEY = 'pm_users';
+
+// ─── Generador de Excel ───────────────────────────────────────────────────────
+const downloadExcel = () => {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  const users  = stored ? JSON.parse(stored) : [];
+
+  if (users.length === 0) return false;
+
+  // ─── Mapear datos a columnas legibles ─────────────────────────────────────
+  const rows = users.map((u) => ({
+    'ID':                 u.id,
+    'Tipo Documento':     u.tipo,
+    'Documento':          u.documento,
+    'Nombre Completo':    u.nombre,
+    'Correo Electrónico': u.correo,
+    'Teléfono':           u.telefono,
+    'Rol':                u.rol,
+    'Estado':             u.activo ? 'Activo' : 'Inactivo',
+    'Registrado Desde':   u.registradoDesde ?? '—',
+  }));
+
+  const worksheet  = XLSX.utils.json_to_sheet(rows);
+  const workbook   = XLSX.utils.book_new();
+
+  // ─── Ancho de columnas ────────────────────────────────────────────────────
+  worksheet['!cols'] = [
+    { wch: 6  },  // ID
+    { wch: 16 },  // Tipo Documento
+    { wch: 18 },  // Documento
+    { wch: 28 },  // Nombre Completo
+    { wch: 30 },  // Correo
+    { wch: 14 },  // Teléfono
+    { wch: 16 },  // Rol
+    { wch: 12 },  // Estado
+    { wch: 18 },  // Registrado Desde
+  ];
+
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Usuarios');
+
+  const fecha = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
+  XLSX.writeFile(workbook, `usuarios_${fecha}.xlsx`);
+
+  return true;
+};
 
 // ─── TopBar ───────────────────────────────────────────────────────────────────
-function TopBar({ search, onSearchChange, onDownload }) {
+function TopBar({ search, onSearchChange }) {
   const navigate = useNavigate();
+  const { showConfirm, showTimer, showWarning } = useAlert();
 
   const handleDownload = () => {
-    swalConfirm('question', '¿Desea descargar los usuarios?', '', {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    const users  = stored ? JSON.parse(stored) : [];
+
+    // ─── Sin registros no tiene sentido descargar ─────────────────────────
+    if (users.length === 0) {
+      showWarning('Sin registros', 'No hay usuarios registrados para descargar.');
+      return;
+    }
+
+    showConfirm('question', '¿Desea descargar los usuarios?', `Se exportarán ${users.length} registro${users.length !== 1 ? 's' : ''} en formato Excel.`, {
       confirmButtonText: 'Descargar',
       cancelButtonText:  'Cancelar',
     }).then((result) => {
       if (result.isConfirmed) {
-
-        // Aquí irá la lógica real de descarga
-        onDownload?.();
-
-        swalTimer('success', 'Se ha iniciado la descarga.', '', 5000, {
-          html: `¿No ha iniciado la descarga?
-                 <a href="#" id="swal-retry" class="font-semibold underline text-teal-700">
-                   Click aquí para reintentar
-                 </a>`,
-          didOpen: () => {
-            document.getElementById('swal-retry')?.addEventListener('click', (e) => {
-              e.preventDefault();
-              onDownload?.();
-            });
-          },
-        });
-
+        const success = downloadExcel();
+        if (success) {
+          showTimer('success', 'Descarga completada', 'El archivo Excel se ha generado exitosamente.', 4000);
+        }
       }
     });
   };

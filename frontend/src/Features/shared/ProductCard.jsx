@@ -1,31 +1,29 @@
 import React, { useState } from "react";
 import { ShoppingCart, Heart, HeartCrack } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAlert } from "../shared/alerts/useAlert";
 
-function ProductCard({
-  image,
-  name,
-  category,
-  price,
-  productId,
-  onAddToCart,
-  onAddToFavorites,
-}) {
+function ProductCard({ image, name, category, price, productId, onAddToCart, onAddToFavorites }) {
   const navigate = useNavigate();
+  const { showSuccess } = useAlert();
 
-  const [isFavorite, setIsFavorite] = useState(false);
+  const [isFavorite,      setIsFavorite]      = useState(false);
   const [isHoveringHeart, setIsHoveringHeart] = useState(false);
 
   const handleFavorite = (e) => {
-    e.stopPropagation(); // 🔥 evita que navegue
+    e.stopPropagation();
     const adding = !isFavorite;
     setIsFavorite(adding);
-    if (adding) onAddToFavorites?.();
+    if (adding) {
+      onAddToFavorites?.();
+      showSuccess('Añadido a favoritos', `${name} se ha agregado a tus favoritos.`);
+    }
   };
 
   const handleAddToCart = (e) => {
-    e.stopPropagation(); // 🔥 evita que navegue
+    e.stopPropagation();
     onAddToCart?.();
+    showSuccess('Añadido al carrito', `${name} se ha agregado al carrito.`);
   };
 
   const goToDetail = () => {
@@ -39,11 +37,7 @@ function ProductCard({
     >
       {/* Imagen */}
       <div className="relative bg-white aspect-square flex items-center justify-center p-2 overflow-hidden">
-        <img
-          src={image}
-          alt={name}
-          className="w-full h-full object-contain"
-        />
+        <img src={image} alt={name} className="w-full h-full object-contain" />
       </div>
 
       <div className="h-px bg-gray-200 mx-3" />
@@ -53,11 +47,9 @@ function ProductCard({
         <h3 className="text-xs font-bold text-gray-800 uppercase tracking-tight text-center leading-tight line-clamp-2">
           {name}
         </h3>
-
         <p className="text-[10px] text-gray-500 uppercase tracking-wide text-center line-clamp-1">
           {category}
         </p>
-
         <p className="text-xl font-bold text-[#004D77] text-center mt-1 mb-2">
           ${price.toLocaleString("es-CO")}
         </p>
@@ -79,21 +71,13 @@ function ProductCard({
           >
             {isFavorite ? (
               isHoveringHeart ? (
-                <HeartCrack
-                  className="w-6 h-6 text-[#004D77]"
-                  strokeWidth={2}
-                />
+                <HeartCrack className="w-6 h-6 text-[#004D77]" strokeWidth={2} />
               ) : (
-                <Heart
-                  className="w-6 h-6 text-[#004D77] fill-[#004D77]"
-                  strokeWidth={2}
-                />
+                <Heart className="w-6 h-6 text-[#004D77] fill-[#004D77]" strokeWidth={2} />
               )
             ) : (
               <Heart
-                className={`w-6 h-6 fill-transparent ${
-                  isHoveringHeart ? "text-[#004D77]" : "text-gray-400"
-                }`}
+                className={`w-6 h-6 fill-transparent ${isHoveringHeart ? "text-[#004D77]" : "text-gray-400"}`}
                 strokeWidth={2}
               />
             )}

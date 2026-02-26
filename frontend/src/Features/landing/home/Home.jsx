@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ShoppingBag, Briefcase, ClipboardPen, FileText, Palette } from 'lucide-react';
-import { swalSuccess } from '../../shared/Alerts.js';
 
 import img01 from '../../../assets/carrusel/01.png';
 import img02 from '../../../assets/carrusel/02.png';
@@ -37,14 +36,14 @@ function Home() {
   ];
 
   const products = [
-    { id: 1, image: correctorCinta,    name: 'Corrector en Cinta',          category: 'ESCRITURA',        price: 4500   },
-    { id: 2, image: cuadernoPrimavera, name: 'Cuaderno Primavera x100h',    category: 'ESCOLAR',          price: 8900   },
-    { id: 3, image: notebookPen,       name: 'Notebook con Bolígrafo',      category: 'OFICINA',          price: 15900  },
-    { id: 4, image: setSharpie30,      name: 'Set Sharpie x30 Colores',     category: 'ARTE',             price: 62000  },
-    { id: 5, image: cosedora,          name: 'Cosedora Metálica',           category: 'OFICINA',          price: 18500  },
-    { id: 6, image: tijeraPuntaRoma,   name: 'Tijeras Punta Roma',          category: 'ESCOLAR',          price: 6200   },
-    { id: 7, image: viniloRojo,        name: 'Vinilo Power Color Rojo',     category: 'ARTE',             price: 9800   },
-    { id: 8, image: marcadorEterna,    name: 'Marcadores Eterna x12',       category: 'ESCRITURA',        price: 13500  },
+    { id: 1, image: correctorCinta,    name: 'Corrector en Cinta',       category: 'ESCRITURA', price: 4500  },
+    { id: 2, image: cuadernoPrimavera, name: 'Cuaderno Primavera x100h', category: 'ESCOLAR',   price: 8900  },
+    { id: 3, image: notebookPen,       name: 'Notebook con Bolígrafo',   category: 'OFICINA',   price: 15900 },
+    { id: 4, image: setSharpie30,      name: 'Set Sharpie x30 Colores',  category: 'ARTE',      price: 62000 },
+    { id: 5, image: cosedora,          name: 'Cosedora Metálica',        category: 'OFICINA',   price: 18500 },
+    { id: 6, image: tijeraPuntaRoma,   name: 'Tijeras Punta Roma',       category: 'ESCOLAR',   price: 6200  },
+    { id: 7, image: viniloRojo,        name: 'Vinilo Power Color Rojo',  category: 'ARTE',      price: 9800  },
+    { id: 8, image: marcadorEterna,    name: 'Marcadores Eterna x12',    category: 'ESCRITURA', price: 13500 },
   ];
 
   useEffect(() => {
@@ -150,8 +149,6 @@ function Home() {
               name={product.name}
               category={product.category}
               price={product.price}
-              onAddToCart={      () => swalSuccess('Añadido al carrito',  `${product.name} se ha agregado al carrito.`)      }
-              onAddToFavorites={ () => swalSuccess('Añadido a favoritos', `${product.name} se ha agregado a tus favoritos.`) }
             />
           ))}
         </div>
@@ -170,7 +167,6 @@ function Home() {
         <div className="w-full sm:w-[98%] lg:w-[95%] h-[50vh] sm:h-[60vh] lg:h-[90vh] relative overflow-hidden rounded-none sm:rounded-lg lg:rounded-2xl">
           <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${mayoristaBg})` }} />
           <div className="absolute inset-0 bg-[#004D77]/80" />
-
           <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-4 sm:px-8 text-center gap-4 sm:gap-6">
             <h2 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white leading-tight">
               ¿Eres mayorista?
