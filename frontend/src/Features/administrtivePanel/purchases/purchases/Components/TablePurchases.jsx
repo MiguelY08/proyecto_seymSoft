@@ -29,6 +29,7 @@ export const PurchasesTable = ({
   startIndex,
   endIndex,
   handleCancel,
+   handleViewDetail,
   search,  // 👈 agregar
 }) => {
 
@@ -87,11 +88,20 @@ export const PurchasesTable = ({
                     {highlightText(compra.proveedor || "", search)}
                   </td>
                   <td className="px-3 py-2.5 text-center">
-                    {compra.cantidadProductos}
+                    {highlightText(
+                      compra.cantidadProductos?.toString() || "",
+                      search
+                    )}
                   </td>
+
                   <td className="px-3 py-2.5 text-right">
-                    ${Number(compra.precioTotal).toLocaleString()}
-                  </td>
+                  $
+                  {highlightText(
+                    Number(compra.precioTotal).toLocaleString(),
+                    search
+                  )}
+                </td>
+
                   <td className="px-3 py-2.5 text-center">
                     <span
                       className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -107,7 +117,7 @@ export const PurchasesTable = ({
                   </td>
                   <td className="px-3 py-2.5 text-center">
                     <div className="flex justify-center gap-2">
-                      <button className="text-gray-400 hover:text-blue-600 transition-colors">
+                      <button onClick={() => handleViewDetail(compra)} className="text-gray-400 hover:text-blue-600 transition-colors">
                         <Info size={16} />
                       </button>
 

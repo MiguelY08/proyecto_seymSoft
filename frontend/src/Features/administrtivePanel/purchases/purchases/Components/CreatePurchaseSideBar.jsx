@@ -26,7 +26,7 @@ const CreateSidebar = ({
     "Papelería El Punto Escolar",
     "OfiExpress Ltda.",
     "ArteColor Supplies",
-    "PlastiPack Ltda",
+    "Útiles Escolares SAS",
   ];
 
   const filteredProviders = providers.filter((provider) =>

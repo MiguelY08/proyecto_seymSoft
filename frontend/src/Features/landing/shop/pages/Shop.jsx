@@ -21,19 +21,129 @@ import vinilopq from "../../../../assets/products/vinilopqpowercolorrojo.png";
 function Shop() {
 
   const products = [
-    { id: 1, image: notebookPen, name: 'Libreta con lapicero', category: 'Escolar', brand: 'Norma', price: 5000 },
-    { id: 2, image: correctorcinta, name: 'corrector cinta', category: 'Oficina', brand: 'Pelikan', price: 4000 },
-    { id: 3, image: cuadernoprimavera, name: 'cuaderno primavera x100h', category: 'Arte', brand: 'Scribe', price: 70000 },
-    { id: 4, image: setsharpie, name: 'set sharpie x30', category: 'Escritura', brand: 'Gilpao', price: 120000 },
-    { id: 5, image: sewingmachine, name: 'sewing machine', category: 'Papelería Básica', brand: 'Eterna', price: 5000 },
-    { id: 6, image: Tijeraspunta, name: 'Tijeras punta roma', category: 'Escolar', brand: 'Norma', price: 3000 },
-    { id: 7, image: vinilopq, name: 'vinilo pq power color rojo', category: 'Oficina', brand: 'Pelikan', price: 1500 },
-    { id: 8, image: correctorcinta, name: 'correctorencinta', category: 'Arte', brand: 'Norma', price: 7000 },
-    { id: 9, image: nacional, name: 'Atletico Nacional', category: 'Escritura', brand: 'Gilpao', price: 200 },
-    { id: 10, image: nacional, name: 'Atletico Nacional', category: 'Papelería Básica', brand: 'Eterna', price: 10000 },
-  ];
+  { 
+    id: 1, 
+    image: notebookPen, 
+    name: 'Libreta con lapicero', 
+    category: 'Escolar',
+    subcategory: 'Cuadernos',
+    childCategory: 'Cosidos',
+    brand: 'Norma', 
+    price: 5000 
+  },
+  { 
+    id: 2, 
+    image: correctorcinta, 
+    name: 'corrector cinta', 
+    category: 'Oficina',
+    brand: 'Pelikan', 
+    price: 4000 
+  },
+  { 
+    id: 3, 
+    image: cuadernoprimavera, 
+    name: 'cuaderno primavera x100h', 
+    category: 'Escolar',
+    subcategory: 'Cuadernos',
+    childCategory: 'Argollados',
+    brand: 'Scribe', 
+    price: 70000 
+  },
+  { 
+    id: 4, 
+    image: setsharpie, 
+    name: 'set sharpie x30', 
+    category: 'Escritura',
+    brand: 'Gilpao', 
+    price: 120000 
+  },
+  { 
+    id: 5, 
+    image: sewingmachine, 
+    name: 'sewing machine', 
+    category: 'Papelería Básica',
+    brand: 'Eterna', 
+    price: 5000 
+  },
+  { 
+    id: 6, 
+    image: Tijeraspunta, 
+    name: 'Tijeras punta roma', 
+    category: 'Escolar',
+    subcategory: 'Mochilas',
+    brand: 'Norma', 
+    price: 3000 
+  },
+  { 
+    id: 7, 
+    image: vinilopq, 
+    name: 'vinilo pq power color rojo', 
+    category: 'Arte',
+    brand: 'Pelikan', 
+    price: 1500 
+  },
+  { 
+    id: 8, 
+    image: correctorcinta, 
+    name: 'correctorencinta', 
+    category: 'Arte',
+    brand: 'Norma', 
+    price: 7000 
+  },
+  { 
+    id: 9, 
+    image: nacional, 
+    name: 'Atletico Nacional', 
+    category: 'Escritura',
+    brand: 'Gilpao', 
+    price: 200 
+  },
+  { 
+    id: 10, 
+    image: nacional, 
+    name: 'Atletico Nacional', 
+    category: 'Papelería Básica',
+    brand: 'Eterna', 
+    price: 10000 
+  },
+];
 
-  const categories = ['Escolar', 'Oficina', 'Escritura', 'Papelería Básica', 'Arte'];
+  const categories = [
+  {
+    name: "Escolar",
+    count: 122,
+    subcategories: [
+      {
+        name: "Cuadernos",
+        count: 50,
+        children: [
+          { name: "Cosidos", count: 20 },
+          { name: "Argollados", count: 30 }
+        ]
+      },
+      {
+        name: "Mochilas",
+        count: 72
+      }
+    ]
+  },
+  {
+    name: "Oficina",
+    count: 20
+  },
+  {
+    name: "Arte",
+    count: 15
+  },
+  {
+    name: "Papelería Básica",
+    count: 15
+  },
+  {
+    name: "Escritura",
+    count: 15
+  }
+];
   const brands = ['Gilpao', 'Eterna', 'Pelikan', 'Norma', 'Scribe'];
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -46,7 +156,7 @@ function Shop() {
   const [sortOpen, setSortOpen] = useState(false);
 
   const sortOptions = [
-    { value: "relevant", label: "Más relevantes" },
+    { value: "relevant", label: "Más vendidos" },
     { value: "price_high", label: "Costo: Mayor a menor" },
     { value: "price_low", label: "Costo: Menor a mayor" }
   ];
@@ -73,16 +183,19 @@ function Shop() {
 
   // FILTRO
   const filteredProducts = products.filter(product => {
-    const matchCategory =
-      selectedCategories.length === 0 ||
-      selectedCategories.includes(product.category);
 
-    const matchBrand =
-      selectedBrands.length === 0 ||
-      selectedBrands.includes(product.brand);
+  const matchCategory =
+    selectedCategories.length === 0 ||
+    selectedCategories.includes(product.category) ||
+    selectedCategories.includes(product.subcategory) ||
+    selectedCategories.includes(product.childCategory);
 
-    return matchCategory && matchBrand;
-  });
+  const matchBrand =
+    selectedBrands.length === 0 ||
+    selectedBrands.includes(product.brand);
+
+  return matchCategory && matchBrand;
+});
 
   // ORDEN
   const sortedProducts = [...filteredProducts].sort((a, b) => {
@@ -163,7 +276,6 @@ function Shop() {
         </div>
       </section>
 
-      <Footer />
     </>
   );
 }

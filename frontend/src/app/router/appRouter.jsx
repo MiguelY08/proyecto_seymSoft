@@ -38,7 +38,7 @@ import Providers from '../../Features/administrtivePanel/purchases/providers/Pro
 import Purchases from "../../Features/administrtivePanel/purchases/purchases/pages/Purchases.jsx";
 import CreatePurchase from "../../Features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx";
 import ReturnsP from '../../Features/administrtivePanel/purchases/returns/Returns.jsx';
-import NonConformingProducts from '../../Features/administrtivePanel/purchases/nonConformingProducts/NonConformingProducts.jsx';
+import NonConformingProducts from "../../Features/administrtivePanel/purchases/nonConformingProducts/pages/NonConformingProducts.jsx";
 
 import Clients from '../../Features/administrtivePanel/sales/clients/Clients.jsx';
 import OrdersA from '../../Features/administrtivePanel/sales/orders/Orders.jsx';
