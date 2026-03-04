@@ -1,33 +1,45 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { X } from 'lucide-react';
+import { useModalAnimation } from '../../../shared/useModalAnimation';
 
 function InfoUser() {
-  const navigate = useNavigate();
   const location = useLocation();
-  const user     = location.state?.user ?? null;
+  const user     = location.state?.user   ?? null;
+  const origin   = location.state?.origin ?? null;
 
-  const handleClose = () => navigate('/admin/users');
+  const { visible, handleClose } = useModalAnimation('/admin/users');
+
+  const transformOrigin = origin
+    ? `${origin.x}px ${origin.y}px`
+    : 'center center';
 
   if (!user) return null;
 
   const rows = [
-    { label: 'Tipo y No. Documento', value: `${user.tipo} ${user.documento}` },
-    { label: 'Nombre completo',      value: user.nombre                       },
-    { label: 'Correo electrónico',   value: user.correo                       },
-    { label: 'Teléfono - Celular',   value: user.telefono                     },
-    { label: 'Tipo de usuario',      value: user.rol                          },
-    { label: 'Estado actual',        value: user.activo ? 'Activo' : 'Inactivo' },
-    { label: 'Registrado desde',     value: user.registradoDesde ?? '—'       },
+    { label: 'Tipo y No. Documento', value: `${user.tipo} ${user.documento}`     },
+    { label: 'Nombre completo',      value: user.nombre                           },
+    { label: 'Correo electrónico',   value: user.correo                           },
+    { label: 'Teléfono - Celular',   value: user.telefono                         },
+    { label: 'Tipo de usuario',      value: user.rol                              },
+    { label: 'Estado actual',        value: user.activo ? 'Activo' : 'Inactivo'   },
+    { label: 'Registrado desde',     value: user.registradoDesde ?? '—'           },
   ];
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
       onClick={handleClose}
+      style={{ transition: 'opacity 250ms ease' }}
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm
+        ${visible ? 'opacity-100' : 'opacity-0'}`}
     >
       <div
-        className="bg-white rounded-lg shadow-2xl w-full max-w-xs sm:max-w-sm md:max-w-md overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
+        style={{
+          transformOrigin,
+          transition: 'transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 200ms ease',
+        }}
+        className={`bg-white rounded-lg shadow-2xl w-full max-w-xs sm:max-w-sm md:max-w-md overflow-hidden flex flex-col
+          ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">

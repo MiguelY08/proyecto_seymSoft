@@ -42,7 +42,12 @@ import NonConformingProducts from '../../Features/administrtivePanel/purchases/n
 
 import Clients from '../../Features/administrtivePanel/sales/clients/Clients.jsx';
 import OrdersA from '../../Features/administrtivePanel/sales/orders/Orders.jsx';
-import Sales from '../../Features/administrtivePanel/sales/sales/Sales.jsx';
+
+// Ventas
+import Sales from '../../Features/administrtivePanel/sales/sales/pages/Sales.jsx';
+import SaleForm from '../../Features/administrtivePanel/sales/sales/pages/SaleForm.jsx';
+import SaleInfo from '../../Features/administrtivePanel/sales/sales/components/SaleInfo.jsx';
+
 import ReturnsS from '../../Features/administrtivePanel/sales/returns/Returns.jsx';
 import PaymentAndCredits from '../../Features/administrtivePanel/sales/paymentsAndCredits/PaymentAndCredits.jsx';
 
@@ -82,9 +87,13 @@ const AppRouter = () => {
           <Route path="purchases/returns-p" element={ <ReturnsP /> } />
           <Route path="purchases/non-conforming-products" element={ <NonConformingProducts /> } />
 
+          <Route path="sales" element={<Sales />}>
+            <Route path="new-user" element={ <FormUser /> } />
+            <Route path="info-sale" element={ <SaleInfo /> } />
+          </Route>
+          <Route path="sales/form-sale" element={<SaleForm />} />
           <Route path="sales/clients" element={ <Clients /> } />
           <Route path="sales/orders" element={ <OrdersA/> } />
-          <Route path="sales" element={ <Sales /> } />
           <Route path="sales/returns-s" element={ <ReturnsS /> } />
           <Route path="sales/payments-and-credits" element={ <PaymentAndCredits /> } />
 
