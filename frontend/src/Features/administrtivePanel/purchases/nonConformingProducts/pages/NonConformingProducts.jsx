@@ -279,9 +279,7 @@ export const NonConformingProducts = () => {
         <NonConformingProductsTable
           currentData={currentData}
           filteredReports={filteredReports}
-          curren
-          
-          tPage={currentPage}
+          currentPage={currentPage}
           setCurrentPage={setCurrentPage}
           totalPages={totalPages}
           startIndex={startIndex}
