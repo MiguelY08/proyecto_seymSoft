@@ -19,10 +19,9 @@ const CreatePurchase = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [purchaseItems, setPurchaseItems] = useState([]);
 
-  // 🔴 Confirmar cancelación
   const handleCancelPurchase = async () => {
     if (purchaseItems.length > 0) {
-      const confirmed = await showConfirm(
+      const result = await showConfirm(
         "warning",
         "Cancelar compra",
         "Si sales ahora se eliminarán los productos agregados. ¿Deseas continuar?",
@@ -32,7 +31,7 @@ const CreatePurchase = () => {
         }
       );
 
-      if (!confirmed) return;
+      if (!result?.isConfirmed) return;
     }
 
     navigate("/compras");
@@ -68,25 +67,25 @@ const CreatePurchase = () => {
   };
 
   const handleDeleteItem = async (id) => {
-    const confirmed = await showConfirm(
+    const result = await showConfirm(
       "warning",
       "Eliminar producto",
       "¿Estás seguro de que deseas eliminar este producto?"
     );
 
-    if (confirmed) {
-      setPurchaseItems(purchaseItems.filter((item) => item.id !== id));
-      showSuccess("Producto eliminado", "El producto fue eliminado correctamente");
-    }
+    if (!result?.isConfirmed) return;
+
+    setPurchaseItems(purchaseItems.filter((item) => item.id !== id));
+    showSuccess("Producto eliminado", "El producto fue eliminado correctamente");
   };
 
+  // 🔥 AQUÍ ESTÁ LA MODIFICACIÓN IMPORTANTE
   const handleAddProduct = async () => {
     if (!searchProduct) {
       showWarning("Producto requerido", "Debes escribir un producto o código");
       return;
     }
 
-    // 🔥 YA NO SE FILTRA POR PROVEEDOR
     const foundProduct = productsDB.find(
       (p) =>
         p.producto.toLowerCase().includes(searchProduct.toLowerCase()) ||
@@ -98,46 +97,99 @@ const CreatePurchase = () => {
       return;
     }
 
-    const subtotal = foundProduct.valorUnit * quantity;
-    const ivaValor = (subtotal * foundProduct.iva) / 100;
-    const total = subtotal + ivaValor;
+    const existingItem = purchaseItems.find(
+      (item) => item.codigoBarras === foundProduct.codigoBarras
+    );
 
-    const newItem = {
-      id: Date.now(),
-      producto: foundProduct.producto,
-      codigoBarras: foundProduct.codigoBarras,
-      proveedor: foundProduct.proveedor,
-      cantidad: quantity,
-      valorUnit: foundProduct.valorUnit,
-      subtotal,
-      iva: foundProduct.iva,
-      ivaValor,
-      total,
-    };
+    // ✅ SI YA EXISTE → SUMAR CANTIDAD
+    if (existingItem) {
+      const updatedItems = purchaseItems.map((item) => {
+        if (item.codigoBarras === foundProduct.codigoBarras) {
+          const nuevaCantidad = item.cantidad + quantity;
+          const subtotal = foundProduct.valorUnit * nuevaCantidad;
+          const ivaValor = (subtotal * foundProduct.iva) / 100;
+          const total = subtotal + ivaValor;
 
-    setPurchaseItems([...purchaseItems, newItem]);
-    showSuccess("Producto agregado", "Añadido correctamente");
+          return {
+            ...item,
+            cantidad: nuevaCantidad,
+            subtotal,
+            ivaValor,
+            total,
+          };
+        }
+        return item;
+      });
+
+      setPurchaseItems(updatedItems);
+      showSuccess("Cantidad actualizada", "Se sumó la cantidad al producto existente");
+    } else {
+      // ✅ SI NO EXISTE → AGREGAR NORMAL
+      const subtotal = foundProduct.valorUnit * quantity;
+      const ivaValor = (subtotal * foundProduct.iva) / 100;
+      const total = subtotal + ivaValor;
+
+      const newItem = {
+        id: Date.now(),
+        producto: foundProduct.producto,
+        codigoBarras: foundProduct.codigoBarras,
+        proveedor: foundProduct.proveedor,
+        cantidad: quantity,
+        valorUnit: foundProduct.valorUnit,
+        subtotal,
+        iva: foundProduct.iva,
+        ivaValor,
+        total,
+      };
+
+      setPurchaseItems([...purchaseItems, newItem]);
+      showSuccess("Producto agregado", "Añadido correctamente");
+    }
 
     setSearchProduct("");
     setQuantity(1);
   };
 
   const handleSavePurchase = async () => {
+    if (!selectedProvider) {
+      showWarning("Proveedor requerido", "Debes seleccionar un proveedor");
+      return;
+    }
+
+    if (!invoiceNumber.trim()) {
+      showWarning("Factura requerida", "Debes ingresar el número de factura");
+      return;
+    }
+
+    if (!purchaseDate) {
+      showWarning("Fecha requerida", "Debes seleccionar la fecha de compra");
+      return;
+    }
+
     if (purchaseItems.length === 0) {
       showWarning("Compra vacía", "Agrega al menos un producto");
       return;
     }
 
-    const confirmed = await showConfirm("info", "Confirmar compra", "¿Deseas guardar?");
-    if (confirmed) {
-      showSuccess("Compra guardada", "Se registró correctamente");
+    const result = await showConfirm(
+      "info",
+      "Confirmar compra",
+      "¿Deseas guardar esta compra?",
+      {
+        confirmButtonText: "Sí, guardar",
+        cancelButtonText: "Cancelar",
+      }
+    );
 
-      setPurchaseItems([]);
-      setSelectedProvider("");
-      setInvoiceNumber("");
-      setPurchaseDate("");
-      setCurrentPage(1);
-    }
+    if (!result?.isConfirmed) return;
+
+    showSuccess("Compra guardada", "Se registró correctamente");
+
+    setPurchaseItems([]);
+    setSelectedProvider("");
+    setInvoiceNumber("");
+    setPurchaseDate("");
+    setCurrentPage(1);
   };
 
   return (
@@ -146,6 +198,7 @@ const CreatePurchase = () => {
 
         <div className="lg:col-span-3">
           <CreateSidebar
+            productsDB={productsDB}
             selectedProvider={selectedProvider}
             setSelectedProvider={setSelectedProvider}
             invoiceNumber={invoiceNumber}
@@ -163,17 +216,8 @@ const CreatePurchase = () => {
         </div>
 
         <div className="lg:col-span-9 bg-white rounded-2xl shadow-lg p-6">
-
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-800">Detalle productos</h2>
-
-            <Link
-              to="/productos/crear"
-              className="flex items-center gap-1 px-3 py-1 border border-sky-700 text-[#004D77] bg-white hover:bg-sky-50 rounded-lg text-xs font-semibold transition-all"
-            >
-              Crear Producto
-              <span className="text-lg font-bold">+</span>
-            </Link>
           </div>
 
           <div className="flex gap-4 mb-6">
@@ -219,7 +263,6 @@ const CreatePurchase = () => {
               Guardar Compra
             </button>
           </div>
-
         </div>
       </div>
     </div>
