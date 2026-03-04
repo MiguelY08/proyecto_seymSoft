@@ -49,7 +49,8 @@ import SaleForm from '../../Features/administrtivePanel/sales/sales/pages/SaleFo
 import SaleInfo from '../../Features/administrtivePanel/sales/sales/components/SaleInfo.jsx';
 
 import ReturnsS from '../../Features/administrtivePanel/sales/returns/Returns.jsx';
-import PaymentAndCredits from '../../Features/administrtivePanel/sales/paymentsAndCredits/PaymentAndCredits.jsx';
+import PaymentsPage from "../../Features/administrtivePanel/sales/paymentsAndCredits/pages/PaymentsPage.jsx";
+import AccountDetailsPage from "../../Features/administrtivePanel/sales/paymentsAndCredits/pages/AccountDetailsPage.jsx";
 
 import RolesPage from "../../Features/administrtivePanel/configuration/roles/page/RolesPage.jsx";
 import Banners from "../../Features/administrtivePanel/appearance/Banners.jsx";
@@ -62,6 +63,7 @@ import EditReturn from "../../Features/landing/orders/EditReturn.jsx";
 import CreateProduct from "../../Features/administrtivePanel/purchases/products/modals/CreateProduct.jsx";
 import FormProduct from "../../Features/administrtivePanel/purchases/products/modals/CreateProduct.jsx";
 import EditProduct from "../../Features/administrtivePanel/purchases/products/modals/EditProduct.jsx";
+
 
 
 const AppRouter = () => {
@@ -95,7 +97,22 @@ const AppRouter = () => {
           <Route path="sales/clients" element={ <Clients /> } />
           <Route path="sales/orders" element={ <OrdersA/> } />
           <Route path="sales/returns-s" element={ <ReturnsS /> } />
-          <Route path="sales/payments-and-credits" element={ <PaymentAndCredits /> } />
+          <Route path="sales/clients" element={<Clients />} />
+          <Route path="sales/orders" element={<OrdersA/>} />
+          <Route path="sales" element={<Sales />} />
+          <Route path="sales/returns-s" element={<ReturnsS />} />
+
+          <Route path="sales/payments-and-credits" element={<PaymentsPage />} />
+
+          <Route 
+            path="sales/payments-and-credits/:id" 
+            element={<AccountDetailsPage mode="view" />} 
+          />
+
+          <Route 
+            path="sales/payments-and-credits/:id/payment" 
+            element={<AccountDetailsPage mode="payment" />} 
+          />
 
       
 
@@ -122,14 +139,14 @@ const AppRouter = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/orders-l/:id" element={<OrderDetail />} />    
         <Route path='returnsOnOrders' element={ <ReturnsOnOrders/> } />
-         <Route path='registerReturn' element={ <RegisterReturn/> } />
-         <Route path='favorites' element={ <Favorites/> } /> 
-         <Route path='cart' element={ <ShoppingCart/> }/> 
-         <Route path='returns/:id' element={ <DetailReturnsOnOrders/> }/> 
-         <Route path='edit/:id' element={ <EditReturn/> }/>
-         <Route path="/returns/:id" element={<RegisterReturnOnDetail />} />
-         <Route path="create" element={<FormProduct/>} />
-         <Route path="edit" element={<EditProduct/>} />
+        <Route path='registerReturn' element={ <RegisterReturn/> } />
+        <Route path='favorites' element={ <Favorites/> } /> 
+        <Route path='cart' element={ <ShoppingCart/> }/> 
+        <Route path='returns/:id' element={ <DetailReturnsOnOrders/> }/> 
+        <Route path='edit/:id' element={ <EditReturn/> }/>
+        <Route path="/returns/:id" element={<RegisterReturnOnDetail />} />
+        <Route path="create" element={<FormProduct/>} />
+        <Route path="edit" element={<EditProduct/>} />
 
 
 
