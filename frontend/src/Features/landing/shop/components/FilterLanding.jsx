@@ -14,13 +14,27 @@ function Filters({
   handleCategoryChange,
   handleBrandChange
 }) {
-
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [openCategories, setOpenCategories] = useState({});
+  const [openSubCategories, setOpenSubCategories] = useState({});
+
+  const toggleCategory = (name) => {
+    setOpenCategories(prev => ({
+      ...prev,
+      [name]: !prev[name]
+    }));
+  };
+
+  const toggleSubCategory = (name) => {
+    setOpenSubCategories(prev => ({
+      ...prev,
+      [name]: !prev[name]
+    }));
+  };
 
   return (
     <div className="w-full md:w-64">
-
-      {/* Botón solo visible en móvil */}
+      {/* Botón móvil */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
         className="md:hidden flex justify-between items-center w-full bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
@@ -29,7 +43,6 @@ function Filters({
         {mobileOpen ? <ChevronUp /> : <ChevronDown />}
       </button>
 
-      {/* Panel de filtros */}
       <div
         className={`
           ${mobileOpen ? "block" : "hidden"} 
@@ -40,7 +53,7 @@ function Filters({
         <h2 className="text-xl font-semibold">Filtros</h2>
         <p className="text-sm text-gray-500">{totalProducts} resultados</p>
 
-        {/* Categorías */}
+        {/* CATEGORÍAS */}
         <button
           onClick={() => setCategoryOpen(!categoryOpen)}
           className="flex justify-between items-center w-full py-2 mt-4"
@@ -50,24 +63,84 @@ function Filters({
         </button>
 
         {categoryOpen && (
-          <div className="space-y-2 mt-2 max-h-60 overflow-y-auto">
+          <div className="space-y-2 mt-2 max-h-80 overflow-y-auto">
             {categories.map(cat => (
-              <label key={cat} className="flex items-center text-sm">
-                <input
-                  type="checkbox"
-                  checked={selectedCategories.includes(cat)}
-                  onChange={() => handleCategoryChange(cat)}
-                  className="mr-2 accent-black"
-                />
-                {cat}
-              </label>
+              <div key={cat.name}>
+                {/* Categoría principal */}
+                <div className="flex justify-between items-center text-sm font-medium">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedCategories.includes(cat.name)}
+                      onChange={() => handleCategoryChange(cat.name)}
+                      className="mr-2 accent-black"
+                    />
+                    {cat.name} ({cat.count})
+                  </label>
+
+                  {cat.subcategories && (
+                    <button onClick={() => toggleCategory(cat.name)}>
+                      {openCategories[cat.name] ? (
+                        <ChevronUp size={16} />
+                      ) : (
+                        <ChevronDown size={16} />
+                      )}
+                    </button>
+                  )}
+                </div>
+
+                {/* Subcategorías */}
+                {openCategories[cat.name] &&
+                  cat.subcategories?.map(sub => (
+                    <div key={sub.name} className="ml-6 mt-1">
+                      <div className="flex justify-between items-center text-sm">
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedCategories.includes(sub.name)}
+                            onChange={() => handleCategoryChange(sub.name)}
+                            className="mr-2 accent-black"
+                          />
+                          {sub.name} ({sub.count})
+                        </label>
+
+                        {sub.children && (
+                          <button onClick={() => toggleSubCategory(sub.name)}>
+                            {openSubCategories[sub.name] ? (
+                              <ChevronUp size={14} />
+                            ) : (
+                              <ChevronDown size={14} />
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Sub-subcategorías */}
+                      {openSubCategories[sub.name] &&
+                        sub.children?.map(child => (
+                          <label
+                            key={child.name}
+                            className="flex items-center text-sm ml-6 mt-1"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedCategories.includes(child.name)}
+                              onChange={() => handleCategoryChange(child.name)}
+                              className="mr-2 accent-black"
+                            />
+                            {child.name} ({child.count})
+                          </label>
+                        ))}
+                    </div>
+                  ))}
+              </div>
             ))}
           </div>
         )}
 
         <hr className="my-4" />
 
-        {/* Marcas */}
+        {/* MARCAS */}
         <button
           onClick={() => setBrandOpen(!brandOpen)}
           className="flex justify-between items-center w-full py-2"
