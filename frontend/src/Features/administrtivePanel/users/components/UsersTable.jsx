@@ -185,20 +185,43 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                 </td>
                 <td className="px-3 py-1.5">
                   <div className="flex items-center justify-center gap-1 sm:gap-1.5">
-                    <button
-                      onClick={() => navigate('/admin/users/info-user', { state: { user: row } })}
-                      className="text-gray-400 hover:text-[#004D77] transition-colors cursor-pointer"
-                      title="Información"
-                    >
-                      <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
-                    </button>
-                    <button
-                      onClick={() => navigate('/admin/users/form-user', { state: { user: row } })}
-                      className="text-gray-400 hover:text-[#004D77] transition-colors cursor-pointer"
-                      title="Editar"
-                    >
-                      <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
-                    </button>
+                  <button
+                    onClick={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      navigate('/admin/users/info-user', {
+                        state: {
+                          user: row,
+                          origin: {
+                            x: rect.left + rect.width  / 2,
+                            y: rect.top  + rect.height / 2,
+                          },
+                        },
+                      });
+                    }}
+                    className="text-gray-400 hover:text-[#004D77] transition-colors cursor-pointer"
+                    title="Información"
+                  >
+                    <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                  </button>
+
+                  <button
+                    onClick={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      navigate('/admin/users/form-user', {
+                        state: {
+                          user: row,
+                          origin: {
+                            x: rect.left + rect.width  / 2,
+                            y: rect.top  + rect.height / 2,
+                          },
+                        },
+                      });
+                    }}
+                    className="text-gray-400 hover:text-[#004D77] transition-colors cursor-pointer"
+                    title="Editar"
+                  >
+                    <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                  </button>
                     <ActiveToggle
                       activo={row.activo}
                       onChange={() => onToggle?.(row.id)}

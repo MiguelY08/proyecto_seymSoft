@@ -142,7 +142,7 @@ export default function Sidebar() {
             <X size={20} />
           </button>
 
-          <div className="mt-3 h-[2px] w-full bg-[#004D77]" />
+          <div className="mt-3 h-2px w-full bg-[#004D77]" />
         </div>
 
         {/* NAV */}

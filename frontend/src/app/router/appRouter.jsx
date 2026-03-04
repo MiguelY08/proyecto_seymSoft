@@ -42,7 +42,12 @@ import NonConformingProducts from '../../Features/administrtivePanel/purchases/n
 
 import Clients from '../../Features/administrtivePanel/sales/clients/Clients.jsx';
 import OrdersA from '../../Features/administrtivePanel/sales/orders/Orders.jsx';
-import Sales from '../../Features/administrtivePanel/sales/sales/Sales.jsx';
+
+// Ventas
+import Sales from '../../Features/administrtivePanel/sales/sales/pages/Sales.jsx';
+import SaleForm from '../../Features/administrtivePanel/sales/sales/pages/SaleForm.jsx';
+import SaleInfo from '../../Features/administrtivePanel/sales/sales/components/SaleInfo.jsx';
+
 import ReturnsS from '../../Features/administrtivePanel/sales/returns/Returns.jsx';
 import PaymentsPage from "../../Features/administrtivePanel/sales/paymentsAndCredits/pages/PaymentsPage.jsx";
 import AccountDetailsPage from "../../Features/administrtivePanel/sales/paymentsAndCredits/pages/AccountDetailsPage.jsx";
@@ -84,6 +89,14 @@ const AppRouter = () => {
           <Route path="purchases/returns-p" element={ <ReturnsP /> } />
           <Route path="purchases/non-conforming-products" element={ <NonConformingProducts /> } />
 
+          <Route path="sales" element={<Sales />}>
+            <Route path="new-user" element={ <FormUser /> } />
+            <Route path="info-sale" element={ <SaleInfo /> } />
+          </Route>
+          <Route path="sales/form-sale" element={<SaleForm />} />
+          <Route path="sales/clients" element={ <Clients /> } />
+          <Route path="sales/orders" element={ <OrdersA/> } />
+          <Route path="sales/returns-s" element={ <ReturnsS /> } />
           <Route path="sales/clients" element={<Clients />} />
           <Route path="sales/orders" element={<OrdersA/>} />
           <Route path="sales" element={<Sales />} />
@@ -126,14 +139,14 @@ const AppRouter = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/orders-l/:id" element={<OrderDetail />} />    
         <Route path='returnsOnOrders' element={ <ReturnsOnOrders/> } />
-         <Route path='registerReturn' element={ <RegisterReturn/> } />
-         <Route path='favorites' element={ <Favorites/> } /> 
-         <Route path='cart' element={ <ShoppingCart/> }/> 
-         <Route path='returns/:id' element={ <DetailReturnsOnOrders/> }/> 
-         <Route path='edit/:id' element={ <EditReturn/> }/>
-         <Route path="/returns/:id" element={<RegisterReturnOnDetail />} />
-         <Route path="create" element={<FormProduct/>} />
-         <Route path="edit" element={<EditProduct/>} />
+        <Route path='registerReturn' element={ <RegisterReturn/> } />
+        <Route path='favorites' element={ <Favorites/> } /> 
+        <Route path='cart' element={ <ShoppingCart/> }/> 
+        <Route path='returns/:id' element={ <DetailReturnsOnOrders/> }/> 
+        <Route path='edit/:id' element={ <EditReturn/> }/>
+        <Route path="/returns/:id" element={<RegisterReturnOnDetail />} />
+        <Route path="create" element={<FormProduct/>} />
+        <Route path="edit" element={<EditProduct/>} />
 
 
 

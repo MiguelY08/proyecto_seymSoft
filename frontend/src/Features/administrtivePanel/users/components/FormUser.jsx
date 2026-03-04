@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { X, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { useAlert } from '../../../shared/alerts/useAlert';
+import { useModalAnimation } from '../../../shared/useModalAnimation';
 
 const STORAGE_KEY = 'pm_users';
 
@@ -11,6 +12,13 @@ function FormUser() {
   const { showWarning, showSuccess } = useAlert();
   const userToEdit      = location.state?.user ?? null;
   const isEditing       = userToEdit !== null;
+  const returnTo        = location.state?.returnTo ?? '/admin/users';
+  const origin          = location.state?.origin ?? null;
+  const { visible, handleClose: animatedClose } = useModalAnimation(returnTo);
+
+  const transformOrigin = origin
+  ? `${origin.x}px ${origin.y}px`
+  : 'center center';
 
   const [form, setForm] = useState({
     tipo:      userToEdit?.tipo      ?? 'CC',
@@ -121,10 +129,12 @@ function FormUser() {
       showSuccess('Usuario creado', 'El nuevo usuario ha sido registrado exitosamente.');
     }
 
-    navigate('/admin/users');
+    navigate(returnTo, {
+      state: returnTo !== '/admin/users' ? { newUserId: String(newId) } : undefined,
+    });
   };
 
-  const handleCancel = () => navigate('/admin/users');
+  const handleCancel = () => animatedClose();
 
   const inputClass = (field) =>
     `w-full px-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
@@ -147,12 +157,19 @@ function FormUser() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
       onClick={handleCancel}
+      style={{ transition: 'opacity 250ms ease' }}
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4
+        ${visible ? 'opacity-100' : 'opacity-0'}`}
     >
       <div
-        className="bg-white rounded-lg shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-lg overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
+        style={{
+          transformOrigin,
+          transition: 'transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 200ms ease',
+        }}
+        className={`bg-white rounded-lg shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-lg overflow-hidden flex flex-col
+          ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">

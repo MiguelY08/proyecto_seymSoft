@@ -3,8 +3,6 @@ import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ShoppingBag, Briefcase, ClipboardPen, FileText, Palette } from 'lucide-react';
 
 import img01 from '../../../assets/carrusel/01.png';
-import img02 from '../../../assets/carrusel/02.png';
-import img03 from '../../../assets/carrusel/03.png';
 
 import ProductCard from '../../shared/ProductCard.jsx';
 import correctorCinta      from '../../../assets/products/correctorencinta.png';
@@ -22,9 +20,7 @@ function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const slides = [
-    { id: 1, image: img01, alt: 'Promoción 1' },
-    { id: 2, image: img02, alt: 'Promoción 2' },
-    { id: 3, image: img03, alt: 'Promoción 3' },
+    { id: 1, image: img01, alt: 'Imagen 1' },
   ];
 
   const categories = [
