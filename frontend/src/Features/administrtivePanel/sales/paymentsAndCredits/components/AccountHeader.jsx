@@ -11,16 +11,23 @@ export default function AccountHeader({
 
   const isPaymentMode = mode === "payment"
 
+  const formatMoney = (value) =>
+    new Intl.NumberFormat("es-CO").format(value)
+
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 flex flex-col md:flex-row md:justify-between md:items-center gap-6">
+    <div className="bg-white rounded-2xl shadow-md p-6 font-lexend 
+                    flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6">
 
       {/* INFO IZQUIERDA */}
-      <div>
-        <h2 className="text-lg font-semibold">
-          {isPaymentMode ? "Abonar a Cuenta" : "Detalles de Estado de Cuenta"} - {nombre}
+      <div className="space-y-2">
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
+          {isPaymentMode
+            ? "Abonar a Cuenta"
+            : "Detalles de Estado de Cuenta"}{" "}
+          - {nombre}
         </h2>
 
-        <p className="text-sm text-gray-600 mt-2">
+        <p className="text-sm text-gray-600">
           Documento: {documento}
         </p>
 
@@ -30,22 +37,30 @@ export default function AccountHeader({
       </div>
 
       {/* SALDO + BOTÓN */}
-      <div className="text-right space-y-3">
-        <div>
+      <div className="flex flex-col items-start lg:items-end gap-4">
+
+        <div className="text-left lg:text-right">
           <p className="text-sm text-gray-500">
             Saldo Total Actual
           </p>
           <p className="text-2xl font-bold text-[#004D77]">
-            ${saldoTotal.toLocaleString()}
+            ${formatMoney(saldoTotal)}
           </p>
         </div>
 
-        <ButtonComponent
-          className="bg-white text-[#004D77] border-[#004D77] hover:bg-[#004D77]/10"
-          onClick={onAction}
-        >
-          {isPaymentMode ? "Generar Abono +" : "Generar PDF +"}
-        </ButtonComponent>
+        {/* Botón solo si existe acción */}
+        {onAction && (
+          <ButtonComponent
+            onClick={onAction}
+            className="bg-[#004D77] text-white hover:bg-[#003D5e] 
+                       transition-all duration-200 rounded-lg px-4 py-2"
+          >
+            {isPaymentMode
+              ? "Generar Abono +"
+              : "Generar PDF +"}
+          </ButtonComponent>
+        )}
+
       </div>
 
     </div>

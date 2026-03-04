@@ -1,10 +1,14 @@
 import { useState, useMemo, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { useAlert } from "../../../../shared/alerts/useAlert"
 
 import ButtonComponent from "../../../../shared/ButtonComponent"
 import TableFilters from "../../../../shared/TableFilters"
-
 import PaymentsTable from "../components/PaymentsTable"
+import PaymentsPaginator from "../components/PaymentsPaginator"
+import ContactClientModal from "../components/ContactClientModal"
+
+import { exportAccountsToExcel } from "../utils/paymentHelpers"
 
 import {
   initializePayments,
@@ -19,6 +23,7 @@ import {
 export default function PaymentsPage() {
 
   const navigate = useNavigate()
+  const { showConfirm, showSuccess, showError } = useAlert()
 
   const [accounts, setAccounts] = useState([])
   const [search, setSearch] = useState("")
@@ -26,23 +31,27 @@ export default function PaymentsPage() {
   const [endDate, setEndDate] = useState("")
   const [estado, setEstado] = useState("todos")
   const [currentPage, setCurrentPage] = useState(1)
+  const [selectedAccount, setSelectedAccount] = useState(null)
 
-  const itemsPerPage = 5
+  const itemsPerPage = 10
 
+  /* ===============================
+     Inicializar datos
+  ================================ */
   useEffect(() => {
     initializePayments()
     const data = getAccounts()
     setAccounts(data)
   }, [])
 
+  /* ===============================
+     Filtrado
+  ================================ */
   const filteredData = useMemo(() => {
     return accounts.filter(item => {
 
       const saldo = calculateSaldo(item)
-      const status = getPaymentStatus(
-        saldo,
-        item.fechaVencimiento
-      )
+      const status = getPaymentStatus(saldo, item.fechaCredito)
 
       if (estado !== "todos" && status !== estado)
         return false
@@ -63,13 +72,14 @@ export default function PaymentsPage() {
     })
   }, [accounts, search, startDate, endDate, estado])
 
+  /* ===============================
+     Formateo
+  ================================ */
   const formattedData = useMemo(() => {
     return filteredData.map(item => {
+
       const saldo = calculateSaldo(item)
-      const status = getPaymentStatus(
-        saldo,
-        item.fechaVencimiento
-      )
+      const status = getPaymentStatus(saldo, item.fechaCredito)
 
       return {
         ...item,
@@ -80,15 +90,17 @@ export default function PaymentsPage() {
     })
   }, [filteredData])
 
+  /* ===============================
+     Paginación
+  ================================ */
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage
     return formattedData.slice(start, start + itemsPerPage)
   }, [formattedData, currentPage])
 
   /* ===============================
-     NAVEGACIÓN
+     Navegación
   ================================ */
-
   const handleView = (id) => {
     navigate(`/admin/sales/payments-and-credits/${id}`)
   }
@@ -98,7 +110,58 @@ export default function PaymentsPage() {
   }
 
   const handleContact = (item) => {
-    console.log("Abrir modal contacto", item)
+    setSelectedAccount(item)
+  }
+
+  /* ===============================
+     Exportar Excel CON ALERTAS
+  ================================ */
+  const handleExportExcel = async () => {
+
+    if (!filteredData.length) {
+      showError(
+        "Sin datos",
+        "No hay registros para exportar."
+      )
+      return
+    }
+
+    const confirm = await showConfirm(
+      "question",
+      "¿Exportar a Excel?",
+      "Se generará el archivo Excel con los datos filtrados.",
+      {
+        confirmButtonText: "Sí, exportar",
+        cancelButtonText: "Cancelar"
+      }
+    )
+
+    if (!confirm.isConfirmed) return
+
+    try {
+
+      const success = exportAccountsToExcel(filteredData)
+
+      if (!success) {
+        showError(
+          "Error",
+          "No se pudo generar el archivo."
+        )
+        return
+      }
+
+      showSuccess(
+        "Exportación completada",
+        "El archivo Excel fue generado correctamente."
+      )
+
+    } catch (error) {
+
+      showError(
+        "Error al exportar",
+        "Ocurrió un problema al generar el Excel."
+      )
+    }
   }
 
   return (
@@ -137,6 +200,7 @@ export default function PaymentsPage() {
 
           <ButtonComponent
             className="bg-white text-green-600 border-green-600 hover:bg-green-400"
+            onClick={handleExportExcel}
           >
             Exportar Excel +
           </ButtonComponent>
@@ -153,6 +217,26 @@ export default function PaymentsPage() {
           onContact={handleContact}
         />
       </div>
+
+      <div className="mt-4">
+        <PaymentsPaginator
+          itemsPerPage={itemsPerPage}
+          totalItems={formattedData.length}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+        />
+      </div>
+
+      {selectedAccount && (
+        <ContactClientModal
+          account={selectedAccount}
+          onClose={() => setSelectedAccount(null)}
+          onInterestApplied={() => {
+            const updated = getAccounts()
+            setAccounts(updated)
+          }}
+        />
+      )}
 
     </div>
   )

@@ -1,9 +1,19 @@
 import { useParams } from "react-router-dom"
-import { useEffect, useState } from "react"
+import { useState, useEffect, useRef } from "react"
+import jsPDF from "jspdf"
+import html2canvas from "html2canvas"
+import { useAlert } from "../../../../shared/alerts/useAlert"
+
+import BackHeader from "../../../../shared/BackHeader"
+
+import PaymentHistoryTable from "../components/PaymentsHistoryTable"
+import PaymentsPaginator from "../components/PaymentsPaginator"
+import GeneratePaymentModal from "../components/generatePaymentModal"
+import CancelPaymentModal from "../components/CancelPaymentModal"
+import AccountReceipt from "../components/AccountReceipt"
 
 import {
   getAccountById,
-  cancelPayment,
   addPayment
 } from "../data/paymentsServices"
 
@@ -12,186 +22,275 @@ import {
   getPaymentStatus
 } from "../utils/paymentHelpers"
 
-import PaymentHistoryTable from "../components/PaymentsHistoryTable"
-
 export default function AccountDetailsPage({ mode }) {
 
   const { id } = useParams()
-  const [account, setAccount] = useState(null)
+  const { showConfirm, showSuccess, showError } = useAlert()
 
+  const [account, setAccount] = useState(null)
   const [showModal, setShowModal] = useState(false)
-  const [amount, setAmount] = useState("")
-  const [error, setError] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedPayment, setSelectedPayment] = useState(null)
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+
+  const pdfRef = useRef(null)
+  const itemsPerPage = 4
 
   useEffect(() => {
-    const data = getAccountById(id)
-    setAccount(data)
+    loadAccount()
   }, [id])
 
-  if (!account) return <div className="p-6">Cargando...</div>
-
-  const saldo = calculateSaldo(account)
-  const status = getPaymentStatus(
-    saldo,
-    account.fechaVencimiento
-  )
-
-  /* ===============================
-     Cancelar Abono
-  ================================ */
-  const handleCancel = (paymentId) => {
-    cancelPayment(id, paymentId)
-
-    const updatedAccount = getAccountById(id)
-    setAccount(updatedAccount)
+  const loadAccount = () => {
+    const data = getAccountById(id)
+    setAccount(data)
   }
 
-  /* ===============================
-     Generar Abono
-  ================================ */
-  const handleAddPayment = () => {
+  if (!account)
+    return <div className="p-6 font-lexend">Cargando...</div>
 
-    if (!amount || Number(amount) <= 0) {
-      setError("Ingrese un monto válido")
+  const saldo = calculateSaldo(account)
+  const status = getPaymentStatus(saldo, account.fechaCredito)
+
+  const abonos = account.abonos || []
+  const paginatedAbonos = abonos.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
+
+  const handleDownloadPDF = async () => {
+    if (!account || !pdfRef.current || isGeneratingPDF) return
+
+    const confirm = await showConfirm(
+      "question",
+      "¿Descargar comprobante?",
+      "Se generará el archivo PDF del cliente.",
+      {
+        confirmButtonText: "Sí, descargar",
+        cancelButtonText: "Cancelar"
+      }
+    )
+
+    if (!confirm.isConfirmed) return
+
+    try {
+      setIsGeneratingPDF(true)
+
+      const canvas = await html2canvas(pdfRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff"
+      })
+
+      const imgData = canvas.toDataURL("image/png")
+      const pdf = new jsPDF("p", "mm", "a4")
+
+      const pageWidth = 210
+      const pageHeight = 297
+      const imgWidth = pageWidth
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+
+      if (imgHeight <= pageHeight) {
+        pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight)
+      } else {
+        let heightLeft = imgHeight
+        let position = 0
+
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+
+        while (heightLeft > 0) {
+          position = heightLeft - imgHeight
+          pdf.addPage()
+          pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+          heightLeft -= pageHeight
+        }
+      }
+
+      pdf.save(`Comprobante_${account.nombre}.pdf`)
+
+      showSuccess(
+        "Descarga completada",
+        "El comprobante PDF fue generado correctamente."
+      )
+
+    } catch (error) {
+      showError(
+        "Error al generar PDF",
+        "Ocurrió un problema al generar el comprobante."
+      )
+    } finally {
+      setIsGeneratingPDF(false)
+    }
+  }
+
+  const handleOpenCancelModal = (payment) => {
+    setSelectedPayment(payment)
+    setIsModalOpen(true)
+  }
+
+  const handleSavePayment = (data) => {
+    const success = addPayment(id, data)
+
+    if (!success) {
+      showError("Error", "No se pudo guardar el abono.")
       return
     }
 
-    if (Number(amount) > saldo) {
-      setError("El monto no puede ser mayor al saldo")
-      return
-    }
-
-    addPayment(id, amount)
-
-    const updatedAccount = getAccountById(id)
-    setAccount(updatedAccount)
-
-    setAmount("")
-    setError("")
+    loadAccount()
     setShowModal(false)
+    setCurrentPage(1)
+
+    showSuccess(
+      "Abono registrado",
+      "El abono fue guardado correctamente."
+    )
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <>
+      <BackHeader title="Volver" />
 
-      {/* HEADER */}
-      <div className="flex justify-between items-center">
+      <div className="p-4 sm:p-6 space-y-6 font-lexend">
 
-        <div>
-          <h2 className="text-xl font-semibold">
-            {mode === "payment"
-              ? `Abonar a Cuenta - ${account.nombre}`
-              : `Detalles de Estado de Cuenta - ${account.nombre}`
-            }
-          </h2>
+        {/* HEADER */}
+        <div className="bg-white rounded-2xl shadow-md p-4 sm:p-6
+                        flex flex-col
+                        md:flex-row md:justify-between md:items-start
+                        gap-6">
 
-          <p className="text-sm text-gray-500">
-            Fecha crédito: {account.fechaCredito}
-          </p>
+          {/* INFO */}
+          <div className="space-y-2 w-full md:w-auto">
+            <h2 className="text-base sm:text-lg md:text-xl font-semibold leading-snug">
+              {mode === "payment"
+                ? `Abonar a Cuenta - ${account.nombre}`
+                : `Detalles de Estado de Cuenta - ${account.nombre}`}
+            </h2>
 
-          <p className="text-sm mt-1">
-            Estado:{" "}
-            <span className={`font-semibold ${
-              status === "al_dia"
-                ? "text-green-600"
-                : status === "vencido"
-                ? "text-red-600"
-                : "text-yellow-600"
-            }`}>
-              {status === "al_dia"
-                ? "Al día"
-                : status === "vencido"
-                ? "Vencido"
-                : "Pendiente"}
-            </span>
-          </p>
+            <p className="text-sm text-gray-600 break-words">
+              Documento: {account.documento}
+            </p>
 
+            <p className="text-sm text-gray-600 break-words">
+              Teléfono: {account.telefono}
+            </p>
+
+            <p className="text-sm mt-1">
+              Estado{" "}
+              <span className={`font-semibold ${
+                status === "al_dia"
+                  ? "text-green-600"
+                  : status === "vencido"
+                  ? "text-red-600"
+                  : "text-yellow-600"
+              }`}>
+                {status === "al_dia"
+                  ? "Al día"
+                  : status === "vencido"
+                  ? "Vencido"
+                  : "Pendiente"}
+              </span>
+            </p>
+          </div>
+
+          {/* BOTONES Y SALDO */}
+          <div className="flex flex-col sm:flex-row md:flex-col
+                          items-start sm:items-center md:items-end
+                          gap-4 w-full md:w-auto">
+
+            <div className="text-left sm:text-right">
+              <p className="text-sm text-gray-500">
+                Saldo Total Actual
+              </p>
+              <p className="text-xl sm:text-2xl font-bold text-[#004D77]">
+                ${new Intl.NumberFormat("es-CO").format(saldo)}
+              </p>
+            </div>
+
+            {mode === "view" && (
+              <button
+                disabled={isGeneratingPDF}
+                onClick={handleDownloadPDF}
+                className="w-full sm:w-auto
+                           px-4 py-2 rounded-lg border
+                           text-[#004D77] bg-white
+                           hover:bg-sky-50
+                           disabled:opacity-50 disabled:cursor-not-allowed
+                           transition-all duration-200
+                           text-sm font-semibold cursor-pointer"
+              >
+                {isGeneratingPDF ? "Generando..." : "Descargar PDF"}
+              </button>
+            )}
+
+            {mode === "payment" && saldo > 0 && (
+              <button
+                onClick={() => setShowModal(true)}
+                className="w-full sm:w-auto
+                           px-4 py-2 rounded-lg border
+                           text-[#004D77] bg-white
+                           hover:bg-sky-50
+                           transition-all duration-200
+                           text-sm font-semibold cursor-pointer"
+              >
+                Generar Abono +
+              </button>
+            )}
+
+          </div>
         </div>
 
-        <div className="text-right">
-          <p className="text-sm text-gray-500">
-            Saldo Total Actual
-          </p>
-          <p className="text-2xl font-bold text-sky-900">
-            ${saldo.toLocaleString()}
-          </p>
+        <PaymentHistoryTable
+          abonos={paginatedAbonos}
+          mode={mode}
+          onDelete={handleOpenCancelModal}
+        />
+
+        <PaymentsPaginator
+          itemsPerPage={itemsPerPage}
+          totalItems={abonos.length}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+        />
+
+        {showModal && (
+          <GeneratePaymentModal
+            account={account}
+            onClose={() => setShowModal(false)}
+            onSave={handleSavePayment}
+          />
+        )}
+
+        {isModalOpen && selectedPayment && (
+          <CancelPaymentModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            creditId={account.id}
+            account={account}
+            payment={selectedPayment}
+            onSuccess={() => {
+              loadAccount()
+              setCurrentPage(1)
+            }}
+          />
+        )}
+
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: "-9999px",
+            width: "210mm",
+            backgroundColor: "#ffffff",
+            zIndex: -1
+          }}
+        >
+          <div ref={pdfRef}>
+            <AccountReceipt account={account} />
+          </div>
         </div>
 
       </div>
-
-      {/* BOTÓN SOLO EN PAYMENT */}
-      {mode === "payment" && (
-        <button
-          onClick={() => setShowModal(true)}
-          className="px-4 py-2 bg-sky-900 text-white rounded-lg hover:opacity-90 transition"
-        >
-          Generar Abono
-        </button>
-      )}
-
-      {/* TABLA */}
-      <PaymentHistoryTable
-        abonos={account.abonos}
-        mode={mode}
-        onDelete={handleCancel}
-      />
-
-      {/* ===============================
-           MODAL GENERAR ABONO
-      ================================ */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-
-          <div className="bg-white p-6 rounded-xl w-96 space-y-4">
-
-            <h3 className="text-lg font-semibold">
-              Generar Abono
-            </h3>
-
-            <input
-              type="number"
-              placeholder="Ingrese monto"
-              value={amount}
-              onChange={(e) => {
-                setAmount(e.target.value)
-                setError("")
-              }}
-              className="w-full px-3 py-2 border rounded-lg"
-            />
-
-            {error && (
-              <p className="text-sm text-red-500">
-                {error}
-              </p>
-            )}
-
-            <div className="flex justify-end gap-3">
-
-              <button
-                onClick={() => {
-                  setShowModal(false)
-                  setError("")
-                  setAmount("")
-                }}
-                className="px-4 py-2 bg-gray-200 rounded-lg"
-              >
-                Cancelar
-              </button>
-
-              <button
-                onClick={handleAddPayment}
-                className="px-4 py-2 bg-sky-900 text-white rounded-lg"
-              >
-                Guardar
-              </button>
-
-            </div>
-
-          </div>
-
-        </div>
-      )}
-
-    </div>
+    </>
   )
 }
