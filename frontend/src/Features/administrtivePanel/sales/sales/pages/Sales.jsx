@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 
-import TopBar        from '../components/TopBar';
-import SalesTable    from '../components/SalesTable';
-import PaginatorSales from '../components/PaginatorSales';
+import TopBar          from '../components/TopBar';
+import SalesTable      from '../components/SalesTable';
+import PaginationAdmin from '../../../../shared/PaginationAdmin';
 
 const STORAGE_KEY      = 'pm_sales';
 const RECORDS_PER_PAGE = 13;
@@ -13,9 +13,7 @@ const loadSales = () => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 };
 
 const saveSales = (sales) => {
@@ -29,12 +27,10 @@ function Sales() {
   const [search,      setSearch]      = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // ─── Re-sincronizar al volver de formularios ──────────────────────────────
   useEffect(() => {
     setData(loadSales());
   }, [location.pathname]);
 
-  // ─── Persistir cambios en localStorage ───────────────────────────────────
   useEffect(() => {
     saveSales(data);
   }, [data]);
@@ -53,12 +49,12 @@ function Sales() {
     const term = search.toLowerCase().trim();
     if (!term) return true;
     return (
-      row.cliente.toLowerCase().includes(term)    ||
-      row.vendedor.toLowerCase().includes(term)   ||
-      String(row.factura).toLowerCase().includes(term) ||
-      row.fecha.toLowerCase().includes(term)      ||
-      row.metodoPago.toLowerCase().includes(term) ||
-      String(row.total).toLowerCase().includes(term) ||
+      row.cliente.toLowerCase().includes(term)          ||
+      row.vendedor.toLowerCase().includes(term)         ||
+      String(row.factura).toLowerCase().includes(term)  ||
+      row.fecha.toLowerCase().includes(term)            ||
+      row.metodoPago.toLowerCase().includes(term)       ||
+      String(row.total).toLowerCase().includes(term)    ||
       row.estado.toLowerCase().includes(term)
     );
   });
@@ -77,8 +73,8 @@ function Sales() {
         onSearchChange={handleSearchChange}
       />
 
-      {/* ── Card contenedor Tabla + Paginador ────────────────────────────── */}
-      <div className="bg-white rounded-xl shadow-md overflow-hidden flex flex-col">
+      {/* ── Tabla ────────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl shadow-md overflow-hidden">
         <SalesTable
           data={paginatedData}
           onAnular={handleAnular}
@@ -86,18 +82,17 @@ function Sales() {
           totalData={data.length}
           offset={(currentPage - 1) * RECORDS_PER_PAGE}
         />
-
-        {data.length > 0 && (
-          <div className="border-t border-gray-400 bg-gray-50 px-4 py-0.5">
-            <PaginatorSales
-              recordsPerPage={RECORDS_PER_PAGE}
-              totalRecords={filtered.length}
-              currentPage={currentPage}
-              onPageChange={setCurrentPage}
-            />
-          </div>
-        )}
       </div>
+
+      {/* ── Paginador separado del card ──────────────────────────────────── */}
+      {filtered.length > 0 && (
+        <PaginationAdmin
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          totalRecords={filtered.length}
+          recordsPerPage={RECORDS_PER_PAGE}
+        />
+      )}
 
       <Outlet />
     </div>

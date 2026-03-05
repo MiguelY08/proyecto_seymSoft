@@ -3,6 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { Info, SquarePen, RefreshCw, XCircle, ShoppingCart } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 
+// ─── Resolver nombre de usuario por ID ───────────────────────────────────────
+const resolveUserName = (userId, storedName) => {
+  if (!userId) return storedName || 'Usuario eliminado';
+  try {
+    const stored = localStorage.getItem('pm_users');
+    const users  = stored ? JSON.parse(stored) : [];
+    const found  = users.find((u) => String(u.id) === String(userId));
+    return found ? found.nombre : 'Usuario eliminado';
+  } catch { return 'Usuario eliminado'; }
+};
+
 // ─── Resaltador de texto ──────────────────────────────────────────────────────
 function highlight(text, term) {
   if (!term || !term.trim()) return text;
@@ -38,15 +49,12 @@ function EstadoBadge({ estado, term }) {
 
 // ─── Clasificador de permisos por estado ─────────────────────────────────────
 const getPermisos = (estado) => {
-  // Puede devolver y anular
   if (estado === 'Aprobada' || estado === 'Créd. aprobado') {
     return { puedeDevolver: true, puedeAnular: true, deshabilitado: false };
   }
-  // Iconos deshabilitados visualmente, sin interacción
   if (estado === 'Anulada') {
     return { puedeDevolver: false, puedeAnular: false, deshabilitado: true };
   }
-  // Muestra error al intentar interactuar
   return { puedeDevolver: false, puedeAnular: false, deshabilitado: false };
 };
 
@@ -81,18 +89,12 @@ function SalesTable({ data = [], onAnular, search = '', totalData = 0, offset = 
   const navigate = useNavigate();
   const { showConfirm, showSuccess, showError } = useAlert();
 
-  // ─── Anular venta ─────────────────────────────────────────────────────────
   const handleAnular = (row) => {
     const { puedeAnular } = getPermisos(row.estado);
-
     if (!puedeAnular) {
-      showError(
-        'Anulación no permitida',
-        `No es posible anular una venta con estado "${row.estado}".`
-      );
+      showError('Anulación no permitida', `No es posible anular una venta con estado "${row.estado}".`);
       return;
     }
-
     showConfirm(
       'warning',
       '¿Está seguro que desea anular esta venta?',
@@ -106,19 +108,12 @@ function SalesTable({ data = [], onAnular, search = '', totalData = 0, offset = 
     });
   };
 
-  // ─── Generar devolución ───────────────────────────────────────────────────
   const handleDevolucion = (row) => {
     const { puedeDevolver } = getPermisos(row.estado);
-
     if (!puedeDevolver) {
-      showError(
-        'Devolución no permitida',
-        `No es posible generar una devolución sobre una venta con estado "${row.estado}".`
-      );
+      showError('Devolución no permitida', `No es posible generar una devolución sobre una venta con estado "${row.estado}".`);
       return;
     }
-
-    // Se implementará más adelante
     navigate('/admin/sales/devolucion', { state: { sale: row } });
   };
 
@@ -145,8 +140,14 @@ function SalesTable({ data = [], onAnular, search = '', totalData = 0, offset = 
 
         <tbody>
           {data.map((row, index) => {
-            const rowBg                                     = index % 2 === 0 ? 'bg-white' : 'bg-gray-100';
+            const rowBg = index % 2 === 0 ? 'bg-white' : 'bg-gray-100';
             const { puedeDevolver, puedeAnular, deshabilitado } = getPermisos(row.estado);
+
+            // ─── Resolver nombres con validación de usuario eliminado ───────
+            const nombreCliente     = resolveUserName(row.clienteId,  row.cliente);
+            const nombreVendedor    = resolveUserName(row.vendedorId, row.vendedor);
+            const clienteEliminado  = nombreCliente  === 'Usuario eliminado';
+            const vendedorEliminado = nombreVendedor === 'Usuario eliminado';
 
             return (
               <tr key={row.id} className={`transition-colors duration-150 ${rowBg}`}>
@@ -154,12 +155,23 @@ function SalesTable({ data = [], onAnular, search = '', totalData = 0, offset = 
                 <td className={`sticky left-0 z-10 ${rowBg} px-3 py-2 text-center text-xs text-gray-500 font-medium`}>
                   {offset + index + 1}
                 </td>
+
+                {/* Cliente */}
                 <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap max-w-160px truncate">
-                  {highlight(row.cliente, search)}
+                  {clienteEliminado
+                    ? <span className="italic text-gray-400">Usuario eliminado</span>
+                    : highlight(nombreCliente, search)
+                  }
                 </td>
+
+                {/* Vendedor */}
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap max-w-160px truncate">
-                  {highlight(row.vendedor, search)}
+                  {vendedorEliminado
+                    ? <span className="italic text-gray-400">Usuario eliminado</span>
+                    : highlight(nombreVendedor, search)
+                  }
                 </td>
+
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap font-mono">
                   {highlight(String(row.factura), search)}
                 </td>
@@ -180,7 +192,6 @@ function SalesTable({ data = [], onAnular, search = '', totalData = 0, offset = 
                 <td className="px-3 py-2">
                   <div className="flex items-center justify-center gap-1.5">
 
-                    {/* Ver info — siempre disponible */}
                     <button
                       onClick={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
@@ -188,8 +199,8 @@ function SalesTable({ data = [], onAnular, search = '', totalData = 0, offset = 
                           state: {
                             sale: row,
                             origin: {
-                              x: rect.left + rect.width / 2,
-                              y: rect.top + rect.height / 2,
+                              x: rect.left + rect.width  / 2,
+                              y: rect.top  + rect.height / 2,
                             },
                           },
                         });
@@ -200,7 +211,6 @@ function SalesTable({ data = [], onAnular, search = '', totalData = 0, offset = 
                       <Info className="w-4 h-4" strokeWidth={1.5} />
                     </button>
 
-                    {/* Editar — siempre disponible */}
                     <button
                       onClick={() => navigate('/admin/sales/form-sale', { state: { sale: row } })}
                       className="text-gray-400 hover:text-[#004D77] transition-colors cursor-pointer"
@@ -209,34 +219,22 @@ function SalesTable({ data = [], onAnular, search = '', totalData = 0, offset = 
                       <SquarePen className="w-4 h-4" strokeWidth={1.5} />
                     </button>
 
-                    {/* Devolución — deshabilitado visualmente si está Anulada, error si otro estado no permitido */}
                     {deshabilitado ? (
-                      <span
-                        className="text-gray-200 cursor-not-allowed"
-                        title="No disponible para ventas anuladas"
-                      >
+                      <span className="text-gray-200 cursor-not-allowed" title="No disponible para ventas anuladas">
                         <RefreshCw className="w-4 h-4" strokeWidth={1.5} />
                       </span>
                     ) : (
                       <button
                         onClick={() => handleDevolucion(row)}
-                        className={`transition-colors cursor-pointer ${
-                          puedeDevolver
-                            ? 'text-gray-400 hover:text-amber-500'
-                            : 'text-gray-400 hover:text-amber-500'
-                        }`}
+                        className="text-gray-400 hover:text-amber-500 transition-colors cursor-pointer"
                         title="Generar devolución"
                       >
                         <RefreshCw className="w-4 h-4" strokeWidth={1.5} />
                       </button>
                     )}
 
-                    {/* Anular — deshabilitado visualmente si está Anulada, error si otro estado no permitido */}
                     {deshabilitado ? (
-                      <span
-                        className="text-gray-200 cursor-not-allowed"
-                        title="No disponible para ventas anuladas"
-                      >
+                      <span className="text-gray-200 cursor-not-allowed" title="No disponible para ventas anuladas">
                         <XCircle className="w-4 h-4" strokeWidth={1.5} />
                       </span>
                     ) : (

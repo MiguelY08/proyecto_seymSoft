@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ShoppingBag, Briefcase, ClipboardPen, FileText, Palette } from 'lucide-react';
 
-import img01 from '../../../assets/carrusel/01.png';
+import { getImage } from '../../administrtivePanel/configuration/carousel/services/CarouselBD.js';
 
 import ProductCard from '../../shared/ProductCard.jsx';
 import correctorCinta      from '../../../assets/products/correctorencinta.png';
@@ -18,10 +18,8 @@ import mayoristaBg from '../../../assets/mayoristasBg.png';
 
 function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
-
-  const slides = [
-    { id: 1, image: img01, alt: 'Imagen 1' },
-  ];
+  const [slides,       setSlides]       = useState([]);
+  const urlsRef = useRef([]);
 
   const categories = [
     { id: 1, name: 'ESCOLAR',          icon: ShoppingBag,  href: '/categoria/escolar'         },
@@ -42,7 +40,53 @@ function Home() {
     { id: 8, image: marcadorEterna,    name: 'Marcadores Eterna x12',    category: 'ESCRITURA', price: 13500 },
   ];
 
+  // ─── Cargar slides desde localStorage + IndexedDB ─────────────────────────
   useEffect(() => {
+    const load = async () => {
+      try {
+        const stored = localStorage.getItem('pm_carousel');
+        const meta   = stored ? JSON.parse(stored) : [];
+
+        // Solo activos, en orden
+        const activos = meta
+          .filter((s) => s.activo)
+          .sort((a, b) => a.orden - b.orden);
+
+        const loaded = await Promise.all(
+          activos.map(async (s) => {
+            const blob = await getImage(s.id);
+            const url  = blob ? URL.createObjectURL(blob) : null;
+            return { id: s.id, image: url, alt: s.nombre };
+          })
+        );
+
+        const validos = loaded.filter((s) => s.image !== null);
+        urlsRef.current = validos.map((s) => s.image);
+        setSlides(validos);
+      } catch (err) {
+        console.error('Error al cargar carrusel:', err);
+        setSlides([]);
+      }
+    };
+
+    load();
+
+    // Limpiar Object URLs al desmontar
+    return () => {
+      urlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, []);
+
+  // ─── Resetear slide actual si se reduce el número de slides ───────────────
+  useEffect(() => {
+    if (slides.length > 0 && currentSlide >= slides.length) {
+      setCurrentSlide(0);
+    }
+  }, [slides]);
+
+  // ─── Auto-avance cada 10 segundos ─────────────────────────────────────────
+  useEffect(() => {
+    if (slides.length === 0) return;
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 10000);
@@ -57,43 +101,45 @@ function Home() {
     <>
       {/* Sección Carrusel */}
       <section className="w-full flex items-center justify-center py-2 sm:py-4">
-        <div className="w-full sm:w-[98%] lg:w-[95%] h-auto lg:h-[80vh] relative overflow-hidden rounded-none sm:rounded-lg lg:rounded-2xl shadow-2xl">
-          <div className="relative w-full h-full">
-            {slides.map((slide, index) => (
-              <div
-                key={slide.id}
-                className={`absolute w-full h-full transition-all duration-700 ease-in-out ${
-                  index === currentSlide
-                    ? 'opacity-100 translate-x-0'
-                    : index < currentSlide
-                    ? 'opacity-0 -translate-x-full'
-                    : 'opacity-0 translate-x-full'
-                }`}
-              >
-                <div className="absolute inset-0 bg-cover bg-center blur-2xl scale-110" style={{ backgroundImage: `url(${slide.image})` }} />
-                <div className="absolute inset-0 bg-black/20" />
-                <div className="relative w-full h-full flex items-center justify-center p-0 sm:p-2 lg:p-4">
-                  <img src={slide.image} alt={slide.alt} className="w-full lg:max-w-full h-auto lg:max-h-full object-contain relative z-10" />
+        {slides.length > 0 && (
+          <div className="w-full sm:w-[98%] lg:w-[95%] h-auto lg:h-[80vh] relative overflow-hidden rounded-none sm:rounded-lg lg:rounded-2xl shadow-2xl">
+            <div className="relative w-full h-full">
+              {slides.map((slide, index) => (
+                <div
+                  key={slide.id}
+                  className={`absolute w-full h-full transition-all duration-700 ease-in-out ${
+                    index === currentSlide
+                      ? 'opacity-100 translate-x-0'
+                      : index < currentSlide
+                      ? 'opacity-0 -translate-x-full'
+                      : 'opacity-0 translate-x-full'
+                  }`}
+                >
+                  <div className="absolute inset-0 bg-cover bg-center blur-2xl scale-110" style={{ backgroundImage: `url(${slide.image})` }} />
+                  <div className="absolute inset-0 bg-black/20" />
+                  <div className="relative w-full h-full flex items-center justify-center p-0 sm:p-2 lg:p-4">
+                    <img src={slide.image} alt={slide.alt} className="w-full lg:max-w-full h-auto lg:max-h-full object-contain relative z-10" />
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-
-          <button onClick={prevSlide} className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer group z-20">
-            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white group-hover:scale-110 transition-transform" strokeWidth={3} />
-          </button>
-          <button onClick={nextSlide} className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer group z-20">
-            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white group-hover:scale-110 transition-transform" strokeWidth={3} />
-          </button>
-
-          <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 bg-black/40 backdrop-blur-sm px-2 sm:px-3 py-1.5 sm:py-2 rounded-full z-20">
-            <div className="flex gap-1.5 sm:gap-2">
-              {slides.map((_, index) => (
-                <button key={index} onClick={() => goToSlide(index)} className={`transition-all duration-300 rounded-full cursor-pointer ${index === currentSlide ? 'w-4 sm:w-6 h-1.5 sm:h-2 bg-white' : 'w-1.5 sm:w-2 h-1.5 sm:h-2 bg-white/50 hover:bg-white/75'}`} />
               ))}
             </div>
+
+            <button onClick={prevSlide} className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer group z-20">
+              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white group-hover:scale-110 transition-transform" strokeWidth={3} />
+            </button>
+            <button onClick={nextSlide} className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer group z-20">
+              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white group-hover:scale-110 transition-transform" strokeWidth={3} />
+            </button>
+
+            <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 bg-black/40 backdrop-blur-sm px-2 sm:px-3 py-1.5 sm:py-2 rounded-full z-20">
+              <div className="flex gap-1.5 sm:gap-2">
+                {slides.map((_, index) => (
+                  <button key={index} onClick={() => goToSlide(index)} className={`transition-all duration-300 rounded-full cursor-pointer ${index === currentSlide ? 'w-4 sm:w-6 h-1.5 sm:h-2 bg-white' : 'w-1.5 sm:w-2 h-1.5 sm:h-2 bg-white/50 hover:bg-white/75'}`} />
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </section>
 
       {/* Sección Categorías */}

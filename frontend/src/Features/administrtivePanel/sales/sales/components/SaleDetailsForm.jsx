@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const STORAGE_USERS = 'pm_users';
 const MAX_DIRECCION = 250;
 
-const METODOS_PAGO = ['Efectivo', 'Crédito', 'Transferencia'];
+const METODOS_PAGO  = ['Efectivo', 'Crédito', 'Transferencia'];
 const ESTADOS_VENTA = [
   'Aprobada', 'Esp. aprobación', 'Créd. aprobado',
   'Anulada', 'Desaprobada', 'Cancelada', 'Créd. denegado',
@@ -31,9 +31,9 @@ function ReadonlyField({ value }) {
 
 // ─── Select con buscador integrado ───────────────────────────────────────────
 function SearchableSelect({ value, onChange, options, placeholder, error, getLabel, getValue }) {
-  const [open,   setOpen]   = useState(false);
-  const [query,  setQuery]  = useState('');
-  const ref                 = useRef(null);
+  const [open,  setOpen]  = useState(false);
+  const [query, setQuery] = useState('');
+  const ref               = useRef(null);
 
   const filtered = useMemo(() =>
     options.filter((o) =>
@@ -45,7 +45,6 @@ function SearchableSelect({ value, onChange, options, placeholder, error, getLab
     return found ? getLabel(found) : '';
   }, [value, options]);
 
-  // Cerrar al click afuera
   useEffect(() => {
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener('mousedown', handler);
@@ -79,7 +78,6 @@ function SearchableSelect({ value, onChange, options, placeholder, error, getLab
 
       {open && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-          {/* Buscador */}
           <div className="p-2 border-b border-gray-100">
             <div className="relative">
               <input
@@ -93,8 +91,6 @@ function SearchableSelect({ value, onChange, options, placeholder, error, getLab
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
             </div>
           </div>
-
-          {/* Opciones */}
           <ul className="max-h-48 overflow-y-auto">
             {filtered.length > 0 ? (
               filtered.map((option) => (
@@ -111,9 +107,7 @@ function SearchableSelect({ value, onChange, options, placeholder, error, getLab
                 </li>
               ))
             ) : (
-              <li className="px-4 py-3 text-xs text-gray-400 text-center">
-                Sin resultados
-              </li>
+              <li className="px-4 py-3 text-xs text-gray-400 text-center">Sin resultados</li>
             )}
           </ul>
         </div>
@@ -153,33 +147,35 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
   const navigate = useNavigate();
   const [users, setUsers] = useState(loadUsers);
 
-  // ─── Re-cargar usuarios si se acaba de crear uno nuevo ───────────────────
   useEffect(() => {
     const sync = () => setUsers(loadUsers());
     window.addEventListener('focus', sync);
     return () => window.removeEventListener('focus', sync);
   }, []);
 
-  // ─── Validación y cambio en campos simples ───────────────────────────────
   const handleChange = (e) => {
     const { name, value } = e.target;
+    // Si cambia entrega a "Cliente lo recoge", limpiar dirección
+    if (name === 'entrega' && value !== 'Domicilio') {
+      onChange('direccion', '');
+    }
     onChange(name, value);
   };
 
-  const handleSelectChange = (name, value) => {
-    onChange(name, value);
-  };
+  const handleSelectChange = (name, value) => onChange(name, value);
 
   const ErrorMsg = ({ field }) =>
-    errors?.[field]
-      ? <p className="mt-1 text-sm text-red-600">{errors[field]}</p>
-      : null;
+    errors?.[field] ? <p className="mt-1 text-sm text-red-600">{errors[field]}</p> : null;
 
   const Label = ({ children, required }) => (
     <label className="block text-sm font-medium text-gray-700 mb-1.5">
       {children}{required && <span className="text-red-500">*</span>}
     </label>
   );
+
+  // ─── Solo usuarios activos ────────────────────────────────────────────────
+  const activeUsers    = users.filter((u) => u.activo);
+  const activeVendors  = users.filter((u) => u.activo && (u.rol === 'Empleado' || u.rol === 'Administrador'));
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -201,7 +197,7 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
         {/* Cliente + Vendedor */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-          {/* Cliente */}
+          {/* Cliente — solo activos */}
           <div>
             <Label required>Cliente</Label>
             <div className="flex gap-2">
@@ -214,7 +210,7 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
                   <SearchableSelect
                     value={form.clienteId}
                     onChange={(val) => handleSelectChange('clienteId', val)}
-                    options={users}
+                    options={activeUsers}
                     placeholder="Cliente"
                     error={errors?.clienteId}
                     getLabel={(u) => u.nombre}
@@ -222,7 +218,6 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
                   />
                 )}
               </div>
-              {/* Botón nuevo usuario — solo en creación */}
               {!isEditing && (
                 <button
                   type="button"
@@ -237,19 +232,18 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
             <ErrorMsg field="clienteId" />
           </div>
 
-          {/* Vendedor */}
+          {/* Vendedor — solo activos con rol Empleado o Administrador */}
           <div>
             <Label required>Vendedor</Label>
             {isEditing ? (
               <ReadonlyField value={
-                users.filter((u) => u.rol === 'Empleado')
-                    .find((u) => String(u.id) === String(form.vendedorId))?.nombre
+                users.find((u) => String(u.id) === String(form.vendedorId))?.nombre
               } />
             ) : (
               <SearchableSelect
                 value={form.vendedorId}
                 onChange={(val) => handleSelectChange('vendedorId', val)}
-                options={users.filter((u) => u.rol === 'Empleado')}
+                options={activeVendors}
                 placeholder="Vendedor"
                 error={errors?.vendedorId}
                 getLabel={(u) => u.nombre}
@@ -306,30 +300,32 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
           <ErrorMsg field="entrega" />
         </div>
 
-        {/* Dirección */}
-        <div>
-          <Label required>Dirección</Label>
-          <div className="relative">
-            <textarea
-              name="direccion"
-              value={form.direccion}
-              onChange={(e) => {
-                if (e.target.value.length <= MAX_DIRECCION) handleChange(e);
-              }}
-              placeholder="Digite la dirección, barrio y descripción del punto de encuentro"
-              rows={3}
-              className={`w-full px-4 py-2.5 text-sm border rounded-lg outline-none resize-none text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
-                errors?.direccion
-                  ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-                  : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
-              }`}
-            />
-            <span className="absolute bottom-2 right-3 text-[10px] text-gray-400">
-              {form.direccion?.length ?? 0}/{MAX_DIRECCION}
-            </span>
+        {/* Dirección — solo visible cuando entrega es Domicilio */}
+        {form.entrega === 'Domicilio' && (
+          <div>
+            <Label required>Dirección</Label>
+            <div className="relative">
+              <textarea
+                name="direccion"
+                value={form.direccion}
+                onChange={(e) => {
+                  if (e.target.value.length <= MAX_DIRECCION) handleChange(e);
+                }}
+                placeholder="Digite la dirección, barrio y descripción del punto de encuentro"
+                rows={3}
+                className={`w-full px-4 py-2.5 text-sm border rounded-lg outline-none resize-none text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
+                  errors?.direccion
+                    ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+                    : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
+                }`}
+              />
+              <span className="absolute bottom-2 right-3 text-[10px] text-gray-400">
+                {form.direccion?.length ?? 0}/{MAX_DIRECCION}
+              </span>
+            </div>
+            <ErrorMsg field="direccion" />
           </div>
-          <ErrorMsg field="direccion" />
-        </div>
+        )}
 
       </div>
     </div>
