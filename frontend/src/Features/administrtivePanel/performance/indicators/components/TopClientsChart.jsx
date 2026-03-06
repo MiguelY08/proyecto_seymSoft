@@ -1,0 +1,60 @@
+import { useEffect, useState } from "react";
+
+const card = {
+  background: "white", borderRadius: "10px",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
+  padding: "8px 10px", flex: 1, minWidth: "180px",
+};
+
+const clients = [
+  { name: "Comercial Express S.A.", value: 2.5, medal: "" },
+  { name: "Librería El Estudiante", value: 2.2, medal: "" },
+  { name: "Colegio San Martín",     value: 1.9, medal: null },
+  { name: "Oficinas Corporativas",  value: 1.6, medal: null },
+  { name: "Papelería Central",      value: 1.1, medal: null },
+];
+
+const CLI_COLORS = ["#ffd900", "#ff0000", "#00ff22", "#0000ff", "#b300ff"];
+
+function TopClientsChart() {
+  const max = 2.5;
+  const [animated, setAnimated] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setAnimated(true), 100);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <div style={card}>
+      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "6px" }}>
+        <span style={{ fontSize: "12px" }}></span>
+        <h3 style={{ margin: 0, fontSize: "12px", fontWeight: "600", color: "#1a1a2e" }}>
+          Top 5 Clientes del Mes
+        </h3>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+        {clients.map((c, i) => (
+          <div key={c.name} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "2px", width: "130px", flexShrink: 0 }}>
+              {c.medal && <span style={{ fontSize: "10px" }}>{c.medal}</span>}
+              <span style={{ fontSize: "12px", color: "#374151", fontWeight: "500" }}>{c.name}</span>
+            </div>
+            <div style={{ flex: 1, background: "#f3f4f6", borderRadius: "100px", height: "4px", overflow: "hidden" }}>
+              <div style={{
+                width: animated ? `${(c.value / max) * 100}%` : "0%",
+                height: "100%",
+                background: CLI_COLORS[i],
+                borderRadius: "100px",
+                transition: `width 0.7s cubic-bezier(0.4, 0, 0.2, 1) ${i * 80}ms`,
+              }} />
+            </div>
+            <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: "600", width: "32px", textAlign: "right", flexShrink: 0 }}>${c.value}M</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default TopClientsChart;

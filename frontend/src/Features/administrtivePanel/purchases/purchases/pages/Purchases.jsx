@@ -42,7 +42,7 @@ const [selectedPurchase, setSelectedPurchase] = useState(null);
       proveedor: "Distribuidora Tech",
       cantidadProductos: 5,
       precioTotal: 1200000,
-      estado: "Pendiente",
+      estado: "Devuelta",
     },
     {
       id: 3,
@@ -69,7 +69,7 @@ const [selectedPurchase, setSelectedPurchase] = useState(null);
       proveedor: "Papelería Central",
       cantidadProductos: 15,
       precioTotal: 620000,
-      estado: "Pendiente",
+      estado: "Devuelta",
     },
     {
       id: 6,
@@ -87,7 +87,7 @@ const [selectedPurchase, setSelectedPurchase] = useState(null);
       proveedor: "Insumos Colombia",
       cantidadProductos: 30,
       precioTotal: 1500000,
-      estado: "Pendiente",
+      estado: "Devuelta",
     },
     {
       id: 8,
@@ -123,7 +123,7 @@ const [selectedPurchase, setSelectedPurchase] = useState(null);
       proveedor: "Office Supplies SAS",
       cantidadProductos: 6,
       precioTotal: 260000,
-      estado: "Pendiente",
+      estado: "Devuelta",
     },
     {
       id: 12,
@@ -141,7 +141,7 @@ const [selectedPurchase, setSelectedPurchase] = useState(null);
       proveedor: "Insumos Colombia",
       cantidadProductos: 14,
       precioTotal: 520000,
-      estado: "Pendiente",
+      estado: "Devuelta",
     },
     {
       id: 14,
@@ -177,7 +177,7 @@ const [selectedPurchase, setSelectedPurchase] = useState(null);
       proveedor: "Distribuidora Tech",
       cantidadProductos: 13,
       precioTotal: 670000,
-      estado: "Pendiente",
+      estado: "Devuelta",
     },
     {
       id: 18,
@@ -195,7 +195,7 @@ const [selectedPurchase, setSelectedPurchase] = useState(null);
       proveedor: "Insumos Colombia",
       cantidadProductos: 2,
       precioTotal: 95000,
-      estado: "Pendiente",
+      estado: "Devuelta",
     },
     {
       id: 20,
@@ -231,7 +231,7 @@ const [selectedPurchase, setSelectedPurchase] = useState(null);
       proveedor: "Proveedores del Norte",
       cantidadProductos: 6,
       precioTotal: 310000,
-      estado: "Pendiente",
+      estado: "Devuelta",
     },
     {
       id: 24,
@@ -249,7 +249,7 @@ const [selectedPurchase, setSelectedPurchase] = useState(null);
       proveedor: "Insumos Colombia",
       cantidadProductos: 9,
       precioTotal: 370000,
-      estado: "Pendiente",
+      estado: "Devuelta",
     },
     {
       id: 26,
