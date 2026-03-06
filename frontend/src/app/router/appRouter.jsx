@@ -41,7 +41,7 @@ import ReturnsP from '../../Features/administrtivePanel/purchases/returns/Return
 import NonConformingProducts from "../../Features/administrtivePanel/purchases/nonConformingProducts/pages/NonConformingProducts.jsx";
 
 import Clients from '../../Features/administrtivePanel/sales/clients/Clients.jsx';
-import OrdersA from '../../Features/administrtivePanel/sales/orders/Orders.jsx';
+import OrdersA from '../../Features/administrtivePanel/sales/orders/pages/Orders.jsx';
 
 // Ventas
 import Sales from '../../Features/administrtivePanel/sales/sales/pages/Sales.jsx';

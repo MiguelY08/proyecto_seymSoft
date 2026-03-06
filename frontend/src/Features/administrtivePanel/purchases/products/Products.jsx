@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { Eye, SquarePen, Search, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Info, SquarePen, Search, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import DetailProduct from './modals/DetailProduct.jsx';
 import CreateProduct from './modals/CreateProduct.jsx';
 import EditProduct from './modals/EditProduct.jsx';
@@ -147,7 +147,6 @@ function migrateOldProducts(products) {
 // ─── Products ─────────────────────────────────────────────────────────────────
 function Products() {
   const { showConfirm, showSuccess } = useAlert(); // ← alertas de confirmación y éxito
-
   const [data, setData] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [search, setSearch] = useState('');
@@ -205,12 +204,11 @@ function Products() {
   const endIndex = startIndex + RECORDS_PER_PAGE;
   const currentData = filteredData.slice(startIndex, endIndex);
 
-  // ── Alerta 4 y 5: Confirmación y éxito al desactivar producto ────────────
+  // ── Alerta: Confirmación y éxito al desactivar/activar producto ─────────
   const handleToggle = async (id) => {
     const producto = data.find((row) => row.id === id);
     if (!producto) return;
 
-    // Solo pedir confirmación al DESACTIVAR (activo → inactivo)
     if (producto.activo) {
       const result = await showConfirm(
         'warning',
@@ -221,22 +219,16 @@ function Products() {
           cancelButtonText: 'Cancelar',
         }
       );
-
       if (!result.isConfirmed) return;
 
       setData((prev) =>
         prev.map((row) => row.id === id ? { ...row, activo: false } : row)
       );
-
-      // ── Alerta 5: Producto desactivado exitosamente ───────────────────
       showSuccess('Producto desactivado', 'El producto fue desactivado exitosamente.');
     } else {
-      // Activar directamente sin confirmación
       setData((prev) =>
         prev.map((row) => row.id === id ? { ...row, activo: true } : row)
       );
-
-      // ── Alerta: Producto activado exitosamente ────────────────────────
       showSuccess('Producto activado', 'El producto está disponible nuevamente para los usuarios.');
     }
   };
@@ -247,7 +239,7 @@ function Products() {
 
   const handleCrearProducto = (nuevoProducto) => {
     const newId = data.length > 0 ? Math.max(...data.map(p => p.id)) + 1 : 1;
-
+    
     const productoCompleto = {
       id: newId,
       nombre: nuevoProducto.nombre,
@@ -327,9 +319,9 @@ function Products() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-
+      
       <div className={`h-full flex flex-col gap-3 p-3 sm:p-4 ${showModal || showFormModal || showEditModal ? 'blur-sm' : ''}`}>
-
+        
         {/* ── Barra superior (solo si hay productos) ───────────────────────── */}
         {data.length > 0 && (
           <div className="flex items-center justify-between gap-2 sm:gap-4 shrink-0">
@@ -407,10 +399,10 @@ function Products() {
                 <tbody>
                   {currentData.map((row, index) => {
                     const rowBg = index % 2 === 0 ? 'bg-white' : 'bg-gray-100';
-                    const categoriaDisplay = row.categorias && row.categorias.length > 0
-                      ? row.categorias.join(', ')
+                    const categoriaDisplay = row.categorias && row.categorias.length > 0 
+                      ? row.categorias.join(', ') 
                       : (row.categoria || 'N/A');
-
+                    
                     return (
                       <tr key={row.id} className={`transition-colors duration-150 ${rowBg}`}>
 
@@ -432,7 +424,7 @@ function Products() {
                         <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                           <HighlightText text={row.precio.toLocaleString()} highlight={search} />
                         </td>
-
+                        
                         <td className="px-3 py-1.5">
                           <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                             <button
@@ -440,7 +432,7 @@ function Products() {
                               className="text-gray-400 hover:text-[#004D77] transition-colors cursor-pointer"
                               title="Ver detalles"
                             >
-                              <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                              <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                             </button>
                             <button
                               onClick={() => handleEditarProducto(row)}
