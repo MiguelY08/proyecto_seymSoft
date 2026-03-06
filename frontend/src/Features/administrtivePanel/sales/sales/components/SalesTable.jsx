@@ -2,14 +2,14 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Info, SquarePen, RefreshCw, XCircle, ShoppingCart } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
+import { UsersDB } from '../../../users/services/usersDB';
 
 // ─── Resolver nombre de usuario por ID ───────────────────────────────────────
 const resolveUserName = (userId, storedName) => {
   if (!userId) return storedName || 'Usuario eliminado';
   try {
-    const stored = localStorage.getItem('pm_users');
-    const users  = stored ? JSON.parse(stored) : [];
-    const found  = users.find((u) => String(u.id) === String(userId));
+    const users = UsersDB.list();
+    const found = users.find((u) => String(u.id) === String(userId));
     return found ? found.nombre : 'Usuario eliminado';
   } catch { return 'Usuario eliminado'; }
 };
@@ -28,13 +28,13 @@ function highlight(text, term) {
 
 // ─── Badge de estado ──────────────────────────────────────────────────────────
 const estadoVariants = {
-  'Aprobada':          'bg-green-100 text-green-700 border-green-300',
-  'Esp. aprobación':   'bg-yellow-100 text-yellow-700 border-yellow-300',
-  'Créd. aprobado':    'bg-teal-100 text-teal-700 border-teal-300',
-  'Anulada':           'bg-red-100 text-red-400 border-red-200',
-  'Desaprobada':       'bg-red-100 text-red-600 border-red-300',
-  'Cancelada':         'bg-orange-100 text-orange-600 border-orange-300',
-  'Créd. denegado':    'bg-pink-100 text-pink-600 border-pink-300',
+  'Aprobada':        'bg-green-100 text-green-700 border-green-300',
+  'Esp. aprobación': 'bg-yellow-100 text-yellow-700 border-yellow-300',
+  'Créd. aprobado':  'bg-teal-100 text-teal-700 border-teal-300',
+  'Anulada':         'bg-red-100 text-red-400 border-red-200',
+  'Desaprobada':     'bg-red-100 text-red-600 border-red-300',
+  'Cancelada':       'bg-orange-100 text-orange-600 border-orange-300',
+  'Créd. denegado':  'bg-pink-100 text-pink-600 border-pink-300',
 };
 
 function EstadoBadge({ estado, term }) {
@@ -47,7 +47,7 @@ function EstadoBadge({ estado, term }) {
   );
 }
 
-// ─── Clasificador de permisos por estado ─────────────────────────────────────
+// ─── Permisos por estado ──────────────────────────────────────────────────────
 const getPermisos = (estado) => {
   if (estado === 'Aprobada' || estado === 'Créd. aprobado') {
     return { puedeDevolver: true, puedeAnular: true, deshabilitado: false };
@@ -143,7 +143,6 @@ function SalesTable({ data = [], onAnular, search = '', totalData = 0, offset = 
             const rowBg = index % 2 === 0 ? 'bg-white' : 'bg-gray-100';
             const { puedeDevolver, puedeAnular, deshabilitado } = getPermisos(row.estado);
 
-            // ─── Resolver nombres con validación de usuario eliminado ───────
             const nombreCliente     = resolveUserName(row.clienteId,  row.cliente);
             const nombreVendedor    = resolveUserName(row.vendedorId, row.vendedor);
             const clienteEliminado  = nombreCliente  === 'Usuario eliminado';
@@ -156,16 +155,14 @@ function SalesTable({ data = [], onAnular, search = '', totalData = 0, offset = 
                   {offset + index + 1}
                 </td>
 
-                {/* Cliente */}
-                <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap max-w-160px truncate">
+                <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap">
                   {clienteEliminado
                     ? <span className="italic text-gray-400">Usuario eliminado</span>
                     : highlight(nombreCliente, search)
                   }
                 </td>
 
-                {/* Vendedor */}
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap max-w-160px truncate">
+                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                   {vendedorEliminado
                     ? <span className="italic text-gray-400">Usuario eliminado</span>
                     : highlight(nombreVendedor, search)
@@ -188,20 +185,15 @@ function SalesTable({ data = [], onAnular, search = '', totalData = 0, offset = 
                   <EstadoBadge estado={row.estado} term={search} />
                 </td>
 
-                {/* ── Acciones ──────────────────────────────────────────── */}
                 <td className="px-3 py-2">
                   <div className="flex items-center justify-center gap-1.5">
-
                     <button
                       onClick={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
                         navigate('/admin/sales/info-sale', {
                           state: {
                             sale: row,
-                            origin: {
-                              x: rect.left + rect.width  / 2,
-                              y: rect.top  + rect.height / 2,
-                            },
+                            origin: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
                           },
                         });
                       }}
@@ -246,7 +238,6 @@ function SalesTable({ data = [], onAnular, search = '', totalData = 0, offset = 
                         <XCircle className="w-4 h-4" strokeWidth={1.5} />
                       </button>
                     )}
-
                   </div>
                 </td>
               </tr>

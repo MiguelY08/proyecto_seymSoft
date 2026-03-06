@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronRight } from 'lucide-react';
 import GraphClient from './GraphClient';
+import { useAlert } from '../../../shared/alerts/useAlert';
 
 function FormClient({ isOpen, onClose, client, onSave }) {
   const [showGraph, setShowGraph] = useState(false);
@@ -16,13 +17,17 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     correo: '',
     nombreContacto: '',
     numeroContacto: '',
+    creditoCliente: '',
     tipoCliente: '',
     rut: '',
     codigoCIU: '',
-  };
+  };  
 
   const [formData, setFormData] = useState(initialState);
   const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+
+  const { showSuccess } = useAlert();
 
   useEffect(() => {
     if (client) {
@@ -37,12 +42,19 @@ function FormClient({ isOpen, onClose, client, onSave }) {
         correo: client.correo || '',
         nombreContacto: client.nombreContacto || '',
         numeroContacto: client.numeroContacto || '',
+        creditoCliente: client.creditoCliente || '',
         tipoCliente: client.tipoCliente || '',
         rut: client.rut || '',
         codigoCIU: client.codigoCIU || '',
       });
+      // when loading existing client, mark all fields touched so validation
+      // messages appear immediately (same as provider behavior)
+      setTouched(
+        Object.keys(initialState).reduce((acc, key) => ({ ...acc, [key]: true }), {})
+      );
     } else {
       setFormData(initialState);
+      setTouched({});
     }
 
     setErrors({});
@@ -51,51 +63,94 @@ function FormClient({ isOpen, onClose, client, onSave }) {
   const resetForm = () => {
     setFormData(initialState);
     setErrors({});
+    setTouched({});
     setShowGraph(false);
+  };  
+
+  const validateField = (name, value) => {
+    let error = '';
+
+    switch (name) {
+      case 'tipoPersona':
+        if (!value || !value.trim()) error = 'Seleccione el tipo de persona';
+        break;
+      case 'tipo':
+        if (!value || !value.trim()) error = 'Seleccione el tipo de documento';
+        break;
+      case 'numero':
+        if (!value || !value.trim()) {
+          error = 'El número es obligatorio';
+        } else if (!/^[0-9-]+$/.test(value)) {
+          error = 'Solo números permitidos';
+        }
+        break;
+      case 'nombres':
+        if (!value || !value.trim()) {
+          error = 'El nombre es obligatorio';
+        } else if (value.trim().length < 2) {
+          error = 'Debe tener al menos 2 caracteres';
+        } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value)) {
+          error = 'Solo se permiten letras';
+        }
+        break;
+      case 'apellidos':
+        if (!value || !value.trim()) {
+          error = 'El apellido es obligatorio';
+        } else if (value.trim().length < 2) {
+          error = 'Debe tener al menos 2 caracteres';
+        } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value)) {
+          error = 'Solo se permiten letras';
+        }
+        break;
+      case 'direccion':
+        if (!value || !value.trim()) error = 'La dirección es obligatoria';
+        break;
+      case 'telefono':
+        if (!value || !value.trim()) {
+          error = 'El teléfono es obligatorio';
+        } else if (!/^[0-9]+$/.test(value)) {
+          error = 'Solo números permitidos';
+        }
+        break;
+      case 'correo':
+        if (!value || !value.trim()) {
+          error = 'El correo es obligatorio';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          error = 'Correo inválido';
+        }
+        break;
+      case 'nombreContacto':
+        if (value && value.trim().length < 3) error = 'Debe tener mínimo 3 caracteres';
+        break;
+      case 'numeroContacto':
+        if (value && !/^[0-9]+$/.test(value)) error = 'Solo números permitidos';
+        break;
+      case 'creditoCliente':
+        if (!value || !value.trim()) {
+          error = 'El crédito es obligatorio';
+        } else if (!/^[0-9]+$/.test(value)) {
+          error = 'Solo números permitidos';
+        }
+        break;
+      case 'tipoCliente':
+        if (!value || !value.trim()) error = 'Seleccione el tipo de cliente';
+        break;
+      case 'rut':
+        if (!value || !value.trim()) error = 'Indique si tiene RUT';
+        break;
+      default:
+        break;
+    }
+
+    return error;
   };
 
-  const validate = () => {
+  const validateAll = () => {
     const newErrors = {};
-
-    if (!formData.tipoPersona.trim())
-      newErrors.tipoPersona = 'Seleccione el tipo de persona';
-
-    if (!formData.tipo.trim())
-      newErrors.tipo = 'Seleccione el tipo de documento';
-
-    if (!formData.numero.trim())
-      newErrors.numero = 'El número es obligatorio';
-    else if (!/^[0-9-]+$/.test(formData.numero))
-      newErrors.numero = 'Solo números permitidos';
-
-    if (!formData.nombres.trim())
-      newErrors.nombres = 'El nombre es obligatorio';
-
-    if (!formData.direccion.trim())
-      newErrors.direccion = 'La dirección es obligatoria';
-
-    if (!formData.telefono.trim())
-      newErrors.telefono = 'El teléfono es obligatorio';
-    else if (!/^[0-9]+$/.test(formData.telefono))
-      newErrors.telefono = 'Solo números permitidos';
-
-    if (!formData.correo.trim())
-      newErrors.correo = 'El correo es obligatorio';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.correo))
-      newErrors.correo = 'Correo inválido';
-
-    if (formData.nombreContacto && formData.nombreContacto.trim().length < 3)
-      newErrors.nombreContacto = 'Debe tener mínimo 3 caracteres';
-
-    if (formData.numeroContacto && !/^[0-9]+$/.test(formData.numeroContacto))
-      newErrors.numeroContacto = 'Solo números permitidos';
-
-    if (!formData.tipoCliente.trim())
-      newErrors.tipoCliente = 'Seleccione el tipo de cliente';
-
-    if (!formData.rut.trim())
-      newErrors.rut = 'Indique si tiene RUT';
-
+    Object.keys(formData).forEach((key) => {
+      const err = validateField(key, formData[key]);
+      if (err) newErrors[key] = err;
+    });
     return newErrors;
   };
 
@@ -107,7 +162,15 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       [name]: value,
     }));
 
-    if (errors[name]) {
+    // validate in real time if the field has been touched
+    if (touched[name]) {
+      const error = validateField(name, value);
+      setErrors((prev) => ({
+        ...prev,
+        [name]: error,
+      }));
+    } else if (errors[name]) {
+      // clear previous error if user modifies before touch
       setErrors((prev) => ({
         ...prev,
         [name]: '',
@@ -115,21 +178,31 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     }
   };
 
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    setTouched((prev) => ({
+      ...prev,
+      [name]: true,
+    }));
+    const error = validateField(name, value);
+    setErrors((prev) => ({
+      ...prev,
+      [name]: error,
+    }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const validationErrors = validate();
+    const validationErrors = validateAll();
     setErrors(validationErrors);
+    setTouched(
+      Object.keys(formData).reduce((acc, key) => ({ ...acc, [key]: true }), {})
+    );
 
     if (Object.keys(validationErrors).length > 0) return;
 
     onSave?.(formData);
-
-    if (client) {
-      alert('Cliente actualizado correctamente');
-    } else {
-      alert('Cliente creado correctamente');
-    }
 
     resetForm();
     onClose();
@@ -138,15 +211,15 @@ function FormClient({ isOpen, onClose, client, onSave }) {
   if (!isOpen) return null;
 
   const inputClass = (field) =>
-    `w-full px-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 ${
-      errors[field]
+    `w-full px-3 py-1.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors ${
+      errors[field] && touched[field]
         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
 
   const renderError = (field) =>
-    errors[field] && (
-      <p className="mt-1 text-sm text-red-600">{errors[field]}</p>
+    errors[field] && touched[field] && (
+      <p className="mt-0.5 text-xs text-red-600">{errors[field]}</p>
     );
 
   return (
@@ -186,17 +259,18 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
             <div className="overflow-y-auto flex-1 p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 max-w-6xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 max-w-6xl mx-auto">
 
                 {/* Tipo persona */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1.5">
-                    Tipo de persona *
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Tipo de persona <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="tipoPersona"
                     value={formData.tipoPersona}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     className={inputClass('tipoPersona')}
                   >
                     <option value="">Selecciona una opción</option>
@@ -208,13 +282,14 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
                 {/* Tipo */}
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Tipo *
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Tipo <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="tipo"
                     value={formData.tipo}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     className={inputClass('tipo')}
                   >
                     <option value="CC">CC</option>
@@ -226,14 +301,15 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
                 {/* Numero */}
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Número *
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Número <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="numero"
                     value={formData.numero}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="Ej: 123456789"
                     className={inputClass('numero')}
                   />
@@ -242,14 +318,15 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
                 {/* Nombres */}
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Nombres *
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Nombres <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="nombres"
                     value={formData.nombres}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="Ej: Juan Carlos"
                     className={inputClass('nombres')}
                   />
@@ -258,29 +335,32 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
                 {/* Apellidos */}
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Apellidos
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Apellidos<span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="apellidos"
                     value={formData.apellidos}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="Ej: Pérez Gómez"
                     className={inputClass('apellidos')}
                   />
+                  {renderError('apellidos')}
                 </div>
 
                 {/* Dirección */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1.5">
-                    Dirección *
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Dirección <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="direccion"
                     value={formData.direccion}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="Ej: Calle 10 # 15-25"
                     className={inputClass('direccion')}
                   />
@@ -289,14 +369,15 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
                 {/* Teléfono */}
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Teléfono *
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Teléfono <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="tel"
                     name="telefono"
                     value={formData.telefono}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="Ej: 3001234567"
                     className={inputClass('telefono')}
                   />
@@ -305,14 +386,15 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
                 {/* Correo */}
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Correo electrónico *
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Correo electrónico <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
                     name="correo"
                     value={formData.correo}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="Ej: cliente@email.com"
                     className={inputClass('correo')}
                   />
@@ -321,7 +403,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
                 {/* Nombre persona contacto */}
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Nombre persona contacto
                   </label>
                   <input
@@ -329,6 +411,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     name="nombreContacto"
                     value={formData.nombreContacto}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="Ej: María López"
                     className={inputClass('nombreContacto')}
                   />
@@ -337,7 +420,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
                 {/* Número persona contacto */}
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Número persona contacto
                   </label>
                   <input
@@ -345,21 +428,40 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     name="numeroContacto"
                     value={formData.numeroContacto}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="Ej: 3009876543"
                     className={inputClass('numeroContacto')}
                   />
                   {renderError('numeroContacto')}
                 </div>
 
+                {/* Crédito cliente */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Crédito cliente <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="creditoCliente"
+                    value={formData.creditoCliente}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Ej: 500000"
+                    className={inputClass('creditoCliente')}
+                  />
+                  {renderError('creditoCliente')}
+                </div>
+
                 {/* Tipo Cliente */}
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Tipo de cliente *
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Tipo de cliente <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="tipoCliente"
                     value={formData.tipoCliente}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     className={inputClass('tipoCliente')}
                   >
                     <option value="">Selecciona una opción</option>
@@ -371,13 +473,14 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
                 {/* RUT */}
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    RUT *
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    RUT <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="rut"
                     value={formData.rut}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     className={inputClass('rut')}
                   >
                     <option value="">Seleccione</option>
@@ -387,9 +490,9 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   {renderError('rut')}
                 </div>
 
-                {/* Codigo CIU */}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1.5">
+                {/* Codigo CIU junto a RUT */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Código CIU
                   </label>
                   <input
@@ -397,6 +500,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     name="codigoCIU"
                     value={formData.codigoCIU}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="Ej: 4669"
                     className={inputClass('codigoCIU')}
                   />

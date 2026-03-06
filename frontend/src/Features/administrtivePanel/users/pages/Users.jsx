@@ -4,43 +4,31 @@ import { Outlet, useLocation } from 'react-router-dom';
 import TopBar          from '../components/TopBar';
 import UsersTable      from '../components/UsersTable';
 import PaginationAdmin from '../../../shared/PaginationAdmin';
+import { UsersDB }     from '../services/usersDB';
 
-const STORAGE_KEY      = 'pm_users';
 const RECORDS_PER_PAGE = 13;
-
-// ─── Helpers localStorage ─────────────────────────────────────────────────────
-const loadUsers = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch { return []; }
-};
-
-const saveUsers = (users) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-};
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 function Users({ onDownload }) {
   const location                     = useLocation();
-  const [data,        setData]        = useState(loadUsers);
+  const [data,        setData]        = useState(() => UsersDB.list());
   const [search,      setSearch]      = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Recargar al volver del formulario tras crear/editar
   useEffect(() => {
-    setData(loadUsers());
+    setData(UsersDB.list());
   }, [location.pathname]);
 
-  useEffect(() => {
-    saveUsers(data);
-  }, [data]);
-
+  // ─── Acciones ──────────────────────────────────────────────────────────────
   const handleToggle = (id) => {
-    setData((prev) => prev.map((row) => row.id === id ? { ...row, activo: !row.activo } : row));
+    const updated = UsersDB.toggle(id);
+    setData(updated);
   };
 
   const handleDelete = (row) => {
-    setData((prev) => prev.filter((r) => r.id !== row.id));
+    const updated = UsersDB.delete(row.id);
+    setData(updated);
   };
 
   const handleSearchChange = (value) => {
@@ -48,13 +36,15 @@ function Users({ onDownload }) {
     setCurrentPage(1);
   };
 
+  // ─── Filtro ────────────────────────────────────────────────────────────────
   const filtered = data.filter((row) => {
     const term = search.toLowerCase().trim();
     if (!term) return true;
 
     const estadoTexto  = row.activo ? 'activo' : 'inactivo';
     const termosEstado = ['activo', 'activos', 'inactivo', 'inactivos'];
-    const matchEstado  = termosEstado.includes(term) && estadoTexto.startsWith(term.replace(/s$/, ''));
+    const matchEstado  = termosEstado.includes(term) &&
+                         estadoTexto.startsWith(term.replace(/s$/, ''));
 
     return (
       row.documento.toLowerCase().includes(term) ||
@@ -81,8 +71,8 @@ function Users({ onDownload }) {
         onDownload={onDownload}
       />
 
-      {/* ── Tabla ────────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
+      {/* ── Tabla ──────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl shadow-md">
         <UsersTable
           data={paginatedData}
           onToggle={handleToggle}
@@ -93,7 +83,7 @@ function Users({ onDownload }) {
         />
       </div>
 
-      {/* ── Paginador separado del card ──────────────────────────────────── */}
+      {/* ── Paginador ──────────────────────────────────────────────────── */}
       {filtered.length > 0 && (
         <PaginationAdmin
           currentPage={currentPage}

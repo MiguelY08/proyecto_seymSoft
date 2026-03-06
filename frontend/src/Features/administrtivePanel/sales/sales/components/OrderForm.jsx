@@ -1,105 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, Package, Trash2, ShoppingBag, Plus, Minus } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
-
-// ─── Productos de prueba ──────────────────────────────────────────────────────
-const SAMPLE_PRODUCTS = [
-  {
-    id: 1,
-    nombre: 'Libreta con Lapicero',
-    proveedor: 'Papelera El Punto S.A.S',
-    precioDetal: 5000,
-    precioMayorista: 4200,
-    stock: 200,
-    categorias: ['Papelería', 'Útiles escolares'],
-  },
-  {
-    id: 2,
-    nombre: 'Silicona Líquida ET131 X',
-    proveedor: 'Distribuciones Andina Ltda.',
-    precioDetal: 2900,
-    precioMayorista: 2400,
-    stock: 500,
-    categorias: ['Arte y manualidades'],
-  },
-  {
-    id: 3,
-    nombre: 'Resma Papel Bond A4 500 Hojas',
-    proveedor: 'Industrias Bolívar S.A.',
-    precioDetal: 18500,
-    precioMayorista: 15800,
-    stock: 350,
-    categorias: ['Oficina', 'Papelería'],
-  },
-  {
-    id: 4,
-    nombre: 'Bolígrafo Kilométrico x12',
-    proveedor: 'Comercializadora Sur Ltda.',
-    precioDetal: 8400,
-    precioMayorista: 6900,
-    stock: 800,
-    categorias: ['Útiles escolares', 'Oficina'],
-  },
-  {
-    id: 5,
-    nombre: 'Caja de Colores 24 Und',
-    proveedor: 'Papelera El Punto S.A.S',
-    precioDetal: 12000,
-    precioMayorista: 10000,
-    stock: 150,
-    categorias: ['Arte y manualidades', 'Útiles escolares'],
-  },
-  {
-    id: 6,
-    nombre: 'Corrector Líquido Faster',
-    proveedor: 'Distribuciones Andina Ltda.',
-    precioDetal: 3500,
-    precioMayorista: 2800,
-    stock: 420,
-    categorias: ['Oficina', 'Útiles escolares'],
-  },
-  {
-    id: 7,
-    nombre: 'Carpeta Argollada Oficio',
-    proveedor: 'Comercializadora Central S.A.S',
-    precioDetal: 9800,
-    precioMayorista: 8200,
-    stock: 180,
-    categorias: ['Oficina'],
-  },
-  {
-    id: 8,
-    nombre: 'Tijeras Escolar Punta Roma',
-    proveedor: 'Industrias Bolívar S.A.',
-    precioDetal: 4200,
-    precioMayorista: 3500,
-    stock: 300,
-    categorias: ['Útiles escolares', 'Arte y manualidades'],
-  },
-  {
-    id: 9,
-    nombre: 'Marcadores Borrables x6',
-    proveedor: 'Papelera El Punto S.A.S',
-    precioDetal: 11500,
-    precioMayorista: 9600,
-    stock: 240,
-    categorias: ['Oficina', 'Arte y manualidades'],
-  },
-  {
-    id: 10,
-    nombre: 'Block Cuadriculado 50 Hojas',
-    proveedor: 'Distribuciones Andina Ltda.',
-    precioDetal: 3800,
-    precioMayorista: 3100,
-    stock: 600,
-    categorias: ['Útiles escolares', 'Papelería'],
-  },
-];
+import { ProductsDB } from '../services/productsBD';
 
 // ─── Formateador de precios ───────────────────────────────────────────────────
 const formatPrice = (value) =>
-  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })
-    .format(value);
+  new Intl.NumberFormat('es-CO', {
+    style: 'currency', currency: 'COP', minimumFractionDigits: 0,
+  }).format(value);
 
 // ─── Card de producto ─────────────────────────────────────────────────────────
 function ProductCard({ item, onQuantityChange, onRemove, isEditing }) {
@@ -127,12 +35,10 @@ function ProductCard({ item, onQuantityChange, onRemove, isEditing }) {
           <span className="text-xs text-gray-400 font-medium">Cantidad</span>
 
           {isEditing ? (
-            /* ── Modo edición: solo lectura ── */
             <span className="text-sm font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1">
               {cantidad}
             </span>
           ) : (
-            /* ── Modo creación: +/- con input directo ── */
             <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
               <button
                 type="button"
@@ -159,10 +65,10 @@ function ProductCard({ item, onQuantityChange, onRemove, isEditing }) {
             </div>
           )}
         </div>
-        <p className="text-[10px] text-gray-400 mt-0.5">Stock: {product.stock}</p>
+        <p className="text-[10px] text-gray-400 mt-0.5">Stock disponible: {product.stock}</p>
       </div>
 
-      {/* Precio + Total */}
+      {/* Precio + Total — desktop */}
       <div className="hidden sm:flex items-center gap-4 shrink-0">
         <div className="text-center">
           <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Precio</p>
@@ -175,13 +81,13 @@ function ProductCard({ item, onQuantityChange, onRemove, isEditing }) {
         </div>
       </div>
 
-      {/* Total mobile */}
+      {/* Total — mobile */}
       <div className="flex sm:hidden flex-col items-end shrink-0">
         <p className="text-[10px] text-gray-400">Total</p>
         <p className="text-sm font-bold text-[#004D77]">{formatPrice(total)}</p>
       </div>
 
-      {/* Eliminar — solo creación */}
+      {/* Eliminar — solo en creación */}
       {!isEditing && (
         <button
           type="button"
@@ -199,11 +105,21 @@ function ProductCard({ item, onQuantityChange, onRemove, isEditing }) {
 // ─── OrderForm ────────────────────────────────────────────────────────────────
 function OrderForm({ items, onItemsChange, isEditing }) {
   const { showWarning } = useAlert();
-  const [query,      setQuery]      = useState('');
+  const [query,        setQuery]        = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const searchRef = useRef(null);
 
-  // ─── Cerrar dropdown al click afuera ─────────────────────────────────────
+  // Cargar catálogo desde el servicio
+  const [allProducts, setAllProducts] = useState(() => ProductsDB.list());
+
+  // Refrescar catálogo al enfocar la ventana (por si cambió el stock)
+  useEffect(() => {
+    const sync = () => setAllProducts(ProductsDB.list());
+    window.addEventListener('focus', sync);
+    return () => window.removeEventListener('focus', sync);
+  }, []);
+
+  // Cerrar dropdown al click afuera
   useEffect(() => {
     const handler = (e) => {
       if (searchRef.current && !searchRef.current.contains(e.target))
@@ -216,22 +132,27 @@ function OrderForm({ items, onItemsChange, isEditing }) {
   // ─── Filtro del buscador ──────────────────────────────────────────────────
   const filteredProducts = useMemo(() => {
     const term = query.toLowerCase().trim();
-    if (!term) return SAMPLE_PRODUCTS;
-    return SAMPLE_PRODUCTS.filter((p) =>
-      p.nombre.toLowerCase().includes(term)          ||
-      p.proveedor.toLowerCase().includes(term)       ||
-      p.categorias.some((c) => c.toLowerCase().includes(term)) ||
-      String(p.precioDetal).includes(term)           ||
+    if (!term) return allProducts;
+    return allProducts.filter((p) =>
+      p.nombre.toLowerCase().includes(term)                          ||
+      p.proveedor.toLowerCase().includes(term)                      ||
+      p.categorias.some((c) => c.toLowerCase().includes(term))      ||
+      String(p.precioDetal).includes(term)                          ||
       String(p.stock).includes(term)
     );
-  }, [query]);
+  }, [query, allProducts]);
 
-  // ─── IDs ya agregados ─────────────────────────────────────────────────────
   const addedIds = useMemo(() => new Set(items.map((i) => i.product.id)), [items]);
 
   // ─── Agregar producto ─────────────────────────────────────────────────────
   const handleSelect = (product) => {
     if (addedIds.has(product.id)) {
+      setDropdownOpen(false);
+      setQuery('');
+      return;
+    }
+    if (product.stock < 1) {
+      showWarning('Sin stock', `"${product.nombre}" no tiene unidades disponibles.`);
       setDropdownOpen(false);
       setQuery('');
       return;
@@ -245,7 +166,6 @@ function OrderForm({ items, onItemsChange, isEditing }) {
   const handleQuantityChange = (productId, newQty) => {
     const item = items.find((i) => i.product.id === productId);
     if (!item) return;
-
     if (newQty < 1) {
       showWarning('Cantidad mínima', 'La cantidad mínima por producto es 1.');
       return;
@@ -270,7 +190,7 @@ function OrderForm({ items, onItemsChange, isEditing }) {
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
 
-      {/* ── Header sección ──────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gray-50">
         <div className="w-7 h-7 rounded-md bg-[#004D77] flex items-center justify-center shrink-0">
           <ShoppingBag className="w-4 h-4 text-white" strokeWidth={2} />
@@ -285,10 +205,10 @@ function OrderForm({ items, onItemsChange, isEditing }) {
         </div>
       </div>
 
-      {/* ── Contenido con scroll ─────────────────────────────────────── */}
+      {/* ── Contenido con scroll ─────────────────────────────────────────── */}
       <div className="p-5 flex flex-col gap-4 max-h-480px overflow-y-auto">
 
-        {/* Buscador — solo creación */}
+        {/* Buscador — solo en creación */}
         {!isEditing && (
           <div ref={searchRef} className="relative">
             <div className="relative">
@@ -297,7 +217,7 @@ function OrderForm({ items, onItemsChange, isEditing }) {
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setDropdownOpen(true); }}
                 onFocus={() => setDropdownOpen(true)}
-                placeholder="Buscar productos, código de barras..."
+                placeholder="Buscar producto, proveedor, categoría..."
                 className="w-full pl-4 pr-10 py-2.5 text-sm border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 text-gray-700 placeholder-gray-400"
               />
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" strokeWidth={2} />
@@ -309,12 +229,14 @@ function OrderForm({ items, onItemsChange, isEditing }) {
                   {filteredProducts.length > 0 ? (
                     filteredProducts.map((product) => {
                       const alreadyAdded = addedIds.has(product.id);
+                      const sinStock     = product.stock < 1;
+                      const disabled     = alreadyAdded || sinStock;
                       return (
                         <li
                           key={product.id}
-                          onClick={() => !alreadyAdded && handleSelect(product)}
+                          onClick={() => !disabled && handleSelect(product)}
                           className={`flex items-center gap-3 px-4 py-2.5 transition-colors duration-150 ${
-                            alreadyAdded
+                            disabled
                               ? 'opacity-40 cursor-not-allowed bg-gray-50'
                               : 'cursor-pointer hover:bg-[#004D77]/5'
                           }`}
@@ -324,10 +246,15 @@ function OrderForm({ items, onItemsChange, isEditing }) {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-800 truncate">{product.nombre}</p>
-                            <p className="text-[10px] text-gray-400">Stock: {product.stock} · {formatPrice(product.precioDetal)}</p>
+                            <p className="text-[10px] text-gray-400">
+                              Stock: {product.stock} · {formatPrice(product.precioDetal)}
+                            </p>
                           </div>
                           {alreadyAdded && (
                             <span className="text-[10px] text-gray-400 shrink-0">Agregado</span>
+                          )}
+                          {sinStock && !alreadyAdded && (
+                            <span className="text-[10px] text-red-400 shrink-0">Sin stock</span>
                           )}
                         </li>
                       );
@@ -343,7 +270,7 @@ function OrderForm({ items, onItemsChange, isEditing }) {
           </div>
         )}
 
-        {/* Lista de productos */}
+        {/* Lista de productos agregados */}
         {items.length > 0 ? (
           <div className="flex flex-col gap-3">
             {items.map((item) => (

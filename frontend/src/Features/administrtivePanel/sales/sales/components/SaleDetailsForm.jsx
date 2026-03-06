@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { ChevronDown, FileText, Search, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { UsersDB } from '../../../users/services/usersDB';
 
-const STORAGE_USERS = 'pm_users';
 const MAX_DIRECCION = 250;
 
 const METODOS_PAGO  = ['Efectivo', 'Crédito', 'Transferencia'];
@@ -11,14 +11,6 @@ const ESTADOS_VENTA = [
   'Anulada', 'Desaprobada', 'Cancelada', 'Créd. denegado',
 ];
 const ENTREGAS = ['Cliente lo recoge', 'Domicilio'];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const loadUsers = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_USERS);
-    return stored ? JSON.parse(stored) : [];
-  } catch { return []; }
-};
 
 // ─── Campo de solo lectura ────────────────────────────────────────────────────
 function ReadonlyField({ value }) {
@@ -29,7 +21,7 @@ function ReadonlyField({ value }) {
   );
 }
 
-// ─── Select con buscador integrado ───────────────────────────────────────────
+// ─── Select con buscador integrado ────────────────────────────────────────────
 function SearchableSelect({ value, onChange, options, placeholder, error, getLabel, getValue }) {
   const [open,  setOpen]  = useState(false);
   const [query, setQuery] = useState('');
@@ -46,7 +38,9 @@ function SearchableSelect({ value, onChange, options, placeholder, error, getLab
   }, [value, options]);
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
@@ -64,7 +58,7 @@ function SearchableSelect({ value, onChange, options, placeholder, error, getLab
         onClick={() => setOpen((p) => !p)}
         className={`w-full flex items-center justify-between px-4 py-2.5 text-sm border rounded-lg bg-white transition-colors duration-200 ${
           error
-            ? 'border-red-500 focus:border-red-500 ring-2 ring-red-200'
+            ? 'border-red-500 ring-2 ring-red-200'
             : open
               ? 'border-[#004D77] ring-2 ring-[#004D77]/20'
               : 'border-gray-300 hover:border-gray-400'
@@ -145,24 +139,21 @@ function SimpleSelect({ name, value, onChange, options, placeholder, error }) {
 // ─── SaleDetailsForm ──────────────────────────────────────────────────────────
 function SaleDetailsForm({ form, onChange, errors, isEditing }) {
   const navigate = useNavigate();
-  const [users, setUsers] = useState(loadUsers);
+
+  // Cargar usuarios desde el servicio y mantener sincronización
+  const [users, setUsers] = useState(() => UsersDB.list());
 
   useEffect(() => {
-    const sync = () => setUsers(loadUsers());
+    const sync = () => setUsers(UsersDB.list());
     window.addEventListener('focus', sync);
     return () => window.removeEventListener('focus', sync);
   }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // Si cambia entrega a "Cliente lo recoge", limpiar dirección
-    if (name === 'entrega' && value !== 'Domicilio') {
-      onChange('direccion', '');
-    }
+    if (name === 'entrega' && value !== 'Domicilio') onChange('direccion', '');
     onChange(name, value);
   };
-
-  const handleSelectChange = (name, value) => onChange(name, value);
 
   const ErrorMsg = ({ field }) =>
     errors?.[field] ? <p className="mt-1 text-sm text-red-600">{errors[field]}</p> : null;
@@ -173,14 +164,13 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
     </label>
   );
 
-  // ─── Solo usuarios activos ────────────────────────────────────────────────
-  const activeUsers    = users.filter((u) => u.activo);
-  const activeVendors  = users.filter((u) => u.activo && (u.rol === 'Empleado' || u.rol === 'Administrador'));
+  const activeUsers   = users.filter((u) => u.activo);
+  const activeVendors = users.filter((u) => u.activo && (u.rol === 'Empleado' || u.rol === 'Administrador'));
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
 
-      {/* ── Header sección ──────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gray-50">
         <div className="w-7 h-7 rounded-md bg-[#004D77] flex items-center justify-center shrink-0">
           <FileText className="w-4 h-4 text-white" strokeWidth={2} />
@@ -196,20 +186,16 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
 
         {/* Cliente + Vendedor */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-          {/* Cliente — solo activos */}
           <div>
             <Label required>Cliente</Label>
             <div className="flex gap-2">
               <div className="flex-1">
                 {isEditing ? (
-                  <ReadonlyField value={
-                    users.find((u) => String(u.id) === String(form.clienteId))?.nombre
-                  } />
+                  <ReadonlyField value={users.find((u) => String(u.id) === String(form.clienteId))?.nombre} />
                 ) : (
                   <SearchableSelect
                     value={form.clienteId}
-                    onChange={(val) => handleSelectChange('clienteId', val)}
+                    onChange={(val) => onChange('clienteId', val)}
                     options={activeUsers}
                     placeholder="Cliente"
                     error={errors?.clienteId}
@@ -232,17 +218,14 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
             <ErrorMsg field="clienteId" />
           </div>
 
-          {/* Vendedor — solo activos con rol Empleado o Administrador */}
           <div>
             <Label required>Vendedor</Label>
             {isEditing ? (
-              <ReadonlyField value={
-                users.find((u) => String(u.id) === String(form.vendedorId))?.nombre
-              } />
+              <ReadonlyField value={users.find((u) => String(u.id) === String(form.vendedorId))?.nombre} />
             ) : (
               <SearchableSelect
                 value={form.vendedorId}
-                onChange={(val) => handleSelectChange('vendedorId', val)}
+                onChange={(val) => onChange('vendedorId', val)}
                 options={activeVendors}
                 placeholder="Vendedor"
                 error={errors?.vendedorId}
@@ -300,7 +283,7 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
           <ErrorMsg field="entrega" />
         </div>
 
-        {/* Dirección — solo visible cuando entrega es Domicilio */}
+        {/* Dirección — solo cuando entrega es Domicilio */}
         {form.entrega === 'Domicilio' && (
           <div>
             <Label required>Dirección</Label>
@@ -326,7 +309,6 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
             <ErrorMsg field="direccion" />
           </div>
         )}
-
       </div>
     </div>
   );

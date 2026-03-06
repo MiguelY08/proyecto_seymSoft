@@ -4,39 +4,25 @@ import { Outlet, useLocation } from 'react-router-dom';
 import TopBar          from '../components/TopBar';
 import SalesTable      from '../components/SalesTable';
 import PaginationAdmin from '../../../../shared/PaginationAdmin';
+import { SalesDB }     from '../services/salesBD';
 
-const STORAGE_KEY      = 'pm_sales';
 const RECORDS_PER_PAGE = 13;
-
-// ─── Helpers localStorage ─────────────────────────────────────────────────────
-const loadSales = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch { return []; }
-};
-
-const saveSales = (sales) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sales));
-};
 
 // ─── Sales ────────────────────────────────────────────────────────────────────
 function Sales() {
   const location                     = useLocation();
-  const [data,        setData]        = useState(loadSales);
+  const [data,        setData]        = useState(() => SalesDB.list());
   const [search,      setSearch]      = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Recargar al volver del formulario
   useEffect(() => {
-    setData(loadSales());
+    setData(SalesDB.list());
   }, [location.pathname]);
 
-  useEffect(() => {
-    saveSales(data);
-  }, [data]);
-
   const handleAnular = (id) => {
-    setData((prev) => prev.map((row) => row.id === id ? { ...row, estado: 'Anulada' } : row));
+    const updated = SalesDB.anular(id);
+    setData(updated);
   };
 
   const handleSearchChange = (value) => {
@@ -49,12 +35,12 @@ function Sales() {
     const term = search.toLowerCase().trim();
     if (!term) return true;
     return (
-      row.cliente.toLowerCase().includes(term)          ||
-      row.vendedor.toLowerCase().includes(term)         ||
-      String(row.factura).toLowerCase().includes(term)  ||
-      row.fecha.toLowerCase().includes(term)            ||
-      row.metodoPago.toLowerCase().includes(term)       ||
-      String(row.total).toLowerCase().includes(term)    ||
+      row.cliente.toLowerCase().includes(term)         ||
+      row.vendedor.toLowerCase().includes(term)        ||
+      String(row.factura).toLowerCase().includes(term) ||
+      row.fecha.toLowerCase().includes(term)           ||
+      row.metodoPago.toLowerCase().includes(term)      ||
+      String(row.total).toLowerCase().includes(term)   ||
       row.estado.toLowerCase().includes(term)
     );
   });
@@ -67,14 +53,13 @@ function Sales() {
   return (
     <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
 
-      {/* ── Barra superior ───────────────────────────────────────────────── */}
       <TopBar
         search={search}
         onSearchChange={handleSearchChange}
       />
 
-      {/* ── Tabla ────────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
+      {/* ── Tabla ──────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl shadow-md">
         <SalesTable
           data={paginatedData}
           onAnular={handleAnular}
@@ -84,7 +69,7 @@ function Sales() {
         />
       </div>
 
-      {/* ── Paginador separado del card ──────────────────────────────────── */}
+      {/* ── Paginador ──────────────────────────────────────────────────── */}
       {filtered.length > 0 && (
         <PaginationAdmin
           currentPage={currentPage}

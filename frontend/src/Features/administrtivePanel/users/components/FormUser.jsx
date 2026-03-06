@@ -3,10 +3,9 @@ import { X, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useAlert } from '../../../shared/alerts/useAlert';
 import { useModalAnimation } from '../../../shared/useModalAnimation';
+import { UsersDB } from '../services/usersDB';
 
-const STORAGE_KEY = 'pm_users';
-
-// ─── Normalizar: sin tildes, sin mayúsculas, sin espacios extremos ─────────────
+// ─── Normalizar: sin tildes, sin mayúsculas, sin espacios extremos ────────────
 const normalizar = (str) =>
   str.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
@@ -48,12 +47,7 @@ function FormUser() {
   const docMinLength = { CC: 8, CE: 6, NIT: 9, TI: 10, PP: 5 };
 
   // ─── Usuarios existentes — solo se leen una vez al montar ─────────────────
-  const existingUsers = useMemo(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch { return []; }
-  }, []);
+  const existingUsers = useMemo(() => UsersDB.list(), []);
 
   // ─── Validar duplicados ────────────────────────────────────────────────────
   const checkDuplicates = (currentForm = form) => {
@@ -61,11 +55,11 @@ function FormUser() {
     const nombreCompleto = `${currentForm.nombres.trim()} ${currentForm.apellidos.trim()}`.trim();
 
     existingUsers.forEach((u) => {
-      if (isEditing && u.id === userToEdit.id) return; // Ignorar el propio usuario
+      if (isEditing && u.id === userToEdit.id) return;
 
       if (currentForm.documento.trim() &&
           normalizar(u.documento) === normalizar(currentForm.documento) &&
-          normalizar(u.tipo) === normalizar(currentForm.tipo)) {
+          normalizar(u.tipo)      === normalizar(currentForm.tipo)) {
         dupes.documento = 'Este número de documento ya está registrado.';
       }
 
@@ -74,7 +68,6 @@ function FormUser() {
         dupes.correo = 'Este correo electrónico ya está registrado.';
       }
 
-      // Solo comparar nombre si ya tiene longitud suficiente para ser real
       if (nombreCompleto.length >= 6 &&
           normalizar(u.nombre) === normalizar(nombreCompleto)) {
         dupes.nombres   = 'Ya existe un usuario con este nombre completo.';
@@ -85,7 +78,7 @@ function FormUser() {
     return dupes;
   };
 
-  // ─── Validación de formato de un campo ────────────────────────────────────
+  // ─── Validación de formato ─────────────────────────────────────────────────
   const validateField = (name, value, currentForm = form) => {
     const v = value.trim();
     switch (name) {
@@ -147,25 +140,17 @@ function FormUser() {
     setForm(updatedForm);
     setTouched((prev) => ({ ...prev, [name]: true }));
 
-    // Calcular errores de formato y duplicados
     const formatError = validateField(name, filtered, updatedForm);
     const dupes       = checkDuplicates(updatedForm);
 
     setErrors((prev) => {
-      const next = { ...prev };
-
-      // Actualizar el campo que cambió
-      next[name] = formatError || dupes[name] || '';
-
-      // Si nombres o apellidos cambia, re-evaluar ambos para el duplicado de nombre completo
+      const next = { ...prev, [name]: formatError || dupes[name] || '' };
       if (name === 'nombres' || name === 'apellidos') {
-        const otroField = name === 'nombres' ? 'apellidos' : 'nombres';
-        // Limpiar duplicado del otro campo si ya no aplica
-        if (prev[otroField] === 'Ya existe un usuario con este nombre completo.') {
-          next[otroField] = dupes[otroField] || '';
+        const otro = name === 'nombres' ? 'apellidos' : 'nombres';
+        if (prev[otro] === 'Ya existe un usuario con este nombre completo.') {
+          next[otro] = dupes[otro] || '';
         }
       }
-
       return next;
     });
   };
@@ -191,7 +176,6 @@ function FormUser() {
       const e = validateField(field, form[field]);
       if (e) errs[field] = e;
     });
-    // Sobrescribir con duplicados si no hay ya error de formato
     const dupes = checkDuplicates();
     Object.entries(dupes).forEach(([field, msg]) => {
       if (!errs[field]) errs[field] = msg;
@@ -199,7 +183,7 @@ function FormUser() {
     return errs;
   };
 
-  // ─── Guardar ───────────────────────────────────────────────────────────────
+  // ─── Guardar vía servicio ──────────────────────────────────────────────────
   const handleSubmit = () => {
     const allTouched = Object.keys(form).reduce((acc, k) => ({ ...acc, [k]: true }), {});
     setTouched(allTouched);
@@ -211,45 +195,38 @@ function FormUser() {
       return;
     }
 
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const users  = stored ? JSON.parse(stored) : [];
     const nombre = `${form.nombres.trim()} ${form.apellidos.trim()}`.trim();
 
     if (isEditing) {
-      const updated = users.map((u) =>
-        u.id === userToEdit.id
-          ? { ...u, tipo: form.tipo, documento: form.documento, nombre, correo: form.correo, telefono: form.telefono, rol: form.rol }
-          : u
-      );
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      UsersDB.update(userToEdit.id, {
+        tipo:      form.tipo,
+        documento: form.documento,
+        nombre,
+        correo:    form.correo,
+        telefono:  form.telefono,
+        rol:       form.rol,
+      });
       showSuccess('Usuario actualizado', 'Los datos del usuario han sido actualizados.');
       navigate(returnTo, {
         state: returnTo !== '/admin/users' ? { newUserId: String(userToEdit.id) } : undefined,
       });
     } else {
-      const newId   = users.length > 0 ? Math.max(...users.map((u) => u.id)) + 1 : 1;
-      const newUser = {
-        id: newId,
-        tipo: form.tipo,
+      const newUser = UsersDB.create({
+        tipo:      form.tipo,
         documento: form.documento,
         nombre,
-        correo:   form.correo,
-        telefono: form.telefono,
-        rol:      form.rol,
-        activo:   true,
-        registradoDesde: new Date().toLocaleDateString('es-CO', {
-          day: '2-digit', month: '2-digit', year: 'numeric',
-        }),
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify([...users, newUser]));
+        correo:    form.correo,
+        telefono:  form.telefono,
+        rol:       form.rol,
+      });
       showSuccess('Usuario creado', 'El nuevo usuario ha sido registrado exitosamente.');
       navigate(returnTo, {
-        state: returnTo !== '/admin/users' ? { newUserId: String(newId) } : undefined,
+        state: returnTo !== '/admin/users' ? { newUserId: String(newUser.id) } : undefined,
       });
     }
   };
 
-  // ─── Detectar si el formulario fue modificado ─────────────────────────────
+  // ─── Detectar cambios sin guardar ─────────────────────────────────────────
   const isDirty = (() => {
     if (isEditing) {
       const nombreOriginal    = userToEdit.nombre ?? '';
@@ -265,7 +242,6 @@ function FormUser() {
         form.rol       !== (userToEdit.rol        ?? '')
       );
     }
-    // En creación: sucio si cualquier campo tiene valor (ignorando tipo que siempre tiene default)
     return (
       form.documento.trim() !== '' ||
       form.nombres.trim()   !== '' ||

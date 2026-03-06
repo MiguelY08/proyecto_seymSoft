@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Info, SquarePen, Trash2, Users, Plus } from 'lucide-react';
 import { useAlert } from '../../../shared/alerts/useAlert';
+import { UsersDB } from '../services/usersDB';
 
 // ─── Resaltador de texto ──────────────────────────────────────────────────────
 function highlight(text, term) {
@@ -125,7 +126,7 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
       return;
     }
 
-    // ─── Verificar ventas asociadas ─────────────────────────────────────────
+    // ─── Verificar ventas asociadas vía servicio ────────────────────────────
     const ventas = (() => {
       try {
         const stored = localStorage.getItem('pm_sales');
@@ -216,10 +217,7 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                         navigate('/admin/users/info-user', {
                           state: {
                             user: row,
-                            origin: {
-                              x: rect.left + rect.width  / 2,
-                              y: rect.top  + rect.height / 2,
-                            },
+                            origin: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
                           },
                         });
                       }}
@@ -235,10 +233,7 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                         navigate('/admin/users/form-user', {
                           state: {
                             user: row,
-                            origin: {
-                              x: rect.left + rect.width  / 2,
-                              y: rect.top  + rect.height / 2,
-                            },
+                            origin: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
                           },
                         });
                       }}
