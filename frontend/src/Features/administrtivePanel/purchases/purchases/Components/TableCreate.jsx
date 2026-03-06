@@ -9,7 +9,6 @@ const CreateTable = ({ currentData, handleDeleteItem }) => {
           <tr>
             <th className="px-3 py-3 text-left font-semibold">Producto</th>
             <th className="px-3 py-3 text-left font-semibold">Código De Barras</th>
-            <th className="px-3 py-3 text-left font-semibold">Proveedor</th>
             <th className="px-3 py-3 text-center font-semibold">Cantidad</th>
             <th className="px-3 py-3 text-right font-semibold">Valor Unit</th>
             <th className="px-3 py-3 text-right font-semibold">Subtotal</th>
@@ -34,9 +33,6 @@ const CreateTable = ({ currentData, handleDeleteItem }) => {
               </td>
               <td className="px-3 py-3 text-gray-600">
                 {item.codigoBarras}
-              </td>
-              <td className="px-3 py-3 text-gray-600">
-                {item.proveedor}
               </td>
               <td className="px-3 py-3 text-center text-gray-800 font-semibold">
                 {item.cantidad}

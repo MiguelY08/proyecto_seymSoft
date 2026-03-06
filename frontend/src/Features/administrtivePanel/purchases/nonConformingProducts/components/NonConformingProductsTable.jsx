@@ -12,6 +12,7 @@ export const NonConformingProductsTable = ({
   endIndex,
   handleCancel,
   highlightText,
+  handleViewDetails
 }) => {
   return (
     <>
@@ -85,7 +86,10 @@ export const NonConformingProductsTable = ({
 
                   <td className="px-3 py-2.5 text-center">
                     <div className="flex justify-center gap-3">
-                      <button className="text-gray-400 hover:text-blue-600 transition-colors">
+                      <button
+                        onClick={() => handleViewDetails(report)}
+                        className="text-gray-400 hover:text-blue-600 transition-colors"
+                      >
                         <Info size={16} />
                       </button>
 

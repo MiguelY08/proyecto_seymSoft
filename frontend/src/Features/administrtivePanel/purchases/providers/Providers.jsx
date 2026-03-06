@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Info, SquarePen, Trash2, Search, Plus, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Info, SquarePen, Trash2, Search, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import FormProvider from './FormProvider';
 import InfoProvider from './InfoProvider';
+import { useAlert } from '../../../shared/alerts/useAlert';
 
 const sampleData = [
   { id: 1,  tipo: 'CC',  numero: '1094827365',  nombre: 'Carlos Ramírez Gómez',        pContacto: 'Sebastian Bedoy',  nuContacto: '3204568790', categorias: 'Útiles escolares, Oficina', activo: true  },
@@ -16,10 +17,9 @@ const sampleData = [
   { id: 10, tipo: 'CC',  numero: '1087654321',  nombre: 'Ricardo Peña Salazar',        pContacto: 'Claudia Torres',   nuContacto: '3008765432', categorias: 'Papelería, Arte',          activo: false },
   { id: 11, tipo: 'CE',  numero: '1023984712',  nombre: 'Daniel Martínez Salazar',     pContacto: 'Sofía Vargas',     nuContacto: '3148650920', categorias: 'Útiles escolares',         activo: true  },
   { id: 12, tipo: 'CC',  numero: '1089456721',  nombre: 'Natalia García Pardo',        pContacto: 'Felipe Mora',      nuContacto: '3156428790', categorias: 'Tecnología',               activo: true  },
-  { id: 13, tipo: 'CC',  numero: '1089456721',  nombre: 'Natalia García Pardo',        pContacto: 'Felipe Mora',      nuContacto: '3156428790', categorias: 'Tecnología',               activo: true  },
-  { id: 14, tipo: 'CC',  numero: '1089456721',  nombre: 'Natalia García Pardo',        pContacto: 'Felipe Mora',      nuContacto: '3156428790', categorias: 'Tecnología',               activo: true  },
-  { id: 15, tipo: 'CC',  numero: '1089456721',  nombre: 'Natalia García Pardo',        pContacto: 'Felipe Mora',      nuContacto: '3156428790', categorias: 'Tecnología',               activo: true  },
-  { id: 16, tipo: 'CC',  numero: '1089456721',  nombre: 'Natalia García Pardo',        pContacto: 'Felipe Mora',      nuContacto: '3156428790', categorias: 'Tecnología',               activo: true  },
+  { id: 13, tipo: 'CC',  numero: '1089456721',  nombre: 'Juan Pérez López',            pContacto: 'María Silva',      nuContacto: '3156428790', categorias: 'Tecnología',               activo: true  },
+  { id: 14, tipo: 'CC',  numero: '1089456721',  nombre: 'Andrea Martínez',             pContacto: 'Pedro García',     nuContacto: '3156428790', categorias: 'Tecnología',               activo: true  },
+  { id: 15, tipo: 'CC',  numero: '1089456721',  nombre: 'Luis Fernando Ruiz',          pContacto: 'Carmen López',     nuContacto: '3156428790', categorias: 'Tecnología',               activo: true  },
 ];
 
 const RECORDS_PER_PAGE = 15;
@@ -105,18 +105,36 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
   );
 }
 
-function Providers({ data: initialData = sampleData, onDelete }) {
+function Providers({ data: initialData = sampleData }) {
   const [data, setData]                         = useState(initialData);
   const [search, setSearch]                     = useState('');
   const [currentPage, setCurrentPage]           = useState(1);
   const [isFormModalOpen, setIsFormModalOpen]   = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen]   = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(null);
+  
+  const { showConfirm, showSuccess } = useAlert();
 
-  const handleToggle = (id) => {
-    setData((prev) =>
-      prev.map((row) => (row.id === id ? { ...row, activo: !row.activo } : row))
+  const handleToggle = async (id) => {
+    const provider = data.find(row => row.id === id);
+    const nuevoEstado = provider.activo ? 'Inactivo' : 'Activo';
+    
+    const result = await showConfirm(
+      'warning',
+      'Cambiar estado',
+      `¿Está seguro de cambiar el estado del proveedor "${provider.nombre}" a ${nuevoEstado}?`,
+      {
+        confirmButtonText: 'Sí, cambiar',
+        cancelButtonText: 'Cancelar'
+      }
     );
+
+    if (result.isConfirmed) {
+      setData((prev) =>
+        prev.map((row) => (row.id === id ? { ...row, activo: !row.activo } : row))
+      );
+      showSuccess('Estado cambiado', `El proveedor ahora está ${nuevoEstado}`);
+    }
   };
 
   const handleEdit = (provider) => {
@@ -134,8 +152,40 @@ function Providers({ data: initialData = sampleData, onDelete }) {
     setIsFormModalOpen(true);
   };
 
-  const handleDownload = () => {
-    console.log('Descargando proveedores...');
+  const handleDelete = async (provider) => {
+    const result = await showConfirm(
+      'error',
+      'Eliminar proveedor',
+      `¿Está seguro de eliminar el proveedor "${provider.nombre}"? Esta acción no se puede deshacer.`,
+      {
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      }
+    );
+
+    if (result.isConfirmed) {
+      setData((prev) => prev.filter(row => row.id !== provider.id));
+      showSuccess('Proveedor eliminado', 'El proveedor ha sido eliminado exitosamente');
+      
+      const newFiltered = data.filter(row => row.id !== provider.id).filter((row) => {
+        const q = search.toLowerCase();
+        return (
+          row.id.toString().includes(q) ||
+          row.tipo.toLowerCase().includes(q) ||
+          row.numero.toLowerCase().includes(q) ||
+          row.nombre.toLowerCase().includes(q) ||
+          row.pContacto.toLowerCase().includes(q) ||
+          row.nuContacto.toLowerCase().includes(q) ||
+          row.categorias.toLowerCase().includes(q) ||
+          (row.activo ? 'activo' : 'inactivo').includes(q)
+        );
+      });
+      
+      const newTotalPages = Math.ceil(newFiltered.length / RECORDS_PER_PAGE);
+      if (currentPage > newTotalPages && newTotalPages > 0) {
+        setCurrentPage(newTotalPages);
+      }
+    }
   };
 
   const handleSave = (formData) => {
@@ -145,28 +195,27 @@ function Providers({ data: initialData = sampleData, onDelete }) {
           row.id === selectedProvider.id
             ? {
                 ...row,
-                tipo: formData.tipo,
-                numero: formData.numero,
+                ...formData,
                 nombre: `${formData.nombres} ${formData.apellidos}`.trim(),
                 pContacto: formData.nombreContacto,
                 nuContacto: formData.numeroContacto,
-                categorias: formData.categorias,
               }
             : row
         )
       );
+      showSuccess('Proveedor actualizado', 'Los datos del proveedor se actualizaron correctamente');
     } else {
+      const maxId = data.length > 0 ? Math.max(...data.map(p => p.id)) : 0;
       const newProvider = {
-        id: data.length + 1,
-        tipo: formData.tipo,
-        numero: formData.numero,
+        ...formData,
+        id: maxId + 1,
         nombre: `${formData.nombres} ${formData.apellidos}`.trim(),
         pContacto: formData.nombreContacto,
         nuContacto: formData.numeroContacto,
-        categorias: formData.categorias,
         activo: true,
       };
       setData((prev) => [...prev, newProvider]);
+      showSuccess('Proveedor creado', 'El nuevo proveedor se creó exitosamente');
     }
     setIsFormModalOpen(false);
   };
@@ -174,23 +223,24 @@ function Providers({ data: initialData = sampleData, onDelete }) {
   const filtered = data.filter((row) => {
     const q = search.toLowerCase();
     return (
-      row.nombre.toLowerCase().includes(q) ||
-      row.numero.toLowerCase().includes(q) ||
+      row.id.toString().includes(q) ||
       row.tipo.toLowerCase().includes(q) ||
+      row.numero.toLowerCase().includes(q) ||
+      row.nombre.toLowerCase().includes(q) ||
       row.pContacto.toLowerCase().includes(q) ||
-      row.categorias.toLowerCase().includes(q)
+      row.nuContacto.toLowerCase().includes(q) ||
+      row.categorias.toLowerCase().includes(q) ||
+      (row.activo ? 'activo' : 'inactivo').includes(q)
     );
   });
 
-  // Paginación
-  const totalPages = Math.ceil(filtered.length / RECORDS_PER_PAGE);
-  const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
-  const endIndex = startIndex + RECORDS_PER_PAGE;
-  const currentData = filtered.slice(startIndex, endIndex);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / RECORDS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * RECORDS_PER_PAGE;
+  const currentData = filtered.slice(startIndex, startIndex + RECORDS_PER_PAGE);
 
   return (
     <div className="min-h-screen flex flex-col gap-3 p-3 sm:p-4">
-
       {/* Barra superior */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
         <div className="relative w-full sm:w-72 md:w-96">
@@ -204,22 +254,17 @@ function Providers({ data: initialData = sampleData, onDelete }) {
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" strokeWidth={2} />
         </div>
 
-        {/* Botones con nuevo estilo */}
-        <div className="flex items-center gap-2 shrink-0">
-          
-
-          <button
-            onClick={handleNewProvider}
-            title="Nuevo proveedor"
-            className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-sky-700 rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
-          >
-            <span className="hidden sm:inline">Nuevo proveedor</span>
-            <Plus className="w-4 h-4" strokeWidth={2} />
-          </button>
-        </div>
+        <button
+          onClick={handleNewProvider}
+          title="Nuevo proveedor"
+          className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-sky-700 rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
+        >
+          <span className="hidden sm:inline">Nuevo proveedor</span>
+          <Plus className="w-4 h-4" strokeWidth={2} />
+        </button>
       </div>
 
-      {/* Tabla sin scroll */}
+      {/* Tabla */}
       <div className="overflow-x-auto rounded-xl shadow-md">
         <table className="w-full min-w-max">
           <thead className="bg-[#004D77] text-white">
@@ -238,11 +283,11 @@ function Providers({ data: initialData = sampleData, onDelete }) {
           <tbody>
             {currentData.map((row, index) => {
               const rowBg = index % 2 === 0 ? 'bg-white' : 'bg-gray-100';
+              const numeroRegistro = startIndex + index + 1;
+              
               return (
                 <tr key={row.id} className={`transition-colors duration-150 ${rowBg}`}>
-                  <td className={`px-3 py-1.5 text-center text-xs text-gray-500 font-medium`}>
-                    {row.id}
-                  </td>
+                  <td className="px-3 py-1.5 text-center text-xs text-gray-500 font-medium">{numeroRegistro}</td>
                   <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">{row.tipo}</td>
                   <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">{row.numero}</td>
                   <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">{row.nombre}</td>
@@ -267,7 +312,7 @@ function Providers({ data: initialData = sampleData, onDelete }) {
                       </button>
                       <ActiveToggle activo={row.activo} onChange={() => handleToggle(row.id)} />
                       <button
-                        onClick={() => onDelete?.(row)}
+                        onClick={() => handleDelete(row)}
                         className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
                         title="Eliminar"
                       >
@@ -290,7 +335,7 @@ function Providers({ data: initialData = sampleData, onDelete }) {
         </table>
       </div>
 
-      {/* Footer: registros + paginador */}
+      {/* Footer */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         <p className="text-xs sm:text-sm font-semibold text-gray-700">
           Mostrando{' '}
@@ -301,14 +346,13 @@ function Providers({ data: initialData = sampleData, onDelete }) {
 
         <div className="bg-white shadow-md rounded-xl px-3 py-2">
           <Pagination
-            currentPage={currentPage}
+            currentPage={safePage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
           />
         </div>
       </div>
 
-      {/* Modal FormProvider */}
       <FormProvider
         isOpen={isFormModalOpen}
         onClose={() => setIsFormModalOpen(false)}
@@ -316,13 +360,11 @@ function Providers({ data: initialData = sampleData, onDelete }) {
         onSave={handleSave}
       />
 
-      {/* Modal InfoProvider */}
       <InfoProvider
         isOpen={isInfoModalOpen}
         onClose={() => setIsInfoModalOpen(false)}
         provider={selectedProvider}
       />
-
     </div>
   );
 }

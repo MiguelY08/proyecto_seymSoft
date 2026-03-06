@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Info, SquarePen, Trash2, Users, Plus } from 'lucide-react';
 import { useAlert } from '../../../shared/alerts/useAlert';
+import { UsersDB } from '../services/usersDB';
 
 // ─── Resaltador de texto ──────────────────────────────────────────────────────
 function highlight(text, term) {
@@ -54,12 +55,9 @@ function ActiveToggle({ activo, onChange, search }) {
 
   return (
     <div className="flex flex-col items-center gap-0.5">
-
-      {/* Etiqueta resaltada si coincide con la búsqueda */}
       {estadoResaltado && (
         <span className="text-[9px] font-semibold">{estadoResaltado}</span>
       )}
-
       <button
         onClick={handleClick}
         className={`relative w-11 h-5 rounded-full transition-colors duration-300 cursor-pointer shrink-0 ${
@@ -118,6 +116,7 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
   const navigate = useNavigate();
   const { showConfirm, showSuccess, showWarning } = useAlert();
 
+  // ─── Eliminar usuario ─────────────────────────────────────────────────────
   const handleDelete = (row) => {
     if (row.activo) {
       showWarning(
@@ -126,10 +125,37 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
       );
       return;
     }
-    showConfirm('warning', '¿Está seguro que desea eliminar este usuario?', 'No se podrá revertir la acción.', {
-      confirmButtonText: 'Eliminar',
-      cancelButtonText:  'Cancelar',
-    }).then((result) => {
+
+    // ─── Verificar ventas asociadas vía servicio ────────────────────────────
+    const ventas = (() => {
+      try {
+        const stored = localStorage.getItem('pm_sales');
+        return stored ? JSON.parse(stored) : [];
+      } catch { return []; }
+    })();
+
+    const ventasAsociadas = ventas.filter(
+      (v) => String(v.clienteId) === String(row.id) || String(v.vendedorId) === String(row.id)
+    );
+
+    const tieneVentas = ventasAsociadas.length > 0;
+    const roles       = ventasAsociadas.reduce((acc, v) => {
+      if (String(v.clienteId)  === String(row.id)) acc.add('cliente');
+      if (String(v.vendedorId) === String(row.id)) acc.add('vendedor');
+      return acc;
+    }, new Set());
+
+    const rolesTexto = [...roles].join(' y ');
+    const subtitulo  = tieneVentas
+      ? `Este usuario aparece como ${rolesTexto} en ${ventasAsociadas.length} venta(s) registrada(s). Al eliminarlo, esas ventas mostrarán "Usuario eliminado". Esta acción no se podrá revertir.`
+      : 'No se podrá revertir la acción.';
+
+    showConfirm(
+      'warning',
+      '¿Está seguro que desea eliminar este usuario?',
+      subtitulo,
+      { confirmButtonText: 'Eliminar', cancelButtonText: 'Cancelar' }
+    ).then((result) => {
       if (result.isConfirmed) {
         onDelete?.(row);
         showSuccess('Usuario eliminado', 'El usuario ha sido eliminado exitosamente.');
@@ -185,48 +211,44 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                 </td>
                 <td className="px-3 py-1.5">
                   <div className="flex items-center justify-center gap-1 sm:gap-1.5">
-                  <button
-                    onClick={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      navigate('/admin/users/info-user', {
-                        state: {
-                          user: row,
-                          origin: {
-                            x: rect.left + rect.width  / 2,
-                            y: rect.top  + rect.height / 2,
+                    <button
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        navigate('/admin/users/info-user', {
+                          state: {
+                            user: row,
+                            origin: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
                           },
-                        },
-                      });
-                    }}
-                    className="text-gray-400 hover:text-[#004D77] transition-colors cursor-pointer"
-                    title="Información"
-                  >
-                    <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
-                  </button>
+                        });
+                      }}
+                      className="text-gray-400 hover:text-[#004D77] transition-colors cursor-pointer"
+                      title="Información"
+                    >
+                      <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                    </button>
 
-                  <button
-                    onClick={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      navigate('/admin/users/form-user', {
-                        state: {
-                          user: row,
-                          origin: {
-                            x: rect.left + rect.width  / 2,
-                            y: rect.top  + rect.height / 2,
+                    <button
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        navigate('/admin/users/form-user', {
+                          state: {
+                            user: row,
+                            origin: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
                           },
-                        },
-                      });
-                    }}
-                    className="text-gray-400 hover:text-[#004D77] transition-colors cursor-pointer"
-                    title="Editar"
-                  >
-                    <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
-                  </button>
+                        });
+                      }}
+                      className="text-gray-400 hover:text-[#004D77] transition-colors cursor-pointer"
+                      title="Editar"
+                    >
+                      <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                    </button>
+
                     <ActiveToggle
                       activo={row.activo}
                       onChange={() => onToggle?.(row.id)}
                       search={search}
                     />
+
                     <button
                       onClick={() => handleDelete(row)}
                       className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"

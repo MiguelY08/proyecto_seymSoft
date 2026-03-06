@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Info, SquarePen, Trash2, Search, Plus, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import FormClient from './FormClient';
 import InfoClient from './InfoClient';
+import { useAlert } from '../../../shared/alerts/useAlert';
 
 const sampleData = [
   { id: 1,  tipo: 'CC',  numero: '1094827365',  nombre: 'Carlos Ramírez Gómez',             correo: 'carlos.ramirez@gmail.com',        telefono: '3204568790', tipoCliente: 'Detal',     activo: true  },
@@ -113,10 +114,29 @@ function Clients({ data: initialData = sampleData, onDelete }) {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedClient, setSelectedClient]   = useState(null);
 
-  const handleToggle = (id) => {
-    setData((prev) =>
-      prev.map((row) => (row.id === id ? { ...row, activo: !row.activo } : row))
+  const { showConfirm, showSuccess } = useAlert();
+  const handleToggle = async (id) => {
+    const cliente = data.find((row) => row.id === id);
+    const nuevoEstado = cliente.activo ? 'Inactivo' : 'Activo';
+
+    const result = await showConfirm(
+      'warning',
+      'Cambiar estado',
+      `¿Está seguro de cambiar el estado del cliente "${cliente.nombre}" a ${nuevoEstado}?`,
+      {
+        confirmButtonText: 'Sí, cambiar',
+        cancelButtonText: 'Cancelar',
+      }
     );
+
+    if (result.isConfirmed) {
+      setData((prev) =>
+        prev.map((row) =>
+          row.id === id ? { ...row, activo: !row.activo } : row
+        )
+      );
+      showSuccess('Estado cambiado', `El cliente ahora está ${nuevoEstado}`);
+    }
   };
 
   const handleEdit = (client) => {
@@ -155,6 +175,7 @@ function Clients({ data: initialData = sampleData, onDelete }) {
             : row
         )
       );
+      showSuccess('Cliente actualizado', 'Los datos del cliente se actualizaron correctamente');
     } else {
       const newClient = {
         id: data.length + 1,
@@ -167,6 +188,7 @@ function Clients({ data: initialData = sampleData, onDelete }) {
         activo: true,
       };
       setData((prev) => [...prev, newClient]);
+      showSuccess('Cliente creado', 'El nuevo cliente se creó exitosamente');
     }
     setIsFormModalOpen(false);
   };
@@ -267,7 +289,41 @@ function Clients({ data: initialData = sampleData, onDelete }) {
                       </button>
                       <ActiveToggle activo={row.activo} onChange={() => handleToggle(row.id)} />
                       <button
-                        onClick={() => onDelete?.(row)}
+                        onClick={async () => {
+                          const result = await showConfirm(
+                            'error',
+                            'Eliminar cliente',
+                            `¿Está seguro de eliminar el cliente "${row.nombre}"? Esta acción no se puede deshacer.`,
+                            {
+                              confirmButtonText: 'Sí, eliminar',
+                              cancelButtonText: 'Cancelar',
+                            }
+                          );
+                          if (result.isConfirmed) {
+                            // remove from state
+                            setData((prev) => prev.filter((r) => r.id !== row.id));
+                            // adjust pagination if needed
+                            const newFiltered = data
+                              .filter((r) => r.id !== row.id)
+                              .filter((r) => {
+                                const q = search.toLowerCase();
+                                return (
+                                  r.nombre.toLowerCase().includes(q) ||
+                                  r.numero.toLowerCase().includes(q) ||
+                                  r.tipo.toLowerCase().includes(q) ||
+                                  r.correo.toLowerCase().includes(q) ||
+                                  r.tipoCliente.toLowerCase().includes(q)
+                                );
+                              });
+                            const newTotalPages = Math.ceil(newFiltered.length / RECORDS_PER_PAGE);
+                            if (currentPage > newTotalPages && newTotalPages > 0) {
+                              setCurrentPage(newTotalPages);
+                            }
+
+                            showSuccess('Cliente eliminado', 'El cliente ha sido eliminado exitosamente');
+                            onDelete?.(row);
+                          }
+                        }}
                         className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
                         title="Eliminar"
                       >

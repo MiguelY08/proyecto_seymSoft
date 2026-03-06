@@ -73,7 +73,6 @@ const motionClass = (position, visible) => {
       ? 'opacity-100 translate-x-0'
       : 'opacity-0 translate-x-10';
   }
-  // center
   return visible
     ? 'opacity-100 translate-y-0'
     : 'opacity-0 -translate-y-4';
@@ -87,6 +86,7 @@ function AlertItem({ alert, onRemove, position = 'center' }) {
 
   const [visible,  setVisible]  = useState(false);
   const [progress, setProgress] = useState(100);
+  const [seconds,  setSeconds]  = useState(Math.ceil((timer ?? DEFAULT_TIMER) / 1000));
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 10);
@@ -102,10 +102,13 @@ function AlertItem({ alert, onRemove, position = 'center' }) {
     const interval  = 50;
     const decrement = 100 / (effectiveTimer / interval);
     let current     = 100;
+    let elapsed     = 0;
 
     const tick = setInterval(() => {
+      elapsed += interval;
       current -= decrement;
       setProgress(Math.max(current, 0));
+      setSeconds(Math.ceil((effectiveTimer - elapsed) / 1000));
       if (current <= 0) {
         clearInterval(tick);
         handleClose();
@@ -174,10 +177,18 @@ function AlertItem({ alert, onRemove, position = 'center' }) {
         </div>
       )}
 
-      {/* ─── Barra de timer ──────────────────────────────────────────────── */}
+      {/* ─── Barra de timer + segundos ───────────────────────────────────── */}
       {effectiveTimer && (
-        <div className="h-1 w-full bg-black/10">
-          <div className={`h-full transition-none ${v.timerBar}`} style={{ width: `${progress}%` }} />
+        <div className="px-4 pb-3 flex items-center gap-2">
+          <div className="flex-1 h-1.5 rounded-full bg-black/10 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-none ${v.timerBar}`}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <span className={`text-[10px] font-semibold tabular-nums shrink-0 ${v.text}`}>
+            {Math.max(seconds, 0)}s
+          </span>
         </div>
       )}
     </div>
