@@ -5,6 +5,7 @@ import FormNonConformingProduct from "./FormNonConformingProduct";
 import { PurchasesFilters } from "../../../../shared/DateFilter";
 import { Plus } from "lucide-react";
 import { Link } from "react-router-dom";
+import ViewDetailsPN from "./ViewDetailsPN";
 
 export const NonConformingProducts = () => {
   const [reports, setReports] = useState([]);
@@ -15,12 +16,13 @@ export const NonConformingProducts = () => {
   const [fechaInicial, setFechaInicial] = useState("");
   const [fechaFinal, setFechaFinal] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [selectedReport, setSelectedReport] = useState(null);
 
   const { showConfirm, showSuccess, showError, showInfo } = useAlert();
   const alertShownRef = useRef(false);
 
   // 🔥 Mock con estado
- const mockReports = [
+  const mockReports = [
   {
     id: 1,
     nombre: "Cuaderno 100 hojas Prisma",
@@ -277,16 +279,17 @@ export const NonConformingProducts = () => {
 
       {!loading && !error && (
         <NonConformingProductsTable
-          currentData={currentData}
-          filteredReports={filteredReports}
-          currentPage={currentPage}
-          setCurrentPage={setCurrentPage}
-          totalPages={totalPages}
-          startIndex={startIndex}
-          endIndex={endIndex}
-          handleCancel={handleCancel}
-          highlightText={highlightText}
-        />
+        currentData={currentData}
+        filteredReports={filteredReports}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        totalPages={totalPages}
+        startIndex={startIndex}
+        endIndex={endIndex}
+        handleCancel={handleCancel}
+        highlightText={highlightText}
+        handleViewDetails={(report) => setSelectedReport(report)}
+      />
       )}
   {showModal && (
   <FormNonConformingProduct
@@ -294,6 +297,12 @@ export const NonConformingProducts = () => {
       setShowModal(false);
       fetchReports(); // 🔥 refresca la lista después de guardar
     }}
+  />
+)}
+{selectedReport && (
+  <ViewDetailsPN
+    report={selectedReport}
+    onClose={() => setSelectedReport(null)}
   />
 )}
     </div>

@@ -33,6 +33,65 @@ const CreateSidebar = ({
     provider.toLowerCase().includes(searchProvider.toLowerCase())
   );
 
+  const filteredProducts = productsDB.filter((product) =>
+    product.producto.toLowerCase().includes(searchProduct.toLowerCase()) ||
+    product.codigoBarras.includes(searchProduct)
+  );
+
+  // ─── Validaciones ───────────────────────────────────────────────
+  const invoiceError = (() => {
+    if (!invoiceTouched) return null;
+    if (!invoiceNumber.trim()) return "El número de factura es obligatorio";
+    if (!/^[a-zA-Z0-9\-]{3,20}$/.test(invoiceNumber.trim()))
+      return "Solo letras, números y guiones (3–20 caracteres)";
+    return null;
+  })();
+
+  const invoiceValid = invoiceTouched && !invoiceError && invoiceNumber.trim();
+
+  const dateError = (() => {
+    if (!dateTouched) return null;
+    if (!purchaseDate) return "La fecha de compra es obligatoria";
+    const selected = new Date(purchaseDate);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    if (selected > today) return "La fecha no puede ser futura";
+    const minDate = new Date("2000-01-01");
+    if (selected < minDate) return "Fecha demasiado antigua";
+    return null;
+  })();
+
+  const dateValid = dateTouched && !dateError && purchaseDate;
+
+  // ─── Helpers de estilo ───────────────────────────────────────────
+  const inputClass = (error) =>
+  `w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-600 outline-none transition-all
+  ${
+    error
+      ? "border-red-400 focus:ring-2 focus:ring-red-300"
+      : "border-gray-300 focus:ring-2 focus:ring-[#004D77]"
+  }`;
+
+  const handleBackToPurchases = async (e) => {
+  e.preventDefault(); // evita navegación automática del Link
+
+  if (purchaseItems.length > 0) {
+    const result = await showConfirm(
+      "warning",
+      "Volver a compras",
+      "Si sales ahora se eliminarán los productos agregados. ¿Deseas continuar?",
+      {
+        confirmButtonText: "Sí, salir",
+        cancelButtonText: "Seguir editando",
+      }
+    );
+
+    if (!result?.isConfirmed) return;
+  }
+
+  navigate("/admin/purchases");
+};
+
   return (
     <div className="col-span-3">
       <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-6">
