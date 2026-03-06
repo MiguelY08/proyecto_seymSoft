@@ -53,7 +53,7 @@ import PaymentsPage from "../../Features/administrtivePanel/sales/paymentsAndCre
 import AccountDetailsPage from "../../Features/administrtivePanel/sales/paymentsAndCredits/pages/AccountDetailsPage.jsx";
 
 import RolesPage from "../../Features/administrtivePanel/configuration/roles/page/RolesPage.jsx";
-import Banners from "../../Features/administrtivePanel/appearance/Banners.jsx";
+import Banners from "../../Features/administrtivePanel/configuration/carousel/pages/Banner.jsx";
 
 
 import RolesTable from '../../Features/administrtivePanel/configuration/roles/components/RolesTable.jsx';
@@ -74,14 +74,11 @@ const AppRouter = () => {
       <Route element={<PrivateRoute />}>
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<DashboardPage />} />
-
           <Route path="indicators" element={ <Indicators /> } />
-
           <Route path="users" element={<Users />}>
             <Route path="form-user" element={ <FormUser /> } />
             <Route path="info-user" element={ <InfoUser /> } />
           </Route>
-
           <Route path="purchases/categories" element={ <Categories /> } />
           <Route path="purchases/products" element={ <Products /> } />
           <Route path="purchases/providers" element={ <Providers /> } />
@@ -89,7 +86,6 @@ const AppRouter = () => {
           <Route path="purchases/create" element={ <CreatePurchase /> } />
           <Route path="purchases/returns-p" element={ <ReturnsP /> } />
           <Route path="purchases/non-conforming-products" element={ <NonConformingProducts /> } />
-
           <Route path="sales" element={<Sales />}>
             <Route path="new-user" element={ <FormUser /> } />
             <Route path="info-sale" element={ <SaleInfo /> } />
@@ -102,21 +98,9 @@ const AppRouter = () => {
           <Route path="sales/orders" element={<OrdersA/>} />
           <Route path="sales" element={<Sales />} />
           <Route path="sales/returns-s" element={<ReturnsS />} />
-
           <Route path="sales/payments-and-credits" element={<PaymentsPage />} />
-
-          <Route 
-            path="sales/payments-and-credits/:id" 
-            element={<AccountDetailsPage mode="view" />} 
-          />
-
-          <Route 
-            path="sales/payments-and-credits/:id/payment" 
-            element={<AccountDetailsPage mode="payment" />} 
-          />
-
-      
-
+          <Route path="sales/payments-and-credits/:id" element={<AccountDetailsPage mode="view" />} />
+          <Route path="sales/payments-and-credits/:id/payment" element={<AccountDetailsPage mode="payment" />} />
           <Route path="configuration">
             <Route path="roles" element={<RolesPage />} />
             <Route path="banners" element={ <Banners /> } />

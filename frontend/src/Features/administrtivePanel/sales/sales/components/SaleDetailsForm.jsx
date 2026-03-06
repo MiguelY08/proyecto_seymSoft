@@ -1,24 +1,16 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { ChevronDown, FileText, Search, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { UsersDB } from '../../../users/services/usersDB';
 
-const STORAGE_USERS = 'pm_users';
 const MAX_DIRECCION = 250;
 
-const METODOS_PAGO = ['Efectivo', 'Crédito', 'Transferencia'];
+const METODOS_PAGO  = ['Efectivo', 'Crédito', 'Transferencia'];
 const ESTADOS_VENTA = [
   'Aprobada', 'Esp. aprobación', 'Créd. aprobado',
   'Anulada', 'Desaprobada', 'Cancelada', 'Créd. denegado',
 ];
 const ENTREGAS = ['Cliente lo recoge', 'Domicilio'];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const loadUsers = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_USERS);
-    return stored ? JSON.parse(stored) : [];
-  } catch { return []; }
-};
 
 // ─── Campo de solo lectura ────────────────────────────────────────────────────
 function ReadonlyField({ value }) {
@@ -29,11 +21,11 @@ function ReadonlyField({ value }) {
   );
 }
 
-// ─── Select con buscador integrado ───────────────────────────────────────────
+// ─── Select con buscador integrado ────────────────────────────────────────────
 function SearchableSelect({ value, onChange, options, placeholder, error, getLabel, getValue }) {
-  const [open,   setOpen]   = useState(false);
-  const [query,  setQuery]  = useState('');
-  const ref                 = useRef(null);
+  const [open,  setOpen]  = useState(false);
+  const [query, setQuery] = useState('');
+  const ref               = useRef(null);
 
   const filtered = useMemo(() =>
     options.filter((o) =>
@@ -45,9 +37,10 @@ function SearchableSelect({ value, onChange, options, placeholder, error, getLab
     return found ? getLabel(found) : '';
   }, [value, options]);
 
-  // Cerrar al click afuera
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
@@ -65,7 +58,7 @@ function SearchableSelect({ value, onChange, options, placeholder, error, getLab
         onClick={() => setOpen((p) => !p)}
         className={`w-full flex items-center justify-between px-4 py-2.5 text-sm border rounded-lg bg-white transition-colors duration-200 ${
           error
-            ? 'border-red-500 focus:border-red-500 ring-2 ring-red-200'
+            ? 'border-red-500 ring-2 ring-red-200'
             : open
               ? 'border-[#004D77] ring-2 ring-[#004D77]/20'
               : 'border-gray-300 hover:border-gray-400'
@@ -79,7 +72,6 @@ function SearchableSelect({ value, onChange, options, placeholder, error, getLab
 
       {open && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-          {/* Buscador */}
           <div className="p-2 border-b border-gray-100">
             <div className="relative">
               <input
@@ -93,8 +85,6 @@ function SearchableSelect({ value, onChange, options, placeholder, error, getLab
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
             </div>
           </div>
-
-          {/* Opciones */}
           <ul className="max-h-48 overflow-y-auto">
             {filtered.length > 0 ? (
               filtered.map((option) => (
@@ -111,9 +101,7 @@ function SearchableSelect({ value, onChange, options, placeholder, error, getLab
                 </li>
               ))
             ) : (
-              <li className="px-4 py-3 text-xs text-gray-400 text-center">
-                Sin resultados
-              </li>
+              <li className="px-4 py-3 text-xs text-gray-400 text-center">Sin resultados</li>
             )}
           </ul>
         </div>
@@ -151,29 +139,24 @@ function SimpleSelect({ name, value, onChange, options, placeholder, error }) {
 // ─── SaleDetailsForm ──────────────────────────────────────────────────────────
 function SaleDetailsForm({ form, onChange, errors, isEditing }) {
   const navigate = useNavigate();
-  const [users, setUsers] = useState(loadUsers);
 
-  // ─── Re-cargar usuarios si se acaba de crear uno nuevo ───────────────────
+  // Cargar usuarios desde el servicio y mantener sincronización
+  const [users, setUsers] = useState(() => UsersDB.list());
+
   useEffect(() => {
-    const sync = () => setUsers(loadUsers());
+    const sync = () => setUsers(UsersDB.list());
     window.addEventListener('focus', sync);
     return () => window.removeEventListener('focus', sync);
   }, []);
 
-  // ─── Validación y cambio en campos simples ───────────────────────────────
   const handleChange = (e) => {
     const { name, value } = e.target;
-    onChange(name, value);
-  };
-
-  const handleSelectChange = (name, value) => {
+    if (name === 'entrega' && value !== 'Domicilio') onChange('direccion', '');
     onChange(name, value);
   };
 
   const ErrorMsg = ({ field }) =>
-    errors?.[field]
-      ? <p className="mt-1 text-sm text-red-600">{errors[field]}</p>
-      : null;
+    errors?.[field] ? <p className="mt-1 text-sm text-red-600">{errors[field]}</p> : null;
 
   const Label = ({ children, required }) => (
     <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -181,10 +164,13 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
     </label>
   );
 
+  const activeUsers   = users.filter((u) => u.activo);
+  const activeVendors = users.filter((u) => u.activo && (u.rol === 'Empleado' || u.rol === 'Administrador'));
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
 
-      {/* ── Header sección ──────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gray-50">
         <div className="w-7 h-7 rounded-md bg-[#004D77] flex items-center justify-center shrink-0">
           <FileText className="w-4 h-4 text-white" strokeWidth={2} />
@@ -200,21 +186,17 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
 
         {/* Cliente + Vendedor */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-          {/* Cliente */}
           <div>
             <Label required>Cliente</Label>
             <div className="flex gap-2">
               <div className="flex-1">
                 {isEditing ? (
-                  <ReadonlyField value={
-                    users.find((u) => String(u.id) === String(form.clienteId))?.nombre
-                  } />
+                  <ReadonlyField value={users.find((u) => String(u.id) === String(form.clienteId))?.nombre} />
                 ) : (
                   <SearchableSelect
                     value={form.clienteId}
-                    onChange={(val) => handleSelectChange('clienteId', val)}
-                    options={users}
+                    onChange={(val) => onChange('clienteId', val)}
+                    options={activeUsers}
                     placeholder="Cliente"
                     error={errors?.clienteId}
                     getLabel={(u) => u.nombre}
@@ -222,7 +204,6 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
                   />
                 )}
               </div>
-              {/* Botón nuevo usuario — solo en creación */}
               {!isEditing && (
                 <button
                   type="button"
@@ -237,19 +218,15 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
             <ErrorMsg field="clienteId" />
           </div>
 
-          {/* Vendedor */}
           <div>
             <Label required>Vendedor</Label>
             {isEditing ? (
-              <ReadonlyField value={
-                users.filter((u) => u.rol === 'Empleado')
-                    .find((u) => String(u.id) === String(form.vendedorId))?.nombre
-              } />
+              <ReadonlyField value={users.find((u) => String(u.id) === String(form.vendedorId))?.nombre} />
             ) : (
               <SearchableSelect
                 value={form.vendedorId}
-                onChange={(val) => handleSelectChange('vendedorId', val)}
-                options={users.filter((u) => u.rol === 'Empleado')}
+                onChange={(val) => onChange('vendedorId', val)}
+                options={activeVendors}
                 placeholder="Vendedor"
                 error={errors?.vendedorId}
                 getLabel={(u) => u.nombre}
@@ -306,31 +283,32 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
           <ErrorMsg field="entrega" />
         </div>
 
-        {/* Dirección */}
-        <div>
-          <Label required>Dirección</Label>
-          <div className="relative">
-            <textarea
-              name="direccion"
-              value={form.direccion}
-              onChange={(e) => {
-                if (e.target.value.length <= MAX_DIRECCION) handleChange(e);
-              }}
-              placeholder="Digite la dirección, barrio y descripción del punto de encuentro"
-              rows={3}
-              className={`w-full px-4 py-2.5 text-sm border rounded-lg outline-none resize-none text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
-                errors?.direccion
-                  ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-                  : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
-              }`}
-            />
-            <span className="absolute bottom-2 right-3 text-[10px] text-gray-400">
-              {form.direccion?.length ?? 0}/{MAX_DIRECCION}
-            </span>
+        {/* Dirección — solo cuando entrega es Domicilio */}
+        {form.entrega === 'Domicilio' && (
+          <div>
+            <Label required>Dirección</Label>
+            <div className="relative">
+              <textarea
+                name="direccion"
+                value={form.direccion}
+                onChange={(e) => {
+                  if (e.target.value.length <= MAX_DIRECCION) handleChange(e);
+                }}
+                placeholder="Digite la dirección, barrio y descripción del punto de encuentro"
+                rows={3}
+                className={`w-full px-4 py-2.5 text-sm border rounded-lg outline-none resize-none text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
+                  errors?.direccion
+                    ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+                    : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
+                }`}
+              />
+              <span className="absolute bottom-2 right-3 text-[10px] text-gray-400">
+                {form.direccion?.length ?? 0}/{MAX_DIRECCION}
+              </span>
+            </div>
+            <ErrorMsg field="direccion" />
           </div>
-          <ErrorMsg field="direccion" />
-        </div>
-
+        )}
       </div>
     </div>
   );
