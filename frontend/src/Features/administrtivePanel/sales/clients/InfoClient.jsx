@@ -34,127 +34,136 @@ function InfoClient({ isOpen, onClose, client }) {
             </button>
           </div>
 
-          {/* Content - Grid en 2 columnas con mejor espaciado */}
-          <div className="overflow-y-auto flex-1 px-6 py-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-5 max-w-5xl mx-auto">
+          {/* Content - adapted to provider style */}
+          <div className="overflow-y-auto flex-1 px-8 py-5">
+            <div className="grid grid-cols-3 gap-x-6 gap-y-3">
 
-              {/* Numero Cliente */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-gray-500 uppercase">Numero Cliente</span>
-                <span className="text-sm text-gray-800 font-medium">{client.id || 'N/A'}</span>
+              {/* Número Cliente full width */}
+              <div className="col-span-3">
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                  Número Cliente
+                </label>
+                <p className="text-sm text-gray-900 font-medium">{client.id || 'N/A'}</p>
               </div>
 
-              {/* Tipo y No. Documento */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-gray-500 uppercase">Tipo y No. Documento</span>
-                <span className="text-sm text-gray-800 font-medium">
-                  {client.tipo} {client.numero}
-                </span>
-              </div>
+              <div className="col-span-3 border-t border-gray-200 my-1"></div>
 
-              {/* Separador */}
-              <div className="md:col-span-2 border-t border-gray-200"></div>
-
-              {/* Nombre completo - Ancho completo */}
-              <div className="md:col-span-2 flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-gray-500 uppercase">Nombre completo</span>
-                <span className="text-sm text-gray-800 font-medium">
-                  {client.nombre || `${client.nombres || ''} ${client.apellidos || ''}`.trim() || 'N/A'}
-                </span>
-              </div>
-
-              {/* Separador */}
-              <div className="md:col-span-2 border-t border-gray-200"></div>
-
-              {/* Correo electrónico */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-gray-500 uppercase">Correo electrónico</span>
-                <span className="text-sm text-gray-800 font-medium break-words">
-                  {client.correo || 'N/A'}
-                </span>
-              </div>
-
-              {/* Teléfono - Celular */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-gray-500 uppercase">Teléfono - Celular</span>
-                <span className="text-sm text-gray-800 font-medium">
-                  {client.telefono ? `(${client.telefono.slice(0, 3)}) ${client.telefono.slice(3, 6)} ${client.telefono.slice(6)}` : 'N/A'}
-                </span>
-              </div>
-
-              {/* Separador */}
-              <div className="md:col-span-2 border-t border-gray-200"></div>
-
-              {/* Dirección - Ancho completo */}
-              <div className="md:col-span-2 flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-gray-500 uppercase">Dirección</span>
-                <span className="text-sm text-gray-800 font-medium">
-                  {client.direccion || 'N/A'}
-                </span>
-              </div>
-
-              {/* Separador */}
-              <div className="md:col-span-2 border-t border-gray-200"></div>
-
-              {/* Persona contacto */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-gray-500 uppercase">Persona contacto</span>
-                <span className="text-sm text-gray-800 font-medium">
-                  {client.nombreContacto || 'N/A'}
-                </span>
-              </div>
-
-              {/* Num. Persona contacto */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-gray-500 uppercase">Num. Persona contacto</span>
-                <span className="text-sm text-gray-800 font-medium">
-                  {client.numeroContacto ? `${client.numeroContacto.slice(0, 3)} ${client.numeroContacto.slice(3, 6)} ${client.numeroContacto.slice(6)}` : 'N/A'}
-                </span>
-              </div>
-
-              {/* Separador */}
-              <div className="md:col-span-2 border-t border-gray-200"></div>
-
-              {/* Codigo CIU */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-gray-500 uppercase">Codigo CIU</span>
-                <span className="text-sm text-gray-800 font-medium">
-                  {client.codigoCIU || 'No Disponible'}
-                </span>
-              </div>
-
-              {/* Tipo de Persona */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-gray-500 uppercase">Tipo de Persona</span>
-                <span className="text-sm text-gray-800 font-medium capitalize">
+              {/* fila 1: tipo persona, tipo doc, número documento */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                  Tipo Persona
+                </label>
+                <p className="text-sm text-gray-900 font-medium capitalize">
                   {client.tipoPersona === 'natural' ? 'Natural' : client.tipoPersona === 'juridica' ? 'Jurídica' : 'N/A'}
-                </span>
+                </p>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                  Tipo Doc.
+                </label>
+                <p className="text-sm text-gray-900 font-medium">{client.tipo || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                  Número Documento
+                </label>
+                <p className="text-sm text-gray-900 font-medium">{client.numero || 'N/A'}</p>
               </div>
 
-              {/* Separador */}
-              <div className="md:col-span-2 border-t border-gray-200"></div>
+              <div className="col-span-3 border-t border-gray-200 my-1"></div>
 
-              {/* Tipo de cliente */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-gray-500 uppercase">Tipo de cliente</span>
-                <span className="text-sm text-gray-800 font-medium capitalize">
-                  {client.tipoCliente || 'N/A'}
-                </span>
+              {/* fila 2: nombres, apellidos, estado */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                  Nombres
+                </label>
+                <p className="text-sm text-gray-900 font-medium">{client.nombres || client.nombre || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                  Apellidos
+                </label>
+                <p className="text-sm text-gray-900 font-medium">{client.apellidos || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                  Estado
+                </label>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                  client.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>{client.activo ? 'Activo' : 'Inactivo'}</span>
               </div>
 
-              {/* Estado actual */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-gray-500 uppercase">Estado actual</span>
-                <div>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                    client.activo 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {client.activo ? 'Activo' : 'Inactivo'}
-                  </span>
-                </div>
+              <div className="col-span-3 border-t border-gray-200 my-1"></div>
+
+              {/* fila 3: correo, teléfono, crédito */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                  Correo Electrónico
+                </label>
+                <p className="text-sm text-gray-900 font-medium break-words">{client.correo || 'N/A'}</p>
               </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                  Teléfono
+                </label>
+                <p className="text-sm text-gray-900 font-medium">{client.telefono ? `(${client.telefono.slice(0,3)}) ${client.telefono.slice(3,6)} ${client.telefono.slice(6)}` : 'N/A'}</p>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                  Crédito Cliente
+                </label>
+                <p className="text-sm text-gray-900 font-medium">{client.creditoCliente || 'N/A'}</p>
+              </div>
+
+              <div className="col-span-3 border-t border-gray-200 my-1"></div>
+
+              {/* Dirección fila completa */}
+              <div className="col-span-3">
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                  Dirección
+                </label>
+                <p className="text-sm text-gray-900 font-medium">{client.direccion || 'N/A'}</p>
+              </div>
+
+              <div className="col-span-3 border-t border-gray-200 my-1"></div>
+
+              {/* fila 5: contacto, teléfono contacto, tipo cliente */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                  Persona Contacto
+                </label>
+                <p className="text-sm text-gray-900 font-medium">{client.nombreContacto || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                  Teléfono Contacto
+                </label>
+                <p className="text-sm text-gray-900 font-medium">{client.numeroContacto ? `${client.numeroContacto.slice(0,3)} ${client.numeroContacto.slice(3,6)} ${client.numeroContacto.slice(6)}` : 'N/A'}</p>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                  Tipo Cliente
+                </label>
+                <p className="text-sm text-gray-900 font-medium capitalize">{client.tipoCliente || 'N/A'}</p>
+              </div>
+
+              <div className="col-span-3 border-t border-gray-200 my-1"></div>
+
+              {/* fila 6: RUT, CIU */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                  RUT
+                </label>
+                <p className="text-sm text-gray-900 font-medium">{client.rut === 'si' ? 'Sí' : client.rut === 'no' ? 'No' : 'N/A'}</p>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                  Código CIU
+                </label>
+                <p className="text-sm text-gray-900 font-medium">{client.codigoCIU || 'N/A'}</p>
+              </div>
+              <div></div>
 
             </div>
           </div>
