@@ -115,11 +115,7 @@ function Shop() {
     subcategories: [
       {
         name: "Cuadernos",
-        count: 50,
-        children: [
-          { name: "Cosidos", count: 20 },
-          { name: "Argollados", count: 30 }
-        ]
+        count: 50
       },
       {
         name: "Mochilas",

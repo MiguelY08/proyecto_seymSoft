@@ -98,6 +98,7 @@ const CreateSidebar = ({
 
   navigate("/admin/purchases");
 };
+
   return (
     <div className="col-span-3">
       <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-6">
