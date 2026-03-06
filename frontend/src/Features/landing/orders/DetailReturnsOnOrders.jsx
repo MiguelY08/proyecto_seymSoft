@@ -1,78 +1,34 @@
-import { ChevronRight, Package, Building2, Truck, RotateCcw, CheckCircle, X } from 'lucide-react';
+import { ChevronRight, Package, Building2, Truck, RotateCcw, CheckCircle, X, Check } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import BgPedidos from '../../../assets/BgPedidos.png';
-import editar from '../orders/EditReturn.jsx';
+import { devoluciones } from './Returns_On_Orders';
+
+const ICONOS_SEGUIMIENTO = [Package, Building2, Truck, RotateCcw, CheckCircle];
 
 function DetailReturnsOnOrders() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // Datos de ejemplo de la devolución
-  const devolucion = {
-    id: '4512',
-    pedidoId: '123456789',
-    titulo: 'LIBRETA CON LAPICERO',
-    estado: 'En proceso 0/1',
-    estadoColor: 'bg-yellow-100 text-yellow-700',
-    producto: {
-      nombre: 'Libreta con lapicero',
-      cantidad: 50,
-      imagen: '/placeholder.png'
-    },
-    informacionGeneral: [
-      '* Pedido en el día: 1º de agosto (1)',
-      '* Libreta con lapicero'
-    ],
-    motivoDevolucion: 'Prod. en mal estado',
-    remesosDevolucion: 'Reemplazo',
-    evidencias: '/evidencia.jpg',
-    seguimiento: [
-      {
-        id: 1,
-        nombre: 'Enviar prod. a la dirección',
-        icono: Package,
-        completado: false,
-        activo: true
-      },
-      {
-        id: 2,
-        nombre: 'Prod. recepción',
-        icono: Building2,
-        completado: false,
-        activo: false
-      },
-      {
-        id: 3,
-        nombre: 'Productos identificados',
-        icono: Truck,
-        completado: false,
-        activo: false
-      },
-      {
-        id: 4,
-        nombre: 'Rembolso/Remplazo',
-        icono: RotateCcw,
-        completado: false,
-        activo: false
-      },
-      {
-        id: 5,
-        nombre: 'Devolución procesada',
-        icono: CheckCircle,
-        completado: false,
-        activo: false
-      }
-    ]
-  };
+  const dev = devoluciones.find((d) => d.id === id);
 
-  const handleModificarDevolucion = () => {
-    navigate(`/edit/${id}`);
-  };
+  if (!dev) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-xl font-semibold text-gray-700 mb-4">Devolución no encontrada</p>
+          <button
+            onClick={() => navigate('/returnsOnOrders')}
+            className="px-6 py-2 text-white rounded-lg hover:opacity-90"
+            style={{ backgroundColor: '#004D77' }}
+          >
+            Volver a devoluciones
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  const handleSolicitarCancelacion = () => {
-    console.log('Solicitar cancelación');
-    // Lógica para cancelar
-  };
+  const totalMonto = dev.productos.reduce((s, p) => s + p.precioUnidad * p.cantidad, 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -80,161 +36,162 @@ function DetailReturnsOnOrders() {
       {/* Banner */}
       <div className="px-4 sm:px-6 lg:px-8 py-4">
         <div className="w-full h-[15vh] sm:h-[18vh] lg:h-[22vh] relative overflow-hidden rounded-2xl">
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${BgPedidos})` }}
-          />
+          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${BgPedidos})` }} />
           <div className="absolute inset-0 bg-blue-950/75" />
           <div className="relative z-10 w-full h-full flex items-center justify-center">
-            <h2 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white">
-              Pedidos / Devoluciones
-            </h2>
+            <h2 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white">Pedidos / Devoluciones</h2>
           </div>
         </div>
       </div>
 
-      {/* Contenido principal */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Botón volver y Breadcrumb */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {/* Volver + Breadcrumb */}
         <div className="mb-6">
-          <button 
+          <button
             onClick={() => navigate('/returnsOnOrders')}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors mb-4"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors mb-4"
           >
             <X className="w-4 h-4" />
             Volver
           </button>
-
           <div className="flex items-center gap-2 text-sm text-gray-600">
-            <a href="/devoluciones" className="hover:text-blue-600">Devoluciones</a>
+            <a href="/returnsOnOrders" className="hover:text-blue-600">Devoluciones</a>
             <ChevronRight className="w-4 h-4" />
-            <span className="text-gray-900">Detalles de la devolución No. {devolucion.id}</span>
-          </div>
-        </div>
-
-        {/* Información general */}
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Información general:</h3>
-          <div className="text-sm text-gray-600 space-y-1">
-            {devolucion.informacionGeneral.map((info, index) => (
-              <p key={index}>{info}</p>
-            ))}
+            <span className="text-gray-900">Devolución No. {dev.id}</span>
           </div>
         </div>
 
         {/* Card principal */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">{devolucion.titulo}</h2>
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Columna izquierda - Producto y estado */}
-              <div className="lg:col-span-1">
-                <div className="mb-4">
-                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${devolucion.estadoColor}`}>
-                    {devolucion.estado}
-                  </span>
-                </div>
-
-                <div className="mb-4">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Producto:</p>
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                      <Package className="w-8 h-8 text-gray-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-900">• {devolucion.producto.nombre}</p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-500">{devolucion.producto.cantidad} unidades</p>
-                </div>
-              </div>
-
-              {/* Columna central - Motivo y reemplazo */}
-              <div className="lg:col-span-1">
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 mb-1">Motivo de devolución</p>
-                    <p className="text-sm text-gray-900">{devolucion.motivoDevolucion}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 mb-1">Remesos de devolución</p>
-                    <p className="text-sm text-gray-900">{devolucion.remesosDevolucion}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Columna derecha - Evidencias y botones */}
-              <div className="lg:col-span-1">
-                <div className="mb-4">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Evidencias</p>
-                  <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <Package className="w-10 h-10 text-gray-400" />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <button 
-                    onClick={handleModificarDevolucion}
-                    className="w-full px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors"
-                    style={{ backgroundColor: '#004D77' }}
-                  >
-                    Modificar devolución
-                  </button>
-                  <button 
-                    onClick={handleSolicitarCancelacion}
-                    className="w-full px-4 py-2 border-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-                    style={{ borderColor: '#004D77', color: '#004D77' }}
-                  >
-                    Solicitar cancelación<br/>de la devolución
-                  </button>
-                </div>
-              </div>
+          {/* Header de la card */}
+          <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Devolución No. {dev.id} · Pedido No. {dev.pedidoId}</p>
+              <h2 className="text-xl font-bold text-gray-900">{dev.titulo}</h2>
+              <p className="text-sm text-gray-500 mt-0.5">{dev.fecha}</p>
             </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${dev.estadoColor}`}>
+                {dev.estado}
+              </span>
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${dev.procesoColor}`}>
+                {dev.proceso}
+              </span>
+            </div>
+          </div>
 
-            {/* Seguimiento */}
-            <div className="mt-8 pt-6 border-t">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Seguimiento</h3>
-              
-              <div className="flex items-start justify-between gap-4">
-                {devolucion.seguimiento.map((paso, index) => (
-                  <div key={paso.id} className="flex flex-col items-center flex-1">
-                    {/* Icono */}
-                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 ${
-                      paso.completado 
-                        ? 'bg-green-100' 
-                        : paso.activo 
-                        ? 'bg-blue-100' 
-                        : 'bg-gray-100'
-                    }`}>
-                      <paso.icono className={`w-8 h-8 ${
-                        paso.completado 
-                          ? 'text-green-600' 
-                          : paso.activo 
-                          ? 'text-blue-600' 
-                          : 'text-gray-400'
-                      }`} />
-                    </div>
+          <div className="p-6 space-y-8">
 
-                    {/* Flecha */}
-                    {index < devolucion.seguimiento.length - 1 && (
-                      <div className="absolute left-1/2 transform translate-x-8 mt-8">
-                        <ChevronRight className="w-6 h-6 text-gray-400" />
+            {/* ── Información general ─────────────────────────────────── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+              {/* Productos devueltos */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Productos devueltos</p>
+                <div className="space-y-3">
+                  {dev.productos.map((producto) => (
+                    <div key={producto.id} className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white border border-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Package className="w-5 h-5 text-gray-400" />
                       </div>
-                    )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{producto.nombre}</p>
+                        <p className="text-xs text-gray-500">
+                          {producto.cantidad} und. × $ {producto.precioUnidad.toLocaleString()}
+                        </p>
+                      </div>
+                      <p className="text-sm font-bold text-gray-800 whitespace-nowrap">
+                        $ {(producto.precioUnidad * producto.cantidad).toLocaleString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
 
-                    {/* Texto */}
-                    <p className="text-xs text-center text-gray-600 max-w-[100px]">
-                      {paso.nombre}
-                    </p>
+                {/* Monto total */}
+                <div className="mt-4 pt-3 border-t border-gray-200 flex justify-between items-center">
+                  <span className="text-sm font-semibold text-gray-700">Monto de devolución</span>
+                  <span className="text-lg font-bold text-gray-900">$ {totalMonto.toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Detalle de la solicitud */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Detalle de la solicitud</p>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs text-gray-500">Motivo</p>
+                    <p className="text-sm font-medium text-gray-900">{dev.motivoDevolucion}</p>
                   </div>
-                ))}
+                  <div>
+                    <p className="text-xs text-gray-500">Resolución solicitada</p>
+                    <p className="text-sm font-medium text-gray-900">{dev.resolucion}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Pedido asociado</p>
+                    <p className="text-sm font-medium text-gray-900">No. {dev.pedidoId}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Fecha de solicitud</p>
+                    <p className="text-sm font-medium text-gray-900">{dev.fecha}</p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* ── Seguimiento ─────────────────────────────────────────── */}
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-5">Seguimiento</p>
+
+              <div className="relative">
+                {/* Línea de progreso */}
+                <div className="absolute top-6 left-6 right-6 h-0.5 bg-gray-200" />
+                <div
+                  className="absolute top-6 left-6 h-0.5 bg-blue-500 transition-all"
+                  style={{
+                    width: `${
+                      ((dev.seguimiento.filter(s => s.completado).length) /
+                      (dev.seguimiento.length - 1)) * 100
+                    }%`
+                  }}
+                />
+
+                <div className="relative flex justify-between">
+                  {dev.seguimiento.map((paso, i) => {
+                    const Icono = ICONOS_SEGUIMIENTO[i];
+                    return (
+                      <div key={paso.id} className="flex flex-col items-center" style={{ width: `${100 / dev.seguimiento.length}%` }}>
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center z-10 mb-3 border-2 transition-colors ${
+                          paso.completado
+                            ? 'bg-green-100 border-green-400'
+                            : paso.activo
+                            ? 'bg-blue-100 border-blue-400'
+                            : 'bg-white border-gray-200'
+                        }`}>
+                          {paso.completado
+                            ? <Check className="w-6 h-6 text-green-600" />
+                            : <Icono className={`w-6 h-6 ${paso.activo ? 'text-blue-600' : 'text-gray-300'}`} />
+                          }
+                        </div>
+                        <p className={`text-xs text-center leading-tight max-w-[80px] ${
+                          paso.completado ? 'text-green-700 font-medium'
+                          : paso.activo   ? 'text-blue-700 font-medium'
+                          : 'text-gray-400'
+                        }`}>
+                          {paso.nombre}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
+
           </div>
         </div>
       </div>
-
     </div>
   );
 }

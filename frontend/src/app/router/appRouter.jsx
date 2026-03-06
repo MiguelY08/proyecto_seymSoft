@@ -41,7 +41,7 @@ import ReturnsP from '../../Features/administrtivePanel/purchases/returns/Return
 import NonConformingProducts from "../../Features/administrtivePanel/purchases/nonConformingProducts/pages/NonConformingProducts.jsx";
 
 import Clients from '../../Features/administrtivePanel/sales/clients/Clients.jsx';
-import OrdersA from '../../Features/administrtivePanel/sales/orders/Orders.jsx';
+import OrdersA from '../../Features/administrtivePanel/sales/orders/pages/Orders.jsx';
 
 // Ventas
 import Sales from '../../Features/administrtivePanel/sales/sales/pages/Sales.jsx';
@@ -63,6 +63,7 @@ import EditReturn from "../../Features/landing/orders/EditReturn.jsx";
 import CreateProduct from "../../Features/administrtivePanel/purchases/products/modals/CreateProduct.jsx";
 import FormProduct from "../../Features/administrtivePanel/purchases/products/modals/CreateProduct.jsx";
 import EditProduct from "../../Features/administrtivePanel/purchases/products/modals/EditProduct.jsx";
+import CompletePay from "../../Features/landing/shoppingCart/modals/CompletePay.jsx";
 
 
 
@@ -130,7 +131,8 @@ const AppRouter = () => {
         <Route path='favorites' element={ <Favorites/> } /> 
         <Route path='cart' element={ <ShoppingCart/> }/> 
         <Route path='favorites' element={ <Favorites/> } /> 
-        <Route path='cart' element={ <ShoppingCart/> }/> 
+        <Route path='cart' element={ <ShoppingCart/> }/>
+        <Route path='completepay' element={ <CompletePay/> }/> 
         <Route path='shop/detail' element={ <ShopDetail/> }/>
         {/* <Route path='orders-l' element={ <Orders/> } /> */}
         {/* <Route path='favorites' element={ <Favorites/> } /> */}
