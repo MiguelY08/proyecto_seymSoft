@@ -1,20 +1,24 @@
 import { useState, useRef, useEffect } from "react";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import { ChevronDown, UserCircle2, SquarePen, LogOut } from "lucide-react";
 
-export default function HeaderSidebar({
-  user = {
-    name: "Yorman Alirio Ocampo Giraldo",
-    email: "yorman123@gmail.com",
-    role: "Administrador",
-    avatarUrl: null,
-  },
-}) {
+import { useAuth } from "../access/context/AuthContext";
+
+export default function HeaderSidebar() {
+
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
   const location = useLocation();
   const { pathname } = location;
 
   const [menuOpen, setMenuOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   // 🔹 Cerrar dropdown si se hace click fuera
   useEffect(() => {
@@ -27,7 +31,7 @@ export default function HeaderSidebar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 🔹 Convertir ruta a breadcrumb automático
+  //  Convertir ruta a breadcrumb automático
   const segments = pathname.split("/").filter(Boolean);
 
   const formatText = (text) =>
@@ -37,13 +41,17 @@ export default function HeaderSidebar({
   const subModuleName = segments[2] ? formatText(segments[2]) : "";
 
   const shortName =
-    user.name.length > 18 ? user.name.slice(0, 16) + "..." : user.name;
+    user?.fullName?.length > 18
+      ? user.fullName.slice(0, 16) + "..."
+      : user?.fullName;
 
   return (
     <header className="w-full h-16 flex items-center justify-between px-4 md:px-6 bg-[#F0F0F0] border-b border-slate-200 font-lexend">
+
       {/* ───────── Breadcrumb Responsive ───────── */}
       <div className="flex items-center gap-2 text-[#004D77] text-sm md:text-base font-medium truncate">
         <span className="truncate">{moduleName}</span>
+
         {subModuleName && (
           <>
             <span className="text-slate-400 hidden sm:block">/</span>
@@ -58,11 +66,12 @@ export default function HeaderSidebar({
           onClick={() => setMenuOpen(!menuOpen)}
           className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-200 transition-colors"
         >
+
           <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden text-slate-500">
-            {user.avatarUrl ? (
+            {user?.avatarUrl ? (
               <img
                 src={user.avatarUrl}
-                alt={user.name}
+                alt={user?.fullName}
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -75,7 +84,9 @@ export default function HeaderSidebar({
             <p className="text-sm font-medium text-[#004D77] leading-tight">
               {shortName}
             </p>
-            <p className="text-xs text-slate-500">{user.role}</p>
+            <p className="text-xs text-slate-500">
+              {user?.role || "Usuario"}
+            </p>
           </div>
 
           <ChevronDown
@@ -84,18 +95,21 @@ export default function HeaderSidebar({
               menuOpen ? "rotate-180" : ""
             }`}
           />
+
         </button>
 
-        {/* ───────── Dropdown Grande (EL TUYO) ───────── */}
+        {/* ───────── Dropdown Usuario ───────── */}
         {menuOpen && (
-          <div className="absolute right-0 mt-2 w-64 sm:w-72 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden ">
+          <div className="absolute right-0 mt-2 w-64 sm:w-72 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
+
             {/* Cabecera dropdown */}
-            <div className="flex flex-col items-center gap-1 px-5 py-5 bg-slate-50 border-b border-slate-200 ">
-              <div className="w-14 h-14 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 overflow-hidden mb-1 ">
-                {user.avatarUrl ? (
+            <div className="flex flex-col items-center gap-1 px-5 py-5 bg-slate-50 border-b border-slate-200">
+
+              <div className="w-14 h-14 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 overflow-hidden mb-1">
+                {user?.avatarUrl ? (
                   <img
                     src={user.avatarUrl}
-                    alt={user.name}
+                    alt={user?.fullName}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -104,33 +118,40 @@ export default function HeaderSidebar({
               </div>
 
               <p className="text-sm font-semibold text-[#004D77] text-center leading-tight">
-                {user.name}
+                {user?.fullName}
               </p>
 
-              <p className="text-xs text-[#004D77] break-all">{user.email}</p>
+              <p className="text-xs text-[#004D77] break-all">
+                {user?.email}
+              </p>
 
               <p className="text-xs font-semibold text-slate-600 mt-0.5">
-                {user.role}
+                {user?.role || "Usuario"}
               </p>
+
             </div>
 
             {/* Acciones */}
             <div className="py-1.5">
-              <a
-                href="/perfil/editar"
+
+              <Link
+                to="/perfil/editar"
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#004D77] hover:bg-gray-200 transition-colors"
               >
                 <SquarePen size={16} strokeWidth={1.8} />
                 Editar Mi Perfil
-              </a>
-
-              <Link to="/login">
-                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors">
-                  <LogOut size={16} strokeWidth={1.8} />
-                  Cerrar sesión
-                </button>
               </Link>
+
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
+              >
+                <LogOut size={16} strokeWidth={1.8} />
+                Cerrar sesión
+              </button>
+
             </div>
+
           </div>
         )}
       </div>

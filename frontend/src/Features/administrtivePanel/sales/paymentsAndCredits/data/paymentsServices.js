@@ -87,7 +87,13 @@ export const cancelPayment = (
   password
 ) => {
 
-  const admin = JSON.parse(localStorage.getItem("adminUser"))
+  // obtener usuarios del sistema
+  const users = JSON.parse(localStorage.getItem("users")) || []
+
+  // buscar administrador
+  const admin = users.find(
+    user => user.role === "Administrador"
+  )
 
   if (!admin || admin.password !== password) {
     throw new Error("Contraseña del administrador incorrecta.")
@@ -113,23 +119,30 @@ export const cancelPayment = (
 
   const payment = accounts[accountIndex].abonos[paymentIndex]
 
+  // regla de negocio 48 horas
   if (payment.createdAt) {
+
     const createdAt = new Date(payment.createdAt)
     const now = new Date()
+
     const diffHours =
       (now - createdAt) / (1000 * 60 * 60)
 
     if (diffHours > 48) {
+
       throw new Error(
         "No se puede anular un abono después de 48 horas."
       )
+
     }
+
   }
 
   if (payment.anulado) {
     throw new Error("Este abono ya fue anulado.")
   }
 
+  // marcar como anulado
   payment.anulado = true
   payment.motivoCancelacion = reason
   payment.cancelledAt = new Date().toISOString()
