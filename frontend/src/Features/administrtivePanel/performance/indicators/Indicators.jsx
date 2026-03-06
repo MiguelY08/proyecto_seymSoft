@@ -1,6 +1,6 @@
 import DashboardStats          from "./components/Dashboardstats";
 import MonthlySalesReturnsChart from "./components/Monthlysalesreturnschart";
-import SalesPurchasesChart      from "./components/Salespurchaseschart";
+import SalesPurchasesChart from "./components/SalesPurchasesChart";
 import CategoryDemandChart      from "./components/Categorydemandchart";
 import TopProductsChart         from "./components/Topproductschart";
 import TopClientsChart          from "./components/Topclientschart";
