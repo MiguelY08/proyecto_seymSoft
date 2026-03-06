@@ -47,7 +47,7 @@ import NonConformingProducts from "../../Features/administrtivePanel/purchases/n
 
 /* SALES */
 import Clients from "../../Features/administrtivePanel/sales/clients/Clients.jsx";
-import OrdersA from "../../Features/administrtivePanel/sales/orders/Orders.jsx";
+import OrdersA from "../../Features/administrtivePanel/sales/orders/pages/Orders.jsx";
 
 import Sales from "../../Features/administrtivePanel/sales/sales/pages/Sales.jsx";
 import SaleForm from "../../Features/administrtivePanel/sales/sales/pages/SaleForm.jsx";
@@ -60,7 +60,7 @@ import AccountDetailsPage from "../../Features/administrtivePanel/sales/payments
 
 /* CONFIGURATION */
 import RolesPage from "../../Features/administrtivePanel/configuration/roles/page/RolesPage.jsx";
-import Banners from "../../Features/administrtivePanel/appearance/Banners.jsx";
+import Banners from "../../Features/administrtivePanel/configuration/carousel/pages/Banner.jsx";
 
 /* PRODUCTS */
 import FormProduct from "../../Features/administrtivePanel/purchases/products/modals/CreateProduct.jsx";
