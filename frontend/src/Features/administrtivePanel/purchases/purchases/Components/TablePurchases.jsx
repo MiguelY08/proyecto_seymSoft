@@ -107,7 +107,7 @@ export const PurchasesTable = ({
                       className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         compra.estado === "Completada"
                           ? "bg-green-100 text-green-700"
-                          : compra.estado === "Cancelada"
+                          : compra.estado === "Anulada"
                           ? "bg-red-100 text-red-700"
                           : "bg-yellow-100 text-yellow-700"
                       }`}
