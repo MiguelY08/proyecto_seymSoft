@@ -4,6 +4,7 @@ import { PurchasesFilters } from "../../../../shared/DateFilter";
 import PurchasesTable from "../Components/TablePurchases";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import DetailPurchases from "./DetailPurchases";
+import Anulatepurchase from "./Anulatepurchase";
 import { Plus } from "lucide-react";
 
 export const Purchases = () => {
@@ -16,6 +17,7 @@ export const Purchases = () => {
   const [fechaFinal, setFechaFinal] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [cancelPurchase, setCancelPurchase] = useState(null);
   // 🔹 Estado del modal
 const [selectedPurchase, setSelectedPurchase] = useState(null);
   // 🔔 Sistema de alertas
@@ -60,7 +62,7 @@ const [selectedPurchase, setSelectedPurchase] = useState(null);
       proveedor: "Importadora Global",
       cantidadProductos: 8,
       precioTotal: 350000,
-      estado: "Cancelada",
+      estado: "Anulada",
     },
     {
       id: 5,
@@ -105,7 +107,7 @@ const [selectedPurchase, setSelectedPurchase] = useState(null);
       proveedor: "Papelería Central",
       cantidadProductos: 4,
       precioTotal: 180000,
-      estado: "Cancelada",
+      estado: "Anulada",
     },
     {
       id: 10,
@@ -159,7 +161,7 @@ const [selectedPurchase, setSelectedPurchase] = useState(null);
       proveedor: "Papelería Central",
       cantidadProductos: 22,
       precioTotal: 1350000,
-      estado: "Cancelada",
+      estado: "Anulada",
     },
     {
       id: 16,
@@ -213,7 +215,7 @@ const [selectedPurchase, setSelectedPurchase] = useState(null);
       proveedor: "Papelería Central",
       cantidadProductos: 16,
       precioTotal: 740000,
-      estado: "Cancelada",
+      estado: "Anulada",
     },
     {
       id: 22,
@@ -283,54 +285,59 @@ const [selectedPurchase, setSelectedPurchase] = useState(null);
     fetchPurchases();
   }, []);
 
-  // 🔥 Cancelar compra
-  const handleCancel = async (id) => {
-    const compra = products.find((c) => c.id === id);
-    if (!compra) return;
+  // 🔥 Anular compra
+ const handleCancel = (id) => {
 
-    if (compra.estado === "Cancelada") {
-      showInfo(
-        "Compra ya cancelada",
-        "Esta compra ya se encuentra cancelada."
-      );
-      return;
-    }
+  const compra = products.find((c) => c.id === id);
 
-    const result = await showConfirm(
-      "warning",
-      "Cancelar compra",
-      "¿Estás seguro de cancelar la compra?",
-      {
-        confirmButtonText: "Sí, cancelar",
-        cancelButtonText: "No",
-      }
+  if (!compra) return;
+
+  if (compra.estado === "Anulada") {
+    showInfo(
+      "Compra ya Anulada",
+      "Esta compra ya se encuentra Anulada."
+    );
+    return;
+  }
+
+  setCancelPurchase(compra);
+};
+const confirmCancelPurchase = async (motivo) => {
+
+  try {
+
+    setLoading(true);
+
+    const updated = products.map((compra) =>
+      compra.id === cancelPurchase.id
+        ? {
+            ...compra,
+            estado: "Anulada",
+            motivoAnulacion: motivo,
+            fechaAnulacion: new Date().toISOString().split("T")[0],
+          }
+        : compra
     );
 
-    if (!result?.isConfirmed) return;
+    setProducts(updated);
 
-    try {
-      setLoading(true);
+    showSuccess(
+      "Compra Anulada",
+      "La compra fue anulada correctamente."
+    );
 
-      const updated = products.map((compra) =>
-        compra.id === id
-          ? { ...compra, estado: "Cancelada" }
-          : compra
-      );
+  } catch (err) {
 
-      setProducts(updated);
+    showError("Error", "No se pudo anular la compra.");
 
-      showSuccess(
-        "Compra cancelada",
-        "La compra fue cancelada correctamente."
-      );
+  } finally {
 
-    } catch (err) {
-      setError("No se pudo cancelar la compra");
-      showError("Error", "No se pudo cancelar la compra.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    setLoading(false);
+    setCancelPurchase(null);
+
+  }
+};
+
   const handleViewDetail = (purchase) => {
   setSelectedPurchase(purchase);
   };
@@ -458,6 +465,13 @@ const [selectedPurchase, setSelectedPurchase] = useState(null);
     onClose={() => setSelectedPurchase(null)}
   />
   )}
+  {cancelPurchase && (
+  <Anulatepurchase
+    purchase={cancelPurchase}
+    onClose={() => setCancelPurchase(null)}
+    onConfirm={confirmCancelPurchase}
+  />
+)}
   </>
   );
   
