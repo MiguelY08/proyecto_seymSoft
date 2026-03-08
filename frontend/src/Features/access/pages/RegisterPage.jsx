@@ -1,29 +1,34 @@
-import RegisterForm from "../components/RegisterForm"
-import imagenBanner from "../../../assets/imagenBanner.png"
-import LoginBanner from "../components/LoginBanner"
-import HeaderLanding from "../../layouts/HeaderLanding"
-import Footer from "../../layouts/Footer"
+import RegisterForm from "../components/RegisterForm";
+import LoginBanner from "../components/LoginBanner";
+import AuthFooter from "../../shared/AuthFooter";
+
+import imagenBanner from "../../../assets/imagenBanner.png";
+import logo from "../../../assets/PapeleriaMagicLogo.png";
 
 export default function RegisterPage() {
   return (
     <div className="min-h-screen flex flex-col">
 
+      {/* CONTENIDO PRINCIPAL */}
+      <main className="flex flex-col flex-1">
 
-      <main className="flex-grow flex flex-col">
-
-        <LoginBanner 
-          titulo="Crea Tu Cuenta"
+        {/* Banner */}
+        <LoginBanner
+          titulo="Regístrate"
           imagen={imagenBanner}
+          logo={logo}
         />
 
-        {/* Contenedor optimizado */}
-        <div className="flex justify-center items-center bg-gray-100 py-6 px-4 flex-grow">
+        {/* Contenedor del formulario */}
+        <div className="flex flex-1 justify-center items-center bg-gray-100 px-3 py-3">
           <RegisterForm />
         </div>
 
       </main>
 
+      {/* Footer */}
+      <AuthFooter />
 
     </div>
-  )
+  );
 }

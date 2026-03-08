@@ -65,30 +65,32 @@ export default function ResetPasswordForm() {
 
     setTimeout(() => {
       navigate("/login")
-    }, 1000)
+    }, 800)
   }
 
   return (
     <div className="w-full max-w-xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
 
-      {/*  Header Azul */}
+      {/* Header */}
       <div className="bg-[#004D77] py-4">
-        <h2 className="font-lexend text-xl font-semibold text-white text-center">
+        <h2 className="font-lexend text-xl md:text-2xl font-semibold text-white text-center">
           Restablecer Contraseña
         </h2>
       </div>
 
-      <div className="p-10">
+      <div className="p-7 md:p-8">
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
 
           {/* Código OTP */}
           <div>
+
             <label className="block mb-4 text-sm font-medium text-center">
               Código enviado al correo
             </label>
 
-            <div className="flex justify-center gap-3">
+            <div className="flex justify-center gap-3 flex-wrap">
+
               {code.map((digit, index) => (
                 <input
                   key={index}
@@ -98,14 +100,17 @@ export default function ResetPasswordForm() {
                   value={digit}
                   onChange={(e) => handleCodeChange(e, index)}
                   onKeyDown={(e) => handleKeyDown(e, index)}
-                  className="w-12 h-12 text-center text-lg border rounded-lg focus:ring-2 focus:ring-blue-600 outline-none"
+                  className="w-12 h-12 md:w-14 md:h-14 text-center text-lg border rounded-lg focus:ring-2 focus:ring-blue-600 outline-none"
                 />
               ))}
+
             </div>
+
           </div>
 
           {/* Nueva contraseña */}
           <div className="relative">
+
             <label className="block mb-2 text-sm font-medium">
               Nueva contraseña
             </label>
@@ -115,7 +120,7 @@ export default function ResetPasswordForm() {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 pr-10 focus:ring-2 focus:ring-blue-600 outline-none"
+              className="w-full border rounded-lg px-4 py-2.5 pr-10 focus:ring-2 focus:ring-blue-600 outline-none"
             />
 
             <button
@@ -125,10 +130,12 @@ export default function ResetPasswordForm() {
             >
               {showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}
             </button>
+
           </div>
 
           {/* Confirmar contraseña */}
           <div className="relative">
+
             <label className="block mb-2 text-sm font-medium">
               Confirmar nueva contraseña
             </label>
@@ -138,7 +145,7 @@ export default function ResetPasswordForm() {
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 pr-10 focus:ring-2 focus:ring-blue-600 outline-none"
+              className="w-full border rounded-lg px-4 py-2.5 pr-10 focus:ring-2 focus:ring-blue-600 outline-none"
             />
 
             <button
@@ -148,6 +155,7 @@ export default function ResetPasswordForm() {
             >
               {showConfirm ? <EyeOff size={18}/> : <Eye size={18}/>}
             </button>
+
           </div>
 
           {error && (
@@ -156,7 +164,7 @@ export default function ResetPasswordForm() {
 
           <button
             type="submit"
-            className="bg-[#004D77] text-white py-2 rounded-lg hover:bg-[#004D77]/90 transition cursor-pointer"
+            className="w-full bg-[#004D77] text-white py-2.5 rounded-lg hover:bg-[#004D77]/90 transition"
           >
             Restablecer Contraseña
           </button>

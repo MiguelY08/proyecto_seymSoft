@@ -1,22 +1,41 @@
-import imagenBanner from "../../../assets/imagenBanner.png";
-import LoginBanner from "../components/LoginBanner";
-import HeaderLanding from "../../layouts/HeaderLanding";
-import Footer from "../../layouts/Footer";
-import ResetPasswordForm from "../components/ResetPasswordForm";
+import imagenBanner from "../../../assets/imagenBanner.png"
+import LoginBanner from "../components/LoginBanner"
+import BackHeader from "../../shared/BackHeader"
+import AuthFooter from "../../shared/AuthFooter"
+import ResetPasswordForm from "../components/ResetPasswordForm"
+import logo from "../../../assets/PapeleriaMagicLogo.png"
 
 export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen flex flex-col">
 
-      <main className="flex-grow flex flex-col">
-        <LoginBanner titulo="Restablecer Contraseña" imagen={imagenBanner} />
+      <main className="flex flex-col flex-1">
 
-        {/* Contenedor optimizado */}
-        <div className="flex justify-center items-center bg-gray-100 py-6 px-4 flex-grow">
-          <ResetPasswordForm />
+        <LoginBanner 
+          titulo="Restablecer contraseña"
+          imagen={imagenBanner}
+          logo={logo}
+        />
+
+        {/* Fondo gris */}
+        <div className="bg-gray-100 flex flex-col flex-1">
+
+          <BackHeader
+            title="Volver"
+            to="/login"
+          />
+
+          {/* Formulario */}
+          <div className="flex flex-1 justify-center items-start lg:items-center px-4 py-3">
+            <ResetPasswordForm />
+          </div>
+
         </div>
+
       </main>
 
+      <AuthFooter />
+
     </div>
-  );
+  )
 }

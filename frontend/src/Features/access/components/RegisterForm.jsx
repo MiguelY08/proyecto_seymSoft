@@ -91,21 +91,21 @@ export default function RegisterForm() {
     : "focus:ring-2 focus:ring-blue-600"
   }`;
 
-  return (
+return (
 
-    <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
+    <div className="max-w-6xl w-full mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
 
-      <div className="bg-[#004D77] py-3">
-        <h2 className="font-lexend text-lg md:text-xl font-semibold text-white text-center">
+      <div className="bg-[#004D77] py-4">
+        <h2 className="font-lexend text-xl md:text-2xl font-semibold text-white text-center">
           Crear Cuenta
         </h2>
       </div>
 
-      <div className="p-6">
+      <div className="p-5 md:p-5">
 
         <form
           onSubmit={handleSubmit}
-          className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          className="grid grid-cols-1 md:grid-cols-2 gap-5"
         >
 
           {/* Tipo Documento */}
@@ -146,7 +146,7 @@ export default function RegisterForm() {
           </div>
 
           {/* Nombre */}
-          <div>
+          <div className="lg:col-span-1">
             <Label text="Nombre Completo"/>
 
             <input
@@ -225,7 +225,7 @@ export default function RegisterForm() {
             <button
               type="button"
               onClick={()=>setShowPassword(!showPassword)}
-              className="absolute right-3 top-[32px] text-gray-500"
+              className="absolute right-3 top-[34px] text-gray-500"
             >
               {showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}
             </button>
@@ -249,7 +249,7 @@ export default function RegisterForm() {
             <button
               type="button"
               onClick={()=>setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-[32px] text-gray-500"
+              className="absolute right-3 top-[34px] text-gray-500"
             >
               {showConfirmPassword ? <EyeOff size={16}/> : <Eye size={16}/>}
             </button>
@@ -259,7 +259,7 @@ export default function RegisterForm() {
           </div>
 
           {/* Términos */}
-          <div className="col-span-2 flex items-center gap-2 mt-2">
+          <div className="col-span-full flex items-center gap-2 mt-2">
 
             <input
               type="checkbox"
@@ -275,24 +275,24 @@ export default function RegisterForm() {
           </div>
 
           {errors.terms &&
-          <div className="col-span-2">
+          <div className="col-span-full">
             <p className="text-red-500 text-xs">{errors.terms}</p>
           </div>}
 
           {/* Botones */}
-          <div className="col-span-2 flex justify-between mt-4">
+          <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
 
             <button
               type="submit"
-              className="bg-blue-900 text-white px-20 py-2 rounded-lg text-sm hover:bg-blue-800 transition cursor-pointer"
-            >
+              className="w-full bg-[#004D77] text-white py-2.5 rounded-lg text-sm hover:bg-[#005D8A] transition cursor-pointer"
+              >
               Registrar
             </button>
 
             <button
               type="button"
-              onClick={()=>navigate("/login")}
-              className="bg-gray-500 text-white px-20 py-2 rounded-lg text-sm hover:bg-gray-600 transition cursor-pointer"
+              onClick={() => navigate("/login")}
+              className="w-full bg-gray-500 text-white py-2.5 rounded-lg text-sm hover:bg-gray-600 transition cursor-pointer"
             >
               Cancelar
             </button>
