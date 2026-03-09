@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate} from "react-router-dom";
 import { useEffect, useRef } from "react";
 
 export default function SidebarItem({
@@ -8,9 +8,11 @@ export default function SidebarItem({
   href,
   children = [],
   openItem,
-  setOpenItem,
+  setOpenItem
 }) {
+  const navigate = useNavigate();
   const { pathname } = useLocation();
+  const isActiveSingle = href && pathname === href;
   const submenuRef = useRef(null);
 
   const hasChildren = children.length > 0;
@@ -19,6 +21,7 @@ export default function SidebarItem({
   const isActiveParent = children.some((child) =>
     pathname.startsWith(child.href)
   );
+  const isActive = isActiveParent || isActiveSingle;
 
   useEffect(() => {
     if (isActiveParent) {
@@ -29,6 +32,8 @@ export default function SidebarItem({
   const handleClick = () => {
     if (hasChildren) {
       setOpenItem(isOpen ? null : label);
+    } else if (href) {
+      navigate(href);
     }
   };
 
@@ -41,7 +46,7 @@ export default function SidebarItem({
         className={`flex items-center justify-between px-4 py-2 rounded-lg cursor-pointer
           transition-all duration-300 ease-in-out
           ${
-            isOpen
+            isOpen || isActive
               ? "bg-[#004D77] text-white shadow-md"
               : "text-[#004D77] hover:bg-[#004D77] hover:text-white hover:shadow-md"
           }`}

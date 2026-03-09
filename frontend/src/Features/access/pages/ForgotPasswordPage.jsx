@@ -1,30 +1,41 @@
-
-
 import imagenBanner from "../../../assets/imagenBanner.png"
 import LoginBanner from "../components/LoginBanner"
-import HeaderLanding from "../../layouts/HeaderLanding"
-import Footer from "../../layouts/Footer"
-import ResetPasswordForm from "../components/ForgotPasswordForm"
+import BackHeader from "../../shared/BackHeader"
+import AuthFooter from "../../shared/AuthFooter"
 
-export default function ResetPasswordPage() {
+import logo from "../../../assets/PapeleriaMagicLogo.png"
+import ForgotPasswordForm from "../components/ForgotPasswordForm"
+
+export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen flex flex-col">
 
-
-      <main className="flex-grow flex flex-col">
+      <main className="flex flex-col flex-1">
 
         <LoginBanner 
-          titulo="Rescuperar contrseña"
+          titulo="Recuperar contraseña"
           imagen={imagenBanner}
+          logo={logo}
         />
 
-        {/* Contenedor optimizado */}
-        <div className="flex justify-center items-center bg-gray-100 py-6 px-4 flex-grow">
-          <ResetPasswordForm />
+        {/* Contenedor gris */}
+        <div className="bg-gray-100 flex flex-col flex-1">
+
+          <BackHeader
+            title="Volver"
+            to="/login"
+          />
+
+          {/* Formulario */}
+          <div className="flex justify-center items-center flex-1 px-4 py-4">
+            <ForgotPasswordForm />
+          </div>
+
         </div>
 
       </main>
 
+      <AuthFooter />
 
     </div>
   )

@@ -18,6 +18,7 @@ import {
   SlidersHorizontal,
   Menu,
   X,
+  LayoutDashboard
 } from "lucide-react";
 
 import SidebarItem from "./SidebarItem";
@@ -46,7 +47,12 @@ export default function Sidebar() {
       icon: Home,
       href: `${ADMIN_BASE}`,
     },
-
+    {
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      href: `${ADMIN_BASE}/dashboard`,
+      permission: "dashboard.ver"
+    },
     {
       label: "Usuarios",
       icon: Users,
@@ -60,7 +66,6 @@ export default function Sidebar() {
         },
       ],
     },
-
     {
       label: "Compras",
       icon: ShoppingBag,
@@ -74,7 +79,6 @@ export default function Sidebar() {
         { label: "Prod. no conforme", href: `${ADMIN_BASE}/purchases/non-conforming-products`, icon: ThumbsDown, permission:"producto_no_conforme.ver" },
       ],
     },
-
     {
       label: "Ventas",
       icon: DollarSign,
@@ -149,9 +153,12 @@ export default function Sidebar() {
           ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}
       >
+
         {/* HEADER */}
         <div className="px-1 pt-1 pb-4 relative">
+
           <div className="flex items-center gap-3">
+
             <div className="w-20 h-20 rounded-full overflow-hidden">
               <img
                 src={PapeleriaMagicLogo}
@@ -168,6 +175,7 @@ export default function Sidebar() {
                 Magic
               </h2>
             </div>
+
           </div>
 
           <button
@@ -177,7 +185,9 @@ export default function Sidebar() {
             <X size={20} />
           </button>
 
-          <div className="mt-3 h-2px w-full bg-[#004D77]" />
+          {/* FRANJA AZUL CORPORATIVA */}
+          <div className="mt-3 h-[2px] w-full bg-[#004D77]" />
+
         </div>
 
         {/* NAV */}
@@ -196,7 +206,9 @@ export default function Sidebar() {
         </nav>
 
         {/* CONFIGURACIÓN */}
-        {filteredConfigChildren.length > 0 && ( <div className="border-t border-slate-100 px-2 py-3">
+        {filteredConfigChildren.length > 0 && (
+          <div className="border-t border-slate-100 px-2 py-3">
+
             <SidebarItem
               icon={Settings}
               label="Configuración"
@@ -206,11 +218,13 @@ export default function Sidebar() {
               setOpenItem={setOpenItem}
             />
 
-              <p className="text-[10px] text-slate-400 text-center mt-2">
-                Powered by SeymsSoft © 2025
-              </p>
+            <p className="text-[10px] text-slate-400 text-center mt-2">
+              Powered by SeymsSoft © 2025
+            </p>
+
           </div>
         )}
+
       </aside>
     </>
   );

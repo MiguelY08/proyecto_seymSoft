@@ -1,11 +1,11 @@
-import DashboardStats          from "./components/Dashboardstats";
-import MonthlySalesReturnsChart from "./components/Monthlysalesreturnschart";
-import SalesPurchasesChart from "./components/SalesPurchasesChart";
-import CategoryDemandChart      from "./components/Categorydemandchart";
-import TopProductsChart         from "./components/Topproductschart";
-import TopClientsChart          from "./components/Topclientschart";
+import DashboardStats          from "../components/Dashboardstats";
+import MonthlySalesReturnsChart from "../components/Monthlysalesreturnschart";
+import SalesPurchasesChart from "../components/SalesPurchasesChart";
+import CategoryDemandChart      from "../components/Categorydemandchart";
+import TopProductsChart         from "../components/Topproductschart";
+import TopClientsChart          from "../components/Topclientschart";
 
-function Indicators() {
+function IndicatorsPage() {
   return (
     <div style={{
       padding: "10px",
@@ -42,4 +42,4 @@ function Indicators() {
   );
 }
 
-export default Indicators;
+export default IndicatorsPage;
