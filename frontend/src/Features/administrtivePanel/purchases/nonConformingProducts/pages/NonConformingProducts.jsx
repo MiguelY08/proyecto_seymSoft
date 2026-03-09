@@ -22,7 +22,7 @@ export const NonConformingProducts = () => {
   const alertShownRef = useRef(false);
 
   // 🔥 Mock con estado
- const mockReports = [
+  const mockReports = [
   {
     id: 1,
     nombre: "Cuaderno 100 hojas Prisma",

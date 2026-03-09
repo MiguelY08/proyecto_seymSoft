@@ -1,57 +1,80 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+import { registerUser } from "../services/authService";
+import { validateRegister, sanitizeInput } from "../validators/authValidators";
 
 export default function RegisterForm() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [formData, setFormData] = useState({
-    documentType: "",
-    document: "",
-    fullName: "",
-    email: "",
-    phone: "",
-    address: "",
-    password: "",
-    confirmPassword: "",
-    terms: false,
+  const [showPassword,setShowPassword] = useState(false);
+  const [showConfirmPassword,setShowConfirmPassword] = useState(false);
+
+  const [formData,setFormData] = useState({
+    documentType:"",
+    document:"",
+    fullName:"",
+    email:"",
+    phone:"",
+    address:"",
+    password:"",
+    confirmPassword:"",
+    terms:false
   });
 
-  const [errors, setErrors] = useState({});
+  const [errors,setErrors] = useState({});
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData({
+  const navigate = useNavigate();
+
+  const handleChange = (e)=>{
+
+    const { name,value,type,checked } = e.target;
+
+    let newValue = type === "checkbox" ? checked : value;
+
+    // sanitización desde validator
+    newValue = sanitizeInput(name,newValue);
+
+    const updatedForm = {
       ...formData,
-      [name]: type === "checkbox" ? checked : value,
-    });
+      [name]:newValue
+    };
+
+    setFormData(updatedForm);
+
+    // validación en tiempo real
+    const validationErrors = validateRegister(updatedForm);
+    setErrors(validationErrors);
+
   };
 
-  const validate = () => {
-    let newErrors = {};
+  const handleSubmit = (e)=>{
 
-    if (!formData.documentType) newErrors.documentType = "Seleccione tipo de documento";
-    if (!formData.document) newErrors.document = "Documento obligatorio";
-    if (!formData.fullName) newErrors.fullName = "Nombre obligatorio";
-    if (!formData.email) newErrors.email = "Correo obligatorio";
-    if (!formData.phone) newErrors.phone = "Teléfono obligatorio";
-    if (!formData.address) newErrors.address = "Dirección obligatoria";
-    if (!formData.password) newErrors.password = "Contraseña obligatoria";
-    if (formData.password && formData.password.length < 6)
-      newErrors.password = "Mínimo 6 caracteres";
-    if (formData.password !== formData.confirmPassword)
-      newErrors.confirmPassword = "Las contraseñas no coinciden";
-    if (!formData.terms) newErrors.terms = "Debe aceptar términos";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (e) => {
     e.preventDefault();
-    if (validate()) {
-      console.log("Formulario válido", formData);
+
+    const validationErrors = validateRegister(formData);
+
+    if(Object.keys(validationErrors).length > 0){
+      setErrors(validationErrors);
+      return;
     }
+
+    try{
+
+      const { confirmPassword,terms,...userData } = formData;
+
+      registerUser(userData);
+
+      alert("Registro exitoso");
+
+      navigate("/login");
+
+    }catch(error){
+
+      alert(error.message);
+
+    }
+
   };
 
   const Label = ({ text }) => (
@@ -61,10 +84,17 @@ export default function RegisterForm() {
     </label>
   );
 
+  const inputStyle = (field)=>
+  `w-full border rounded-lg px-3 py-2 text-sm outline-none
+  ${errors[field]
+    ? "border-red-500 focus:ring-red-500"
+    : "focus:ring-2 focus:ring-blue-600"
+  }`;
+
   return (
+
     <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
 
-      {/*  Encabezado Azul */}
       <div className="bg-[#004D77] py-3">
         <h2 className="font-lexend text-lg md:text-xl font-semibold text-white text-center">
           Crear Cuenta
@@ -72,169 +102,186 @@ export default function RegisterForm() {
       </div>
 
       <div className="p-6">
+
         <form
           onSubmit={handleSubmit}
           className="grid grid-cols-1 md:grid-cols-2 gap-4"
         >
+
           {/* Tipo Documento */}
           <div>
-            <Label text="Tipo de Documento" />
+            <Label text="Tipo de Documento"/>
+
             <select
               name="documentType"
               value={formData.documentType}
               onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none cursor-pointer"
+              className={inputStyle("documentType")}
             >
               <option value="">Seleccione</option>
               <option value="CC">CC</option>
               <option value="TI">TI</option>
               <option value="CE">CE</option>
             </select>
-            {errors.documentType && (
-              <p className="text-red-500 text-xs mt-1">{errors.documentType}</p>
-            )}
+
+            {errors.documentType &&
+            <p className="text-red-500 text-xs mt-1">{errors.documentType}</p>}
           </div>
 
           {/* Documento */}
           <div>
-            <Label text="Documento" />
+            <Label text="Documento"/>
+
             <input
               type="text"
               name="document"
+              inputMode="numeric"
               value={formData.document}
               onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none"
+              className={inputStyle("document")}
             />
-            {errors.document && (
-              <p className="text-red-500 text-xs mt-1">{errors.document}</p>
-            )}
+
+            {errors.document &&
+            <p className="text-red-500 text-xs mt-1">{errors.document}</p>}
           </div>
 
           {/* Nombre */}
           <div>
-            <Label text="Nombre Completo" />
+            <Label text="Nombre Completo"/>
+
             <input
               type="text"
               name="fullName"
               value={formData.fullName}
               onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none"
+              className={inputStyle("fullName")}
             />
-            {errors.fullName && (
-              <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>
-            )}
+
+            {errors.fullName &&
+            <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>}
           </div>
 
           {/* Email */}
           <div>
-            <Label text="Correo Electrónico" />
+            <Label text="Correo Electrónico"/>
+
             <input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none"
+              className={inputStyle("email")}
             />
-            {errors.email && (
-              <p className="text-red-500 text-xs mt-1">{errors.email}</p>
-            )}
+
+            {errors.email &&
+            <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
           </div>
 
           {/* Dirección */}
           <div>
-            <Label text="Dirección" />
+            <Label text="Dirección"/>
+
             <input
               type="text"
               name="address"
               value={formData.address}
               onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none"
+              className={inputStyle("address")}
             />
-            {errors.address && (
-              <p className="text-red-500 text-xs mt-1">{errors.address}</p>
-            )}
+
+            {errors.address &&
+            <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
           </div>
 
           {/* Teléfono */}
           <div>
-            <Label text="Teléfono" />
+            <Label text="Teléfono"/>
+
             <input
               type="text"
               name="phone"
+              inputMode="numeric"
               value={formData.phone}
               onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none"
+              className={inputStyle("phone")}
             />
-            {errors.phone && (
-              <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
-            )}
+
+            {errors.phone &&
+            <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
           </div>
 
           {/* Contraseña */}
           <div className="relative">
-            <Label text="Contraseña" />
+            <Label text="Contraseña"/>
+
             <input
               type={showPassword ? "text" : "password"}
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-blue-600 outline-none"
+              className={inputStyle("password")}
             />
+
             <button
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-[32px] text-gray-500 hover:text-gray-700"
+              onClick={()=>setShowPassword(!showPassword)}
+              className="absolute right-3 top-[32px] text-gray-500"
             >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              {showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}
             </button>
-            {errors.password && (
-              <p className="text-red-500 text-xs mt-1">{errors.password}</p>
-            )}
+
+            {errors.password &&
+            <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
           </div>
 
           {/* Confirmar */}
           <div className="relative">
-            <Label text="Confirmar Contraseña" />
+            <Label text="Confirmar Contraseña"/>
+
             <input
               type={showConfirmPassword ? "text" : "password"}
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-blue-600 outline-none"
+              className={inputStyle("confirmPassword")}
             />
+
             <button
               type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-[32px] text-gray-500 hover:text-gray-700"
+              onClick={()=>setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-[32px] text-gray-500"
             >
-              {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              {showConfirmPassword ? <EyeOff size={16}/> : <Eye size={16}/>}
             </button>
-            {errors.confirmPassword && (
-              <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>
-            )}
+
+            {errors.confirmPassword &&
+            <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
           </div>
 
           {/* Términos */}
-          <div className="col-span-1 md:col-span-2 flex items-center gap-2 mt-2">
+          <div className="col-span-2 flex items-center gap-2 mt-2">
+
             <input
               type="checkbox"
               name="terms"
               checked={formData.terms}
               onChange={handleChange}
             />
+
             <label className="text-sm">
               Aceptar términos y condiciones
             </label>
+
           </div>
 
-          {errors.terms && (
-            <div className="col-span-1 md:col-span-2">
-              <p className="text-red-500 text-xs">{errors.terms}</p>
-            </div>
-          )}
+          {errors.terms &&
+          <div className="col-span-2">
+            <p className="text-red-500 text-xs">{errors.terms}</p>
+          </div>}
 
           {/* Botones */}
-          <div className="col-span-1 md:col-span-2 flex justify-between mt-4">
+          <div className="col-span-2 flex justify-between mt-4">
+
             <button
               type="submit"
               className="bg-blue-900 text-white px-20 py-2 rounded-lg text-sm hover:bg-blue-800 transition cursor-pointer"
@@ -244,13 +291,18 @@ export default function RegisterForm() {
 
             <button
               type="button"
+              onClick={()=>navigate("/login")}
               className="bg-gray-500 text-white px-20 py-2 rounded-lg text-sm hover:bg-gray-600 transition cursor-pointer"
             >
               Cancelar
             </button>
+
           </div>
+
         </form>
+
       </div>
+
     </div>
   );
 }
