@@ -1,29 +1,36 @@
 import LoginBanner from "../components/LoginBanner"
 import LoginCard from "../components/LoginCard"
+import BackHeader from "../../shared/BackHeader"
+import AuthFooter from "../../shared/AuthFooter"
 import imagenBanner from "../../../assets/imagenBanner.png"
-import HeaderLanding from "../../layouts/HeaderLanding"
-import Footer from "../../layouts/Footer"
+import logo from "../../../assets/PapeleriaMagicLogo.png"
 
 export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col">
 
+      <LoginBanner
+        titulo="Iniciar Sesión"
+        imagen={imagenBanner}
+        logo={logo}
+      />
 
-      <main className="grow flex flex-col">
+      {/* CONTENIDO */}
+      <div className="bg-gray-100 flex flex-col flex-1">
 
-        <LoginBanner 
-          titulo="Iniciar Sesión"
-          imagen={imagenBanner}
+        <BackHeader
+          title="Volver"
+          to="/"
         />
 
-        {/* Contenedor optimizado */}
-        <div className="flex justify-center items-center bg-gray-100 py-6 px-4 grow">
+        <div className="flex justify-center items-center flex-1 px-4 py-6">
           <LoginCard />
         </div>
 
-      </main>
+      </div>
 
+      <AuthFooter />
 
     </div>
   );
-};
+}

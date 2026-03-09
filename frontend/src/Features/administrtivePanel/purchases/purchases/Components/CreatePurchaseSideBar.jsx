@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Plus, Minus, AlertCircle, CheckCircle } from "lucide-react";
+import { Search, Plus, Minus, AlertCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 
@@ -18,16 +18,21 @@ const CreateSidebar = ({
   handleQuantityChange,
   handleAddProduct,
   purchaseItems,
+  invoiceTouched,
+  setInvoiceTouched,
+  dateTouched,
+  setDateTouched,
+  providerTouched,
+  setProviderTouched,
+  openCreateProduct,
+  isFormModalOpen  // 👈 NUEVO
 }) => {
   const navigate = useNavigate();
   const { showConfirm } = useAlert();
+
   const [isOpen, setIsOpen] = useState(false);
   const [searchProvider, setSearchProvider] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
-
-  // 🔥 Estados de validación en tiempo real
-  const [invoiceTouched, setInvoiceTouched] = useState(false);
-  const [dateTouched, setDateTouched] = useState(false);
 
   const providers = [
     "Papelería El Punto Escolar",
@@ -40,12 +45,24 @@ const CreateSidebar = ({
     provider.toLowerCase().includes(searchProvider.toLowerCase())
   );
 
-  const filteredProducts = productsDB.filter((product) =>
-    product.producto.toLowerCase().includes(searchProduct.toLowerCase()) ||
-    product.codigoBarras.includes(searchProduct)
+  const filteredProducts = productsDB.filter(
+    (product) =>
+      product.producto.toLowerCase().includes(searchProduct.toLowerCase()) ||
+      product.codigoBarras.includes(searchProduct)
   );
 
-  // ─── Validaciones ───────────────────────────────────────────────
+  // ================= VALIDACIONES =================
+
+  const providerError = (() => {
+    if (!providerTouched) return null;
+    if (!selectedProvider) return "El proveedor es obligatorio";
+    if (selectedProvider.length < 3)
+      return "El nombre del proveedor es demasiado corto";
+    return null;
+  })();
+
+  const providerValid = providerTouched && !providerError && selectedProvider;
+
   const invoiceError = (() => {
     if (!invoiceTouched) return null;
     if (!invoiceNumber.trim()) return "El número de factura es obligatorio";
@@ -59,62 +76,84 @@ const CreateSidebar = ({
   const dateError = (() => {
     if (!dateTouched) return null;
     if (!purchaseDate) return "La fecha de compra es obligatoria";
+
     const selected = new Date(purchaseDate);
     const today = new Date();
     today.setHours(23, 59, 59, 999);
+
     if (selected > today) return "La fecha no puede ser futura";
+
     const minDate = new Date("2000-01-01");
     if (selected < minDate) return "Fecha demasiado antigua";
+
     return null;
   })();
 
   const dateValid = dateTouched && !dateError && purchaseDate;
 
-  // ─── Helpers de estilo ───────────────────────────────────────────
+  // ================= ESTILO INPUT =================
+
   const inputClass = (error) =>
-  `w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-600 outline-none transition-all
-  ${
-    error
-      ? "border-red-400 focus:ring-2 focus:ring-red-300"
-      : "border-gray-300 focus:ring-2 focus:ring-[#004D77]"
-  }`;
+    `w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-600 outline-none transition-all
+    ${
+      error
+        ? "border-red-400 focus:ring-2 focus:ring-red-300"
+        : "border-gray-300 focus:ring-2 focus:ring-[#004D77]"
+    }`;
+
+  // ================= CONFIRMAR SALIDA =================
 
   const handleBackToPurchases = async (e) => {
-  e.preventDefault(); // evita navegación automática del Link
+    e.preventDefault();
 
-  if (purchaseItems.length > 0) {
-    const result = await showConfirm(
-      "warning",
-      "Volver a compras",
-      "Si sales ahora se eliminarán los productos agregados. ¿Deseas continuar?",
-      {
-        confirmButtonText: "Sí, salir",
-        cancelButtonText: "Seguir editando",
-      }
-    );
+    if (purchaseItems.length > 0) {
+      const result = await showConfirm(
+        "warning",
+        "Volver a compras",
+        "Si sales ahora se eliminarán los productos agregados. ¿Deseas continuar?",
+        {
+          confirmButtonText: "Sí, salir",
+          cancelButtonText: "Seguir editando",
+        }
+      );
 
-    if (!result?.isConfirmed) return;
-  }
+      if (!result?.isConfirmed) return;
+    }
 
-  navigate("/admin/purchases");
-};
+    navigate("/admin/purchases");
+  };
 
   return (
     <div className="col-span-3">
       <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-6">
 
         {/* ================= PROVEEDOR ================= */}
+
         <div className="mb-6 relative">
           <label className="block text-sm font-bold text-gray-800 mb-2">
             Proveedores
           </label>
 
           <div
-            onClick={() => setIsOpen(!isOpen)}
-            className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-600 cursor-pointer flex justify-between items-center hover:border-[#004D77] transition-all"
+            onClick={() => {
+              setIsOpen(!isOpen);
+              setProviderTouched(true);
+            }}
+            className={`w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-600 cursor-pointer flex justify-between items-center transition-all
+            ${
+              providerError
+                ? "border-red-400"
+                : "border-gray-300 hover:border-[#004D77]"
+            }`}
           >
             <span>{selectedProvider || "Seleccione el proveedor"}</span>
-            <span className="text-gray-500">▾</span>
+
+            <div className="flex items-center gap-2">
+              {providerTouched && providerError && (
+                <AlertCircle size={16} className="text-red-400" />
+              )}
+              <span className="text-gray-500">▾</span>
+            </div>
           </div>
 
           {isOpen && (
@@ -134,7 +173,9 @@ const CreateSidebar = ({
                     className="bg-transparent outline-none text-sm w-full"
                   />
                 </div>
-                <button className="flex items-center gap-1 px-3 py-1 border border-sky-700 text-[#004D77] bg-white hover:bg-sky-50 rounded-lg text-xs font-semibold transition-all">
+
+                <button  onClick={isFormModalOpen}
+                className="flex items-center gap-1 px-3 py-1 border border-sky-700 text-[#004D77] bg-white hover:bg-sky-50 rounded-lg text-xs font-semibold transition-all">
                   Crear
                   <Plus size={14} />
                 </button>
@@ -153,6 +194,7 @@ const CreateSidebar = ({
                       checked={selectedProvider === provider}
                       onChange={() => {
                         setSelectedProvider(provider);
+                        setProviderTouched(true);
                         setIsOpen(false);
                       }}
                       className="accent-[#004D77]"
@@ -163,9 +205,21 @@ const CreateSidebar = ({
               </div>
             </div>
           )}
+
+          <div
+            className={`overflow-hidden transition-all duration-300 ${
+              providerError ? "max-h-10 mt-1.5 opacity-100" : "max-h-0 opacity-0"
+            }`}
+          >
+            <p className="text-xs text-red-500 flex items-center gap-1">
+              <AlertCircle size={12} />
+              {providerError}
+            </p>
+          </div>
         </div>
 
         {/* ================= FACTURA ================= */}
+
         <div className="mb-6">
           <label className="block text-sm font-bold text-gray-800 mb-2">
             No. factura
@@ -177,14 +231,13 @@ const CreateSidebar = ({
               value={invoiceNumber}
               onChange={(e) => {
                 setInvoiceNumber(e.target.value);
-                setInvoiceTouched(true); // valida desde el primer caracter
+                setInvoiceTouched(true);
               }}
               onBlur={() => setInvoiceTouched(true)}
               placeholder="Ingrese el No de la factura"
               className={inputClass(invoiceError)}
             />
 
-            {/* Ícono de estado */}
             {invoiceTouched && invoiceError && (
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 <AlertCircle size={16} className="text-red-400" />
@@ -192,7 +245,6 @@ const CreateSidebar = ({
             )}
           </div>
 
-          {/* Mensaje de error con animación */}
           <div
             className={`overflow-hidden transition-all duration-300 ${
               invoiceError ? "max-h-10 mt-1.5 opacity-100" : "max-h-0 opacity-0"
@@ -204,7 +256,6 @@ const CreateSidebar = ({
             </p>
           </div>
 
-          {/* Contador de caracteres */}
           {invoiceTouched && !invoiceError && (
             <p className="text-xs text-gray-400 mt-1 text-right">
               {invoiceNumber.trim().length}/20 caracteres
@@ -213,6 +264,7 @@ const CreateSidebar = ({
         </div>
 
         {/* ================= FECHA ================= */}
+
         <div className="mb-6">
           <label className="block text-sm font-bold text-gray-800 mb-2">
             Fecha compra
@@ -222,7 +274,7 @@ const CreateSidebar = ({
             <input
               type="date"
               value={purchaseDate}
-              max={new Date().toISOString().split("T")[0]} // bloquea fechas futuras en el picker
+              max={new Date().toISOString().split("T")[0]}
               onChange={(e) => {
                 setPurchaseDate(e.target.value);
                 setDateTouched(true);
@@ -231,15 +283,13 @@ const CreateSidebar = ({
               className={inputClass(dateError)}
             />
 
-            {/* Ícono de estado */}
             {dateTouched && dateError && (
-            <div className="absolute right-8 top-1/2 -translate-y-1/2">
-              <AlertCircle size={16} className="text-red-400" />
-            </div>
-          )}
+              <div className="absolute right-8 top-1/2 -translate-y-1/2">
+                <AlertCircle size={16} className="text-red-400" />
+              </div>
+            )}
           </div>
 
-          {/* Mensaje de error con animación */}
           <div
             className={`overflow-hidden transition-all duration-300 ${
               dateError ? "max-h-10 mt-1.5 opacity-100" : "max-h-0 opacity-0"
@@ -253,6 +303,7 @@ const CreateSidebar = ({
         </div>
 
         {/* ================= BUSCAR PRODUCTO ================= */}
+
         <div className="mb-6 relative">
           <label className="block text-sm font-bold text-gray-800 mb-2">
             Busque el Producto
@@ -272,12 +323,12 @@ const CreateSidebar = ({
               />
             </div>
 
-            <Link
-              to="/productos/crear"
-              className="flex items-center justify-center px-3 py-2 border border-[#004D77] text-[#004D77] bg-white hover:bg-[#004D77] hover:text-white rounded-lg transition-all"
-            >
-              <Plus size={16} />
-            </Link>
+            <button
+            onClick={openCreateProduct}
+            className="flex items-center justify-center px-3 py-2 border border-[#004D77] text-[#004D77] bg-white hover:bg-[#004D77] hover:text-white rounded-lg transition-all"
+          >
+            <Plus size={16} />
+          </button>
           </div>
 
           {showSuggestions && searchProduct && filteredProducts.length > 0 && (
@@ -292,7 +343,9 @@ const CreateSidebar = ({
                   className="px-4 py-2 text-sm text-gray-700 hover:bg-[#004D77] hover:text-white cursor-pointer transition-all"
                 >
                   <div className="font-semibold">{product.producto}</div>
-                  <div className="text-xs opacity-70">Código: {product.codigoBarras}</div>
+                  <div className="text-xs opacity-70">
+                    Código: {product.codigoBarras}
+                  </div>
                 </div>
               ))}
             </div>
@@ -300,6 +353,7 @@ const CreateSidebar = ({
         </div>
 
         {/* ================= CANTIDAD ================= */}
+
         <div className="mb-6">
           <label className="block text-sm font-bold text-gray-800 mb-2">
             Cantidad
@@ -331,7 +385,8 @@ const CreateSidebar = ({
           </div>
         </div>
 
-        {/* ================= AGREGAR ================= */}
+        {/* ================= BOTONES ================= */}
+
         <button
           onClick={handleAddProduct}
           className="w-full py-3 bg-[#004D77] text-white font-semibold rounded-lg hover:bg-[#003a5c] transition-all shadow-lg"
@@ -340,12 +395,12 @@ const CreateSidebar = ({
         </button>
 
         <Link
-  to="/admin/purchases"
-  onClick={handleBackToPurchases}
-  className="w-full mt-3 block text-center py-3 border-2 border-[#004D77] text-[#004D77] font-semibold rounded-lg hover:bg-[#004D77] hover:text-white transition-all"
->
-  Volver a Compras
-</Link>
+          to="/admin/purchases"
+          onClick={handleBackToPurchases}
+          className="w-full mt-3 block text-center py-3 border-2 border-[#004D77] text-[#004D77] font-semibold rounded-lg hover:bg-[#004D77] hover:text-white transition-all"
+        >
+          Volver a Compras
+        </Link>
 
       </div>
     </div>

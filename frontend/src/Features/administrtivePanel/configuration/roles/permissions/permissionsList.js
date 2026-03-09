@@ -203,6 +203,13 @@ export const permissionsList = [
       "editar",
       "ver"
     ]
+  },
+  {
+    id: 15,
+    modulo: "dashboard",
+    acciones: [
+      "ver"
+    ]
   }
 
 ];

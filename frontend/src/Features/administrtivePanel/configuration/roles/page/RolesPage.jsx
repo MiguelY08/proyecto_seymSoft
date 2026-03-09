@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { Search } from "lucide-react"
+
 import ButtonComponent from "../../../../shared/ButtonComponent"
 
 import RolesTable from "../components/RolesTable"
@@ -14,25 +15,49 @@ import {
 
 export default function RolesPage() {
 
+  /* ======================================================
+  Estados principales
+  ====================================================== */
+
   const [search,setSearch] = useState("")
+  const [roles,setRoles] = useState([])
+
   const [isModalOpen,setIsModalOpen] = useState(false)
   const [modalMode,setModalMode] = useState("create")
   const [selectedRole,setSelectedRole] = useState(null)
 
-  const [roles,setRoles] = useState([])
 
-  // cargar roles
-  useEffect(()=>{
+  /* ======================================================
+  Cargar roles desde storage
+  ====================================================== */
+
+  const loadRoles = () => {
 
     const storedRoles = getRoles()
 
     setRoles(storedRoles)
 
+  }
+
+  useEffect(()=>{
+
+    loadRoles()
+
   },[])
+
+
+  /* ======================================================
+  Filtrar roles por búsqueda
+  ====================================================== */
 
   const filteredRoles = roles.filter(role =>
     role.name.toLowerCase().includes(search.toLowerCase())
   )
+
+
+  /* ======================================================
+  Abrir modal crear
+  ====================================================== */
 
   const handleCreate = () => {
 
@@ -42,6 +67,11 @@ export default function RolesPage() {
 
   }
 
+
+  /* ======================================================
+  Abrir modal editar
+  ====================================================== */
+
   const handleEdit = (role) => {
 
     setModalMode("edit")
@@ -49,6 +79,11 @@ export default function RolesPage() {
     setIsModalOpen(true)
 
   }
+
+
+  /* ======================================================
+  Abrir modal ver
+  ====================================================== */
 
   const handleView = (role) => {
 
@@ -58,13 +93,16 @@ export default function RolesPage() {
 
   }
 
+
+  /* ======================================================
+  Guardar rol (crear o editar)
+  ====================================================== */
+
   const handleSave = (roleData) => {
 
     if(modalMode === "create"){
 
-      const newRole = createRole(roleData)
-
-      setRoles(prev => [...prev,newRole])
+      createRole(roleData)
 
     }
 
@@ -72,37 +110,38 @@ export default function RolesPage() {
 
       updateRole(roleData)
 
-      setRoles(prev =>
-        prev.map(role =>
-          role.id === roleData.id
-            ? roleData
-            : role
-        )
-      )
-
     }
 
+    /* recargar roles */
+    loadRoles()
+
   }
+
+
+  /* ======================================================
+  Activar / desactivar rol
+  ====================================================== */
 
   const handleToggleActive = (id) => {
 
     toggleRoleStatus(id)
 
-    setRoles(prev =>
-      prev.map(role =>
-        role.id === id
-          ? { ...role, active: !role.active }
-          : role
-      )
-    )
+    loadRoles()
 
   }
+
 
   return (
 
     <div className="p-6 font-lexend">
 
+      {/* ======================================================
+      Barra superior
+      ====================================================== */}
+
       <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-6 mb-10">
+
+        {/* BUSCADOR */}
 
         <div>
 
@@ -129,6 +168,9 @@ export default function RolesPage() {
 
         </div>
 
+
+        {/* BOTÓN CREAR */}
+
         <div className="flex justify-end">
 
           <ButtonComponent onClick={handleCreate}>
@@ -139,12 +181,22 @@ export default function RolesPage() {
 
       </div>
 
+
+      {/* ======================================================
+      Tabla de roles
+      ====================================================== */}
+
       <RolesTable
         roles={filteredRoles}
         onEdit={handleEdit}
         onView={handleView}
         onToggleActive={handleToggleActive}
       />
+
+
+      {/* ======================================================
+      Modal crear / editar / ver rol
+      ====================================================== */}
 
       <RoleModal
         isOpen={isModalOpen}

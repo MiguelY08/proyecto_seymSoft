@@ -1,4 +1,6 @@
-// REGEX CENTRALIZADAS
+import { emailExists, documentExists } from "../services/authService";
+
+// ─── REGEX CENTRALIZADAS ───────────────────────────────────────────
 export const patterns = {
 
   document: /^[0-9]{6,12}$/,
@@ -14,60 +16,97 @@ export const patterns = {
 };
 
 
-// VALIDACIÓN REGISTER
+// ─── VALIDACIÓN REGISTER ───────────────────────────────────────────
 export const validateRegister = (formData) => {
 
   let errors = {};
 
-  if (!formData.documentType)
+  // tipo documento
+  if (!formData.documentType) {
     errors.documentType = "Seleccione tipo de documento";
+  }
 
-  if (!patterns.document.test(formData.document))
-    errors.document = "Documento inválido (solo números)";
+  // documento formato
+  if (!patterns.document.test(formData.document)) {
+    errors.document = "Documento inválido (6-12 números)";
+  }
 
-  if (!patterns.fullName.test(formData.fullName))
+  // documento duplicado
+  if (
+    patterns.document.test(formData.document) &&
+    documentExists(formData.document)
+  ) {
+    errors.document = "Este documento ya está registrado";
+  }
+
+  // nombre
+  if (!patterns.fullName.test(formData.fullName)) {
     errors.fullName = "Nombre inválido";
+  }
 
-  if (!patterns.email.test(formData.email))
+  // email formato
+  if (!patterns.email.test(formData.email)) {
     errors.email = "Correo inválido";
+  }
 
-  if (!patterns.phone.test(formData.phone))
+  // email duplicado
+  if (
+    patterns.email.test(formData.email) &&
+    emailExists(formData.email)
+  ) {
+    errors.email = "Este correo ya está registrado";
+  }
+
+  // teléfono
+  if (!patterns.phone.test(formData.phone)) {
     errors.phone = "Teléfono inválido (10 números)";
+  }
 
-  if (!formData.address)
+  // dirección
+  if (!formData.address) {
     errors.address = "Dirección obligatoria";
+  }
 
-  if (!patterns.password.test(formData.password))
+  // contraseña
+  if (!patterns.password.test(formData.password)) {
     errors.password = "La contraseña debe tener mínimo 8 caracteres";
+  }
 
-  if (formData.password !== formData.confirmPassword)
+  // confirmar contraseña
+  if (formData.password !== formData.confirmPassword) {
     errors.confirmPassword = "Las contraseñas no coinciden";
+  }
 
-  if (!formData.terms)
+  // términos
+  if (!formData.terms) {
     errors.terms = "Debe aceptar términos";
+  }
 
   return errors;
 };
 
 
-// VALIDACIÓN LOGIN
+// ─── VALIDACIÓN LOGIN ──────────────────────────────────────────────
 export const validateLogin = (formData) => {
 
   let errors = {};
 
-  if (!patterns.email.test(formData.email))
+  if (!patterns.email.test(formData.email)) {
     errors.email = "Correo inválido";
+  }
 
-  if (!patterns.password.test(formData.password))
+  if (!patterns.password.test(formData.password)) {
     errors.password = "Contraseña inválida";
+  }
 
   return errors;
 };
 
 
-// SANITIZACIÓN DE INPUTS
+// ─── SANITIZACIÓN DE INPUTS ────────────────────────────────────────
 export const sanitizeInput = (name,value)=>{
 
+  // solo números para documento y teléfono
   if(name === "document" || name === "phone"){
     return value.replace(/\D/g,"");
   }
