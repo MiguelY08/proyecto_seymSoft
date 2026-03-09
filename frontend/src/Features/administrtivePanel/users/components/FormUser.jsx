@@ -32,21 +32,23 @@ function FormUser() {
     apellidos: userToEdit?.nombre?.split(' ').slice(2).join(' ')    ?? '',
     correo:    userToEdit?.correo    ?? '',
     telefono:  userToEdit?.telefono  ?? '',
-    rol:       userToEdit?.rol       ?? '',
+    rol:       userToEdit?.rol       ?? 'Nulo',
   });
 
   const [errors,  setErrors]  = useState({});
   const [touched, setTouched] = useState({});
 
   const tiposDocumento = ['CC', 'CE', 'NIT', 'TI', 'PP'];
-  const roles          = ['Administrador', 'Empleado', 'Cliente'];
+  const roles          = ['Nulo', 'Administrador', 'Empleado', 'Cliente'];
+
+  // tipoCliente es inmutable — siempre se lee del usuario o cae en 'Detal'
+  const tipoCliente = userToEdit?.tipoCliente ?? 'Detal';
 
   const PHONE_MIN = 7;
   const PHONE_MAX = 10;
 
   const docMinLength = { CC: 8, CE: 6, NIT: 9, TI: 10, PP: 5 };
 
-  // ─── Usuarios existentes — solo se leen una vez al montar ─────────────────
   const existingUsers = useMemo(() => UsersDB.list(), []);
 
   // ─── Validar duplicados ────────────────────────────────────────────────────
@@ -82,7 +84,6 @@ function FormUser() {
   const validateField = (name, value, currentForm = form) => {
     const v = value.trim();
     switch (name) {
-
       case 'documento': {
         const min = docMinLength[currentForm.tipo] ?? 8;
         if (!v)               return 'El documento es obligatorio.';
@@ -90,42 +91,33 @@ function FormUser() {
         if (v.length < min)   return `Mínimo ${min} dígitos para ${currentForm.tipo}.`;
         return '';
       }
-
       case 'nombres':
-        if (!v)                                return 'Los nombres son obligatorios.';
-        if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(v))      return 'Solo se permiten letras y espacios.';
-        if (v.replace(/\s+/g, '').length < 3)  return 'El nombre debe tener al menos 3 letras.';
+        if (!v)                               return 'Los nombres son obligatorios.';
+        if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(v))     return 'Solo se permiten letras y espacios.';
+        if (v.replace(/\s+/g, '').length < 3) return 'El nombre debe tener al menos 3 letras.';
         return '';
-
       case 'apellidos':
-        if (!v)                                return 'Los apellidos son obligatorios.';
-        if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(v))      return 'Solo se permiten letras y espacios.';
-        if (v.replace(/\s+/g, '').length < 3)  return 'El apellido debe tener al menos 3 letras.';
+        if (!v)                               return 'Los apellidos son obligatorios.';
+        if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(v))     return 'Solo se permiten letras y espacios.';
+        if (v.replace(/\s+/g, '').length < 3) return 'El apellido debe tener al menos 3 letras.';
         return '';
-
       case 'correo':
-        if (!v)                                         return 'El correo electrónico es obligatorio.';
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v))  return 'Ingrese un correo válido. Ej: usuario@dominio.com';
-        if (v.length < 10)                              return 'El correo parece muy corto. Verifícalo.';
+        if (!v)                                        return 'El correo electrónico es obligatorio.';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return 'Ingrese un correo válido. Ej: usuario@dominio.com';
+        if (v.length < 10)                             return 'El correo parece muy corto. Verifícalo.';
         return '';
-
       case 'telefono':
         if (!v)                   return 'El teléfono es obligatorio.';
         if (!/^\d+$/.test(v))     return 'Solo se permiten números.';
         if (v.length < PHONE_MIN) return `Mínimo ${PHONE_MIN} dígitos.`;
         if (v.length > PHONE_MAX) return `Máximo ${PHONE_MAX} dígitos.`;
         return '';
-
-      case 'rol':
-        if (!value) return 'Seleccione un rol.';
-        return '';
-
       default:
         return '';
     }
   };
 
-  // ─── handleChange: formato + duplicados en tiempo real ────────────────────
+  // ─── handleChange ─────────────────────────────────────────────────────────
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -155,7 +147,6 @@ function FormUser() {
     });
   };
 
-  // ─── Re-validar documento al cambiar tipo ─────────────────────────────────
   const handleTipoChange = (e) => {
     const updatedForm = { ...form, tipo: e.target.value };
     setForm(updatedForm);
@@ -171,8 +162,9 @@ function FormUser() {
 
   // ─── Validación completa al enviar ────────────────────────────────────────
   const validate = () => {
-    const errs = {};
-    Object.keys(form).forEach((field) => {
+    const errs   = {};
+    const fields = ['documento', 'nombres', 'apellidos', 'correo', 'telefono'];
+    fields.forEach((field) => {
       const e = validateField(field, form[field]);
       if (e) errs[field] = e;
     });
@@ -183,7 +175,7 @@ function FormUser() {
     return errs;
   };
 
-  // ─── Guardar vía servicio ──────────────────────────────────────────────────
+  // ─── Guardar ──────────────────────────────────────────────────────────────
   const handleSubmit = () => {
     const allTouched = Object.keys(form).reduce((acc, k) => ({ ...acc, [k]: true }), {});
     setTouched(allTouched);
@@ -196,6 +188,7 @@ function FormUser() {
     }
 
     const nombre = `${form.nombres.trim()} ${form.apellidos.trim()}`.trim();
+    const rol    = form.rol || 'Nulo';
 
     if (isEditing) {
       UsersDB.update(userToEdit.id, {
@@ -204,7 +197,8 @@ function FormUser() {
         nombre,
         correo:    form.correo,
         telefono:  form.telefono,
-        rol:       form.rol,
+        rol,
+        // tipoCliente no se envía — el servicio lo conserva intacto
       });
       showSuccess('Usuario actualizado', 'Los datos del usuario han sido actualizados.');
       navigate(returnTo, {
@@ -217,7 +211,8 @@ function FormUser() {
         nombre,
         correo:    form.correo,
         telefono:  form.telefono,
-        rol:       form.rol,
+        rol,
+        // tipoCliente lo asigna create() automáticamente como 'Detal'
       });
       showSuccess('Usuario creado', 'El nuevo usuario ha sido registrado exitosamente.');
       navigate(returnTo, {
@@ -233,13 +228,13 @@ function FormUser() {
       const nombresOriginal   = nombreOriginal.split(' ').slice(0, 2).join(' ');
       const apellidosOriginal = nombreOriginal.split(' ').slice(2).join(' ');
       return (
-        form.tipo      !== (userToEdit.tipo      ?? 'CC') ||
-        form.documento !== (userToEdit.documento  ?? '')   ||
-        form.nombres   !== nombresOriginal                 ||
-        form.apellidos !== apellidosOriginal               ||
-        form.correo    !== (userToEdit.correo     ?? '')   ||
-        form.telefono  !== (userToEdit.telefono   ?? '')   ||
-        form.rol       !== (userToEdit.rol        ?? '')
+        form.tipo      !== (userToEdit.tipo      ?? 'CC')   ||
+        form.documento !== (userToEdit.documento  ?? '')     ||
+        form.nombres   !== nombresOriginal                   ||
+        form.apellidos !== apellidosOriginal                 ||
+        form.correo    !== (userToEdit.correo     ?? '')     ||
+        form.telefono  !== (userToEdit.telefono   ?? '')     ||
+        form.rol       !== (userToEdit.rol        ?? 'Nulo')
       );
     }
     return (
@@ -247,8 +242,7 @@ function FormUser() {
       form.nombres.trim()   !== '' ||
       form.apellidos.trim() !== '' ||
       form.correo.trim()    !== '' ||
-      form.telefono.trim()  !== '' ||
-      form.rol              !== ''
+      form.telefono.trim()  !== ''
     );
   })();
 
@@ -445,10 +439,11 @@ function FormUser() {
             <ErrorMsg field="telefono" />
           </div>
 
-          {/* Rol */}
+          {/* Rol — opcional, por defecto Nulo */}
           <div className="flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
-              Rol<span className="text-red-500">*</span>
+              Rol
+              <span className="ml-1.5 text-xs text-gray-400 font-normal">(opcional — se asignará desde el módulo de Roles)</span>
             </label>
             <div className="relative">
               <select
@@ -457,13 +452,23 @@ function FormUser() {
                 onChange={handleChange}
                 className={selectClass('rol')}
               >
-                <option value="" disabled>Seleccione un rol</option>
                 {roles.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
             </div>
-            <ErrorMsg field="rol" />
           </div>
+
+          {/* Tipo de cliente — inmutable, gestionado desde el módulo de clientes */}
+          <div className="flex flex-col gap-1.5">
+            <label className="block text-sm font-medium text-gray-700">
+              Tipo de cliente
+              <span className="ml-1.5 text-xs text-gray-400 font-normal">(se gestiona desde el módulo de clientes)</span>
+            </label>
+            <div className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed select-none">
+              {tipoCliente}
+            </div>
+          </div>
+
         </div>
 
         {/* ── Footer ────────────────────────────────────────────────────── */}

@@ -52,6 +52,7 @@ import OrdersA from "../../Features/administrtivePanel/sales/orders/pages/Orders
 import Sales from "../../Features/administrtivePanel/sales/sales/pages/Sales.jsx";
 import SaleForm from "../../Features/administrtivePanel/sales/sales/pages/SaleForm.jsx";
 import SaleInfo from "../../Features/administrtivePanel/sales/sales/components/SaleInfo.jsx";
+import AnnularSale from "../../Features/administrtivePanel/sales/sales/components/AnnularSale.jsx"
 
 import ReturnsS from "../../Features/administrtivePanel/sales/returns/Returns.jsx";
 
@@ -126,6 +127,7 @@ const AppRouter = () => {
           <Route path="sales" element={<Sales />} />
           <Route path="sales/form-sale" element={<SaleForm />} />
           <Route path="sales/info-sale" element={<SaleInfo />} />
+          <Route path="sales/annular-sale" element={<AnnularSale />} />
 
           <Route path="sales/clients" element={<Clients />} />
           <Route path="sales/orders" element={<OrdersA />} />
