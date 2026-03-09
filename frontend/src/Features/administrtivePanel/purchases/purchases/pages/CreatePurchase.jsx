@@ -4,8 +4,9 @@ import { Link, useNavigate } from "react-router-dom";
 import CreateSidebar from "../Components/CreatePurchaseSideBar";
 import CreatePagination from "../Components/CreatePagination";
 import CreateTable from "../Components/TableCreate";
-
+import CreateProduct from "../../products/modals/CreateProduct";
 import { useAlert } from "../../../../shared/alerts/useAlert";
+import FormProvider from "../../providers/FormProvider";
 
 const CreatePurchase = () => {
   const navigate = useNavigate();
@@ -18,6 +19,12 @@ const CreatePurchase = () => {
   const [quantity, setQuantity] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   const [purchaseItems, setPurchaseItems] = useState([]);
+  const [invoiceTouched, setInvoiceTouched] = useState(false);
+  const [dateTouched, setDateTouched] = useState(false);
+  const [providerTouched, setProviderTouched] = useState(false);
+  const [showCreateProduct, setShowCreateProduct] = useState(false);
+  const [isFormModalOpen, setIsFormModalOpen]   = useState(false);
+  const [selectedProviderData, setSelectedProviderData] = useState(null);
 
   const handleCancelPurchase = async () => {
     if (purchaseItems.length > 0) {
@@ -34,9 +41,18 @@ const CreatePurchase = () => {
       if (!result?.isConfirmed) return;
     }
 
-    navigate("/compras");
+    navigate("/admin/purchases");
   };
 
+  const handleSave = (formData) => {
+  showSuccess(
+    "Proveedor creado",
+    "El proveedor se creó correctamente"
+  );
+
+  setSelectedProvider(`${formData.nombres} ${formData.apellidos}`);
+  setIsFormModalOpen(false);
+};
   const productsDB = [
     { id: 100, producto: "Cuaderno Norma", codigoBarras: "444555666", proveedor: "Papelería El Punto Escolar", valorUnit: 8000, iva: 19 },
     { id: 101, producto: "Borrador Nata", codigoBarras: "123123123", proveedor: "Papelería El Punto Escolar", valorUnit: 1200, iva: 19 },
@@ -79,7 +95,12 @@ const CreatePurchase = () => {
     showSuccess("Producto eliminado", "El producto fue eliminado correctamente");
   };
 
-  // 🔥 AQUÍ ESTÁ LA MODIFICACIÓN IMPORTANTE
+  // 🔥 SOLO SE QUITÓ LA ALERTA AQUÍ
+  const handleCreateProduct = (newProduct) => {
+    console.log("Producto creado:", newProduct);
+    setShowCreateProduct(false);
+  };
+
   const handleAddProduct = async () => {
     if (!searchProduct) {
       showWarning("Producto requerido", "Debes escribir un producto o código");
@@ -101,7 +122,6 @@ const CreatePurchase = () => {
       (item) => item.codigoBarras === foundProduct.codigoBarras
     );
 
-    // ✅ SI YA EXISTE → SUMAR CANTIDAD
     if (existingItem) {
       const updatedItems = purchaseItems.map((item) => {
         if (item.codigoBarras === foundProduct.codigoBarras) {
@@ -124,7 +144,6 @@ const CreatePurchase = () => {
       setPurchaseItems(updatedItems);
       showSuccess("Cantidad actualizada", "Se sumó la cantidad al producto existente");
     } else {
-      // ✅ SI NO EXISTE → AGREGAR NORMAL
       const subtotal = foundProduct.valorUnit * quantity;
       const ivaValor = (subtotal * foundProduct.iva) / 100;
       const total = subtotal + ivaValor;
@@ -151,22 +170,16 @@ const CreatePurchase = () => {
   };
 
   const handleSavePurchase = async () => {
-    if (!selectedProvider) {
-      showWarning("Proveedor requerido", "Debes seleccionar un proveedor");
-      return;
-    }
 
-    if (!invoiceNumber.trim()) {
-      showWarning("Factura requerida", "Debes ingresar el número de factura");
-      return;
-    }
+    setInvoiceTouched(true);
+    setDateTouched(true);
+    setProviderTouched(true);
 
-    if (!purchaseDate) {
-      showWarning("Fecha requerida", "Debes seleccionar la fecha de compra");
+    if (!selectedProvider || !invoiceNumber.trim() || !purchaseDate) {
+      showWarning("Campos incompletos", "Llena todos los campos");
       return;
-    }
-
-    if (purchaseItems.length === 0) {
+    } 
+    else if (purchaseItems.length === 0) {
       showWarning("Compra vacía", "Agrega al menos un producto");
       return;
     }
@@ -190,6 +203,10 @@ const CreatePurchase = () => {
     setInvoiceNumber("");
     setPurchaseDate("");
     setCurrentPage(1);
+
+    setInvoiceTouched(false);
+    setDateTouched(false);
+    setProviderTouched(false);
   };
 
   return (
@@ -212,6 +229,14 @@ const CreatePurchase = () => {
             handleQuantityChange={handleQuantityChange}
             handleAddProduct={handleAddProduct}
             purchaseItems={purchaseItems}
+            invoiceTouched={invoiceTouched}
+            setInvoiceTouched={setInvoiceTouched}
+            dateTouched={dateTouched}
+            setDateTouched={setDateTouched}
+            providerTouched={providerTouched}
+            setProviderTouched={setProviderTouched}
+            openCreateProduct={() => setShowCreateProduct(true)}
+            isFormModalOpen={() => setIsFormModalOpen(true)}
           />
         </div>
 
@@ -265,6 +290,18 @@ const CreatePurchase = () => {
           </div>
         </div>
       </div>
+
+      <CreateProduct
+        isOpen={showCreateProduct}
+        onClose={() => setShowCreateProduct(false)}
+        onCreate={handleCreateProduct}
+      />
+       <FormProvider
+        isOpen={isFormModalOpen}
+        onClose={() => setIsFormModalOpen(false)}
+        provider={selectedProviderData}
+        onSave={handleSave}
+      />
     </div>
   );
 };

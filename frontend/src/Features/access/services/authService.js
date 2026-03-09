@@ -5,7 +5,7 @@ import { flattenPermissions } from "../../administrtivePanel/configuration/roles
 const USERS_KEY = "users";
 
 
-// Obtener todos los usuarios
+// ─── Obtener todos los usuarios ────────────────────────────────────
 export const getUsers = () => {
 
   try {
@@ -27,7 +27,7 @@ export const getUsers = () => {
 };
 
 
-// Guardar usuarios
+// ─── Guardar usuarios ──────────────────────────────────────────────
 export const saveUsers = (users) => {
 
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
@@ -35,18 +35,42 @@ export const saveUsers = (users) => {
 };
 
 
-// Registrar usuario
+// ─── Verificar si un correo ya existe ──────────────────────────────
+export const emailExists = (email) => {
+
+  const users = getUsers();
+
+  return users.some(
+    user =>
+      user.email.trim().toLowerCase() === email.trim().toLowerCase()
+  );
+
+};
+
+
+// ─── Verificar si un documento ya existe ───────────────────────────
+export const documentExists = (document) => {
+
+  const users = getUsers();
+
+  return users.some(
+    user => user.document === document
+  );
+
+};
+
+
+// ─── Registrar usuario ─────────────────────────────────────────────
 export const registerUser = (userData) => {
 
   const users = getUsers();
 
-  const emailExists = users.some(
-    (user) =>
-      user.email.trim().toLowerCase() === userData.email.trim().toLowerCase()
-  );
-
-  if (emailExists) {
+  if (emailExists(userData.email)) {
     throw new Error("El correo ya está registrado");
+  }
+
+  if (documentExists(userData.document)) {
+    throw new Error("El documento ya está registrado");
   }
 
   const newUser = {
@@ -72,22 +96,16 @@ export const registerUser = (userData) => {
 };
 
 
-// Login
+// ─── Login ─────────────────────────────────────────────────────────
 export const loginUser = (email, password) => {
 
   const users = getUsers();
-
-  console.log("EMAIL INGRESADO:", email);
-  console.log("PASSWORD INGRESADO:", password);
-  console.log("USERS:", users);
 
   const user = users.find(
     (u) =>
       u.email.trim().toLowerCase() === email.trim().toLowerCase() &&
       u.password.trim() === password.trim()
   );
-
-  console.log("USER FOUND:", user);
 
   if (!user) {
     throw new Error("Correo o contraseña incorrectos");
@@ -123,8 +141,6 @@ export const loginUser = (email, password) => {
     },
     token: Date.now()
   };
-
-  console.log("SESSION RETURN:", session);
 
   return session;
 };

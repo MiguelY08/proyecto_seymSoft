@@ -6,20 +6,39 @@ import { loginUser } from "../services/authService";
 import { saveSession } from "../helpers/authStorage";
 import { validateLogin } from "../validators/authValidators";
 import { useAuth } from "../context/AuthContext";
+import { useAlert } from "../../shared/alerts/useAlert";
 
 export default function LoginForm() {
 
+  // ─── Contexto de autenticación ─────────────────────────────────────────────
+  // Permite guardar el usuario autenticado en el contexto global
   const { setUser } = useAuth();
+
+  // ─── Navegación entre rutas ────────────────────────────────────────────────
   const navigate = useNavigate();
 
+  // ─── Sistema de alertas compartido ─────────────────────────────────────────
+  const { showError, showSuccess, showWarning } = useAlert();
+
+  // ─── Control de visibilidad de contraseña ──────────────────────────────────
   const [showPassword, setShowPassword] = useState(false);
 
+  // ─── Estado del formulario ─────────────────────────────────────────────────
   const [formData, setFormData] = useState({
     email: "",
     password: ""
   });
 
+  // ─── Estado de errores de validación ───────────────────────────────────────
   const [errors, setErrors] = useState({});
+
+
+  /* ========================================================================== 
+     handleChange
+     Se ejecuta cada vez que el usuario escribe en un input.
+     - Actualiza el estado del formulario
+     - Ejecuta validación en tiempo real
+  ========================================================================== */
 
   const handleChange = (e) => {
 
@@ -32,50 +51,92 @@ export default function LoginForm() {
 
     setFormData(updatedForm);
 
-    // validación en tiempo real
+    // validar solo el campo modificado
     const validationErrors = validateLogin(updatedForm);
 
-    setErrors(validationErrors);
+    setErrors((prev) => ({
+      ...prev,
+      [name]: validationErrors[name]
+    }));
   };
+
+
+  /* ========================================================================== 
+     handleSubmit
+     Se ejecuta cuando el usuario envía el formulario.
+     Flujo:
+     1. Validar campos
+     2. Intentar login
+     3. Guardar sesión
+     4. Actualizar contexto
+     5. Redirigir al dashboard
+  ========================================================================== */
 
   const handleSubmit = (e) => {
 
-  e.preventDefault();
+    e.preventDefault();
 
-  const validationErrors = validateLogin(formData);
+    // validar formulario completo antes de enviar
+    const validationErrors = validateLogin(formData);
 
-  if (Object.keys(validationErrors).length > 0) {
-    setErrors(validationErrors);
-    return;
-  }
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
 
-  try {
+      showWarning(
+        "Campos incompletos",
+        "Por favor corrige los campos del formulario"
+      );
 
-    const session = loginUser(
-      formData.email,
-      formData.password
-    );
+      return;
+    }
 
-    console.log("SESSION GENERADA:", session);
+    try {
 
-    // guardar sesión completa
-    saveSession(session);
+      // intentar autenticar usuario
+      const session = loginUser(
+        formData.email,
+        formData.password
+      );
 
-    // actualizar contexto
-    setUser(session.user);
+      console.log("SESSION GENERADA:", session);
 
-    // redirigir al panel
-    navigate("/admin");
+      // guardar sesión en almacenamiento
+      saveSession(session);
 
-  } catch (error) {
+      // actualizar contexto global
+      setUser(session.user);
 
-    setErrors({
-      general: error.message
-    });
+      // alerta de éxito
+      showSuccess(
+        "Inicio de sesión exitoso",
+        `Bienvenido ${session.user.nombre}`
+      );
 
-  }
+      // redirigir al panel administrativo
+      navigate("/admin");
 
-};
+    } catch (error) {
+
+      // mostrar alerta si credenciales son incorrectas
+      showError(
+        "Error de autenticación",
+        error.message
+      );
+
+      setErrors({
+        general: error.message
+      });
+
+    }
+
+  };
+
+
+  /* ========================================================================== 
+     inputStyle
+     Genera estilos dinámicos para inputs dependiendo si tienen error.
+  ========================================================================== */
+
   const inputStyle = (field) =>
     `w-full px-3 py-2 border rounded-lg text-sm outline-none
     ${errors[field]
@@ -83,10 +144,12 @@ export default function LoginForm() {
       : "focus:ring-2 focus:ring-blue-600"
     }`;
 
+
   return (
 
     <div className="w-full md:w-1/2 p-6 flex flex-col justify-center">
 
+      {/* ─── Título del sistema ───────────────────────────────────────────── */}
       <h2 className="font-lexend text-xl md:text-2xl font-semibold mb-2 text-gray-800 text-center">
         Papelería Magic
       </h2>
@@ -102,7 +165,7 @@ export default function LoginForm() {
 
         <div className="flex flex-col gap-4">
 
-          {/* Email */}
+          {/* ─── Campo correo ───────────────────────────────────────────── */}
           <div>
 
             <label className="block mb-1 text-sm font-medium text-gray-700">
@@ -126,7 +189,7 @@ export default function LoginForm() {
 
           </div>
 
-          {/* Password */}
+          {/* ─── Campo contraseña ───────────────────────────────────────── */}
           <div className="relative">
 
             <label className="block mb-1 text-sm font-medium text-gray-700">
@@ -142,6 +205,7 @@ export default function LoginForm() {
               className={inputStyle("password")}
             />
 
+            {/* botón mostrar contraseña */}
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
@@ -160,14 +224,14 @@ export default function LoginForm() {
 
         </div>
 
-        {/* Error general */}
+        {/* ─── Error general ───────────────────────────────────────────── */}
         {errors.general &&
           <p className="text-red-500 text-xs mt-3 text-center">
             {errors.general}
           </p>
         }
 
-        {/* Recordar */}
+        {/* ─── Opciones extra ─────────────────────────────────────────── */}
         <div className="flex items-center justify-between text-xs mt-4">
 
           <label className="flex items-center gap-2">
@@ -184,7 +248,7 @@ export default function LoginForm() {
 
         </div>
 
-        {/* Botón */}
+        {/* ─── Botón login ───────────────────────────────────────────── */}
         <button
           type="submit"
           className="w-full bg-blue-900 text-white py-2 rounded-lg hover:bg-blue-800 transition cursor-pointer mt-4 text-sm"
@@ -192,7 +256,7 @@ export default function LoginForm() {
           Ingresar
         </button>
 
-        {/* Registro */}
+        {/* ─── Registro ─────────────────────────────────────────────── */}
         <div className="text-center text-xs mt-3">
 
           ¿No tienes cuenta?{" "}

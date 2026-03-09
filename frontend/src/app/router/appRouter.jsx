@@ -29,12 +29,15 @@ import ShoppingCart from "../../Features/landing/shoppingCart/ShoppingCart.jsx";
 import AdminLayout from "../../Features/layouts/AdminLayout";
 import DashboardPage from "../../Features/layouts/DashboardPage";
 
-import Indicators from "../../Features/administrtivePanel/performance/indicators/Indicators.jsx";
+
 
 /* USERS */
 import Users from "../../Features/administrtivePanel/users/pages/Users.jsx";
 import FormUser from "../../Features/administrtivePanel/users/components/FormUser.jsx";
 import InfoUser from "../../Features/administrtivePanel/users/components/InfoUser.jsx";
+
+//*INDICATORS */
+import IndicatorsPage from "../../Features/administrtivePanel/performance/indicators/pages/IndicatorsPage.jsx";
 
 /* PURCHASES */
 import Categories from "../../Features/administrtivePanel/purchases/categories/pages/Categories.jsx";
@@ -66,6 +69,7 @@ import Banners from "../../Features/administrtivePanel/configuration/carousel/pa
 /* PRODUCTS */
 import FormProduct from "../../Features/administrtivePanel/purchases/products/modals/CreateProduct.jsx";
 import EditProduct from "../../Features/administrtivePanel/purchases/products/modals/EditProduct.jsx";
+
 
 const AppRouter = () => {
   return (
@@ -107,7 +111,7 @@ const AppRouter = () => {
           <Route index element={<DashboardPage />} />
 
           {/* PERFORMANCE */}
-          <Route path="indicators" element={<Indicators />} />
+          <Route path="dashboard" element={<IndicatorsPage/>} />
 
           {/* USERS */}
           <Route path="users" element={<Users />} />
