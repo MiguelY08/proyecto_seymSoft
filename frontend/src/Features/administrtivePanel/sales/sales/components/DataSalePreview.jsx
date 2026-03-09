@@ -39,7 +39,7 @@ function DetailRow({ label, value, placeholder }) {
 }
 
 // ─── DataSalePreview ──────────────────────────────────────────────────────────
-function DataSalePreview({ form, items, facturaNo }) {
+function DataSalePreview({ form, items, facturaNo, isAnulada = false, motivoAnulacion = '', fechaAnulacion = '' }) {
   const users = loadUsers();
 
   const cliente  = useMemo(() => users.find((u) => String(u.id) === String(form?.clienteId)),  [form?.clienteId]);
@@ -84,6 +84,18 @@ function DataSalePreview({ form, items, facturaNo }) {
             <DetailRow label="Estado"         value={form?.estado}          placeholder="(Elija el estado)"        />
             <DetailRow label="Entrega"        value={form?.entrega}         placeholder="(Elija una opción)"       />
             <DetailRow label="Dirección"      value={form?.direccion}       placeholder="(Sin dirección)"          />
+            {isAnulada && (
+              <>
+                <DetailRow
+                  label="Motivo de anulación"
+                  value={motivoAnulacion || 'Sin motivo registrado.'}
+                  placeholder="—"
+                />
+                {fechaAnulacion && (
+                  <DetailRow label="Fecha de anulación" value={fechaAnulacion} placeholder="—" />
+                )}
+              </>
+            )}
           </div>
 
           {/* ── Columna derecha: Detalles del pedido ──────────────────── */}

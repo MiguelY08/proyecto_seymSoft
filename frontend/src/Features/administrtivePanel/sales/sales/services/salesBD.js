@@ -252,11 +252,20 @@ export const SalesDB = {
   },
 
   // ── Anular venta ──────────────────────────────────────────────────────────
-  anular(saleId) {
+  anular(saleId, motivo = '') {
     const sales = this.list();
     const sale  = sales.find((s) => s.id === saleId);
     const updated = sales.map((s) =>
-      s.id === saleId ? { ...s, estado: 'Anulada' } : s
+      s.id === saleId
+        ? {
+            ...s,
+            estado:          'Anulada',
+            motivoAnulacion: motivo.trim() || 'Sin motivo registrado.',
+            fechaAnulacion:  new Date().toLocaleDateString('es-CO', {
+              day: '2-digit', month: '2-digit', year: 'numeric',
+            }),
+          }
+        : s
     );
     this._save(updated);
     if (sale?.items) ProductsDB.restoreStock(sale.items);

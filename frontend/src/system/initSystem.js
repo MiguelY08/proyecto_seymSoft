@@ -58,7 +58,6 @@ export const initSystem = () => {
       role: "Administrador",
       clientType: "Interno",
       createdAt: new Date().toISOString()
-
     }
 
     saveUsers([adminUser])

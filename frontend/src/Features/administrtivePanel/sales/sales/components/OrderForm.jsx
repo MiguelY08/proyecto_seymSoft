@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, Package, Trash2, ShoppingBag, Plus, Minus } from 'lucide-react';
+import { Search, Package, Trash2, ShoppingBag, Plus, Minus, Barcode } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import { ProductsDB } from '../services/productsBD';
 
@@ -30,6 +30,14 @@ function ProductCard({ item, onQuantityChange, onRemove, isEditing }) {
       {/* Info + controles */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-800 truncate">{product.nombre}</p>
+
+        {/* Código de barras */}
+        {product.codigoBarras && (
+          <p className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
+            <Barcode className="w-3 h-3" strokeWidth={1.5} />
+            {product.codigoBarras}
+          </p>
+        )}
 
         <div className="flex items-center gap-2 mt-1.5">
           <span className="text-xs text-gray-400 font-medium">Cantidad</span>
@@ -112,7 +120,7 @@ function OrderForm({ items, onItemsChange, isEditing }) {
   // Cargar catálogo desde el servicio
   const [allProducts, setAllProducts] = useState(() => ProductsDB.list());
 
-  // Refrescar catálogo al enfocar la ventana (por si cambió el stock)
+  // Refrescar catálogo al enfocar la ventana
   useEffect(() => {
     const sync = () => setAllProducts(ProductsDB.list());
     window.addEventListener('focus', sync);
@@ -129,7 +137,7 @@ function OrderForm({ items, onItemsChange, isEditing }) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // ─── Filtro del buscador ──────────────────────────────────────────────────
+  // ─── Filtro del buscador — incluye código de barras ───────────────────────
   const filteredProducts = useMemo(() => {
     const term = query.toLowerCase().trim();
     if (!term) return allProducts;
@@ -138,7 +146,8 @@ function OrderForm({ items, onItemsChange, isEditing }) {
       p.proveedor.toLowerCase().includes(term)                      ||
       p.categorias.some((c) => c.toLowerCase().includes(term))      ||
       String(p.precioDetal).includes(term)                          ||
-      String(p.stock).includes(term)
+      String(p.stock).includes(term)                                ||
+      (p.codigoBarras && p.codigoBarras.includes(term))             // ← búsqueda por código de barras
     );
   }, [query, allProducts]);
 
@@ -187,6 +196,9 @@ function OrderForm({ items, onItemsChange, isEditing }) {
     onItemsChange(items.filter((i) => i.product.id !== productId));
   };
 
+  // ─── Determinar si la query es un código de barras exacto ────────────────
+  const isBarcodeSearch = /^\d{8,13}$/.test(query.trim());
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
 
@@ -200,7 +212,7 @@ function OrderForm({ items, onItemsChange, isEditing }) {
           <p className="text-xs text-gray-400">
             {isEditing
               ? 'Puedes modificar las cantidades de los productos'
-              : 'Busque y elija los productos y las cantidades del pedido'}
+              : 'Busque por nombre, categoría o código de barras'}
           </p>
         </div>
       </div>
@@ -217,10 +229,15 @@ function OrderForm({ items, onItemsChange, isEditing }) {
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setDropdownOpen(true); }}
                 onFocus={() => setDropdownOpen(true)}
-                placeholder="Buscar producto, proveedor, categoría..."
+                placeholder="Buscar producto, proveedor, categoría o código de barras..."
                 className="w-full pl-4 pr-10 py-2.5 text-sm border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 text-gray-700 placeholder-gray-400"
               />
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" strokeWidth={2} />
+              {/* Ícono: lupa normal o barras si parece código de barras */}
+              {isBarcodeSearch ? (
+                <Barcode className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#004D77]" strokeWidth={2} />
+              ) : (
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" strokeWidth={2} />
+              )}
             </div>
 
             {dropdownOpen && (
@@ -246,8 +263,8 @@ function OrderForm({ items, onItemsChange, isEditing }) {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-800 truncate">{product.nombre}</p>
-                            <p className="text-[10px] text-gray-400">
-                              Stock: {product.stock} · {formatPrice(product.precioDetal)}
+                            <p className="text-[10px] text-gray-400 font-mono">
+                              {product.codigoBarras} · Stock: {product.stock} · {formatPrice(product.precioDetal)}
                             </p>
                           </div>
                           {alreadyAdded && (
@@ -261,7 +278,9 @@ function OrderForm({ items, onItemsChange, isEditing }) {
                     })
                   ) : (
                     <li className="px-4 py-4 text-sm text-gray-400 text-center">
-                      No se encontraron productos
+                      {isBarcodeSearch
+                        ? `No se encontró ningún producto con el código "${query.trim()}"`
+                        : 'No se encontraron productos'}
                     </li>
                   )}
                 </ul>

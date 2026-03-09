@@ -100,7 +100,7 @@ function TopBar({ search, onSearchChange }) {
           title="Descargar"
           className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-sky-700 rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
         >
-          <span className="hidden sm:inline">Descargar</span>
+          <span className="hidden sm:inline">Exportar Excel</span>
           <Download className="w-4 h-4" strokeWidth={1.8} />
         </button>
         <button
