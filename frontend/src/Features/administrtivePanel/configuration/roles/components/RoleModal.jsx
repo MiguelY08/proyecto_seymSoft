@@ -2,6 +2,9 @@ import { useEffect, useState } from "react"
 import { X } from "lucide-react"
 import PermissionsGrid from "./PermissionsGrid"
 import { permissionsList } from "../permissions/permissionsList"
+import { validateRole } from "../validators/rolesValidators"
+import { useAlert } from "../../../../shared/alerts/useAlert"
+import { getRoles } from "../services/rolesServices"
 
 export default function RoleModal({
   isOpen,
@@ -11,21 +14,27 @@ export default function RoleModal({
   mode = "create"
 }) {
 
+  const { showSuccess, showWarning } = useAlert()
+
   const isView = mode === "view"
 
   const today = new Date().toLocaleDateString()
 
-  const [nombre, setNombre] = useState("")
-  const [descripcion, setDescripcion] = useState("")
-  const [permisosRol, setPermisosRol] = useState([])
+  const [nombre,setNombre] = useState("")
+  const [descripcion,setDescripcion] = useState("")
+  const [permisosRol,setPermisosRol] = useState([])
 
-  /* =================================
-     Cargar datos según modo
-  ================================= */
+  const [errors,setErrors] = useState({})
 
-  useEffect(() => {
 
-    if ((mode === "edit" || mode === "view") && roleData) {
+
+  /* ======================================================
+  Cargar datos según modo
+  ====================================================== */
+
+  useEffect(()=>{
+
+    if((mode === "edit" || mode === "view") && roleData){
 
       setNombre(roleData.name || "")
       setDescripcion(roleData.description || "")
@@ -33,7 +42,7 @@ export default function RoleModal({
 
     }
 
-    if (mode === "create") {
+    if(mode === "create"){
 
       setNombre("")
       setDescripcion("")
@@ -41,54 +50,236 @@ export default function RoleModal({
 
     }
 
-  }, [roleData, mode])
+    setErrors({})
 
-  if (!isOpen) return null
+  },[roleData,mode])
 
-  /* =================================
-     Guardar rol
-  ================================= */
 
-  const handleSubmit = () => {
+  if(!isOpen) return null
 
-    if (isView) return
+
+
+  /* ======================================================
+  Validación nombre en tiempo real
+  ====================================================== */
+
+  const handleNombreChange = (value)=>{
+
+    setNombre(value)
+
+    const validation = validateRole({
+      name:value,
+      description:descripcion,
+      permissions:permisosRol
+    })
+
+    setErrors(prev=>({
+      ...prev,
+      name:validation.name || ""
+    }))
+
+  }
+
+
+
+  /* ======================================================
+  Validación descripción en tiempo real
+  ====================================================== */
+
+  const handleDescripcionChange = (value)=>{
+
+    setDescripcion(value)
+
+    const validation = validateRole({
+      name:nombre,
+      description:value,
+      permissions:permisosRol
+    })
+
+    setErrors(prev=>({
+      ...prev,
+      description:validation.description || ""
+    }))
+
+  }
+
+
+
+  /* ======================================================
+  Cambio de permisos
+  ====================================================== */
+
+  const handlePermissionsChange = (permisos)=>{
+
+    setPermisosRol(permisos)
+
+    const validation = validateRole({
+      name:nombre,
+      description:descripcion,
+      permissions:permisos
+    })
+
+    setErrors(prev=>({
+      ...prev,
+      permissions:validation.permissions || ""
+    }))
+
+  }
+
+
+
+  /* ======================================================
+  Normalizar permisos para comparar roles
+  ====================================================== */
+
+const normalizePermissions = (perms) => {
+
+  return JSON.stringify(
+
+    perms
+      .map(p => ({
+        id: p.id,
+        acciones: Object.keys(p.acciones)
+          .filter(a => p.acciones[a])
+          .sort()
+      }))
+
+      // ordenar módulos por id correctamente
+      .sort((a,b) => a.id - b.id)
+
+  )
+
+}
+
+
+
+  /* ======================================================
+  Validar duplicación de permisos
+  ====================================================== */
+
+  const rolePermissionsAlreadyExist = ()=>{
+
+    const roles = getRoles()
+
+    const newPermissions = normalizePermissions(permisosRol)
+
+    return roles.find(role=>{
+
+      if(role.id === roleData?.id) return false
+
+      const existingPermissions =
+        normalizePermissions(role.permisos)
+
+      return existingPermissions === newPermissions
+
+    })
+
+  }
+
+
+
+  /* ======================================================
+  Guardar rol
+  ====================================================== */
+
+  const handleSubmit = ()=>{
+
+    if(isView) return
+
+    const validationErrors = validateRole({
+      name:nombre,
+      description:descripcion,
+      permissions:permisosRol
+    })
+
+    if(Object.keys(validationErrors).length > 0){
+
+      setErrors(validationErrors)
+
+      showWarning(
+        "Campos incompletos",
+        "Revisa la información del rol"
+      )
+
+      return
+
+    }
+
+
+    /* validar permisos duplicados */
+
+    const duplicateRole = rolePermissionsAlreadyExist()
+
+    if(duplicateRole){
+
+      showWarning(
+        "Rol duplicado",
+        `Este conjunto de permisos ya pertenece al rol "${duplicateRole.name}"`
+      )
+
+      return
+
+    }
+
 
     const payload = {
 
-      id: roleData?.id,
+      id:roleData?.id,
 
-      name: nombre.trim(),
+      name:nombre.trim(),
 
-      description: descripcion.trim(),
+      description:descripcion.trim(),
 
-      active: roleData?.active ?? true,
+      active:roleData?.active ?? true,
 
-      createdAt: roleData?.createdAt || today,
+      createdAt:roleData?.createdAt || today,
 
-      permisos: permisosRol
+      permisos:permisosRol
 
     }
 
     onSave(payload)
 
+
+
+    if(mode === "create"){
+
+      showSuccess(
+        "Rol creado",
+        "El rol fue registrado correctamente"
+      )
+
+    }
+
+    if(mode === "edit"){
+
+      showSuccess(
+        "Rol actualizado",
+        "Los cambios del rol fueron guardados"
+      )
+
+    }
+
     onClose()
 
   }
+
+
 
   return (
 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
 
-      {/* OVERLAY */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* MODAL */}
       <div className="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-xl shadow-2xl flex flex-col font-lexend z-10">
 
+
         {/* HEADER */}
+
         <div className="bg-[#0E5676] text-white px-6 py-4 flex justify-between items-center rounded-t-xl">
 
           <h2 className="text-lg font-semibold">
@@ -100,53 +291,64 @@ export default function RoleModal({
           </h2>
 
           <button onClick={onClose}>
-            <X size={22} />
+            <X size={22}/>
           </button>
 
         </div>
 
+
+
         {/* BODY */}
+
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
 
-          {/* FORM */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-            {/* IZQUIERDA */}
-            <div className="space-y-6">
 
-              <div>
+            {/* Nombre */}
 
-                <label className="text-sm font-medium">
-                  Nombre del Rol
-                </label>
+            <div>
 
-                <input
-                  value={nombre}
-                  disabled={isView}
-                  onChange={(e) => setNombre(e.target.value)}
-                  className="w-full mt-2 border border-gray-400 rounded-lg px-4 py-2 text-sm focus:outline-blue-600"
-                />
+              <label className="text-sm font-medium">
+                Nombre del Rol
+              </label>
 
-              </div>
+              <input
+                value={nombre}
+                disabled={isView}
+                onChange={(e)=>handleNombreChange(e.target.value)}
+                className="w-full mt-2 border border-gray-400 rounded-lg px-4 py-2 text-sm focus:outline-blue-600"
+              />
 
-              <div>
-
-                <label className="text-sm font-medium">
-                  Fecha de Creación
-                </label>
-
-                <input
-                  value={roleData?.createdAt || today}
-                  disabled
-                  className="w-full mt-2 bg-gray-200 rounded-lg px-4 py-2 text-sm"
-                />
-
-              </div>
+              {errors.name &&(
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.name}
+                </p>
+              )}
 
             </div>
 
-            {/* DERECHA */}
+
+            {/* Fecha */}
+
             <div>
+
+              <label className="text-sm font-medium">
+                Fecha de Creación
+              </label>
+
+              <input
+                value={roleData?.createdAt || today}
+                disabled
+                className="w-full mt-2 bg-gray-200 rounded-lg px-4 py-2 text-sm"
+              />
+
+            </div>
+
+
+            {/* Descripción */}
+
+            <div className="md:col-span-2">
 
               <label className="text-sm font-medium">
                 Descripción
@@ -156,15 +358,23 @@ export default function RoleModal({
                 rows="4"
                 value={descripcion}
                 disabled={isView}
-                onChange={(e) => setDescripcion(e.target.value)}
+                onChange={(e)=>handleDescripcionChange(e.target.value)}
                 className="w-full mt-2 border border-gray-400 rounded-lg px-4 py-2 text-sm focus:outline-blue-600"
               />
+
+              {errors.description &&(
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.description}
+                </p>
+              )}
 
             </div>
 
           </div>
 
+
           {/* PERMISOS */}
+
           <div>
 
             <h3 className="text-sm font-semibold mb-4">
@@ -174,17 +384,25 @@ export default function RoleModal({
             <PermissionsGrid
               permisosSistema={permissionsList}
               permisosRol={permisosRol}
-              onChange={setPermisosRol}
+              onChange={handlePermissionsChange}
               readOnly={isView}
             />
+
+            {errors.permissions &&(
+              <p className="text-red-500 text-xs mt-2">
+                {errors.permissions}
+              </p>
+            )}
 
           </div>
 
         </div>
 
+
+
         {/* FOOTER */}
 
-        {mode !== "view" && (
+        {mode !== "view" &&(
 
           <div className="px-6 py-4 flex justify-between gap-4">
 

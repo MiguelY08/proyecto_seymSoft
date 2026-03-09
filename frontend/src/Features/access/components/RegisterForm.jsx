@@ -4,12 +4,21 @@ import { useNavigate } from "react-router-dom";
 
 import { registerUser } from "../services/authService";
 import { validateRegister, sanitizeInput } from "../validators/authValidators";
+import { useAlert } from "../../shared/alerts/useAlert";
 
 export default function RegisterForm() {
 
+  // ─── Navegación ───────────────────────────────────────────────────────────
+  const navigate = useNavigate();
+
+  // ─── Sistema de alertas ───────────────────────────────────────────────────
+  const { showSuccess, showError, showWarning } = useAlert();
+
+  // ─── Mostrar / ocultar contraseñas ────────────────────────────────────────
   const [showPassword,setShowPassword] = useState(false);
   const [showConfirmPassword,setShowConfirmPassword] = useState(false);
 
+  // ─── Estado del formulario ────────────────────────────────────────────────
   const [formData,setFormData] = useState({
     documentType:"",
     document:"",
@@ -22,9 +31,20 @@ export default function RegisterForm() {
     terms:false
   });
 
+  // ─── Errores de validación ────────────────────────────────────────────────
   const [errors,setErrors] = useState({});
 
-  const navigate = useNavigate();
+
+  /* ==========================================================================
+     handleChange
+     Se ejecuta cuando el usuario escribe o modifica un campo.
+
+     Funciones:
+     1. Obtener valor del input
+     2. Sanitizar datos (seguridad)
+     3. Actualizar estado del formulario
+     4. Validar solo el campo modificado (UX correcta)
+  ========================================================================== */
 
   const handleChange = (e)=>{
 
@@ -32,7 +52,7 @@ export default function RegisterForm() {
 
     let newValue = type === "checkbox" ? checked : value;
 
-    // sanitización desde validator
+    // sanitización desde validator (elimina caracteres no permitidos)
     newValue = sanitizeInput(name,newValue);
 
     const updatedForm = {
@@ -42,11 +62,29 @@ export default function RegisterForm() {
 
     setFormData(updatedForm);
 
-    // validación en tiempo real
+    // validar formulario completo
     const validationErrors = validateRegister(updatedForm);
-    setErrors(validationErrors);
+
+    // guardar solo error del campo modificado
+    setErrors(prev => ({
+      ...prev,
+      [name]: validationErrors[name]
+    }));
 
   };
+
+
+  /* ==========================================================================
+     handleSubmit
+     Se ejecuta al enviar el formulario.
+
+     Flujo:
+     1. Validar todos los campos
+     2. Si hay errores → detener envío
+     3. Registrar usuario
+     4. Mostrar alerta de éxito
+     5. Redirigir al login
+  ========================================================================== */
 
   const handleSubmit = (e)=>{
 
@@ -54,28 +92,52 @@ export default function RegisterForm() {
 
     const validationErrors = validateRegister(formData);
 
+    // si existen errores no continuar
     if(Object.keys(validationErrors).length > 0){
+
       setErrors(validationErrors);
+
+      showWarning(
+        "Campos incompletos",
+        "Por favor revisa los campos obligatorios"
+      );
+
       return;
     }
 
     try{
 
+      // eliminar campos que no deben guardarse
       const { confirmPassword,terms,...userData } = formData;
 
+      // registrar usuario
       registerUser(userData);
 
-      alert("Registro exitoso");
+      // alerta de éxito
+      showSuccess(
+        "Registro exitoso",
+        "Tu cuenta fue creada correctamente"
+      );
 
+      // redirigir al login
       navigate("/login");
 
     }catch(error){
 
-      alert(error.message);
+      showError(
+        "Error en el registro",
+        error.message
+      );
 
     }
 
   };
+
+
+  /* ==========================================================================
+     Label reutilizable
+     Muestra label con indicador de campo obligatorio (*)
+  ========================================================================== */
 
   const Label = ({ text }) => (
     <label className="flex items-center gap-1 mb-1 text-sm font-medium text-gray-700">
@@ -84,6 +146,12 @@ export default function RegisterForm() {
     </label>
   );
 
+
+  /* ==========================================================================
+     inputStyle
+     Genera estilos dinámicos dependiendo si el campo tiene error
+  ========================================================================== */
+
   const inputStyle = (field)=>
   `w-full border rounded-lg px-3 py-2 text-sm outline-none
   ${errors[field]
@@ -91,10 +159,12 @@ export default function RegisterForm() {
     : "focus:ring-2 focus:ring-blue-600"
   }`;
 
+
 return (
 
     <div className="max-w-6xl w-full mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
 
+      {/* ─── Header ─────────────────────────────────────────────────────── */}
       <div className="bg-[#004D77] py-4">
         <h2 className="font-lexend text-xl md:text-2xl font-semibold text-white text-center">
           Crear Cuenta
@@ -128,6 +198,7 @@ return (
             <p className="text-red-500 text-xs mt-1">{errors.documentType}</p>}
           </div>
 
+
           {/* Documento */}
           <div>
             <Label text="Documento"/>
@@ -145,8 +216,9 @@ return (
             <p className="text-red-500 text-xs mt-1">{errors.document}</p>}
           </div>
 
+
           {/* Nombre */}
-          <div className="lg:col-span-1">
+          <div>
             <Label text="Nombre Completo"/>
 
             <input
@@ -160,6 +232,7 @@ return (
             {errors.fullName &&
             <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>}
           </div>
+
 
           {/* Email */}
           <div>
@@ -177,6 +250,7 @@ return (
             <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
           </div>
 
+
           {/* Dirección */}
           <div>
             <Label text="Dirección"/>
@@ -192,6 +266,7 @@ return (
             {errors.address &&
             <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
           </div>
+
 
           {/* Teléfono */}
           <div>
@@ -209,6 +284,7 @@ return (
             {errors.phone &&
             <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
           </div>
+
 
           {/* Contraseña */}
           <div className="relative">
@@ -234,7 +310,8 @@ return (
             <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
           </div>
 
-          {/* Confirmar */}
+
+          {/* Confirmar contraseña */}
           <div className="relative">
             <Label text="Confirmar Contraseña"/>
 
@@ -258,6 +335,7 @@ return (
             <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
           </div>
 
+
           {/* Términos */}
           <div className="col-span-full flex items-center gap-2 mt-2">
 
@@ -278,6 +356,7 @@ return (
           <div className="col-span-full">
             <p className="text-red-500 text-xs">{errors.terms}</p>
           </div>}
+
 
           {/* Botones */}
           <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">

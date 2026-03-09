@@ -7,37 +7,47 @@ export default function PermissionsGrid({
   readOnly = false
 }) {
 
-  //  Sincronizar permisos si vienen vacíos o incompletos
+  /* ======================================================
+  Sincronizar estructura inicial de permisos
+  Solo se ejecuta cuando el rol no tiene permisos aún
+  ====================================================== */
+
   useEffect(() => {
 
     if (!permisosSistema.length) return
 
-    const permisosCompletos = permisosSistema.map(modulo => {
+    /* evitar sobrescribir permisos existentes */
 
-      const existente = permisosRol.find(p => p.id === modulo.id)
+    if (permisosRol.length > 0) return
 
-      if (existente) return existente
+    const permisosIniciales = permisosSistema.map(modulo => ({
 
-      return {
-        id: modulo.id,
-        acciones: modulo.acciones.reduce((acc, accion) => {
-          acc[accion] = false
-          return acc
-        }, {})
-      }
-    })
+      id: modulo.id,
 
-    if (JSON.stringify(permisosCompletos) !== JSON.stringify(permisosRol)) {
-      onChange(permisosCompletos)
-    }
+      acciones: modulo.acciones.reduce((acc, accion) => {
+
+        acc[accion] = false
+        return acc
+
+      }, {})
+
+    }))
+
+    onChange(permisosIniciales)
 
   }, [permisosSistema])
 
-  //  Toggle acción individual
+
+  /* ======================================================
+  Activar / desactivar una acción individual
+  ====================================================== */
+
   const toggleAccion = (moduloId, accion) => {
+
     if (readOnly) return
 
     const updated = permisosRol.map(modulo =>
+
       modulo.id === moduloId
         ? {
             ...modulo,
@@ -47,13 +57,20 @@ export default function PermissionsGrid({
             }
           }
         : modulo
+
     )
 
     onChange(updated)
+
   }
 
-  //  Toggle seleccionar todo el módulo
+
+  /* ======================================================
+  Seleccionar todo el módulo
+  ====================================================== */
+
   const toggleModuloCompleto = (moduloId) => {
+
     if (readOnly) return
 
     const updated = permisosRol.map(modulo => {
@@ -63,87 +80,188 @@ export default function PermissionsGrid({
         const allSelected =
           Object.values(modulo.acciones).every(Boolean)
 
-        const nuevasAcciones = Object.keys(modulo.acciones).reduce(
-          (acc, key) => {
+        const nuevasAcciones = Object.keys(modulo.acciones)
+          .reduce((acc, key) => {
+
             acc[key] = !allSelected
             return acc
-          },
-          {}
-        )
+
+          }, {})
 
         return { ...modulo, acciones: nuevasAcciones }
+
       }
 
       return modulo
+
     })
 
     onChange(updated)
+
   }
 
+
+  /* ======================================================
+  Seleccionar todos los módulos
+  ====================================================== */
+
+  const toggleAllModules = () => {
+
+    if (readOnly) return
+
+    const allSelected = permisosRol.every(modulo =>
+      Object.values(modulo.acciones).every(Boolean)
+    )
+
+    const updated = permisosRol.map(modulo => {
+
+      const nuevasAcciones = Object.keys(modulo.acciones)
+        .reduce((acc, key) => {
+
+          acc[key] = !allSelected
+          return acc
+
+        }, {})
+
+      return { ...modulo, acciones: nuevasAcciones }
+
+    })
+
+    onChange(updated)
+
+  }
+
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-      {permisosSistema.map((modulo) => {
+    <div>
 
-        const rolModulo =
-          permisosRol.find(p => p.id === modulo.id)
+      {/* ======================================================
+      Botón seleccionar todos
+      ====================================================== */}
 
-        const allChecked =
-          rolModulo &&
-          Object.values(rolModulo.acciones).every(Boolean)
+      {!readOnly && (
 
-        return (
-          <div
-            key={modulo.id}
-            className="border border-gray-400   rounded-xl p-4 shadow-sm bg-white"
+        <div className="flex justify-end mb-3">
+
+          <button
+            onClick={toggleAllModules}
+            className="text-xs bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition"
           >
+            Seleccionar todos
+          </button>
 
-            {/* Header módulo */}
-            <div className="flex justify-between items-center mb-3">
-              <h4 className="font-semibold text-sm">
-                {modulo.modulo}
-              </h4>
+        </div>
 
-              <input
-                type="checkbox"
-                checked={allChecked || false}
-                disabled={readOnly}
-                onChange={() =>
-                  toggleModuloCompleto(modulo.id)
-                }
-                className="cursor-pointer"
-              />
+      )}
+
+
+      {/* ======================================================
+      Grid de módulos
+      ====================================================== */}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        {permisosSistema.map((modulo) => {
+
+          const rolModulo =
+            permisosRol.find(p => p.id === modulo.id)
+
+          /* detectar si el módulo tiene permisos activos */
+
+          const hasPermission =
+            rolModulo &&
+            Object.values(rolModulo.acciones).some(Boolean)
+
+          const allChecked =
+            rolModulo &&
+            Object.values(rolModulo.acciones).every(Boolean)
+
+          return (
+
+            <div
+              key={modulo.id}
+              className={`border rounded-xl p-4 shadow-sm bg-white transition
+              ${
+                hasPermission
+                  ? "border-blue-500 ring-2 ring-blue-400"
+                  : "border-gray-400"
+              }`}
+            >
+
+              {/* ======================================================
+              Header módulo
+              ====================================================== */}
+
+              <div className="flex justify-between items-center mb-3">
+
+                <h4 className="font-semibold text-sm">
+                  {modulo.modulo}
+                </h4>
+
+                <input
+                  type="checkbox"
+                  checked={allChecked || false}
+                  disabled={readOnly}
+                  onChange={() =>
+                    toggleModuloCompleto(modulo.id)
+                  }
+                  className={`accent-blue-600 ${
+                    readOnly
+                      ? "opacity-100 cursor-default"
+                      : "cursor-pointer"
+                  }`}
+                />
+
+              </div>
+
+
+              {/* ======================================================
+              Acciones del módulo
+              ====================================================== */}
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
+
+                {modulo.acciones.map((accion) => (
+
+                  <label
+                    key={accion}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+
+                    <input
+                      type="checkbox"
+                      checked={
+                        rolModulo?.acciones?.[accion] || false
+                      }
+                      onChange={() =>
+                        toggleAccion(modulo.id, accion)
+                      }
+                      className={`accent-blue-600 ${
+                        readOnly
+                          ? "pointer-events-none cursor-default"
+                          : "cursor-pointer"
+                      }`}
+                    />
+
+                    {accion.charAt(0).toUpperCase() + accion.slice(1)}
+
+                  </label>
+
+                ))}
+
+              </div>
+
             </div>
 
-            {/* Acciones */}
-            <div className="grid grid-cols-2 gap-3 text-sm">
+          )
 
-              {modulo.acciones.map((accion) => (
-                <label
-                  key={accion}
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    checked={
-                      rolModulo?.acciones?.[accion] || false
-                    }
-                    disabled={readOnly}
-                    onChange={() =>
-                      toggleAccion(modulo.id, accion)
-                    }
-                  />
+        })}
 
-                  {accion.charAt(0).toUpperCase() + accion.slice(1)}
-                </label>
-              ))}
-
-            </div>
-
-          </div>
-        )
-      })}
+      </div>
 
     </div>
+
   )
+
 }

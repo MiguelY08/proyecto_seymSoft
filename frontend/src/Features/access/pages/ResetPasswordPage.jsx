@@ -7,7 +7,7 @@ import logo from "../../../assets/PapeleriaMagicLogo.png"
 
 export default function ResetPasswordPage() {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col overflow-x-hidden">
 
       <main className="flex flex-col flex-1">
 
@@ -17,16 +17,14 @@ export default function ResetPasswordPage() {
           logo={logo}
         />
 
-        {/* Fondo gris */}
-        <div className="bg-gray-100 flex flex-col flex-1">
+        <div className="bg-gray-100 flex flex-col flex-1 overflow-hidden">
 
           <BackHeader
             title="Volver"
             to="/login"
           />
 
-          {/* Formulario */}
-          <div className="flex flex-1 justify-center items-start lg:items-center px-4 py-3">
+          <div className="flex flex-1 justify-center items-center px-4 py-2 overflow-y-auto">
             <ResetPasswordForm />
           </div>
 

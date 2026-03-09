@@ -1,6 +1,21 @@
+// ─────────────────────────────────────────────
+// IMPORTAR SERVICIO DE USUARIOS
+// ─────────────────────────────────────────────
+
+import UsersDB from "../../../users/services/usersDB"
+
+
+// ─────────────────────────────────────────────
+// CLAVE STORAGE
+// ─────────────────────────────────────────────
+
 const STORAGE_KEY = "roles"
 
-// obtener roles
+
+// ─────────────────────────────────────────────
+// OBTENER ROLES
+// ─────────────────────────────────────────────
+
 export const getRoles = () => {
 
   try {
@@ -23,21 +38,34 @@ export const getRoles = () => {
 
 }
 
-// guardar roles
+
+// ─────────────────────────────────────────────
+// GUARDAR ROLES
+// ─────────────────────────────────────────────
+
 export const saveRoles = (roles) => {
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(roles))
 
 }
 
-// crear rol
+
+// ─────────────────────────────────────────────
+// CREAR ROL
+// ─────────────────────────────────────────────
+
 export const createRole = (role) => {
 
   const roles = getRoles()
 
   const newRole = {
+
     ...role,
+
     id: Date.now(),
+
+    active: true
+
   }
 
   const updatedRoles = [...roles, newRole]
@@ -48,15 +76,21 @@ export const createRole = (role) => {
 
 }
 
-// actualizar rol
+
+// ─────────────────────────────────────────────
+// ACTUALIZAR ROL
+// ─────────────────────────────────────────────
+
 export const updateRole = (updatedRole) => {
 
   const roles = getRoles()
 
   const updatedRoles = roles.map(role =>
+
     role.id === updatedRole.id
-      ? updatedRole
+      ? { ...role, ...updatedRole }
       : role
+
   )
 
   saveRoles(updatedRoles)
@@ -65,17 +99,103 @@ export const updateRole = (updatedRole) => {
 
 }
 
-// cambiar estado
+
+// ─────────────────────────────────────────────
+// CAMBIAR ESTADO (ACTIVAR / DESACTIVAR)
+// ─────────────────────────────────────────────
+
 export const toggleRoleStatus = (id) => {
 
   const roles = getRoles()
 
   const updatedRoles = roles.map(role =>
+
     role.id === id
       ? { ...role, active: !role.active }
       : role
+
   )
 
   saveRoles(updatedRoles)
+
+  return updatedRoles
+
+}
+
+
+// ─────────────────────────────────────────────
+// DESACTIVAR ROL
+// ─────────────────────────────────────────────
+
+export const deactivateRole = (roleId) => {
+
+  const roles = getRoles()
+
+  const updatedRoles = roles.map(role =>
+
+    role.id === roleId
+      ? { ...role, active: false }
+      : role
+
+  )
+
+  saveRoles(updatedRoles)
+
+  return updatedRoles
+
+}
+
+
+// ─────────────────────────────────────────────
+// ELIMINAR ROL
+// ─────────────────────────────────────────────
+
+export const deleteRole = (roleId) => {
+
+  const roles = getRoles()
+
+  const updatedRoles = roles.filter(
+
+    role => role.id !== roleId
+
+  )
+
+  saveRoles(updatedRoles)
+
+  return updatedRoles
+
+}
+
+
+// ─────────────────────────────────────────────
+// VALIDAR SI UN ROL TIENE USUARIOS
+// ─────────────────────────────────────────────
+
+export const roleHasUsers = (roleName) => {
+
+  const users = UsersDB.list()
+
+  return users.some(
+
+    user => user.rol === roleName
+
+  )
+
+}
+
+
+// ─────────────────────────────────────────────
+// CONTAR USUARIOS POR ROL
+// ─────────────────────────────────────────────
+
+export const countUsersByRole = (roleName) => {
+
+  const users = UsersDB.list()
+
+  return users.filter(
+
+    user => user.rol === roleName
+
+  ).length
 
 }
