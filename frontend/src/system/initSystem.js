@@ -4,66 +4,97 @@ import { permissionsList } from "../Features/administrtivePanel/configuration/ro
 
 export const initSystem = () => {
 
-  console.log("INIT SYSTEM EJECUTANDO");
+  console.log(" Inicializando sistema...");
 
+  let users = getUsers();
+  let roles = getRoles();
 
-  const users = getUsers();
-  const roles = getRoles();
+  /* ===================================================
+     CREAR O ACTUALIZAR ROL ADMINISTRADOR
+  =================================================== */
 
-  console.log("INIT SYSTEM EJECUTANDO");
+  let adminRole = roles.find(
+    role => role.name === "Administrador"
+  );
 
-  /* ===============================
-     CREAR ROL ADMIN SI NO EXISTE
-  =============================== */
+  if(!adminRole){
 
-  if(roles.length === 0){
+    console.log(" Creando rol Administrador...");
 
     const adminPermissions = permissionsList.map(modulo => ({
       id: modulo.id,
       acciones: modulo.acciones.reduce((acc,accion)=>{
-        acc[accion] = true
-        return acc
+        acc[accion] = true;
+        return acc;
       },{})
-    }))
+    }));
 
-    const adminRole = {
+    adminRole = {
 
-      id: 1,
+      id: Date.now(),
+
       name: "Administrador",
+
       description: "Acceso total al sistema",
+
       active: true,
+
       createdAt: new Date().toLocaleDateString(),
+
       permisos: adminPermissions
 
-    }
+    };
 
-    saveRoles([adminRole])
+    roles.push(adminRole);
 
-    console.log("Rol administrador creado")
+    saveRoles(roles);
 
   }
 
-  /* ===============================
-     CREAR USUARIO ADMIN SI NO EXISTE
-  =============================== */
 
-  if(users.length === 0){
+  /* ===================================================
+     CREAR USUARIO ADMINISTRADOR GLOBAL
+  =================================================== */
 
-    const adminUser = {
+  let adminUser = users.find(
+    user => user.email === "admin@magic.com"
+  );
 
-      id: 1,
+  if(!adminUser){
+
+    console.log(" Creando usuario administrador global...");
+
+    adminUser = {
+
+      id: Date.now(),
+
       name: "Administrador",
+
       email: "admin@magic.com",
+
       password: "12345678",
+
       role: "Administrador",
+
       clientType: "Interno",
+
+      active: true,
+
       createdAt: new Date().toISOString()
-    }
 
-    saveUsers([adminUser])
+    };
 
-    console.log("Usuario administrador creado")
+    users.push(adminUser);
+
+    saveUsers(users);
 
   }
 
-}
+
+  /* ===================================================
+     VERIFICACIÓN FINAL
+  =================================================== */
+
+  console.log("Sistema inicializado correctamente");
+
+};
