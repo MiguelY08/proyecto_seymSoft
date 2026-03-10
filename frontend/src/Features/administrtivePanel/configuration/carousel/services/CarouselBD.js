@@ -1,7 +1,14 @@
+import image01 from '../../../../../assets/carrusel/01.png';
+
+// ─── Imagen por defecto ───────────────────────────────────────────────────────
+export const DEFAULT_CAROUSEL_IMAGE = image01;
+export const DEFAULT_SLIDE_ID       = 0; // ID fijo — nunca colisiona con Date.now()
+
 // ─── Configuración ────────────────────────────────────────────────────────────
 const DB_NAME    = 'CarouselDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'images';
+const META_KEY   = 'pm_carousel';
 
 // ─── Abrir / inicializar la BD ────────────────────────────────────────────────
 const openDB = () =>
@@ -19,9 +26,35 @@ const openDB = () =>
     request.onerror    = (event) => reject(event.target.error);
   });
 
+// ─── Sembrar imagen por defecto ───────────────────────────────────────────────
+// Se ejecuta una sola vez: si el slide con DEFAULT_SLIDE_ID no existe en
+// localStorage, descarga el asset como Blob, lo guarda en IndexedDB y
+// añade su metadata a pm_carousel en primera posición.
+export const seedDefaultImage = async () => {
+  try {
+    const stored = localStorage.getItem(META_KEY);
+    const meta   = stored ? JSON.parse(stored) : [];
+    const exists = meta.some((s) => s.id === DEFAULT_SLIDE_ID);
+
+    if (exists) return; // Ya sembrada — nada que hacer
+
+    // Descargar el asset como Blob para guardarlo en IndexedDB
+    const response = await fetch(image01);
+    const blob     = await response.blob();
+    await saveImage(DEFAULT_SLIDE_ID, blob);
+
+    // Insertar en primera posición y reajustar órdenes del resto
+    const newMeta = [
+      { id: DEFAULT_SLIDE_ID, nombre: 'Banner principal', orden: 1, activo: true },
+      ...meta.map((s) => ({ ...s, orden: s.orden + 1 })),
+    ];
+    localStorage.setItem(META_KEY, JSON.stringify(newMeta));
+  } catch (err) {
+    console.error('Error al sembrar imagen por defecto:', err);
+  }
+};
+
 // ─── Guardar imagen ───────────────────────────────────────────────────────────
-// Recibe: id (número), blob (File | Blob)
-// Guarda: { id, blob }
 export const saveImage = async (id, blob) => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -35,7 +68,6 @@ export const saveImage = async (id, blob) => {
 };
 
 // ─── Obtener imagen por ID ────────────────────────────────────────────────────
-// Retorna: Blob | null
 export const getImage = async (id) => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -49,7 +81,6 @@ export const getImage = async (id) => {
 };
 
 // ─── Obtener todas las imágenes ───────────────────────────────────────────────
-// Retorna: [{ id, blob }, ...]
 export const getAllImages = async () => {
   const db = await openDB();
   return new Promise((resolve, reject) => {

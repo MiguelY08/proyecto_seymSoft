@@ -41,18 +41,19 @@ function Users({ onDownload }) {
     const term = search.toLowerCase().trim();
     if (!term) return true;
 
-    const estadoTexto  = row.activo ? 'activo' : 'inactivo';
+    const estadoTexto  = row.active ? 'activo' : 'inactivo';
     const termosEstado = ['activo', 'activos', 'inactivo', 'inactivos'];
     const matchEstado  = termosEstado.includes(term) &&
                          estadoTexto.startsWith(term.replace(/s$/, ''));
 
     return (
-      row.documento.toLowerCase().includes(term) ||
-      row.nombre.toLowerCase().includes(term)    ||
-      row.correo.toLowerCase().includes(term)    ||
-      row.telefono.toLowerCase().includes(term)  ||
-      row.tipo.toLowerCase().includes(term)      ||
-      row.rol.toLowerCase().includes(term)       ||
+      (row.document     ?? '').toLowerCase().includes(term) ||
+      (row.documentType ?? '').toLowerCase().includes(term) ||
+      (row.name         ?? '').toLowerCase().includes(term) ||
+      (row.email        ?? '').toLowerCase().includes(term) ||
+      (row.phone        ?? '').toLowerCase().includes(term) ||
+      (row.role         ?? '').toLowerCase().includes(term) ||
+      (row.clientType   ?? '').toLowerCase().includes(term) ||
       matchEstado
     );
   });

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import { getCategories, createSubcategory } from "../services/categoriesService";
 
-// Toggle
+// Toggle de estado activo/inactivo
 function ActiveToggle({ activo, onChange }) {
   return (
     <button
@@ -20,7 +20,6 @@ function ActiveToggle({ activo, onChange }) {
       >
         {activo ? "A" : "I"}
       </span>
-
       <span
         className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
           activo ? "left-[1.4rem]" : "left-0.5"
@@ -34,7 +33,6 @@ function FormSubCategory({ onClose }) {
   const { showWarning, showSuccess } = useAlert();
 
   const [categories, setCategories] = useState([]);
-
   const [form, setForm] = useState({
     nombre: "",
     descripcion: "",
@@ -42,7 +40,7 @@ function FormSubCategory({ onClose }) {
     activo: true,
   });
 
-  // Touched para mostrar errores
+  // touched para mostrar errores solo después de que el usuario interactúe
   const [nombreTouched, setNombreTouched] = useState(false);
   const [categoriaTouched, setCategoriaTouched] = useState(false);
 
@@ -50,6 +48,7 @@ function FormSubCategory({ onClose }) {
   const nombreError = (() => {
     if (!nombreTouched) return null;
     if (!form.nombre.trim()) return "El nombre de la subcategoría es obligatorio.";
+    if (/^\d/.test(form.nombre.trim())) return "El nombre no puede iniciar con un número.";
     if (form.nombre.trim().length < 3) return "Debe tener al menos 3 caracteres.";
     return null;
   })();
@@ -70,11 +69,20 @@ function FormSubCategory({ onClose }) {
 
   // ─── SUBMIT ─────────────────────────────
   const handleSubmit = () => {
-    // marcar todos como touched para forzar mostrar errores
     setNombreTouched(true);
     setCategoriaTouched(true);
 
-    if (hasErrors) {
+    const nombreErr = !form.nombre.trim()
+      ? "El nombre es obligatorio"
+      : /^\d/.test(form.nombre.trim())
+      ? "El nombre no puede iniciar con un número"
+      : form.nombre.trim().length < 3
+      ? "Debe tener al menos 3 caracteres"
+      : null;
+
+    const categoriaErr = !form.categoriaId ? "Debes seleccionar una categoría" : null;
+
+    if (nombreErr || categoriaErr) {
       showWarning("Campos incompletos", "Por favor completa todos los campos correctamente.");
       return;
     }
@@ -89,7 +97,9 @@ function FormSubCategory({ onClose }) {
 
   const inputClass = (error) =>
     `w-full px-4 py-2.5 text-sm border rounded-xl outline-none bg-gray-100 text-gray-700 transition ${
-      error ? "border-red-400 focus:ring-2 focus:ring-red-300" : "border-gray-300 focus:ring-2 focus:ring-[#0E5679]/20"
+      error
+        ? "border-red-400 focus:ring-2 focus:ring-red-300"
+        : "border-gray-300 focus:ring-2 focus:ring-[#0E5679]/20"
     }`;
 
   return (
@@ -132,7 +142,11 @@ function FormSubCategory({ onClose }) {
                 </div>
               )}
             </div>
-            <div className={`overflow-hidden transition-all duration-300 ${nombreError ? "max-h-10 mt-1 opacity-100" : "max-h-0 opacity-0"}`}>
+            <div
+              className={`overflow-hidden transition-all duration-300 ${
+                nombreError ? "max-h-10 mt-1 opacity-100" : "max-h-0 opacity-0"
+              }`}
+            >
               <p className="text-xs text-red-500 flex items-center gap-1">
                 <AlertCircle size={12} />
                 {nombreError}
@@ -178,7 +192,11 @@ function FormSubCategory({ onClose }) {
                 </div>
               )}
             </div>
-            <div className={`overflow-hidden transition-all duration-300 ${categoriaError ? "max-h-10 mt-1 opacity-100" : "max-h-0 opacity-0"}`}>
+            <div
+              className={`overflow-hidden transition-all duration-300 ${
+                categoriaError ? "max-h-10 mt-1 opacity-100" : "max-h-0 opacity-0"
+              }`}
+            >
               <p className="text-xs text-red-500 flex items-center gap-1">
                 <AlertCircle size={12} />
                 {categoriaError}
