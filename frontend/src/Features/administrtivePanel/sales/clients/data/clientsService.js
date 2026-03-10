@@ -180,7 +180,7 @@ export const clientsService = {
     const newClient = {
       id: newId,
       ...clientData,
-      // ✅ Si no hay crédito o está vacío, poner '0'
+      //  Si no hay crédito o está vacío, poner '0'
       creditoCliente: clientData.creditoCliente || '0',
       nombreCompleto: `${clientData.nombres || ''} ${clientData.apellidos || ''}`.trim(),
       activo: true,
@@ -207,7 +207,7 @@ export const clientsService = {
     const updatedClient = {
       ...clients[index],
       ...clientData,
-      // ✅ También aplicar la misma lógica en actualización
+      // También aplicar la misma lógica en actualización
       creditoCliente: clientData.creditoCliente || clients[index].creditoCliente || '0',
       nombreCompleto: `${clientData.nombres || clients[index].nombres} ${clientData.apellidos || clients[index].apellidos}`.trim(),
       updatedAt: new Date().toISOString()

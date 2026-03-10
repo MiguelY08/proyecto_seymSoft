@@ -1,40 +1,29 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
-  Search,
-  Home,
-  Store,
-  Package,
-  Heart,
-  ShoppingCart,
-  Menu,
-  SquarePen,
-  LogOut,
-  User,
-  LogIn,
-  UserPlus,
-  X
+  Search, Home, Store, Package, Heart, ShoppingCart,
+  Menu, SquarePen, LogOut, User, LogIn, UserPlus, X, UserCircle2
 } from "lucide-react";
 import logo from "../../assets/PapeleriaMagicLogo.png";
-
-// ─── Usuario hardcodeado para pruebas ────────────────────────────────────────
-const testUser = {
-  name:      "Yorman Alirio Ocampo Giraldo",
-  email:     "yorman123@gmail.com",
-  role:      "Administrador",
-  avatarUrl: null,
-  initials:  "YO",
-};
+import { useAuth } from "../access/context/AuthContext";
 
 function HeaderLanding() {
-  const [searchQuery,   setSearchQuery]   = useState("");
-  const [menuOpen,      setMenuOpen]      = useState(false);
-  const [scrolled,      setScrolled]      = useState(false);
-  const [profileModal,  setProfileModal]  = useState(false);
-  const modalRef  = useRef(null);
-  const location  = useLocation();
+  const { user, logout }              = useAuth();
+  const navigate                      = useNavigate();
+  const [searchQuery,  setSearchQuery]  = useState("");
+  const [menuOpen,     setMenuOpen]     = useState(false);
+  const [scrolled,     setScrolled]     = useState(false);
+  const [profileModal, setProfileModal] = useState(false);
+  const modalRef = useRef(null);
+  const location = useLocation();
 
   const isActive = (path) => location.pathname === path;
+
+  const handleLogout = () => {
+    logout();
+    setProfileModal(false);
+    navigate("/login");
+  };
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -56,6 +45,10 @@ function HeaderLanding() {
     setProfileModal(false);
   }, [location]);
 
+  // Iniciales del nombre
+  const getInitials = (name = '') =>
+    name.trim().split(/\s+/).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+
   return (
     <>
       <header
@@ -64,11 +57,10 @@ function HeaderLanding() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div
-            className={`flex items-center justify-between gap-3 sm:gap-6 transition-all duration-150 ${
-              scrolled ? "h-12 sm:h-14" : "h-16 sm:h-20"
-            }`}
-          >
+          <div className={`flex items-center justify-between gap-3 sm:gap-6 transition-all duration-150 ${
+            scrolled ? "h-12 sm:h-14" : "h-16 sm:h-20"
+          }`}>
+
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 sm:gap-3 shrink-0">
               <div className={`rounded-full overflow-hidden cursor-pointer transition-all duration-150 ${scrolled ? "w-8 h-8 sm:w-12 sm:h-12" : "w-10 h-10 sm:w-20 sm:h-20"}`}>
@@ -100,9 +92,9 @@ function HeaderLanding() {
 
             {/* Nav Desktop */}
             <nav className="hidden lg:flex items-center gap-1">
-              <NavLink icon={Home}    label="Inicio"  to="/"        active={isActive("/")}        scrolled={scrolled} />
-              <NavLink icon={Store}   label="Tienda"  to="/shop"    active={isActive("/shop")}    scrolled={scrolled} />
-              <NavLink icon={Package} label="Pedidos" to="/orders-l" active={isActive("/orders-l")} scrolled={scrolled} />
+              <NavLink icon={Home}    label="Inicio"   to="/"         active={isActive("/")}         scrolled={scrolled} />
+              <NavLink icon={Store}   label="Tienda"   to="/shop"     active={isActive("/shop")}     scrolled={scrolled} />
+              <NavLink icon={Package} label="Pedidos"  to="/orders-l" active={isActive("/orders-l")} scrolled={scrolled} />
             </nav>
 
             {/* Action Icons */}
@@ -110,108 +102,122 @@ function HeaderLanding() {
               <IconButton icon={Heart}        to="/favorites" badge={0} className="hidden sm:block" scrolled={scrolled} />
               <IconButton icon={ShoppingCart} to="/cart"      badge={0} scrolled={scrolled} />
 
-              {/* ── Perfil: versión SESIÓN INICIADA (pruebas) ─────────────── */}
-              {/* <div className="relative hidden sm:block" ref={modalRef}>
-                <button
-                  onClick={() => setProfileModal(!profileModal)}
-                  className={`relative rounded-full bg-[#004D77] hover:bg-[#003d5e] transition-all duration-150 cursor-pointer flex items-center justify-center font-bold text-white ${
-                    scrolled ? "w-8 h-8 text-xs" : "w-9 h-9 text-sm"
-                  }`}
-                >
-                  {testUser.initials}
-                </button>
-
-                {profileModal && (
-                  <div className="absolute right-0 top-full mt-3 w-64 sm:w-72 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
-
-                    <div className="flex flex-col items-center gap-1 px-5 py-5 bg-slate-50 border-b border-slate-200">
-                      <div className="w-14 h-14 rounded-full bg-[#004D77] flex items-center justify-center text-white font-bold text-xl mb-1">
-                        {testUser.initials}
-                      </div>
-                      <p className="text-sm font-semibold text-[#004D77] text-center leading-tight">
-                        {testUser.name}
-                      </p>
-                      <p className="text-xs text-[#004D77] break-all">
-                        {testUser.email}
-                      </p>
-                      <p className="text-xs font-semibold text-slate-600 mt-0.5">
-                        {testUser.role}
-                      </p>
-                    </div>
-
-                    <div className="py-1.5">
-                      <a
-                        href="/perfil/editar"
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#004D77] hover:bg-gray-100 transition-colors"
-                      >
-                        <SquarePen size={16} strokeWidth={1.8} />
-                        Editar Mi Perfil
-                      </a>
-                      <button
-                        onClick={() => {}}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
-                      >
-                        <LogOut size={16} strokeWidth={1.8} />
-                        Cerrar sesión
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div> */}
-
-              {/* ── Perfil: versión SIN SESIÓN (original — comentado) ──────── */}
+              {/* ── Perfil ───────────────────────────────────────────────── */}
               <div className="relative hidden sm:block" ref={modalRef}>
-                <button
-                  onClick={() => setProfileModal(!profileModal)}
-                  className={`relative rounded-full hover:bg-[#004D77]/10 transition-all duration-150 group cursor-pointer flex items-center justify-center ${
-                    scrolled ? "p-1.5 sm:p-2" : "p-2 sm:p-2.5"
-                  } ${profileModal ? "bg-[#004D77]/10" : ""}`}
-                >
-                  <User
-                    className={`transition-all duration-150 ${
-                      profileModal ? "text-[#004D77]" : "text-gray-700 group-hover:text-[#004D77]"
-                    } ${scrolled ? "w-4 h-4" : "w-5 h-5"}`}
-                    strokeWidth={2}
-                  />
-                </button>
 
-                {profileModal && (
-                  <div className="absolute right-0 top-full mt-3 w-52 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50">
-                    <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                      <span className="text-sm font-semibold text-gray-700">Mi cuenta</span>
-                      <button
-                        onClick={() => setProfileModal(false)}
-                        className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="p-2 flex flex-col gap-1">
-                      <Link
-                        to="/login"
-                        className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-[#004D77]/10 hover:text-[#004D77] transition-all duration-200 cursor-pointer group"
-                      >
-                        <LogIn className="w-5 h-5 text-gray-400 group-hover:text-[#004D77] transition-colors" strokeWidth={2} />
-                        <div>
-                          <p className="text-sm font-semibold">Iniciar sesión</p>
-                          <p className="text-[10px] text-gray-400">Accede a tu cuenta</p>
+                {user ? (
+                  // ── Usuario logueado ──────────────────────────────────
+                  <>
+                    <button
+                      onClick={() => setProfileModal(!profileModal)}
+                      className={`relative rounded-full bg-[#004D77] hover:bg-[#003d5e] transition-all duration-150 cursor-pointer flex items-center justify-center font-bold text-white ${
+                        scrolled ? "w-8 h-8 text-xs" : "w-9 h-9 text-sm"
+                      }`}
+                    >
+                      {user.avatarUrl
+                        ? <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover rounded-full" />
+                        : getInitials(user.name)
+                      }
+                    </button>
+
+                    {profileModal && (
+                      <div className="absolute right-0 top-full mt-3 w-64 sm:w-72 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
+
+                        {/* Cabecera */}
+                        <div className="flex flex-col items-center gap-1 px-5 py-5 bg-slate-50 border-b border-slate-200">
+                          <div className="w-14 h-14 rounded-full bg-[#004D77] flex items-center justify-center text-white font-bold text-xl mb-1 overflow-hidden">
+                            {user.avatarUrl
+                              ? <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                              : getInitials(user.name)
+                            }
+                          </div>
+                          <p className="text-sm font-semibold text-[#004D77] text-center leading-tight">
+                            {user.name}
+                          </p>
+                          <p className="text-xs text-[#004D77] break-all">
+                            {user.email}
+                          </p>
+                          <p className="text-xs font-semibold text-slate-600 mt-0.5">
+                            {user.role ?? 'Cliente'}
+                          </p>
                         </div>
-                      </Link>
-                      <Link
-                        to="/register"
-                        className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-[#004D77]/10 hover:text-[#004D77] transition-all duration-200 cursor-pointer group"
-                      >
-                        <UserPlus className="w-5 h-5 text-gray-400 group-hover:text-[#004D77] transition-colors" strokeWidth={2} />
-                        <div>
-                          <p className="text-sm font-semibold">Registrarse</p>
-                          <p className="text-[10px] text-gray-400">Crea una cuenta nueva</p>
+
+                        {/* Acciones */}
+                        <div className="py-1.5">
+                          <Link
+                            to="/perfil/editar"
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#004D77] hover:bg-gray-100 transition-colors"
+                          >
+                            <SquarePen size={16} strokeWidth={1.8} />
+                            Editar Mi Perfil
+                          </Link>
+                          <button
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                          >
+                            <LogOut size={16} strokeWidth={1.8} />
+                            Cerrar sesión
+                          </button>
                         </div>
-                      </Link>
-                    </div>
-                  </div>
+
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  // ── Sin sesión ────────────────────────────────────────
+                  <>
+                    <button
+                      onClick={() => setProfileModal(!profileModal)}
+                      className={`relative rounded-full hover:bg-[#004D77]/10 transition-all duration-150 group cursor-pointer flex items-center justify-center ${
+                        scrolled ? "p-1.5 sm:p-2" : "p-2 sm:p-2.5"
+                      } ${profileModal ? "bg-[#004D77]/10" : ""}`}
+                    >
+                      <User
+                        className={`transition-all duration-150 ${
+                          profileModal ? "text-[#004D77]" : "text-gray-700 group-hover:text-[#004D77]"
+                        } ${scrolled ? "w-4 h-4" : "w-5 h-5"}`}
+                        strokeWidth={2}
+                      />
+                    </button>
+
+                    {profileModal && (
+                      <div className="absolute right-0 top-full mt-3 w-52 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50">
+                        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                          <span className="text-sm font-semibold text-gray-700">Mi cuenta</span>
+                          <button
+                            onClick={() => setProfileModal(false)}
+                            className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="p-2 flex flex-col gap-1">
+                          <Link
+                            to="/login"
+                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-[#004D77]/10 hover:text-[#004D77] transition-all duration-200 cursor-pointer group"
+                          >
+                            <LogIn className="w-5 h-5 text-gray-400 group-hover:text-[#004D77] transition-colors" strokeWidth={2} />
+                            <div>
+                              <p className="text-sm font-semibold">Iniciar sesión</p>
+                              <p className="text-[10px] text-gray-400">Accede a tu cuenta</p>
+                            </div>
+                          </Link>
+                          <Link
+                            to="/register"
+                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-[#004D77]/10 hover:text-[#004D77] transition-all duration-200 cursor-pointer group"
+                          >
+                            <UserPlus className="w-5 h-5 text-gray-400 group-hover:text-[#004D77] transition-colors" strokeWidth={2} />
+                            <div>
+                              <p className="text-sm font-semibold">Registrarse</p>
+                              <p className="text-[10px] text-gray-400">Crea una cuenta nueva</p>
+                            </div>
+                          </Link>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
-              {/* ─────────────────────────────────────────────────────────────── */}
 
               {/* Menú hamburguesa */}
               <button
@@ -227,9 +233,9 @@ function HeaderLanding() {
           {menuOpen && (
             <div className="lg:hidden border-t border-gray-200 py-3">
               <nav className="flex flex-col gap-2">
-                <NavLinkMobile icon={Home}    label="Inicio"  to="/"        active={isActive("/")}        onClick={() => setMenuOpen(false)} />
-                <NavLinkMobile icon={Store}   label="Tienda"  to="/shop"    active={isActive("/shop")}    onClick={() => setMenuOpen(false)} />
-                <NavLinkMobile icon={Package} label="Pedidos" to="/orders-l" active={isActive("/orders-l")} onClick={() => setMenuOpen(false)} />
+                <NavLinkMobile icon={Home}    label="Inicio"   to="/"         active={isActive("/")}         onClick={() => setMenuOpen(false)} />
+                <NavLinkMobile icon={Store}   label="Tienda"   to="/shop"     active={isActive("/shop")}     onClick={() => setMenuOpen(false)} />
+                <NavLinkMobile icon={Package} label="Pedidos"  to="/orders-l" active={isActive("/orders-l")} onClick={() => setMenuOpen(false)} />
               </nav>
               <div className="flex items-center gap-4 mt-4 pt-3 border-t border-gray-200">
                 <Link to="/favorites" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-gray-700 hover:text-[#004D77] transition-colors cursor-pointer">

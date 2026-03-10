@@ -112,6 +112,7 @@ export const registerUser = (userData) => {
 
 
 // ─── Login ────────────────────────────────────────
+
 export const loginUser = (email, password) => {
 
   const users = getUsers();
@@ -126,43 +127,31 @@ export const loginUser = (email, password) => {
     throw new Error("Correo o contraseña incorrectos");
   }
 
+  // ── Validar cuenta activa ────────────────────────
+  if (!user.active) {
+    throw new Error("Tu cuenta está inactiva. Contacta al administrador.");
+  }
+
   let permissions = [];
 
-  // si el usuario tiene rol → obtener permisos
   if (user.role) {
-
     try {
-
       const roles = getRoles();
-
-      const role = roles.find(
-        (r) => r.name === user.role
-      );
-
+      const role = roles.find((r) => r.name === user.role);
       const rolePermissions = role?.permisos || [];
-
-      permissions = flattenPermissions(
-        rolePermissions,
-        permissionsList
-      ) || [];
-
+      permissions = flattenPermissions(rolePermissions, permissionsList) || [];
     } catch (error) {
-
       console.error("Error generando permisos:", error);
-
     }
-
   }
 
   const session = {
-
     user: {
       ...user,
       permissions
     },
-
-    token: Date.now()
-
+    token:      Date.now(),
+    redirectTo: user.role ? '/admin' : '/'  
   };
 
   return session;
