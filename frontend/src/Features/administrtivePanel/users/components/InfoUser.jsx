@@ -20,15 +20,19 @@ function InfoUser() {
 
   if (!user) return null;
 
+  const createdAt = user.createdAt
+    ? new Date(user.createdAt).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : '—';
+
   const rows = [
-    { label: 'Tipo y No. Documento', value: `${user.tipo} ${user.documento}`     },
-    { label: 'Nombre completo',      value: user.nombre                           },
-    { label: 'Correo electrónico',   value: user.correo                           },
-    { label: 'Teléfono - Celular',   value: user.telefono                         },
-    { label: 'Tipo de usuario',      value: user.rol                              },
-    { label: 'Tipo de cliente',      value: user.tipoCliente ?? 'Detal'             },
-    { label: 'Estado actual',        value: user.activo ? 'Activo' : 'Inactivo'   },
-    { label: 'Registrado desde',     value: user.registradoDesde ?? '—'           },
+    { label: 'Tipo y No. Documento', value: `${user.documentType} ${user.document}` },
+    { label: 'Nombre completo',      value: user.name                               },
+    { label: 'Correo electrónico',   value: user.email                              },
+    { label: 'Teléfono - Celular',   value: user.phone                              },
+    { label: 'Tipo de usuario',      value: user.role ?? 'Nulo'                     },
+    { label: 'Tipo de cliente',      value: user.clientType ?? 'Detal'              },
+    { label: 'Estado actual',        value: user.active ? 'Activo' : 'Inactivo'     },
+    { label: 'Registrado desde',     value: createdAt                               },
   ];
 
   return (

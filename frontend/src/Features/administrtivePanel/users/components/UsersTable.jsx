@@ -117,14 +117,14 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
   const { showConfirm, showSuccess, showWarning } = useAlert();
 
   // ─── Eliminar usuario ─────────────────────────────────────────────────────
-  const handleDelete = (row) => {
-    if (row.activo) {
-      showWarning(
-        'No es posible eliminar este usuario',
-        'Debes desactivar el usuario antes de poder eliminarlo.'
-      );
-      return;
-    }
+    const handleDelete = (row) => {
+      if (row.active) {          
+        showWarning(
+          'No es posible eliminar este usuario',
+          'Debes desactivar el usuario antes de poder eliminarlo.'
+        );
+        return;
+      }
 
     // ─── Verificar ventas asociadas vía servicio ────────────────────────────
     const ventas = (() => {
@@ -192,24 +192,24 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                   {offset + index + 1}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                  <span className="font-medium">{highlight(row.tipo, search)}</span>
+                  <span className="font-medium">{highlight(row.documentType, search)}</span>
                   {' '}
-                  {highlight(row.documento, search)}
+                  {highlight(row.document, search)}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">
-                  {highlight(row.nombre, search)}
+                  {highlight(row.name, search)}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(row.correo, search)}
+                  {highlight(row.email, search)}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(row.telefono, search)}
+                  {highlight(row.phone, search)}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(row.rol, search)}
+                  {highlight(row.role ?? 'Nulo', search)}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(row.tipoCliente ?? 'Detal', search)}
+                  {highlight(row.clientType ?? 'Detal', search)}
                 </td>
                 <td className="px-3 py-1.5">
                   <div className="flex items-center justify-center gap-1 sm:gap-1.5">
@@ -245,11 +245,11 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                       <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                     </button>
 
-                    <ActiveToggle
-                      activo={row.activo}
-                      onChange={() => onToggle?.(row.id)}
-                      search={search}
-                    />
+                      <ActiveToggle
+                        activo={row.active}       
+                        onChange={() => onToggle?.(row.id)}
+                        search={search}
+                      />
 
                     <button
                       onClick={() => handleDelete(row)}

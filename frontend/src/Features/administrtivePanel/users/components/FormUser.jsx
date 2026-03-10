@@ -6,9 +6,18 @@ import { useModalAnimation } from '../../../shared/useModalAnimation';
 import { UsersDB } from '../services/usersDB';
 import { getRoles } from '../../configuration/roles/services/rolesServices';
 
-// ─── Normalizar: sin tildes, sin mayúsculas, sin espacios extremos ────────────
 const normalizar = (str) =>
   str.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+// ── Helper para dividir nombre completo inteligentemente ─────────────────────
+const splitName = (fullName = '') => {
+  const palabras = fullName.trim().split(/\s+/).filter(Boolean);
+  const mitad    = palabras.length >= 3 ? Math.ceil(palabras.length / 2) : palabras.length;
+  return {
+    nombres:   palabras.slice(0, mitad).join(' '),
+    apellidos: palabras.slice(mitad).join(' '),
+  };
+};
 
 function FormUser() {
   const navigate   = useNavigate();
@@ -26,14 +35,16 @@ function FormUser() {
     ? `${origin.x}px ${origin.y}px`
     : 'center center';
 
+  const { nombres: nombresInit, apellidos: apellidosInit } = splitName(userToEdit?.name);
+
   const [form, setForm] = useState({
-    tipo:      userToEdit?.tipo      ?? 'CC',
-    documento: userToEdit?.documento ?? '',
-    nombres:   userToEdit?.nombre?.split(' ').slice(0, 2).join(' ') ?? '',
-    apellidos: userToEdit?.nombre?.split(' ').slice(2).join(' ')    ?? '',
-    correo:    userToEdit?.correo    ?? '',
-    telefono:  userToEdit?.telefono  ?? '',
-    rol:       userToEdit?.rol       ?? 'Nulo',
+    tipo:      userToEdit?.documentType ?? 'CC',
+    documento: userToEdit?.document     ?? '',
+    nombres:   nombresInit,
+    apellidos: apellidosInit,
+    correo:    userToEdit?.email        ?? '',
+    telefono:  userToEdit?.phone        ?? '',
+    rol:       userToEdit?.role         ?? 'Nulo',
   });
 
   const [errors,  setErrors]  = useState({});
@@ -41,7 +52,6 @@ function FormUser() {
 
   const tiposDocumento = ['CC', 'CE', 'NIT', 'TI', 'PP'];
 
-  // Roles dinámicos: 'Nulo' siempre primero + roles activos del módulo de Roles
   const roles = [
     'Nulo',
     ...getRoles()
@@ -49,8 +59,7 @@ function FormUser() {
       .map((r) => r.name),
   ];
 
-  // tipoCliente es inmutable — siempre se lee del usuario o cae en 'Detal'
-  const tipoCliente = userToEdit?.tipoCliente ?? 'Detal';
+  const tipoCliente = userToEdit?.clientType ?? 'Detal';
 
   const PHONE_MIN = 7;
   const PHONE_MAX = 10;
@@ -59,7 +68,7 @@ function FormUser() {
 
   const existingUsers = useMemo(() => UsersDB.list(), []);
 
-  // ─── Validar duplicados ────────────────────────────────────────────────────
+  // ── Validar duplicados ───────────────────────────────────────────────────
   const checkDuplicates = (currentForm = form) => {
     const dupes = {};
     const nombreCompleto = `${currentForm.nombres.trim()} ${currentForm.apellidos.trim()}`.trim();
@@ -67,19 +76,25 @@ function FormUser() {
     existingUsers.forEach((u) => {
       if (isEditing && u.id === userToEdit.id) return;
 
-      if (currentForm.documento.trim() &&
-          normalizar(u.documento) === normalizar(currentForm.documento) &&
-          normalizar(u.tipo)      === normalizar(currentForm.tipo)) {
+      if (
+        currentForm.documento.trim() &&
+        normalizar(u.document     ?? '') === normalizar(currentForm.documento) &&
+        normalizar(u.documentType ?? '') === normalizar(currentForm.tipo)
+      ) {
         dupes.documento = 'Este número de documento ya está registrado.';
       }
 
-      if (currentForm.correo.trim() &&
-          normalizar(u.correo) === normalizar(currentForm.correo)) {
+      if (
+        currentForm.correo.trim() &&
+        normalizar(u.email ?? '') === normalizar(currentForm.correo)
+      ) {
         dupes.correo = 'Este correo electrónico ya está registrado.';
       }
 
-      if (nombreCompleto.length >= 6 &&
-          normalizar(u.nombre) === normalizar(nombreCompleto)) {
+      if (
+        nombreCompleto.length >= 6 &&
+        normalizar(u.name ?? '') === normalizar(nombreCompleto)
+      ) {
         dupes.nombres   = 'Ya existe un usuario con este nombre completo.';
         dupes.apellidos = 'Ya existe un usuario con este nombre completo.';
       }
@@ -88,7 +103,7 @@ function FormUser() {
     return dupes;
   };
 
-  // ─── Validación de formato ─────────────────────────────────────────────────
+  // ── Validación de formato ────────────────────────────────────────────────
   const validateField = (name, value, currentForm = form) => {
     const v = value.trim();
     switch (name) {
@@ -104,11 +119,16 @@ function FormUser() {
         if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(v))     return 'Solo se permiten letras y espacios.';
         if (v.replace(/\s+/g, '').length < 3) return 'El nombre debe tener al menos 3 letras.';
         return '';
-      case 'apellidos':
+      case 'apellidos': {
+        // Opcional si estamos editando y el nombre original tenía ≤2 palabras
+        const palabrasOriginales = (userToEdit?.name ?? '').trim().split(/\s+/).filter(Boolean).length;
+        const esOpcional = isEditing && palabrasOriginales <= 2;
+        if (!v && esOpcional)                 return '';
         if (!v)                               return 'Los apellidos son obligatorios.';
         if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(v))     return 'Solo se permiten letras y espacios.';
         if (v.replace(/\s+/g, '').length < 3) return 'El apellido debe tener al menos 3 letras.';
         return '';
+      }
       case 'correo':
         if (!v)                                        return 'El correo electrónico es obligatorio.';
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return 'Ingrese un correo válido. Ej: usuario@dominio.com';
@@ -125,7 +145,6 @@ function FormUser() {
     }
   };
 
-  // ─── handleChange ─────────────────────────────────────────────────────────
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -168,7 +187,6 @@ function FormUser() {
     }
   };
 
-  // ─── Validación completa al enviar ────────────────────────────────────────
   const validate = () => {
     const errs   = {};
     const fields = ['documento', 'nombres', 'apellidos', 'correo', 'telefono'];
@@ -183,7 +201,7 @@ function FormUser() {
     return errs;
   };
 
-  // ─── Guardar ──────────────────────────────────────────────────────────────
+  // ── Guardar ──────────────────────────────────────────────────────────────
   const handleSubmit = () => {
     const allTouched = Object.keys(form).reduce((acc, k) => ({ ...acc, [k]: true }), {});
     setTouched(allTouched);
@@ -195,18 +213,17 @@ function FormUser() {
       return;
     }
 
-    const nombre = `${form.nombres.trim()} ${form.apellidos.trim()}`.trim();
-    const rol    = form.rol || 'Nulo';
+    const name = `${form.nombres.trim()} ${form.apellidos.trim()}`.trim();
+    const role = form.rol === 'Nulo' ? null : form.rol;
 
     if (isEditing) {
       UsersDB.update(userToEdit.id, {
-        tipo:      form.tipo,
-        documento: form.documento,
-        nombre,
-        correo:    form.correo,
-        telefono:  form.telefono,
-        rol,
-        // tipoCliente no se envía — el servicio lo conserva intacto
+        documentType: form.tipo,
+        document:     form.documento,
+        name,
+        email:        form.correo,
+        phone:        form.telefono,
+        role,
       });
       showSuccess('Usuario actualizado', 'Los datos del usuario han sido actualizados.');
       navigate(returnTo, {
@@ -214,14 +231,15 @@ function FormUser() {
       });
     } else {
       const newUser = UsersDB.create({
-        tipo:      form.tipo,
-        documento: form.documento,
-        nombre,
-        correo:    form.correo,
-        telefono:  form.telefono,
-        rol,
-        // tipoCliente lo asigna create() automáticamente como 'Detal'
+        documentType: form.tipo,
+        document:     form.documento,
+        name,
+        email:        form.correo,
+        phone:        form.telefono,
+        role,
       });
+      // ── Log de contraseña generada ────────────────────────────────────
+      console.log(` Contraseña generada para "${name}":`, newUser.password);
       showSuccess('Usuario creado', 'El nuevo usuario ha sido registrado exitosamente.');
       navigate(returnTo, {
         state: returnTo !== '/admin/users' ? { newUserId: String(newUser.id) } : undefined,
@@ -229,27 +247,23 @@ function FormUser() {
     }
   };
 
-  // ─── Detectar cambios sin guardar ─────────────────────────────────────────
+  // ── isDirty ──────────────────────────────────────────────────────────────
   const isDirty = (() => {
     if (isEditing) {
-      const nombreOriginal    = userToEdit.nombre ?? '';
-      const nombresOriginal   = nombreOriginal.split(' ').slice(0, 2).join(' ');
-      const apellidosOriginal = nombreOriginal.split(' ').slice(2).join(' ');
+      const { nombres: nombresOrig, apellidos: apellidosOrig } = splitName(userToEdit.name);
       return (
-        form.tipo      !== (userToEdit.tipo      ?? 'CC')   ||
-        form.documento !== (userToEdit.documento  ?? '')     ||
-        form.nombres   !== nombresOriginal                   ||
-        form.apellidos !== apellidosOriginal                 ||
-        form.correo    !== (userToEdit.correo     ?? '')     ||
-        form.telefono  !== (userToEdit.telefono   ?? '')     ||
-        form.rol       !== (userToEdit.rol        ?? 'Nulo')
+        form.tipo      !== (userToEdit.documentType ?? 'CC')  ||
+        form.documento !== (userToEdit.document     ?? '')    ||
+        form.nombres   !== nombresOrig                        ||
+        form.apellidos !== apellidosOrig                      ||
+        form.correo    !== (userToEdit.email        ?? '')    ||
+        form.telefono  !== (userToEdit.phone        ?? '')    ||
+        form.rol       !== (userToEdit.role         ?? 'Nulo')
       );
     }
     return (
-      form.documento.trim() !== '' ||
-      form.nombres.trim()   !== '' ||
-      form.apellidos.trim() !== '' ||
-      form.correo.trim()    !== '' ||
+      form.documento.trim() !== '' || form.nombres.trim()   !== '' ||
+      form.apellidos.trim() !== '' || form.correo.trim()    !== '' ||
       form.telefono.trim()  !== ''
     );
   })();
@@ -265,7 +279,6 @@ function FormUser() {
     if (confirmed?.isConfirmed) animatedClose();
   };
 
-  // ─── Helpers de estilo ─────────────────────────────────────────────────────
   const isValid = (field) =>
     touched[field] && !errors[field] && form[field].toString().trim() !== '';
 
@@ -313,7 +326,7 @@ function FormUser() {
         className={`bg-white rounded-lg shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-lg overflow-hidden flex flex-col
           ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
       >
-        {/* ── Header ────────────────────────────────────────────────────── */}
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
           <h2 className="text-white font-semibold text-lg">
             {isEditing ? 'Editar usuario' : 'Nuevo usuario'}
@@ -323,7 +336,7 @@ function FormUser() {
           </button>
         </div>
 
-        {/* ── Body ──────────────────────────────────────────────────────── */}
+        {/* Body */}
         <div className="px-6 py-5 flex flex-col gap-4 overflow-y-auto">
 
           {/* Tipo + Documento */}
@@ -388,7 +401,11 @@ function FormUser() {
             </div>
             <div className="flex flex-col gap-1.5 flex-1">
               <label className="block text-sm font-medium text-gray-700">
-                Apellidos<span className="text-red-500">*</span>
+                Apellidos
+                {/* Mostrar asterisco solo si es obligatorio */}
+                {!(isEditing && (userToEdit?.name ?? '').trim().split(/\s+/).filter(Boolean).length <= 2) && (
+                  <span className="text-red-500">*</span>
+                )}
               </label>
               <div className="relative">
                 <input
@@ -447,7 +464,7 @@ function FormUser() {
             <ErrorMsg field="telefono" />
           </div>
 
-          {/* Rol — opcional, por defecto Nulo */}
+          {/* Rol */}
           <div className="flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
               Rol
@@ -466,7 +483,7 @@ function FormUser() {
             </div>
           </div>
 
-          {/* Tipo de cliente — inmutable, gestionado desde el módulo de clientes */}
+          {/* Tipo de cliente — inmutable */}
           <div className="flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
               Tipo de cliente
@@ -479,7 +496,7 @@ function FormUser() {
 
         </div>
 
-        {/* ── Footer ────────────────────────────────────────────────────── */}
+        {/* Footer */}
         <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
           <button
             onClick={handleCancel}
