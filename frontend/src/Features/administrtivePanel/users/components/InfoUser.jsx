@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X } from 'lucide-react';
+import { X, SquarePen } from 'lucide-react';
 import { useModalAnimation } from '../../../shared/useModalAnimation';
 
 function InfoUser() {
@@ -7,7 +7,12 @@ function InfoUser() {
   const user     = location.state?.user   ?? null;
   const origin   = location.state?.origin ?? null;
 
+  const navigate = useNavigate();
   const { visible, handleClose } = useModalAnimation('/admin/users');
+
+  const handleEdit = () => {
+    navigate('/admin/users/form-user', { state: { user } });
+  };
 
   const transformOrigin = origin
     ? `${origin.x}px ${origin.y}px`
@@ -68,12 +73,19 @@ function InfoUser() {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 px-6 py-4 flex justify-end shrink-0">
+        <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
           <button
             onClick={handleClose}
-            className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+            className="px-6 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
           >
             Cerrar
+          </button>
+          <button
+            onClick={handleEdit}
+            className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"
+          >
+            <SquarePen className="w-4 h-4" strokeWidth={1.8} />
+            Editar usuario
           </button>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { saveImage, getImage, deleteImage as deleteImageDB } from '../services/CarouselBD';
+import { saveImage, getImage, deleteImage as deleteImageDB, seedDefaultImage, DEFAULT_SLIDE_ID } from '../services/CarouselBD';
 import OrderSection      from '../components/OrderSection';
 import ManagementSection from '../components/ManagementSection';
 
@@ -29,6 +29,8 @@ function Banner() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
+      // Sembrar imagen por defecto si aún no existe en localStorage/IndexedDB
+      await seedDefaultImage();
       const meta = loadMeta();
       setSlides(meta);
 

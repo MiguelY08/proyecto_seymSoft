@@ -173,8 +173,7 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
         <thead className="bg-[#004D77] text-white">
           <tr>
             <th className="sticky left-0 z-10 bg-[#004D77] px-3 py-2.5 text-center text-xs font-semibold">#</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Tipo</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Documento</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Tipo y Documento</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Nombre</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Correo electrónico</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Teléfono</th>
@@ -193,9 +192,8 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                   {offset + index + 1}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(row.tipo, search)}
-                </td>
-                <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                  <span className="font-medium">{highlight(row.tipo, search)}</span>
+                  {' '}
                   {highlight(row.documento, search)}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">

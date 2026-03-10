@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useAlert } from '../../../shared/alerts/useAlert';
 import { useModalAnimation } from '../../../shared/useModalAnimation';
 import { UsersDB } from '../services/usersDB';
+import { getRoles } from '../../configuration/roles/services/rolesServices';
 
 // ─── Normalizar: sin tildes, sin mayúsculas, sin espacios extremos ────────────
 const normalizar = (str) =>
@@ -39,7 +40,14 @@ function FormUser() {
   const [touched, setTouched] = useState({});
 
   const tiposDocumento = ['CC', 'CE', 'NIT', 'TI', 'PP'];
-  const roles          = ['Nulo', 'Administrador', 'Empleado', 'Cliente'];
+
+  // Roles dinámicos: 'Nulo' siempre primero + roles activos del módulo de Roles
+  const roles = [
+    'Nulo',
+    ...getRoles()
+      .filter((r) => r.active)
+      .map((r) => r.name),
+  ];
 
   // tipoCliente es inmutable — siempre se lee del usuario o cae en 'Detal'
   const tipoCliente = userToEdit?.tipoCliente ?? 'Detal';

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ShoppingBag, Briefcase, ClipboardPen, FileText, Palette } from 'lucide-react';
 
-import { getImage } from '../../administrtivePanel/configuration/carousel/services/CarouselBD.js';
+import { getImage, seedDefaultImage } from '../../administrtivePanel/configuration/carousel/services/CarouselBD.js';
 
 import ProductCard from '../../shared/ProductCard.jsx';
 import correctorCinta      from '../../../assets/products/correctorencinta.png';
@@ -44,6 +44,9 @@ function Home() {
   useEffect(() => {
     const load = async () => {
       try {
+        // Garantizar que la imagen por defecto esté sembrada
+        await seedDefaultImage();
+
         const stored = localStorage.getItem('pm_carousel');
         const meta   = stored ? JSON.parse(stored) : [];
 
