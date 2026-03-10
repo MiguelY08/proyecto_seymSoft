@@ -10,7 +10,7 @@ const fmt = (v) =>
   }).format(v);
 
 // ─── Helper: construir item de venta a partir de producto semilla ─────────────
-const mkItem = (prod, cantidad) => ({ product: prod, cantidad });
+const mkItem = (prod, cantidad, descripcion = '') => ({ product: prod, cantidad, descripcion });
 
 // ─── Productos de la semilla (referencia estática para las ventas de ejemplo) ─
 const P = [
@@ -45,7 +45,7 @@ const SEED_SALES = [
     cliente:  'Marcela Alejandra Gómez Ríos',   vendedor: 'Laura Milena Restrepo Cardona',
     metodoPago: 'Efectivo',    estado: 'Aprobada',
     entrega: 'Cliente lo recoge', direccion: '',
-    items: [mkItem(P[1], 3), mkItem(P[4], 2)],
+    items: [mkItem(P[1], 3, '2 libretas de pasta dura azul y 1 de pasta roja'), mkItem(P[4], 2)],
     get total() { return calcTotal(this.items); },
     registradoDesde: '05/01/2025',
   },
@@ -55,7 +55,7 @@ const SEED_SALES = [
     cliente:  'Carlos Eduardo Vargas Herrera',   vendedor: 'Andrés Felipe Martínez Salazar',
     metodoPago: 'Transferencia', estado: 'Aprobada',
     entrega: 'Domicilio', direccion: 'Calle 45 # 23-10, Barrio La Estrella, Medellín',
-    items: [mkItem(P[3], 5), mkItem(P[6], 2), mkItem(P[9], 4)],
+    items: [mkItem(P[3], 5, 'Todas deben ser de la marca Navigator, sin sustitutos'), mkItem(P[6], 2), mkItem(P[9], 4, '2 set de colores cálidos y 2 de colores fríos')],
     get total() { return calcTotal(this.items); },
     registradoDesde: '10/01/2025',
   },
@@ -63,9 +63,9 @@ const SEED_SALES = [
     id: 3, factura: '674821093', fecha: '15/01/2025',
     clienteId: 7,  vendedorId: 9,
     cliente:  'Juan Sebastián Torres Mendoza',   vendedor: 'Miguel Ángel Castillo Duque',
-    metodoPago: 'Crédito',     estado: 'Créd. aprobado',
+    metodoPago: 'Crédito',     estado: 'Aprobada',
     entrega: 'Cliente lo recoge', direccion: '',
-    items: [mkItem(P[2], 10), mkItem(P[5], 3)],
+    items: [mkItem(P[2], 10), mkItem(P[5], 3, '2 cajas para niña (tonos pastel) y 1 para niño (tonos vivos)')],
     get total() { return calcTotal(this.items); },
     registradoDesde: '15/01/2025',
   },
@@ -85,7 +85,7 @@ const SEED_SALES = [
     cliente:  'Alejandro José Patiño Londoño',   vendedor: 'Daniel Esteban Ramírez Posada',
     metodoPago: 'Transferencia', estado: 'Esp. aprobación',
     entrega: 'Cliente lo recoge', direccion: '',
-    items: [mkItem(P[10], 6), mkItem(P[11], 4), mkItem(P[12], 8)],
+    items: [mkItem(P[10], 6, '3 paquetes de rayas y 3 de cuadros'), mkItem(P[11], 4), mkItem(P[12], 8, '5 cuadernos para mujer y 3 para hombre')],
     get total() { return calcTotal(this.items); },
     registradoDesde: '25/01/2025',
   },
@@ -103,7 +103,7 @@ const SEED_SALES = [
     id: 7, factura: '560294817', fecha: '07/02/2025',
     clienteId: 14, vendedorId: 19,
     cliente:  'Isabella Fernanda López Arango',  vendedor: 'Tomás Alejandro Herrera Zuluaga',
-    metodoPago: 'Crédito',     estado: 'Créd. denegado',
+    metodoPago: 'Crédito',     estado: 'Desaprobada',
     entrega: 'Cliente lo recoge', direccion: '',
     items: [mkItem(P[3], 2), mkItem(P[4], 3), mkItem(P[5], 1)],
     get total() { return calcTotal(this.items); },
@@ -115,7 +115,7 @@ const SEED_SALES = [
     cliente:  'Camila Andrea Sánchez Vélez',     vendedor: 'Natalia Paola Ospina Cano',
     metodoPago: 'Transferencia', estado: 'Aprobada',
     entrega: 'Domicilio', direccion: 'Calle 10 # 43-20, Barrio El Estadio, Medellín',
-    items: [mkItem(P[1], 5), mkItem(P[2], 8), mkItem(P[15], 10)],
+    items: [mkItem(P[1], 5, '3 con espiral y 2 de pasta dura'), mkItem(P[2], 8), mkItem(P[15], 10)],
     get total() { return calcTotal(this.items); },
     registradoDesde: '12/02/2025',
   },
@@ -135,14 +135,14 @@ const SEED_SALES = [
     cliente:  'Manuela Sofía Álvarez Montoya',   vendedor: 'Laura Milena Restrepo Cardona',
     metodoPago: 'Transferencia', estado: 'Aprobada',
     entrega: 'Domicilio', direccion: 'Transversal 39 # 72-15, Barrio Laureles, Medellín',
-    items: [mkItem(P[11], 3), mkItem(P[12], 5), mkItem(P[13], 6), mkItem(P[14], 2)],
+    items: [mkItem(P[11], 3), mkItem(P[12], 5, '3 cuadernos universitarios con índice y 2 sin índice'), mkItem(P[13], 6, '4 pegantes grandes y 2 pequeños'), mkItem(P[14], 2)],
     get total() { return calcTotal(this.items); },
     registradoDesde: '20/02/2025',
   },
 ];
 
 // ─── Versión de la semilla — incrementar si se modifica SEED_SALES ────────────
-const SEED_VERSION = 'sales_v1';
+const SEED_VERSION = 'sales_v3';
 
 // ─── Sembrar ventas si no existe, está vacía o la versión no coincide ─────────
 const seedSales = () => {

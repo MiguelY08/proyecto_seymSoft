@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Search, Package, Trash2, ShoppingBag, Plus, Minus, Barcode } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import { ProductsDB } from '../services/productsBD';
@@ -9,9 +9,40 @@ const formatPrice = (value) =>
     style: 'currency', currency: 'COP', minimumFractionDigits: 0,
   }).format(value);
 
-// ─── Card de producto ─────────────────────────────────────────────────────────
-function ProductCard({ item, onQuantityChange, onRemove, isEditing }) {
-  const { product, cantidad } = item;
+// ─── Hook: long-press para +/- ───────────────────────────────────────────────
+// Usa callbackRef para evitar stale closure cuando la cantidad cambia entre ticks
+function useLongPress(callback, { delay = 500, interval = 80 } = {}) {
+  const callbackRef = useRef(callback);
+  const timeoutRef  = useRef(null);
+  const intervalRef = useRef(null);
+
+  // Siempre apunta al callback más reciente sin recrear start/stop
+  useEffect(() => { callbackRef.current = callback; }, [callback]);
+
+  const start = useCallback(() => {
+    callbackRef.current(); // disparo inmediato
+    timeoutRef.current = setTimeout(() => {
+      intervalRef.current = setInterval(() => callbackRef.current(), interval);
+    }, delay);
+  }, [delay, interval]);
+
+  const stop = useCallback(() => {
+    clearTimeout(timeoutRef.current);
+    clearInterval(intervalRef.current);
+  }, []);
+
+  return {
+    onMouseDown:  start,
+    onMouseUp:    stop,
+    onMouseLeave: stop,
+    onTouchStart: (e) => { e.preventDefault(); start(); },
+    onTouchEnd:   stop,
+  };
+}
+
+// ─── Card de producto (compacta) ──────────────────────────────────────────────
+function ProductCard({ item, onQuantityChange, onDescriptionChange, onRemove, isEditing }) {
+  const { product, cantidad, descripcion = '' } = item;
   const total = product.precioDetal * cantidad;
 
   const handleInputChange = (e) => {
@@ -19,41 +50,48 @@ function ProductCard({ item, onQuantityChange, onRemove, isEditing }) {
     if (!isNaN(val)) onQuantityChange(product.id, val);
   };
 
+  const decrement = () => onQuantityChange(product.id, cantidad - 1);
+  const increment = () => onQuantityChange(product.id, cantidad + 1);
+
+  const longPressMin = useLongPress(decrement);
+  const longPressMax = useLongPress(increment);
+
   return (
-    <div className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg bg-white">
+    <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
 
-      {/* Icono */}
-      <div className="w-14 h-14 rounded-lg bg-[#004D77]/8 border border-[#004D77]/15 flex items-center justify-center shrink-0">
-        <Package className="w-7 h-7 text-[#004D77]/50" strokeWidth={1.5} />
-      </div>
+      {/* ── Fila principal ─────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2.5 px-3 py-2">
 
-      {/* Info + controles */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-gray-800 truncate">{product.nombre}</p>
+        {/* Icono pequeño */}
+        <div className="w-8 h-8 rounded-md bg-[#004D77]/8 border border-[#004D77]/15 flex items-center justify-center shrink-0">
+          <Package className="w-4 h-4 text-[#004D77]/50" strokeWidth={1.5} />
+        </div>
 
-        {/* Código de barras */}
-        {product.codigoBarras && (
-          <p className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
-            <Barcode className="w-3 h-3" strokeWidth={1.5} />
-            {product.codigoBarras}
-          </p>
-        )}
+        {/* Nombre + barras */}
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-gray-800 truncate leading-tight">{product.nombre}</p>
+          {product.codigoBarras && (
+            <p className="text-[9px] text-gray-400 font-mono flex items-center gap-0.5 leading-tight">
+              <Barcode className="w-2.5 h-2.5" strokeWidth={1.5} />
+              {product.codigoBarras}
+            </p>
+          )}
+        </div>
 
-        <div className="flex items-center gap-2 mt-1.5">
-          <span className="text-xs text-gray-400 font-medium">Cantidad</span>
-
+        {/* Controles de cantidad */}
+        <div className="flex flex-col items-center gap-0.5 shrink-0">
           {isEditing ? (
-            <span className="text-sm font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1">
+            <span className="text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded px-2 py-0.5">
               {cantidad}
             </span>
           ) : (
-            <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+            <div className="flex items-center border border-gray-300 rounded-md overflow-hidden">
               <button
                 type="button"
-                onClick={() => onQuantityChange(product.id, cantidad - 1)}
-                className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer"
+                {...longPressMin}
+                className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer select-none"
               >
-                <Minus className="w-3 h-3" strokeWidth={2.5} />
+                <Minus className="w-2.5 h-2.5" strokeWidth={2.5} />
               </button>
               <input
                 type="number"
@@ -61,51 +99,56 @@ function ProductCard({ item, onQuantityChange, onRemove, isEditing }) {
                 onChange={handleInputChange}
                 min={1}
                 max={product.stock}
-                className="w-14 text-center text-sm font-semibold text-gray-700 border-x border-gray-200 outline-none py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-10 text-center text-xs font-semibold text-gray-700 border-x border-gray-200 outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <button
                 type="button"
-                onClick={() => onQuantityChange(product.id, cantidad + 1)}
-                className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer"
+                {...longPressMax}
+                className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer select-none"
               >
-                <Plus className="w-3 h-3" strokeWidth={2.5} />
+                <Plus className="w-2.5 h-2.5" strokeWidth={2.5} />
               </button>
             </div>
           )}
+          <span className="text-[9px] text-gray-400 leading-tight">
+            Máx: {product.stock}
+          </span>
         </div>
-        <p className="text-[10px] text-gray-400 mt-0.5">Stock disponible: {product.stock}</p>
+
+        {/* Precio › Total */}
+        <div className="hidden sm:flex items-center gap-2 shrink-0">
+          <span className="text-[10px] font-medium text-gray-500">{formatPrice(product.precioDetal)}</span>
+          <span className="text-gray-300 text-xs">›</span>
+          <span className="text-xs font-bold text-[#004D77]">{formatPrice(total)}</span>
+        </div>
+
+        {/* Total solo mobile */}
+        <span className="flex sm:hidden text-xs font-bold text-[#004D77] shrink-0">{formatPrice(total)}</span>
+
+        {/* Eliminar */}
+        {!isEditing && (
+          <button
+            type="button"
+            onClick={() => onRemove(product.id)}
+            className="shrink-0 w-6 h-6 flex items-center justify-center rounded text-red-300 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer"
+            title="Quitar producto"
+          >
+            <Trash2 className="w-3.5 h-3.5" strokeWidth={1.8} />
+          </button>
+        )}
       </div>
 
-      {/* Precio + Total — desktop */}
-      <div className="hidden sm:flex items-center gap-4 shrink-0">
-        <div className="text-center">
-          <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Precio</p>
-          <p className="text-sm font-bold text-gray-700">{formatPrice(product.precioDetal)}</p>
-        </div>
-        <span className="text-gray-300 text-lg">›</span>
-        <div className="text-center">
-          <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Total</p>
-          <p className="text-sm font-bold text-[#004D77]">{formatPrice(total)}</p>
-        </div>
+      {/* ── Descripción — editable tanto en creación como en edición ──── */}
+      <div className="px-3 pb-2">
+        <input
+          type="text"
+          value={descripcion}
+          onChange={(e) => onDescriptionChange(product.id, e.target.value)}
+          placeholder="Descripción / observaciones del producto (opcional)"
+          maxLength={200}
+          className="w-full px-2.5 py-1.5 text-[11px] border border-gray-200 rounded-md outline-none placeholder-gray-300 text-gray-600 focus:border-[#004D77] focus:ring-1 focus:ring-[#004D77]/20 transition-colors duration-200"
+        />
       </div>
-
-      {/* Total — mobile */}
-      <div className="flex sm:hidden flex-col items-end shrink-0">
-        <p className="text-[10px] text-gray-400">Total</p>
-        <p className="text-sm font-bold text-[#004D77]">{formatPrice(total)}</p>
-      </div>
-
-      {/* Eliminar — solo en creación */}
-      {!isEditing && (
-        <button
-          type="button"
-          onClick={() => onRemove(product.id)}
-          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer"
-          title="Quitar producto"
-        >
-          <Trash2 className="w-4 h-4" strokeWidth={1.8} />
-        </button>
-      )}
     </div>
   );
 }
@@ -196,6 +239,13 @@ function OrderForm({ items, onItemsChange, isEditing }) {
     onItemsChange(items.filter((i) => i.product.id !== productId));
   };
 
+  // ─── Actualizar descripción ───────────────────────────────────────────────
+  const handleDescriptionChange = (productId, value) => {
+    onItemsChange(items.map((i) =>
+      i.product.id === productId ? { ...i, descripcion: value } : i
+    ));
+  };
+
   // ─── Determinar si la query es un código de barras exacto ────────────────
   const isBarcodeSearch = /^\d{8,13}$/.test(query.trim());
 
@@ -211,7 +261,7 @@ function OrderForm({ items, onItemsChange, isEditing }) {
           <p className="text-sm font-semibold text-gray-800">2. Datos del pedido</p>
           <p className="text-xs text-gray-400">
             {isEditing
-              ? 'Puedes modificar las cantidades de los productos'
+              ? 'Solo puedes modificar la descripción de cada producto'
               : 'Busque por nombre, categoría o código de barras'}
           </p>
         </div>
@@ -297,6 +347,7 @@ function OrderForm({ items, onItemsChange, isEditing }) {
                 key={item.product.id}
                 item={item}
                 onQuantityChange={handleQuantityChange}
+                onDescriptionChange={handleDescriptionChange}
                 onRemove={handleRemove}
                 isEditing={isEditing}
               />

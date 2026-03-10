@@ -30,11 +30,9 @@ function highlight(text, term) {
 const estadoVariants = {
   'Aprobada':        'bg-green-100 text-green-700 border-green-300',
   'Esp. aprobación': 'bg-yellow-100 text-yellow-700 border-yellow-300',
-  'Créd. aprobado':  'bg-teal-100 text-teal-700 border-teal-300',
   'Anulada':         'bg-red-100 text-red-400 border-red-200',
   'Desaprobada':     'bg-red-100 text-red-600 border-red-300',
   'Cancelada':       'bg-orange-100 text-orange-600 border-orange-300',
-  'Créd. denegado':  'bg-pink-100 text-pink-600 border-pink-300',
 };
 
 function EstadoBadge({ estado, term }) {
@@ -49,7 +47,7 @@ function EstadoBadge({ estado, term }) {
 
 // ─── Permisos por estado ──────────────────────────────────────────────────────
 const getPermisos = (estado) => {
-  if (estado === 'Aprobada' || estado === 'Créd. aprobado') {
+  if (estado === 'Aprobada') {
     return { puedeDevolver: true, puedeAnular: true, deshabilitado: false };
   }
   if (estado === 'Anulada') {
