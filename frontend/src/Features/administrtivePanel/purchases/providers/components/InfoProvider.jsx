@@ -1,5 +1,12 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { 
+  formatPersonType, 
+  formatRut, 
+  formatClientType,
+  getStatusBadgeClass,
+  getStatusText
+} from '../utils/providerHelpers';
 
 function InfoProvider({ isOpen, onClose, provider }) {
   if (!isOpen || !provider) return null;
@@ -36,7 +43,7 @@ function InfoProvider({ isOpen, onClose, provider }) {
                 Tipo Persona
               </label>
               <p className="text-sm text-gray-900 font-medium">
-                {provider.tipoPersona === 'natural' ? 'Natural' : provider.tipoPersona === 'juridica' ? 'Jurídica' : 'N/A'}
+                {formatPersonType(provider.tipoPersona)}
               </p>
             </div>
 
@@ -76,10 +83,8 @@ function InfoProvider({ isOpen, onClose, provider }) {
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                 Estado
               </label>
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                provider.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-              }`}>
-                {provider.activo ? 'Activo' : 'Inactivo'}
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusBadgeClass(provider.activo)}`}>
+                {getStatusText(provider.activo)}
               </span>
             </div>
 
@@ -134,7 +139,7 @@ function InfoProvider({ isOpen, onClose, provider }) {
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                 Tipo Cliente
               </label>
-              <p className="text-sm text-gray-900 font-medium capitalize">{provider.tipoCliente || 'N/A'}</p>
+              <p className="text-sm text-gray-900 font-medium capitalize">{formatClientType(provider.tipoCliente)}</p>
             </div>
 
             {/* Separador */}
@@ -152,9 +157,7 @@ function InfoProvider({ isOpen, onClose, provider }) {
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                 RUT
               </label>
-              <p className="text-sm text-gray-900 font-medium">
-                {provider.rut === 'si' ? 'Sí' : provider.rut === 'no' ? 'No' : 'N/A'}
-              </p>
+              <p className="text-sm text-gray-900 font-medium">{formatRut(provider.rut)}</p>
             </div>
 
             {/* Separador */}
