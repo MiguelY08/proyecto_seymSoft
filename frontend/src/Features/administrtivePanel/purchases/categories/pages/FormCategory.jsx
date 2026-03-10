@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 
-const STORAGE_KEY = "pm_categories";
+import { createCategory, updateCategory } from "../services/categoriesService";
 
 function ActiveToggle({ activo, onChange }) {
   return (
@@ -32,6 +32,7 @@ function ActiveToggle({ activo, onChange }) {
 }
 
 function FormCategory({ onClose }) {
+
   const navigate = useNavigate();
   const location = useLocation();
   const { showWarning, showSuccess } = useAlert();
@@ -48,7 +49,6 @@ function FormCategory({ onClose }) {
 
   const [error, setError] = useState("");
 
-  // 🔹 Validación en tiempo real
   useEffect(() => {
     if (!form.nombre.trim()) {
       setError("El nombre de la categoría es obligatorio.");
@@ -58,6 +58,7 @@ function FormCategory({ onClose }) {
   }, [form.nombre]);
 
   const handleSubmit = () => {
+
     if (!form.nombre.trim()) {
       showWarning(
         "Campo obligatorio",
@@ -66,53 +67,34 @@ function FormCategory({ onClose }) {
       return;
     }
 
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const categories = stored ? JSON.parse(stored) : [];
-
     if (isEditing) {
-      const updated = categories.map((c) =>
-        c.id === categoryToEdit.id
-          ? {
-              ...c,
-              nombre: form.nombre.trim(),
-              estado: form.activo ? "Activo" : "Inactivo",
-            }
-          : c
-      );
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      updateCategory(categoryToEdit.id, form);
 
       showSuccess(
         "Categoría actualizada",
         "La categoría fue actualizada correctamente."
       );
+
     } else {
-      const newId =
-        categories.length > 0
-          ? Math.max(...categories.map((c) => c.id)) + 1
-          : 1;
 
-      const newCategory = {
-        id: newId,
-        nombre: form.nombre.trim(),
-        estado: form.activo ? "Activo" : "Inactivo",
-      };
-
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify([...categories, newCategory])
-      );
+      createCategory(form);
 
       showSuccess(
         "Categoría creada",
         "La nueva categoría fue creada exitosamente."
       );
+
     }
+
+    onClose();
+
   };
 
-    const handleCancel = () => {
-    onClose(); // 🔹 solo cierra el modal
-    };
+  const handleCancel = () => {
+    onClose();
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
@@ -122,8 +104,11 @@ function FormCategory({ onClose }) {
         className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
+
         {/* Header */}
+
         <div className="flex items-center justify-between px-6 py-4 bg-[#004D77]">
+
           <h2 className="text-white font-semibold text-lg">
             {isEditing ? "Editar Categoría" : "Crear Categoría"}
           </h2>
@@ -134,12 +119,15 @@ function FormCategory({ onClose }) {
           >
             <X className="w-5 h-5" strokeWidth={2} />
           </button>
+
         </div>
 
         {/* Body */}
+
         <div className="px-6 py-6 flex flex-col gap-5">
-          {/* Nombre */}
+
           <div className="flex flex-col gap-1.5">
+
             <label className="text-sm font-medium text-gray-700">
               Nombre
             </label>
@@ -161,10 +149,11 @@ function FormCategory({ onClose }) {
             {error && (
               <p className="text-sm text-red-600 mt-1">{error}</p>
             )}
+
           </div>
 
-          {/* Estado */}
           <div className="flex flex-col gap-2">
+
             <label className="text-sm font-medium text-gray-700">
               Estado
             </label>
@@ -175,11 +164,15 @@ function FormCategory({ onClose }) {
                 setForm({ ...form, activo: !form.activo })
               }
             />
+
           </div>
+
         </div>
 
         {/* Footer */}
+
         <div className="px-6 pb-6 flex flex-col gap-3">
+
           <button
             onClick={handleSubmit}
             disabled={!!error}
@@ -198,7 +191,9 @@ function FormCategory({ onClose }) {
           >
             Cancelar
           </button>
+
         </div>
+
       </div>
     </div>
   );

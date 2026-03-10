@@ -1,5 +1,5 @@
 import React from "react";
-import { Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 import Pagination from "../../../../shared/PaginationAdmin";
 
 function ActiveToggle({ activo, onChange }) {
@@ -48,12 +48,19 @@ export const CategoriesTable = ({
             <thead className="bg-[#004D77] text-white">
               <tr>
                 <th className="px-3 py-2 text-center font-semibold">#</th>
+
                 <th className="px-3 py-2 text-left font-semibold">
                   Nombre Categoría
                 </th>
+
+                <th className="px-3 py-2 text-center font-semibold">
+                  Subcategorías
+                </th>
+
                 <th className="px-3 py-2 text-center font-semibold">
                   Estado
                 </th>
+
                 <th className="px-3 py-2 text-center font-semibold">
                   Acciones
                 </th>
@@ -78,6 +85,11 @@ export const CategoriesTable = ({
                     {highlightText(category.nombre || "")}
                   </td>
 
+                  {/* 🔵 CONTADOR DE SUBCATEGORÍAS */}
+                  <td className="px-3 py-2.5 text-center font-semibold text-gray-700">
+                    {category.subcategorias || 0}
+                  </td>
+
                   <td className="px-3 py-2.5 text-center">
                     <span
                       className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -93,11 +105,11 @@ export const CategoriesTable = ({
                   <td className="px-3 py-2.5 text-center">
                     <div className="flex justify-center gap-2">
                       <button
-                            onClick={() => handleEdit(category)}
-                            className="text-gray-400 hover:text-blue-600 transition-colors"
-                        >
-                            <Edit size={16} />
-                        </button>
+                        onClick={() => handleEdit(category)}
+                        className="text-gray-400 hover:text-blue-600 transition-colors"
+                      >
+                        <Edit size={16} />
+                      </button>
 
                       <ActiveToggle
                         activo={category.estado === "Activo"}
@@ -120,13 +132,13 @@ export const CategoriesTable = ({
       </div>
 
       <Pagination
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-            totalPages={totalPages}
-            startIndex={startIndex}
-            endIndex={endIndex}
-            totalRecords={filteredCategories.length}
-            />
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        totalPages={totalPages}
+        startIndex={startIndex}
+        endIndex={endIndex}
+        totalRecords={filteredCategories.length}
+      />
     </>
   );
 };
