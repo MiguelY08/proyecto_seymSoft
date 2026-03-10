@@ -5,7 +5,7 @@ import { flattenPermissions } from "../../administrtivePanel/configuration/roles
 const USERS_KEY = "users";
 
 
-// ─── Obtener todos los usuarios ────────────────────────────────────
+// ─── Obtener usuarios ─────────────────────────────
 export const getUsers = () => {
 
   try {
@@ -27,28 +27,39 @@ export const getUsers = () => {
 };
 
 
-// ─── Guardar usuarios ──────────────────────────────────────────────
+// ─── Guardar usuarios ─────────────────────────────
 export const saveUsers = (users) => {
 
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  localStorage.setItem(
+    USERS_KEY,
+    JSON.stringify(users)
+  );
 
 };
 
 
-// ─── Verificar si un correo ya existe ──────────────────────────────
+// ─── Normalizar datos ─────────────────────────────
+const normalizeEmail = (email) =>
+  email.trim().toLowerCase();
+
+const normalizePassword = (password) =>
+  password.trim();
+
+
+// ─── Verificar email existente ────────────────────
 export const emailExists = (email) => {
 
   const users = getUsers();
 
   return users.some(
     user =>
-      user.email.trim().toLowerCase() === email.trim().toLowerCase()
+      normalizeEmail(user.email) === normalizeEmail(email)
   );
 
 };
 
 
-// ─── Verificar si un documento ya existe ───────────────────────────
+// ─── Verificar documento existente ────────────────
 export const documentExists = (document) => {
 
   const users = getUsers();
@@ -60,7 +71,7 @@ export const documentExists = (document) => {
 };
 
 
-// ─── Registrar usuario ─────────────────────────────────────────────
+// ─── Registrar usuario (Landing) ──────────────────
 export const registerUser = (userData) => {
 
   const users = getUsers();
@@ -79,9 +90,13 @@ export const registerUser = (userData) => {
 
     ...userData,
 
+    email: normalizeEmail(userData.email),
+
+    password: normalizePassword(userData.password),
+
     clientType: "Detal",
 
-    role: null,
+    role: null, // clientes no tienen rol administrativo
 
     createdAt: new Date().toISOString(),
 
@@ -96,15 +111,15 @@ export const registerUser = (userData) => {
 };
 
 
-// ─── Login ─────────────────────────────────────────────────────────
+// ─── Login ────────────────────────────────────────
 export const loginUser = (email, password) => {
 
   const users = getUsers();
 
   const user = users.find(
     (u) =>
-      u.email.trim().toLowerCase() === email.trim().toLowerCase() &&
-      u.password.trim() === password.trim()
+      normalizeEmail(u.email) === normalizeEmail(email) &&
+      normalizePassword(u.password) === normalizePassword(password)
   );
 
   if (!user) {
@@ -113,34 +128,43 @@ export const loginUser = (email, password) => {
 
   let permissions = [];
 
-  try {
+  // si el usuario tiene rol → obtener permisos
+  if (user.role) {
 
-    const roles = getRoles();
+    try {
 
-    const role = roles.find(
-      (r) => r.name === user.role
-    );
+      const roles = getRoles();
 
-    const rolePermissions = role?.permisos || [];
+      const role = roles.find(
+        (r) => r.name === user.role
+      );
 
-    permissions = flattenPermissions(
-      rolePermissions,
-      permissionsList
-    ) || [];
+      const rolePermissions = role?.permisos || [];
 
-  } catch (error) {
+      permissions = flattenPermissions(
+        rolePermissions,
+        permissionsList
+      ) || [];
 
-    console.error("Error generando permisos:", error);
+    } catch (error) {
+
+      console.error("Error generando permisos:", error);
+
+    }
 
   }
 
   const session = {
+
     user: {
       ...user,
       permissions
     },
+
     token: Date.now()
+
   };
 
   return session;
+
 };

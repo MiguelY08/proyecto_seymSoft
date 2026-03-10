@@ -1,6 +1,11 @@
+// ─────────────────────────────────────────────
+// CONVERTIR PERMISOS DE ROL → ARRAY DE STRINGS
+// ─────────────────────────────────────────────
 
-// FUNCION PARA FLATTEAR PERMISOS
-export const flattenPermissions = (rolePermissions = [], permissionsList = []) => {
+export const flattenPermissions = (
+  rolePermissions = [],
+  permissionsList = []
+) => {
 
   const result = []
 
@@ -12,19 +17,24 @@ export const flattenPermissions = (rolePermissions = [], permissionsList = []) =
 
     if (!moduloSistema) return
 
-    Object.entries(permiso.acciones).forEach(([accion, activo]) => {
+    if (!permiso.acciones) return
 
-      if (activo) {
+    Object.entries(permiso.acciones).forEach(
+      ([accion, activo]) => {
 
-        result.push(
-          `${moduloSistema.modulo.toLowerCase().replace(/\s+/g, "_")}.${accion}`
-        )
+        if (activo === true) {
+
+          result.push(
+            `${moduloSistema.modulo}.${accion}`
+          )
+
+        }
 
       }
-
-    })
+    )
 
   })
 
   return result
+
 }
