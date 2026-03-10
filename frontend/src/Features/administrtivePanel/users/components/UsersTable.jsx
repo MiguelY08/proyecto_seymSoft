@@ -179,6 +179,7 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Correo electrónico</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Teléfono</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Rol</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">T. Cliente</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Acciones</th>
           </tr>
         </thead>
@@ -209,6 +210,9 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(row.rol, search)}
                 </td>
+                <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                  {highlight(row.tipoCliente ?? 'Detal', search)}
+                </td>
                 <td className="px-3 py-1.5">
                   <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                     <button
@@ -221,7 +225,7 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                           },
                         });
                       }}
-                      className="text-gray-400 hover:text-[#004D77] transition-colors cursor-pointer"
+                      className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                       title="Información"
                     >
                       <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
@@ -237,7 +241,7 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                           },
                         });
                       }}
-                      className="text-gray-400 hover:text-[#004D77] transition-colors cursor-pointer"
+                      className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                       title="Editar"
                     >
                       <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
@@ -251,7 +255,7 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
 
                     <button
                       onClick={() => handleDelete(row)}
-                      className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+                      className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
                       title="Eliminar"
                     >
                       <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />

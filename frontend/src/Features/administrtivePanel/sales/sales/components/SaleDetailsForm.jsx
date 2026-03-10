@@ -6,10 +6,10 @@ import { UsersDB } from '../../../users/services/usersDB';
 const MAX_DIRECCION = 250;
 
 const METODOS_PAGO  = ['Efectivo', 'Crédito', 'Transferencia'];
-const ESTADOS_VENTA = [
-  'Aprobada', 'Esp. aprobación', 'Créd. aprobado',
-  'Anulada', 'Desaprobada', 'Cancelada', 'Créd. denegado',
-];
+
+// ─── Solo los 4 estados permitidos en el formulario ──────────────────────────
+const ESTADOS_VENTA = ['Aprobada', 'Anulada', 'Esp. aprobación', 'Desaprobada'];
+
 const ENTREGAS = ['Cliente lo recoge', 'Domicilio'];
 
 // ─── Campo de solo lectura ────────────────────────────────────────────────────
@@ -111,19 +111,24 @@ function SearchableSelect({ value, onChange, options, placeholder, error, getLab
 }
 
 // ─── Select simple ────────────────────────────────────────────────────────────
-function SimpleSelect({ name, value, onChange, options, placeholder, error }) {
+function SimpleSelect({ name, value, onChange, options, placeholder, error, disabled }) {
   return (
     <div className="relative">
       <select
         name={name}
         value={value}
         onChange={onChange}
-        className={`appearance-none w-full px-4 py-2.5 text-sm border rounded-lg outline-none bg-white cursor-pointer transition-colors duration-200 ${
-          value ? 'text-gray-700' : 'text-gray-400'
+        disabled={disabled}
+        className={`appearance-none w-full px-4 py-2.5 text-sm border rounded-lg outline-none bg-white transition-colors duration-200 ${
+          disabled
+            ? 'bg-gray-50 text-gray-500 border-gray-200 cursor-not-allowed'
+            : value ? 'text-gray-700 cursor-pointer' : 'text-gray-400 cursor-pointer'
         } ${
           error
             ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-            : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
+            : disabled
+              ? ''
+              : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
         }`}
       >
         <option value="" disabled>{placeholder}</option>
@@ -131,16 +136,16 @@ function SimpleSelect({ name, value, onChange, options, placeholder, error }) {
           <option key={o} value={o}>{o}</option>
         ))}
       </select>
-      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
+      <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${disabled ? 'text-gray-300' : 'text-gray-400'}`} strokeWidth={2} />
     </div>
   );
 }
 
 // ─── SaleDetailsForm ──────────────────────────────────────────────────────────
-function SaleDetailsForm({ form, onChange, errors, isEditing }) {
+// isAnulada: true cuando la venta ya fue anulada → Estado se bloquea permanentemente
+function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoAnulacion = '', fechaAnulacion = '' }) {
   const navigate = useNavigate();
 
-  // Cargar usuarios desde el servicio y mantener sincronización
   const [users, setUsers] = useState(() => UsersDB.list());
 
   useEffect(() => {
@@ -165,7 +170,7 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
   );
 
   const activeUsers   = users.filter((u) => u.activo);
-  const activeVendors = users.filter((u) => u.activo && (u.rol === 'Empleado' || u.rol === 'Administrador'));
+  const activeVendors = users.filter((u) => u.activo && (u.rol === 'Empleado' || u.rol === 'Administrador' || u.rol === 'Nulo'));
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -177,7 +182,11 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
         </div>
         <div>
           <p className="text-sm font-semibold text-gray-800">1. Detalles</p>
-          <p className="text-xs text-gray-400">Ingrese los datos básicos</p>
+          <p className="text-xs text-gray-400">
+            {isAnulada
+              ? 'Esta venta ha sido anulada y no puede modificarse'
+              : 'Ingrese los datos básicos'}
+          </p>
         </div>
       </div>
 
@@ -255,19 +264,46 @@ function SaleDetailsForm({ form, onChange, errors, isEditing }) {
             )}
             <ErrorMsg field="metodoPago" />
           </div>
+
           <div>
             <Label required>Estado</Label>
-            <SimpleSelect
-              name="estado"
-              value={form.estado}
-              onChange={handleChange}
-              options={ESTADOS_VENTA}
-              placeholder="Elija un estado"
-              error={errors?.estado}
-            />
-            <ErrorMsg field="estado" />
+            {/* Si la venta ya está anulada → solo lectura permanente */}
+            {isAnulada ? (
+              <>
+                <ReadonlyField value="Anulada" />
+                <p className="mt-1 text-xs text-red-500">La anulación es permanente y no puede revertirse.</p>
+              </>
+            ) : (
+              <>
+                <SimpleSelect
+                  name="estado"
+                  value={form.estado}
+                  onChange={handleChange}
+                  options={ESTADOS_VENTA}
+                  placeholder="Elija un estado"
+                  error={errors?.estado}
+                />
+                <ErrorMsg field="estado" />
+              </>
+            )}
           </div>
         </div>
+
+        {/* Motivo y fecha de anulación — solo visible cuando la venta está anulada */}
+        {isAnulada && (
+          <div className="flex flex-col gap-3">
+            <div>
+              <Label>Motivo de anulación</Label>
+              <ReadonlyField value={motivoAnulacion || 'Sin motivo registrado.'} />
+            </div>
+            {fechaAnulacion && (
+              <div>
+                <Label>Fecha de anulación</Label>
+                <ReadonlyField value={fechaAnulacion} />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Entrega */}
         <div>

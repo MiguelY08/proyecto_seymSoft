@@ -21,6 +21,7 @@ function InfoUser() {
     { label: 'Correo electrónico',   value: user.correo                           },
     { label: 'Teléfono - Celular',   value: user.telefono                         },
     { label: 'Tipo de usuario',      value: user.rol                              },
+    { label: 'Tipo de cliente',      value: user.tipoCliente ?? 'Detal'             },
     { label: 'Estado actual',        value: user.activo ? 'Activo' : 'Inactivo'   },
     { label: 'Registrado desde',     value: user.registradoDesde ?? '—'           },
   ];

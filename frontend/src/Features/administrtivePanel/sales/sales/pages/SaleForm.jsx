@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
@@ -15,13 +15,14 @@ const generateFactura = () =>
 // ─── Validaciones ─────────────────────────────────────────────────────────────
 const validateForm = (form, items) => {
   const errors = {};
-  if (!form.clienteId)        errors.clienteId  = 'Seleccione un cliente.';
-  if (!form.vendedorId)       errors.vendedorId = 'Seleccione un vendedor.';
-  if (!form.metodoPago)       errors.metodoPago = 'Seleccione un método de pago.';
-  if (!form.estado)           errors.estado     = 'Seleccione un estado.';
-  if (!form.entrega)          errors.entrega    = 'Seleccione una opción de entrega.';
-  if (!form.direccion?.trim())errors.direccion  = 'Ingrese la dirección de entrega.';
-  if (items.length === 0)     errors.items      = 'Agrega al menos un producto al pedido.';
+  if (!form.clienteId)                                      errors.clienteId  = 'Seleccione un cliente.';
+  if (!form.vendedorId)                                     errors.vendedorId = 'Seleccione un vendedor.';
+  if (!form.metodoPago)                                     errors.metodoPago = 'Seleccione un método de pago.';
+  if (!form.estado)                                         errors.estado     = 'Seleccione un estado.';
+  if (!form.entrega)                                        errors.entrega    = 'Seleccione una opción de entrega.';
+  // Dirección solo es obligatoria cuando la entrega es a domicilio
+  if (form.entrega === 'Domicilio' && !form.direccion?.trim()) errors.direccion = 'Ingrese la dirección de entrega.';
+  if (items.length === 0)                                   errors.items      = 'Agrega al menos un producto al pedido.';
   return errors;
 };
 
@@ -34,7 +35,9 @@ function SaleForm() {
   const saleToEdit = location.state?.sale ?? null;
   const isEditing  = saleToEdit !== null;
 
-  // Número de factura fijo durante toda la sesión del formulario
+  // Una venta anulada no puede cambiar su estado
+  const isAnulada  = isEditing && saleToEdit?.estado === 'Anulada';
+
   const [facturaNo] = useState(() =>
     isEditing ? saleToEdit.factura : generateFactura()
   );
@@ -49,7 +52,6 @@ function SaleForm() {
     direccion:  saleToEdit?.direccion  ?? '',
   });
 
-  // Al editar, guardar los items originales para restaurar stock si cambian
   const [originalItems] = useState(() =>
     isEditing && saleToEdit.items ? saleToEdit.items : []
   );
@@ -79,15 +81,30 @@ function SaleForm() {
     });
   };
 
-  // ─── Guardar vía servicio ─────────────────────────────────────────────────
-  const handleSave = () => {
+  // ─── Guardar — con confirmación previa ────────────────────────────────────
+  const handleSave = async () => {
+    // 1. Validar campos
     const newErrors = validateForm(form, items);
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      showWarning('Formulario incompleto', 'Por favor completa todos los campos obligatorios y agrega al menos un producto.');
+      showWarning(
+        'Formulario incompleto',
+        'Por favor completa todos los campos obligatorios y agrega al menos un producto.'
+      );
       return;
     }
 
+    // 2. Alerta de confirmación — "Enviar" guarda, "Revisar" vuelve al formulario
+    const result = await showConfirm(
+      'info',
+      '¿Listo para guardar?',
+      'Revisa que todos los datos sean correctos antes de confirmar. Esta acción guardará la venta en el sistema.',
+      { confirmButtonText: 'Enviar', cancelButtonText: 'Revisar' }
+    );
+
+    if (!result?.isConfirmed) return; // Usuario quiere revisar → no hacemos nada
+
+    // 3. Guardar
     if (isEditing) {
       SalesDB.update(saleToEdit.id, form, items, originalItems);
       showSuccess('Venta actualizada', 'Los datos de la venta han sido actualizados correctamente.');
@@ -115,6 +132,11 @@ function SaleForm() {
         <h1 className="text-xl font-bold text-[#004D77]">
           {isEditing ? `Modificando venta no. ${saleToEdit.factura}` : 'Nueva venta'}
         </h1>
+        {isAnulada && (
+          <p className="text-sm text-red-500 font-medium">
+            Esta venta está anulada. El estado no puede modificarse.
+          </p>
+        )}
       </div>
 
       {/* ── Grid principal ───────────────────────────────────────────── */}
@@ -124,6 +146,9 @@ function SaleForm() {
           onChange={handleFormChange}
           errors={errors}
           isEditing={isEditing}
+          isAnulada={isAnulada}
+          motivoAnulacion={saleToEdit?.motivoAnulacion ?? ''}
+          fechaAnulacion={saleToEdit?.fechaAnulacion  ?? ''}
         />
         <OrderForm
           items={items}
@@ -159,6 +184,9 @@ function SaleForm() {
         form={form}
         items={items}
         facturaNo={facturaNo}
+        isAnulada={isAnulada}
+        motivoAnulacion={saleToEdit?.motivoAnulacion ?? ''}
+        fechaAnulacion={saleToEdit?.fechaAnulacion  ?? ''}
       />
     </div>
   );

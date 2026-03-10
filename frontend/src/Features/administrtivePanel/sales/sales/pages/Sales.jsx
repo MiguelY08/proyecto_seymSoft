@@ -20,11 +20,6 @@ function Sales() {
     setData(SalesDB.list());
   }, [location.pathname]);
 
-  const handleAnular = (id) => {
-    const updated = SalesDB.anular(id);
-    setData(updated);
-  };
-
   const handleSearchChange = (value) => {
     setSearch(value);
     setCurrentPage(1);
@@ -62,7 +57,6 @@ function Sales() {
       <div className="bg-white rounded-xl shadow-md">
         <SalesTable
           data={paginatedData}
-          onAnular={handleAnular}
           search={search}
           totalData={data.length}
           offset={(currentPage - 1) * RECORDS_PER_PAGE}

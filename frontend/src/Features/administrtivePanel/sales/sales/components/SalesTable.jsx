@@ -85,9 +85,9 @@ function EmptyState({ isSearching }) {
 }
 
 // ─── SalesTable ───────────────────────────────────────────────────────────────
-function SalesTable({ data = [], onAnular, search = '', totalData = 0, offset = 0 }) {
+function SalesTable({ data = [], search = '', totalData = 0, offset = 0 }) {
   const navigate = useNavigate();
-  const { showConfirm, showSuccess, showError } = useAlert();
+  const { showError } = useAlert();
 
   const handleAnular = (row) => {
     const { puedeAnular } = getPermisos(row.estado);
@@ -95,17 +95,7 @@ function SalesTable({ data = [], onAnular, search = '', totalData = 0, offset = 
       showError('Anulación no permitida', `No es posible anular una venta con estado "${row.estado}".`);
       return;
     }
-    showConfirm(
-      'warning',
-      '¿Está seguro que desea anular esta venta?',
-      `No. Factura: ${row.factura} — Esta acción no se podrá revertir.`,
-      { confirmButtonText: 'Anular', cancelButtonText: 'Cancelar' }
-    ).then((result) => {
-      if (result.isConfirmed) {
-        onAnular?.(row.id);
-        showSuccess('Venta anulada', 'La venta ha sido anulada exitosamente.');
-      }
-    });
+    navigate('/admin/sales/annular-sale', { state: { sale: row } });
   };
 
   const handleDevolucion = (row) => {
@@ -197,7 +187,7 @@ function SalesTable({ data = [], onAnular, search = '', totalData = 0, offset = 
                           },
                         });
                       }}
-                      className="text-gray-400 hover:text-[#004D77] transition-colors cursor-pointer"
+                      className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                       title="Ver información"
                     >
                       <Info className="w-4 h-4" strokeWidth={1.5} />
@@ -205,7 +195,7 @@ function SalesTable({ data = [], onAnular, search = '', totalData = 0, offset = 
 
                     <button
                       onClick={() => navigate('/admin/sales/form-sale', { state: { sale: row } })}
-                      className="text-gray-400 hover:text-[#004D77] transition-colors cursor-pointer"
+                      className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                       title="Editar venta"
                     >
                       <SquarePen className="w-4 h-4" strokeWidth={1.5} />
@@ -218,7 +208,7 @@ function SalesTable({ data = [], onAnular, search = '', totalData = 0, offset = 
                     ) : (
                       <button
                         onClick={() => handleDevolucion(row)}
-                        className="text-gray-400 hover:text-amber-500 transition-colors cursor-pointer"
+                        className="text-gray-400 hover:scale-110 hover:text-amber-500 transition cursor-pointer"
                         title="Generar devolución"
                       >
                         <RefreshCw className="w-4 h-4" strokeWidth={1.5} />
@@ -232,7 +222,7 @@ function SalesTable({ data = [], onAnular, search = '', totalData = 0, offset = 
                     ) : (
                       <button
                         onClick={() => handleAnular(row)}
-                        className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+                        className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
                         title="Anular venta"
                       >
                         <XCircle className="w-4 h-4" strokeWidth={1.5} />
