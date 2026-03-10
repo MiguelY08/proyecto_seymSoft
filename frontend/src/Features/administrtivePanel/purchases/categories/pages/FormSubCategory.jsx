@@ -1,9 +1,7 @@
-import { X } from "lucide-react";
+import { X, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
-
 import { getCategories, createSubcategory } from "../services/categoriesService";
-
 
 // Toggle
 function ActiveToggle({ activo, onChange }) {
@@ -33,7 +31,6 @@ function ActiveToggle({ activo, onChange }) {
 }
 
 function FormSubCategory({ onClose }) {
-
   const { showWarning, showSuccess } = useAlert();
 
   const [categories, setCategories] = useState([]);
@@ -42,192 +39,181 @@ function FormSubCategory({ onClose }) {
     nombre: "",
     descripcion: "",
     categoriaId: "",
-    activo: true
+    activo: true,
   });
 
-  const [error, setError] = useState("");
+  // Touched para mostrar errores
+  const [nombreTouched, setNombreTouched] = useState(false);
+  const [categoriaTouched, setCategoriaTouched] = useState(false);
 
+  // ─── VALIDACIONES ─────────────────────────────
+  const nombreError = (() => {
+    if (!nombreTouched) return null;
+    if (!form.nombre.trim()) return "El nombre de la subcategoría es obligatorio.";
+    if (form.nombre.trim().length < 3) return "Debe tener al menos 3 caracteres.";
+    return null;
+  })();
 
+  const categoriaError = (() => {
+    if (!categoriaTouched) return null;
+    if (!form.categoriaId) return "Debes seleccionar una categoría.";
+    return null;
+  })();
 
-  // 🔵 Cargar categorías desde el service
+  const hasErrors = nombreError || categoriaError;
+
+  // 🔵 Cargar categorías
   useEffect(() => {
-
     const cats = getCategories();
-
     setCategories(cats);
-
   }, []);
 
-
-
-  // 🔵 Validación
-  useEffect(() => {
-
-    if (!form.nombre.trim()) {
-      setError("El nombre de la subcategoría es obligatorio");
-    } 
-    else if (!form.categoriaId) {
-      setError("Debes seleccionar una categoría");
-    } 
-    else {
-      setError("");
-    }
-
-  }, [form]);
-
-
-
+  // ─── SUBMIT ─────────────────────────────
   const handleSubmit = () => {
+    // marcar todos como touched para forzar mostrar errores
+    setNombreTouched(true);
+    setCategoriaTouched(true);
 
-    if (error) {
-      showWarning("Formulario incompleto", error);
+    if (hasErrors) {
+      showWarning("Campos incompletos", "Por favor completa todos los campos correctamente.");
       return;
     }
 
     createSubcategory(form);
 
-    showSuccess(
-      "Subcategoría creada",
-      "La subcategoría fue creada correctamente"
-    );
-
+    showSuccess("Subcategoría creada", "La subcategoría fue creada correctamente.");
     onClose();
-
   };
 
+  const handleCancel = () => onClose();
 
+  const inputClass = (error) =>
+    `w-full px-4 py-2.5 text-sm border rounded-xl outline-none bg-gray-100 text-gray-700 transition ${
+      error ? "border-red-400 focus:ring-2 focus:ring-red-300" : "border-gray-300 focus:ring-2 focus:ring-[#0E5679]/20"
+    }`;
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-      onClick={onClose}
+      onClick={handleCancel}
     >
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-
+        {/* HEADER */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#004D77]">
-          <h2 className="text-white font-semibold text-lg">
-            Crear Subcategoría
-          </h2>
-
-          <button
-            onClick={onClose}
-            className="text-white hover:bg-white/20 rounded-full p-1"
-          >
+          <h2 className="text-white font-semibold text-lg">Crear Subcategoría</h2>
+          <button onClick={handleCancel} className="text-white hover:bg-white/20 rounded-full p-1">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-
+        {/* BODY */}
         <div className="px-6 py-6 flex flex-col gap-5">
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">
-              Nombre
-            </label>
-
-            <input
-              type="text"
-              value={form.nombre}
-              onChange={(e) =>
-                setForm({ ...form, nombre: e.target.value })
-              }
-              placeholder="Nombre de la subcategoría"
-              className="w-full px-4 py-2.5 text-sm border rounded-lg bg-gray-100"
-            />
+          {/* NOMBRE */}
+          <div>
+            <label className="text-sm font-medium text-gray-700">Nombre</label>
+            <div className="relative mt-1">
+              <input
+                type="text"
+                value={form.nombre}
+                onChange={(e) => {
+                  setForm({ ...form, nombre: e.target.value });
+                  setNombreTouched(true);
+                }}
+                onBlur={() => setNombreTouched(true)}
+                placeholder="Nombre de la subcategoría"
+                className={inputClass(nombreError)}
+              />
+              {nombreTouched && nombreError && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <AlertCircle size={16} className="text-red-400" />
+                </div>
+              )}
+            </div>
+            <div className={`overflow-hidden transition-all duration-300 ${nombreError ? "max-h-10 mt-1 opacity-100" : "max-h-0 opacity-0"}`}>
+              <p className="text-xs text-red-500 flex items-center gap-1">
+                <AlertCircle size={12} />
+                {nombreError}
+              </p>
+            </div>
           </div>
 
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">
-              Descripción
-            </label>
-
+          {/* DESCRIPCIÓN */}
+          <div>
+            <label className="text-sm font-medium text-gray-700">Descripción</label>
             <textarea
-              rows={3}
+              rows="3"
               value={form.descripcion}
-              onChange={(e) =>
-                setForm({ ...form, descripcion: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
               placeholder="Descripción de la subcategoría"
-              className="w-full px-4 py-2.5 text-sm border rounded-lg bg-gray-100 resize-none"
+              className="w-full px-4 py-2.5 text-sm border rounded-xl bg-gray-100 resize-none"
             />
           </div>
 
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">
-              Categoría
-            </label>
-
-            <select
-              value={form.categoriaId}
-              onChange={(e) =>
-                setForm({ ...form, categoriaId: e.target.value })
-              }
-              className="w-full px-4 py-2.5 text-sm border rounded-lg bg-gray-100"
-            >
-              <option value="">Seleccionar categoría</option>
-
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.nombre}
-                </option>
-              ))}
-
-            </select>
+          {/* CATEGORÍA */}
+          <div>
+            <label className="text-sm font-medium text-gray-700">Categoría</label>
+            <div className="relative mt-1">
+              <select
+                value={form.categoriaId}
+                onChange={(e) => {
+                  setForm({ ...form, categoriaId: e.target.value });
+                  setCategoriaTouched(true);
+                }}
+                onBlur={() => setCategoriaTouched(true)}
+                className={inputClass(categoriaError)}
+              >
+                <option value="">Seleccionar categoría</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.nombre}
+                  </option>
+                ))}
+              </select>
+              {categoriaTouched && categoriaError && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <AlertCircle size={16} className="text-red-400" />
+                </div>
+              )}
+            </div>
+            <div className={`overflow-hidden transition-all duration-300 ${categoriaError ? "max-h-10 mt-1 opacity-100" : "max-h-0 opacity-0"}`}>
+              <p className="text-xs text-red-500 flex items-center gap-1">
+                <AlertCircle size={12} />
+                {categoriaError}
+              </p>
+            </div>
           </div>
 
-
+          {/* ESTADO */}
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-gray-700">
-              Estado
-            </label>
-
+            <label className="text-sm font-medium text-gray-700">Estado</label>
             <ActiveToggle
               activo={form.activo}
-              onChange={() =>
-                setForm({ ...form, activo: !form.activo })
-              }
+              onChange={() => setForm({ ...form, activo: !form.activo })}
             />
           </div>
-
-
-          {error && (
-            <p className="text-sm text-red-600">
-              {error}
-            </p>
-          )}
-
         </div>
 
-
-        <div className="px-6 pb-6 flex flex-col gap-3">
-
+        {/* FOOTER */}
+        <div className="px-6 pb-6 flex gap-4">
           <button
             onClick={handleSubmit}
-            disabled={!!error}
-            className={`w-full py-2.5 text-sm font-medium text-white rounded-lg ${
-              error
-                ? "bg-gray-400"
-                : "bg-[#004D77] hover:bg-[#003a5c]"
+            disabled={hasErrors}
+            className={`flex-1 py-2.5 text-sm font-medium text-white rounded-xl transition ${
+              hasErrors ? "bg-gray-400 cursor-not-allowed" : "bg-[#004D77] hover:bg-[#003a5c]"
             }`}
           >
             Crear
           </button>
-
-
           <button
-            onClick={onClose}
-            className="w-full py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg"
+            onClick={handleCancel}
+            className="flex-1 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-xl transition"
           >
             Cancelar
           </button>
-
         </div>
-
       </div>
     </div>
   );
