@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { X, ChevronRight } from 'lucide-react';
 import GraphClient from './GraphClient';
+import { 
+  formatPersonType, 
+  formatPhoneNumber, 
+  formatContactPhone, 
+  formatClientType, 
+  formatRut,
+  getStatusBadgeClass,
+  getStatusText
+} from '../utils/clientHelpers';
 
 function InfoClient({ isOpen, onClose, client }) {
   const [showGraph, setShowGraph] = useState(false);
@@ -54,7 +63,7 @@ function InfoClient({ isOpen, onClose, client }) {
                   Tipo Persona
                 </label>
                 <p className="text-sm text-gray-900 font-medium capitalize">
-                  {client.tipoPersona === 'natural' ? 'Natural' : client.tipoPersona === 'juridica' ? 'Jurídica' : 'N/A'}
+                  {formatPersonType(client.tipoPersona)}
                 </p>
               </div>
               <div>
@@ -77,7 +86,7 @@ function InfoClient({ isOpen, onClose, client }) {
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Nombres
                 </label>
-                <p className="text-sm text-gray-900 font-medium">{client.nombres || client.nombre || 'N/A'}</p>
+                <p className="text-sm text-gray-900 font-medium">{client.nombres || 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
@@ -89,9 +98,9 @@ function InfoClient({ isOpen, onClose, client }) {
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Estado
                 </label>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                  client.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>{client.activo ? 'Activo' : 'Inactivo'}</span>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusBadgeClass(client.activo)}`}>
+                  {getStatusText(client.activo)}
+                </span>
               </div>
 
               <div className="col-span-3 border-t border-gray-200 my-1"></div>
@@ -107,7 +116,7 @@ function InfoClient({ isOpen, onClose, client }) {
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Teléfono
                 </label>
-                <p className="text-sm text-gray-900 font-medium">{client.telefono ? `(${client.telefono.slice(0,3)}) ${client.telefono.slice(3,6)} ${client.telefono.slice(6)}` : 'N/A'}</p>
+                <p className="text-sm text-gray-900 font-medium">{formatPhoneNumber(client.telefono)}</p>
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
@@ -139,13 +148,13 @@ function InfoClient({ isOpen, onClose, client }) {
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Teléfono Contacto
                 </label>
-                <p className="text-sm text-gray-900 font-medium">{client.numeroContacto ? `${client.numeroContacto.slice(0,3)} ${client.numeroContacto.slice(3,6)} ${client.numeroContacto.slice(6)}` : 'N/A'}</p>
+                <p className="text-sm text-gray-900 font-medium">{formatContactPhone(client.numeroContacto)}</p>
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Tipo Cliente
                 </label>
-                <p className="text-sm text-gray-900 font-medium capitalize">{client.tipoCliente || 'N/A'}</p>
+                <p className="text-sm text-gray-900 font-medium capitalize">{formatClientType(client.tipoCliente)}</p>
               </div>
 
               <div className="col-span-3 border-t border-gray-200 my-1"></div>
@@ -155,7 +164,7 @@ function InfoClient({ isOpen, onClose, client }) {
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   RUT
                 </label>
-                <p className="text-sm text-gray-900 font-medium">{client.rut === 'si' ? 'Sí' : client.rut === 'no' ? 'No' : 'N/A'}</p>
+                <p className="text-sm text-gray-900 font-medium">{formatRut(client.rut)}</p>
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">

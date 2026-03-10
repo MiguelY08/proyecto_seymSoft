@@ -6,7 +6,7 @@ import CreatePagination from "../Components/CreatePagination";
 import CreateTable from "../Components/TableCreate";
 import CreateProduct from "../../products/modals/CreateProduct";
 import { useAlert } from "../../../../shared/alerts/useAlert";
-import FormProvider from "../../providers/FormProvider";
+import FormProvider from "../../providers/components/FormProvider";
 
 const CreatePurchase = () => {
   const navigate = useNavigate();
