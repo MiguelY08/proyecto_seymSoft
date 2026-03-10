@@ -161,21 +161,34 @@ function SaleInfo() {
       pdf.line(rightX - 1, yRight, pageW - margin, yRight);
       yRight += 3.5;
 
-      items.forEach(({ product, cantidad }, idx) => {
+      items.forEach(({ product, cantidad, descripcion }, idx) => {
+        const nameLines = pdf.splitTextToSize(product.nombre, rightW * 0.43);
+        const descLines = descripcion
+          ? pdf.splitTextToSize(descripcion, rightW * 0.43)
+          : [];
+        const rowH = nameLines.length * 4.5 + (descLines.length ? descLines.length * 3.5 + 1 : 0);
+
         if (idx % 2 !== 0) {
           pdf.setFillColor(248, 249, 250);
-          pdf.rect(rightX - 1, yRight - 3, rightW + 2, 5.5, 'F');
+          pdf.rect(rightX - 1, yRight - 3, rightW + 2, rowH + 2, 'F');
         }
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(8);
         pdf.setTextColor(50, 50, 50);
 
-        const nameLines = pdf.splitTextToSize(product.nombre, rightW * 0.43);
-        pdf.text(nameLines,                                                         c1,                   yRight);
-        pdf.text(String(cantidad),                                                  c2,                   yRight, { align: 'right' });
-        pdf.text(product.precioDetal.toLocaleString('es-CO'),                       c3,                   yRight, { align: 'right' });
-        pdf.text((product.precioDetal * cantidad).toLocaleString('es-CO'),          c4 + (rightW * 0.22), yRight, { align: 'right' });
+        pdf.text(nameLines,                                                        c1,                   yRight);
+        pdf.text(String(cantidad),                                                 c2,                   yRight, { align: 'right' });
+        pdf.text(product.precioDetal.toLocaleString('es-CO'),                      c3,                   yRight, { align: 'right' });
+        pdf.text((product.precioDetal * cantidad).toLocaleString('es-CO'),         c4 + (rightW * 0.22), yRight, { align: 'right' });
         yRight += nameLines.length * 4.5;
+
+        if (descLines.length) {
+          pdf.setFont('helvetica', 'italic');
+          pdf.setFontSize(6.5);
+          pdf.setTextColor(130, 130, 130);
+          pdf.text(descLines, c1, yRight);
+          yRight += descLines.length * 3.5 + 1;
+        }
       });
 
       yRight += 2;
@@ -309,12 +322,17 @@ function SaleInfo() {
 
                     {/* Filas */}
                     <div className="flex flex-col divide-y divide-gray-100 mb-4">
-                      {items.map(({ product, cantidad }) => (
+                      {items.map(({ product, cantidad, descripcion }) => (
                         <div
                           key={product.id}
                           className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 py-1.5 items-start"
                         >
-                          <span className="text-xs text-gray-700">{product.nombre}</span>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-xs text-gray-700">{product.nombre}</span>
+                            {descripcion && (
+                              <span className="text-[10px] text-gray-400 italic mt-0.5 leading-tight">{descripcion}</span>
+                            )}
+                          </div>
                           <span className="text-xs text-gray-600 text-right tabular-nums">{cantidad}</span>
                           <span className="text-xs text-gray-600 text-right tabular-nums">
                             {product.precioDetal.toLocaleString('es-CO')}
@@ -362,10 +380,10 @@ function SaleInfo() {
           <button
             onClick={handleDownload}
             disabled={downloading}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 border border-gray-400 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="w-4 h-4" strokeWidth={1.8} />
-            {downloading ? 'Generando...' : 'Descargar'}
+            {downloading ? 'Generando...' : 'Exportar PDF'}
           </button>
 
           {/* Acciones principales */}
@@ -373,7 +391,7 @@ function SaleInfo() {
             {/* Cerrar — gris */}
             <button
               onClick={handleClose}
-              className="px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer"
+              className="px-6 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
             >
               Cerrar
             </button>

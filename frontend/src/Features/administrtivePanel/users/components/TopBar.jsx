@@ -4,7 +4,7 @@ import { Search, Download, Plus } from 'lucide-react';
 import { useAlert } from '../../../shared/alerts/useAlert';
 import * as XLSX from 'xlsx';
 
-const STORAGE_KEY = 'pm_users';
+const STORAGE_KEY = 'users';
 
 // ─── Generador de Excel ───────────────────────────────────────────────────────
 const downloadExcel = () => {
@@ -16,14 +16,17 @@ const downloadExcel = () => {
   // ─── Mapear datos a columnas legibles ─────────────────────────────────────
   const rows = users.map((u) => ({
     'ID':                 u.id,
-    'Tipo Documento':     u.tipo,
-    'Documento':          u.documento,
-    'Nombre Completo':    u.nombre,
-    'Correo Electrónico': u.correo,
-    'Teléfono':           u.telefono,
-    'Rol':                u.rol,
-    'Estado':             u.activo ? 'Activo' : 'Inactivo',
-    'Registrado Desde':   u.registradoDesde ?? '—',
+    'Tipo Documento':     u.documentType,
+    'Documento':          u.document,
+    'Nombre Completo':    u.name,
+    'Correo Electrónico': u.email,
+    'Teléfono':           u.phone,
+    'Rol':                u.role ?? 'Nulo',
+    'Tipo de Cliente':    u.clientType ?? 'Detal',
+    'Estado':             u.active ? 'Activo' : 'Inactivo',
+    'Registrado Desde':   u.createdAt
+      ? new Date(u.createdAt).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      : '—',
   }));
 
   const worksheet  = XLSX.utils.json_to_sheet(rows);
@@ -38,6 +41,7 @@ const downloadExcel = () => {
     { wch: 30 },  // Correo
     { wch: 14 },  // Teléfono
     { wch: 16 },  // Rol
+    { wch: 16 },  // Tipo de Cliente
     { wch: 12 },  // Estado
     { wch: 18 },  // Registrado Desde
   ];

@@ -14,7 +14,7 @@ const clients = [
   { name: "Papelería Central",      value: 1.1, medal: null },
 ];
 
-const CLI_COLORS = ["#ffd900", "#ff0000", "#00ff22", "#0000ff", "#b300ff"];
+const CLI_COLORS = ["#1e3a5f", "#1e6091", "#2980b9", "#5dade2", "#a9cce3"];
 
 function TopClientsChart() {
   const max = 2.5;
