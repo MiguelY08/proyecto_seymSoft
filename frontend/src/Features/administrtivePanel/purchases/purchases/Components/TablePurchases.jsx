@@ -119,20 +119,20 @@ export const PurchasesTable = ({
                     <div className="flex justify-center gap-2">
                       <button
                         onClick={() => handleViewDetail(compra)}
-                        className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-125"
+                        className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-110 cursor-pointer"
                       >
                         <Info size={16} />
                       </button>
 
                       <button
-                        className="text-gray-400 hover:text-yellow-600 transition-all duration-200 transform hover:scale-125"
+                        className="text-gray-400 hover:text-yellow-600 transition-all duration-200 transform hover:scale-110 cursor-pointer"
                       >
                         <RefreshCw size={16} />
                       </button>
 
                       <button
                         onClick={() => handleCancel(compra.id)}
-                        className="text-gray-400 hover:text-red-600 transition-all duration-200 transform hover:scale-125"
+                        className="text-gray-400 hover:text-red-600 transition-all duration-200 transform hover:scale-110 cursor-pointer"
                       >
                         <XCircle size={16} />
                       </button>

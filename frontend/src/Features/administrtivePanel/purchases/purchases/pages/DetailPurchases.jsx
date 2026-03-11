@@ -44,10 +44,7 @@ const EstadoBadge = ({ estado }) => {
 };
 
 const DetailPurchases = ({ purchase, onClose }) => {
-  const data =
-    purchase && purchase.productos && purchase.productos.length > 0
-      ? purchase
-      : mockPurchase;
+  const data = purchase ?? mockPurchase;
 
   const fmt = (n) =>
     typeof n === "number"
@@ -76,7 +73,7 @@ const DetailPurchases = ({ purchase, onClose }) => {
       >
         {/* Header */}
         <div
-          className="relative flex items-center px-6 py-2.5 flex-shrink-0"
+          className="relative flex items-center px-6 py-2.5 shrink-0"
           style={{ backgroundColor: "#004D77" }}
         >
           <h2 className="absolute left-1/2 transform -translate-x-1/2 text-white font-semibold text-xl">

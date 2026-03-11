@@ -124,7 +124,6 @@ function Banner() {
 
   return (
     <div className="flex flex-col gap-6 sm:gap-8 p-3 sm:p-4 lg:p-6 max-w-7xl mx-auto w-full">
-
       {/* ── Encabezado ──────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-1">
         <h1 className="text-lg sm:text-xl font-bold text-[#004D77]">Gestión del carrusel</h1>
@@ -150,7 +149,6 @@ function Banner() {
         onToggle={handleToggleActive}
         loading={loading}
       />
-
     </div>
   );
 }
