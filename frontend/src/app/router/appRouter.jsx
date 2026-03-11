@@ -42,14 +42,14 @@ import IndicatorsPage from "../../Features/administrtivePanel/performance/indica
 /* PURCHASES */
 import Categories from "../../Features/administrtivePanel/purchases/categories/pages/Categories.jsx";
 import Products from "../../Features/administrtivePanel/purchases/products/Products.jsx";
-import Providers from "../../Features/administrtivePanel/purchases/providers/Providers.jsx";
+import ProvidersPage from "../../Features/administrtivePanel/purchases/providers/page/ProvidersPage.jsx";
 import Purchases from "../../Features/administrtivePanel/purchases/purchases/pages/Purchases.jsx";
 import CreatePurchase from "../../Features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx";
 import ReturnsP from "../../Features/administrtivePanel/purchases/returns/Returns.jsx";
 import NonConformingProducts from "../../Features/administrtivePanel/purchases/nonConformingProducts/pages/NonConformingProducts.jsx";
 
 /* SALES */
-import Clients from "../../Features/administrtivePanel/sales/clients/Clients.jsx";
+import ClientsPage from "../../Features/administrtivePanel/sales/clients/page/ClientsPage.jsx";
 import OrdersA from "../../Features/administrtivePanel/sales/orders/pages/Orders.jsx";
 
 import Sales from "../../Features/administrtivePanel/sales/sales/pages/Sales.jsx";
@@ -121,7 +121,7 @@ const AppRouter = () => {
           {/* PURCHASES */}
           <Route path="purchases/categories" element={<Categories />} />
           <Route path="purchases/products" element={<Products />} />
-          <Route path="purchases/providers" element={<Providers />} />
+          <Route path="purchases/providers" element={<ProvidersPage />} />
           <Route path="purchases" element={<Purchases />} />
           <Route path="purchases/create" element={<CreatePurchase />} />
           <Route path="purchases/returns-p" element={<ReturnsP />} />
@@ -133,7 +133,7 @@ const AppRouter = () => {
           <Route path="sales/info-sale" element={<SaleInfo />} />
           <Route path="sales/annular-sale" element={<AnnularSale />} />
 
-          <Route path="sales/clients" element={<Clients />} />
+          <Route path="sales/clients" element={<ClientsPage />} />
           <Route path="sales/orders" element={<OrdersA />} />
           <Route path="sales/returns-s" element={<ReturnsS />} />
 

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronRight } from 'lucide-react';
 import GraphClient from './GraphClient';
-import { useAlert } from '../../../shared/alerts/useAlert';
+import { useAlert } from '../../../../shared/alerts/useAlert';
+import { clientsService } from '../data/clientsService';
+import { validateClientForm } from '../utils/clientHelpers';
 
 function FormClient({ isOpen, onClose, client, onSave }) {
   const [showGraph, setShowGraph] = useState(false);
@@ -17,7 +19,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     correo: '',
     nombreContacto: '',
     numeroContacto: '',
-    creditoCliente: '',
+    creditoCliente: '',  // Se guardará como '0' si está vacío
     tipoCliente: '',
     rut: '',
     codigoCIU: '',
@@ -47,8 +49,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
         rut: client.rut || '',
         codigoCIU: client.codigoCIU || '',
       });
-      // when loading existing client, mark all fields touched so validation
-      // messages appear immediately (same as provider behavior)
+      
       setTouched(
         Object.keys(initialState).reduce((acc, key) => ({ ...acc, [key]: true }), {})
       );
@@ -67,93 +68,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     setShowGraph(false);
   };  
 
-  const validateField = (name, value) => {
-    let error = '';
-
-    switch (name) {
-      case 'tipoPersona':
-        if (!value || !value.trim()) error = 'Seleccione el tipo de persona';
-        break;
-      case 'tipo':
-        if (!value || !value.trim()) error = 'Seleccione el tipo de documento';
-        break;
-      case 'numero':
-        if (!value || !value.trim()) {
-          error = 'El número es obligatorio';
-        } else if (!/^[0-9-]+$/.test(value)) {
-          error = 'Solo números permitidos';
-        }
-        break;
-      case 'nombres':
-        if (!value || !value.trim()) {
-          error = 'El nombre es obligatorio';
-        } else if (value.trim().length < 2) {
-          error = 'Debe tener al menos 2 caracteres';
-        } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value)) {
-          error = 'Solo se permiten letras';
-        }
-        break;
-      case 'apellidos':
-        if (!value || !value.trim()) {
-          error = 'El apellido es obligatorio';
-        } else if (value.trim().length < 2) {
-          error = 'Debe tener al menos 2 caracteres';
-        } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value)) {
-          error = 'Solo se permiten letras';
-        }
-        break;
-      case 'direccion':
-        if (!value || !value.trim()) error = 'La dirección es obligatoria';
-        break;
-      case 'telefono':
-        if (!value || !value.trim()) {
-          error = 'El teléfono es obligatorio';
-        } else if (!/^[0-9]+$/.test(value)) {
-          error = 'Solo números permitidos';
-        }
-        break;
-      case 'correo':
-        if (!value || !value.trim()) {
-          error = 'El correo es obligatorio';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-          error = 'Correo inválido';
-        }
-        break;
-      case 'nombreContacto':
-        if (value && value.trim().length < 3) error = 'Debe tener mínimo 3 caracteres';
-        break;
-      case 'numeroContacto':
-        if (value && !/^[0-9]+$/.test(value)) error = 'Solo números permitidos';
-        break;
-      case 'creditoCliente':
-        if (!value || !value.trim()) {
-          error = 'El crédito es obligatorio';
-        } else if (!/^[0-9]+$/.test(value)) {
-          error = 'Solo números permitidos';
-        }
-        break;
-      case 'tipoCliente':
-        if (!value || !value.trim()) error = 'Seleccione el tipo de cliente';
-        break;
-      case 'rut':
-        if (!value || !value.trim()) error = 'Indique si tiene RUT';
-        break;
-      default:
-        break;
-    }
-
-    return error;
-  };
-
-  const validateAll = () => {
-    const newErrors = {};
-    Object.keys(formData).forEach((key) => {
-      const err = validateField(key, formData[key]);
-      if (err) newErrors[key] = err;
-    });
-    return newErrors;
-  };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -164,10 +78,10 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
     // validate in real time if the field has been touched
     if (touched[name]) {
-      const error = validateField(name, value);
+      const validationErrors = validateClientForm({ ...formData, [name]: value });
       setErrors((prev) => ({
         ...prev,
-        [name]: error,
+        [name]: validationErrors[name] || '',
       }));
     } else if (errors[name]) {
       // clear previous error if user modifies before touch
@@ -179,22 +93,22 @@ function FormClient({ isOpen, onClose, client, onSave }) {
   };
 
   const handleBlur = (e) => {
-    const { name, value } = e.target;
+    const { name } = e.target;
     setTouched((prev) => ({
       ...prev,
       [name]: true,
     }));
-    const error = validateField(name, value);
+    const validationErrors = validateClientForm(formData);
     setErrors((prev) => ({
       ...prev,
-      [name]: error,
+      [name]: validationErrors[name] || '',
     }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const validationErrors = validateAll();
+    const validationErrors = validateClientForm(formData);
     setErrors(validationErrors);
     setTouched(
       Object.keys(formData).reduce((acc, key) => ({ ...acc, [key]: true }), {})
@@ -202,6 +116,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
     if (Object.keys(validationErrors).length > 0) return;
 
+    // El crédito se enviará como está, y en el service se convertirá a '0' si está vacío
     onSave?.(formData);
 
     resetForm();
@@ -435,10 +350,10 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   {renderError('numeroContacto')}
                 </div>
 
-                {/* Crédito cliente */}
+                {/* Crédito cliente - AHORA OPCIONAL */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Crédito cliente <span className="text-red-500">*</span>
+                    Crédito cliente
                   </label>
                   <input
                     type="text"
@@ -446,7 +361,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     value={formData.creditoCliente}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="Ej: 500000"
+                    placeholder="0"  // Placeholder cambiado a "0"
                     className={inputClass('creditoCliente')}
                   />
                   {renderError('creditoCliente')}
@@ -467,6 +382,8 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     <option value="">Selecciona una opción</option>
                     <option value="detal">Detal</option>
                     <option value="mayorista">Mayorista</option>
+                    <option value="colegas">Colegas</option>
+                    <option value="pacas">Pacas</option>
                   </select>
                   {renderError('tipoCliente')}
                 </div>

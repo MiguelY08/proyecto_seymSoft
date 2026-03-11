@@ -7,9 +7,9 @@ export const permissionsList = [
     id: 1,
     modulo: "usuarios",
     acciones: [
+      "ver",
       "crear",
       "editar",
-      "ver",
       "eliminar",
       "cambiar_estado",
       "descargar"
@@ -23,9 +23,9 @@ export const permissionsList = [
     id: 2,
     modulo: "roles",
     acciones: [
+      "ver",
       "crear",
       "editar",
-      "ver",
       "eliminar"
     ]
   },
@@ -37,9 +37,9 @@ export const permissionsList = [
     id: 3,
     modulo: "clientes",
     acciones: [
+      "ver",
       "crear",
       "editar",
-      "ver",
       "eliminar"
     ]
   },
@@ -51,9 +51,9 @@ export const permissionsList = [
     id: 4,
     modulo: "productos",
     acciones: [
+      "ver",
       "crear",
       "editar",
-      "ver",
       "activar_desactivar"
     ]
   },
@@ -80,9 +80,9 @@ export const permissionsList = [
     id: 6,
     modulo: "proveedores",
     acciones: [
+      "ver",
       "crear",
       "editar",
-      "ver",
       "eliminar"
     ]
   },
@@ -110,8 +110,8 @@ export const permissionsList = [
     modulo: "producto_no_conforme",
     acciones: [
       "ver",
-      "editar",
       "crear",
+      "editar",
       "ver_detalle",
       "anular"
     ]
@@ -124,8 +124,8 @@ export const permissionsList = [
     id: 9,
     modulo: "pedidos",
     acciones: [
-      "editar",
       "ver",
+      "editar",
       "anular",
       "descargar"
     ]
@@ -138,9 +138,9 @@ export const permissionsList = [
     id: 10,
     modulo: "ventas",
     acciones: [
+      "ver",
       "crear",
       "editar",
-      "ver",
       "eliminar",
       "descargar",
       "generar_devolucion",
@@ -155,9 +155,9 @@ export const permissionsList = [
     id: 11,
     modulo: "devoluciones_en_ventas",
     acciones: [
+      "ver",
       "crear",
       "editar",
-      "ver",
       "anular"
     ]
   },
@@ -169,9 +169,9 @@ export const permissionsList = [
     id: 12,
     modulo: "pagos_y_abonos",
     acciones: [
+      "ver",
       "crear",
       "editar",
-      "ver",
       "descargar"
     ]
   },
@@ -189,21 +189,25 @@ export const permissionsList = [
       "cambiar_estado",
       "ordenar"
     ]
+  },
 
   // ==============================
   // DEVOLUCIONES EN COMPRAS
   // ==============================
-  },
   {
     id: 14,
     modulo: "devoluciones_en_compras",
     acciones: [
-      "ver_inofrmacion",
-      "descargar",
+      "ver",
+      "ver_informacion",
       "editar",
-      "ver"
+      "descargar"
     ]
   },
+
+  // ==============================
+  // DASHBOARD
+  // ==============================
   {
     id: 15,
     modulo: "dashboard",

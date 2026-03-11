@@ -15,7 +15,7 @@ const products = [
   { name: "Tijeras",    value: 156 },
 ];
 
-const PROD_COLORS = ["#00c8ff", "#44ff00", "#ff8400", "#ff00ae", "#ff0000", "#ea00ff"];
+const PROD_COLORS = ["#1e3a5f", "#1e6091", "#2980b9", "#5dade2", "#a9cce3", "#d6eaf8"];
 
 function TopProductsChart() {
   const max = 456;

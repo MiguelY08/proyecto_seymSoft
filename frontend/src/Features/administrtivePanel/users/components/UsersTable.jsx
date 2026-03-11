@@ -117,14 +117,14 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
   const { showConfirm, showSuccess, showWarning } = useAlert();
 
   // ─── Eliminar usuario ─────────────────────────────────────────────────────
-  const handleDelete = (row) => {
-    if (row.activo) {
-      showWarning(
-        'No es posible eliminar este usuario',
-        'Debes desactivar el usuario antes de poder eliminarlo.'
-      );
-      return;
-    }
+    const handleDelete = (row) => {
+      if (row.active) {          
+        showWarning(
+          'No es posible eliminar este usuario',
+          'Debes desactivar el usuario antes de poder eliminarlo.'
+        );
+        return;
+      }
 
     // ─── Verificar ventas asociadas vía servicio ────────────────────────────
     const ventas = (() => {
@@ -173,8 +173,7 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
         <thead className="bg-[#004D77] text-white">
           <tr>
             <th className="sticky left-0 z-10 bg-[#004D77] px-3 py-2.5 text-center text-xs font-semibold">#</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Tipo</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Documento</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Tipo y Documento</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Nombre</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Correo electrónico</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Teléfono</th>
@@ -193,25 +192,24 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                   {offset + index + 1}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(row.tipo, search)}
-                </td>
-                <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(row.documento, search)}
+                  <span className="font-medium">{highlight(row.documentType, search)}</span>
+                  {' '}
+                  {highlight(row.document, search)}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">
-                  {highlight(row.nombre, search)}
+                  {highlight(row.name, search)}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(row.correo, search)}
+                  {highlight(row.email, search)}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(row.telefono, search)}
+                  {highlight(row.phone, search)}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(row.rol, search)}
+                  {highlight(row.role ?? 'Nulo', search)}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(row.tipoCliente ?? 'Detal', search)}
+                  {highlight(row.clientType ?? 'Detal', search)}
                 </td>
                 <td className="px-3 py-1.5">
                   <div className="flex items-center justify-center gap-1 sm:gap-1.5">
@@ -247,11 +245,11 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                       <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                     </button>
 
-                    <ActiveToggle
-                      activo={row.activo}
-                      onChange={() => onToggle?.(row.id)}
-                      search={search}
-                    />
+                      <ActiveToggle
+                        activo={row.active}       
+                        onChange={() => onToggle?.(row.id)}
+                        search={search}
+                      />
 
                     <button
                       onClick={() => handleDelete(row)}

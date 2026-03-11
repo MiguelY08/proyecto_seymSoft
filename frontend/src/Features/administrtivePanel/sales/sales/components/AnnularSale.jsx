@@ -184,7 +184,7 @@ function AnnularSale() {
 
                   {/* Filas de productos */}
                   <div className="flex flex-col divide-y divide-gray-100 mb-4 flex-1">
-                    {items.map(({ product, cantidad }) => (
+                    {items.map(({ product, cantidad, descripcion }) => (
                       <div
                         key={product.id}
                         className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 py-2 items-start"
@@ -193,7 +193,12 @@ function AnnularSale() {
                           <div className="w-6 h-6 rounded bg-gray-100 flex items-center justify-center shrink-0">
                             <Package className="w-3.5 h-3.5 text-gray-400" strokeWidth={1.5} />
                           </div>
-                          <span className="text-xs text-gray-700 truncate">{product.nombre}</span>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-xs text-gray-700 truncate">{product.nombre}</span>
+                            {descripcion && (
+                              <span className="text-[10px] text-gray-400 italic leading-tight">{descripcion}</span>
+                            )}
+                          </div>
                         </div>
                         <span className="text-xs text-gray-600 text-right tabular-nums">{cantidad}</span>
                         <span className="text-xs text-gray-600 text-right tabular-nums">
@@ -241,7 +246,7 @@ function AnnularSale() {
         <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
           <button
             onClick={handleClose}
-            className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer"
+            className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
           >
             Cancelar
           </button>

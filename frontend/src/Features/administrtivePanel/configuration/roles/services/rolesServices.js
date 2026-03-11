@@ -1,12 +1,8 @@
-// ─────────────────────────────────────────────
-// IMPORTAR SERVICIO DE USUARIOS
-// ─────────────────────────────────────────────
-
 import UsersDB from "../../../users/services/usersDB"
 
 
 // ─────────────────────────────────────────────
-// CLAVE STORAGE
+// STORAGE KEY
 // ─────────────────────────────────────────────
 
 const STORAGE_KEY = "roles"
@@ -22,11 +18,11 @@ export const getRoles = () => {
 
     const roles = localStorage.getItem(STORAGE_KEY)
 
-    if(!roles) return []
+    if (!roles) return []
 
     return JSON.parse(roles)
 
-  } catch(error){
+  } catch (error) {
 
     console.error("Error leyendo roles:", error)
 
@@ -45,7 +41,10 @@ export const getRoles = () => {
 
 export const saveRoles = (roles) => {
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(roles))
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(roles)
+  )
 
 }
 
@@ -57,6 +56,15 @@ export const saveRoles = (roles) => {
 export const createRole = (role) => {
 
   const roles = getRoles()
+
+  // validar duplicados
+  const exists = roles.some(
+    r => r.name.toLowerCase() === role.name.toLowerCase()
+  )
+
+  if (exists) {
+    throw new Error("El rol ya existe")
+  }
 
   const newRole = {
 
@@ -101,7 +109,7 @@ export const updateRole = (updatedRole) => {
 
 
 // ─────────────────────────────────────────────
-// CAMBIAR ESTADO (ACTIVAR / DESACTIVAR)
+// ACTIVAR / DESACTIVAR ROL
 // ─────────────────────────────────────────────
 
 export const toggleRoleStatus = (id) => {
@@ -154,6 +162,19 @@ export const deleteRole = (roleId) => {
 
   const roles = getRoles()
 
+  const role = roles.find(
+    r => r.id === roleId
+  )
+
+  if (!role) {
+    throw new Error("Rol no encontrado")
+  }
+
+  // validar si el rol tiene usuarios
+  if (roleHasUsers(role.name)) {
+    throw new Error("No se puede eliminar un rol con usuarios asignados")
+  }
+
   const updatedRoles = roles.filter(
 
     role => role.id !== roleId
@@ -177,7 +198,7 @@ export const roleHasUsers = (roleName) => {
 
   return users.some(
 
-    user => user.rol === roleName
+    user => user.role === roleName
 
   )
 
@@ -194,7 +215,7 @@ export const countUsersByRole = (roleName) => {
 
   return users.filter(
 
-    user => user.rol === roleName
+    user => user.role === roleName
 
   ).length
 

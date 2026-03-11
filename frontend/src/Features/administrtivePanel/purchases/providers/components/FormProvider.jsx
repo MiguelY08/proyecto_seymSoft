@@ -1,7 +1,18 @@
-// FormProvider.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronDown } from 'lucide-react';
-import { useAlert } from '../../../shared/alerts/useAlert';
+import { useAlert } from '../../../../shared/alerts/useAlert';
+import { validateProviderForm } from '../utils/providerHelpers';
+
+const categoriasOptions = [
+  "Útiles escolares",
+  "Oficina",
+  "Papelería",
+  "Arte y manualidades",
+  "Tecnología",
+  "Industrial",
+  "Impresión y copiado",
+  "Etiquetas adhesivas"
+];
 
 function FormProvider({ isOpen, onClose, provider, onSave }) {
 
@@ -28,10 +39,17 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
   const [categoriasOpen, setCategoriasOpen] = useState(false);
   const categoriasRef = useRef(null);
   
-  const { showError } = useAlert();
+  const { showError, showSuccess } = useAlert();
 
   useEffect(() => {
     if (provider) {
+      // Convertir string de categorías a array si viene como string
+      const categoriasArray = provider.categorias 
+        ? (Array.isArray(provider.categorias) 
+            ? provider.categorias 
+            : provider.categorias.split(', '))
+        : [];
+
       setFormData({
         tipoPersona: provider.tipoPersona || '',
         tipo: provider.tipo || 'CC',
@@ -40,20 +58,24 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
         apellidos: provider.apellidos || '',
         telefono: provider.telefono || '',
         correo: provider.correo || '',
-        nombreContacto: provider.nombreContacto || '',
-        numeroContacto: provider.numeroContacto || '',
+        nombreContacto: provider.pContacto || provider.nombreContacto || '',
+        numeroContacto: provider.nuContacto || provider.numeroContacto || '',
         direccion: provider.direccion || '',
         tipoCliente: provider.tipoCliente || '',
-        categorias: Array.isArray(provider.categorias) ? provider.categorias : (provider.categorias ? provider.categorias.split(', ') : []),
+        categorias: categoriasArray,
         rut: provider.rut || '',
         codigoCIU: provider.codigoCIU || '',
       });
+      
+      setTouched(
+        Object.keys(initialState).reduce((acc, key) => ({ ...acc, [key]: true }), {})
+      );
     } else {
       setFormData(initialState);
+      setTouched({});
     }
 
     setErrors({});
-    setTouched({});
   }, [provider, isOpen]);
 
   // Cerrar dropdown al hacer clic fuera
@@ -85,114 +107,6 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     onClose();
   };
 
-  // Validación en tiempo real
-  const validateField = (name, value) => {
-    let error = '';
-
-    switch (name) {
-      case 'tipoPersona':
-        if (!value || !value.trim()) error = 'Seleccione el tipo de persona';
-        break;
-
-      case 'tipo':
-        if (!value || !value.trim()) error = 'Seleccione el tipo de documento';
-        break;
-
-      case 'numero':
-        if (!value || !value.trim()) {
-          error = 'El número es obligatorio';
-        } else if (!/^[0-9-]+$/.test(value)) {
-          error = 'Solo se permiten números y guiones';
-        } else if (value.length < 6) {
-          error = 'Debe tener al menos 6 caracteres';
-        }
-        break;
-
-      case 'nombres':
-        if (!value || !value.trim()) {
-          error = 'El nombre es obligatorio';
-        } else if (value.trim().length < 2) {
-          error = 'Debe tener al menos 2 caracteres';
-        } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value)) {
-          error = 'Solo se permiten letras';
-        }
-        break;
-
-      case 'apellidos':
-        if (!value || !value.trim()) {
-          error = 'El apellido es obligatorio';
-        } else if (value.trim().length < 2) {
-          error = 'Debe tener al menos 2 caracteres';
-        } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value)) {
-          error = 'Solo se permiten letras';
-        }
-        break;
-
-      case 'telefono':
-        if (!value || !value.trim()) {
-          error = 'El teléfono es obligatorio';
-        } else if (!/^[0-9]+$/.test(value)) {
-          error = 'Solo se permiten números';
-        } else if (value.length < 7 || value.length > 10) {
-          error = 'Debe tener entre 7 y 10 dígitos';
-        }
-        break;
-
-      case 'correo':
-        if (!value || !value.trim()) {
-          error = 'El correo es obligatorio';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-          error = 'Formato de correo inválido';
-        }
-        break;
-
-      case 'numeroContacto':
-        if (value && value.trim()) {
-          if (!/^[0-9]+$/.test(value)) {
-            error = 'Solo se permiten números';
-          } else if (value.length < 7 || value.length > 10) {
-            error = 'Debe tener entre 7 y 10 dígitos';
-          }
-        }
-        break;
-
-      case 'direccion':
-        if (!value || !value.trim()) {
-          error = 'La dirección es obligatoria';
-        } else if (value.trim().length < 5) {
-          error = 'Debe tener al menos 5 caracteres';
-        }
-        break;
-
-      case 'tipoCliente':
-        if (!value || !value.trim()) error = 'Seleccione el tipo de cliente';
-        break;
-
-      case 'categorias':
-        if (!value || value.length === 0) error = 'Seleccione al menos una categoría';
-        break;
-
-      case 'rut':
-        if (!value || !value.trim()) error = 'Indique si tiene RUT';
-        break;
-
-      case 'nombreContacto':
-        if (value && value.trim()) {
-          if (value.trim().length < 2) {
-            error = 'Debe tener al menos 2 caracteres';
-          } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value)) {
-            error = 'Solo se permiten letras';
-          }
-        }
-        break;
-
-      default:
-        break;
-    }
-
-    return error;
-  };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -201,12 +115,11 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       [name]: value,
     }));
 
-    // Validar en tiempo real solo si el campo ya ha sido tocado
     if (touched[name]) {
-      const error = validateField(name, value);
+      const validationErrors = validateProviderForm({ ...formData, [name]: value });
       setErrors((prev) => ({
         ...prev,
-        [name]: error,
+        [name]: validationErrors[name] || '',
       }));
     }
   };
@@ -226,28 +139,27 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       categorias: updatedCategorias,
     }));
 
-    // Validar en tiempo real
     if (touched.categorias) {
-      const error = validateField('categorias', updatedCategorias);
+      const validationErrors = validateProviderForm({ ...formData, categorias: updatedCategorias });
       setErrors((prev) => ({
         ...prev,
-        categorias: error,
+        categorias: validationErrors.categorias || '',
       }));
     }
   };
 
   const handleBlur = (e) => {
-    const { name, value } = e.target;
+    const { name } = e.target;
     
     setTouched((prev) => ({
       ...prev,
       [name]: true,
     }));
 
-    const error = validateField(name, value);
+    const validationErrors = validateProviderForm(formData);
     setErrors((prev) => ({
       ...prev,
-      [name]: error,
+      [name]: validationErrors[name] || '',
     }));
   };
 
@@ -257,28 +169,17 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       categorias: true,
     }));
 
-    const error = validateField('categorias', formData.categorias);
+    const validationErrors = validateProviderForm(formData);
     setErrors((prev) => ({
       ...prev,
-      categorias: error,
+      categorias: validationErrors.categorias || '',
     }));
-  };
-
-  const validateAll = () => {
-    const newErrors = {};
-
-    Object.keys(formData).forEach((key) => {
-      const error = validateField(key, formData[key]);
-      if (error) newErrors[key] = error;
-    });
-
-    return newErrors;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const validationErrors = validateAll();
+    const validationErrors = validateProviderForm(formData);
     setErrors(validationErrors);
     setTouched(
       Object.keys(formData).reduce((acc, key) => ({ ...acc, [key]: true }), {})
@@ -298,6 +199,8 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     onSave?.(dataToSave);
     resetForm();
     onClose();
+    showSuccess(provider ? 'Proveedor actualizado' : 'Proveedor creado', 
+                provider ? 'Los datos se actualizaron correctamente' : 'El proveedor se creó exitosamente');
   };
 
   if (!isOpen) return null;
@@ -312,19 +215,9 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
   const renderError = (field) =>
     errors[field] && touched[field] && (
       <p className="mt-0.5 text-xs text-red-600 flex items-start gap-1">
-        <span className="mt-0.5"></span>
         <span>{errors[field]}</span>
       </p>
     );
-
-  const categoriasOptions = [
-    "Útiles escolares",
-    "Oficina",
-    "Papelería",
-    "Arte y manualidades",
-    "Tecnología",
-    "Industrial"
-  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
