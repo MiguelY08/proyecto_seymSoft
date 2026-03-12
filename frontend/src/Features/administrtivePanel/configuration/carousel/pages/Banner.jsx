@@ -1,22 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { saveImage, getImage, deleteImage as deleteImageDB, seedDefaultImage, DEFAULT_SLIDE_ID } from '../services/CarouselBD';
+import { loadMeta, saveMeta, MAX_FILE_SIZE } from '../helpers/carouselHelpers';
 import OrderSection      from '../components/OrderSection';
 import ManagementSection from '../components/ManagementSection';
-
-const STORAGE_KEY   = 'pm_carousel';
-const MAX_FILE_SIZE = 12 * 1024 * 1024; // 12 MB
-
-// ─── Helpers localStorage ─────────────────────────────────────────────────────
-const loadMeta = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch { return []; }
-};
-
-const saveMeta = (slides) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(slides));
-};
 
 // ─── Banner ───────────────────────────────────────────────────────────────────
 function Banner() {
@@ -29,7 +15,6 @@ function Banner() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      // Sembrar imagen por defecto si aún no existe en localStorage/IndexedDB
       await seedDefaultImage();
       const meta = loadMeta();
       setSlides(meta);
@@ -40,7 +25,7 @@ function Banner() {
           const blob = await getImage(slide.id);
           if (blob) {
             const url = URL.createObjectURL(blob);
-            urls[slide.id] = url;
+            urls[slide.id]         = url;
             urlsRef.current[slide.id] = url;
           }
         })
@@ -60,14 +45,18 @@ function Banner() {
     if (!loading) saveMeta(slides);
   }, [slides, loading]);
 
+
   // ─── Agregar imagen ─────────────────────────────────────────────────────
   const handleAddImage = useCallback(async (file) => {
     if (!file) return { ok: false, error: 'No se seleccionó ningún archivo.' };
     if (file.size > MAX_FILE_SIZE) {
-      return { ok: false, error: `La imagen supera los 12 MB. Peso actual: ${(file.size / (1024 * 1024)).toFixed(1)} MB.` };
+      return {
+        ok:    false,
+        error: `La imagen supera los ${MAX_FILE_SIZE / (1024 * 1024)} MB. Peso actual: ${(file.size / (1024 * 1024)).toFixed(1)} MB.`,
+      };
     }
 
-    const id    = Date.now();
+    const id     = Date.now();
     const nombre = file.name;
     const orden  = slides.length + 1;
 
@@ -82,6 +71,7 @@ function Banner() {
       return { ok: false, error: 'Error al guardar la imagen.' };
     }
   }, [slides]);
+
 
   // ─── Eliminar imagen ────────────────────────────────────────────────────
   const handleDeleteImage = useCallback(async (id) => {
@@ -105,12 +95,14 @@ function Banner() {
     }
   }, []);
 
+
   // ─── Activar / Desactivar imagen ────────────────────────────────────────
   const handleToggleActive = useCallback((id) => {
     setSlides((prev) =>
       prev.map((s) => s.id === id ? { ...s, activo: !s.activo } : s)
     );
   }, []);
+
 
   // ─── Reordenar imágenes ─────────────────────────────────────────────────
   const handleReorder = useCallback((newOrder) => {
@@ -120,11 +112,13 @@ function Banner() {
     });
   }, []);
 
+
   const slidesOrdenados = [...slides].sort((a, b) => a.orden - b.orden);
 
   return (
     <div className="flex flex-col gap-6 sm:gap-8 p-3 sm:p-4 lg:p-6 max-w-7xl mx-auto w-full">
-      {/* ── Encabezado ──────────────────────────────────────────────────── */}
+
+      {/* Encabezado */}
       <div className="flex flex-col gap-1">
         <h1 className="text-lg sm:text-xl font-bold text-[#004D77]">Gestión del carrusel</h1>
         <p className="text-xs sm:text-sm text-gray-500">
@@ -132,7 +126,7 @@ function Banner() {
         </p>
       </div>
 
-      {/* ── Sección 1: Orden ────────────────────────────────────────────── */}
+      {/* Sección 1: Orden */}
       <OrderSection
         slides={slidesOrdenados}
         imageUrls={imageUrls}
@@ -140,7 +134,7 @@ function Banner() {
         loading={loading}
       />
 
-      {/* ── Sección 2: Administrar ──────────────────────────────────────── */}
+      {/* Sección 2: Administrar */}
       <ManagementSection
         slides={slidesOrdenados}
         imageUrls={imageUrls}

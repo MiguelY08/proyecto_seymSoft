@@ -5,11 +5,12 @@ import TopBar          from '../components/TopBar';
 import UsersTable      from '../components/UsersTable';
 import PaginationAdmin from '../../../shared/PaginationAdmin';
 import { UsersDB }     from '../services/usersDB';
+import { filterUsers } from '../helpers/usersHelpers';
 
 const RECORDS_PER_PAGE = 13;
 
 // ─── Users ────────────────────────────────────────────────────────────────────
-function Users({ onDownload }) {
+function Users() {
   const location                     = useLocation();
   const [data,        setData]        = useState(() => UsersDB.list());
   const [search,      setSearch]      = useState('');
@@ -19,6 +20,7 @@ function Users({ onDownload }) {
   useEffect(() => {
     setData(UsersDB.list());
   }, [location.pathname]);
+
 
   // ─── Acciones ──────────────────────────────────────────────────────────────
   const handleToggle = (id) => {
@@ -36,28 +38,9 @@ function Users({ onDownload }) {
     setCurrentPage(1);
   };
 
-  // ─── Filtro ────────────────────────────────────────────────────────────────
-  const filtered = data.filter((row) => {
-    const term = search.toLowerCase().trim();
-    if (!term) return true;
 
-    const estadoTexto  = row.active ? 'activo' : 'inactivo';
-    const termosEstado = ['activo', 'activos', 'inactivo', 'inactivos'];
-    const matchEstado  = termosEstado.includes(term) &&
-                         estadoTexto.startsWith(term.replace(/s$/, ''));
-
-    return (
-      (row.document     ?? '').toLowerCase().includes(term) ||
-      (row.documentType ?? '').toLowerCase().includes(term) ||
-      (row.name         ?? '').toLowerCase().includes(term) ||
-      (row.email        ?? '').toLowerCase().includes(term) ||
-      (row.phone        ?? '').toLowerCase().includes(term) ||
-      (row.role         ?? '').toLowerCase().includes(term) ||
-      (row.clientType   ?? '').toLowerCase().includes(term) ||
-      matchEstado
-    );
-  });
-
+  // ─── Filtro y paginación ───────────────────────────────────────────────────
+  const filtered      = filterUsers(data, search);
   const paginatedData = filtered.slice(
     (currentPage - 1) * RECORDS_PER_PAGE,
     currentPage * RECORDS_PER_PAGE
@@ -69,7 +52,7 @@ function Users({ onDownload }) {
       <TopBar
         search={search}
         onSearchChange={handleSearchChange}
-        onDownload={onDownload}
+        users={data}
       />
 
       {/* ── Tabla ──────────────────────────────────────────────────────── */}

@@ -1,9 +1,22 @@
 import { useRef } from 'react';
 import { Maximize2, Trash2 } from 'lucide-react';
-
-const MAX_FILE_SIZE = 12 * 1024 * 1024; // 12 MB
+import { MAX_FILE_SIZE } from '../helpers/carouselHelpers';
 
 // ─── CardManagement ───────────────────────────────────────────────────────────
+// Tarjeta dual: muestra una imagen existente con sus controles,
+// o el botón "Agregar imagen" cuando isAddCard es true.
+//
+// Props (tarjeta de imagen):
+//   slide     — Objeto de metadata del slide { id, nombre, orden, activo }
+//   imageUrl  — URL object de la imagen (generada desde IndexedDB)
+//   onDelete  — (id) => void
+//   onToggle  — (id) => void
+//   onExpand  — (id) => void
+//
+// Props (tarjeta de agregar):
+//   isAddCard — true
+//   onAdd     — (file: File) => void
+// ─────────────────────────────────────────────────────────────────────────────
 function CardManagement({ slide, imageUrl, onDelete, onToggle, onExpand, onAdd, isAddCard = false }) {
   const fileInputRef = useRef(null);
 
@@ -32,7 +45,9 @@ function CardManagement({ slide, imageUrl, onDelete, onToggle, onExpand, onAdd, 
             <span className="text-xl sm:text-2xl font-light leading-none">+</span>
           </div>
           <p className="text-[11px] sm:text-xs font-medium">Agregar imagen</p>
-          <p className="text-[9px] sm:text-[10px] text-gray-400">Máx. 12 MB</p>
+          <p className="text-[9px] sm:text-[10px] text-gray-400">
+            Máx. {MAX_FILE_SIZE / (1024 * 1024)} MB
+          </p>
         </div>
       </div>
     );
@@ -49,7 +64,7 @@ function CardManagement({ slide, imageUrl, onDelete, onToggle, onExpand, onAdd, 
           : 'border-red-300 shadow-md shadow-red-50'
       }`}
     >
-      {/* ── Imagen ────────────────────────────────────────────────────── */}
+      {/* Imagen */}
       {imageUrl ? (
         <img
           src={imageUrl}
@@ -65,10 +80,8 @@ function CardManagement({ slide, imageUrl, onDelete, onToggle, onExpand, onAdd, 
         </div>
       )}
 
-      {/* ── Overlay de acciones (top-right) ───────────────────────────── */}
+      {/* Overlay de acciones (top-right) */}
       <div className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 flex items-center gap-1 sm:gap-1.5">
-
-        {/* Ampliar */}
         <button
           type="button"
           onClick={() => onExpand?.(slide?.id)}
@@ -78,7 +91,6 @@ function CardManagement({ slide, imageUrl, onDelete, onToggle, onExpand, onAdd, 
           <Maximize2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" strokeWidth={2} />
         </button>
 
-        {/* Eliminar */}
         <button
           type="button"
           onClick={() => onDelete?.(slide?.id)}
@@ -89,7 +101,7 @@ function CardManagement({ slide, imageUrl, onDelete, onToggle, onExpand, onAdd, 
         </button>
       </div>
 
-      {/* ── Toggle activo/inactivo (bottom-right) ─────────────────────── */}
+      {/* Toggle activo/inactivo (bottom-right) */}
       <div className="absolute bottom-1.5 sm:bottom-2 right-1.5 sm:right-2">
         <button
           type="button"
@@ -110,7 +122,7 @@ function CardManagement({ slide, imageUrl, onDelete, onToggle, onExpand, onAdd, 
         </button>
       </div>
 
-      {/* ── Overlay inactivo ──────────────────────────────────────────── */}
+      {/* Overlay inactivo */}
       {!isActive && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-black/50 text-white text-[9px] sm:text-[10px] font-semibold rounded-full backdrop-blur-sm">

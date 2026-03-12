@@ -21,47 +21,52 @@ const mockPurchase = {
   }),
 };
 
+// Calculamos totales para el mock
 mockPurchase.ivaTotal = mockPurchase.productos.reduce((sum, p) => sum + p.ivaValor, 0);
 mockPurchase.precioTotal =
   mockPurchase.productos.reduce((sum, p) => sum + p.subtotal, 0) + mockPurchase.ivaTotal;
 
+// Componente para mostrar el estado
 const EstadoBadge = ({ estado }) => {
   const styles = {
-    Activo:    { bg: "#dcfce7", color: "#15803d" },
-    Anulada:   { bg: "#fee2e2", color: "#b91c1c" },
+    Activo: { bg: "#dcfce7", color: "#15803d" },
+    Anulada: { bg: "#fee2e2", color: "#b91c1c" },
     Pendiente: { bg: "#fef9c3", color: "#a16207" },
   };
   const s = styles[estado] ?? { bg: "#f3f4f6", color: "#374151" };
-
   return (
     <span
       className="inline-block px-3 py-0.5 rounded-full text-xs font-semibold"
       style={{ backgroundColor: s.bg, color: s.color }}
     >
-      {estado}
+      {estado ?? "-"}
     </span>
   );
 };
 
 const DetailPurchases = ({ purchase, onClose }) => {
+  // Datos seguros: purchase o mock
   const data = purchase ?? mockPurchase;
+  const productos = Array.isArray(data.productos) ? data.productos : [];
 
+  // Función de formato de números
   const fmt = (n) =>
     typeof n === "number"
       ? n.toLocaleString("es-CO", { minimumFractionDigits: 3, maximumFractionDigits: 3 })
-      : n;
+      : n ?? "-";
 
+  // Paginación
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 5;
 
   const currentProducts = useMemo(() => {
     const start = (currentPage - 1) * productsPerPage;
-    return data.productos.slice(start, start + productsPerPage);
-  }, [currentPage, data.productos]);
+    return productos.slice(start, start + productsPerPage);
+  }, [currentPage, productos]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [data]);
+    setCurrentPage(1); // reset paginación cuando cambien los productos
+  }, [productos]);
 
   const isAnulada = data.estado === "Anulada";
 
@@ -72,10 +77,7 @@ const DetailPurchases = ({ purchase, onClose }) => {
         style={{ width: "780px", maxWidth: "95vw", maxHeight: "95vh" }}
       >
         {/* Header */}
-        <div
-          className="relative flex items-center px-6 py-2.5 shrink-0"
-          style={{ backgroundColor: "#004D77" }}
-        >
+        <div className="relative flex items-center px-6 py-2.5 shrink-0" style={{ backgroundColor: "#004D77" }}>
           <h2 className="absolute left-1/2 transform -translate-x-1/2 text-white font-semibold text-xl">
             Detalle De Compra
           </h2>
@@ -89,19 +91,18 @@ const DetailPurchases = ({ purchase, onClose }) => {
 
         {/* Body — scrollable */}
         <div className="px-8 py-4 text-sm text-gray-800 overflow-y-auto flex-1">
-
-          {/* Info general — en dos columnas */}
+          {/* Info general */}
           <div className="grid grid-cols-2 gap-x-8 gap-y-0.5 mb-3">
-            <p><strong>No.Facturación:</strong> {data.numeroFacturacion}</p>
-            <p><strong>Fecha:</strong> {data.fechaCompra}</p>
-            <p><strong>Proveedor:</strong> {data.proveedor}</p>
+            <p><strong>No.Facturación:</strong> {data.numeroFacturacion ?? "-"}</p>
+            <p><strong>Fecha:</strong> {data.fechaCompra ?? "-"}</p>
+            <p><strong>Proveedor:</strong> {data.proveedor ?? "-"}</p>
             <div className="flex items-center gap-2">
               <strong>Estado:</strong>
-              <EstadoBadge estado={data.estado} />
+              <EstadoBadge estado={data.estado ?? "N/A"} />
             </div>
           </div>
 
-          {/* Motivo de anulación — solo si está anulada */}
+          {/* Motivo de anulación */}
           {isAnulada && data.motivoAnulacion && (
             <div
               className="flex gap-2 items-start rounded-lg px-3 py-2 mb-3 text-xs"
@@ -112,12 +113,12 @@ const DetailPurchases = ({ purchase, onClose }) => {
                 <p className="font-semibold mb-0.5" style={{ color: "#b91c1c" }}>
                   Motivo de anulación
                 </p>
-                <p style={{ color: "#7f1d1d" }}>{data.motivoAnulacion}</p>
+                <p style={{ color: "#7f1d1d" }}>{data.motivoAnulacion ?? "-"}</p>
               </div>
             </div>
           )}
 
-          {/* Tabla */}
+          {/* Tabla de productos */}
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr className="text-left border-b border-gray-300">
@@ -133,23 +134,23 @@ const DetailPurchases = ({ purchase, onClose }) => {
             <tbody>
               {currentProducts.map((p, i) => (
                 <tr key={i} className="border-b border-gray-100">
-                  <td className="py-1.5">{p.nombre}</td>
-                  <td className="py-1.5">{p.codigoBarras}</td>
-                  <td className="py-1.5 text-right">{p.cantidad}</td>
+                  <td className="py-1.5">{p.nombre ?? "-"}</td>
+                  <td className="py-1.5">{p.codigoBarras ?? "-"}</td>
+                  <td className="py-1.5 text-right">{p.cantidad ?? 0}</td>
                   <td className="py-1.5 text-right">{fmt(p.valorUnit)}</td>
-                  <td className="py-1.5 text-right">{p.iva}%</td>
+                  <td className="py-1.5 text-right">{p.iva ?? 0}%</td>
                   <td className="py-1.5 text-right">{fmt(p.ivaValor)}</td>
                   <td className="py-1.5 text-right">{fmt(p.subtotal)}</td>
                 </tr>
               ))}
               <tr>
                 <td colSpan={5} className="pt-2 pb-1 font-bold text-sm">IVA</td>
-                <td colSpan={2} className="pt-2 pb-1 text-right text-sm">{fmt(data.ivaTotal)}</td>
+                <td colSpan={2} className="pt-2 pb-1 text-right text-sm">{fmt(data.ivaTotal ?? 0)}</td>
               </tr>
               <tr>
                 <td colSpan={5} className="py-1 font-bold text-sm">Total</td>
                 <td colSpan={2} className="py-1 text-right font-bold text-sm text-gray-900">
-                  ${Number(data.precioTotal).toLocaleString("es-CO")}.00
+                  ${Number(data.precioTotal ?? 0).toLocaleString("es-CO")}.00
                 </td>
               </tr>
             </tbody>
@@ -157,7 +158,7 @@ const DetailPurchases = ({ purchase, onClose }) => {
 
           {/* Paginador */}
           <Pagination
-            totalProducts={data.productos.length}
+            totalProducts={productos.length}
             productsPerPage={productsPerPage}
             currentPage={currentPage}
             setCurrentPage={setCurrentPage}

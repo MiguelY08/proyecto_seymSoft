@@ -1,35 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Info, SquarePen, Trash2, Users, Plus } from 'lucide-react';
-import { useAlert } from '../../../shared/alerts/useAlert';
-import { UsersDB } from '../services/usersDB';
+import { useAlert }          from '../../../shared/alerts/useAlert';
+import { highlight, highlightEstado } from '../helpers/usersHelpers';
 
-// ─── Resaltador de texto ──────────────────────────────────────────────────────
-function highlight(text, term) {
-  if (!term || !term.trim()) return text;
-  const regex = new RegExp(`(${term.trim()})`, 'gi');
-  const parts = String(text).split(regex);
-  return parts.map((part, i) =>
-    regex.test(part)
-      ? <mark key={i} className="bg-[#004d7726] text-[#004D77] rounded px-0.5">{part}</mark>
-      : part
-  );
-}
-
-// ─── Resaltador para estado activo/inactivo ───────────────────────────────────
-function highlightEstado(activo, term) {
-  const estadoTexto  = activo ? 'Activo' : 'Inactivo';
-  const termosEstado = ['activo', 'activos', 'inactivo', 'inactivos'];
-  const termLower    = term.toLowerCase().trim();
-  const isMatch      = termosEstado.includes(termLower) &&
-                       estadoTexto.toLowerCase().startsWith(termLower.replace(/s$/, ''));
-  if (!isMatch) return null;
-  return (
-    <mark className="bg-[#004d7726] text-[#004D77] rounded px-0.5">
-      {estadoTexto}
-    </mark>
-  );
-}
 
 // ─── Toggle activo/inactivo ───────────────────────────────────────────────────
 function ActiveToggle({ activo, onChange, search }) {
@@ -77,6 +51,7 @@ function ActiveToggle({ activo, onChange, search }) {
   );
 }
 
+
 // ─── Empty State ──────────────────────────────────────────────────────────────
 function EmptyState({ isSearching }) {
   const navigate = useNavigate();
@@ -111,22 +86,23 @@ function EmptyState({ isSearching }) {
   );
 }
 
+
 // ─── UsersTable ───────────────────────────────────────────────────────────────
 function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0, offset = 0 }) {
   const navigate = useNavigate();
   const { showConfirm, showSuccess, showWarning } = useAlert();
 
   // ─── Eliminar usuario ─────────────────────────────────────────────────────
-    const handleDelete = (row) => {
-      if (row.active) {          
-        showWarning(
-          'No es posible eliminar este usuario',
-          'Debes desactivar el usuario antes de poder eliminarlo.'
-        );
-        return;
-      }
+  const handleDelete = (row) => {
+    if (row.active) {
+      showWarning(
+        'No es posible eliminar este usuario',
+        'Debes desactivar el usuario antes de poder eliminarlo.'
+      );
+      return;
+    }
 
-    // ─── Verificar ventas asociadas vía servicio ────────────────────────────
+    // Verificar ventas asociadas
     const ventas = (() => {
       try {
         const stored = localStorage.getItem('pm_sales');
@@ -206,7 +182,7 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                   {highlight(row.phone, search)}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(row.role ?? 'Nulo', search)}
+                  {highlight(row.role, search)}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(row.clientType ?? 'Detal', search)}
@@ -218,7 +194,7 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                         const rect = e.currentTarget.getBoundingClientRect();
                         navigate('/admin/users/info-user', {
                           state: {
-                            user: row,
+                            user:   row,
                             origin: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
                           },
                         });
@@ -234,7 +210,7 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                         const rect = e.currentTarget.getBoundingClientRect();
                         navigate('/admin/users/form-user', {
                           state: {
-                            user: row,
+                            user:   row,
                             origin: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
                           },
                         });
@@ -245,11 +221,11 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                       <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                     </button>
 
-                      <ActiveToggle
-                        activo={row.active}       
-                        onChange={() => onToggle?.(row.id)}
-                        search={search}
-                      />
+                    <ActiveToggle
+                      activo={row.active}
+                      onChange={() => onToggle?.(row.id)}
+                      search={search}
+                    />
 
                     <button
                       onClick={() => handleDelete(row)}

@@ -29,8 +29,9 @@ export const PurchasesTable = ({
   startIndex,
   endIndex,
   handleCancel,
-   handleViewDetail,
-  search,  // 👈 agregar
+  handleViewDetail,
+  handleReturn,
+  search,
 }) => {
 
   return (
@@ -125,7 +126,18 @@ export const PurchasesTable = ({
                       </button>
 
                       <button
-                        className="text-gray-400 hover:text-yellow-600 transition-all duration-200 transform hover:scale-110 cursor-pointer"
+                        onClick={() => handleReturn?.(compra)}
+                        disabled={compra.estado === "Anulada"}
+                        title={
+                          compra.estado === "Anulada"
+                            ? "No se puede devolver una compra anulada"
+                            : "Registrar devolución"
+                        }
+                        className={`transition-all duration-200 transform ${
+                          compra.estado === "Anulada"
+                            ? "text-gray-200 cursor-not-allowed"
+                            : "text-gray-400 hover:text-yellow-600 hover:scale-110 cursor-pointer"
+                        }`}
                       >
                         <RefreshCw size={16} />
                       </button>

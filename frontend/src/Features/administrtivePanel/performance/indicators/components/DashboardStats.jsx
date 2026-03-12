@@ -1,49 +1,106 @@
 import { ShoppingCart, Users, Package } from "lucide-react";
+import useBreakpoint from "../hooks/useBreakpoint";
 
-const StatCard = ({ icon: Icon, value, label, iconColor, iconBg }) => (
+const stats = [
+  {
+    icon:      ShoppingCart,
+    value:     "$45.2M",
+    label:     "Ventas del mes",
+    iconColor: "#2563eb",
+    iconBg:    "rgba(37,99,235,0.1)",
+    trend:     "+8.2%",
+    trendUp:   true,
+  },
+  {
+    icon:      Users,
+    value:     "324",
+    label:     "Clientes activos",
+    iconColor: "#059669",
+    iconBg:    "rgba(5,150,105,0.1)",
+    trend:     "+3.1%",
+    trendUp:   true,
+  },
+  {
+    icon:      Package,
+    value:     "1,847",
+    label:     "Productos en stock",
+    iconColor: "#7c3aed",
+    iconBg:    "rgba(124,58,237,0.1)",
+    trend:     "-0.5%",
+    trendUp:   false,
+  },
+];
+
+const StatCard = ({ icon: Icon, value, label, iconColor, iconBg, trend, trendUp }) => (
   <div style={{
-    background: "rgba(255,255,255,0.82)",
-    backdropFilter: "blur(8px)",
-    borderRadius: "12px",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.10)",
-    padding: "16px 20px",
-    display: "flex",
-    alignItems: "center",
-    gap: "14px",
-    flex: 1,
-    minWidth: "140px",
+    background:    "#ffffff",
+    borderRadius:  "14px",
+    boxShadow:     "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06)",
+    padding:       "18px 20px",
+    display:       "flex",
+    flexDirection: "column",
+    gap:           "12px",
+    flex:           1,
+    minWidth:      "0",
   }}>
-    <div style={{ background: iconBg, borderRadius: "11px", padding: "11px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-      <Icon size={22} color={iconColor} strokeWidth={1.8} />
+
+    {/* Fila 1 – Icono + Label */}
+    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+      <div style={{
+        background:     iconBg,
+        borderRadius:   "10px",
+        width:          "34px",
+        height:         "34px",
+        display:        "flex",
+        alignItems:     "center",
+        justifyContent: "center",
+        flexShrink:      0,
+      }}>
+        <Icon size={18} color={iconColor} strokeWidth={1.8} />
+      </div>
+      <span style={{ fontSize: "13px", color: "#64748b", fontWeight: "500" }}>
+        {label}
+      </span>
     </div>
-    <div>
-      <div style={{ fontSize: "22px", fontWeight: "700", color: "#1a1a2e", lineHeight: 1.1 }}>{value}</div>
-      <div style={{ fontSize: "12px", color: "#5a6a7e", marginTop: "3px", fontWeight: "500" }}>{label}</div>
+
+    {/* Fila 2 – Valor + Tendencia */}
+    <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "8px" }}>
+      <span style={{
+        fontSize:      "28px",
+        fontWeight:    "700",
+        color:         "#0f172a",
+        lineHeight:     1,
+        letterSpacing: "-0.02em",
+      }}>
+        {value}
+      </span>
+      <span style={{
+        fontSize:     "13px",
+        fontWeight:   "600",
+        color:         trendUp ? "#059669" : "#dc2626",
+        background:    trendUp ? "rgba(5,150,105,0.08)" : "rgba(220,38,38,0.08)",
+        borderRadius:  "8px",
+        padding:       "4px 10px",
+        flexShrink:     0,
+        marginBottom:  "2px",
+      }}>
+        {trend}
+      </span>
     </div>
+
   </div>
 );
 
 function DashboardStats() {
+  const { isMobile } = useBreakpoint();
+
   return (
     <div style={{
-      borderRadius: "12px",
-      overflow: "hidden",
-      boxShadow: "0 4px 16px rgba(30,90,180,0.13)",
-      background: "linear-gradient(120deg, #b8d9f8 0%, #deeffe 35%, #7ec8f0 65%, #1e4fa0 100%)",
-      padding: "20px 20px",
-      position: "relative",
+      display:             "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
+      gap:                 "12px",
     }}>
-      <svg viewBox="0 0 1200 160" preserveAspectRatio="none"
-        style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: "100%", opacity: 0.18, pointerEvents: "none" }}>
-        <path d="M0,80 C200,140 400,20 600,80 C800,140 1000,20 1200,80 L1200,160 L0,160 Z" fill="white" />
-        <path d="M0,100 C300,40 600,160 900,80 C1050,40 1150,100 1200,90 L1200,160 L0,160 Z" fill="white" opacity="0.5" />
-        <path d="M0,120 C150,80 350,150 600,110 C850,70 1050,140 1200,120 L1200,160 L0,160 Z" fill="#1e4fa0" opacity="0.3" />
-      </svg>
-      <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", position: "relative", zIndex: 1 }}>
-        <StatCard icon={ShoppingCart} value="$45.2M" label="Ventas del mes"    iconColor="#3b82f6" iconBg="rgba(239,246,255,0.9)" />
-        <StatCard icon={Users}        value="324"    label="Clientes activos"   iconColor="#10b981" iconBg="rgba(236,253,245,0.9)" />
-        <StatCard icon={Package}      value="1,847"  label="Productos en stock" iconColor="#3b82f6" iconBg="rgba(245,243,255,0.9)" />
-      </div>
+      {stats.map(s => <StatCard key={s.label} {...s} />)}
     </div>
   );
 }

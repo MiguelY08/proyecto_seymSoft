@@ -1,10 +1,5 @@
-import { useEffect, useState } from "react";
-
-const card = {
-  background: "white", borderRadius: "10px",
-  boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
-  padding: "8px 10px", flex: 1, minWidth: "180px",
-};
+import { chartCard }       from "../helpers/indicatorsHelpers";
+import useBarAnimation     from "../hooks/useBarAnimation";
 
 const clients = [
   { name: "Comercial Express S.A.", value: 2.5, medal: "" },
@@ -16,19 +11,14 @@ const clients = [
 
 const CLI_COLORS = ["#1e3a5f", "#1e6091", "#2980b9", "#5dade2", "#a9cce3"];
 
-function TopClientsChart() {
-  const max = 2.5;
-  const [animated, setAnimated] = useState(false);
+const MAX_VALUE = clients[0].value;
 
-  useEffect(() => {
-    const t = setTimeout(() => setAnimated(true), 100);
-    return () => clearTimeout(t);
-  }, []);
+function TopClientsChart() {
+  const animated = useBarAnimation();
 
   return (
-    <div style={card}>
+    <div style={{ ...chartCard, minWidth: "180px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "6px" }}>
-        <span style={{ fontSize: "12px" }}></span>
         <h3 style={{ margin: 0, fontSize: "12px", fontWeight: "600", color: "#1a1a2e" }}>
           Top 5 Clientes del Mes
         </h3>
@@ -42,14 +32,16 @@ function TopClientsChart() {
             </div>
             <div style={{ flex: 1, background: "#f3f4f6", borderRadius: "100px", height: "4px", overflow: "hidden" }}>
               <div style={{
-                width: animated ? `${(c.value / max) * 100}%` : "0%",
+                width: animated ? `${(c.value / MAX_VALUE) * 100}%` : "0%",
                 height: "100%",
                 background: CLI_COLORS[i],
                 borderRadius: "100px",
                 transition: `width 0.7s cubic-bezier(0.4, 0, 0.2, 1) ${i * 80}ms`,
               }} />
             </div>
-            <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: "600", width: "32px", textAlign: "right", flexShrink: 0 }}>${c.value}M</span>
+            <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: "600", width: "32px", textAlign: "right", flexShrink: 0 }}>
+              ${c.value}M
+            </span>
           </div>
         ))}
       </div>

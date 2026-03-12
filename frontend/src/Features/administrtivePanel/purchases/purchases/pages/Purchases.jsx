@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { PurchasesFilters } from "../../../../shared/DateFilter";
 import PurchasesTable from "../Components/TablePurchases";
 import { useAlert } from "../../../../shared/alerts/useAlert";
@@ -26,6 +26,15 @@ export const Purchases = () => {
   const alertShownRef = useRef(false);
 
 
+
+  const navigate = useNavigate();
+
+  // 🔥 Abrir formulario de devolución para una compra
+  const handleReturn = (compra) => {
+    navigate("/admin/purchases/returns-p", {
+      state: { openReturnForm: true, purchase: compra },
+    });
+  };
 
   // 🔥 Anular compra
  const handleCancel = (id) => {
@@ -161,7 +170,8 @@ export const Purchases = () => {
           startIndex={startIndex}
           endIndex={endIndex}
           handleCancel={handleCancel}
-          handleViewDetail={handleViewDetail} 
+          handleViewDetail={handleViewDetail}
+          handleReturn={handleReturn}
           search={search}
         />
       )}

@@ -1,15 +1,9 @@
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
-
-const axTick = { fontSize: 11, fill: "#8a94a6" };
-
-const card = {
-  background: "white", borderRadius: "10px",
-  boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
-  padding: "8px 10px", flex: 1, minWidth: "200px",
-};
+import { chartCard, cardTitle, axTick, tooltipBox, tooltipLabel, tooltipValue } from "../helpers/indicatorsHelpers";
+import useBreakpoint from "../hooks/useBreakpoint";
 
 const monthlySalesData = [
   { mes: "Ene", ventas: 42, devoluciones: 8  },
@@ -24,22 +18,54 @@ const monthlySalesData = [
   { mes: "Oct", ventas: 44, devoluciones: 9  },
 ];
 
-function MonthlySalesReturnsChart() {
+const CustomTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
   return (
-    <div style={card}>
-      <h3 style={{ margin: "0 0 4px", fontSize: "12px", fontWeight: "600", color: "#1a1a2e" }}>
-        Ventas &amp; Devoluciones mensuales
-      </h3>
-      <ResponsiveContainer width="100%" height={105}>
-        <LineChart data={monthlySalesData} margin={{ top: 4, right: 6, left: -18, bottom: -10 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+    <div style={tooltipBox}>
+      <p style={tooltipLabel}>{label}</p>
+      {payload.map(p => (
+        <p key={p.dataKey} style={{ ...tooltipValue, color: p.dataKey === "ventas" ? "#93c5fd" : "#fca5a5" }}>
+          {p.dataKey === "ventas" ? "Ventas" : "Devoluciones"}: {p.value}M
+        </p>
+      ))}
+    </div>
+  );
+};
+
+function MonthlySalesReturnsChart() {
+  const { isMobile } = useBreakpoint();
+  return (
+    <div style={chartCard}>
+      <h3 style={cardTitle}>Ventas &amp; Devoluciones Mensuales</h3>
+      <ResponsiveContainer width="100%" height={isMobile ? 180 : 160}>
+        <AreaChart data={monthlySalesData} margin={{ top: 4, right: 4, left: -12, bottom: 0 }}>
+          <defs>
+            <linearGradient id="gradVentas" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%"  stopColor="#2563eb" stopOpacity={0.15} />
+              <stop offset="95%" stopColor="#2563eb" stopOpacity={0}    />
+            </linearGradient>
+            <linearGradient id="gradDev" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%"  stopColor="#ef4444" stopOpacity={0.12} />
+              <stop offset="95%" stopColor="#ef4444" stopOpacity={0}    />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
           <XAxis dataKey="mes" tick={axTick} axisLine={false} tickLine={false} />
-          <YAxis tickFormatter={v => `${v}M`} tick={axTick} axisLine={false} tickLine={false} domain={['auto', 'auto']} />
-          <Tooltip formatter={(v, n) => [`${v}M`, n === "ventas" ? "Ventas" : "Devoluciones"]} />
-          <Legend iconType="circle" iconSize={6} formatter={v => v === "ventas" ? "Ventas" : "Devoluciones"} wrapperStyle={{ fontSize: "11px", paddingTop: "0px", lineHeight: "14px" }} />
-          <Line type="monotone" dataKey="ventas"       stroke="#0062ff" strokeWidth={1.5} dot={{ r: 3, fill: "#3b82f6", strokeWidth: 0 }} activeDot={{ r: 4 }} />
-          <Line type="monotone" dataKey="devoluciones" stroke="#ff0000" strokeWidth={1.5} strokeDasharray="4 3" dot={{ r: 3, fill: "#ef4444", strokeWidth: 0 }} activeDot={{ r: 4 }} />
-        </LineChart>
+          <YAxis tickFormatter={v => `${v}M`} tick={axTick} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
+          <Tooltip
+            content={<CustomTooltip />}
+            isAnimationActive={false}
+            wrapperStyle={{ transition: "opacity 0.15s ease" }}
+          />
+          <Legend
+            iconType="circle"
+            iconSize={8}
+            formatter={v => v === "ventas" ? "Ventas" : "Devoluciones"}
+            wrapperStyle={{ fontSize: "13px", paddingTop: "8px" }}
+          />
+          <Area type="monotone" dataKey="ventas"       stroke="#2563eb" strokeWidth={2} fill="url(#gradVentas)" dot={false} activeDot={{ r: 4, fill: "#2563eb" }} />
+          <Area type="monotone" dataKey="devoluciones" stroke="#ef4444" strokeWidth={2} fill="url(#gradDev)"    dot={false} activeDot={{ r: 4, fill: "#ef4444" }} strokeDasharray="5 3" />
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );
