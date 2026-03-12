@@ -59,7 +59,7 @@ import SaleForm from "../../Features/administrtivePanel/sales/sales/pages/SaleFo
 import SaleInfo from "../../Features/administrtivePanel/sales/sales/modals/SaleInfo.jsx";
 import AnnularSale from "../../Features/administrtivePanel/sales/sales/modals/AnnularSale.jsx"
 
-import ReturnsS from "../../Features/administrtivePanel/sales/returns/Returns.jsx";
+import ReturnsPage from "../../Features/administrtivePanel/sales/returns/page/ReturnsPage.jsx"; 
 
 import PaymentsPage from "../../Features/administrtivePanel/sales/paymentsAndCredits/pages/PaymentsPage.jsx";
 import AccountDetailsPage from "../../Features/administrtivePanel/sales/paymentsAndCredits/pages/AccountDetailsPage.jsx";
@@ -139,7 +139,7 @@ const AppRouter = () => {
 
           <Route path="sales/clients" element={<ClientsPage />} />
           <Route path="sales/orders" element={<OrdersA />} />
-          <Route path="sales/returns-s" element={<ReturnsS />} />
+          <Route path="sales/returns-s" element={<ReturnsPage />} />
 
           {/* PAYMENTS */}
           <Route path="sales/payments-and-credits" element={<PaymentsPage />} />
