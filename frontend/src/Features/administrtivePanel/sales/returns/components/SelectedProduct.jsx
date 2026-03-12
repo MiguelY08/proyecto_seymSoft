@@ -174,13 +174,26 @@ function ConfigurationItem({ config, index, total, onChange, onRemove, product, 
 }
 
 function SelectedProduct({ product, configurations, onConfigurationsChange, onRemove, submitted }) {
+  // Estado para controlar expansión/colapsación del card
   const [expanded, setExpanded] = useState(true);
+  
+  // Cantidad máxima del producto disponible
   const maxTotalQuantity = product.quantity;
 
-  // Calculate total quantity used
+  // ======================= CÓMPUTO DE CANTIDADES =======================
+  
+  // Calcular cantidad total usada en todas las configuraciones
   const totalQuantityUsed = configurations.reduce((sum, cfg) => sum + (cfg.quantity || 0), 0);
+  
+  // Calcular cantidad restante disponible
   const remainingQuantity = maxTotalQuantity - totalQuantityUsed;
 
+  // ======================= FUNCIONALIDAD: AGREGAR CONFIGURACIÓN =======================
+  
+  /**
+   * Agrega una nueva configuración al producto.
+   * Valida que haya cantidad disponible.
+   */
   const handleAddConfiguration = () => {
     if (remainingQuantity <= 0) return;
     
@@ -194,12 +207,26 @@ function SelectedProduct({ product, configurations, onConfigurationsChange, onRe
     onConfigurationsChange([...configurations, newConfig]);
   };
 
+  // ======================= FUNCIONALIDAD: EDITAR CONFIGURACIÓN =======================
+  
+  /**
+   * Actualiza una configuración existente.
+   * @param {number} index - Índice de la configuración
+   * @param {Object} updatedConfig - Datos actualizados
+   */
   const handleConfigurationChange = (index, updatedConfig) => {
     const newConfigs = [...configurations];
     newConfigs[index] = updatedConfig;
     onConfigurationsChange(newConfigs);
   };
 
+  // ======================= FUNCIONALIDAD: ELIMINAR CONFIGURACIÓN =======================
+  
+  /**
+   * Elimina una configuración.
+   * Si es la única configuración, elimina el producto completo.
+   * @param {number} index - Índice de la configuración a eliminar
+   */
   const handleConfigurationRemove = (index) => {
     if (configurations.length <= 1) {
       // If only one configuration remains, remove the entire product
@@ -212,8 +239,9 @@ function SelectedProduct({ product, configurations, onConfigurationsChange, onRe
 
   return (
     <div className="border rounded-xl overflow-hidden transition-colors border-gray-300">
-      {/* Header */}
+      {/* Header del card - información del producto */}
       <div className="flex items-center gap-2 px-3 py-2.5 bg-[#f1f1f1]">
+        {/* Botón para expandir/colapsar */}
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}
@@ -225,6 +253,7 @@ function SelectedProduct({ product, configurations, onConfigurationsChange, onRe
           />
         </button>
         
+        {/* Checkbox para deseleccionar el producto */}
         <input
           type="checkbox"
           checked
@@ -233,8 +262,10 @@ function SelectedProduct({ product, configurations, onConfigurationsChange, onRe
           onClick={onRemove}
         />
         
+        {/* Imagen del producto */}
         <ProductImage src={product.image} size="sm" />
         
+        {/* Información del producto */}
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold text-gray-800 truncate">{product.name}</p>
           <p className="text-[11px] text-gray-500">
@@ -242,6 +273,7 @@ function SelectedProduct({ product, configurations, onConfigurationsChange, onRe
           </p>
         </div>
         
+        {/* Valor total del producto */}
         <div className="text-right flex-shrink-0">
           <p className="text-[10px] text-gray-400">Max total</p>
           <p className="text-xs font-bold text-gray-700">
@@ -250,7 +282,7 @@ function SelectedProduct({ product, configurations, onConfigurationsChange, onRe
         </div>
       </div>
 
-      {/* Expanded configurations */}
+      {/* Configuraciones expandibles */}
       {expanded && (
         <div className="bg-white px-3 py-2">
           {configurations.map((config, index) => (
@@ -267,7 +299,7 @@ function SelectedProduct({ product, configurations, onConfigurationsChange, onRe
             />
           ))}
 
-          {/* Button to add new configuration */}
+          {/* Botón para agregar nueva configuración si hay cantidad disponible */}
           {remainingQuantity > 0 && (
             <button
               type="button"

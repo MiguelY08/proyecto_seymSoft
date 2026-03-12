@@ -1,10 +1,33 @@
+/**
+ * Archivo: providersService.js
+ *
+ * Este módulo actúa como la capa de servicio para el manejo de proveedores
+ * utilizando el almacenamiento local del navegador (localStorage).
+ *
+ * Responsabilidades:
+ * - Inicializar datos de ejemplo cuando no existe información previa
+ * - Proporcionar operaciones CRUD (crear, leer, actualizar, eliminar)
+ *   para los proveedores
+ * - Gestionar el cambio de estado activo/inactivo de un proveedor
+ * - Mantener la consistencia de los datos (nombres calculados, timestamps)
+ *
+ * Nota: Todas las operaciones trabajan con el mismo key definido en
+ * STORAGE_KEYS.PROVIDERS.
+ */
+
 // Providers Service - Local Storage CRUD operations
 
+// Claves utilizadas en localStorage para evitar strings mágicos
 const STORAGE_KEYS = {
   PROVIDERS: 'providers'
 };
 
-// Initialize localStorage with sample data if empty
+// Inicializa el almacenamiento local con datos de muestra si está vacío
+/**
+ * Esta función se ejecuta al cargar el módulo y garantiza que exista un
+ * arreglo inicial de proveedores en localStorage. Si no se encuentra la
+ * clave correspondiente, se inserta un conjunto de proveedores de ejemplo.
+ */
 const initializeLocalStorage = () => {
   if (!localStorage.getItem(STORAGE_KEYS.PROVIDERS)) {
     const sampleProviders = [
@@ -30,20 +53,37 @@ const initializeLocalStorage = () => {
 
 // Provider CRUD operations
 export const providersService = {
-  // Get all providers
+  // Obtener todos los proveedores
+  /**
+   * Lee y retorna el arreglo completo de proveedores del localStorage.
+   * Si el almacenamiento aún no está inicializado, llama a initializeLocalStorage.
+   * @returns {Array} Lista de proveedores
+   */
   getAll: () => {
     initializeLocalStorage();
     const providers = localStorage.getItem(STORAGE_KEYS.PROVIDERS);
     return providers ? JSON.parse(providers) : [];
   },
 
-  // Get provider by ID
+  // Obtener proveedor por su ID
+  /**
+   * Busca y retorna un proveedor cuyo id coincida con el parámetro.
+   * Si no se encuentra, retorna null.
+   * @param {number} id - Identificador del proveedor
+   * @returns {Object|null} Proveedor encontrado o null
+   */
   getById: (id) => {
     const providers = providersService.getAll();
     return providers.find(provider => provider.id === id) || null;
   },
 
-  // Create new provider
+  // Crear nuevo proveedor
+  /**
+   * Agrega un nuevo proveedor al almacenamiento.
+   * Calcula un id único, formatea algunos campos y marca 'activo'.
+   * @param {Object} providerData - Datos del proveedor a crear
+   * @returns {Object} El proveedor recién creado
+   */
   create: (providerData) => {
     const providers = providersService.getAll();
     const newId = Math.max(...providers.map(p => p.id), 0) + 1;
@@ -64,7 +104,14 @@ export const providersService = {
     return newProvider;
   },
 
-  // Update provider
+  // Actualizar proveedor existente
+  /**
+   * Modifica los datos de un proveedor existente identificado por id.
+   * Actualiza campos calculados y registra la fecha de modificación.
+   * @param {number} id - ID del proveedor a actualizar
+   * @param {Object} providerData - Nuevos datos del proveedor
+   * @returns {Object|null} Proveedor actualizado o null si no existe
+   */
   update: (id, providerData) => {
     const providers = providersService.getAll();
     const index = providers.findIndex(p => p.id === id);
@@ -86,7 +133,13 @@ export const providersService = {
     return updatedProvider;
   },
 
-  // Delete provider
+  // Eliminar proveedor
+  /**
+   * Remueve un proveedor del arreglo según su id y guarda los cambios.
+   * Devuelve true siempre para indicar que la operación se realizó.
+   * @param {number} id - ID del proveedor a eliminar
+   * @returns {boolean} true
+   */
   delete: (id) => {
     const providers = providersService.getAll();
     const filteredProviders = providers.filter(p => p.id !== id);
@@ -94,7 +147,13 @@ export const providersService = {
     return true;
   },
 
-  // Toggle provider active status
+  // Cambiar estado activo/inactivo del proveedor
+  /**
+   * Invierte el valor booleano de la propiedad 'activo' de un proveedor
+   * identificado por id y persiste el cambio en localStorage.
+   * @param {number} id - ID del proveedor
+   * @returns {Object|null} Proveedor actualizado o null si no existe
+   */
   toggleActive: (id) => {
     const providers = providersService.getAll();
     const index = providers.findIndex(p => p.id === id);

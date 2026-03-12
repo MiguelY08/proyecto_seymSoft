@@ -1,3 +1,11 @@
+/**
+ * Archivo: ClientsPage.jsx
+ *
+ * Página principal de gestión de clientes en el panel administrativo.
+ * Contiene toolbar, tabla, paginación y modales para crear/editar/ver
+ * información de clientes. Maneja la lógica de carga, búsqueda,
+ * paginación y CRUD utilizando servicios basados en localStorage.
+ */
 import React, { useState, useEffect } from 'react';
 import ClientsToolbar from '../components/ClientsToolbar';
 import ClientsTable from '../components/ClientsTable';
@@ -11,20 +19,23 @@ import { filterClients, paginateData } from '../utils/clientHelpers';
 const RECORDS_PER_PAGE = 13;
 
 function ClientsPage() {
-  const [clients, setClients] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // estado principal
+  const [clients, setClients] = useState([]); // todos los clientes en el sistema
+  const [searchTerm, setSearchTerm] = useState(''); // texto del buscador
+  const [currentPage, setCurrentPage] = useState(1); // página activa de la tabla
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false); // crear/editar
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false); // ver detalles
+  const [selectedClient, setSelectedClient] = useState(null); // cliente en foco
+  const [loading, setLoading] = useState(true); // indicador de carga inicial
 
   const { showConfirm, showSuccess, showError } = useAlert();
 
+  // cargamos los clientes al montar el componente
   useEffect(() => {
     loadClients();
   }, []);
 
+  // obtiene todos los clientes desde el servicio y actualiza el estado
   const loadClients = () => {
     try {
       const data = clientsService.getAll();
@@ -36,6 +47,7 @@ function ClientsPage() {
     }
   };
 
+  // alterna el estado activo/inactivo con confirmación del usuario
   const handleToggleActive = async (id) => {
     const client = clients.find(c => c.id === id);
     const newStatus = client.activo ? 'Inactivo' : 'Activo';
@@ -60,21 +72,25 @@ function ClientsPage() {
     }
   };
 
+  // abrir modal de edición con el cliente seleccionado
   const handleEdit = (client) => {
     setSelectedClient(client);
     setIsFormModalOpen(true);
   };
 
+  // mostrar modal de información detallada
   const handleInfo = (client) => {
     setSelectedClient(client);
     setIsInfoModalOpen(true);
   };
 
+  // preparar formulario para crear un cliente nuevo
   const handleNewClient = () => {
     setSelectedClient(null);
     setIsFormModalOpen(true);
   };
 
+  // recibe datos del formulario y crea o actualiza según el cliente seleccionado
   const handleSave = (formData) => {
     try {
       if (selectedClient) {
@@ -94,6 +110,7 @@ function ClientsPage() {
     }
   };
 
+  // elimina un cliente después de confirmar con el usuario y ajusta paginación
   const handleDelete = async (client) => {
     const result = await showConfirm(
       'error',
@@ -120,11 +137,13 @@ function ClientsPage() {
     }
   };
 
+  // actualización del término de búsqueda y reset de página
   const handleSearchChange = (term) => {
     setSearchTerm(term);
     setCurrentPage(1);
   };
 
+  // aplicar filtrado y paginación antes de renderizar
   const filteredClients = filterClients(clients, searchTerm);
   const { currentData, totalPages, startIndex } = paginateData(
     filteredClients,
@@ -132,6 +151,7 @@ function ClientsPage() {
     RECORDS_PER_PAGE
   );
 
+  // mientras se cargan los datos, mostramos un spinner
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">

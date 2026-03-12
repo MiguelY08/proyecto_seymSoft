@@ -1,3 +1,14 @@
+/**
+ * Archivo: InfoClient.jsx
+ *
+ * Modal de sólo lectura que muestra los detalles completos de un cliente.
+ * Incluye un botón para alternar una gráfica histórica del cliente.
+ *
+ * Props:
+ * @param {boolean} isOpen - Controla visibilidad del modal
+ * @param {Function} onClose - Cierra el modal
+ * @param {object} client - Cliente cuyos datos se muestran (requerido)
+ */
 import React, { useState } from 'react';
 import { X, ChevronRight } from 'lucide-react';
 import GraphClient from './GraphClient';
@@ -12,8 +23,10 @@ import {
 } from '../utils/clientHelpers';
 
 function InfoClient({ isOpen, onClose, client }) {
+  // controla visibilidad de la sección de gráfico adicional
   const [showGraph, setShowGraph] = useState(false);
 
+  // si no está abierto o no hay cliente no renderizamos nada
   if (!isOpen || !client) return null;
 
   return (
