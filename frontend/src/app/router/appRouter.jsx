@@ -11,7 +11,7 @@ import ResetPasswordPage from "../../Features/access/pages/ResetPasswordPage.jsx
 import EditProfilePage from "../../Features/access/pages/EditProfilePage.jsx";
 
 /* ========= LANDING ========= */
-import Landing from "../../Features/landing/Landing.jsx";
+import Landing from "../../Features/landing//pages/Landing.jsx";
 import Home from "../../Features/landing/home/Home.jsx";
 import Shop from "../../Features/landing/shop/pages/Shop.jsx";
 import ShopDetail from "../../Features/landing/shop/pages/ShopDetails.jsx";
@@ -42,11 +42,13 @@ import IndicatorsPage from "../../Features/administrtivePanel/performance/indica
 
 /* PURCHASES */
 import Categories from "../../Features/administrtivePanel/purchases/categories/pages/Categories.jsx";
-import Products from "../../Features/administrtivePanel/purchases/products/Products.jsx";
+import Products from "../../Features/administrtivePanel/purchases/products/pages/Products.jsx";
 import ProvidersPage from "../../Features/administrtivePanel/purchases/providers/page/ProvidersPage.jsx";
 import Purchases from "../../Features/administrtivePanel/purchases/purchases/pages/Purchases.jsx";
 import CreatePurchase from "../../Features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx";
-import ReturnsP from "../../Features/administrtivePanel/purchases/returns/Returns.jsx";
+import ReturnsP from "../../Features/administrtivePanel/purchases/returns/pages/Returns.jsx";
+import ReturnForm from "../../Features/administrtivePanel/purchases/returns/modals/ReturnForm.jsx";
+import ReturnInfo from "../../Features/administrtivePanel/purchases/returns/modals/ReturnInfo.jsx";
 import NonConformingProducts from "../../Features/administrtivePanel/purchases/nonConformingProducts/pages/NonConformingProducts.jsx";
 
 /* SALES */
@@ -55,10 +57,10 @@ import OrdersA from "../../Features/administrtivePanel/sales/orders/pages/Orders
 
 import Sales from "../../Features/administrtivePanel/sales/sales/pages/Sales.jsx";
 import SaleForm from "../../Features/administrtivePanel/sales/sales/pages/SaleForm.jsx";
-import SaleInfo from "../../Features/administrtivePanel/sales/sales/components/SaleInfo.jsx";
-import AnnularSale from "../../Features/administrtivePanel/sales/sales/components/AnnularSale.jsx"
+import SaleInfo from "../../Features/administrtivePanel/sales/sales/modals/SaleInfo.jsx";
+import AnnularSale from "../../Features/administrtivePanel/sales/sales/modals/AnnularSale.jsx"
 
-import ReturnsS from "../../Features/administrtivePanel/sales/returns/Returns.jsx";
+import ReturnsPage from "../../Features/administrtivePanel/sales/returns/page/ReturnsPage.jsx"; 
 
 import PaymentsPage from "../../Features/administrtivePanel/sales/paymentsAndCredits/pages/PaymentsPage.jsx";
 import AccountDetailsPage from "../../Features/administrtivePanel/sales/paymentsAndCredits/pages/AccountDetailsPage.jsx";
@@ -132,6 +134,8 @@ const AppRouter = () => {
           <Route path="purchases" element={<Purchases />} />
           <Route path="purchases/create" element={<CreatePurchase />} />
           <Route path="purchases/returns-p" element={<ReturnsP />} />
+          <Route path="purchases/return-form" element={ <ReturnForm /> } />
+          <Route path="purchases/return-info" element={ <ReturnInfo /> } />
           <Route path="purchases/non-conforming-products" element={<NonConformingProducts />} />
 
           {/* SALES */}
@@ -142,7 +146,7 @@ const AppRouter = () => {
 
           <Route path="sales/clients" element={<ClientsPage />} />
           <Route path="sales/orders" element={<OrdersA />} />
-          <Route path="sales/returns-s" element={<ReturnsS />} />
+          <Route path="sales/returns-s" element={<ReturnsPage />} />
 
           {/* PAYMENTS */}
           <Route path="sales/payments-and-credits" element={<PaymentsPage />} />

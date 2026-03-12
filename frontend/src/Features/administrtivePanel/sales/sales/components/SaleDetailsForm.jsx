@@ -1,16 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { ChevronDown, FileText, Search, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { UsersDB } from '../../../users/services/usersDB';
+import { UsersDB }                                  from '../../../users/services/usersDB';
+import { METODOS_PAGO, ESTADOS_VENTA, ENTREGAS }   from '../helpers/salesHelpers';
 
 const MAX_DIRECCION = 250;
-
-const METODOS_PAGO  = ['Efectivo', 'Crédito', 'Transferencia'];
-
-// ─── Solo los 4 estados permitidos en el formulario ──────────────────────────
-const ESTADOS_VENTA = ['Aprobada', 'Anulada', 'Esp. aprobación', 'Desaprobada'];
-
-const ENTREGAS = ['Cliente lo recoge', 'Domicilio'];
 
 // ─── Campo de solo lectura ────────────────────────────────────────────────────
 function ReadonlyField({ value }) {
@@ -175,7 +169,7 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
 
-      {/* ── Header ──────────────────────────────────────────────────────── */}
+      {/* Header */}
       <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gray-50">
         <div className="w-7 h-7 rounded-md bg-[#004D77] flex items-center justify-center shrink-0">
           <FileText className="w-4 h-4 text-white" strokeWidth={2} />
@@ -190,7 +184,7 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
         </div>
       </div>
 
-      {/* ── Campos ──────────────────────────────────────────────────────── */}
+      {/* Campos */}
       <div className="p-5 flex flex-col gap-4">
 
         {/* Cliente + Vendedor */}
@@ -200,7 +194,7 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
             <div className="flex gap-2">
               <div className="flex-1">
                 {isEditing ? (
-                  <ReadonlyField value={users.find((u) => String(u.id) === String(form.clienteId))?.nombre} />
+                  <ReadonlyField value={users.find((u) => String(u.id) === String(form.clienteId))?.name} />
                 ) : (
                   <SearchableSelect
                     value={form.clienteId}
@@ -208,7 +202,7 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
                     options={activeUsers}
                     placeholder="Cliente"
                     error={errors?.clienteId}
-                    getLabel={(u) => u.nombre}
+                    getLabel={(u) => u.name}
                     getValue={(u) => String(u.id)}
                   />
                 )}
@@ -230,7 +224,7 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
           <div>
             <Label required>Vendedor</Label>
             {isEditing ? (
-              <ReadonlyField value={users.find((u) => String(u.id) === String(form.vendedorId))?.nombre} />
+              <ReadonlyField value={users.find((u) => String(u.id) === String(form.vendedorId))?.name} />
             ) : (
               <SearchableSelect
                 value={form.vendedorId}
@@ -238,7 +232,7 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
                 options={activeVendors}
                 placeholder="Vendedor"
                 error={errors?.vendedorId}
-                getLabel={(u) => u.nombre}
+                getLabel={(u) => u.name}
                 getValue={(u) => String(u.id)}
               />
             )}
@@ -267,7 +261,6 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
 
           <div>
             <Label required>Estado</Label>
-            {/* Si la venta ya está anulada → solo lectura permanente */}
             {isAnulada ? (
               <>
                 <ReadonlyField value="Anulada" />
@@ -289,7 +282,7 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
           </div>
         </div>
 
-        {/* Motivo y fecha de anulación — solo visible cuando la venta está anulada */}
+        {/* Motivo y fecha de anulación */}
         {isAnulada && (
           <div className="flex flex-col gap-3">
             <div>

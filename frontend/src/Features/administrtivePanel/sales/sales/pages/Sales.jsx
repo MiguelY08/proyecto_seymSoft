@@ -5,6 +5,7 @@ import TopBar          from '../components/TopBar';
 import SalesTable      from '../components/SalesTable';
 import PaginationAdmin from '../../../../shared/PaginationAdmin';
 import { SalesDB }     from '../services/salesBD';
+import { filterSales } from '../helpers/salesHelpers';
 
 const RECORDS_PER_PAGE = 13;
 
@@ -25,20 +26,7 @@ function Sales() {
     setCurrentPage(1);
   };
 
-  // ─── Filtro global ────────────────────────────────────────────────────────
-  const filtered = data.filter((row) => {
-    const term = search.toLowerCase().trim();
-    if (!term) return true;
-    return (
-      row.cliente.toLowerCase().includes(term)         ||
-      row.vendedor.toLowerCase().includes(term)        ||
-      String(row.factura).toLowerCase().includes(term) ||
-      row.fecha.toLowerCase().includes(term)           ||
-      row.metodoPago.toLowerCase().includes(term)      ||
-      String(row.total).toLowerCase().includes(term)   ||
-      row.estado.toLowerCase().includes(term)
-    );
-  });
+  const filtered = filterSales(data, search);
 
   const paginatedData = filtered.slice(
     (currentPage - 1) * RECORDS_PER_PAGE,
@@ -53,7 +41,7 @@ function Sales() {
         onSearchChange={handleSearchChange}
       />
 
-      {/* ── Tabla ──────────────────────────────────────────────────────── */}
+      {/* Tabla */}
       <div className="bg-white rounded-xl shadow-md">
         <SalesTable
           data={paginatedData}
@@ -63,7 +51,7 @@ function Sales() {
         />
       </div>
 
-      {/* ── Paginador ──────────────────────────────────────────────────── */}
+      {/* Paginador */}
       {filtered.length > 0 && (
         <PaginationAdmin
           currentPage={currentPage}

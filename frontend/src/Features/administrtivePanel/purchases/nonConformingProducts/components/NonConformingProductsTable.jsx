@@ -88,7 +88,7 @@ export const NonConformingProductsTable = ({
                     <div className="flex justify-center gap-3">
                       <button
                         onClick={() => handleViewDetails(report)}
-                        className="text-gray-400 hover:text-blue-600 transition-colors"
+                        className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-125"
                       >
                         <Info size={16} />
                       </button>
@@ -99,7 +99,7 @@ export const NonConformingProductsTable = ({
                             handleCancel(report.id);
                             }
                         }}
-                        className={`transition-colors ${
+                        className={`transition-all duration-200 transform hover:scale-125 ${
                             report.estado === "Anulado"
                             ? "text-red-600 cursor-not-allowed"
                             : "text-gray-400 hover:text-red-600"

@@ -1,8 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Info, SquarePen, RefreshCw, XCircle, ShoppingCart } from 'lucide-react';
-import { useAlert } from '../../../../shared/alerts/useAlert';
-import { UsersDB } from '../../../users/services/usersDB';
+import { useAlert }    from '../../../../shared/alerts/useAlert';
+import { UsersDB }     from '../../../users/services/usersDB';
+import { highlight }   from '../helpers/salesHelpers';
 
 // ─── Resolver nombre de usuario por ID ───────────────────────────────────────
 const resolveUserName = (userId, storedName) => {
@@ -10,21 +11,9 @@ const resolveUserName = (userId, storedName) => {
   try {
     const users = UsersDB.list();
     const found = users.find((u) => String(u.id) === String(userId));
-    return found ? found.nombre : 'Usuario eliminado';
+    return found ? found.nombre || found.name : 'Usuario eliminado';
   } catch { return 'Usuario eliminado'; }
 };
-
-// ─── Resaltador de texto ──────────────────────────────────────────────────────
-function highlight(text, term) {
-  if (!term || !term.trim()) return text;
-  const regex = new RegExp(`(${term.trim()})`, 'gi');
-  const parts = String(text).split(regex);
-  return parts.map((part, i) =>
-    regex.test(part)
-      ? <mark key={i} className="bg-[#004d7726] text-[#004D77] rounded px-0.5">{part}</mark>
-      : part
-  );
-}
 
 // ─── Badge de estado ──────────────────────────────────────────────────────────
 const estadoVariants = {
@@ -47,13 +36,9 @@ function EstadoBadge({ estado, term }) {
 
 // ─── Permisos por estado ──────────────────────────────────────────────────────
 const getPermisos = (estado) => {
-  if (estado === 'Aprobada') {
-    return { puedeDevolver: true, puedeAnular: true, deshabilitado: false };
-  }
-  if (estado === 'Anulada') {
-    return { puedeDevolver: false, puedeAnular: false, deshabilitado: true };
-  }
-  return { puedeDevolver: false, puedeAnular: false, deshabilitado: false };
+  if (estado === 'Aprobada') return { puedeDevolver: true,  puedeAnular: true,  deshabilitado: false };
+  if (estado === 'Anulada')  return { puedeDevolver: false, puedeAnular: false, deshabilitado: true  };
+  return                            { puedeDevolver: false, puedeAnular: false, deshabilitado: false };
 };
 
 // ─── Empty State ──────────────────────────────────────────────────────────────

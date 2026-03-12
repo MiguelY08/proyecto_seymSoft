@@ -1,0 +1,141 @@
+// ─── Motivos de devolución ────────────────────────────────────────────────────
+export const MOTIVOS_DEVOLUCION = [
+  "Prod. en mal estado",
+  "Insatisfecho",
+  "Prod. incorrecto",
+  "Otro motivo",
+];
+
+// ─── Tipos de devolución ──────────────────────────────────────────────────────
+export const TIPOS_DEVOLUCION = [
+  "Reemplazo",
+  "Sin reemplazo",
+];
+
+// ─── Estados por tipo de devolución ──────────────────────────────────────────
+
+export const ESTADOS_REEMPLAZO = [
+  "Pend. envío",
+  "Pend. reemplazo",
+  "Recibido",
+];
+
+export const ESTADOS_SIN_REEMPLAZO = [
+  "Pend. envío",
+  "Pend. reembolso",
+  "Enviado",
+];
+
+/**
+ * Devuelve la lista de estados disponibles según el tipo de devolución.
+ * @param {"Reemplazo"|"Sin reemplazo"} tipo
+ */
+export const getEstadosByTipo = (tipo) =>
+  tipo === "Reemplazo" ? ESTADOS_REEMPLAZO : ESTADOS_SIN_REEMPLAZO;
+
+/**
+ * Devuelve el estado inicial de un producto recién agregado a una devolución.
+ * Siempre es "Pend. envío" independientemente del tipo.
+ */
+export const getEstadoInicial = () => "Pend. envío";
+
+/**
+ * Devuelve el estado terminal de un producto según su tipo de devolución.
+ * @param {"Reemplazo"|"Sin reemplazo"} tipo
+ */
+export const getEstadoTerminal = (tipo) =>
+  tipo === "Reemplazo" ? "Recibido" : "Enviado";
+
+/**
+ * Indica si un producto ha completado su proceso de devolución.
+ * @param {{ tipoDevolucion: string, estado: string }} producto
+ */
+export const isProductoTerminado = (producto) =>
+  producto.estado === getEstadoTerminal(producto.tipoDevolucion);
+
+// ─── Estilos de badge de estado (devolución general) ─────────────────────────
+
+/**
+ * Devuelve los estilos de color para el badge de estado de una devolución.
+ * Cubre "Aprobada x/y", "Procesada x/x" y "Anulada".
+ * @param {string} estado
+ */
+export const getBadgeEstadoDevolucion = (estado = "") => {
+  if (estado === "Anulada") {
+    return { background: "#fee2e2", color: "#b91c1c" };
+  }
+  if (estado.startsWith("Procesada")) {
+    return { background: "#dcfce7", color: "#15803d" };
+  }
+  if (estado.startsWith("Aprobada")) {
+    return { background: "#fef9c3", color: "#a16207" };
+  }
+  return { background: "#f3f4f6", color: "#374151" };
+};
+
+// ─── Estilos de badge de estado (producto individual) ────────────────────────
+
+/**
+ * Devuelve los estilos de color para el badge de estado de un producto.
+ * @param {string} estado
+ */
+export const getBadgeEstadoProducto = (estado = "") => {
+  switch (estado) {
+    case "Recibido":
+    case "Enviado":
+      return { background: "#dcfce7", color: "#15803d" };    // verde — terminal
+    case "Pend. reemplazo":
+    case "Pend. reembolso":
+      return { background: "#fef9c3", color: "#a16207" };    // amarillo — en curso
+    case "Pend. envío":
+      return { background: "#fce7f3", color: "#9d174d" };    // rosa — inicial
+    default:
+      return { background: "#f3f4f6", color: "#374151" };
+  }
+};
+
+// ─── Estilos de badge de estado de la compra ─────────────────────────────────
+
+/**
+ * Devuelve los estilos del badge de estado para la compra original.
+ * Extiende los estados base con los nuevos: "Proc. devolución" y "Completada*".
+ * @param {string} estado
+ */
+export const getBadgeEstadoCompra = (estado = "") => {
+  switch (estado) {
+    case "Completada":
+      return { background: "#dcfce7", color: "#15803d" };
+    case "Completada*":
+      return { background: "#d1fae5", color: "#065f46" };
+    case "Proc. devolución":
+      return { background: "#fef9c3", color: "#a16207" };
+    case "Devuelta":
+      return { background: "#dbeafe", color: "#1d4ed8" };
+    case "Anulada":
+      return { background: "#fee2e2", color: "#b91c1c" };
+    default:
+      return { background: "#f3f4f6", color: "#374151" };
+  }
+};
+
+// ─── Formateadores ────────────────────────────────────────────────────────────
+
+/**
+ * Formatea un número como moneda colombiana.
+ * @param {number} value
+ */
+export const formatCurrency = (value) =>
+  typeof value === "number"
+    ? `$${value.toLocaleString("es-CO")}`
+    : "-";
+
+/**
+ * Calcula el subtotal, IVA y total de un producto.
+ * @param {{ valorUnit: number, iva: number, cantidadDevolver: number }} producto
+ */
+export const calcularTotalesProducto = (producto) => {
+  const subtotal = producto.valorUnit * producto.cantidadDevolver;
+  const ivaValor = Math.round(subtotal * (producto.iva / 100));
+  const total    = subtotal + ivaValor;
+  return { subtotal, ivaValor, total };
+};
