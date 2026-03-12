@@ -150,7 +150,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
       {/* Modal Container */}
       <div className={`relative bg-white rounded-lg shadow-2xl overflow-hidden flex transition-all h-[95vh] ${
-        showGraph ? 'w-[95vw] max-w-[1600px]' : 'w-full max-w-5xl'
+        showGraph ? 'w-[95vw] max-w-1600px' : 'w-full max-w-5xl'
       }`}>
 
         {/* Form Section */}

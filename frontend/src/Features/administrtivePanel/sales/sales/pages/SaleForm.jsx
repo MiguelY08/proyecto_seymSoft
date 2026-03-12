@@ -3,28 +3,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 
-import SaleDetailsForm from '../components/SaleDetailsForm';
-import OrderForm       from '../components/OrderForm';
-import DataSalePreview from '../components/DataSalePreview';
-import { SalesDB }     from '../services/salesBD';
-
-// ─── Generar número de factura único ──────────────────────────────────────────
-const generateFactura = () =>
-  String(Math.floor(100000000 + Math.random() * 900000000));
-
-// ─── Validaciones ─────────────────────────────────────────────────────────────
-const validateForm = (form, items) => {
-  const errors = {};
-  if (!form.clienteId)                                      errors.clienteId  = 'Seleccione un cliente.';
-  if (!form.vendedorId)                                     errors.vendedorId = 'Seleccione un vendedor.';
-  if (!form.metodoPago)                                     errors.metodoPago = 'Seleccione un método de pago.';
-  if (!form.estado)                                         errors.estado     = 'Seleccione un estado.';
-  if (!form.entrega)                                        errors.entrega    = 'Seleccione una opción de entrega.';
-  // Dirección solo es obligatoria cuando la entrega es a domicilio
-  if (form.entrega === 'Domicilio' && !form.direccion?.trim()) errors.direccion = 'Ingrese la dirección de entrega.';
-  if (items.length === 0)                                   errors.items      = 'Agrega al menos un producto al pedido.';
-  return errors;
-};
+import SaleDetailsForm          from '../components/SaleDetailsForm';
+import OrderForm                from '../components/OrderForm';
+import DataSalePreview          from '../components/DataSalePreview';
+import { SalesDB }              from '../services/salesBD';
+import { generateFactura, validateForm } from '../helpers/salesHelpers';
 
 // ─── SaleForm ─────────────────────────────────────────────────────────────────
 function SaleForm() {
@@ -94,7 +77,7 @@ function SaleForm() {
       return;
     }
 
-    // 2. Alerta de confirmación — "Enviar" guarda, "Revisar" vuelve al formulario
+    // 2. Confirmación — "Enviar" guarda, "Revisar" vuelve al formulario
     const result = await showConfirm(
       'info',
       '¿Listo para guardar?',
@@ -102,7 +85,7 @@ function SaleForm() {
       { confirmButtonText: 'Enviar', cancelButtonText: 'Revisar' }
     );
 
-    if (!result?.isConfirmed) return; // Usuario quiere revisar → no hacemos nada
+    if (!result?.isConfirmed) return;
 
     // 3. Guardar
     if (isEditing) {
@@ -119,7 +102,7 @@ function SaleForm() {
   return (
     <div className="flex flex-col gap-5 p-4 sm:p-6 max-w-7xl mx-auto">
 
-      {/* ── Volver + Título ─────────────────────────────────────────── */}
+      {/* Volver + Título */}
       <div className="flex flex-col gap-1">
         <button
           type="button"
@@ -139,7 +122,7 @@ function SaleForm() {
         )}
       </div>
 
-      {/* ── Grid principal ───────────────────────────────────────────── */}
+      {/* Grid principal */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <SaleDetailsForm
           form={form}
@@ -161,7 +144,7 @@ function SaleForm() {
         <p className="text-sm text-red-600 -mt-2">{errors.items}</p>
       )}
 
-      {/* ── Botones ──────────────────────────────────────────────────── */}
+      {/* Botones */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <button
           type="button"
@@ -179,7 +162,7 @@ function SaleForm() {
         </button>
       </div>
 
-      {/* ── Vista previa ─────────────────────────────────────────────── */}
+      {/* Vista previa */}
       <DataSalePreview
         form={form}
         items={items}

@@ -4,25 +4,11 @@ import { X, XCircle, AlertTriangle, Package } from 'lucide-react';
 import { useAlert }          from '../../../../shared/alerts/useAlert';
 import { useModalAnimation } from '../../../../shared/useModalAnimation';
 import { SalesDB }           from '../services/salesBD';
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const formatPrice = (value) =>
-  new Intl.NumberFormat('es-CO', {
-    style: 'currency', currency: 'COP', minimumFractionDigits: 0,
-  }).format(value);
+import { formatPrice }       from '../helpers/salesHelpers';
+import SaleDetailRow         from '../components/SaleDetailRow';
 
 const MOTIVO_MAX = 500;
 const MOTIVO_MIN = 10;
-
-// ─── Fila de detalle ──────────────────────────────────────────────────────────
-function DetailItem({ label, value }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">{label}</span>
-      <span className="text-sm font-medium text-gray-800">{value || '—'}</span>
-    </div>
-  );
-}
 
 // ─── AnnularSale ──────────────────────────────────────────────────────────────
 function AnnularSale() {
@@ -48,7 +34,7 @@ function AnnularSale() {
 
   // ─── Calcular totales ─────────────────────────────────────────────────────
   const items    = sale?.items ?? [];
-  const subtotal = items.reduce((acc, i) => acc + i.product.precioDetal * i.cantidad, 0);
+  const subtotal = items.reduce((acc, i) => acc + i.product.precioDetalle * i.cantidad, 0);
   const iva      = Math.round(subtotal * 0.19);
   const total    = subtotal + iva;
 
@@ -83,7 +69,7 @@ function AnnularSale() {
         className={`bg-white rounded-lg shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden max-h-[90vh]
           ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
       >
-        {/* ── Header ────────────────────────────────────────────────────── */}
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-red-600 shrink-0">
           <div className="flex items-center gap-2.5">
             <XCircle className="w-5 h-5 text-white" strokeWidth={2} />
@@ -100,7 +86,7 @@ function AnnularSale() {
           </button>
         </div>
 
-        {/* ── Aviso ─────────────────────────────────────────────────────── */}
+        {/* Aviso */}
         <div className="flex items-start gap-3 px-6 py-3 bg-red-50 border-b border-red-100 shrink-0">
           <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" strokeWidth={2} />
           <p className="text-xs text-red-700 leading-relaxed">
@@ -109,29 +95,29 @@ function AnnularSale() {
           </p>
         </div>
 
-        {/* ── Body ──────────────────────────────────────────────────────── */}
+        {/* Body */}
         <div className="overflow-y-auto flex-1">
           <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-200">
 
-            {/* ── Columna izquierda: Detalles + Motivo ──────────────────── */}
+            {/* Columna izquierda: Detalles + Motivo */}
             <div className="px-6 py-5 flex flex-col gap-5">
 
               {/* Detalles de la venta */}
               <div>
                 <p className="text-sm font-bold text-gray-700 mb-3">Detalles de la venta</p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                  <DetailItem label="Factura No."    value={sale.factura}    />
-                  <DetailItem label="Fecha"          value={sale.fecha}      />
-                  <DetailItem label="Cliente"        value={sale.cliente}    />
-                  <DetailItem label="Vendedor"       value={sale.vendedor}   />
-                  <DetailItem label="Método de pago" value={sale.metodoPago} />
-                  <DetailItem label="Estado actual"  value={sale.estado}     />
-                  <DetailItem label="Entrega"        value={sale.entrega}    />
-                  <DetailItem label="Total"          value={sale.total}      />
+                <div className="grid grid-cols-2 gap-x-4">
+                  <SaleDetailRow label="Factura No."    value={sale.factura}    />
+                  <SaleDetailRow label="Fecha"          value={sale.fecha}      />
+                  <SaleDetailRow label="Cliente"        value={sale.cliente}    />
+                  <SaleDetailRow label="Vendedor"       value={sale.vendedor}   />
+                  <SaleDetailRow label="Método de pago" value={sale.metodoPago} />
+                  <SaleDetailRow label="Estado actual"  value={sale.estado}     />
+                  <SaleDetailRow label="Entrega"        value={sale.entrega}    />
+                  <SaleDetailRow label="Total"          value={sale.total}      />
                 </div>
                 {sale.entrega === 'Domicilio' && sale.direccion && (
-                  <div className="mt-3">
-                    <DetailItem label="Dirección" value={sale.direccion} />
+                  <div className="mt-1">
+                    <SaleDetailRow label="Dirección" value={sale.direccion} />
                   </div>
                 )}
               </div>
@@ -168,7 +154,7 @@ function AnnularSale() {
               </div>
             </div>
 
-            {/* ── Columna derecha: Productos ────────────────────────────── */}
+            {/* Columna derecha: Productos */}
             <div className="px-6 py-5 flex flex-col">
               <p className="text-sm font-bold text-gray-700 mb-3">Productos del pedido</p>
 
@@ -202,10 +188,10 @@ function AnnularSale() {
                         </div>
                         <span className="text-xs text-gray-600 text-right tabular-nums">{cantidad}</span>
                         <span className="text-xs text-gray-600 text-right tabular-nums">
-                          {product.precioDetal.toLocaleString('es-CO')}
+                          {product.precioDetalle.toLocaleString('es-CO')}
                         </span>
                         <span className="text-xs font-medium text-gray-700 text-right tabular-nums">
-                          {(product.precioDetal * cantidad).toLocaleString('es-CO')}
+                          {(product.precioDetalle * cantidad).toLocaleString('es-CO')}
                         </span>
                       </div>
                     ))}
@@ -225,7 +211,6 @@ function AnnularSale() {
                       <span className="text-sm font-bold text-gray-800">Total</span>
                       <span className="text-sm font-bold text-gray-900 tabular-nums">{formatPrice(total)}</span>
                     </div>
-                    {/* Nota de restauración de stock */}
                     <p className="text-[10px] text-gray-400 mt-1">
                       ↑ Al anular, el stock de estos {items.length} producto{items.length !== 1 ? 's' : ''} será restaurado automáticamente.
                     </p>
@@ -242,7 +227,7 @@ function AnnularSale() {
           </div>
         </div>
 
-        {/* ── Footer ────────────────────────────────────────────────────── */}
+        {/* Footer */}
         <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
           <button
             onClick={handleClose}

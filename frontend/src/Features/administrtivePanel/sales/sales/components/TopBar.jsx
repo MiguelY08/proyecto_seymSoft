@@ -1,54 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Download, Plus } from 'lucide-react';
-import { useAlert } from '../../../../shared/alerts/useAlert';
-import * as XLSX from 'xlsx';
-
-const STORAGE_KEY = 'pm_sales';
-
-// ─── Generador de Excel ───────────────────────────────────────────────────────
-const downloadExcel = () => {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  const sales  = stored ? JSON.parse(stored) : [];
-
-  if (sales.length === 0) return false;
-
-  const rows = sales.map((s, index) => ({
-    '#':                  index + 1,
-    'Cliente':            s.cliente,
-    'Vendedor':           s.vendedor,
-    'No. Factura':        s.factura,
-    'Fecha':              s.fecha,
-    'Método de Pago':     s.metodoPago,
-    'Total':              s.total,
-    'Estado':             s.estado,
-    'Registrado Desde':   s.registradoDesde ?? '—',
-  }));
-
-  const worksheet = XLSX.utils.json_to_sheet(rows);
-  const workbook  = XLSX.utils.book_new();
-
-  worksheet['!cols'] = [
-    { wch: 6  },  // #
-    { wch: 28 },  // Cliente
-    { wch: 28 },  // Vendedor
-    { wch: 16 },  // No. Factura
-    { wch: 14 },  // Fecha
-    { wch: 18 },  // Método de Pago
-    { wch: 14 },  // Total
-    { wch: 20 },  // Estado
-    { wch: 18 },  // Registrado Desde
-  ];
-
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Ventas');
-
-  const fecha = new Date()
-    .toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    .replace(/\//g, '-');
-
-  XLSX.writeFile(workbook, `ventas_${fecha}.xlsx`);
-  return true;
-};
+import { useAlert }              from '../../../../shared/alerts/useAlert';
+import { downloadSalesExcel }    from '../helpers/salesHelpers';
+import { SalesDB }               from '../services/salesBD';
 
 // ─── TopBar ───────────────────────────────────────────────────────────────────
 function TopBar({ search, onSearchChange }) {
@@ -56,8 +11,7 @@ function TopBar({ search, onSearchChange }) {
   const { showConfirm, showTimer, showWarning } = useAlert();
 
   const handleDownload = () => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const sales  = stored ? JSON.parse(stored) : [];
+    const sales = SalesDB.list();
 
     if (sales.length === 0) {
       showWarning('Sin registros', 'No hay ventas registradas para descargar.');
@@ -71,7 +25,7 @@ function TopBar({ search, onSearchChange }) {
       { confirmButtonText: 'Descargar', cancelButtonText: 'Cancelar' }
     ).then((result) => {
       if (result.isConfirmed) {
-        const success = downloadExcel();
+        const success = downloadSalesExcel();
         if (success) {
           showTimer('success', 'Descarga completada', 'El archivo Excel se ha generado exitosamente.', 4000);
         }
