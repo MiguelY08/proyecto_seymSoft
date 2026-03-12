@@ -1,120 +1,61 @@
 import { getRoles } from "../../administrtivePanel/configuration/roles/services/rolesServices";
 import { permissionsList } from "../../administrtivePanel/configuration/roles/permissions/permissionsList";
 import { flattenPermissions } from "../../administrtivePanel/configuration/roles/helpers/permissionUtils";
+import { saveSession, getSession } from "../helpers/authStorage";
 
 const USERS_KEY = "users";
 
-
-// ─── Obtener usuarios ─────────────────────────────
 export const getUsers = () => {
-
   try {
-
     const users = localStorage.getItem(USERS_KEY);
-
     return users ? JSON.parse(users) : [];
-
   } catch (error) {
-
     console.error("Error leyendo usuarios:", error);
-
     localStorage.removeItem(USERS_KEY);
-
     return [];
-
   }
-
 };
 
-
-// ─── Guardar usuarios ─────────────────────────────
 export const saveUsers = (users) => {
-
-  localStorage.setItem(
-    USERS_KEY,
-    JSON.stringify(users)
-  );
-
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
 };
 
+const normalizeEmail = (email) => email.trim().toLowerCase();
+const normalizePassword = (password) => password.trim();
 
-// ─── Normalizar datos ─────────────────────────────
-const normalizeEmail = (email) =>
-  email.trim().toLowerCase();
-
-const normalizePassword = (password) =>
-  password.trim();
-
-
-// ─── Verificar email existente ────────────────────
 export const emailExists = (email) => {
-
   const users = getUsers();
-
-  return users.some(
-    user =>
-      normalizeEmail(user.email) === normalizeEmail(email)
-  );
-
+  return users.some(user => normalizeEmail(user.email) === normalizeEmail(email));
 };
 
-
-// ─── Verificar documento existente ────────────────
 export const documentExists = (document) => {
-
   const users = getUsers();
-
-  return users.some(
-    user => user.document === document
-  );
-
+  return users.some(user => user.document === document);
 };
 
-
-// ─── Registrar usuario (Landing) ──────────────────
 export const registerUser = (userData) => {
-
   const users = getUsers();
-
-  if (emailExists(userData.email)) {
-    throw new Error("El correo ya está registrado");
-  }
-
-  if (documentExists(userData.document)) {
-    throw new Error("El documento ya está registrado");
-  }
+  if (emailExists(userData.email)) throw new Error("El correo ya está registrado");
+  if (documentExists(userData.document)) throw new Error("El documento ya está registrado");
 
   const newUser = {
-
-    id: Date.now(),
-
+    id:         Date.now(),
     ...userData,
-
-    email: normalizeEmail(userData.email),
-
-    password: normalizePassword(userData.password),
-
+    name:       userData.fullName,
+    email:      normalizeEmail(userData.email),
+    password:   normalizePassword(userData.password),
     clientType: "Detal",
-
-    role: null, // clientes no tienen rol administrativo
-
-    createdAt: new Date().toISOString(),
-
+    role:       null,
+    active:     true,
+    createdAt:  new Date().toISOString(),
   };
 
   users.push(newUser);
-
   saveUsers(users);
-
   return newUser;
-
 };
 
-
-// ─── Login ────────────────────────────────────────
-
 export const loginUser = (email, password) => {
-
   const users = getUsers();
 
   const user = users.find(
@@ -123,17 +64,10 @@ export const loginUser = (email, password) => {
       normalizePassword(u.password) === normalizePassword(password)
   );
 
-  if (!user) {
-    throw new Error("Correo o contraseña incorrectos");
-  }
-
-  // ── Validar cuenta activa ────────────────────────
-  if (!user.active) {
-    throw new Error("Tu cuenta está inactiva. Contacta al administrador.");
-  }
+  if (!user) throw new Error("Correo o contraseña incorrectos");
+  if (!user.active) throw new Error("Tu cuenta está inactiva. Contacta al administrador.");
 
   let permissions = [];
-
   if (user.role) {
     try {
       const roles = getRoles();
@@ -145,15 +79,39 @@ export const loginUser = (email, password) => {
     }
   }
 
-  const session = {
-    user: {
-      ...user,
-      permissions
-    },
+  return {
+    user:       { ...user, permissions },
     token:      Date.now(),
-    redirectTo: user.role ? '/admin' : '/'  
+    redirectTo: user.role ? "/admin" : "/",
   };
+};
 
-  return session;
+// ─── Actualizar perfil ────────────────────────────
+export const updateProfile = (userId, changes) => {
+
+  const users = getUsers();
+
+  if (changes.email) {
+    const emailTaken = users.some(
+      (u) =>
+        u.email.trim().toLowerCase() === changes.email.trim().toLowerCase() &&
+        u.id !== userId
+    );
+    if (emailTaken) throw new Error("Este correo ya está registrado por otro usuario.");
+  }
+
+  const updatedUsers = users.map((u) =>
+    u.id === userId ? { ...u, ...changes } : u
+  );
+
+  saveUsers(updatedUsers);
+
+  const session = getSession();
+  if (session) {
+    const updatedUser = updatedUsers.find((u) => u.id === userId);
+    saveSession({ ...session, user: { ...session.user, ...updatedUser } });
+  }
+
+  return updatedUsers.find((u) => u.id === userId);
 
 };

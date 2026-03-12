@@ -8,6 +8,7 @@ import LoginPage from "../../Features/access/pages/LoginPage.jsx";
 import RegisterPage from "../../Features/access/pages/RegisterPage.jsx";
 import ForgotPasswordPage from "../../Features/access/pages/ForgotPasswordPage.jsx";
 import ResetPasswordPage from "../../Features/access/pages/ResetPasswordPage.jsx";
+import EditProfilePage from "../../Features/access/pages/EditProfilePage.jsx";
 
 /* ========= LANDING ========= */
 import Landing from "../../Features/landing/Landing.jsx";
@@ -71,6 +72,7 @@ import FormProduct from "../../Features/administrtivePanel/purchases/products/mo
 import EditProduct from "../../Features/administrtivePanel/purchases/products/modals/EditProduct.jsx";
 
 
+
 const AppRouter = () => {
   return (
     <Routes>
@@ -82,12 +84,14 @@ const AppRouter = () => {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgotpassword" element={<ForgotPasswordPage />} />
         <Route path="/resetpassword" element={<ResetPasswordPage />} />
+        
 
       </Route>
 
       {/* ========= LANDING ========= */}
       <Route path="/" element={<Landing />}>
         <Route index element={<Home />} />
+        
 
         <Route path="shop" element={<Shop />} />
         <Route path="shop/detail" element={<ShopDetail />} />
@@ -105,10 +109,13 @@ const AppRouter = () => {
       </Route>
 
       {/* ========= PANEL ADMIN ========= */}
-      <Route element={<PrivateRoute />}>
+      <Route element={<PrivateRoute requireRole={false}/>}>
+
+        <Route path="/perfil/editar" element={<EditProfilePage />} /> // Ruta para editar perfil, accesible para cualquier usuario autenticado
         <Route path="/admin" element={<AdminLayout />}>
 
           <Route index element={<DashboardPage />} />
+          
 
           {/* PERFORMANCE */}
           <Route path="dashboard" element={<IndicatorsPage/>} />

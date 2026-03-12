@@ -1,38 +1,46 @@
 import { XCircle } from "lucide-react"
 
+/*
+  Tabla de abonos de UNA factura.
+
+  Props:
+    abonos   → array de abonos de la factura seleccionada
+    mode     → "view" | "payment"
+               "view"    → solo lectura, sin columna Funciones
+               "payment" → muestra icono de anular en cada fila
+    onDelete → (abono) => void — se dispara al click en anular
+               Solo se activa si el abono cumple la regla de 48h
+*/
 export default function PaymentHistoryTable({
   abonos = [],
   mode = "view",
   onDelete
 }) {
 
+  // Determina si un abono puede anularse según la regla de 48 horas
   const canCancel = (abono) => {
-
     if (abono.anulado) return false
     if (!abono.createdAt) return true
 
-    const createdAt = new Date(abono.createdAt)
-    const now = new Date()
-
-    const diffHours =
-      (now - createdAt) / (1000 * 60 * 60)
-
+    const diffHours = (new Date() - new Date(abono.createdAt)) / (1000 * 60 * 60)
     return diffHours <= 48
   }
 
   return (
     <div className="w-full overflow-x-auto rounded-xl shadow-md font-lexend">
 
-      {/*  min-width controlado */}
       <table className="w-full min-w-[750px] text-sm">
 
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="px-3 py-2 text-xs whitespace-nowrap">#</th>
+            {/* nroAbono: correlativo legible dentro de la factura */}
+            <th className="px-3 py-2 text-xs whitespace-nowrap">Nro Abono</th>
             <th className="px-3 py-2 text-xs whitespace-nowrap">Fecha</th>
             <th className="px-3 py-2 text-xs whitespace-nowrap">Monto</th>
-            <th className="px-3 py-2 text-xs whitespace-nowrap">Medio</th>
-            <th className="px-3 py-2 text-xs whitespace-nowrap">Observaciones</th>
+            {/* medioPago: Efectivo | Transferencia | Tarjeta | Cheque */}
+            <th className="px-3 py-2 text-xs whitespace-nowrap">Medio de Pago</th>
+            {/* observacion: nota libre del cajero (campo renombrado del modelo) */}
+            <th className="px-3 py-2 text-xs whitespace-nowrap">Observación</th>
             <th className="px-3 py-2 text-xs whitespace-nowrap">Estado</th>
             {mode === "payment" && (
               <th className="px-3 py-2 text-xs text-center whitespace-nowrap">
@@ -50,14 +58,13 @@ export default function PaymentHistoryTable({
                 colSpan={mode === "payment" ? 7 : 6}
                 className="text-center py-6 text-gray-400"
               >
-                No hay abonos registrados
+                No hay abonos registrados para esta factura
               </td>
             </tr>
           )}
 
           {abonos.map((abono, index) => {
 
-            const estado = abono.anulado ? "anulado" : "activo"
             const allowed = canCancel(abono)
 
             return (
@@ -67,8 +74,10 @@ export default function PaymentHistoryTable({
                   index % 2 === 0 ? "bg-white" : "bg-gray-50"
                 } hover:bg-gray-100`}
               >
-                <td className="px-3 py-2 text-center">
-                  {index + 1}
+
+                {/* nroAbono: correlativo del abono dentro de la factura */}
+                <td className="px-3 py-2 text-center font-medium">
+                  #{abono.nroAbono ?? index + 1}
                 </td>
 
                 <td className="px-3 py-2 text-center whitespace-nowrap">
@@ -80,24 +89,25 @@ export default function PaymentHistoryTable({
                 </td>
 
                 <td className="px-3 py-2 text-center whitespace-nowrap">
-                  {abono.medioPago}
+                  {abono.medioPago ?? "-"}
                 </td>
 
+                {/* observacion → campo correcto del nuevo modelo (antes era observaciones) */}
                 <td
                   className="px-3 py-2 text-center max-w-[200px] truncate"
-                  title={abono.observaciones}
+                  title={abono.observacion}
                 >
-                  {abono.observaciones}
+                  {abono.observacion || "-"}
                 </td>
 
                 <td className="px-3 py-2 text-center whitespace-nowrap">
-                  {estado === "activo" ? (
-                    <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-600">
-                      Pago
-                    </span>
-                  ) : (
+                  {abono.anulado ? (
                     <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-600">
                       Anulado
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-600">
+                      Activo
                     </span>
                   )}
                 </td>
@@ -105,12 +115,9 @@ export default function PaymentHistoryTable({
                 {mode === "payment" && (
                   <td className="px-3 py-2">
                     <div className="flex justify-center items-center">
-
                       <XCircle
                         size={18}
-                        onClick={() => {
-                          if (allowed) onDelete(abono) //  enviamos el objeto completo
-                        }}
+                        onClick={() => { if (allowed) onDelete(abono) }}
                         className={`transition duration-200 ${
                           allowed
                             ? "cursor-pointer text-gray-400 hover:scale-110 hover:text-red-600"
@@ -124,7 +131,6 @@ export default function PaymentHistoryTable({
                               : "No se puede anular después de 48 horas"
                         }
                       />
-
                     </div>
                   </td>
                 )}

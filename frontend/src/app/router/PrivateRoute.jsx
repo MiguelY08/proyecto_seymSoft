@@ -1,17 +1,17 @@
-// PrivateRoute.jsx
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../../Features/access/context/AuthContext";
 
-export default function PrivateRouter() {
+export default function PrivateRoute({ requireRole = true }) {
 
+  // Obtenemos el usuario autenticado del contexto
   const { user } = useAuth();
 
+  // validar si el usuario existe para dirigirlo 
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // si está logueado pero no tiene rol → landing
-  if (!user.role) {
+  if (requireRole && !user.role) {
     return <Navigate to="/" replace />;
   }
 
