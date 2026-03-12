@@ -8,7 +8,7 @@ import { useAlert } from '../../../../shared/alerts/useAlert';
 import { providersService } from '../data/providersService';
 import { filterProviders, paginateData } from '../utils/providerHelpers';
 
-const RECORDS_PER_PAGE = 10;  // ← CAMBIADO DE 15 A 10
+const RECORDS_PER_PAGE = 13;
 
 function ProvidersPage() {
   const [providers, setProviders] = useState([]);
@@ -21,7 +21,6 @@ function ProvidersPage() {
 
   const { showConfirm, showSuccess, showError } = useAlert();
 
-  // Load providers from localStorage on mount
   useEffect(() => {
     loadProviders();
   }, []);
@@ -45,10 +44,7 @@ function ProvidersPage() {
       'warning',
       'Cambiar estado',
       `¿Está seguro de cambiar el estado del proveedor "${provider.nombre}" a ${newStatus}?`,
-      {
-        confirmButtonText: 'Sí, cambiar',
-        cancelButtonText: 'Cancelar',
-      }
+      { confirmButtonText: 'Sí, cambiar', cancelButtonText: 'Cancelar' }
     );
 
     if (result.isConfirmed) {
@@ -82,13 +78,11 @@ function ProvidersPage() {
   const handleSave = (formData) => {
     try {
       if (selectedProvider) {
-        // Update existing provider
         const updatedProvider = providersService.update(selectedProvider.id, formData);
         if (updatedProvider) {
           setProviders(prev => prev.map(p => p.id === selectedProvider.id ? updatedProvider : p));
         }
       } else {
-        // Create new provider
         const newProvider = providersService.create(formData);
         setProviders(prev => [...prev, newProvider]);
       }
@@ -103,18 +97,14 @@ function ProvidersPage() {
       'error',
       'Eliminar proveedor',
       `¿Está seguro de eliminar el proveedor "${provider.nombre}"? Esta acción no se puede deshacer.`,
-      {
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
-      }
+      { confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar' }
     );
 
     if (result.isConfirmed) {
       try {
         providersService.delete(provider.id);
         setProviders(prev => prev.filter(p => p.id !== provider.id));
-        
-        // Adjust current page if necessary
+
         const filtered = filterProviders(providers.filter(p => p.id !== provider.id), searchTerm);
         const newTotalPages = Math.ceil(filtered.length / RECORDS_PER_PAGE);
         if (currentPage > newTotalPages && newTotalPages > 0) {
@@ -133,11 +123,10 @@ function ProvidersPage() {
     setCurrentPage(1);
   };
 
-  // Filter and paginate providers
   const filteredProviders = filterProviders(providers, searchTerm);
   const { currentData, totalPages, startIndex } = paginateData(
-    filteredProviders, 
-    currentPage, 
+    filteredProviders,
+    currentPage,
     RECORDS_PER_PAGE
   );
 
@@ -153,22 +142,25 @@ function ProvidersPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col gap-3 p-3 sm:p-4">
-      <ProvidersToolbar 
+    <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
+
+      <ProvidersToolbar
         searchTerm={searchTerm}
         onSearchChange={handleSearchChange}
         onNewClick={handleNewProvider}
       />
 
-      <ProvidersTable 
-        providers={currentData}
-        startIndex={startIndex}
-        searchTerm={searchTerm}
-        onInfo={handleInfo}
-        onEdit={handleEdit}
-        onToggleActive={handleToggleActive}
-        onDelete={handleDelete}
-      />
+      <div className="bg-white rounded-xl shadow-md">
+        <ProvidersTable
+          providers={currentData}
+          startIndex={startIndex}
+          searchTerm={searchTerm}
+          onInfo={handleInfo}
+          onEdit={handleEdit}
+          onToggleActive={handleToggleActive}
+          onDelete={handleDelete}
+        />
+      </div>
 
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         <p className="text-sm font-semibold text-gray-700">
@@ -178,13 +170,15 @@ function ProvidersPage() {
           <span className="text-[#004D77]">{filteredProviders.length}</span>
         </p>
 
-        <div className="bg-white shadow-md rounded-xl px-3 py-2">
-          <ProvidersPagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
-        </div>
+        {totalPages > 1 && (
+          <div className="bg-white shadow-md rounded-xl px-3 py-2">
+            <ProvidersPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
       </div>
 
       <FormProvider
