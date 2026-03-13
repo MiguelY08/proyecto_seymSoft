@@ -1,29 +1,13 @@
 import { Info, DollarSign, Phone } from "lucide-react"
 import StatusBadge from "./StatusBadge"
+import { highlight } from "../utils/paymentHelpers"
 
-/*
-  Tabla principal del index de Pagos y Abonos.
-  Muestra un cliente por fila con su resumen de crédito.
-
-  Props:
-    data      → array de clientes formateados desde PaymentsPage:
-                {
-                  id, nombre, documento, telefono,
-                  creditoAsignado,   ← límite asignado desde módulo Clientes
-                  totalCredito,      ← suma de valorCredito de todas sus facturas
-                  totalAbonado,      ← suma de abonos activos de todas sus facturas
-                  saldo,             ← saldo pendiente total del cliente
-                  estado             ← "al_dia" | "pendiente" | "vencido"
-                }
-    onView    → (id) => void — navega a vista Ver detalle
-    onAbonar  → (id) => void — navega a vista Abonar
-    onContact → (item) => void — abre modal Contactar (solo en estado vencido)
-*/
 export default function PaymentsTable({
   data = [],
   onView,
   onAbonar,
-  onContact
+  onContact,
+  search = ""
 }) {
 
   const formatCOP = (value) =>
@@ -40,16 +24,13 @@ export default function PaymentsTable({
 
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="px-3 py-2 text-xs">#</th>
-            <th className="px-3 py-2 text-xs text-left">Nombre</th>
-            {/* creditoAsignado: límite de crédito que viene del módulo de Clientes */}
-            <th className="px-3 py-2 text-xs">Crédito Asignado</th>
-            {/* totalCredito: suma de todas las facturas activas del cliente */}
-            <th className="px-3 py-2 text-xs">Total Crédito</th>
-            {/* saldo: lo que le falta por pagar en total (todas las facturas) */}
-            <th className="px-3 py-2 text-xs">Saldo Pendiente</th>
-            <th className="px-3 py-2 text-xs">Estado</th>
-            <th className="px-3 py-2 text-xs">Funciones</th>
+            <th className="px-3 py-1.5 text-xs">#</th>
+            <th className="px-3 py-1.5 text-xs text-left">Nombre</th>
+            <th className="px-3 py-1.5 text-xs">Crédito Asignado</th>
+            <th className="px-3 py-1.5 text-xs">Cupo Ocupado</th>
+            <th className="px-3 py-1.5 text-xs">Cupo Disponible</th>
+            <th className="px-3 py-1.5 text-xs">Estado</th>
+            <th className="px-3 py-1.5 text-xs">Funciones</th>
           </tr>
         </thead>
 
@@ -57,7 +38,7 @@ export default function PaymentsTable({
 
           {data.length === 0 && (
             <tr>
-              <td colSpan={7} className="text-center py-8 text-gray-400 text-sm">
+              <td colSpan={7} className="text-center py-6 text-gray-400 text-sm">
                 No hay registros para mostrar
               </td>
             </tr>
@@ -65,70 +46,94 @@ export default function PaymentsTable({
 
           {data.map((item, index) => {
 
-            const status = item.estado
+            const status          = item.estado
+            const cupoOcupado     = item.saldo ?? 0
+            const creditoAsignado = item.creditoAsignado ?? 0
+            const cupoDisponible  = Math.max(0, creditoAsignado - cupoOcupado)
+            const pctOcupado      = creditoAsignado > 0
+              ? Math.min(100, Math.round((cupoOcupado / creditoAsignado) * 100))
+              : 0
 
             return (
               <tr
                 key={item.id}
                 className={`transition ${
-                  index % 2 === 0 ? "bg-white" : "bg-gray-100"
-                } hover:bg-gray-50`}
+                  index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                } hover:bg-blue-50`}
               >
 
-                <td className="px-3 py-2 text-xs text-center text-gray-500">
+                <td className="px-3 py-1.5 text-xs text-center text-gray-400">
                   {index + 1}
                 </td>
 
-                <td className="px-3 py-2 text-xs font-medium text-gray-800">
-                  {item.nombre}
+                <td className="px-3 py-1.5 text-xs font-medium text-gray-800">
+                  {highlight(item.nombre, search)}
                 </td>
 
-                {/* Crédito asignado desde módulo de Clientes */}
-                <td className="px-3 py-2 text-xs text-center text-gray-600">
-                  {formatCOP(item.creditoAsignado ?? 0)}
+                <td className="px-3 py-1.5 text-xs text-center text-gray-600 font-medium">
+                  {formatCOP(creditoAsignado)}
                 </td>
 
-                {/* Suma de valorCredito de todas las facturas del cliente */}
-                <td className="px-3 py-2 text-xs text-center text-gray-600">
-                  {formatCOP(item.totalCredito ?? 0)}
+                {/* Cupo Ocupado — monto + barra compacta */}
+                <td className="px-3 py-1.5 text-xs text-center">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className={`font-semibold ${
+                      cupoOcupado > 0 ? "text-red-600" : "text-green-600"
+                    }`}>
+                      {formatCOP(cupoOcupado)}
+                    </span>
+                    {/* Barra más pequeña y delgada */}
+                    <div className="w-12 h-[3px] bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          pctOcupado >= 90 ? "bg-red-500" :
+                          pctOcupado >= 60 ? "bg-yellow-400" :
+                          "bg-green-500"
+                        }`}
+                        style={{ width: `${pctOcupado}%` }}
+                      />
+                    </div>
+                    <span className="text-gray-400 text-[9px] leading-none">
+                      {pctOcupado}%
+                    </span>
+                  </div>
                 </td>
 
-                {/* Saldo total pendiente — se pinta en rojo si hay deuda */}
-                <td className={`px-3 py-2 text-xs text-center font-semibold ${
-                  item.saldo > 0 ? "text-red-600" : "text-green-600"
-                }`}>
-                  {formatCOP(item.saldo ?? 0)}
+                {/* Cupo Disponible */}
+                <td className="px-3 py-1.5 text-xs text-center">
+                  <span className={`font-semibold ${
+                    cupoDisponible > 0 ? "text-green-600" : "text-gray-400"
+                  }`}>
+                    {formatCOP(cupoDisponible)}
+                  </span>
                 </td>
 
-                <td className="px-3 py-2 text-center">
-                  <StatusBadge status={status} />
+                <td className="px-3 py-1.5 text-center">
+                  <StatusBadge status={status} search={search} />
                 </td>
 
-                <td className="px-3 py-2">
+                <td className="px-3 py-1.5">
                   <div className="flex justify-center gap-3">
 
-                    {/* Ver info: siempre disponible */}
                     <Info
-                      size={16}
+                      size={15}
                       className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-[#004D77]"
                       title="Ver detalle"
                       onClick={() => onView(item.id)}
                     />
 
-                    {/* Abonar: solo si tiene saldo pendiente */}
                     {(status === "pendiente" || status === "vencido") && (
                       <DollarSign
-                        size={16}
+                        size={15}
                         className="cursor-pointer text-gray-400 hover:scale-110 transition hover:text-green-600"
                         title="Registrar abono"
                         onClick={() => onAbonar(item.id)}
                       />
                     )}
 
-                    {/* Contactar: solo si está vencido */}
                     {status === "vencido" && (
                       <Phone
-                        size={16}
+                        size={15}
                         className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-red-500"
                         title="Contactar cliente"
                         onClick={() => onContact(item)}

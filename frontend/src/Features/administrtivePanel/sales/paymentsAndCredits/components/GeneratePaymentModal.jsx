@@ -61,9 +61,6 @@ export default function GeneratePaymentModal({
     }
 
     if (!trimmedObs) {
-      newErrors.observacion = "Debe contener mínimo 10 caracteres"
-    } else if (trimmedObs.length < 10) {
-      newErrors.observacion = "Debe contener mínimo 10 caracteres"
     } else if (/^[0-9]/.test(trimmedObs)) {
       newErrors.observacion = "No puede iniciar con números"
     }

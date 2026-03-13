@@ -3,7 +3,8 @@ import {
   getTotalAbonadoFactura,
   calculateSaldoCliente,
   getTotalCreditoCliente,
-  getTotalAbonadoCliente
+  getTotalAbonadoCliente,
+  calculateCupoOcupado
 } from "../utils/paymentHelpers"
 
 /*
@@ -22,6 +23,9 @@ export default function AccountReceipt({ account }) {
   const saldoTotal    = calculateSaldoCliente(account)
   const totalCredito  = getTotalCreditoCliente(account)
   const totalAbonado  = getTotalAbonadoCliente(account)
+  const cupoOcupado   = calculateCupoOcupado(account)
+  const creditoAsignado = account.creditoAsignado ?? 0
+  const cupoDisponible = Math.max(0, creditoAsignado - cupoOcupado)
   const today         = new Date().toLocaleDateString("es-CO")
 
   const formatCOP = (value) =>
@@ -34,28 +38,28 @@ export default function AccountReceipt({ account }) {
   return (
     <div style={wrapperStyle}>
 
-      {/* ENCABEZADO */}
-      <div style={{ marginBottom: "20px" }}>
-        <p style={{ fontSize: "12px", color: "#6B7280" }}>Fecha de emisión</p>
-        <p>{today}</p>
-      </div>
-
-      <div style={{ textAlign: "center", marginBottom: "30px" }}>
-        <h2 style={{ fontSize: "22px", fontWeight: "600", color: "#004D77" }}>
-          Estado de Cuenta — Comprobante
+      <div style={{ textAlign: "center", marginBottom: "30px", borderBottom: "2px solid #004D77", paddingBottom: "20px" }}>
+        <h2 style={{ fontSize: "24px", fontWeight: "700", color: "#004D77", margin: "0" }}>
+          Estado de Cuenta — Comprobante Oficial
         </h2>
-        <p style={{ fontSize: "12px", color: "#6B7280", marginTop: "6px" }}>
+        <p style={{ fontSize: "14px", color: "#6B7280", margin: "8px 0 0 0" }}>
           Sistema de Pagos y Abonos - Papelería Magic
+        </p>
+        <p style={{ fontSize: "12px", color: "#9CA3AF", margin: "4px 0 0 0" }}>
+          Generado el {today}
         </p>
       </div>
 
       {/* DATOS DEL CLIENTE */}
       <h3 style={sectionTitle}>Datos del Cliente</h3>
       <div style={cardStyle}>
-        <Info label="Cliente"    value={account.nombre} />
-        <Info label="Documento"  value={account.documento} />
-        <Info label="Teléfono"   value={account.telefono} />
-        <Info label="Correo"     value={account.correo || "-"} />
+        <Info label="Cliente"            value={account.nombre} />
+        <Info label="Documento"          value={account.documento} />
+        <Info label="Teléfono"           value={account.telefono} />
+        <Info label="Correo"             value={account.correo || "-"} />
+        <Info label="Crédito Asignado"   value={formatCOP(creditoAsignado)} />
+        <Info label="Crédito Utilizado"  value={formatCOP(cupoOcupado)} />
+        <Info label="Cupo Disponible"    value={formatCOP(cupoDisponible)} />
       </div>
 
       {/* FACTURAS — una sección por cada factura */}
@@ -98,8 +102,8 @@ export default function AccountReceipt({ account }) {
               </thead>
               <tbody>
                 {factura.abonos && factura.abonos.length > 0 ? (
-                  factura.abonos.map((a) => (
-                    <tr key={a.id} style={{ borderBottom: "1px solid #E5E7EB" }}>
+                  factura.abonos.map((a, index) => (
+                    <tr key={a.id} style={{ backgroundColor: index % 2 === 0 ? "#FFFFFF" : "#F9FAFB" }}>
                       <td style={tdStyle}>#{a.nroAbono}</td>
                       <td style={tdStyle}>{a.fecha}</td>
                       <td style={tdStyle}>{formatCOP(a.monto)}</td>
@@ -179,7 +183,9 @@ const wrapperStyle = {
   fontFamily: "Lexend, sans-serif",
   fontSize: "14px",
   color: "#374151",
-  width: "100%"
+  width: "210mm", // A4 width
+  minHeight: "297mm", // A4 height
+  boxSizing: "border-box"
 }
 
 const sectionTitle = {
@@ -190,17 +196,23 @@ const sectionTitle = {
 
 const cardStyle = {
   border: "1px solid #E5E7EB",
-  borderRadius: "8px",
-  padding: "16px",
+  borderRadius: "12px",
+  padding: "20px",
   display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  gap: "16px"
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+  gap: "16px",
+  backgroundColor: "#F9FAFB",
+  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)"
 }
 
 const tableStyle = {
   width: "100%",
   borderCollapse: "collapse",
-  marginBottom: "10px"
+  marginBottom: "10px",
+  border: "1px solid #E5E7EB",
+  borderRadius: "8px",
+  overflow: "hidden",
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)"
 }
 
 const thStyle = {

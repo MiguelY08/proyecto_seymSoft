@@ -3,21 +3,29 @@
    Servicios CRUD del módulo de Pagos y Abonos.
    Persiste los datos en localStorage bajo la clave "creditAccounts".
    Modelo: Cliente → facturas[] → abonos[]
+
+   REGLA DE DISTRIBUCIÓN DE ABONOS (orden bancario):
+     1° → cubre saldo de interés pendiente  (abono.tipo = "interes")
+     2° → cubre saldo de capital pendiente  (abono.tipo = "capital")
+     Si el monto cubre el interés completo, el resto va a capital.
 ============================================================================= */
 
-import { mockCreditAccounts } from "./mockCreditAccounts"
-import { calculateSaldoFactura } from "../utils/paymentHelpers"
+import mockCreditAccounts from "./mockCreditAccounts"
+import {
+  calculateSaldoCapital,
+  calculateSaldoInteres,
+  calculateSaldoFactura
+} from "../utils/paymentHelpers"
 
 const STORAGE_KEY = "creditAccounts"
 
-
 /* -----------------------------------------------------------------------
    Carga los datos mock en localStorage solo si no existen previamente.
-   Llamar una vez al montar la app (ej: en App.jsx o el layout raíz).
 ----------------------------------------------------------------------- */
 export const initializePayments = () => {
-  const stored = localStorage.getItem(STORAGE_KEY)
-  if (!stored) {
+  const existing = localStorage.getItem(STORAGE_KEY)
+
+  if (!existing) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(mockCreditAccounts))
   }
 }
@@ -37,7 +45,7 @@ export const getAccounts = () => {
 ----------------------------------------------------------------------- */
 export const getAccountById = (id) => {
   const accounts = getAccounts()
-  return accounts.find(acc => acc.id === Number(id))
+  return accounts.find(acc => acc.id === id || acc.id === Number(id))
 }
 
 
@@ -46,75 +54,117 @@ export const getAccountById = (id) => {
 ----------------------------------------------------------------------- */
 export const saveAccounts = (accounts) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts))
+
+  //  NUEVO: notifica a toda la app que cambió la información
+  window.dispatchEvent(new Event("paymentsUpdated"))
 }
 
-
 /* -----------------------------------------------------------------------
-   Registra un nuevo abono en una factura específica de un cliente.
+   Registra uno o dos abonos en una factura aplicando la regla bancaria:
+     1° cubre interés pendiente → abono.tipo = "interes"
+     2° cubre capital pendiente → abono.tipo = "capital"
 
-   @param {number} clienteId   - id del cliente
-   @param {number} facturaId   - id de la factura dentro del cliente
-   @param {Object} paymentData - { monto, medioPago, observacion, fecha }
+   Si el monto ingresado cubre el interés completo, el resto se aplica
+   automáticamente al capital en un segundo abono del mismo movimiento.
 
-   @returns {Object} El abono creado, o lanza Error si no encuentra
-                     el cliente o la factura.
+   @param {string|number} clienteId   - id del cliente
+   @param {string|number} facturaId   - id de la factura
+   @param {Object}        paymentData - { monto, medioPago, observacion, fecha }
 
-   El nroAbono se calcula automáticamente como el siguiente correlativo
-   dentro de la factura (contando activos y anulados).
+   @returns {Array} Array con los abonos creados (1 o 2 según distribución)
+   @throws  {Error} Si cliente/factura no existen o el monto es inválido
 ----------------------------------------------------------------------- */
 export const addPayment = (clienteId, facturaId, paymentData) => {
 
   const accounts = getAccounts()
 
   const clienteIndex = accounts.findIndex(
-    acc => acc.id === Number(clienteId)
+    acc => acc.id === clienteId || acc.id === Number(clienteId)
   )
-
-  if (clienteIndex === -1) {
-    throw new Error("Cliente no encontrado.")
-  }
+  if (clienteIndex === -1) throw new Error("Cliente no encontrado.")
 
   const facturaIndex = accounts[clienteIndex].facturas.findIndex(
-    fac => fac.id === Number(facturaId)
+    fac => fac.id === facturaId || fac.id === Number(facturaId)
   )
+  if (facturaIndex === -1) throw new Error("Factura no encontrada.")
 
-  if (facturaIndex === -1) {
-    throw new Error("Factura no encontrada.")
+  const factura      = accounts[clienteIndex].facturas[facturaIndex]
+  const saldoTotal   = calculateSaldoFactura(factura)
+  const montoIngreso = Number(paymentData.monto)
+
+  // ── Validaciones ─────────────────────────────────────────────────────────
+  if (montoIngreso <= 0) {
+    throw new Error("El monto del abono debe ser mayor a cero.")
   }
-
-  const factura     = accounts[clienteIndex].facturas[facturaIndex]
-  const abonos      = factura.abonos ?? []
-  const saldoActual = calculateSaldoFactura(factura)
-
-  // Validar que el monto no supere el saldo pendiente
-  if (Number(paymentData.monto) > saldoActual) {
+  if (montoIngreso > saldoTotal) {
     throw new Error(
-      `El monto ($${Number(paymentData.monto).toLocaleString("es-CO")}) ` +
-      `supera el saldo pendiente ($${saldoActual.toLocaleString("es-CO")}).`
+      `El monto (${montoIngreso.toLocaleString("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 })}) ` +
+      `supera el saldo pendiente (${saldoTotal.toLocaleString("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 })}).`
     )
   }
 
-  // Validar que el monto sea mayor a cero
-  if (Number(paymentData.monto) <= 0) {
-    throw new Error("El monto del abono debe ser mayor a cero.")
+  const abonos        = factura.abonos ?? []
+  const nextNro       = abonos.length + 1
+  const createdAt     = new Date().toISOString()
+  const nuevosAbonos  = []
+
+  const saldoInteres  = calculateSaldoInteres(factura)
+  const saldoCapital  = calculateSaldoCapital(factura)
+
+  let montoRestante = montoIngreso
+
+  // ── 1° Cubrir interés pendiente ───────────────────────────────────────────
+  if (saldoInteres > 0 && montoRestante > 0) {
+
+    const montoInteres = Math.min(montoRestante, saldoInteres)
+
+    const abonoInteres = {
+      id:               Date.now(),
+      nroAbono:         nextNro,
+      monto:            montoInteres,
+      medioPago:        paymentData.medioPago   || "Efectivo",
+      observacion:      paymentData.observacion
+                          ? `${paymentData.observacion} (interés)`
+                          : "Pago interés mora",
+      fecha:            paymentData.fecha,
+      tipo:             "interes",
+      anulado:          false,
+      createdAt,
+      cancelledAt:      null,
+      motivoCancelacion: null
+    }
+
+    nuevosAbonos.push(abonoInteres)
+    montoRestante -= montoInteres
   }
 
-  const newPayment = {
-    id:          Date.now(),
-    nroAbono:    abonos.length + 1,          // Correlativo dentro de la factura
-    monto:       Number(paymentData.monto),
-    medioPago:   paymentData.medioPago   || "Efectivo",
-    observacion: paymentData.observacion || "",
-    fecha:       paymentData.fecha,
-    createdAt:   new Date().toISOString(), // Timestamp real para regla de 48h
-    anulado:     false
+  // ── 2° Cubrir capital pendiente ───────────────────────────────────────────
+  if (saldoCapital > 0 && montoRestante > 0) {
+
+    const montoCapital = Math.min(montoRestante, saldoCapital)
+
+    const abonoCapital = {
+      id:               Date.now() + 1,   // +1 para evitar colisión de id en el mismo ms
+      nroAbono:         nextNro + (nuevosAbonos.length > 0 ? 1 : 0),
+      monto:            montoCapital,
+      medioPago:        paymentData.medioPago   || "Efectivo",
+      observacion:      paymentData.observacion || "Abono a capital",
+      fecha:            paymentData.fecha,
+      tipo:             "capital",
+      anulado:          false,
+      createdAt,
+      cancelledAt:      null,
+      motivoCancelacion: null
+    }
+
+    nuevosAbonos.push(abonoCapital)
   }
 
-  accounts[clienteIndex].facturas[facturaIndex].abonos.push(newPayment)
-
+  // ── Persistir ─────────────────────────────────────────────────────────────
+  accounts[clienteIndex].facturas[facturaIndex].abonos.push(...nuevosAbonos)
   saveAccounts(accounts)
 
-  return newPayment
+  return nuevosAbonos
 }
 
 
@@ -122,17 +172,18 @@ export const addPayment = (clienteId, facturaId, paymentData) => {
    Anula un abono de una factura específica.
 
    REGLAS DE NEGOCIO:
-     1. Requiere la contraseña del Administrador registrado en "users".
+     1. Requiere contraseña del Administrador registrado en "users".
      2. Solo se puede anular dentro de las 48 horas desde createdAt.
-     3. No se puede anular un abono que ya fue anulado.
+     3. No se puede anular un abono ya anulado.
 
-   @param {number} clienteId  - id del cliente
-   @param {number} facturaId  - id de la factura
-   @param {number} abonoId    - id del abono a anular
-   @param {string} reason     - motivo de la anulación
-   @param {string} password   - contraseña del administrador
+   @param {string|number} clienteId  - id del cliente
+   @param {string|number} facturaId  - id de la factura
+   @param {string|number} abonoId    - id del abono a anular
+   @param {string}        reason     - motivo de la anulación
+   @param {string}        password   - contraseña del administrador
 
-   @returns {boolean} true si anuló correctamente, o lanza Error.
+   @returns {boolean} true si anuló correctamente
+   @throws  {Error}   Si validación falla
 ----------------------------------------------------------------------- */
 export const cancelPayment = (clienteId, facturaId, abonoId, reason, password) => {
 
@@ -147,37 +198,26 @@ export const cancelPayment = (clienteId, facturaId, abonoId, reason, password) =
   const accounts = getAccounts()
 
   const clienteIndex = accounts.findIndex(
-    acc => acc.id === Number(clienteId)
+    acc => acc.id === clienteId || acc.id === Number(clienteId)
   )
-
-  if (clienteIndex === -1) {
-    throw new Error("Cliente no encontrado.")
-  }
+  if (clienteIndex === -1) throw new Error("Cliente no encontrado.")
 
   const facturaIndex = accounts[clienteIndex].facturas.findIndex(
-    fac => fac.id === Number(facturaId)
+    fac => fac.id === facturaId || fac.id === Number(facturaId)
   )
-
-  if (facturaIndex === -1) {
-    throw new Error("Factura no encontrada.")
-  }
+  if (facturaIndex === -1) throw new Error("Factura no encontrada.")
 
   const abonoIndex = accounts[clienteIndex].facturas[facturaIndex].abonos.findIndex(
-    abono => abono.id === abonoId
+    a => a.id === abonoId
   )
-
-  if (abonoIndex === -1) {
-    throw new Error("Abono no encontrado.")
-  }
+  if (abonoIndex === -1) throw new Error("Abono no encontrado.")
 
   const abono = accounts[clienteIndex].facturas[facturaIndex].abonos[abonoIndex]
 
-  // Validar que no esté ya anulado
   if (abono.anulado) {
     throw new Error("Este abono ya fue anulado.")
   }
 
-  // Validar regla de 48 horas
   if (abono.createdAt) {
     const diffHours = (new Date() - new Date(abono.createdAt)) / (1000 * 60 * 60)
     if (diffHours > 48) {
@@ -185,51 +225,51 @@ export const cancelPayment = (clienteId, facturaId, abonoId, reason, password) =
     }
   }
 
-  // Marcar como anulado y registrar metadatos
-  abono.anulado            = true
-  abono.motivoCancelacion  = reason
-  abono.cancelledAt        = new Date().toISOString()
+  abono.anulado           = true
+  abono.motivoCancelacion = reason
+  abono.cancelledAt       = new Date().toISOString()
 
   saveAccounts(accounts)
-
   return true
 }
 
 
 /* -----------------------------------------------------------------------
-   Aplica un porcentaje de interés al valorCredito de una factura.
-   Aumenta el valorCredito original en el % indicado sobre el saldo actual.
+   Aplica un porcentaje de interés sobre el saldo de capital pendiente
+   de una factura específica.
 
-   @param {number} clienteId   - id del cliente
-   @param {number} facturaId   - id de la factura
-   @param {number} percentage  - porcentaje de interés (ej: 5 = 5%)
+   El interés se SUMA al campo factura.interes (no toca valorCredito),
+   por lo que NO consume cupo del cliente.
 
-   @returns {Object} La factura actualizada, o null si no se encontró.
+   @param {string|number} clienteId  - id del cliente
+   @param {string|number} facturaId  - id de la factura
+   @param {number}        percentage - porcentaje (ej: 5 = 5%)
+
+   @returns {Object|null} La factura actualizada, o null si no se encontró
 ----------------------------------------------------------------------- */
 export const applyInterest = (clienteId, facturaId, percentage) => {
 
   const accounts = getAccounts()
 
   const clienteIndex = accounts.findIndex(
-    acc => acc.id === Number(clienteId)
+    acc => acc.id === clienteId || acc.id === Number(clienteId)
   )
-
   if (clienteIndex === -1) return null
 
   const facturaIndex = accounts[clienteIndex].facturas.findIndex(
-    fac => fac.id === Number(facturaId)
+    fac => fac.id === facturaId || fac.id === Number(facturaId)
   )
-
   if (facturaIndex === -1) return null
 
-  const factura     = accounts[clienteIndex].facturas[facturaIndex]
-  const saldoActual = calculateSaldoFactura(factura)
+  const factura      = accounts[clienteIndex].facturas[facturaIndex]
+  const saldoCapital = calculateSaldoCapital(factura)
 
-  // El interés se calcula sobre el saldo pendiente, no sobre el valor original
-  const interestAmount = (saldoActual * percentage) / 100
-  factura.valorCredito += interestAmount
+  // Interés se calcula sobre el saldo de CAPITAL (no sobre el interés previo)
+  const nuevoInteres = Math.round((saldoCapital * percentage) / 100)
+
+  // Se acumula sobre el interés existente
+  factura.interes = (factura.interes ?? 0) + nuevoInteres
 
   saveAccounts(accounts)
-
   return factura
 }

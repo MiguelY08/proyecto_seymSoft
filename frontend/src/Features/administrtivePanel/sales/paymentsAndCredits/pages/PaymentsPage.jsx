@@ -1,149 +1,160 @@
-import { useState, useMemo, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
-import { useAlert } from "../../../../shared/alerts/useAlert"
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAlert } from "../../../../shared/alerts/useAlert";
 
-import ButtonComponent    from "../../../../shared/ButtonComponent"
-import TableFilters       from "../../../../shared/TableFilters"
-import PaymentsTable      from "../components/PaymentsTable"
-import PaymentsPaginator  from "../components/PaymentsPaginator"
-import ContactClientModal from "../components/ContactClientModal"
+import ButtonComponent from "../../../../shared/ButtonComponent";
+import TableFilters from "../../../../shared/TableFilters";
+import PaymentsTable from "../components/PaymentsTable";
+import PaymentsPaginator from "../components/PaymentsPaginator";
+import ContactClientModal from "../components/ContactClientModal";
 
-import { exportAccountsToExcel } from "../utils/paymentHelpers"
-import { initializePayments, getAccounts } from "../data/paymentsServices"
+import { exportAccountsToExcel } from "../utils/paymentHelpers";
+
+import { initializePayments, getAccounts } from "../data/paymentsServices";
+
 import {
   calculateSaldoCliente,
-  getTotalCreditoCliente,
-  getTotalAbonadoCliente,
-  getClienteStatus
-} from "../utils/paymentHelpers"
+  getPaymentStatus,
+  getClienteStatus,
+} from "../utils/paymentHelpers";
 
-/*
-  Index principal del módulo de Pagos y Abonos.
-  Muestra un cliente por fila con su resumen consolidado de crédito.
-
-  Filtros disponibles:
-    - Búsqueda por nombre
-    - Rango de fechas (se compara contra la fecha más reciente de sus facturas)
-    - Estado general del cliente (al_dia / pendiente / vencido)
-
-  Acciones por fila:
-    - Ver info    → navega a AccountDetailsPage mode="view"
-    - Abonar      → navega a AccountDetailsPage mode="payment"
-    - Contactar   → abre ContactClientModal (solo clientes vencidos)
-*/
 export default function PaymentsPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { showConfirm, showSuccess, showError } = useAlert();
 
-  const navigate = useNavigate()
-  const { showConfirm, showSuccess, showError } = useAlert()
+  const [accounts, setAccounts] = useState([]);
+  const [search, setSearch] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [estado, setEstado] = useState("todos");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedAccount, setSelectedAccount] = useState(null);
 
-  const [accounts,         setAccounts]         = useState([])
-  const [search,           setSearch]           = useState("")
-  const [startDate,        setStartDate]        = useState("")
-  const [endDate,          setEndDate]          = useState("")
-  const [estado,           setEstado]           = useState("todos")
-  const [currentPage,      setCurrentPage]      = useState(1)
-  const [selectedAccount,  setSelectedAccount]  = useState(null)
+  const itemsPerPage = 10;
 
-  const itemsPerPage = 10
-
-  // Cargar datos al montar
+  /* ===============================
+     Inicializar datos
+  ================================ */
+  // Recargar accounts cada vez que se navega a esta vista
   useEffect(() => {
-    initializePayments()
-    setAccounts(getAccounts())
-  }, [])
+    initializePayments();
+    setAccounts(getAccounts());
+  }, [location]);
 
-  /* ── Filtrado ────────────────────────────────────────────────────────────
-     El estado se calcula a nivel cliente (peor estado entre sus facturas).
-     La fecha se compara contra la factura más reciente del cliente.
-  ---------------------------------------------------------------------- */
+  // Escuchar cambios en los datos para mantener el estado sincronizado
+  useEffect(() => {
+    const handlePaymentsUpdate = () => {
+      setAccounts(getAccounts());
+    };
+    window.addEventListener("paymentsUpdated", handlePaymentsUpdate);
+    return () =>
+      window.removeEventListener("paymentsUpdated", handlePaymentsUpdate);
+  }, []);
+
+  /* ===============================
+     Filtrado
+  ================================ */
   const filteredData = useMemo(() => {
+    return accounts.filter((item) => {
+      const saldo = calculateSaldoCliente(item);
+      const status = getClienteStatus(item);
 
-    return accounts.filter(cliente => {
+      if (estado !== "todos" && status !== estado) return false;
 
-      const estadoCliente = getClienteStatus(cliente)
+      if (search && !item.nombre.toLowerCase().includes(search.toLowerCase()))
+        return false;
 
-      // Filtro por estado general
-      if (estado !== "todos" && estadoCliente !== estado) return false
+      // Nota: Filtros de fecha removidos ya que los clientes no tienen fechaCredito única
+      // Si se necesita, implementar lógica para fecha de factura más antigua
 
-      // Filtro por nombre
-      if (search && !cliente.nombre.toLowerCase().includes(search.toLowerCase()))
-        return false
+      return true;
+    });
+  }, [accounts, search, estado]);
 
-      // Filtro por rango de fechas — usa la fecha de la factura más reciente
-      const facturas = cliente.facturas ?? []
-      if (facturas.length && (startDate || endDate)) {
-        const fechas = facturas.map(f => new Date(f.fechaCredito))
-        const fechaMax = new Date(Math.max(...fechas))
-        if (startDate && fechaMax < new Date(startDate)) return false
-        if (endDate   && fechaMax > new Date(endDate))   return false
-      }
-
-      return true
-    })
-
-  }, [accounts, search, startDate, endDate, estado])
-
-  /* ── Formateo ────────────────────────────────────────────────────────────
-     Transforma cada cliente al shape que espera PaymentsTable:
-     { id, nombre, documento, telefono, creditoAsignado,
-       totalCredito, totalAbonado, saldo, estado }
-  ---------------------------------------------------------------------- */
+  /* ===============================
+     Formateo
+  ================================ */
   const formattedData = useMemo(() => {
+    return filteredData.map((item) => {
+      const saldo = calculateSaldoCliente(item);
+      const status = getClienteStatus(item);
 
-    return filteredData.map(cliente => ({
-      ...cliente,
-      totalCredito:  getTotalCreditoCliente(cliente),
-      totalAbonado:  getTotalAbonadoCliente(cliente),
-      saldo:         calculateSaldoCliente(cliente),
-      estado:        getClienteStatus(cliente)
-    }))
+      return {
+        ...item,
+        valor: item.valorCredito, // Nota: Esto puede no existir en cliente, revisar
+        saldo,
+        estado: status,
+      };
+    });
+  }, [filteredData]);
 
-  }, [filteredData])
-
-  /* ── Paginación ──────────────────────────────────────────────────────── */
+  /* ===============================
+     Paginación
+  ================================ */
   const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage
-    return formattedData.slice(start, start + itemsPerPage)
-  }, [formattedData, currentPage])
+    const start = (currentPage - 1) * itemsPerPage;
+    return formattedData.slice(start, start + itemsPerPage);
+  }, [formattedData, currentPage]);
 
-  /* ── Navegación ──────────────────────────────────────────────────────── */
-  const handleView    = (id) => navigate(`/admin/sales/payments-and-credits/${id}`)
-  const handleAbonar  = (id) => navigate(`/admin/sales/payments-and-credits/${id}/payment`)
-  const handleContact = (item) => setSelectedAccount(item)
+  /* ===============================
+     Navegación
+  ================================ */
+  const handleView = (id) => {
+    navigate(`/admin/sales/payments-and-credits/${id}`);
+  };
 
-  /* ── Exportar Excel ──────────────────────────────────────────────────── */
+  const handleAbonar = (id) => {
+    navigate(`/admin/sales/payments-and-credits/${id}/payment`);
+  };
+
+  const handleContact = (item) => {
+    setSelectedAccount(item);
+  };
+
+  /* ===============================
+     Exportar Excel CON ALERTAS
+  ================================ */
   const handleExportExcel = async () => {
-
     if (!filteredData.length) {
-      showError("Sin datos", "No hay registros para exportar.")
-      return
+      showError("Sin datos", "No hay registros para exportar.");
+      return;
     }
 
     const confirm = await showConfirm(
       "question",
       "¿Exportar a Excel?",
-      "Se generará el archivo con los datos filtrados actualmente.",
-      { confirmButtonText: "Sí, exportar", cancelButtonText: "Cancelar" }
-    )
+      "Se generará el archivo Excel con los datos filtrados.",
+      {
+        confirmButtonText: "Sí, exportar",
+        cancelButtonText: "Cancelar",
+      },
+    );
 
-    if (!confirm.isConfirmed) return
+    if (!confirm.isConfirmed) return;
 
     try {
-      const success = exportAccountsToExcel(filteredData)
-      if (!success) {
-        showError("Error", "No se pudo generar el archivo.")
-        return
-      }
-      showSuccess("Exportación completada", "El archivo Excel fue generado correctamente.")
-    } catch {
-      showError("Error al exportar", "Ocurrió un problema al generar el Excel.")
-    }
-  }
+      const success = exportAccountsToExcel(filteredData);
 
-  /* ── Render ──────────────────────────────────────────────────────────── */
+      if (!success) {
+        showError("Error", "No se pudo generar el archivo.");
+        return;
+      }
+
+      showSuccess(
+        "Exportación completada",
+        "El archivo Excel fue generado correctamente.",
+      );
+    } catch (error) {
+      showError(
+        "Error al exportar",
+        "Ocurrió un problema al generar el Excel.",
+      );
+    }
+  };
+
   return (
     <div className="p-6 font-lexend space-y-6">
-
       <TableFilters
         search={search}
         setSearch={setSearch}
@@ -154,13 +165,14 @@ export default function PaymentsPage() {
         setCurrentPage={setCurrentPage}
       >
         <div className="flex items-end gap-4 flex-wrap">
-
-          {/* Filtro por estado */}
           <div className="w-full sm:w-56">
             <label className="block text-xs font-medium mb-1">Estado</label>
             <select
               value={estado}
-              onChange={(e) => { setEstado(e.target.value); setCurrentPage(1) }}
+              onChange={(e) => {
+                setEstado(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full px-3 py-2 bg-white rounded-xl border border-gray-300 shadow-sm focus:ring-2 focus:ring-sky-900 text-sm"
             >
               <option value="todos">Todos</option>
@@ -176,35 +188,38 @@ export default function PaymentsPage() {
           >
             Exportar Excel +
           </ButtonComponent>
-
         </div>
       </TableFilters>
 
-      <div className="mt-6">
+      <div className="mt-10">
         <PaymentsTable
           data={paginatedData}
           onView={handleView}
           onAbonar={handleAbonar}
           onContact={handleContact}
+          search={search}
         />
       </div>
 
-      <PaymentsPaginator
-        itemsPerPage={itemsPerPage}
-        totalItems={formattedData.length}
-        currentPage={currentPage}
-        onPageChange={setCurrentPage}
-      />
+      <div className="mt-4">
+        <PaymentsPaginator
+          itemsPerPage={itemsPerPage}
+          totalItems={formattedData.length}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+        />
+      </div>
 
-      {/* Modal contactar cliente vencido */}
       {selectedAccount && (
         <ContactClientModal
           account={selectedAccount}
           onClose={() => setSelectedAccount(null)}
-          onInterestApplied={() => setAccounts(getAccounts())}
+          onInterestApplied={() => {
+            const updated = getAccounts();
+            setAccounts(updated);
+          }}
         />
       )}
-
     </div>
-  )
+  );
 }
