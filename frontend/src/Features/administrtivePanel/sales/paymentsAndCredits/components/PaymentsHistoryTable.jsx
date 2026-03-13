@@ -7,36 +7,32 @@ export default function PaymentHistoryTable({
 }) {
 
   const canCancel = (abono) => {
-
     if (abono.anulado) return false
     if (!abono.createdAt) return true
 
-    const createdAt = new Date(abono.createdAt)
-    const now = new Date()
-
     const diffHours =
-      (now - createdAt) / (1000 * 60 * 60)
+      (new Date() - new Date(abono.createdAt)) / (1000 * 60 * 60)
 
     return diffHours <= 48
   }
 
   return (
-    <div className="w-full overflow-x-auto rounded-xl shadow-md font-lexend">
+    <div className="flex-1 overflow-x-auto rounded-xl shadow-md min-h-0">
 
-      {/*  min-width controlado */}
-      <table className="w-full min-w-[750px] text-sm">
+      <table className="min-w-max w-full">
 
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="px-3 py-2 text-xs whitespace-nowrap">#</th>
-            <th className="px-3 py-2 text-xs whitespace-nowrap">Fecha</th>
-            <th className="px-3 py-2 text-xs whitespace-nowrap">Monto</th>
-            <th className="px-3 py-2 text-xs whitespace-nowrap">Medio</th>
-            <th className="px-3 py-2 text-xs whitespace-nowrap">Observaciones</th>
-            <th className="px-3 py-2 text-xs whitespace-nowrap">Estado</th>
+            <th className="px-3 py-2.5 text-xs font-semibold text-center">Nro Abono</th>
+            <th className="px-3 py-2.5 text-xs font-semibold text-center">Fecha</th>
+            <th className="px-3 py-2.5 text-xs font-semibold text-center">Monto</th>
+            <th className="px-3 py-2.5 text-xs font-semibold text-center">Medio de Pago</th>
+            <th className="px-3 py-2.5 text-xs font-semibold text-center">Observación</th>
+            <th className="px-3 py-2.5 text-xs font-semibold text-center">Estado</th>
+
             {mode === "payment" && (
-              <th className="px-3 py-2 text-xs text-center whitespace-nowrap">
-                Funciones
+              <th className="px-3 py-2.5 text-xs font-semibold text-center">
+                Acciones
               </th>
             )}
           </tr>
@@ -46,10 +42,8 @@ export default function PaymentHistoryTable({
 
           {abonos.length === 0 && (
             <tr>
-              <td
-                colSpan={mode === "payment" ? 7 : 6}
-                className="text-center py-6 text-gray-400"
-              >
+              <td colSpan={mode === "payment" ? 7 : 6}
+                  className="text-center py-8 text-gray-400 text-sm">
                 No hay abonos registrados
               </td>
             </tr>
@@ -57,72 +51,59 @@ export default function PaymentHistoryTable({
 
           {abonos.map((abono, index) => {
 
-            const estado = abono.anulado ? "anulado" : "activo"
             const allowed = canCancel(abono)
+            const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-100"
 
             return (
-              <tr
-                key={abono.id}
-                className={`transition ${
-                  index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                } hover:bg-gray-100`}
-              >
-                <td className="px-3 py-2 text-center">
-                  {index + 1}
+              <tr key={abono.id} className={`transition-colors duration-150 ${rowBg}`}>
+
+                <td className="px-3 py-2 text-xs text-center font-medium">
+                  #{abono.nroAbono ?? index + 1}
                 </td>
 
-                <td className="px-3 py-2 text-center whitespace-nowrap">
+                <td className="px-3 py-2 text-xs text-center whitespace-nowrap">
                   {abono.fecha}
                 </td>
 
-                <td className="px-3 py-2 text-center font-medium whitespace-nowrap">
+                <td className="px-3 py-2 text-xs text-center font-semibold">
                   ${new Intl.NumberFormat("es-CO").format(abono.monto)}
                 </td>
 
-                <td className="px-3 py-2 text-center whitespace-nowrap">
-                  {abono.medioPago}
+                <td className="px-3 py-2 text-xs text-center">
+                  {abono.medioPago ?? "-"}
                 </td>
 
                 <td
-                  className="px-3 py-2 text-center max-w-[200px] truncate"
-                  title={abono.observaciones}
+                  className="px-3 py-2 text-xs text-center max-w-[220px] truncate"
+                  title={abono.observacion}
                 >
-                  {abono.observaciones}
+                  {abono.observacion || "-"}
                 </td>
 
-                <td className="px-3 py-2 text-center whitespace-nowrap">
-                  {estado === "activo" ? (
-                    <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-600">
-                      Pago
+                <td className="px-3 py-2 text-center">
+                  {abono.anulado ? (
+                    <span className="px-2 py-0.5 text-[10px] rounded-full bg-red-100 text-red-600 font-semibold">
+                      Anulado
                     </span>
                   ) : (
-                    <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-600">
-                      Anulado
+                    <span className="px-2 py-0.5 text-[10px] rounded-full bg-green-100 text-green-600 font-semibold">
+                      Activo
                     </span>
                   )}
                 </td>
 
                 {mode === "payment" && (
                   <td className="px-3 py-2">
-                    <div className="flex justify-center items-center">
+                    <div className="flex items-center justify-center gap-1.5">
 
                       <XCircle
-                        size={18}
-                        onClick={() => {
-                          if (allowed) onDelete(abono) //  enviamos el objeto completo
-                        }}
-                        className={`transition duration-200 ${
+                        size={16}
+                        onClick={() => { if (allowed) onDelete(abono) }}
+                        className={`transition ${
                           allowed
-                            ? "cursor-pointer text-gray-400 hover:scale-110 hover:text-red-600"
-                            : "text-gray-300 cursor-not-allowed"
+                            ? "text-gray-400 hover:scale-110 hover:text-red-500 cursor-pointer"
+                            : "text-gray-200 cursor-not-allowed"
                         }`}
-                        title={
-                          abono.anulado
-                            ? "Este abono ya fue anulado"
-                            : allowed
-                              ? "Anular abono"
-                              : "No se puede anular después de 48 horas"
-                        }
                       />
 
                     </div>
@@ -135,6 +116,7 @@ export default function PaymentHistoryTable({
 
         </tbody>
       </table>
+
     </div>
   )
 }
