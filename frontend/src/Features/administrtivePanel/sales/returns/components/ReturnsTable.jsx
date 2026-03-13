@@ -1,8 +1,29 @@
-// components/ReturnsTable.jsx
+/**
+ * Archivo: ReturnsTable.jsx
+ *
+ * Componente que renderiza la tabla principal de devoluciones. Muestra todos
+ * los registros de devoluciones con su informaci\u00f3n detallada (número, factura,
+ * cliente, motivo, fecha, valor, estado) y botones de acción.
+ *
+ * Responsabilidades:
+ * - Mostrar lista de devoluciones en formato tabla
+ * - Resaltar términos de búsqueda en los datos
+ * - Alternar colores de fila para mejor legibilidad
+ * - Mostrar mensajes cuando no hay registros
+ * - Proveer botones de acción (ver, editar, anular)
+ */
 import React from 'react';
 import { Info, SquarePen, XCircle } from 'lucide-react';
 import { formatCurrency, formatDate, getStatusStyle, getStatusText } from '../utils/returnsHelpers';
 
+/**
+ * Función auxiliar: Resalta fragmentos de texto que coinciden con la búsqueda.
+ * Se usa para enfatizar resultados dentro de celdas de la tabla.
+ *
+ * @param {string|number} text Texto original a evaluar
+ * @param {string} search Término de búsqueda
+ * @returns {string|JSX[]} Texto con fragmentos resaltados o el texto original
+ */
 const highlightText = (text, search) => {
   if (!search || !text) return text;
 

@@ -1,13 +1,41 @@
-// components/CancelReturn.jsx
+/**
+ * Archivo: CancelReturn.jsx
+ * 
+ * Modal para anular una devolución con motivo registrado.
+ * Presenta confirmación de la acción que es permanente e irreversible.
+ * Permite al usuario ingresar el motivo de anulación y revisar detalles.
+ * 
+ * Responsabilidades principales:
+ * - Mostrar modal de confirmación de anulación
+ * - Permitir ingresar motivo de anulación
+ * - Validar longitud del motivo (mínimo y máximo de caracteres)
+ * - Mostrar detalles de la devolución a anular
+ * - Listar productos relevantes
+ * - Ejecutar la anulación y mostrar confirmación
+ * - Mostrar advertencia sobre irreversibilidad
+ */
+
 import React, { useState } from 'react';
 import { X, XCircle, AlertTriangle } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import { cancelReturn } from '../data/returnsService';
 import { formatCurrency, formatDate } from '../utils/returnsHelpers';
 
+// Límite de caracteres para el motivo de anulación
 const MOTIVO_MAX = 500;
 const MOTIVO_MIN = 10;
 
+// ======================= COMPONENTE AUXILIAR =======================
+
+/**
+ * Componente auxiliar para mostrar un campo de detalles.
+ * Muestra etiqueta y valor en formato de información.
+ * 
+ * @param {Object} props - Props del componente
+ * @param {string} props.label - Etiqueta del campo
+ * @param {string} props.value - Valor a mostrar
+ * @returns {JSX.Element} Campo de información formateado
+ */
 function DetailItem({ label, value }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -17,33 +45,73 @@ function DetailItem({ label, value }) {
   );
 }
 
+/**
+ * Componente: CancelReturn
+ * 
+ * Modal temporal para confirmar y ejecutar la anulación de una devolución.
+ * Requiere ingresar un motivo antes de proceder.
+ * 
+ * @component
+ * @param {Object} props - Props del componente
+ * @param {boolean} props.isOpen - Controla visibilidad del modal
+ * @param {Function} props.onClose - Función para cerrar sin anular
+ * @param {Object|null} props.returnData - Datos de la devolución a anular
+ * @param {Function} props.onSuccess - Callback cuando se anula exitosamente
+ * 
+ * @returns {JSX.Element|null} Modal si está abierto, null si no
+ */
 function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
+  // Hook para mostrar alertas (confirmación, éxito, error)
   const { showSuccess, showError } = useAlert();
 
+  // Estado para almacenar el motivo de anulación ingresado por el usuario
   const [motivo, setMotivo] = useState('');
+  
+  // Estado para rastrear si el campo ha sido tocado (validación)
   const [touched, setTouched] = useState(false);
 
+  // Validación: mostrar si el modal debe ser visible
   if (!isOpen || !returnData) return null;
 
+  // ======================= FUNCIONALIDAD: VALIDACIÓN =======================
+  
+  /**
+   * Valida el motivo ingresado.
+   * Debe tener entre MOTIVO_MIN y MOTIVO_MAX caracteres.
+   */
   const motivoError = touched && motivo.trim().length < MOTIVO_MIN
     ? `El motivo debe tener al menos ${MOTIVO_MIN} caracteres.`
     : '';
 
+  // Obtener productos de la devolución para mostrar
   const productos = returnData.productosDevueltos || [];
+  
+  // Calcular valor total de la devolución
   const totalGeneral = returnData.totalValor || productos.reduce((a, p) => a + ((p.cantidad || 1) * (p.precioUnit || 0)), 0);
 
+  // ======================= FUNCIONALIDAD: ANULAR =======================
+  
+  /**
+   * Ejecuta la anulación de la devolución.
+   * Valida el motivo, ejecuta la operación y muestra confirmación.
+   */
   const handleConfirm = () => {
     setTouched(true);
     if (motivo.trim().length < MOTIVO_MIN) return;
 
     try {
+      // Llamar al servicio para anular la devolución
       const cancelled = cancelReturn(returnData.id, motivo.trim());
       if (cancelled) {
+        // Mostrar mensaje de éxito
         showSuccess('Devolución anulada', `La devolución ${returnData.numeroDevolucion} ha sido anulada exitosamente.`);
+        // Llamar callback de éxito
         onSuccess?.();
+        // Cerrar el modal
         onClose();
       }
     } catch (error) {
+      // Mostrar error si algo sale mal
       showError('Error', 'No se pudo anular la devolución');
     }
   };
@@ -57,7 +125,7 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
         onClick={(e) => e.stopPropagation()}
         className="bg-white rounded-lg shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden max-h-[90vh]"
       >
-        {/* Header */}
+        {/* Header del modal */}
         <div className="flex items-center justify-between px-6 py-4 bg-red-600 shrink-0">
           <div className="flex items-center gap-2.5">
             <XCircle className="w-5 h-5 text-white" strokeWidth={2} />
@@ -66,6 +134,7 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
               <p className="text-red-200 text-xs">Devolución No. {returnData.numeroDevolucion}</p>
             </div>
           </div>
+          {/* Botón para cerrar sin anular */}
           <button
             onClick={onClose}
             className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
@@ -74,7 +143,7 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
           </button>
         </div>
 
-        {/* Aviso */}
+        {/* Mensaje de advertencia de irreversibilidad */}
         <div className="flex items-start gap-3 px-6 py-3 bg-red-50 border-b border-red-100 shrink-0">
           <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" strokeWidth={2} />
           <p className="text-xs text-red-700 leading-relaxed">
@@ -83,14 +152,14 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
           </p>
         </div>
 
-        {/* Body */}
+        {/* Body del modal con scroll */}
         <div className="overflow-y-auto flex-1">
           <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-200">
 
-            {/* Columna izquierda: Detalles + Motivo */}
+            {/* Columna izquierda: Detalles generales y campo de motivo */}
             <div className="px-6 py-5 flex flex-col gap-5">
 
-              {/* Detalles de la devolución */}
+              {/* Detalles principales de la devolución */}
               <div>
                 <p className="text-sm font-bold text-gray-700 mb-3">Detalles de la devolución</p>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-3">
@@ -109,7 +178,7 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
                 )}
               </div>
 
-              {/* Motivo de anulación */}
+              {/* Campo para ingresar motivo de anulación */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Motivo de anulación <span className="text-red-500">*</span>
@@ -129,6 +198,7 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
                         : 'border-gray-300 focus:border-red-500 focus:ring-2 focus:ring-red-200'
                     }`}
                   />
+                  {/* Contador de caracteres */}
                   <span className={`absolute bottom-2 right-3 text-[10px] ${
                     motivo.length >= MOTIVO_MAX ? 'text-red-400' : 'text-gray-400'
                   }`}>
@@ -141,13 +211,13 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
               </div>
             </div>
 
-            {/* Columna derecha: Productos */}
+            {/* Columna derecha: Listado de productos */}
             <div className="px-6 py-5 flex flex-col">
               <p className="text-sm font-bold text-gray-700 mb-3">Productos devueltos</p>
 
               {productos.length > 0 ? (
                 <>
-                  {/* Encabezado tabla */}
+                  {/* Encabezado de tabla de productos */}
                   <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 pb-1.5 border-b-2 border-gray-200 mb-1">
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Producto</span>
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide text-right">Cant</span>
@@ -174,7 +244,7 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
                     ))}
                   </div>
 
-                  {/* Totales */}
+                  {/* Resumen de totales */}
                   <div className="mt-auto border-t border-gray-200 pt-3 flex flex-col gap-1.5">
                     <div className="flex justify-between">
                       <span className="text-xs font-semibold text-gray-500">Total devolución</span>
@@ -189,14 +259,16 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer con botones de acción */}
         <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
+          {/* Botón cancelar sin anular */}
           <button
             onClick={onClose}
             className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer"
           >
             Cancelar
           </button>
+          {/* Botón confirmar anulación */}
           <button
             onClick={handleConfirm}
             className="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors cursor-pointer"

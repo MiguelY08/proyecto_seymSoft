@@ -1,3 +1,15 @@
+/**
+ * Archivo: ClientsToolbar.jsx
+ *
+ * Barra de herramientas ubicada encima de la tabla de clientes. Incluye:
+ * - campo de búsqueda con icono
+ * - botón para crear un nuevo cliente
+ *
+ * Props:
+ * @param {string} searchTerm Texto actual del input de búsqueda
+ * @param {Function} onSearchChange Callback cuando el usuario modifica la búsqueda
+ * @param {Function} onNewClick Acción al pulsar el botón "Nuevo cliente"
+ */
 import React from 'react';
 import { Search, Plus } from 'lucide-react';
 
@@ -5,7 +17,7 @@ function ClientsToolbar({ searchTerm, onSearchChange, onNewClick }) {
   return (
     <div className="flex items-center justify-between gap-2 sm:gap-4 shrink-0">
 
-      {/* Buscador */}
+      {/* Campo de búsqueda con icono que dispara onSearchChange */}
       <div className="relative flex-1 sm:flex-none sm:w-72 md:w-96">
         <input
           type="text"
@@ -22,7 +34,7 @@ function ClientsToolbar({ searchTerm, onSearchChange, onNewClick }) {
         />
       </div>
 
-      {/* Botón */}
+      {/* Botón para agregar un cliente. Oculta texto en pantallas pequeñas */}
       <div className="flex items-center gap-2 shrink-0">
         <button
           onClick={onNewClick}

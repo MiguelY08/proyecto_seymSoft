@@ -1,17 +1,56 @@
-// utils/pdfExporter.js
+/**
+ * Archivo: pdfExporter.js
+ * 
+ * Utilidad especializada para exportar una devolución a PDF con visualización.
+ * Genera un documento HTML profesional que se abre en nueva ventana para impresión.
+ * El documento incluye todos los detalles de la devolución con estilos profesionales.
+ * 
+ * Responsabilidades principales:
+ * - Generar HTML profesional de la devolución
+ * - Incluir estilos CSS integrados
+ * - Mostrar información formatada de cliente, productos y totales
+ * - Facilitar visualización e impresión del documento
+ * - Listar evidencias adjuntas
+ * - Mostrar estados con colores diferenciados
+ */
+
 import { formatCurrency, formatDate } from './returnsHelpers';
 
-// Función para exportar devolución a PDF
+// ======================= FUNCIONALIDAD: DESCARGAR =======================
+
+/**
+ * Exporta una devolución a un documento PDF visualizable/imprimible.
+ * Genera un contenido HTML profesional con estilos integrados.
+ * Abre automáticamente una ventana para visualización e impresión.
+ * 
+ * @param {Object} devolucion - Objeto de devolución a exportar
+ * @param {string} devolucion.numeroDevolucion - Número único de devolución
+ * @param {string} devolucion.numeroFactura - Número de factura
+ * @param {string} devolucion.cliente - Nombre del cliente
+ * @param {string} devolucion.asesor - Nombre del asesor
+ * @param {string} devolucion.telefono - Teléfono de contacto
+ * @param {string} devolucion.direccion - Dirección de entrega
+ * @param {string} devolucion.estado - Estado actual
+ * @param {string} devolucion.descripcion - Descripción detallada
+ * @param {number} devolucion.totalValor - Valor total
+ * @param {number} devolucion.cantidadProductos - Cantidad total de productos
+ * @param {number} devolucion.totalUnidades - Total de unidades
+ * @param {Array} devolucion.productosDevueltos - Array de productos devueltos
+ * @param {string|Date} devolucion.fechaCreacion - Fecha de creación
+ * @returns {void} Abre ventana de impresión del PDF
+ */
 export const exportReturnToPDF = (devolucion) => {
-  // Crear una nueva ventana para el PDF
+  // Crear una nueva ventana para visualizar el documento
   const printWindow = window.open('', '_blank');
   
+  // Verificar que se haya abierto la ventana correctamente
   if (!printWindow) {
     alert('Por favor, permite las ventanas emergentes para exportar el PDF');
     return;
   }
 
-  // Calcular totales
+  // ======================= Cálculos preliminares =======================
+  // Calcular totales de la devolución
   const productos = devolucion.productosDevueltos || [];
   const totalGeneral = devolucion.totalValor || productos.reduce((a, p) => a + ((p.cantidad || 1) * (p.precioUnit || 0)), 0);
   

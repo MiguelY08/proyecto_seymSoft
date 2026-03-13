@@ -1,4 +1,29 @@
-// utils/returnsHelpers.js
+/**
+ * Archivo: returnsHelpers.js
+ *
+ * Colección de funciones de utilidad para el módulo de devoluciones.
+ * Proporciona funciones para formateo, validación, filtrado y paginación
+ * que son usadas por componentes y servicios en todo el módulo.
+ *
+ * Responsabilidades principales:
+ * - Formatear datos (moneda, fechas, estados)
+ * - Obtener estilos y colores según estados
+ * - Calcular totales de productos
+ * - Filtrar devoluciones por término de búsqueda
+ * - Paginar datos para visualización en tabla
+ * - Exportar datos a Excel
+ * - Generar números de devolución únicos
+ */
+
+// ======================= FUNCIONALIDAD: FORMATEO =======================
+
+/**
+ * Formatea un número como moneda COP (Peso Colombiano) sin decimales.
+ * Usa la configuración regional de Colombia para separadores.
+ * 
+ * @param {number} value - Valor numérico a formatear
+ * @returns {string} Valor formateado como moneda (ej: "1.500.000")
+ */
 export const formatCurrency = (value) => {
   return new Intl.NumberFormat('es-CO', {
     style: 'currency',
@@ -8,6 +33,12 @@ export const formatCurrency = (value) => {
   }).format(value).replace('$', '').trim();
 };
 
+/**
+ * Formatea una fecha en formato DD/MM/YYYY según configuración regional de Colombia.
+ * 
+ * @param {string|Date} date - Fecha a formatear ISO string o objeto Date
+ * @returns {string} Fecha formateada en formato local (DD/MM/YYYY)
+ */
 export const formatDate = (date) => {
   return new Date(date).toLocaleDateString('es-CO', {
     year: 'numeric',
@@ -16,6 +47,13 @@ export const formatDate = (date) => {
   });
 };
 
+/**
+ * Retorna el color hexadecimal asociado a un estado de devolución.
+ * Utilizado para mostrar indicadores visuales en la UI.
+ * 
+ * @param {string} estado - Estado de la devolución ('Pendiente', 'Aprobada', 'Rechazada', 'Anulada')
+ * @returns {string} Código hexadecimal del color correspondiente
+ */
 export const getEstadoColor = (estado) => {
   const colors = {
     'Pendiente': '#dc2626',
@@ -26,6 +64,13 @@ export const getEstadoColor = (estado) => {
   return colors[estado] || '#dc2626';
 };
 
+/**
+ * Retorna las clases Tailwind CSS para mostrar el estado como badge.
+ * Combina color de texto y fondo según el estado.
+ * 
+ * @param {string} status - Estado de la devolución
+ * @returns {string} Clases Tailwind para el badge
+ */
 export const getStatusStyle = (status) => {
   const styles = {
     'Pendiente': 'text-red-600 bg-red-100',
@@ -36,22 +81,53 @@ export const getStatusStyle = (status) => {
   return styles[status] || styles['Pendiente'];
 };
 
+/**
+ * Retorna el texto del estado como string.
+ * Función auxiliar para normalizar representación de estados.
+ * 
+ * @param {string} status - Estado a procesar
+ * @returns {string} Estado normalizado
+ */
 export const getStatusText = (status) => {
   return status;
 };
 
+/**
+ * Calcula el valor total de un array de productos.
+ * Multiplica cantidad por precio unitario de cada producto y suma todos.
+ * 
+ * @param {Array} products - Array de productos con campos 'cantidad' y 'precioUnit'
+ * @returns {number} Valor total acumulado
+ */
 export const calculateTotals = (products) => {
   return products.reduce((acc, product) => {
     return acc + (product.cantidad * product.precioUnit);
   }, 0);
 };
 
+/**
+ * Genera un número único para nuevas devoluciones.
+ * Formato: DEV-YYYY-XXXX (ej: DEV-2024-5732)
+ * 
+ * @returns {string} Número de devolución generado
+ */
 export const generateReturnNumber = () => {
   const year = new Date().getFullYear();
   const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
   return `DEV-${year}-${random}`;
 };
 
+// ======================= FUNCIONALIDAD: FILTRADO =======================
+
+/**
+ * Filtra un array de devoluciones por término de búsqueda.
+ * Busca en múltiples campos: número, factura, cliente, motivo y estado.
+ * La búsqueda es case-insensitive.
+ * 
+ * @param {Array} returns - Array de devoluciones a filtrar
+ * @param {string} searchTerm - Término de búsqueda (puede estar vacío)
+ * @returns {Array} Array filtrado de devoluciones que coinciden
+ */
 export const filterReturns = (returns, searchTerm) => {
   if (!searchTerm) return returns;
   
@@ -65,6 +141,21 @@ export const filterReturns = (returns, searchTerm) => {
   );
 };
 
+// ======================= FUNCIONALIDAD: PAGINACIÓN =======================
+
+/**
+ * Divide un array de datos en páginas para visualización en tabla.
+ * Calcula el índice de inicio, los datos de la página actual y el total de páginas.
+ * 
+ * @param {Array} data - Array completo de datos a paginar
+ * @param {number} currentPage - Número de página actual (1-indexed)
+ * @param {number} recordsPerPage - Cantidad de registros por página
+ * @returns {Object} Objeto con currentData, totalPages, startIndex y safeCurrentPage
+ * @returns {Array} return.currentData - Datos de la página actual
+ * @returns {number} return.totalPages - Total de páginas disponibles
+ * @returns {number} return.startIndex - Índice de inicio en el array original
+ * @returns {number} return.safeCurrentPage - Página segura (ajustada si es necesario)
+ */
 export const paginateData = (data, currentPage, recordsPerPage) => {
   const totalPages = Math.max(1, Math.ceil(data.length / recordsPerPage));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -79,6 +170,17 @@ export const paginateData = (data, currentPage, recordsPerPage) => {
   };
 };
 
+// ======================= FUNCIONALIDAD: EXPORTACIÓN =======================
+
+/**
+ * Prepara datos de devoluciones para exportación a Excel.
+ * Formatea valores monetarios y fechas según configuración regional.
+ * 
+ * @param {Array} returns - Array de devoluciones a exportar
+ * @returns {Object} Objeto con estructura para librería XLSX
+ * @returns {Array} return.headers - Encabezados de columnas
+ * @returns {Array} return.data - Datos formateados para Excel
+ */
 export const exportToExcel = (returns) => {
   const headers = [
     'Número Devolución',

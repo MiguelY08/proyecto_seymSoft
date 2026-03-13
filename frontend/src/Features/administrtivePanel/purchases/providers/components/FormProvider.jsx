@@ -1,8 +1,23 @@
+/**
+ * Archivo: FormProvider.jsx
+ * 
+ * Este archivo contiene un modal con un formulario para crear o editar proveedores.
+ * 
+ * Responsabilidades:
+ * - Renderizar un formulario completo para capturar datos del proveedor
+ * - Validar los datos ingresados en tiempo real (mientras el usuario escribe)
+ * - Mostrar errores de validación para campos específicos
+ * - Manejar múltiples campos de entrada (texto, select, dropdown de categorías)
+ * - Guardar los datos al hacer submit si validateProviderForm los datos son válidos
+ * - Distinguir entre crear nuevo proveedor y editar existente
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronDown } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import { validateProviderForm } from '../utils/providerHelpers';
 
+// Opciones disponibles para el campo de categorías
 const categoriasOptions = [
   "Útiles escolares",
   "Oficina",
@@ -14,8 +29,21 @@ const categoriasOptions = [
   "Etiquetas adhesivas"
 ];
 
+/**
+ * Componente: FormProvider
+ * 
+ * Modal que contiene un formulario para crear o editar un proveedor.
+ * Incluye validación en tiempo real y manejo de errores.
+ * 
+ * Props:
+ * @param {boolean} isOpen - Controla si el modal está visible
+ * @param {Function} onClose - Callback para cerrar el modal
+ * @param {Object} provider - Objeto del proveedor a editar (null si es nuevo)
+ * @param {Function} onSave - Callback que se ejecuta cuando se guarda el formulario
+ */
 function FormProvider({ isOpen, onClose, provider, onSave }) {
 
+  // Estado inicial del formulario con campos vacíos
   const initialState = {
     tipoPersona: '',
     tipo: 'CC',
@@ -33,14 +61,26 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     codigoCIU: '',
   };
 
+  // Estado que almacena los datos del formulario
   const [formData, setFormData] = useState(initialState);
+  
+  // Estado que almacena los errores de validación por campo
   const [errors, setErrors] = useState({});
+  
+  // Estado que rastrea qué campos han sido tocados por el usuario (para mostrar errores)
   const [touched, setTouched] = useState({});
+  
+  // Estado que controla si el dropdown de categorías está abierto
   const [categoriasOpen, setCategoriasOpen] = useState(false);
+  
+  // Referencia al contenedor del dropdown para detectar clics fuera
   const categoriasRef = useRef(null);
   
+  // Hook para mostrar alertas personalizadas
   const { showError, showSuccess } = useAlert();
 
+  // Este useEffect se ejecuta cuando el modal abre o cuando cambia el proveedor a editar
+  // Inicializa el formulario con los datos existentes o lo limpia si es nuevo
   useEffect(() => {
     if (provider) {
       // Convertir string de categorías a array si viene como string
@@ -67,10 +107,12 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
         codigoCIU: provider.codigoCIU || '',
       });
       
+      // Marca todos los campos como tocados para mostrar errores si existen
       setTouched(
         Object.keys(initialState).reduce((acc, key) => ({ ...acc, [key]: true }), {})
       );
     } else {
+      // Nuevo proveedor: reinicia el formulario
       setFormData(initialState);
       setTouched({});
     }
@@ -78,7 +120,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     setErrors({});
   }, [provider, isOpen]);
 
-  // Cerrar dropdown al hacer clic fuera
+  // Este useEffect maneja el cierre del dropdown de categorías cuando se hace clic fuera
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (categoriasRef.current && !categoriasRef.current.contains(event.target)) {
@@ -95,6 +137,11 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     };
   }, [categoriasOpen]);
 
+  // ======== FUNCIONALIDAD: Limpiar Formulario ========
+  /**
+   * Reinicia el formulario a su estado inicial, limpiando todos los campos,
+   * errores, campos tocados y cierra el dropdown de categorías.
+   */
   const resetForm = () => {
     setFormData(initialState);
     setErrors({});
@@ -102,11 +149,21 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     setCategoriasOpen(false);
   };
 
+  // ======== FUNCIONALIDAD: Cerrar Formulario ========
+  /**
+   * Limpia el formulario y cierra el modal.
+   */
   const handleClose = () => {
     resetForm();
     onClose();
   };
 
+  // ======== FUNCIONALIDAD: Cambiar Campo de Entrada ========
+  /**
+   * Maneja los cambios en los campos de entrada (text, select, etc).
+   * Actualiza el estado del formulario y valida el campo si ha sido tocado.
+   * @param {Event} e - Evento del input
+   */
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -115,6 +172,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       [name]: value,
     }));
 
+    // Valida el campo en tiempo real si el usuario ya lo ha tocado
     if (touched[name]) {
       const validationErrors = validateProviderForm({ ...formData, [name]: value });
       setErrors((prev) => ({
@@ -124,13 +182,20 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     }
   };
 
+  // ======== FUNCIONALIDAD: Cambiar Selección de Categoría ========
+  /**
+   * Agrega o quita una categoría del array de categorías seleccionadas.
+   * @param {string} categoria - Nombre de la categoría a agregar/quitar
+   */
   const handleCategoriaChange = (categoria) => {
     const isSelected = formData.categorias.includes(categoria);
     let updatedCategorias;
 
     if (isSelected) {
+      // Si ya está seleccionada, la quita
       updatedCategorias = formData.categorias.filter((cat) => cat !== categoria);
     } else {
+      // Si no está seleccionada, la agrega
       updatedCategorias = [...formData.categorias, categoria];
     }
 
@@ -139,6 +204,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       categorias: updatedCategorias,
     }));
 
+    // Valida el campo categorías si ya ha sido tocado
     if (touched.categorias) {
       const validationErrors = validateProviderForm({ ...formData, categorias: updatedCategorias });
       setErrors((prev) => ({
@@ -148,6 +214,12 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     }
   };
 
+  // ======== FUNCIONALIDAD: Marcar Campo como Tocado ========
+  /**
+   * Cuando el usuario pierde el foco (blur) en un campo, lo marca como tocado
+   * y valida su contenido.
+   * @param {Event} e - Evento del blur
+   */
   const handleBlur = (e) => {
     const { name } = e.target;
     
@@ -163,6 +235,10 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     }));
   };
 
+  // ======== FUNCIONALIDAD: Marcar Categorías como Tocadas ========
+  /**
+   * Marca el campo de categorías como tocado al perder el foco.
+   */
   const handleCategoriasBlur = () => {
     setTouched((prev) => ({
       ...prev,
@@ -176,6 +252,12 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     }));
   };
 
+  // ======== FUNCIONALIDAD: Enviar Formulario ========
+  /**
+   * Valida todo el formulario. Si no hay errores, guarda los datos.
+   * Convierte el array de categorías a string antes de guardar.
+   * @param {Event} e - Evento del submit
+   */
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -185,6 +267,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       Object.keys(formData).reduce((acc, key) => ({ ...acc, [key]: true }), {})
     );
 
+    // Si hay errores, muestra alerta y no continúa
     if (Object.keys(validationErrors).length > 0) {
       showError('Errores en el formulario', 'Por favor corrija los errores antes de continuar');
       return;
@@ -199,12 +282,21 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     onSave?.(dataToSave);
     resetForm();
     onClose();
+    // Muestra mensaje de éxito según si es creación o actualización
     showSuccess(provider ? 'Proveedor actualizado' : 'Proveedor creado', 
                 provider ? 'Los datos se actualizaron correctamente' : 'El proveedor se creó exitosamente');
   };
 
+  // No renderiza nada si el modal no está abierto
   if (!isOpen) return null;
 
+  // ======== FUNCIONALIDAD: Generar Clases de Estilo para Inputs ========
+  /**
+   * Genera las clases CSS dinámicas para un input basado en si tiene errores y
+   * si ha sido tocado por el usuario. Cambia el color del borde según el estado.
+   * @param {string} field - Nombre del campo
+   * @returns {string} String con las clases Tailwind CSS
+   */
   const inputClass = (field) =>
     `w-full px-3 py-1.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors ${
       errors[field] && touched[field]
@@ -212,6 +304,13 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
 
+  // ======== FUNCIONALIDAD: Renderizar Error de Validación ========
+  /**
+   * Muestra el mensaje de error de un campo solo si el campo tiene error y
+   * ha sido tocado por el usuario.
+   * @param {string} field - Nombre del campo
+   * @returns {JSX|null} Elemento con el mensaje de error o null
+   */
   const renderError = (field) =>
     errors[field] && touched[field] && (
       <p className="mt-0.5 text-xs text-red-600 flex items-start gap-1">
@@ -219,21 +318,25 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       </p>
     );
 
+  {/* ======== RENDERIZADO: Modal del Formulario ======== */}
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       
+      {/* Backdrop: área oscura para cerrar al hacer clic */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={handleClose}
       />
 
+      {/* Modal principal con el formulario */}
       <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-5xl h-[95vh] overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col">
         
-        {/* Header */}
+        {/* Encabezado del modal */}
         <div className="bg-[#004D77] text-white px-6 py-3.5 flex items-center justify-between shrink-0">
           <h2 className="text-lg font-semibold">
             {provider ? 'Editar proveedor' : 'Nuevo proveedor'}
           </h2>
+          {/* Botón para cerrar el modal */}
           <button
             onClick={handleClose}
             className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
@@ -242,12 +345,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
           </button>
         </div>
 
+        {/* Formulario con campos */}
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
           
+          {/* Contenido scrolleable del formulario (campos) */}
           <div className="flex-1 overflow-y-auto p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 max-w-6xl mx-auto">
 
-              {/* Tipo de persona */}
+              {/* Campo: Tipo de Persona */}
               <div className="md:col-span-2">
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   Tipo de persona<span className="text-red-500">*</span>
@@ -266,7 +371,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                 {renderError('tipoPersona')}
               </div>
 
-              {/* Tipo */}
+              {/* Campo: Tipo de Documento */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   Tipo<span className="text-red-500">*</span>
@@ -285,7 +390,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                 {renderError('tipo')}
               </div>
 
-              {/* Número */}
+              {/* Campo: Número de Documento */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   Numero<span className="text-red-500">*</span>
@@ -302,7 +407,8 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                 {renderError('numero')}
               </div>
 
-              {/* Nombres */}
+              {/* Sección: Información Personal */}
+              {/* Campo: Nombres */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   Nombres<span className="text-red-500">*</span>
@@ -519,8 +625,9 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
             </div>
           </div>
 
-          {/* Footer */}
+          {/* Pie del formulario: botones de acción */}
           <div className="border-t border-gray-200 px-6 py-3 flex items-center justify-end gap-3 shrink-0">
+            {/* Botón: Cancelar  */}
             <button
               type="button"
               onClick={handleClose}
@@ -528,6 +635,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
             >
               Cancelar
             </button>
+            {/* Botón: Crear o Actualizar proveedor */}
             <button
               type="submit"
               className="px-6 py-2 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors"
@@ -542,4 +650,5 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
   );
 }
 
+{/* Exporta el componente FormProvider como componente por defecto */}
 export default FormProvider;

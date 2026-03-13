@@ -1,6 +1,18 @@
+/**
+ * Archivo: GraphClient.jsx
+ *
+ * Componente que renderiza una gráfica de área SVG con datos de compras
+ * mensuales de un cliente. Se utiliza en el modal de edición para visualizar
+ * el comportamiento de facturación a lo largo del año.
+ *
+ * Props:
+ * @param {string} clientStartDate - Fecha de inicio del cliente (no se usa
+ *   actualmente, sirve de referencia para potencial lógica futura)
+ */
 import React, { useState } from 'react';
 
-// Datos de ejemplo de compras por mes
+// Genera datos ficticios para el gráfico. Esta función puede sustituirse por
+// una llamada real al backend cuando existan datos verdaderos.
 const generateMockData = (year = 2024) => {
   return [
     { month: 'Ene', value: 30000000, products: 65 },
@@ -22,25 +34,27 @@ function GraphClient({ clientStartDate = '07/05/2023' }) {
   const [selectedYear, setSelectedYear] = useState(2024);
   const [hoveredMonth, setHoveredMonth] = useState(null);
   
-  const data = generateMockData(selectedYear);
-  const maxValue = Math.max(...data.map(d => d.value));
-  const totalValue = data.reduce((sum, d) => sum + d.value, 0);
-  const totalProducts = data.reduce((sum, d) => sum + d.products, 0);
+  const data = generateMockData(selectedYear); // datos para el año seleccionado
+  const maxValue = Math.max(...data.map(d => d.value)); // valor máximo para escalar el eje
+  const totalValue = data.reduce((sum, d) => sum + d.value, 0); // suma total del año
+  const totalProducts = data.reduce((sum, d) => sum + d.products, 0); // productos totales
 
-  // Calcular coordenadas para el gráfico de área - Ajustado para mejor proporción
+  // Configuración geométrica del SVG. Las constantes están en unidades
+  // relativas (porcentaje) para que la gráfica escale con el contenedor.
   const width = 100; // Usaremos porcentaje para mejor responsividad
   const height = 60; // Proporción relativa
   const padding = { top: 5, right: 3, bottom: 12, left: 10 };
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
 
+  // convertimos cada punto de datos a coordenadas SVG
   const points = data.map((d, i) => {
     const x = padding.left + (chartWidth / (data.length - 1)) * i;
     const y = padding.top + chartHeight - (d.value / maxValue) * chartHeight;
     return { x, y, ...d };
   });
 
-  // Crear path para el área (con gradiente)
+  // Path SVG que dibuja el área bajo la línea (usado con un gradiente)
   const areaPath = `
     M ${padding.left} ${padding.top + chartHeight}
     ${points.map(p => `L ${p.x} ${p.y}`).join(' ')}
@@ -48,10 +62,11 @@ function GraphClient({ clientStartDate = '07/05/2023' }) {
     Z
   `;
 
-  // Crear path para la línea
+  // Path SVG que dibuja la línea principal del gráfico
   const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
-  // Calcular posición del tooltip para que no se salga del viewport
+  // Devuelve coordenadas para un tooltip que acompaña a un punto
+  // Se asegura de que el recuadro no se salga del área visible.
   const getTooltipPosition = (index) => {
     const point = points[index];
     const tooltipWidth = 28;

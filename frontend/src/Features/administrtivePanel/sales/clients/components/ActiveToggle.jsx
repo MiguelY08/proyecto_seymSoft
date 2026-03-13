@@ -1,7 +1,28 @@
-import React from 'react';
+/**
+ * Archivo: ActiveToggle.jsx
+ *
+ * Componente reutilizable que muestra un botón tipo toggle para indicar si
+ * un cliente (u otro elemento) está activo o inactivo.
+ *
+ * Responsabilidades:
+ * - Presentar estado con colores verde/rojo y letras A/I
+ * - Disparar callback cuando el usuario hace clic para cambiar estado
+ */
 
+import React from 'react';
+/**
+ * Componente: ActiveToggle
+ *
+ * Muestra un switch estilizado que indica si un elemento está activo
+ * (color verde, letra A) o inactivo (color rojo, letra I).
+ *
+ * Props:
+ * @param {boolean} activo - Estado actual del elemento
+ * @param {Function} onChange - Callback que se ejecuta al hacer clic
+ */
 function ActiveToggle({ activo, onChange }) {
   return (
+    // Botón principal con color dependiendo de 'activo'
     <button
       onClick={onChange}
       className={`relative w-11 h-5 rounded-full transition-colors duration-300 cursor-pointer shrink-0 ${
