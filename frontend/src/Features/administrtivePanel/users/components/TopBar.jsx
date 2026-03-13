@@ -1,80 +1,29 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Download, Plus } from 'lucide-react';
-import { useAlert } from '../../../shared/alerts/useAlert';
-import * as XLSX from 'xlsx';
-
-const STORAGE_KEY = 'users';
-
-// ─── Generador de Excel ───────────────────────────────────────────────────────
-const downloadExcel = () => {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  const users  = stored ? JSON.parse(stored) : [];
-
-  if (users.length === 0) return false;
-
-  // ─── Mapear datos a columnas legibles ─────────────────────────────────────
-  const rows = users.map((u) => ({
-    'ID':                 u.id,
-    'Tipo Documento':     u.documentType,
-    'Documento':          u.document,
-    'Nombre Completo':    u.name,
-    'Correo Electrónico': u.email,
-    'Teléfono':           u.phone,
-    'Rol':                u.role ?? 'Nulo',
-    'Tipo de Cliente':    u.clientType ?? 'Detal',
-    'Estado':             u.active ? 'Activo' : 'Inactivo',
-    'Registrado Desde':   u.createdAt
-      ? new Date(u.createdAt).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' })
-      : '—',
-  }));
-
-  const worksheet  = XLSX.utils.json_to_sheet(rows);
-  const workbook   = XLSX.utils.book_new();
-
-  // ─── Ancho de columnas ────────────────────────────────────────────────────
-  worksheet['!cols'] = [
-    { wch: 6  },  // ID
-    { wch: 16 },  // Tipo Documento
-    { wch: 18 },  // Documento
-    { wch: 28 },  // Nombre Completo
-    { wch: 30 },  // Correo
-    { wch: 14 },  // Teléfono
-    { wch: 16 },  // Rol
-    { wch: 16 },  // Tipo de Cliente
-    { wch: 12 },  // Estado
-    { wch: 18 },  // Registrado Desde
-  ];
-
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Usuarios');
-
-  const fecha = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
-  XLSX.writeFile(workbook, `usuarios_${fecha}.xlsx`);
-
-  return true;
-};
+import { useAlert }             from '../../../shared/alerts/useAlert';
+import { downloadUsersExcel }   from '../helpers/usersHelpers';
 
 // ─── TopBar ───────────────────────────────────────────────────────────────────
-function TopBar({ search, onSearchChange }) {
+// users : array completo de usuarios (proviene de Users.jsx)
+function TopBar({ search, onSearchChange, users = [] }) {
   const navigate = useNavigate();
   const { showConfirm, showTimer, showWarning } = useAlert();
 
   const handleDownload = () => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const users  = stored ? JSON.parse(stored) : [];
-
-    // ─── Sin registros no tiene sentido descargar ─────────────────────────
     if (users.length === 0) {
       showWarning('Sin registros', 'No hay usuarios registrados para descargar.');
       return;
     }
 
-    showConfirm('question', '¿Desea descargar los usuarios?', `Se exportarán ${users.length} registro${users.length !== 1 ? 's' : ''} en formato Excel.`, {
-      confirmButtonText: 'Descargar',
-      cancelButtonText:  'Cancelar',
-    }).then((result) => {
+    showConfirm(
+      'question',
+      '¿Desea descargar los usuarios?',
+      `Se exportarán ${users.length} registro${users.length !== 1 ? 's' : ''} en formato Excel.`,
+      { confirmButtonText: 'Descargar', cancelButtonText: 'Cancelar' }
+    ).then((result) => {
       if (result.isConfirmed) {
-        const success = downloadExcel();
+        const success = downloadUsersExcel(users);
         if (success) {
           showTimer('success', 'Descarga completada', 'El archivo Excel se ha generado exitosamente.', 4000);
         }
@@ -107,6 +56,7 @@ function TopBar({ search, onSearchChange }) {
           <span className="hidden sm:inline">Exportar Excel</span>
           <Download className="w-4 h-4" strokeWidth={1.8} />
         </button>
+
         <button
           onClick={() => navigate('/admin/users/form-user')}
           title="Nuevo usuario"

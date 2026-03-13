@@ -51,6 +51,12 @@ const CATS_DISPONIBLES = ['Escolar', 'Oficina', 'Arte', 'Papelería Básica'];
 
 const str = (v) => (v !== undefined && v !== null && v !== '') ? String(v) : '';
 
+// ─────────────────────────────────────────────────────────────────────────────
+
+const numeric = (v) => v.replace(/[^0-9]/g, '');
+const block   = (e) => { if (['e', 'E', '+', '-', '.'].includes(e.key)) e.preventDefault(); };
+
+// ─── EditProduct ──────────────────────────────────────────────────────────────
 function EditProduct({ isOpen, onClose, onUpdate, producto }) {
   const { showSuccess, showError } = useAlert();
 
@@ -59,6 +65,7 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
   const [errors, setErrors]               = useState({});
   const [priceErrors, setPriceErrors]     = useState({});
 
+  // Inicializar formulario cuando cambia el producto
   useEffect(() => {
     if (!producto) return;
     setFormData({

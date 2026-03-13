@@ -1,27 +1,25 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { X, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { useState, useMemo } from 'react';
-import { useAlert } from '../../../shared/alerts/useAlert';
-import { useModalAnimation } from '../../../shared/useModalAnimation';
-import { UsersDB } from '../services/usersDB';
-import { getRoles } from '../../configuration/roles/services/rolesServices';
+import { useAlert }           from '../../../shared/alerts/useAlert';
+import { useModalAnimation }  from '../../../shared/useModalAnimation';
+import { UsersDB }            from '../services/usersDB';
+import { getRoles }           from '../../configuration/roles/services/rolesServices';
+import { splitName }          from '../helpers/usersHelpers';
+import {
+  PHONE_MIN,
+  PHONE_MAX,
+  DOC_MIN_LENGTH,
+  TIPOS_DOCUMENTO,
+  validateField,
+  checkDuplicates,
+  validateUserForm,
+} from '../validators/usersValidators';
 
-const normalizar = (str) =>
-  str.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-// ── Helper para dividir nombre completo inteligentemente ─────────────────────
-const splitName = (fullName = '') => {
-  const palabras = fullName.trim().split(/\s+/).filter(Boolean);
-  const mitad    = palabras.length >= 3 ? Math.ceil(palabras.length / 2) : palabras.length;
-  return {
-    nombres:   palabras.slice(0, mitad).join(' '),
-    apellidos: palabras.slice(mitad).join(' '),
-  };
-};
 
 function FormUser() {
-  const navigate   = useNavigate();
-  const location   = useLocation();
+  const navigate  = useNavigate();
+  const location  = useLocation();
   const { showWarning, showSuccess, showConfirm } = useAlert();
 
   const userToEdit = location.state?.user   ?? null;
@@ -50,7 +48,9 @@ function FormUser() {
   const [errors,  setErrors]  = useState({});
   const [touched, setTouched] = useState({});
 
-  const tiposDocumento = ['CC', 'CE', 'NIT', 'TI', 'PP'];
+  const context       = { isEditing, userToEdit };
+  const existingUsers = useMemo(() => UsersDB.list(), []);
+  const tipoCliente   = userToEdit?.clientType ?? 'Detal';
 
   const roles = [
     'Nulo',
@@ -59,92 +59,8 @@ function FormUser() {
       .map((r) => r.name),
   ];
 
-  const tipoCliente = userToEdit?.clientType ?? 'Detal';
 
-  const PHONE_MIN = 7;
-  const PHONE_MAX = 10;
-
-  const docMinLength = { CC: 8, CE: 6, NIT: 9, TI: 10, PP: 5 };
-
-  const existingUsers = useMemo(() => UsersDB.list(), []);
-
-  // ── Validar duplicados ───────────────────────────────────────────────────
-  const checkDuplicates = (currentForm = form) => {
-    const dupes = {};
-    const nombreCompleto = `${currentForm.nombres.trim()} ${currentForm.apellidos.trim()}`.trim();
-
-    existingUsers.forEach((u) => {
-      if (isEditing && u.id === userToEdit.id) return;
-
-      if (
-        currentForm.documento.trim() &&
-        normalizar(u.document     ?? '') === normalizar(currentForm.documento) &&
-        normalizar(u.documentType ?? '') === normalizar(currentForm.tipo)
-      ) {
-        dupes.documento = 'Este número de documento ya está registrado.';
-      }
-
-      if (
-        currentForm.correo.trim() &&
-        normalizar(u.email ?? '') === normalizar(currentForm.correo)
-      ) {
-        dupes.correo = 'Este correo electrónico ya está registrado.';
-      }
-
-      if (
-        nombreCompleto.length >= 6 &&
-        normalizar(u.name ?? '') === normalizar(nombreCompleto)
-      ) {
-        dupes.nombres   = 'Ya existe un usuario con este nombre completo.';
-        dupes.apellidos = 'Ya existe un usuario con este nombre completo.';
-      }
-    });
-
-    return dupes;
-  };
-
-  // ── Validación de formato ────────────────────────────────────────────────
-  const validateField = (name, value, currentForm = form) => {
-    const v = value.trim();
-    switch (name) {
-      case 'documento': {
-        const min = docMinLength[currentForm.tipo] ?? 8;
-        if (!v)               return 'El documento es obligatorio.';
-        if (!/^\d+$/.test(v)) return 'Solo se permiten números.';
-        if (v.length < min)   return `Mínimo ${min} dígitos para ${currentForm.tipo}.`;
-        return '';
-      }
-      case 'nombres':
-        if (!v)                               return 'Los nombres son obligatorios.';
-        if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(v))     return 'Solo se permiten letras y espacios.';
-        if (v.replace(/\s+/g, '').length < 3) return 'El nombre debe tener al menos 3 letras.';
-        return '';
-      case 'apellidos': {
-        // Opcional si estamos editando y el nombre original tenía ≤2 palabras
-        const palabrasOriginales = (userToEdit?.name ?? '').trim().split(/\s+/).filter(Boolean).length;
-        const esOpcional = isEditing && palabrasOriginales <= 2;
-        if (!v && esOpcional)                 return '';
-        if (!v)                               return 'Los apellidos son obligatorios.';
-        if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(v))     return 'Solo se permiten letras y espacios.';
-        if (v.replace(/\s+/g, '').length < 3) return 'El apellido debe tener al menos 3 letras.';
-        return '';
-      }
-      case 'correo':
-        if (!v)                                        return 'El correo electrónico es obligatorio.';
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return 'Ingrese un correo válido. Ej: usuario@dominio.com';
-        if (v.length < 10)                             return 'El correo parece muy corto. Verifícalo.';
-        return '';
-      case 'telefono':
-        if (!v)                   return 'El teléfono es obligatorio.';
-        if (!/^\d+$/.test(v))     return 'Solo se permiten números.';
-        if (v.length < PHONE_MIN) return `Mínimo ${PHONE_MIN} dígitos.`;
-        if (v.length > PHONE_MAX) return `Máximo ${PHONE_MAX} dígitos.`;
-        return '';
-      default:
-        return '';
-    }
-  };
-
+  // ─── Handlers de cambio ───────────────────────────────────────────────────
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -159,8 +75,8 @@ function FormUser() {
     setForm(updatedForm);
     setTouched((prev) => ({ ...prev, [name]: true }));
 
-    const formatError = validateField(name, filtered, updatedForm);
-    const dupes       = checkDuplicates(updatedForm);
+    const formatError = validateField(name, filtered, updatedForm, context);
+    const dupes       = checkDuplicates(updatedForm, existingUsers, context);
 
     setErrors((prev) => {
       const next = { ...prev, [name]: formatError || dupes[name] || '' };
@@ -178,8 +94,8 @@ function FormUser() {
     const updatedForm = { ...form, tipo: e.target.value };
     setForm(updatedForm);
     if (touched.documento) {
-      const formatError = validateField('documento', form.documento, updatedForm);
-      const dupes       = checkDuplicates(updatedForm);
+      const formatError = validateField('documento', form.documento, updatedForm, context);
+      const dupes       = checkDuplicates(updatedForm, existingUsers, context);
       setErrors((prev) => ({
         ...prev,
         documento: formatError || dupes.documento || '',
@@ -187,26 +103,13 @@ function FormUser() {
     }
   };
 
-  const validate = () => {
-    const errs   = {};
-    const fields = ['documento', 'nombres', 'apellidos', 'correo', 'telefono'];
-    fields.forEach((field) => {
-      const e = validateField(field, form[field]);
-      if (e) errs[field] = e;
-    });
-    const dupes = checkDuplicates();
-    Object.entries(dupes).forEach(([field, msg]) => {
-      if (!errs[field]) errs[field] = msg;
-    });
-    return errs;
-  };
 
-  // ── Guardar ──────────────────────────────────────────────────────────────
+  // ─── Guardar ──────────────────────────────────────────────────────────────
   const handleSubmit = () => {
     const allTouched = Object.keys(form).reduce((acc, k) => ({ ...acc, [k]: true }), {});
     setTouched(allTouched);
 
-    const newErrors = validate();
+    const newErrors = validateUserForm(form, existingUsers, context);
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       showWarning('Formulario incompleto', 'Por favor revisa los campos marcados en rojo antes de continuar.');
@@ -238,8 +141,7 @@ function FormUser() {
         phone:        form.telefono,
         role,
       });
-      // ── Log de contraseña generada ────────────────────────────────────
-      console.log(` Contraseña generada para "${name}":`, newUser.password);
+      console.log(`Contraseña generada para "${name}":`, newUser.password);
       showSuccess('Usuario creado', 'El nuevo usuario ha sido registrado exitosamente.');
       navigate(returnTo, {
         state: returnTo !== '/admin/users' ? { newUserId: String(newUser.id) } : undefined,
@@ -247,17 +149,18 @@ function FormUser() {
     }
   };
 
-  // ── isDirty ──────────────────────────────────────────────────────────────
+
+  // ─── Detectar cambios sin guardar ─────────────────────────────────────────
   const isDirty = (() => {
     if (isEditing) {
       const { nombres: nombresOrig, apellidos: apellidosOrig } = splitName(userToEdit.name);
       return (
-        form.tipo      !== (userToEdit.documentType ?? 'CC')  ||
-        form.documento !== (userToEdit.document     ?? '')    ||
-        form.nombres   !== nombresOrig                        ||
-        form.apellidos !== apellidosOrig                      ||
-        form.correo    !== (userToEdit.email        ?? '')    ||
-        form.telefono  !== (userToEdit.phone        ?? '')    ||
+        form.tipo      !== (userToEdit.documentType ?? 'CC')   ||
+        form.documento !== (userToEdit.document     ?? '')     ||
+        form.nombres   !== nombresOrig                         ||
+        form.apellidos !== apellidosOrig                       ||
+        form.correo    !== (userToEdit.email        ?? '')     ||
+        form.telefono  !== (userToEdit.phone        ?? '')     ||
         form.rol       !== (userToEdit.role         ?? 'Nulo')
       );
     }
@@ -279,6 +182,8 @@ function FormUser() {
     if (confirmed?.isConfirmed) animatedClose();
   };
 
+
+  // ─── Helpers de UI ────────────────────────────────────────────────────────
   const isValid = (field) =>
     touched[field] && !errors[field] && form[field].toString().trim() !== '';
 
@@ -307,9 +212,14 @@ function FormUser() {
 
   const FieldCheck = ({ field }) =>
     isValid(field) ? (
-      <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500 pointer-events-none" strokeWidth={2} />
+      <CheckCircle2
+        className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500 pointer-events-none"
+        strokeWidth={2}
+      />
     ) : null;
 
+
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div
       onClick={handleCancel}
@@ -331,7 +241,10 @@ function FormUser() {
           <h2 className="text-white font-semibold text-lg">
             {isEditing ? 'Editar usuario' : 'Nuevo usuario'}
           </h2>
-          <button onClick={handleCancel} className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer">
+          <button
+            onClick={handleCancel}
+            className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
+          >
             <X className="w-5 h-5" strokeWidth={2} />
           </button>
         </div>
@@ -352,7 +265,7 @@ function FormUser() {
                   onChange={handleTipoChange}
                   className="appearance-none w-24 px-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
                 >
-                  {tiposDocumento.map((t) => <option key={t} value={t}>{t}</option>)}
+                  {TIPOS_DOCUMENTO.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
               </div>
@@ -368,7 +281,7 @@ function FormUser() {
                   name="documento"
                   value={form.documento}
                   onChange={handleChange}
-                  placeholder={`Mín. ${docMinLength[form.tipo] ?? 8} dígitos`}
+                  placeholder={`Mín. ${DOC_MIN_LENGTH[form.tipo] ?? 8} dígitos`}
                   maxLength={12}
                   autoComplete="off"
                   className={inputClass('documento')}
@@ -399,10 +312,10 @@ function FormUser() {
               </div>
               <ErrorMsg field="nombres" />
             </div>
+
             <div className="flex flex-col gap-1.5 flex-1">
               <label className="block text-sm font-medium text-gray-700">
                 Apellidos
-                {/* Mostrar asterisco solo si es obligatorio */}
                 {!(isEditing && (userToEdit?.name ?? '').trim().split(/\s+/).filter(Boolean).length <= 2) && (
                   <span className="text-red-500">*</span>
                 )}
@@ -468,7 +381,9 @@ function FormUser() {
           <div className="flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
               Rol
-              <span className="ml-1.5 text-xs text-gray-400 font-normal">(opcional — se asignará desde el módulo de Roles)</span>
+              <span className="ml-1.5 text-xs text-gray-400 font-normal">
+                (opcional — se asignará desde el módulo de Roles)
+              </span>
             </label>
             <div className="relative">
               <select
@@ -487,7 +402,9 @@ function FormUser() {
           <div className="flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
               Tipo de cliente
-              <span className="ml-1.5 text-xs text-gray-400 font-normal">(se gestiona desde el módulo de clientes)</span>
+              <span className="ml-1.5 text-xs text-gray-400 font-normal">
+                (se gestiona desde el módulo de clientes)
+              </span>
             </label>
             <div className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed select-none">
               {tipoCliente}

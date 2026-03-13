@@ -1,29 +1,28 @@
 import React, { useState } from "react";
 import { ShoppingCart, Heart, HeartCrack } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAlert } from "../shared/alerts/useAlert";
 
-function ProductCard({ image, name, category, price, productId, onAddToCart, onAddToFavorites }) {
+function ProductCard({
+  image,
+  name,
+  category,
+  price,
+  onAddToCart,
+  // ── Favoritos conectados al contexto ──────────────────────────────────────
+  isFavorite,          // viene del contexto vía Shop.jsx
+  onToggleFavorite,    // viene del contexto vía Shop.jsx
+}) {
   const navigate = useNavigate();
-  const { showSuccess } = useAlert();
-
-  const [isFavorite,      setIsFavorite]      = useState(false);
   const [isHoveringHeart, setIsHoveringHeart] = useState(false);
 
   const handleFavorite = (e) => {
     e.stopPropagation();
-    const adding = !isFavorite;
-    setIsFavorite(adding);
-    if (adding) {
-      onAddToFavorites?.();
-      showSuccess('Añadido a favoritos', `${name} se ha agregado a tus favoritos.`);
-    }
+    onToggleFavorite?.();   // Shop.jsx se encarga de la alerta
   };
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
     onAddToCart?.();
-    showSuccess('Añadido al carrito', `${name} se ha agregado al carrito.`);
   };
 
   const goToDetail = () => {

@@ -6,15 +6,15 @@ function ClientsPagination({ currentPage, totalPages, onPageChange }) {
     if (totalPages <= 5) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
-    
+
     if (currentPage <= 3) {
       return [1, 2, 3, '...', totalPages];
     }
-    
+
     if (currentPage >= totalPages - 2) {
       return [1, '...', totalPages - 2, totalPages - 1, totalPages];
     }
-    
+
     return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
   };
 
@@ -37,8 +37,8 @@ function ClientsPagination({ currentPage, totalPages, onPageChange }) {
 
       {getVisiblePages().map((page, index) =>
         page === '...' ? (
-          <span 
-            key={`ellipsis-${index}`} 
+          <span
+            key={`ellipsis-${index}`}
             className="w-7 h-7 flex items-center justify-center text-gray-400 text-xs"
           >
             ...

@@ -3,26 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { X, Download, SquarePen } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { useModalAnimation } from '../../../../shared/useModalAnimation';
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const formatPrice = (value) =>
-  new Intl.NumberFormat('es-CO', {
-    style: 'currency', currency: 'COP', minimumFractionDigits: 0,
-  }).format(value);
-
-// ─── Fila de detalle: label arriba, valor abajo ───────────────────────────────
-function DetailRow({ label, value }) {
-  return (
-    <div className="flex flex-col gap-0.5 py-2.5 border-b border-gray-100 last:border-0">
-      <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
-        {label}
-      </span>
-      <span className="text-sm font-medium text-gray-800">
-        {value || '—'}
-      </span>
-    </div>
-  );
-}
+import { formatPrice }       from '../helpers/salesHelpers';
+import SaleDetailRow         from '../components/SaleDetailRow';
 
 // ─── SaleInfo ─────────────────────────────────────────────────────────────────
 function SaleInfo() {
@@ -41,7 +23,7 @@ function SaleInfo() {
 
   // ─── Calcular totales desde los items ─────────────────────────────────────
   const items    = sale?.items ?? [];
-  const subtotal = items.reduce((acc, i) => acc + i.product.precioDetal * i.cantidad, 0);
+  const subtotal = items.reduce((acc, i) => acc + i.product.precioDetalle * i.cantidad, 0);
   const iva      = Math.round(subtotal * 0.19);
   const total    = subtotal + iva;
 
@@ -65,7 +47,7 @@ function SaleInfo() {
       const fmt = (v) =>
         new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
 
-      // ── Header ──────────────────────────────────────────────────────────
+      // Header
       pdf.setFillColor(0, 77, 119);
       pdf.rect(0, 0, pageW, 18, 'F');
       pdf.setTextColor(255, 255, 255);
@@ -78,7 +60,7 @@ function SaleInfo() {
 
       y = 26;
 
-      // ── Subtítulos de columnas ───────────────────────────────────────────
+      // Subtítulos de columnas
       pdf.setTextColor(30, 30, 30);
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(10);
@@ -94,7 +76,7 @@ function SaleInfo() {
       pdf.setDrawColor(220, 220, 220);
       pdf.setLineWidth(0.3);
 
-      // ── Detalles de la venta (columna izquierda) ─────────────────────────
+      // Detalles de la venta (columna izquierda)
       const fields = [
         ['Factura No.',    sale.factura],
         ['Fecha',         sale.fecha],
@@ -122,10 +104,10 @@ function SaleInfo() {
         yLeft += lines.length * 4.5 + 1.5;
       });
 
-      // ── Detalles del pedido (columna derecha) ────────────────────────────
-      const rightX  = colMid + 4;
-      const rightW  = pageW - margin - rightX;
-      let   yRight  = y + 6;
+      // Detalles del pedido (columna derecha)
+      const rightX = colMid + 4;
+      const rightW = pageW - margin - rightX;
+      let yRight   = y + 6;
 
       if (sale.entrega === 'Domicilio' && sale.direccion) {
         pdf.setFont('helvetica', 'bold');
@@ -176,10 +158,10 @@ function SaleInfo() {
         pdf.setFontSize(8);
         pdf.setTextColor(50, 50, 50);
 
-        pdf.text(nameLines,                                                        c1,                   yRight);
-        pdf.text(String(cantidad),                                                 c2,                   yRight, { align: 'right' });
-        pdf.text(product.precioDetal.toLocaleString('es-CO'),                      c3,                   yRight, { align: 'right' });
-        pdf.text((product.precioDetal * cantidad).toLocaleString('es-CO'),         c4 + (rightW * 0.22), yRight, { align: 'right' });
+        pdf.text(nameLines,                                                           c1,                   yRight);
+        pdf.text(String(cantidad),                                                    c2,                   yRight, { align: 'right' });
+        pdf.text(product.precioDetalle.toLocaleString('es-CO'),                       c3,                   yRight, { align: 'right' });
+        pdf.text((product.precioDetalle * cantidad).toLocaleString('es-CO'),          c4 + (rightW * 0.22), yRight, { align: 'right' });
         yRight += nameLines.length * 4.5;
 
         if (descLines.length) {
@@ -216,7 +198,7 @@ function SaleInfo() {
         yRight += 5.5;
       });
 
-      // ── Footer ───────────────────────────────────────────────────────────
+      // Footer
       const footerY = pdf.internal.pageSize.getHeight() - 10;
       pdf.setFillColor(0, 77, 119);
       pdf.rect(0, footerY - 2, pageW, 12, 'F');
@@ -255,7 +237,7 @@ function SaleInfo() {
         className={`bg-white rounded-lg shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden max-h-[90vh]
           ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
       >
-        {/* ── Header ────────────────────────────────────────────────────── */}
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
           <h2 className="text-white font-semibold text-lg">Más información</h2>
           <button
@@ -266,39 +248,39 @@ function SaleInfo() {
           </button>
         </div>
 
-        {/* ── Body (con scroll) ─────────────────────────────────────────── */}
+        {/* Body */}
         <div className="overflow-y-auto flex-1">
           <div className="bg-white">
             <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-200">
 
-              {/* ── Columna izquierda: Detalles de la venta ───────────── */}
+              {/* Columna izquierda: Detalles de la venta */}
               <div className="px-6 py-5">
                 <p className="text-sm font-bold text-gray-700 text-center mb-3">
                   Detalles de la venta
                 </p>
-                <DetailRow label="Factura No."    value={sale.factura}         />
-                <DetailRow label="Fecha"          value={sale.fecha}           />
-                <DetailRow label="Cliente"        value={sale.cliente}         />
-                <DetailRow label="Vendedor"       value={sale.vendedor}        />
-                <DetailRow label="Método de pago" value={sale.metodoPago}      />
-                <DetailRow label="Estado"         value={sale.estado}          />
-                <DetailRow label="Entrega"        value={sale.entrega}         />
-                <DetailRow label="Dirección"      value={sale.direccion}       />
-                <DetailRow label="Registrado"     value={sale.registradoDesde} />
+                <SaleDetailRow label="Factura No."    value={sale.factura}         />
+                <SaleDetailRow label="Fecha"          value={sale.fecha}           />
+                <SaleDetailRow label="Cliente"        value={sale.cliente}         />
+                <SaleDetailRow label="Vendedor"       value={sale.vendedor}        />
+                <SaleDetailRow label="Método de pago" value={sale.metodoPago}      />
+                <SaleDetailRow label="Estado"         value={sale.estado}          />
+                <SaleDetailRow label="Entrega"        value={sale.entrega}         />
+                <SaleDetailRow label="Dirección"      value={sale.direccion}       />
+                <SaleDetailRow label="Registrado"     value={sale.registradoDesde} />
                 {sale.estado === 'Anulada' && (
                   <>
-                    <DetailRow
+                    <SaleDetailRow
                       label="Motivo de anulación"
                       value={sale.motivoAnulacion || 'Sin motivo registrado.'}
                     />
                     {sale.fechaAnulacion && (
-                      <DetailRow label="Fecha de anulación" value={sale.fechaAnulacion} />
+                      <SaleDetailRow label="Fecha de anulación" value={sale.fechaAnulacion} />
                     )}
                   </>
                 )}
               </div>
 
-              {/* ── Columna derecha: Detalles del pedido ──────────────── */}
+              {/* Columna derecha: Detalles del pedido */}
               <div className="px-6 py-5 flex flex-col">
                 <p className="text-sm font-bold text-gray-700 text-center mb-3">
                   Detalles del pedido
@@ -335,10 +317,10 @@ function SaleInfo() {
                           </div>
                           <span className="text-xs text-gray-600 text-right tabular-nums">{cantidad}</span>
                           <span className="text-xs text-gray-600 text-right tabular-nums">
-                            {product.precioDetal.toLocaleString('es-CO')}
+                            {product.precioDetalle.toLocaleString('es-CO')}
                           </span>
                           <span className="text-xs text-gray-700 text-right tabular-nums">
-                            {(product.precioDetal * cantidad).toLocaleString('es-CO')}
+                            {(product.precioDetalle * cantidad).toLocaleString('es-CO')}
                           </span>
                         </div>
                       ))}
@@ -356,9 +338,7 @@ function SaleInfo() {
                       </div>
                       <div className="flex justify-between pt-1.5 border-t border-gray-800">
                         <span className="text-sm font-bold text-gray-800">Total</span>
-                        <span className="text-sm font-bold text-gray-900 tabular-nums">
-                          {formatPrice(total)}
-                        </span>
+                        <span className="text-sm font-bold text-gray-900 tabular-nums">{formatPrice(total)}</span>
                       </div>
                     </div>
                   </>
@@ -373,10 +353,8 @@ function SaleInfo() {
           </div>
         </div>
 
-        {/* ── Footer ────────────────────────────────────────────────────── */}
+        {/* Footer */}
         <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
-
-          {/* Descargar PDF */}
           <button
             onClick={handleDownload}
             disabled={downloading}
@@ -386,17 +364,13 @@ function SaleInfo() {
             {downloading ? 'Generando...' : 'Exportar PDF'}
           </button>
 
-          {/* Acciones principales */}
           <div className="flex items-center gap-3">
-            {/* Cerrar — gris */}
             <button
               onClick={handleClose}
               className="px-6 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
             >
               Cerrar
             </button>
-
-            {/* Editar venta — azul principal */}
             <button
               onClick={handleEdit}
               className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"

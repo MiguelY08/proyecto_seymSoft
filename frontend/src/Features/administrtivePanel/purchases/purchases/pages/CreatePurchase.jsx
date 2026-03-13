@@ -7,6 +7,7 @@ import CreateTable from "../Components/TableCreate";
 import CreateProduct from "../../products/modals/CreateProduct";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import FormProvider from "../../providers/components/FormProvider";
+import { PurchasesDB } from "../services/Purchases.service";
 
 const CreatePurchase = () => {
   const navigate = useNavigate();
@@ -178,7 +179,7 @@ const CreatePurchase = () => {
     if (!selectedProvider || !invoiceNumber.trim() || !purchaseDate) {
       showWarning("Campos incompletos", "Llena todos los campos");
       return;
-    } 
+    }
     else if (purchaseItems.length === 0) {
       showWarning("Compra vacía", "Agrega al menos un producto");
       return;
@@ -196,6 +197,18 @@ const CreatePurchase = () => {
 
     if (!result?.isConfirmed) return;
 
+    const cantidadProductos = purchaseItems.reduce((sum, item) => sum + item.cantidad, 0);
+    const precioTotal       = purchaseItems.reduce((sum, item) => sum + item.total, 0);
+
+    PurchasesDB.create({
+      numeroFacturacion: invoiceNumber.trim(),
+      fechaCompra:       purchaseDate,
+      proveedor:         selectedProvider,
+      cantidadProductos,
+      precioTotal,
+      productos:         purchaseItems,
+    });
+
     showSuccess("Compra guardada", "Se registró correctamente");
 
     setPurchaseItems([]);
@@ -207,11 +220,13 @@ const CreatePurchase = () => {
     setInvoiceTouched(false);
     setDateTouched(false);
     setProviderTouched(false);
+
+    navigate("/admin/purchases");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 px-4 py-6">
-      <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-blue-50 px-4 py-6">
+      <div className="max-w-1400px mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         <div className="lg:col-span-3">
           <CreateSidebar
