@@ -1,7 +1,27 @@
+/**
+ * Archivo: ClientsPagination.jsx
+ *
+ * Contiene el componente de paginación usado en el módulo de clientes.
+ *
+ * Responsabilidades:
+ * - Renderizar botones para navegar entre páginas de la tabla de clientes
+ * - Calcular qué números de página deben mostrarse según la página actual
+ * - Soportar elipsis cuando hay muchas páginas
+ */
+
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
+/**
+ * Componente: ClientsPagination
+ *
+ * Props:
+ * @param {number} currentPage - Página actualmente seleccionada
+ * @param {number} totalPages - Total de páginas disponibles
+ * @param {Function} onPageChange - Callback al cambiar de página
+ */
 function ClientsPagination({ currentPage, totalPages, onPageChange }) {
+  // ===== funcionalidad: cálculo de páginas visibles =====
   const getVisiblePages = () => {
     if (totalPages <= 5) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);

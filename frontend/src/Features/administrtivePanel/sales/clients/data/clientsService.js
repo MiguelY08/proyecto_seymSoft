@@ -1,4 +1,9 @@
 // Clients Service - Local Storage CRUD operations
+//
+// Este módulo encapsula todas las operaciones relacionadas con clientes,
+// cuentas de crédito y pagos utilizando localStorage como "base de datos".
+// Incluye inicialización con datos de muestra, así como lógica para mantener
+// las relaciones entre clientes, créditos y pagos.
 
 const STORAGE_KEYS = {
   CLIENTS: 'clients',
@@ -6,7 +11,8 @@ const STORAGE_KEYS = {
   PAYMENTS: 'payments'
 };
 
-// Initialize localStorage with sample data if empty
+// Inicializa las claves necesarias en localStorage con ejemplos si están vacías.
+// Se llama al importar el módulo para garantizar que siempre existan valores.
 const initializeLocalStorage = () => {
   if (!localStorage.getItem(STORAGE_KEYS.CLIENTS)) {
     const sampleClients = [
@@ -157,22 +163,37 @@ const initializeLocalStorage = () => {
   }
 };
 
-// Client CRUD operations
+// ============================================================================
+// Operaciones CRUD para clientes
+// ============================================================================
 export const clientsService = {
-  // Get all clients
+  /**
+   * Devuelve el arreglo completo de clientes almacenados.
+   * Asegura que la inicialización se ejecute antes de leer.
+   * @returns {Array<object>} Lista de clientes
+   */
   getAll: () => {
     initializeLocalStorage();
     const clients = localStorage.getItem(STORAGE_KEYS.CLIENTS);
     return clients ? JSON.parse(clients) : [];
   },
 
-  // Get client by ID
+  /**
+   * Busca un cliente por su identificador.
+   * @param {string} id
+   * @returns {object|null} Cliente o null si no existe
+   */
   getById: (id) => {
     const clients = clientsService.getAll();
     return clients.find(client => client.id === id) || null;
   },
 
-  // Create new client - MODIFICADO: crédito opcional con valor por defecto 0
+  /**
+   * Crea un nuevo cliente. También genera cuenta de crédito asociada.
+   * Si el campo crédito está vacío, se asigna '0'.
+   * @param {object} clientData
+   * @returns {object} Cliente creado
+   */
   create: (clientData) => {
     const clients = clientsService.getAll();
     const newId = (Math.max(...clients.map(c => parseInt(c.id)), 0) + 1).toString();
@@ -197,7 +218,12 @@ export const clientsService = {
     return newClient;
   },
 
-  // Update client
+  /**
+   * Actualiza los datos de un cliente existente.
+   * También ajusta crédito y nombre completo.
+   * @param {string} id
+   * @param {object} clientData
+   */
   update: (id, clientData) => {
     const clients = clientsService.getAll();
     const index = clients.findIndex(c => c.id === id);
@@ -219,7 +245,11 @@ export const clientsService = {
     return updatedClient;
   },
 
-  // Delete client
+  /**
+   * Elimina un cliente junto con su cuenta de crédito y pagos relacionados.
+   * @param {string} id
+   * @returns {boolean} true si se eliminó
+   */
   delete: (id) => {
     const clients = clientsService.getAll();
     const filteredClients = clients.filter(c => c.id !== id);
@@ -232,7 +262,11 @@ export const clientsService = {
     return true;
   },
 
-  // Toggle client active status
+  /**
+   * Alterna el estado 'activo' de un cliente.
+   * @param {string} id
+   * @returns {object|null} Cliente actualizado o null si no existe
+   */
   toggleActive: (id) => {
     const clients = clientsService.getAll();
     const index = clients.findIndex(c => c.id === id);
@@ -246,7 +280,9 @@ export const clientsService = {
   }
 };
 
-// Credit Account operations
+// ============================================================================
+// Operaciones sobre cuentas de crédito asociadas a clientes
+// ============================================================================
 export const creditAccountService = {
   getAll: () => {
     const accounts = localStorage.getItem(STORAGE_KEYS.CREDIT_ACCOUNTS);
@@ -258,6 +294,12 @@ export const creditAccountService = {
     return accounts.find(acc => acc.clientId === clientId) || null;
   },
 
+  /**
+   * Crea una cuenta de crédito nueva para un cliente dado.
+   * @param {string} clientId
+   * @param {number} initialCredit
+   * @returns {object} Cuenta creada
+   */
   createForClient: (clientId, initialCredit) => {
     const accounts = creditAccountService.getAll();
     const newAccount = {
@@ -274,6 +316,10 @@ export const creditAccountService = {
     return newAccount;
   },
 
+  /**
+   * Resta el monto de pago del balance de la cuenta de crédito
+   * sin permitir que el balance sea negativo.
+   */
   updateBalance: (clientId, paymentAmount) => {
     const accounts = creditAccountService.getAll();
     const index = accounts.findIndex(acc => acc.clientId === clientId);
@@ -293,7 +339,9 @@ export const creditAccountService = {
   }
 };
 
-// Payment operations
+// ============================================================================
+// Operaciones sobre pagos registrados para clientes
+// ============================================================================
 export const paymentService = {
   getAll: () => {
     const payments = localStorage.getItem(STORAGE_KEYS.PAYMENTS);
@@ -305,6 +353,10 @@ export const paymentService = {
     return payments.filter(p => p.clientId === clientId);
   },
 
+  /**
+   * Agrega un nuevo pago y actualiza el balance de la cuenta de crédito
+   * correspondiente.
+   */
   create: (paymentData) => {
     const payments = paymentService.getAll();
     const newPayment = {

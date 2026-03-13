@@ -1,4 +1,20 @@
-// components/DetailReturn.jsx
+/**
+ * Archivo: DetailReturn.jsx
+ * 
+ * Modal para visualizar los detalles completos de una devolución.
+ * Presenta la información de forma estructurada y profesional.
+ * Permite exportar la devolución a PDF e ver las evidencias adjuntas.
+ * 
+ * Responsabilidades principales:
+ * - Mostrar información completa de la devolución
+ * - Listar productos devueltos con detalles
+ * - Mostrar totales y cálculos
+ * - Permitir visualización de evidencias
+ * - Facilitar exportación a PDF
+ * - Mostrar motivos de anulación si aplica
+ * - Presentar datos de cliente y asesor
+ */
+
 import React, { useState } from 'react';
 import { X, Download, AlertTriangle } from 'lucide-react';
 import ViewEvidence from './ViewEvidence';
@@ -6,22 +22,37 @@ import { formatCurrency, formatDate } from '../utils/returnsHelpers';
 import { exportReturnToPDF } from '../utils/pdfExporter';
 
 /**
- * Props:
- *   isOpen     {boolean}     - controla visibilidad
- *   onClose    {function}    - cierra el modal
- *   devolucion {object|null} - datos de la devolución a mostrar
+ * Componente: DetailReturn
+ * 
+ * Modal temporal que muestra los detalles completos de una devolución.
+ * Se abre/cierra mediante props y se comunica con el componente padre.
+ * 
+ * @component
+ * @param {Object} props - Props del componente
+ * @param {boolean} props.isOpen - Controla visibilidad del modal
+ * @param {Function} props.onClose - Función para cerrar el modal
+ * @param {Object|null} props.devolucion - Datos de la devolución a mostrar (null si no hay)
+ * 
+ * @returns {JSX.Element|null} Modal si está abierto, null si no
  */
 function DetailReturn({ isOpen, onClose, devolucion = null }) {
+  // Estado para controlar visibilidad del modal de evidencias
   const [evidenceOpen, setEvidenceOpen] = useState(false);
 
+  // Validar si el modal debe mostrarse
   if (!isOpen || !devolucion) return null;
 
+  // ======================= FUNCIONALIDAD: ESTILOS =======================
+  
+  // Determinar color del estado según su valor
   const estadoColor = {
     Pendiente: 'text-red-500',
     Aprobada:  'text-green-600',
     Anulada:   'text-gray-400',
   }[devolucion.estado] ?? 'text-red-500';
 
+  // ======================= FUNCIONALIDAD: CÓMPUTO DE DATOS =======================
+  
   // Obtener productos devueltos del objeto devolucion
   const productos = devolucion.productosDevueltos || [];
 
@@ -30,12 +61,19 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
   const canUnidades = devolucion.totalUnidades || productos.reduce((a, p) => a + (p.cantidad || 0), 0);
   const totalGeneral = devolucion.totalValor || productos.reduce((a, p) => a + ((p.cantidad || 1) * (p.precioUnit || 0)), 0);
   
+  // Función auxiliar para formatear números como moneda
   const formatNum = (v) => new Intl.NumberFormat('es-CO').format(v);
 
+  // Obtener evidencias y descripción
   const evidencias = devolucion.evidencias || [];
   const descripcion = devolucion.descripcion || 'Sin descripción adicional';
 
-  // Función para exportar a PDF
+  // ======================= FUNCIONALIDAD: DESCARGAR =======================
+  
+  /**
+   * Exporta la devolución actual a un documento PDF.
+   * Abre una ventana nueva con vista preliminar e impresión.
+   */
   const handleExportPDF = () => {
     exportReturnToPDF(devolucion);
   };
@@ -51,6 +89,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
               Detalles de la devolución
             </h2>
             <div className="flex items-center gap-2">
+              {/* Botón para exportar a PDF */}
               <button
                 type="button"
                 onClick={handleExportPDF}
@@ -59,6 +98,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
               >
                 <Download className="w-4 h-4" />
               </button>
+              {/* Botón para cerrar el modal */}
               <button
                 type="button"
                 onClick={onClose}
@@ -72,7 +112,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
           {/* ── Body con scroll ── */}
           <div className="px-7 py-5 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 80px)' }}>
 
-            {/* Mensaje de anulación - SOLO si está anulada */}
+            {/* Mensaje de anulación - SOLO si está anulada y tiene motivo registrado */}
             {devolucion.estado === 'Anulada' && devolucion.cancelReason && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <div className="flex items-start gap-2">
@@ -103,10 +143,11 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
 
             <hr className="border-gray-300 mb-4" />
 
-            {/* Datos */}
+            {/* Sección de datos generales */}
             <div className="mb-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base font-black text-gray-900">Datos</h3>
+                {/* Botón para ver evidencias */}
                 <button
                   type="button"
                   onClick={() => setEvidenceOpen(true)}
@@ -142,7 +183,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
 
             <hr className="border-gray-300 mb-4" />
 
-            {/* Productos devueltos */}
+            {/* Sección de productos devueltos */}
             {productos.length > 0 && (
               <div className="mb-4">
                 <h3 className="text-sm font-black text-gray-900 mb-2">Productos devueltos</h3>
@@ -150,6 +191,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-[#004D77] text-white">
+                        {/* Encabezados de la tabla de productos */}
                         <th className="px-3 py-2.5 text-left font-semibold">Producto</th>
                         <th className="px-3 py-2.5 text-left font-semibold">Motivo</th>
                         <th className="px-3 py-2.5 text-left font-semibold">Método</th>
@@ -189,14 +231,13 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
               </div>
             )}
 
-            {/* Descripción + totales */}
+            {/* Sección de descripción y totales */}
             <div>
               <p className="text-sm font-black text-gray-900 mb-2">Descripción:</p>
               <div className="flex gap-4 items-stretch">
                 <div className="flex-1 border-2 border-[#004D77]/40 rounded-lg px-4 py-3">
                   <p className="text-xs text-gray-600 leading-relaxed">{descripcion}</p>
-                </div>
-                <div className="border-2 border-[#004D77]/40 rounded-lg overflow-hidden flex-shrink-0" style={{ minWidth: 180 }}>
+                </div>                {/* Caja de totales de la devolución */}                <div className="border-2 border-[#004D77]/40 rounded-lg overflow-hidden flex-shrink-0" style={{ minWidth: 180 }}>
                   <div className="flex justify-between items-center px-3 py-2 border-b border-gray-200">
                     <span className="text-xs font-black text-gray-800">No. Productos:</span>
                     <span className="text-xs text-gray-700 font-semibold">{noProductos}</span>
@@ -217,7 +258,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
         </div>
       </div>
 
-      {/* ── ViewEvidence modal ── */}
+      {/* ── Modal para ver evidencias ── */}
       <ViewEvidence
         isOpen={evidenceOpen}
         onClose={() => setEvidenceOpen(false)}

@@ -1,6 +1,10 @@
 // Client Helper Functions
+//
+// Colección de utilidades para formateo, validación, filtrado y paginación
+// usadas por los componentes de clientes. Mantiene la lógica reutilizable fuera
+// de las vistas para facilitar el mantenimiento.
 
-// Format currency to COP
+// Formatea un número como moneda COP sin decimales.
 export const formatCurrency = (amount) => {
   if (!amount && amount !== 0) return 'N/A';
   return new Intl.NumberFormat('es-CO', {
@@ -11,7 +15,7 @@ export const formatCurrency = (amount) => {
   }).format(amount);
 };
 
-// Format phone number
+// Formatea teléfono con paréntesis y espacio (10 dígitos)
 export const formatPhoneNumber = (phone) => {
   if (!phone) return 'N/A';
   const cleaned = phone.replace(/\D/g, '');
@@ -21,7 +25,7 @@ export const formatPhoneNumber = (phone) => {
   return phone;
 };
 
-// Format contact phone
+// Formatea teléfono de contacto sin paréntesis
 export const formatContactPhone = (phone) => {
   if (!phone) return 'N/A';
   const cleaned = phone.replace(/\D/g, '');
@@ -31,74 +35,74 @@ export const formatContactPhone = (phone) => {
   return phone;
 };
 
-// Validate email
+// Verifica que el correo tenga formato válido
 export const isValidEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 };
 
-// Validate phone
+// Verifica que el teléfono sea numérico entre 7 y 10 dígitos
 export const isValidPhone = (phone) => {
   const phoneRegex = /^[0-9]{7,10}$/;
   return phoneRegex.test(phone);
 };
 
-// Validate numbers only (allow hyphen for NIT)
+// Comprueba que una cadena contenga solo números (o guiones para NIT)
 export const isOnlyNumbers = (value) => {
   const numbersRegex = /^[0-9-]+$/;
   return numbersRegex.test(value);
 };
 
-// Validate letters and spaces only
+// Comprueba que solo haya letras y espacios en la cadena
 export const isOnlyLetters = (value) => {
   const lettersRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
   return lettersRegex.test(value);
 };
 
-// Calculate credit balance
+// Calcula saldo restante restando pagos al crédito total
 export const calculateBalance = (creditAmount, payments = []) => {
   const totalPayments = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
   return Math.max(0, creditAmount - totalPayments);
 };
 
-// Calculate interest
+// Calcula interés simple según balance, tasa y días
 export const calculateInterest = (balance, rate, days = 30) => {
   return (balance * (rate / 100) * days) / 360;
 };
 
-// Get client status badge class
+// Devuelve clases de CSS para el badge de estado según activo
 export const getStatusBadgeClass = (isActive) => {
   return isActive 
     ? 'bg-green-100 text-green-800' 
     : 'bg-red-100 text-red-800';
 };
 
-// Get client status text
+// Devuelve texto 'Activo'/'Inactivo' según banderilla
 export const getStatusText = (isActive) => {
   return isActive ? 'Activo' : 'Inactivo';
 };
 
-// Format date
+// Formatea una fecha ISO a formato local colombiano
 export const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
   const date = new Date(dateString);
   return date.toLocaleDateString('es-CO');
 };
 
-// Capitalize first letter
+// Convierte la primera letra de una palabra a mayúscula
 export const capitalizeFirst = (string) => {
   if (!string) return '';
   return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
 };
 
-// Format person type
+// Transforma el tipo de persona a texto legible
 export const formatPersonType = (tipoPersona) => {
   if (tipoPersona === 'natural') return 'Natural';
   if (tipoPersona === 'juridica') return 'Jurídica';
   return 'N/A';
 };
 
-// Format client type
+// Transforma el tipo de cliente a texto legible
 export const formatClientType = (tipoCliente) => {
   if (tipoCliente === 'detal') return 'Detal';
   if (tipoCliente === 'mayorista') return 'Mayorista';
@@ -107,14 +111,14 @@ export const formatClientType = (tipoCliente) => {
   return 'N/A';
 };
 
-// Format RUT
+// Convierte el valor de RUT a Sí/No o N/A
 export const formatRut = (rut) => {
   if (rut === 'si') return 'Sí';
   if (rut === 'no') return 'No';
   return 'N/A';
 };
 
-// Filter clients by search term
+// Filtra clientes en función del término de búsqueda (nombre, doc, etc.)
 export const filterClients = (clients, searchTerm) => {
   if (!searchTerm) return clients;
   
@@ -129,7 +133,7 @@ export const filterClients = (clients, searchTerm) => {
   );
 };
 
-// Paginate data
+// Pagina un arreglo devolviendo datos de la página actual y metadatos
 export const paginateData = (data, page, itemsPerPage) => {
   const startIndex = (page - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -141,7 +145,7 @@ export const paginateData = (data, page, itemsPerPage) => {
   };
 };
 
-// Validate client form
+// Realiza validación de todos los campos del formulario de cliente
 export const validateClientForm = (formData) => {
   const errors = {};
 
