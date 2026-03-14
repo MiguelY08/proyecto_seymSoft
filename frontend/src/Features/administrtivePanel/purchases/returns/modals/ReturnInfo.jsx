@@ -110,7 +110,7 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
             </div>
           </div>
 
-          {/* Motivo de anulación */}
+          {/* ── Banner de anulación — solo si está anulada ───────────────── */}
           {isAnulada && (
             <div
               className="flex gap-2.5 items-start rounded-lg px-4 py-3 text-xs mb-3"
@@ -119,9 +119,13 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: '#b91c1c' }} strokeWidth={1.8} />
               <div>
                 <p className="font-semibold mb-0.5" style={{ color: '#b91c1c' }}>Motivo de anulación</p>
-                <p style={{ color: '#7f1d1d' }}>{devolucion?.motivoAnulacion ?? 'Sin motivo registrado.'}</p>
+                <p style={{ color: '#7f1d1d' }}>
+                  {devolucion?.motivoAnulacion ?? 'Sin motivo registrado.'}
+                </p>
                 {devolucion?.fechaAnulacion && (
-                  <p className="mt-1" style={{ color: '#9f1239' }}>Anulada el {devolucion.fechaAnulacion}</p>
+                  <p className="mt-1" style={{ color: '#9f1239' }}>
+                    Anulada el {devolucion.fechaAnulacion}
+                  </p>
                 )}
               </div>
             </div>
@@ -170,25 +174,23 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
                     );
                   })}
                 </tbody>
-
-                {/* Totales — solo en última página */}
-                {paginaActual === totalPaginas && (
-                  <tfoot>
-                    <tr className="border-t border-gray-200 bg-gray-50">
-                      <td colSpan={6} className="px-3 py-1.5 text-right text-xs font-semibold text-gray-400">Subtotal</td>
-                      <td colSpan={2} className="px-3 py-1.5 text-right text-xs font-semibold text-gray-700">{formatCurrency(totalSubtotal)}</td>
-                    </tr>
-                    <tr className="bg-gray-50">
-                      <td colSpan={6} className="px-3 py-1.5 text-right text-xs font-semibold text-gray-400">IVA</td>
-                      <td colSpan={2} className="px-3 py-1.5 text-right text-xs font-semibold text-gray-700">{formatCurrency(totalIva)}</td>
-                    </tr>
-                    <tr style={{ backgroundColor: '#f0f9ff' }}>
-                      <td colSpan={6} className="px-3 py-2 text-right text-sm font-bold text-gray-600">Total devolución</td>
-                      <td colSpan={2} className="px-3 py-2 text-right text-sm font-bold" style={{ color: '#004D77' }}>{formatCurrency(totalGeneral)}</td>
-                    </tr>
-                  </tfoot>
-                )}
               </table>
+            </div>
+
+            {/* ── Totales — siempre visibles, fuera de la paginación ──────── */}
+            <div className="mt-1 border border-gray-200 rounded-lg overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Subtotal</span>
+                <span className="text-xs font-semibold text-gray-700">{formatCurrency(totalSubtotal)}</span>
+              </div>
+              <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">IVA</span>
+                <span className="text-xs font-semibold text-gray-700">{formatCurrency(totalIva)}</span>
+              </div>
+              <div className="flex items-center justify-between px-4 py-2.5" style={{ backgroundColor: '#f0f9ff' }}>
+                <span className="text-sm font-bold text-gray-600">Total devolución</span>
+                <span className="text-sm font-bold" style={{ color: '#004D77' }}>{formatCurrency(totalGeneral)}</span>
+              </div>
             </div>
 
             {/* Paginador de productos */}
