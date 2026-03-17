@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
+import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 import CategoriesTable from "../components/CategoriesTable";
 import SearchInput from "../components/SearchInput";
 import CategoryDetail from "./CategoryDetail";
 import FormSubCategory from "./FormSubCategory";
 import FormCategory from "./FormCategory";
 import { Plus } from "lucide-react";
-import { getCategories, saveCategories, getSubcategories } from "../services/categoriesService";
+import {
+  getCategories,
+  saveCategories,
+  getSubcategories,
+} from "../services/categoriesService";
 
 export const Categories = () => {
   const [categories, setCategories] = useState([]);
@@ -21,6 +26,7 @@ export const Categories = () => {
   const [categoryDetail, setCategoryDetail] = useState(null);
 
   const { showConfirm, showSuccess, showError } = useAlert();
+  const { hasPermission } = usePermissions();
   const alertShownRef = useRef(false);
 
   // ─── CARGAR CATEGORÍAS ───────────────────────
@@ -64,12 +70,14 @@ export const Categories = () => {
       "question",
       "Cambiar estado",
       `¿Deseas cambiar el estado de "${category.nombre}"?`,
-      { confirmButtonText: "Sí", cancelButtonText: "No" }
+      { confirmButtonText: "Sí", cancelButtonText: "No" },
     );
     if (!result?.isConfirmed) return;
 
     const updated = categories.map((cat) =>
-      cat.id === id ? { ...cat, estado: cat.estado === "Activo" ? "Inactivo" : "Activo" } : cat
+      cat.id === id
+        ? { ...cat, estado: cat.estado === "Activo" ? "Inactivo" : "Activo" }
+        : cat,
     );
 
     setCategories(updated);
@@ -85,7 +93,7 @@ export const Categories = () => {
       "warning",
       "Eliminar categoría",
       `¿Seguro que deseas eliminar "${category.nombre}"?`,
-      { confirmButtonText: "Sí, eliminar", cancelButtonText: "Cancelar" }
+      { confirmButtonText: "Sí, eliminar", cancelButtonText: "Cancelar" },
     );
     if (!result?.isConfirmed) return;
 
@@ -97,11 +105,16 @@ export const Categories = () => {
 
   const handleSave = (category, isEditing) => {
     if (isEditing) {
-      const updated = categories.map((c) => (c.id === category.id ? category : c));
+      const updated = categories.map((c) =>
+        c.id === category.id ? category : c,
+      );
       setCategories(updated);
       saveCategories(updated);
     } else {
-      const newId = categories.length > 0 ? Math.max(...categories.map((c) => c.id)) + 1 : 1;
+      const newId =
+        categories.length > 0
+          ? Math.max(...categories.map((c) => c.id)) + 1
+          : 1;
       const updated = [...categories, { ...category, id: newId }];
       setCategories(updated);
       saveCategories(updated);
@@ -112,18 +125,30 @@ export const Categories = () => {
 
   const filteredCategories = categories.filter((cat) =>
     Object.values(cat).some((value) =>
-      String(value).toLowerCase().includes(search.toLowerCase())
-    )
+      String(value).toLowerCase().includes(search.toLowerCase()),
+    ),
   );
 
   const highlightText = (text = "") => {
     if (!search) return text;
-    const regex = new RegExp(`(${search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
-    return String(text).split(regex).map((part, index) =>
-      part.toLowerCase() === search.toLowerCase() ? (
-        <span key={index} className="bg-[#004d7726] text-[#004D77] rounded px-1 font-semibold">{part}</span>
-      ) : part
+    const regex = new RegExp(
+      `(${search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+      "gi",
     );
+    return String(text)
+      .split(regex)
+      .map((part, index) =>
+        part.toLowerCase() === search.toLowerCase() ? (
+          <span
+            key={index}
+            className="bg-[#004d7726] text-[#004D77] rounded px-1 font-semibold"
+          >
+            {part}
+          </span>
+        ) : (
+          part
+        ),
+      );
   };
 
   const RECORDS_PER_PAGE = 13;
@@ -135,26 +160,34 @@ export const Categories = () => {
   return (
     <div className="px-4 md:px-0 max-w-5xl mx-auto">
       <div className="flex items-center justify-between gap-2 sm:gap-4 mb-3 mt-7">
-        <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar" />
+        <SearchInput
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar"
+        />
         <div className="flex gap-2">
-          <button
-            onClick={() => setShowSubForm(true)}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-purple-700 rounded-lg text-purple-700 bg-white hover:bg-purple-50 transition"
-          >
-            Crear Subcategoría
-            <Plus className="w-4 h-4" />
-          </button>
+          {hasPermission("categorias.crear") && (
+            <>
+              <button
+                onClick={() => setShowSubForm(true)}
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-purple-700 rounded-lg text-purple-700 bg-white hover:bg-purple-50 transition"
+              >
+                Crear Subcategoría
+                <Plus className="w-4 h-4" />
+              </button>
 
-          <button
-            onClick={() => {
-              setCategoryToEdit(null);
-              setShowForm(true);
-            }}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 transition"
-          >
-            Crear Categoría
-            <Plus className="w-4 h-4" />
-          </button>
+              <button
+                onClick={() => {
+                  setCategoryToEdit(null);
+                  setShowForm(true);
+                }}
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 transition"
+              >
+                Crear Categoría
+                <Plus className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 

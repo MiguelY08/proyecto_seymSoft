@@ -1,6 +1,7 @@
-import React from "react";
+
 import { Info, XCircle, Ban } from "lucide-react";
 import Pagination from "../../../../shared/PaginationAdmin";
+import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 
 export const NonConformingProductsTable = ({
   currentData,
@@ -86,31 +87,33 @@ export const NonConformingProductsTable = ({
 
                   <td className="px-3 py-2.5 text-center">
                     <div className="flex justify-center gap-3">
-                      <button
-                        onClick={() => handleViewDetails(report)}
-                        className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-125"
-                      >
-                        <Info size={16} />
-                      </button>
 
-                      <button
-                        onClick={() => {
-                            if (report.estado !== "Anulado") {
-                            handleCancel(report.id);
-                            }
-                        }}
-                        className={`transition-all duration-200 transform hover:scale-125 ${
-                            report.estado === "Anulado"
-                            ? "text-red-600 cursor-not-allowed"
-                            : "text-gray-400 hover:text-red-600"
-                        }`}
+                      
+                        <button
+                          onClick={() => handleViewDetails(report)}
+                          className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-125"
                         >
-                        {report.estado === "Anulado" ? (
-                            <Ban size={16} />
-                        ) : (
-                            <XCircle size={16} />
-                        )}
+                          <Info size={16} />
                         </button>
+
+                        <button
+                          onClick={() => {
+                              if (report.estado !== "Anulado") {
+                              handleCancel(report.id);
+                              }
+                          }}
+                          className={`transition-all duration-200 transform hover:scale-125 ${
+                              report.estado === "Anulado"
+                              ? "text-red-600 cursor-not-allowed"
+                              : "text-gray-400 hover:text-red-600"
+                          }`}
+                          >
+                          {report.estado === "Anulado" ? (
+                              <Ban size={16} />
+                          ) : (
+                              <XCircle size={16} />
+                          )}
+                          </button>
                     </div>
                   </td>
                 </tr>
