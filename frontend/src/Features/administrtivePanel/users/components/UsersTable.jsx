@@ -94,15 +94,15 @@ function EmptyState({ isSearching }) {
             Aún no se han registrado usuarios en el sistema. Crea el primero
             para comenzar.
           </p>
-          {hasPermission("usuarios.crear") && (
-            <button
-              onClick={() => navigate("/admin/users/form-user")}
-              className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"
-            >
-              <span>Nuevo usuario</span>
-              <Plus className="w-4 h-4" strokeWidth={2} />
-            </button>
-          )}
+          {/* hasPermission("usuarios.crear") && ( */}
+          <button
+            onClick={() => navigate("/admin/users/form-user")}
+            className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"
+          >
+            <span>Nuevo usuario</span>
+            <Plus className="w-4 h-4" strokeWidth={2} />
+          </button>
+          {/* ) */}
         </>
       )}
     </div>
@@ -250,74 +250,74 @@ function UsersTable({
                 </td>
                 <td className="px-3 py-1.5">
                   <div className="flex items-center justify-center gap-1 sm:gap-1.5">
-                    {hasPermission("usuarios.ver") && (
-                      <button
-                        onClick={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          navigate("/admin/users/info-user", {
-                            state: {
-                              user: row,
-                              origin: {
-                                x: rect.left + rect.width / 2,
-                                y: rect.top + rect.height / 2,
-                              },
+                    {/* {hasPermission("usuarios.ver") && ( */}
+                    <button
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        navigate("/admin/users/info-user", {
+                          state: {
+                            user: row,
+                            origin: {
+                              x: rect.left + rect.width / 2,
+                              y: rect.top + rect.height / 2,
                             },
-                          });
-                        }}
-                        className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
-                        title="Información"
-                      >
-                        <Info
-                          className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                          strokeWidth={1.5}
-                        />
-                      </button>
-                    )}
-
-                    {hasPermission("usuarios.editar") && (
-                      <button
-                        onClick={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          navigate("/admin/users/form-user", {
-                            state: {
-                              user: row,
-                              origin: {
-                                x: rect.left + rect.width / 2,
-                                y: rect.top + rect.height / 2,
-                              },
-                            },
-                          });
-                        }}
-                        className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
-                        title="Editar"
-                      >
-                        <SquarePen
-                          className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                          strokeWidth={1.5}
-                        />
-                      </button>
-                    )}
-
-                    {hasPermission("usuarios.cambiar_estado") && (
-                      <ActiveToggle
-                        activo={row.active}
-                        onChange={() => onToggle?.(row.id)}
-                        search={search}
+                          },
+                        });
+                      }}
+                      className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                      title="Información"
+                    >
+                      <Info
+                        className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                        strokeWidth={1.5}
                       />
-                    )}
+                    </button>
+                    {/* )} */}
 
-                    {hasPermission("usuarios.eliminar") && (
-                      <button
-                        onClick={() => handleDelete(row)}
-                        className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
-                        title="Eliminar"
-                      >
-                        <Trash2
-                          className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                          strokeWidth={1.5}
-                        />
-                      </button>
-                    )}
+                    {/* {hasPermission("usuarios.editar") && ( */}
+                    <button
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        navigate("/admin/users/form-user", {
+                          state: {
+                            user: row,
+                            origin: {
+                              x: rect.left + rect.width / 2,
+                              y: rect.top + rect.height / 2,
+                            },
+                          },
+                        });
+                      }}
+                      className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                      title="Editar"
+                    >
+                      <SquarePen
+                        className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                        strokeWidth={1.5}
+                      />
+                    </button>
+                    {/* )} */}
+
+                    {/* {hasPermission("usuarios.cambiar_estado") && ( */}
+                    <ActiveToggle
+                      activo={row.active}
+                      onChange={() => onToggle?.(row.id)}
+                      search={search}
+                    />
+                    {/* )} */}
+
+                    {/* {hasPermission("usuarios.eliminar") && ( */}
+                    <button
+                      onClick={() => handleDelete(row)}
+                      className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
+                      title="Eliminar"
+                    >
+                      <Trash2
+                        className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                        strokeWidth={1.5}
+                      />
+                    </button>
+                    {/* )} */}
                   </div>
                 </td>
               </tr>

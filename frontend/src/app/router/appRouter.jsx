@@ -32,8 +32,8 @@ import DashboardPage from "../../Features/layouts/DashboardPage";
 
 /* USERS */
 import Users from "../../Features/administrtivePanel/users/pages/Users.jsx";
-// import FormUser from "../../Features/administrtivePanel/users/components/FormUser.jsx";
-// import InfoUser from "../../Features/administrtivePanel/users/components/InfoUser.jsx";
+import FormUser from "../../Features/administrtivePanel/users/components/FormUser.jsx";
+import InfoUser from "../../Features/administrtivePanel/users/components/InfoUser.jsx";
 
 //*INDICATORS */
 import IndicatorsPage from "../../Features/administrtivePanel/performance/indicators/pages/IndicatorsPage.jsx";
@@ -149,10 +149,13 @@ const AppRouter = () => {
               </PermissionGuard>
             }
           />
-          {/* <Route
+          <Route
             path="users/form-user"
             element={
-              <PermissionGuard permission="usuarios.ver" fallback={<Navigate to="/admin" replace />}>
+              <PermissionGuard
+                permission="usuarios.ver"
+                fallback={<Navigate to="/admin" replace />}
+              >
                 <FormUser />
               </PermissionGuard>
             }
@@ -160,11 +163,14 @@ const AppRouter = () => {
           <Route
             path="users/info-user"
             element={
-              <PermissionGuard permission="usuarios.ver" fallback={<Navigate to="/admin" replace />}>
+              <PermissionGuard
+                permission="usuarios.ver"
+                fallback={<Navigate to="/admin" replace />}
+              >
                 <InfoUser />
               </PermissionGuard>
             }
-          /> */}
+          />
 
           {/* PURCHASES */}
           <Route
