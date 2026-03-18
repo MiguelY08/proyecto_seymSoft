@@ -3,16 +3,31 @@ import ProductsService from '../../../purchases/products/services/productsServic
 const SALES_KEY = 'pm_sales';
 const USERS_KEY = 'pm_users';
 
-// ─── Formateador de precio ────────────────────────────────────────────────────
+/**
+ * Formateador de precio para mostrar valores en formato colombiano.
+ * @param {number} v - Valor numérico a formatear.
+ * @returns {string} Valor formateado como moneda COP.
+ */
 const fmt = (v) =>
   new Intl.NumberFormat('es-CO', {
     style: 'currency', currency: 'COP', minimumFractionDigits: 0,
   }).format(v);
 
-// ─── Helper: construir item de venta ─────────────────────────────────────────
+/**
+ * Helper para construir un item de venta.
+ * @param {Object} prod - Objeto del producto.
+ * @param {number} cantidad - Cantidad del producto.
+ * @param {string} [descripcion=''] - Descripción opcional del item.
+ * @returns {Object} Item de venta con product, cantidad y descripcion.
+ */
 const mkItem = (prod, cantidad, descripcion = '') => ({ product: prod, cantidad, descripcion });
 
-// ─── Cálculo de total para el seed (getter) ───────────────────────────────────
+/**
+ * Cálculo de total para el seed (getter).
+ * Calcula subtotal, IVA y total formateado.
+ * @param {Array} items - Lista de items de la venta.
+ * @returns {string} Total formateado.
+ */
 const calcTotal = (items) => {
   const subtotal = items.reduce((a, i) => a + i.product.precioDetalle * i.cantidad, 0);
   return fmt(subtotal + Math.round(subtotal * 0.19));
@@ -21,8 +36,11 @@ const calcTotal = (items) => {
 // ─── Control de versión del seed ──────────────────────────────────────────────
 const SEED_VERSION = 'sales_v3';
 
-// ─── Seed dinámico: usa los productos reales registrados en ProductsService ───
-// Se ejecuta en tiempo de arranque, cuando ProductsService ya sembró su propio seed.
+/**
+ * Seed dinámico de ventas.
+ * Usa productos reales de ProductsService para crear datos de ejemplo.
+ * Se ejecuta al cargar el módulo si no hay datos sembrados o la versión cambió.
+ */
 const seedSales = () => {
   try {
     const currentVersion = localStorage.getItem(`${SALES_KEY}_seed_version`);
@@ -183,20 +201,35 @@ const seedSales = () => {
 seedSales();
 
 // ─── Servicio de Ventas ───────────────────────────────────────────────────────
+/**
+ * Servicio de base de datos para ventas.
+ * Maneja operaciones CRUD de ventas, delega productos a ProductsService y usa localStorage.
+ */
 export const SalesDB = {
 
-  // ── Productos reales (delegado a ProductsService) ─────────────────────────
-  // Los módulos de ventas consumen productos a través de SalesDB,
-  // sin necesidad de importar ProductsService directamente.
+  /**
+   * Obtiene la lista de productos reales.
+   * Delega a ProductsService.
+   * @returns {Array} Lista de productos.
+   */
   getProducts() {
     return ProductsService.list();
   },
 
+  /**
+   * Obtiene un producto por ID.
+   * Delega a ProductsService.
+   * @param {number} id - ID del producto.
+   * @returns {Object|null} Producto encontrado o null.
+   */
   getProductById(id) {
     return ProductsService.findById(id);
   },
 
-  // ── Ventas ────────────────────────────────────────────────────────────────
+  /**
+   * Lista todas las ventas.
+   * @returns {Array} Lista de ventas desde localStorage.
+   */
   list() {
     try {
       const stored = localStorage.getItem(SALES_KEY);
@@ -204,10 +237,20 @@ export const SalesDB = {
     } catch { return []; }
   },
 
+  /**
+   * Guarda la lista de ventas en localStorage.
+   * @private
+   * @param {Array} sales - Lista de ventas a guardar.
+   */
   _save(sales) {
     localStorage.setItem(SALES_KEY, JSON.stringify(sales));
   },
 
+  /**
+   * Carga la lista de usuarios desde localStorage.
+   * @private
+   * @returns {Array} Lista de usuarios.
+   */
   _loadUsers() {
     try {
       const stored = localStorage.getItem(USERS_KEY);
@@ -215,14 +258,26 @@ export const SalesDB = {
     } catch { return []; }
   },
 
-  // Usa precioDetalle del producto real
+  /**
+   * Calcula subtotal, IVA y total de una lista de items.
+   * @private
+   * @param {Array} items - Lista de items con product y cantidad.
+   * @returns {Object} Objeto con subtotal, iva y total.
+   */
   _calcTotals(items) {
     const subtotal = items.reduce((acc, i) => acc + i.product.precioDetalle * i.cantidad, 0);
     const iva      = Math.round(subtotal * 0.19);
     return { subtotal, iva, total: subtotal + iva };
   },
 
-  // ── Crear venta ───────────────────────────────────────────────────────────
+  /**
+   * Crea una nueva venta.
+   * Decrementa stock de productos y guarda la venta.
+   * @param {Object} form - Datos del formulario de venta.
+   * @param {Array} items - Lista de items de la venta.
+   * @param {string} facturaNo - Número de factura.
+   * @returns {Object} La venta creada.
+   */
   create(form, items, facturaNo) {
     const sales    = this.list();
     const users    = this._loadUsers();
@@ -253,7 +308,15 @@ export const SalesDB = {
     return newSale;
   },
 
-  // ── Actualizar venta ──────────────────────────────────────────────────────
+  /**
+   * Actualiza una venta existente.
+   * Restaura stock original y decrementa el nuevo.
+   * @param {number} saleId - ID de la venta a actualizar.
+   * @param {Object} form - Nuevos datos del formulario.
+   * @param {Array} items - Nueva lista de items.
+   * @param {Array} originalItems - Items originales para restaurar stock.
+   * @returns {Array} Lista actualizada de ventas.
+   */
   update(saleId, form, items, originalItems) {
     const sales    = this.list();
     const users    = this._loadUsers();
@@ -284,7 +347,13 @@ export const SalesDB = {
     return updated;
   },
 
-  // ── Anular venta ──────────────────────────────────────────────────────────
+  /**
+   * Anula una venta.
+   * Cambia estado a 'Anulada', registra motivo y fecha, y restaura stock.
+   * @param {number} saleId - ID de la venta a anular.
+   * @param {string} [motivo=''] - Motivo de la anulación.
+   * @returns {Array} Lista actualizada de ventas.
+   */
   anular(saleId, motivo = '') {
     const sales = this.list();
     const sale  = sales.find((s) => s.id === saleId);

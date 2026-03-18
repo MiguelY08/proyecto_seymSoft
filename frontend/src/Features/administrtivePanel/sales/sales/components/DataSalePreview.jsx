@@ -3,13 +3,26 @@ import { ClipboardList, Package } from 'lucide-react';
 import { formatPrice, today, loadSalesUsers } from '../helpers/salesHelpers';
 import SaleDetailRow from '../components/SaleDetailRow';
 
-// ─── DataSalePreview ──────────────────────────────────────────────────────────
+/**
+ * Componente que muestra una vista previa de los datos de la venta.
+ * Incluye detalles de la venta, cliente, vendedor, y un resumen del pedido con productos y totales.
+ *
+ * @param {Object} props - Propiedades del componente.
+ * @param {Object} props.form - Datos del formulario de la venta.
+ * @param {Array} props.items - Lista de items del pedido (productos con cantidad).
+ * @param {string} props.facturaNo - Número de factura.
+ * @param {boolean} [props.isAnulada=false] - Indica si la venta está anulada.
+ * @param {string} [props.motivoAnulacion=''] - Motivo de anulación si aplica.
+ * @param {string} [props.fechaAnulacion=''] - Fecha de anulación si aplica.
+ */
 function DataSalePreview({ form, items, facturaNo, isAnulada = false, motivoAnulacion = '', fechaAnulacion = '' }) {
   const users = loadSalesUsers();
 
+  // ── Búsqueda de cliente y vendedor ──────────────────────────────────────────
   const cliente  = useMemo(() => users.find((u) => String(u.id) === String(form?.clienteId)),  [form?.clienteId]);
   const vendedor = useMemo(() => users.find((u) => String(u.id) === String(form?.vendedorId)), [form?.vendedorId]);
 
+  // ── Cálculos de totales ────────────────────────────────────────────────────
   const subtotal = useMemo(() =>
     items.reduce((acc, i) => acc + i.product.precioDetalle * i.cantidad, 0),
   [items]);
@@ -41,14 +54,17 @@ function DataSalePreview({ form, items, facturaNo, isAnulada = false, motivoAnul
               Detalles de la venta
             </p>
 
+            {/* Mostrar detalles básicos de la venta */}
             <SaleDetailRow label="Factura No."    value={facturaNo}             placeholder="—"                         />
             <SaleDetailRow label="Fecha"          value={today()}               placeholder="—"                         />
-            <SaleDetailRow label="Cliente"        value={cliente?.nombre}       placeholder="(Elija un cliente)"        />
-            <SaleDetailRow label="Vendedor"       value={vendedor?.nombre}      placeholder="(Elija un vendedor)"       />
+            <SaleDetailRow label="Cliente"        value={cliente?.name}         placeholder="(Elija un cliente)"        />
+            <SaleDetailRow label="Vendedor"       value={vendedor?.name}        placeholder="(Elija un vendedor)"       />
             <SaleDetailRow label="Método de pago" value={form?.metodoPago}      placeholder="(Elija un método de pago)" />
             <SaleDetailRow label="Estado"         value={form?.estado}          placeholder="(Elija el estado)"         />
             <SaleDetailRow label="Entrega"        value={form?.entrega}         placeholder="(Elija una opción)"        />
             <SaleDetailRow label="Dirección"      value={form?.direccion}       placeholder="(Sin dirección)"           />
+
+            {/* Mostrar información de anulación si aplica */}
             {isAnulada && (
               <>
                 <SaleDetailRow
@@ -71,7 +87,7 @@ function DataSalePreview({ form, items, facturaNo, isAnulada = false, motivoAnul
 
             {/* Info cliente + domicilio */}
             <div className="mb-3">
-              <SaleDetailRow label="Cliente"  value={cliente?.nombre} placeholder="(Elija un cliente)" />
+              <SaleDetailRow label="Cliente"  value={cliente?.name} placeholder="(Elija un cliente)" />
               <SaleDetailRow
                 label="Domicilio"
                 value={
@@ -90,6 +106,7 @@ function DataSalePreview({ form, items, facturaNo, isAnulada = false, motivoAnul
             {/* Tabla de productos */}
             {items.length > 0 ? (
               <>
+                {/* Encabezado de la tabla */}
                 <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 pb-1.5 border-b border-gray-200 mb-1">
                   <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Prod</span>
                   <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide text-right">Cant</span>
@@ -97,6 +114,7 @@ function DataSalePreview({ form, items, facturaNo, isAnulada = false, motivoAnul
                   <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide text-right">Total</span>
                 </div>
 
+                {/* Filas de productos */}
                 <div className="flex flex-col divide-y divide-gray-50 mb-3">
                   {items.map(({ product, cantidad }) => (
                     <div
@@ -132,6 +150,7 @@ function DataSalePreview({ form, items, facturaNo, isAnulada = false, motivoAnul
                 </div>
               </>
             ) : (
+              /* Mensaje cuando no hay productos */
               <div className="flex flex-col items-center justify-center py-8 gap-2 flex-1">
                 <Package className="w-7 h-7 text-gray-200" strokeWidth={1.5} />
                 <p className="text-xs text-gray-300 text-center">

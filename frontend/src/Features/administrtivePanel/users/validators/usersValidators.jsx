@@ -1,18 +1,40 @@
+// ─── Archivo de validadores para el módulo de usuarios ──────────────────────────
+/**
+ * Este archivo contiene reglas de validación para formularios de usuarios:
+ * - Constantes para límites de campos
+ * - Validación individual de campos
+ * - Verificación de duplicados
+ * - Validación completa del formulario
+ */
+
 import { normalizar } from '../helpers/usersHelpers';
 
-
 // ─── Constantes de validación ─────────────────────────────────────────────────
+/**
+ * Límites para números de teléfono.
+ */
 export const PHONE_MIN = 7;
 export const PHONE_MAX = 10;
 
+/**
+ * Longitudes mínimas para cada tipo de documento.
+ */
 export const DOC_MIN_LENGTH = { CC: 8, CE: 6, NIT: 9, TI: 10, PP: 5 };
 
+/**
+ * Tipos de documento válidos.
+ */
 export const TIPOS_DOCUMENTO = ['CC', 'CE', 'NIT', 'TI', 'PP'];
 
-
 // ─── Validar campo individual ─────────────────────────────────────────────────
-// currentForm : objeto completo del formulario (necesario para validar 'documento' según 'tipo')
-// context     : { isEditing, userToEdit } — necesario para la regla de apellidos opcionales
+/**
+ * Valida un campo específico del formulario de usuario.
+ * @param {string} name - Nombre del campo (documento, nombres, apellidos, correo, telefono).
+ * @param {string} value - Valor del campo.
+ * @param {object} currentForm - Objeto completo del formulario (necesario para validar documento según tipo).
+ * @param {object} context - Contexto de validación { isEditing, userToEdit }.
+ * @returns {string} Mensaje de error o cadena vacía si es válido.
+ */
 export const validateField = (name, value, currentForm = {}, context = {}) => {
   const v = (value ?? '').trim();
   const { isEditing = false, userToEdit = null } = context;
@@ -62,9 +84,14 @@ export const validateField = (name, value, currentForm = {}, context = {}) => {
   }
 };
 
-
 // ─── Validar duplicados contra usuarios existentes ───────────────────────────
-// context: { isEditing, userToEdit }
+/**
+ * Verifica si los datos del formulario duplican información de usuarios existentes.
+ * @param {object} currentForm - Datos del formulario actual.
+ * @param {Array} existingUsers - Lista de usuarios existentes.
+ * @param {object} context - Contexto { isEditing, userToEdit }.
+ * @returns {object} Objeto con errores de duplicados por campo.
+ */
 export const checkDuplicates = (currentForm = {}, existingUsers = [], context = {}) => {
   const { isEditing = false, userToEdit = null } = context;
   const dupes        = {};
@@ -100,9 +127,14 @@ export const checkDuplicates = (currentForm = {}, existingUsers = [], context = 
   return dupes;
 };
 
-
 // ─── Validación completa del formulario ──────────────────────────────────────
-// Combina validación de formato + duplicados y devuelve todos los errores.
+/**
+ * Realiza validación completa del formulario: formato de campos + duplicados.
+ * @param {object} form - Datos del formulario.
+ * @param {Array} existingUsers - Lista de usuarios existentes.
+ * @param {object} context - Contexto de validación.
+ * @returns {object} Objeto con todos los errores encontrados.
+ */
 export const validateUserForm = (form, existingUsers = [], context = {}) => {
   const errs   = {};
   const fields = ['documento', 'nombres', 'apellidos', 'correo', 'telefono'];

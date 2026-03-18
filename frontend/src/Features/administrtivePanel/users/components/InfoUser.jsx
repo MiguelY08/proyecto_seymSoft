@@ -2,7 +2,15 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { X, SquarePen } from 'lucide-react';
 import { useModalAnimation } from '../../../shared/useModalAnimation';
 
+/**
+ * Componente InfoUser.
+ * Modal de solo lectura para mostrar detalles completos de un usuario.
+ * Incluye animaciones de apertura y navegación a edición.
+ * @param {object} props - No recibe props directas, usa location.state para datos.
+ * @returns {JSX.Element|null} Modal con información del usuario o null si no hay usuario.
+ */
 function InfoUser() {
+  // Obtener datos del usuario desde el estado de navegación
   const location = useLocation();
   const user     = location.state?.user   ?? null;
   const origin   = location.state?.origin ?? null;
@@ -10,20 +18,27 @@ function InfoUser() {
   const navigate = useNavigate();
   const { visible, handleClose } = useModalAnimation('/admin/users');
 
+  /**
+   * Navega al formulario de edición con los datos del usuario actual.
+   */
   const handleEdit = () => {
     navigate('/admin/users/form-user', { state: { user } });
   };
 
+  // Origen para animación del modal (posición del botón que lo abrió)
   const transformOrigin = origin
     ? `${origin.x}px ${origin.y}px`
     : 'center center';
 
+  // No renderizar si no hay usuario
   if (!user) return null;
 
+  // Formatear fecha de creación
   const createdAt = user.createdAt
     ? new Date(user.createdAt).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' })
     : '—';
 
+  // Datos a mostrar en filas
   const rows = [
     { label: 'Tipo y No. Documento', value: `${user.documentType} ${user.document}` },
     { label: 'Nombre completo',      value: user.name                               },
@@ -51,7 +66,7 @@ function InfoUser() {
         className={`bg-white rounded-lg shadow-2xl w-full max-w-xs sm:max-w-sm md:max-w-md overflow-hidden flex flex-col
           ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
       >
-        {/* Header */}
+        {/* Header del modal */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
           <h2 className="text-white font-semibold text-lg">Detalles</h2>
           <button
@@ -62,7 +77,7 @@ function InfoUser() {
           </button>
         </div>
 
-        {/* Body */}
+        {/* Cuerpo con lista de detalles del usuario */}
         <div className="px-6 py-2 flex flex-col divide-y divide-gray-100">
           {rows.map(({ label, value }) => (
             <div key={label} className="flex flex-col py-3 gap-0.5">
@@ -76,7 +91,7 @@ function InfoUser() {
           ))}
         </div>
 
-        {/* Footer */}
+        {/* Footer con botones de acción */}
         <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
           <button
             onClick={handleClose}

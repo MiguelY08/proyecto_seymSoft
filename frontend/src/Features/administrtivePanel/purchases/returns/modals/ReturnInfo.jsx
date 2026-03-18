@@ -7,7 +7,14 @@ import {
   formatCurrency,
 } from '../helpers/returnsHelpers';
 
-// ─── Badge genérico ───────────────────────────────────────────────────────────
+/**
+ * Componente Badge genérico.
+ * Muestra un badge con etiqueta y estilos personalizados.
+ * @param {object} props - Props del componente.
+ * @param {string} props.label - Texto del badge.
+ * @param {object} props.style - Estilos inline para el badge.
+ * @returns {JSX.Element} Badge renderizado.
+ */
 const Badge = ({ label, style }) => (
   <span
     className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap"
@@ -17,7 +24,14 @@ const Badge = ({ label, style }) => (
   </span>
 );
 
-// ─── Fila de info general (estilo InfoUser) ───────────────────────────────────
+/**
+ * Componente InfoRow.
+ * Fila de información con etiqueta y contenido, estilo similar a InfoUser.
+ * @param {object} props - Props del componente.
+ * @param {string} props.label - Etiqueta de la fila.
+ * @param {JSX.Element} props.children - Contenido de la fila.
+ * @returns {JSX.Element} Fila de información.
+ */
 const InfoRow = ({ label, children }) => (
   <div className="flex flex-col py-3 gap-0.5">
     <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</span>
@@ -25,13 +39,15 @@ const InfoRow = ({ label, children }) => (
   </div>
 );
 
-// ─── Componente principal ─────────────────────────────────────────────────────
 /**
- * ReturnInfo — Modal de solo lectura para una devolución.
- * Props:
- *   devolucion  {Object}   - datos completos de la devolución
- *   onClose     {Function} - cierra el modal
- *   onEdit      {Function} - opcional, abre el formulario en modo edición
+ * Componente ReturnInfo.
+ * Modal de solo lectura para mostrar detalles de una devolución.
+ * Incluye información general, productos con paginación y totales.
+ * @param {object} props - Props del componente.
+ * @param {object} props.devolucion - Datos completos de la devolución.
+ * @param {function} props.onClose - Función para cerrar el modal.
+ * @param {function} props.onEdit - Función opcional para abrir edición.
+ * @returns {JSX.Element} Modal con detalles de la devolución.
  */
 const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
   const [paginaActual, setPaginaActual] = useState(1);

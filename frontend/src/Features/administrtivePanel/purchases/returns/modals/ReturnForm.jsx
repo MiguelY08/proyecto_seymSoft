@@ -17,7 +17,15 @@ import {
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import ReturnsDB from '../services/returnsServices';
 
-// ─── Long press hook ──────────────────────────────────────────────────────────
+/**
+ * Hook useLongPress.
+ * Maneja eventos de presión prolongada para incrementar/decrementar valores.
+ * @param {function} callback - Función a ejecutar al presionar.
+ * @param {object} options - Opciones de configuración.
+ * @param {number} options.delay - Retraso inicial en ms.
+ * @param {number} options.interval - Intervalo entre ejecuciones en ms.
+ * @returns {object} Objeto con handlers para mouse y touch.
+ */
 function useLongPress(callback, { delay = 380, interval = 75 } = {}) {
   const timerRef    = useRef(null);
   const intervalRef = useRef(null);
@@ -40,7 +48,18 @@ function useLongPress(callback, { delay = 380, interval = 75 } = {}) {
            onTouchStart: start, onTouchEnd: stop };
 }
 
-// ─── Dropdown de Estado con badges (portal fixed) ─────────────────────────────
+/**
+ * Componente EstadoDropdown.
+ * Dropdown personalizado para seleccionar estado de producto con badges.
+ * Usa portal para renderizar fuera del contenedor.
+ * @param {object} props - Props del componente.
+ * @param {string} props.value - Valor seleccionado.
+ * @param {boolean} props.disabled - Si está deshabilitado.
+ * @param {string[]} props.estados - Lista de estados disponibles.
+ * @param {function} props.onChange - Función al cambiar selección.
+ * @param {boolean} props.hasError - Si hay error de validación.
+ * @returns {JSX.Element} Dropdown renderizado.
+ */
 function EstadoDropdown({ value, disabled, estados, onChange, hasError }) {
   const [open, setOpen] = useState(false);
   const [pos,  setPos]  = useState(null);
@@ -153,7 +172,16 @@ const selectClass = (hasError) =>
       : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
   }`;
 
-// ─── Sub-componente: configuración de producto (panel derecho) ────────────────
+/**
+ * Componente ProductConfig.
+ * Panel de configuración para un producto seleccionado en la devolución.
+ * Incluye campos para motivo, tipo, estado y cantidad con validación.
+ * @param {object} props - Props del componente.
+ * @param {object} props.producto - Datos del producto.
+ * @param {function} props.onChange - Función para actualizar campos.
+ * @param {object} props.errores - Errores de validación por campo.
+ * @returns {JSX.Element} Panel de configuración.
+ */
 const ProductConfig = ({ producto, onChange, errores }) => {
   const estadosDisponibles = producto.tipoDevolucion
     ? getEstadosByTipo(producto.tipoDevolucion)
@@ -322,7 +350,18 @@ const ProductConfig = ({ producto, onChange, errores }) => {
   );
 };
 
-// ─── Componente principal ─────────────────────────────────────────────────────
+/**
+ * Componente ReturnForm.
+ * Modal para crear o editar devoluciones de compras.
+ * Incluye selección de productos, configuración y validación.
+ * @param {object} props - Props del componente.
+ * @param {string} props.mode - Modo: 'create' o 'edit'.
+ * @param {object} props.purchase - Datos de la compra.
+ * @param {object} props.devolucion - Datos de la devolución (en modo edit).
+ * @param {function} props.onClose - Función para cerrar el modal.
+ * @param {function} props.onSaved - Función al guardar exitosamente.
+ * @returns {JSX.Element} Modal del formulario.
+ */
 const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved }) => {
   const { showConfirm, showSuccess, showError, showWarning } = useAlert();
   const navigate = useNavigate();

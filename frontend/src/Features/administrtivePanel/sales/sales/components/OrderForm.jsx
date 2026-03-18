@@ -1,15 +1,30 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Search, Package, Trash2, ShoppingBag, Plus, Minus, Barcode } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
-import ProductsService from '../../../purchases/products/services/productsServices';
+import { SalesDB } from '../services/salesBD';
 
 // ─── Formateador de precios ───────────────────────────────────────────────────
+/**
+ * Formatea un valor numérico como precio en pesos colombianos.
+ * @param {number} value - Valor a formatear.
+ * @returns {string} Precio formateado.
+ */
 const formatPrice = (value) =>
   new Intl.NumberFormat('es-CO', {
     style: 'currency', currency: 'COP', minimumFractionDigits: 0,
   }).format(value);
 
 // ─── Hook: long-press para +/- ───────────────────────────────────────────────
+/**
+ * Hook personalizado para manejar eventos de presión prolongada en botones.
+ * Útil para incrementar/decrementar valores rápidamente.
+ *
+ * @param {Function} callback - Función a ejecutar en cada intervalo.
+ * @param {Object} options - Opciones de configuración.
+ * @param {number} [options.delay=500] - Retraso inicial en ms antes de iniciar el intervalo.
+ * @param {number} [options.interval=80] - Intervalo en ms entre ejecuciones.
+ * @returns {Object} Objeto con handlers para eventos de mouse y touch.
+ */
 function useLongPress(callback, { delay = 500, interval = 80 } = {}) {
   const callbackRef = useRef(callback);
   const timeoutRef  = useRef(null);
@@ -39,11 +54,24 @@ function useLongPress(callback, { delay = 500, interval = 80 } = {}) {
 }
 
 // ─── Card de producto ─────────────────────────────────────────────────────────
-function ProductCard({ item, onQuantityChange, onDescriptionChange, onRemove, isEditing }) {
+/**
+ * Componente que representa un producto agregado al pedido.
+ * Permite cambiar cantidad, agregar descripción y remover el producto.
+ *
+ * @param {Object} props - Propiedades del componente.
+ * @param {Object} props.item - Objeto del item (product, cantidad, descripcion).
+ * @param {Function} props.onQuantityChange - Función para cambiar la cantidad.
+ * @param {Function} props.onDescriptionChange - Función para cambiar la descripción.
+ * @param {Function} props.onRemove - Función para remover el producto.
+ */
+function ProductCard({ item, onQuantityChange, onDescriptionChange, onRemove }) {
   const { product, cantidad, descripcion = '' } = item;
-  // precioDetalle es el campo canónico del nuevo esquema
   const total = product.precioDetalle * cantidad;
 
+  /**
+   * Maneja el cambio de cantidad desde el input numérico.
+   * @param {Event} e - Evento del input.
+   */
   const handleInputChange = (e) => {
     const val = parseInt(e.target.value, 10);
     if (!isNaN(val)) onQuantityChange(product.id, val);
@@ -67,7 +95,6 @@ function ProductCard({ item, onQuantityChange, onDescriptionChange, onRemove, is
 
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-gray-800 truncate leading-tight">{product.nombre}</p>
-          {/* codBarras es el campo canónico del nuevo esquema */}
           {product.codBarras && (
             <p className="text-[9px] text-gray-400 font-mono flex items-center gap-0.5 leading-tight">
               <Barcode className="w-2.5 h-2.5" strokeWidth={1.5} />
@@ -78,27 +105,21 @@ function ProductCard({ item, onQuantityChange, onDescriptionChange, onRemove, is
 
         {/* Controles de cantidad */}
         <div className="flex flex-col items-center gap-0.5 shrink-0">
-          {isEditing ? (
-            <span className="text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded px-2 py-0.5">
-              {cantidad}
-            </span>
-          ) : (
-            <div className="flex items-center border border-gray-300 rounded-md overflow-hidden">
-              <button type="button" {...longPressMin}
-                className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer select-none">
-                <Minus className="w-2.5 h-2.5" strokeWidth={2.5} />
-              </button>
-              <input
-                type="number" value={cantidad} onChange={handleInputChange}
-                min={1} max={product.stock}
-                className="w-10 text-center text-xs font-semibold text-gray-700 border-x border-gray-200 outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
-              <button type="button" {...longPressMax}
-                className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer select-none">
-                <Plus className="w-2.5 h-2.5" strokeWidth={2.5} />
-              </button>
-            </div>
-          )}
+          <div className="flex items-center border border-gray-300 rounded-md overflow-hidden">
+            <button type="button" {...longPressMin}
+              className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer select-none">
+              <Minus className="w-2.5 h-2.5" strokeWidth={2.5} />
+            </button>
+            <input
+              type="number" value={cantidad} onChange={handleInputChange}
+              min={1} max={product.stock}
+              className="w-10 text-center text-xs font-semibold text-gray-700 border-x border-gray-200 outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+            <button type="button" {...longPressMax}
+              className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer select-none">
+              <Plus className="w-2.5 h-2.5" strokeWidth={2.5} />
+            </button>
+          </div>
           <span className="text-[9px] text-gray-400 leading-tight">Máx: {product.stock}</span>
         </div>
 
@@ -113,13 +134,11 @@ function ProductCard({ item, onQuantityChange, onDescriptionChange, onRemove, is
         <span className="flex sm:hidden text-xs font-bold text-[#004D77] shrink-0">{formatPrice(total)}</span>
 
         {/* Eliminar */}
-        {!isEditing && (
-          <button type="button" onClick={() => onRemove(product.id)}
-            className="shrink-0 w-6 h-6 flex items-center justify-center rounded text-red-300 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer"
-            title="Quitar producto">
-            <Trash2 className="w-3.5 h-3.5" strokeWidth={1.8} />
-          </button>
-        )}
+        <button type="button" onClick={() => onRemove(product.id)}
+          className="shrink-0 w-6 h-6 flex items-center justify-center rounded text-red-300 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer"
+          title="Quitar producto">
+          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.8} />
+        </button>
       </div>
 
       {/* Descripción */}
@@ -137,21 +156,29 @@ function ProductCard({ item, onQuantityChange, onDescriptionChange, onRemove, is
 }
 
 // ─── OrderForm ────────────────────────────────────────────────────────────────
-function OrderForm({ items, onItemsChange, isEditing }) {
+/**
+ * Componente principal para gestionar el pedido de productos en una venta.
+ * Permite buscar productos, agregarlos al pedido, cambiar cantidades y descripciones.
+ *
+ * @param {Object} props - Propiedades del componente.
+ * @param {Array} props.items - Lista de items del pedido.
+ * @param {Function} props.onItemsChange - Función para actualizar la lista de items.
+ */
+function OrderForm({ items, onItemsChange }) {
   const { showWarning } = useAlert();
   const [query,        setQuery]        = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const searchRef = useRef(null);
 
-  // Catálogo desde ProductsService — solo productos activos
+  // Catálogo desde SalesDB — solo productos activos
   const [allProducts, setAllProducts] = useState(() =>
-    ProductsService.list().filter((p) => p.activo !== false)
+    SalesDB.getProducts().filter((p) => p.activo !== false)
   );
 
   // Refrescar catálogo al enfocar la ventana
   useEffect(() => {
     const sync = () => setAllProducts(
-      ProductsService.list().filter((p) => p.activo !== false)
+      SalesDB.getProducts().filter((p) => p.activo !== false)
     );
     window.addEventListener('focus', sync);
     return () => window.removeEventListener('focus', sync);
@@ -184,6 +211,10 @@ function OrderForm({ items, onItemsChange, isEditing }) {
   const addedIds = useMemo(() => new Set(items.map((i) => i.product.id)), [items]);
 
   // Agregar producto
+  /**
+   * Maneja la selección de un producto desde el dropdown.
+   * @param {Object} product - Producto seleccionado.
+   */
   const handleSelect = (product) => {
     if (addedIds.has(product.id)) { setDropdownOpen(false); setQuery(''); return; }
     if (product.stock < 1) {
@@ -191,12 +222,17 @@ function OrderForm({ items, onItemsChange, isEditing }) {
       setDropdownOpen(false); setQuery('');
       return;
     }
-    onItemsChange([...items, { product, cantidad: 1 }]);
+    onItemsChange([...items, { product, cantidad: 1, descripcion: '' }]);
     setDropdownOpen(false);
     setQuery('');
   };
 
   // Cambiar cantidad
+  /**
+   * Maneja el cambio de cantidad de un producto.
+   * @param {string|number} productId - ID del producto.
+   * @param {number} newQty - Nueva cantidad.
+   */
   const handleQuantityChange = (productId, newQty) => {
     const item = items.find((i) => i.product.id === productId);
     if (!item) return;
@@ -215,11 +251,20 @@ function OrderForm({ items, onItemsChange, isEditing }) {
   };
 
   // Quitar producto
+  /**
+   * Remueve un producto del pedido.
+   * @param {string|number} productId - ID del producto a remover.
+   */
   const handleRemove = (productId) => {
     onItemsChange(items.filter((i) => i.product.id !== productId));
   };
 
   // Actualizar descripción
+  /**
+   * Actualiza la descripción de un producto.
+   * @param {string|number} productId - ID del producto.
+   * @param {string} value - Nueva descripción.
+   */
   const handleDescriptionChange = (productId, value) => {
     onItemsChange(items.map((i) =>
       i.product.id === productId ? { ...i, descripcion: value } : i
@@ -229,7 +274,7 @@ function OrderForm({ items, onItemsChange, isEditing }) {
   const isBarcodeSearch = /^\d{8,13}$/.test(query.trim());
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-lg border border-gray-200">
 
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gray-50">
@@ -238,77 +283,71 @@ function OrderForm({ items, onItemsChange, isEditing }) {
         </div>
         <div>
           <p className="text-sm font-semibold text-gray-800">2. Datos del pedido</p>
-          <p className="text-xs text-gray-400">
-            {isEditing
-              ? 'Solo puedes modificar la descripción de cada producto'
-              : 'Busque por nombre, categoría o código de barras'}
-          </p>
+          <p className="text-xs text-gray-400">Busque por nombre, categoría o código de barras</p>
         </div>
       </div>
 
       {/* Contenido */}
       <div className="p-5 flex flex-col gap-4 max-h-480px overflow-y-auto">
 
-        {/* Buscador — solo en creación */}
-        {!isEditing && (
-          <div ref={searchRef} className="relative">
-            <div className="relative">
-              <input
-                type="text" value={query}
-                onChange={(e) => { setQuery(e.target.value); setDropdownOpen(true); }}
-                onFocus={() => setDropdownOpen(true)}
-                placeholder="Buscar producto, proveedor, categoría o código de barras..."
-                className="w-full pl-4 pr-10 py-2.5 text-sm border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 text-gray-700 placeholder-gray-400"
-              />
-              {isBarcodeSearch
-                ? <Barcode className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#004D77]" strokeWidth={2} />
-                : <Search  className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"   strokeWidth={2} />
-              }
-            </div>
-
-            {dropdownOpen && (
-              <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-                <ul className="max-h-56 overflow-y-auto">
-                  {filteredProducts.length > 0 ? (
-                    filteredProducts.map((product) => {
-                      const alreadyAdded = addedIds.has(product.id);
-                      const sinStock     = product.stock < 1;
-                      const disabled     = alreadyAdded || sinStock;
-                      return (
-                        <li key={product.id}
-                          onClick={() => !disabled && handleSelect(product)}
-                          className={`flex items-center gap-3 px-4 py-2.5 transition-colors duration-150 ${
-                            disabled
-                              ? 'opacity-40 cursor-not-allowed bg-gray-50'
-                              : 'cursor-pointer hover:bg-[#004D77]/5'
-                          }`}
-                        >
-                          <div className="w-9 h-9 rounded-md bg-[#004D77]/8 border border-[#004D77]/15 flex items-center justify-center shrink-0">
-                            <Package className="w-4 h-4 text-[#004D77]/50" strokeWidth={1.5} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-800 truncate">{product.nombre}</p>
-                            <p className="text-[10px] text-gray-400 font-mono">
-                              {product.codBarras} · Stock: {product.stock} · {formatPrice(product.precioDetalle)}
-                            </p>
-                          </div>
-                          {alreadyAdded && <span className="text-[10px] text-gray-400 shrink-0">Agregado</span>}
-                          {sinStock && !alreadyAdded && <span className="text-[10px] text-red-400 shrink-0">Sin stock</span>}
-                        </li>
-                      );
-                    })
-                  ) : (
-                    <li className="px-4 py-4 text-sm text-gray-400 text-center">
-                      {isBarcodeSearch
-                        ? `No se encontró ningún producto con el código "${query.trim()}"`
-                        : 'No se encontraron productos'}
-                    </li>
-                  )}
-                </ul>
-              </div>
-            )}
+        {/* Buscador */}
+        <div ref={searchRef} className="relative">
+          <div className="relative">
+            <input
+              type="text" value={query}
+              onChange={(e) => { setQuery(e.target.value); setDropdownOpen(true); }}
+              onFocus={() => setDropdownOpen(true)}
+              placeholder="Buscar producto, proveedor, categoría o código de barras..."
+              className="w-full pl-4 pr-10 py-2.5 text-sm border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 text-gray-700 placeholder-gray-400"
+            />
+            {isBarcodeSearch
+              ? <Barcode className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#004D77]" strokeWidth={2} />
+              : <Search  className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"   strokeWidth={2} />
+            }
           </div>
-        )}
+
+          {dropdownOpen && (
+            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+              <ul className="max-h-56 overflow-y-auto">
+                {filteredProducts.length > 0 ? (
+                  filteredProducts.map((product) => {
+                    const alreadyAdded = addedIds.has(product.id);
+                    const sinStock     = product.stock < 1;
+                    const disabled     = alreadyAdded || sinStock;
+                    return (
+                      <li key={product.id}
+                        onClick={() => !disabled && handleSelect(product)}
+                        className={`flex items-center gap-3 px-4 py-2.5 transition-colors duration-150 ${
+                          disabled
+                            ? 'opacity-40 cursor-not-allowed bg-gray-50'
+                            : 'cursor-pointer hover:bg-[#004D77]/5'
+                        }`}
+                      >
+                        <div className="w-9 h-9 rounded-md bg-[#004D77]/8 border border-[#004D77]/15 flex items-center justify-center shrink-0">
+                          <Package className="w-4 h-4 text-[#004D77]/50" strokeWidth={1.5} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">{product.nombre}</p>
+                          <p className="text-[10px] text-gray-400 font-mono">
+                            {product.codBarras} · Stock: {product.stock} · {formatPrice(product.precioDetalle)}
+                          </p>
+                        </div>
+                        {alreadyAdded && <span className="text-[10px] text-gray-400 shrink-0">Agregado</span>}
+                        {sinStock && !alreadyAdded && <span className="text-[10px] text-red-400 shrink-0">Sin stock</span>}
+                      </li>
+                    );
+                  })
+                ) : (
+                  <li className="px-4 py-4 text-sm text-gray-400 text-center">
+                    {isBarcodeSearch
+                      ? `No se encontró ningún producto con el código "${query.trim()}"`
+                      : 'No se encontraron productos'}
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
+        </div>
 
         {/* Lista de productos agregados */}
         {items.length > 0 ? (
@@ -320,7 +359,6 @@ function OrderForm({ items, onItemsChange, isEditing }) {
                 onQuantityChange={handleQuantityChange}
                 onDescriptionChange={handleDescriptionChange}
                 onRemove={handleRemove}
-                isEditing={isEditing}
               />
             ))}
           </div>

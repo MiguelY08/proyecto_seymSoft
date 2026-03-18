@@ -1,168 +1,509 @@
-export const mockCreditAccounts = [
+/* =============================================================================
+   mockCreditAccounts.js
+   Datos de prueba para el módulo de Pagos y Abonos.
+
+   MODELO:
+     Cliente → facturas[] → abonos[]
+
+   CAMPOS NUEVOS:
+     factura.interes     → interés acumulado aplicado por mora (NO afecta cupo)
+     abono.tipo          → "capital" | "interes"
+                           capital  = reduce valorCredito (libera cupo)
+                           interes  = reduce factura.interes (no toca cupo)
+
+   REGLA DE DISTRIBUCIÓN DE ABONOS:
+     Cuando el cliente abona, se aplica en este orden:
+       1° → cubre interés pendiente  (abono.tipo = "interes")
+       2° → cubre capital            (abono.tipo = "capital")
+
+   ESCENARIOS CUBIERTOS:
+     1. Cliente al día, sin interés                        (Camila Torres)
+     2. Cliente pendiente, sin interés                     (Andrés Martínez)
+     3. Cliente vencido, con interés generado              (María González)
+     4. Cliente vencido, interés parcialmente pagado       (Carlos Rodríguez)
+     5. Cliente vencido, interés totalmente pagado         (Jorge Ramírez)
+     6. Cliente con abono anulado                          (Laura Pérez)
+     7. Cliente con múltiples facturas, mix de estados     (Daniela Castro)
+     8. Cliente sin abonos                                 (Sebastián López)
+     9. Cliente al día en todas sus facturas               (Valentina Herrera)
+============================================================================= */
+
+const mockCreditAccounts = [
+
+  /* ── 1. MARÍA GONZÁLEZ ─────────────────────────────────────────────────────
+     Vencido | FAC-001 con interés pendiente, FAC-002 pagada (al día)         */
   {
-    id: 1,
-    nombre: "María González",
-    documento: "1023456789",
-    telefono: "3001112233",
-    valorCredito: 600000,
-    fechaCredito: "2025-11-14",
-    fechaVencimiento: "2025-12-14",
-    abonos: [{ id: 1, monto: 200000, fecha: "2025-11-20", anulado: false }],
+    id:               "cliente-001",
+    nombre:           "María González",
+    documento:        "1023456789",
+    telefono:         "3001112233",
+    creditoAsignado:  2000000,
+    facturas: [
+      {
+        id:           "fac-001",
+        nroFactura:   "FAC-001",
+        valorCredito: 600000,
+        interes:      60000,      // ← interés aplicado por mora (10%)
+        fechaCredito: "2024-10-01",
+        abonos: [
+          {
+            id:          "abo-001",
+            nroAbono:    1,
+            monto:       60000,
+            fecha:       "2025-01-10",
+            medioPago:   "Efectivo",
+            observacion: "Pago interés mora",
+            tipo:        "interes",   // cubre el interés primero
+            anulado:     false,
+            createdAt:   "2025-01-10T09:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          },
+          {
+            id:          "abo-002",
+            nroAbono:    2,
+            monto:       80000,
+            fecha:       "2025-01-10",
+            medioPago:   "Efectivo",
+            observacion: "Abono a capital",
+            tipo:        "capital",   // luego al capital
+            anulado:     false,
+            createdAt:   "2025-01-10T09:05:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          }
+        ]
+      },
+      {
+        id:           "fac-002",
+        nroFactura:   "FAC-002",
+        valorCredito: 420000,
+        interes:      0,
+        fechaCredito: "2025-08-15",
+        abonos: [
+          {
+            id:          "abo-003",
+            nroAbono:    1,
+            monto:       420000,
+            fecha:       "2025-09-01",
+            medioPago:   "Transferencia",
+            observacion: "Pago total",
+            tipo:        "capital",
+            anulado:     false,
+            createdAt:   "2025-09-01T10:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          }
+        ]
+      }
+    ]
   },
+
+  /* ── 2. CARLOS RODRÍGUEZ ───────────────────────────────────────────────────
+     Vencido | Interés parcialmente pagado (queda interés pendiente)          */
   {
-    id: 2,
-    nombre: "Carlos Rodríguez",
-    documento: "1098765432",
-    telefono: "3015556677",
-    valorCredito: 1120000,
-    fechaCredito: "2025-10-19",
-    fechaVencimiento: "2025-11-19",
-    abonos: [{ id: 1, monto: 800000, fecha: "2025-10-25", anulado: false }],
+    id:               "cliente-002",
+    nombre:           "Carlos Rodríguez",
+    documento:        "9876543210",
+    telefono:         "3109876543",
+    creditoAsignado:  3000000,
+    facturas: [
+      {
+        id:           "fac-003",
+        nroFactura:   "FAC-003",
+        valorCredito: 800000,
+        interes:      80000,      // interés aplicado, solo pagaron $30.000
+        fechaCredito: "2024-09-10",
+        abonos: [
+          {
+            id:          "abo-004",
+            nroAbono:    1,
+            monto:       30000,
+            fecha:       "2024-12-05",
+            medioPago:   "Efectivo",
+            observacion: "Abono parcial interés",
+            tipo:        "interes",
+            anulado:     false,
+            createdAt:   "2024-12-05T11:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          },
+          {
+            id:          "abo-005",
+            nroAbono:    2,
+            monto:       450000,
+            fecha:       "2025-01-20",
+            medioPago:   "Transferencia",
+            observacion: "Abono capital",
+            tipo:        "capital",
+            anulado:     false,
+            createdAt:   "2025-01-20T14:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          }
+        ]
+      },
+      {
+        id:           "fac-004",
+        nroFactura:   "FAC-004",
+        valorCredito: 320000,
+        interes:      0,
+        fechaCredito: "2024-11-20",
+        abonos: []
+      }
+    ]
   },
+
+  /* ── 3. LAURA PÉREZ ────────────────────────────────────────────────────────
+     Vencido | Tiene un abono anulado                                         */
   {
-    id: 3,
-    nombre: "Laura Pérez",
-    documento: "1045678912",
-    telefono: "3024445566",
-    valorCredito: 450000,
-    fechaCredito: "2025-09-01",
-    fechaVencimiento: "2025-10-01",
-    abonos: [],
+    id:               "cliente-003",
+    nombre:           "Laura Pérez",
+    documento:        "1122334455",
+    telefono:         "3205556677",
+    creditoAsignado:  1500000,
+    facturas: [
+      {
+        id:           "fac-005",
+        nroFactura:   "FAC-005",
+        valorCredito: 770000,
+        interes:      77000,
+        fechaCredito: "2024-08-20",
+        abonos: [
+          {
+            id:          "abo-006",
+            nroAbono:    1,
+            monto:       77000,
+            fecha:       "2024-11-01",
+            medioPago:   "Efectivo",
+            observacion: "Pago interés",
+            tipo:        "interes",
+            anulado:     false,
+            createdAt:   "2024-11-01T08:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          },
+          {
+            id:          "abo-007",
+            nroAbono:    2,
+            monto:       200000,
+            fecha:       "2024-11-15",
+            medioPago:   "Transferencia",
+            observacion: "Abono capital — ANULADO",
+            tipo:        "capital",
+            anulado:     true,        // ← anulado, no se cuenta
+            createdAt:   "2024-11-15T10:00:00",
+            cancelledAt: "2024-11-16T09:00:00",
+            motivoCancelacion: "Error en el monto registrado"
+          }
+        ]
+      }
+    ]
   },
+
+  /* ── 4. ANDRÉS MARTÍNEZ ────────────────────────────────────────────────────
+     Pendiente | Sin interés, dentro del plazo                                */
   {
-    id: 4,
-    nombre: "Andrés Martínez",
-    documento: "1078945612",
-    telefono: "3007778899",
-    valorCredito: 980000,
-    fechaCredito: "2026-01-30",
-    fechaVencimiento: "2026-01-30",
-    abonos: [{ id: 1, monto: 300000, fecha: "2025-12-10", anulado: false }],
+    id:               "cliente-004",
+    nombre:           "Andrés Martínez",
+    documento:        "5544332211",
+    telefono:         "3154443322",
+    creditoAsignado:  2500000,
+    facturas: [
+      {
+        id:           "fac-006",
+        nroFactura:   "FAC-006",
+        valorCredito: 580000,
+        interes:      0,
+        fechaCredito: "2026-01-10",
+        abonos: [
+          {
+            id:          "abo-008",
+            nroAbono:    1,
+            monto:       200000,
+            fecha:       "2026-02-01",
+            medioPago:   "Efectivo",
+            observacion: "Primer abono",
+            tipo:        "capital",
+            anulado:     false,
+            createdAt:   "2026-02-01T10:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          }
+        ]
+      },
+      {
+        id:           "fac-007",
+        nroFactura:   "FAC-007",
+        valorCredito: 400000,
+        interes:      0,
+        fechaCredito: "2026-02-05",
+        abonos: [
+          {
+            id:          "abo-009",
+            nroAbono:    1,
+            monto:       180000,
+            fecha:       "2026-02-20",
+            medioPago:   "Tarjeta",
+            observacion: "Abono parcial",
+            tipo:        "capital",
+            anulado:     false,
+            createdAt:   "2026-02-20T15:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          }
+        ]
+      }
+    ]
   },
+
+  /* ── 5. CAMILA TORRES ──────────────────────────────────────────────────────
+     Al día | Todo pagado, sin interés                                        */
   {
-    id: 5,
-    nombre: "Camila Torres",
-    documento: "1033344455",
-    telefono: "3012223344",
-    valorCredito: 750000,
-    fechaCredito: "2025-08-15",
-    fechaVencimiento: "2025-09-15",
-    abonos: [{ id: 1, monto: 750000, fecha: "2025-08-20", anulado: false }],
+    id:               "cliente-005",
+    nombre:           "Camila Torres",
+    documento:        "6677889900",
+    telefono:         "3006667788",
+    creditoAsignado:  1000000,
+    facturas: [
+      {
+        id:           "fac-008",
+        nroFactura:   "FAC-008",
+        valorCredito: 750000,
+        interes:      0,
+        fechaCredito: "2025-06-01",
+        abonos: [
+          {
+            id:          "abo-010",
+            nroAbono:    1,
+            monto:       400000,
+            fecha:       "2025-07-01",
+            medioPago:   "Transferencia",
+            observacion: "Primer pago",
+            tipo:        "capital",
+            anulado:     false,
+            createdAt:   "2025-07-01T09:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          },
+          {
+            id:          "abo-011",
+            nroAbono:    2,
+            monto:       350000,
+            fecha:       "2025-07-25",
+            medioPago:   "Efectivo",
+            observacion: "Pago total restante",
+            tipo:        "capital",
+            anulado:     false,
+            createdAt:   "2025-07-25T11:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          }
+        ]
+      }
+    ]
   },
+
+  /* ── 6. JORGE RAMÍREZ ──────────────────────────────────────────────────────
+     Vencido | Interés totalmente pagado, queda capital pendiente             */
   {
-    id: 6,
-    nombre: "Jorge Ramírez",
-    documento: "1066677788",
-    telefono: "3028889900",
-    valorCredito: 520000,
-    fechaCredito: "2025-11-01",
-    fechaVencimiento: "2025-12-01",
-    abonos: [
-      { id: 1, monto: 100000, fecha: "2025-11-05", anulado: false },
-      { id: 2, monto: 50000, fecha: "2025-11-10", anulado: true },
-    ],
+    id:               "cliente-006",
+    nombre:           "Jorge Ramírez",
+    documento:        "2233445566",
+    telefono:         "3112223344",
+    creditoAsignado:  1200000,
+    facturas: [
+      {
+        id:           "fac-009",
+        nroFactura:   "FAC-009",
+        valorCredito: 520000,
+        interes:      52000,      // interés 100% pagado
+        fechaCredito: "2024-07-15",
+        abonos: [
+          {
+            id:          "abo-012",
+            nroAbono:    1,
+            monto:       52000,
+            fecha:       "2024-10-01",
+            medioPago:   "Efectivo",
+            observacion: "Pago total interés mora",
+            tipo:        "interes",   // cubre el interés completo
+            anulado:     false,
+            createdAt:   "2024-10-01T10:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          },
+          {
+            id:          "abo-013",
+            nroAbono:    2,
+            monto:       100000,
+            fecha:       "2024-10-15",
+            medioPago:   "Transferencia",
+            observacion: "Abono capital",
+            tipo:        "capital",
+            anulado:     false,
+            createdAt:   "2024-10-15T14:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          }
+        ]
+      }
+    ]
   },
+
+  /* ── 7. VALENTINA HERRERA ──────────────────────────────────────────────────
+     Vencido | Múltiples facturas, una al día y otra vencida con interés      */
   {
-    id: 7,
-    nombre: "Valentina Herrera",
-    documento: "1012345678",
-    telefono: "3009998877",
-    valorCredito: 1300000,
-    fechaCredito: "2025-07-20",
-    fechaVencimiento: "2025-08-20",
-    abonos: [{ id: 1, monto: 400000, fecha: "2025-07-25", anulado: false }],
+    id:               "cliente-007",
+    nombre:           "Valentina Herrera",
+    documento:        "3344556677",
+    telefono:         "3187776655",
+    creditoAsignado:  2000000,
+    facturas: [
+      {
+        id:           "fac-010",
+        nroFactura:   "FAC-010",
+        valorCredito: 800000,
+        interes:      0,
+        fechaCredito: "2025-05-01",
+        abonos: [
+          {
+            id:          "abo-014",
+            nroAbono:    1,
+            monto:       800000,
+            fecha:       "2025-06-15",
+            medioPago:   "Transferencia",
+            observacion: "Pago completo",
+            tipo:        "capital",
+            anulado:     false,
+            createdAt:   "2025-06-15T10:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          }
+        ]
+      },
+      {
+        id:           "fac-011",
+        nroFactura:   "FAC-011",
+        valorCredito: 900000,
+        interes:      90000,
+        fechaCredito: "2024-06-10",
+        abonos: []    // sin abonos — debe capital + interés completo
+      }
+    ]
   },
+
+  /* ── 8. SEBASTIÁN LÓPEZ ────────────────────────────────────────────────────
+     Vencido | Sin abonos en ninguna factura                                  */
   {
-    id: 8,
-    nombre: "Sebastián López",
-    documento: "1055566677",
-    telefono: "3011234567",
-    valorCredito: 890000,
-    fechaCredito: "2025-12-01",
-    fechaVencimiento: "2026-01-01",
-    abonos: [],
+    id:               "cliente-008",
+    nombre:           "Sebastián López",
+    documento:        "4455667788",
+    telefono:         "3223334455",
+    creditoAsignado:  1500000,
+    facturas: [
+      {
+        id:           "fac-012",
+        nroFactura:   "FAC-012",
+        valorCredito: 890000,
+        interes:      89000,
+        fechaCredito: "2024-05-20",
+        abonos: []
+      }
+    ]
   },
+
+  /* ── 9. DANIELA CASTRO ─────────────────────────────────────────────────────
+     Vencido | 3 facturas: al_dia + pendiente + vencida con interés           */
   {
-    id: 9,
-    nombre: "Daniela Castro",
-    documento: "1099988877",
-    telefono: "3004567890",
-    valorCredito: 800000,
-    fechaCredito: "2026-02-20",
-    fechaVencimiento: "2026-04-20", // FUTURA
-    abonos: [{ id: 1, monto: 200000, fecha: "2025-02-22", anulado: false }],
-  },
-   {
-    id: 10,
-    nombre: "Laura Pérez",
-    documento: "1045678912",
-    telefono: "3024445566",
-    valorCredito: 450000,
-    fechaCredito: "2025-09-01",
-    fechaVencimiento: "2025-10-01",
-    abonos: [],
-  },
-  {
-    id: 11,
-    nombre: "Andrés Martínez",
-    documento: "1078945612",
-    telefono: "3007778899",
-    valorCredito: 980000,
-    fechaCredito: "2026-01-30",
-    fechaVencimiento: "2026-01-30",
-    abonos: [{ id: 1, monto: 300000, fecha: "2025-12-10", anulado: false }],
-  },
-  {
-    id: 12,
-    nombre: "Camila Torres",
-    documento: "1033344455",
-    telefono: "3012223344",
-    valorCredito: 750000,
-    fechaCredito: "2025-08-15",
-    fechaVencimiento: "2025-09-15",
-    abonos: [{ id: 1, monto: 750000, fecha: "2025-08-20", anulado: false }],
-  },
-  {
-    id: 13,
-    nombre: "Jorge Ramírez",
-    documento: "1066677788",
-    telefono: "3028889900",
-    valorCredito: 520000,
-    fechaCredito: "2025-11-01",
-    fechaVencimiento: "2025-12-01",
-    abonos: [
-      { id: 1, monto: 100000, fecha: "2025-11-05", anulado: false },
-      { id: 2, monto: 50000, fecha: "2025-11-10", anulado: true },
-    ],
-  },
-  {
-    id: 14,
-    nombre: "Valentina Herrera",
-    documento: "1012345678",
-    telefono: "3009998877",
-    valorCredito: 1300000,
-    fechaCredito: "2025-07-20",
-    fechaVencimiento: "2025-08-20",
-    abonos: [{ id: 1, monto: 400000, fecha: "2025-07-25", anulado: false }],
-  },
-  {
-    id: 15,
-    nombre: "Sebastián López",
-    documento: "1055566677",
-    telefono: "3011234567",
-    valorCredito: 890000,
-    fechaCredito: "2025-12-01",
-    fechaVencimiento: "2026-01-01",
-    abonos: [],
-  },
-  {
-    id: 16,
-    nombre: "Daniela Castro",
-    documento: "1099988877",
-    telefono: "3004567890",
-    valorCredito: 800000,
-    fechaCredito: "2026-02-20",
-    fechaVencimiento: "2026-04-20", // FUTURA
-    abonos: [{ id: 1, monto: 200000, fecha: "2025-02-22", anulado: false }],
+    id:               "cliente-009",
+    nombre:           "Daniela Castro",
+    documento:        "5566778899",
+    telefono:         "3045556677",
+    creditoAsignado:  3500000,
+    facturas: [
+      {
+        id:           "fac-013",
+        nroFactura:   "FAC-013",
+        valorCredito: 400000,
+        interes:      0,
+        fechaCredito: "2025-07-01",
+        abonos: [
+          {
+            id:          "abo-015",
+            nroAbono:    1,
+            monto:       400000,
+            fecha:       "2025-08-10",
+            medioPago:   "Efectivo",
+            observacion: "Pago completo",
+            tipo:        "capital",
+            anulado:     false,
+            createdAt:   "2025-08-10T10:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          }
+        ]
+      },
+      {
+        id:           "fac-014",
+        nroFactura:   "FAC-014",
+        valorCredito: 600000,
+        interes:      0,
+        fechaCredito: "2026-01-15",
+        abonos: [
+          {
+            id:          "abo-016",
+            nroAbono:    1,
+            monto:       100000,
+            fecha:       "2026-02-01",
+            medioPago:   "Transferencia",
+            observacion: "Abono inicial",
+            tipo:        "capital",
+            anulado:     false,
+            createdAt:   "2026-02-01T09:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          }
+        ]
+      },
+      {
+        id:           "fac-015",
+        nroFactura:   "FAC-015",
+        valorCredito: 900000,
+        interes:      90000,
+        fechaCredito: "2024-04-01",
+        abonos: [
+          {
+            id:          "abo-017",
+            nroAbono:    1,
+            monto:       90000,
+            fecha:       "2024-07-01",
+            medioPago:   "Efectivo",
+            observacion: "Pago interés mora",
+            tipo:        "interes",
+            anulado:     false,
+            createdAt:   "2024-07-01T10:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          },
+          {
+            id:          "abo-018",
+            nroAbono:    2,
+            monto:       200000,
+            fecha:       "2024-08-15",
+            medioPago:   "Cheque",
+            observacion: "Abono capital",
+            tipo:        "capital",
+            anulado:     false,
+            createdAt:   "2024-08-15T11:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          }
+        ]
+      }
+    ]
   }
-];
+
+]
+
+export default mockCreditAccounts

@@ -1,3 +1,17 @@
+/**
+ * Archivo: FormClient.jsx
+ *
+ * Modal que despliega el formulario para crear o editar un cliente.
+ * Contiene lógica de estado local, validación en tiempo real y manejo
+ * de envío. También permite alternar una gráfica histórica cuando se
+ * edita un cliente existente.
+ *
+ * Props:
+ * @param {boolean} isOpen  - Controla la visibilidad del modal
+ * @param {Function} onClose - Callback al cerrar el modal
+ * @param {object|null} client - Objeto cliente para editar (null al crear)
+ * @param {Function} onSave - Función que se ejecuta con los datos validados
+ */
 import React, { useState, useEffect } from 'react';
 import { X, ChevronRight } from 'lucide-react';
 import GraphClient from './GraphClient';
@@ -6,8 +20,10 @@ import { clientsService } from '../data/clientsService';
 import { validateClientForm } from '../utils/clientHelpers';
 
 function FormClient({ isOpen, onClose, client, onSave }) {
+  // muestra/oculta sección de gráfica cuando se edita un cliente existente
   const [showGraph, setShowGraph] = useState(false);
 
+  // estado base con todos los campos del formulario
   const initialState = {
     tipoPersona: '',
     tipo: 'CC',
@@ -25,12 +41,15 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     codigoCIU: '',
   };  
 
+  // estados manejados por el formulario
   const [formData, setFormData] = useState(initialState);
-  const [errors, setErrors] = useState({});
-  const [touched, setTouched] = useState({});
+  const [errors, setErrors] = useState({});     // mensajes de validación
+  const [touched, setTouched] = useState({});   // campos visitados por el usuario
 
-  const { showSuccess } = useAlert();
+  const { showSuccess } = useAlert(); // alerta de éxito tras guardado
 
+  // cuando cambia el cliente o se abre el modal, rellenamos el formulario
+  // si venimos a editar; si es creación, se limpia todo.
   useEffect(() => {
     if (client) {
       setFormData({
@@ -50,17 +69,21 @@ function FormClient({ isOpen, onClose, client, onSave }) {
         codigoCIU: client.codigoCIU || '',
       });
       
+      // marcamos todos los campos como tocados para que los errores se muestren
       setTouched(
         Object.keys(initialState).reduce((acc, key) => ({ ...acc, [key]: true }), {})
       );
     } else {
+      // inicializar para nuevo cliente
       setFormData(initialState);
       setTouched({});
     }
 
+    // limpiar errores previos cada vez que el modal se abre o cambia el cliente
     setErrors({});
   }, [client, isOpen]);
 
+  // restaura estados al valor inicial (limpia formulario, errores y gráfica)
   const resetForm = () => {
     setFormData(initialState);
     setErrors({});
@@ -68,6 +91,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     setShowGraph(false);
   };  
 
+  // Se ejecuta en cada cambio de campo para mantener formData actualizado
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -76,7 +100,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       [name]: value,
     }));
 
-    // validate in real time if the field has been touched
+    // validación en vivo solo si el campo ya fue tocado
     if (touched[name]) {
       const validationErrors = validateClientForm({ ...formData, [name]: value });
       setErrors((prev) => ({
@@ -84,7 +108,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
         [name]: validationErrors[name] || '',
       }));
     } else if (errors[name]) {
-      // clear previous error if user modifies before touch
+      // limpiar error anterior si el usuario corrige antes de perder el foco
       setErrors((prev) => ({
         ...prev,
         [name]: '',
@@ -92,6 +116,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     }
   };
 
+  // Marca el campo como tocado y ejecuta validación completa
   const handleBlur = (e) => {
     const { name } = e.target;
     setTouched((prev) => ({
@@ -105,6 +130,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     }));
   };
 
+  // Procesa el envío del formulario
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -114,6 +140,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       Object.keys(formData).reduce((acc, key) => ({ ...acc, [key]: true }), {})
     );
 
+    // si hay errores, no continuar
     if (Object.keys(validationErrors).length > 0) return;
 
     // El crédito se enviará como está, y en el service se convertirá a '0' si está vacío
@@ -123,8 +150,10 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     onClose();
   };
 
+  // no renderear nada si el modal está cerrado
   if (!isOpen) return null;
 
+  // devuelve la clase de CSS para un campo considerando si tiene error
   const inputClass = (field) =>
     `w-full px-3 py-1.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors ${
       errors[field] && touched[field]
@@ -132,6 +161,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
 
+  // muestra el mensaje de error si el campo está tocado y tiene error
   const renderError = (field) =>
     errors[field] && touched[field] && (
       <p className="mt-0.5 text-xs text-red-600">{errors[field]}</p>

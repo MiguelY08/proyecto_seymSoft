@@ -1,4 +1,6 @@
-export default function StatusBadge({ status }) {
+import { highlight } from "../utils/paymentHelpers"
+
+export default function StatusBadge({ status, search = "" }) {
 
   const styles = {
     al_dia: "bg-green-100 text-green-700",
@@ -14,7 +16,7 @@ export default function StatusBadge({ status }) {
 
   return (
     <span className={`px-3 py-1 text-xs rounded-full font-medium ${styles[status]}`}>
-      {labels[status]}
+      {highlight(labels[status], search)}
     </span>
   )
 }

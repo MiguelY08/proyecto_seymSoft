@@ -4,12 +4,24 @@ import { Search, Download, Plus } from 'lucide-react';
 import { useAlert }             from '../../../shared/alerts/useAlert';
 import { downloadUsersExcel }   from '../helpers/usersHelpers';
 
-// ─── TopBar ───────────────────────────────────────────────────────────────────
-// users : array completo de usuarios (proviene de Users.jsx)
+/**
+ * Componente TopBar.
+ * Barra superior con buscador, botón de descarga Excel y botón para crear usuario.
+ * Maneja búsqueda en tiempo real y exportación de datos.
+ * @param {object} props - Props del componente.
+ * @param {string} props.search - Valor actual del término de búsqueda.
+ * @param {function} props.onSearchChange - Función para actualizar el término de búsqueda.
+ * @param {Array} props.users - Array completo de usuarios para exportación.
+ * @returns {JSX.Element} Barra con controles de búsqueda y acciones.
+ */
 function TopBar({ search, onSearchChange, users = [] }) {
   const navigate = useNavigate();
   const { showConfirm, showTimer, showWarning } = useAlert();
 
+  /**
+   * Maneja la descarga de usuarios en formato Excel.
+   * Valida que haya usuarios y confirma la acción antes de exportar.
+   */
   const handleDownload = () => {
     if (users.length === 0) {
       showWarning('Sin registros', 'No hay usuarios registrados para descargar.');
@@ -34,7 +46,7 @@ function TopBar({ search, onSearchChange, users = [] }) {
   return (
     <div className="flex items-center justify-between gap-2 sm:gap-4 shrink-0">
 
-      {/* Buscador */}
+      {/* Campo de búsqueda con ícono */}
       <div className="relative flex-1 sm:flex-none sm:w-72 md:w-96">
         <input
           type="text"
@@ -46,7 +58,7 @@ function TopBar({ search, onSearchChange, users = [] }) {
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" strokeWidth={2} />
       </div>
 
-      {/* Botones */}
+      {/* Botones de acción: descargar y crear usuario */}
       <div className="flex items-center gap-2 shrink-0">
         <button
           onClick={handleDownload}

@@ -1,8 +1,18 @@
+// ─── Servicio de base de datos simulada para usuarios ──────────────────────────
+/**
+ * Este archivo simula una base de datos usando localStorage para persistir usuarios.
+ * Incluye seed de datos iniciales, generación de contraseñas y operaciones CRUD.
+ * En producción, reemplazar con API backend.
+ */
+
 const STORAGE_KEY = "users";
 const SEED_VERSION = "users_v5";
 
-
 // ─── Generador de contraseña automática ───────────────────────────
+/**
+ * Genera una contraseña aleatoria de 10 caracteres: 2 letras, 2 dígitos y 6 caracteres mixtos, mezclados.
+ * @returns {string} Contraseña generada.
+ */
 const generatePassword = () => {
 
   const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -27,8 +37,10 @@ const generatePassword = () => {
 
 };
 
-
 // ─── Tipos de cliente ─────────────────────────────────────────────
+/**
+ * Lista de tipos de cliente disponibles en el sistema.
+ */
 export const CLIENT_TYPES = [
   "Detal",
   "Mayorista",
@@ -36,8 +48,11 @@ export const CLIENT_TYPES = [
   "Por paca"
 ];
 
-
 // ─── Usuarios iniciales del sistema ───────────────────────────────
+/**
+ * Datos seed para inicializar la base de datos con usuarios de ejemplo.
+ * Incluye variedad de tipos de documento y estados.
+ */
 const SEED_USERS = [
 
   // ── Usuarios con rol administrativo ───────────────────────────
@@ -260,8 +275,10 @@ const SEED_USERS = [
 
 ];
 
-
 // ─── Sembrar base de datos si está vacía ──────────────────────────
+/**
+ * Inicializa localStorage con datos seed si está vacío o la versión cambió.
+ */
 const seedUsers = () => {
   try {
     const currentVersion = localStorage.getItem(`${STORAGE_KEY}_seed_version`);
@@ -287,10 +304,15 @@ const seedUsers = () => {
 
 seedUsers();
 
-
 // ─── Servicio de usuarios ─────────────────────────────────────────
+/**
+ * Objeto que simula operaciones de base de datos para usuarios.
+ */
 export const UsersDB = {
-  // Obtener usuarios
+  /**
+   * Obtiene la lista completa de usuarios desde localStorage.
+   * @returns {Array} Lista de usuarios.
+   */
   list() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -300,8 +322,10 @@ export const UsersDB = {
     }
   },
 
-
-  // Guardar
+  /**
+   * Guarda la lista de usuarios en localStorage.
+   * @param {Array} users - Lista de usuarios a guardar.
+   */
   _save(users) {
     localStorage.setItem(
       STORAGE_KEY,
@@ -309,38 +333,46 @@ export const UsersDB = {
     );
   },
 
+  /**
+   * Crea un nuevo usuario con ID generado y contraseña automática.
+   * @param {object} userData - Datos del usuario a crear.
+   * @returns {object} Usuario creado.
+   */
+  create(userData) {
+    const users = this.list();
 
-// Crear usuario (panel administrativo)
-create(userData) {
-  const users = this.list();
+    const newId =
+      users.length > 0
+        ? Math.max(...users.map((u) => u.id)) + 1
+        : 1;
 
-  const newId =
-    users.length > 0
-      ? Math.max(...users.map((u) => u.id)) + 1
-      : 1;
+    const password = generatePassword();
+    console.log(` Contraseña generada para "${userData.name}":`, password);
 
-  const password = generatePassword();
-  console.log(` Contraseña generada para "${userData.name}":`, password);
+    const newUser = {
+      id:           newId,
+      name:         userData.name,
+      documentType: userData.documentType,
+      document:     userData.document,
+      email:        userData.email.trim().toLowerCase(),
+      phone:        userData.phone,
+      role:         userData.role || null,
+      clientType:   "Detal",
+      active:       true,
+      password,
+      createdAt:    new Date().toISOString()
+    };
 
-  const newUser = {
-    id:           newId,
-    name:         userData.name,
-    documentType: userData.documentType,
-    document:     userData.document,
-    email:        userData.email.trim().toLowerCase(),
-    phone:        userData.phone,
-    role:         userData.role || null,
-    clientType:   "Detal",
-    active:       true,
-    password,
-    createdAt:    new Date().toISOString()
-  };
+    this._save([...users, newUser]);
+    return newUser;
+  },
 
-  this._save([...users, newUser]);
-  return newUser;
-},
-
-  // Actualizar usuario
+  /**
+   * Actualiza un usuario existente con los cambios proporcionados.
+   * @param {number} id - ID del usuario a actualizar.
+   * @param {object} changes - Cambios a aplicar.
+   * @returns {Array} Lista actualizada de usuarios.
+   */
   update(id, changes) {
     const users = this.list();
     const updated = users.map((u) =>
@@ -356,8 +388,11 @@ create(userData) {
     return updated;
   },
 
-
-  // Activar / desactivar usuario
+  /**
+   * Alterna el estado activo/inactivo de un usuario.
+   * @param {number} id - ID del usuario.
+   * @returns {Array} Lista actualizada de usuarios.
+   */
   toggle(id) {
     const users = this.list();
     const updated = users.map((u) =>
@@ -369,8 +404,11 @@ create(userData) {
     return updated;
   },
 
-
-  // Eliminar usuario
+  /**
+   * Elimina un usuario de la lista.
+   * @param {number} id - ID del usuario a eliminar.
+   * @returns {Array} Lista actualizada de usuarios.
+   */
   delete(id) {
     const users = this.list().filter(
       (u) => u.id !== id
@@ -379,7 +417,6 @@ create(userData) {
     return users;
   }
 };
-
 
 // ─── Exportaciones ────────────────────────────────────────────────
 export { generatePassword };

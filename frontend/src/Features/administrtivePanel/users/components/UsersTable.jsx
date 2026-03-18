@@ -4,12 +4,22 @@ import { Info, SquarePen, Trash2, Users, Plus } from 'lucide-react';
 import { useAlert }          from '../../../shared/alerts/useAlert';
 import { highlight, highlightEstado } from '../helpers/usersHelpers';
 
-
-// ─── Toggle activo/inactivo ───────────────────────────────────────────────────
+/**
+ * Componente ActiveToggle.
+ * Toggle visual para activar/desactivar usuarios con confirmación para desactivación.
+ * @param {object} props - Props del componente.
+ * @param {boolean} props.activo - Estado actual del usuario (activo/inactivo).
+ * @param {function} props.onChange - Función a ejecutar al cambiar estado.
+ * @param {string} props.search - Término de búsqueda para resaltar estado.
+ * @returns {JSX.Element} Toggle con animación y confirmación.
+ */
 function ActiveToggle({ activo, onChange, search }) {
   const { showConfirm, showSuccess } = useAlert();
   const estadoResaltado = highlightEstado(activo, search);
 
+  /**
+   * Maneja el clic en el toggle, con confirmación para desactivar.
+   */
   const handleClick = () => {
     if (activo) {
       showConfirm('warning', '¿Está seguro que desea desactivar este usuario?', '', {
@@ -51,8 +61,13 @@ function ActiveToggle({ activo, onChange, search }) {
   );
 }
 
-
-// ─── Empty State ──────────────────────────────────────────────────────────────
+/**
+ * Componente EmptyState.
+ * Muestra estado vacío cuando no hay usuarios o resultados de búsqueda.
+ * @param {object} props - Props del componente.
+ * @param {boolean} props.isSearching - Indica si se está buscando (afecta el mensaje).
+ * @returns {JSX.Element} Mensaje y botón para crear usuario si no hay datos.
+ */
 function EmptyState({ isSearching }) {
   const navigate = useNavigate();
   return (
@@ -86,13 +101,28 @@ function EmptyState({ isSearching }) {
   );
 }
 
-
-// ─── UsersTable ───────────────────────────────────────────────────────────────
+/**
+ * Componente UsersTable.
+ * Tabla principal para mostrar lista de usuarios con acciones CRUD.
+ * Incluye paginación, búsqueda resaltada, y estados vacío.
+ * @param {object} props - Props del componente.
+ * @param {Array} props.data - Lista de usuarios a mostrar.
+ * @param {function} props.onDelete - Función para eliminar usuario.
+ * @param {function} props.onToggle - Función para activar/desactivar usuario.
+ * @param {string} props.search - Término de búsqueda para resaltar.
+ * @param {number} props.totalData - Total de usuarios (para determinar si es búsqueda).
+ * @param {number} props.offset - Offset para numeración de filas.
+ * @returns {JSX.Element} Tabla con usuarios o estado vacío.
+ */
 function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0, offset = 0 }) {
   const navigate = useNavigate();
   const { showConfirm, showSuccess, showWarning } = useAlert();
 
-  // ─── Eliminar usuario ─────────────────────────────────────────────────────
+  /**
+   * Maneja eliminación de usuario con validaciones y confirmación.
+   * Verifica si está activo y si tiene ventas asociadas.
+   * @param {object} row - Datos del usuario a eliminar.
+   */
   const handleDelete = (row) => {
     if (row.active) {
       showWarning(
@@ -102,7 +132,7 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
       return;
     }
 
-    // Verificar ventas asociadas
+    // Verificar ventas asociadas desde localStorage
     const ventas = (() => {
       try {
         const stored = localStorage.getItem('pm_sales');
@@ -139,6 +169,7 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
     });
   };
 
+  // Renderizar estado vacío si no hay datos
   if (data.length === 0) {
     return <EmptyState isSearching={totalData > 0 && search.trim().length > 0} />;
   }
@@ -146,6 +177,7 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
   return (
     <div className="flex-1 overflow-x-auto rounded-xl shadow-md min-h-0">
       <table className="min-w-max w-full">
+        {/* Header de la tabla con columnas fijas */}
         <thead className="bg-[#004D77] text-white">
           <tr>
             <th className="sticky left-0 z-10 bg-[#004D77] px-3 py-2.5 text-center text-xs font-semibold">#</th>
@@ -159,14 +191,17 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
           </tr>
         </thead>
 
+        {/* Cuerpo de la tabla con filas de usuarios */}
         <tbody>
           {data.map((row, index) => {
             const rowBg = index % 2 === 0 ? 'bg-white' : 'bg-gray-100';
             return (
               <tr key={row.id} className={`transition-colors duration-150 ${rowBg}`}>
+                {/* Número de fila con offset para paginación */}
                 <td className={`sticky left-0 z-10 ${rowBg} px-3 py-1.5 text-center text-xs text-gray-500 font-medium`}>
                   {offset + index + 1}
                 </td>
+                {/* Datos del usuario con resaltado de búsqueda */}
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                   <span className="font-medium">{highlight(row.documentType, search)}</span>
                   {' '}
@@ -187,8 +222,10 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(row.clientType ?? 'Detal', search)}
                 </td>
+                {/* Acciones: info, editar, toggle activo, eliminar */}
                 <td className="px-3 py-1.5">
                   <div className="flex items-center justify-center gap-1 sm:gap-1.5">
+                    {/* Botón de información */}
                     <button
                       onClick={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
@@ -205,6 +242,7 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                       <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                     </button>
 
+                    {/* Botón de editar */}
                     <button
                       onClick={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
@@ -221,12 +259,14 @@ function UsersTable({ data = [], onDelete, onToggle, search = '', totalData = 0,
                       <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                     </button>
 
+                    {/* Toggle activo/inactivo */}
                     <ActiveToggle
                       activo={row.active}
                       onChange={() => onToggle?.(row.id)}
                       search={search}
                     />
 
+                    {/* Botón de eliminar */}
                     <button
                       onClick={() => handleDelete(row)}
                       className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"

@@ -10,44 +10,63 @@ import SaleDetailRow         from '../components/SaleDetailRow';
 const MOTIVO_MAX = 500;
 const MOTIVO_MIN = 10;
 
-// ─── AnnularSale ──────────────────────────────────────────────────────────────
+/**
+ * Componente modal para anular una venta existente.
+ * Permite al usuario ingresar un motivo de anulación, valida la entrada y confirma la acción.
+ * Al confirmar, anula la venta, restaura el stock de productos y navega de vuelta a la lista de ventas.
+ *
+ * @component
+ * @param {Object} props - Propiedades del componente (ninguna requerida, usa location.state).
+ * @returns {JSX.Element|null} El modal de anulación o null si no hay venta.
+ */
 function AnnularSale() {
   const navigate  = useNavigate();
   const location  = useLocation();
   const { showSuccess } = useAlert();
 
+  // Obtener datos de la venta y origen desde el estado de navegación
   const sale   = location.state?.sale   ?? null;
   const origin = location.state?.origin ?? null;
 
+  // Hook para manejar la animación y cierre del modal
   const { visible, handleClose } = useModalAnimation('/admin/sales');
 
+  // Calcular el origen de transformación para la animación
   const transformOrigin = origin
     ? `${origin.x}px ${origin.y}px`
     : 'center center';
 
+  // Estado para el motivo de anulación y validación
   const [motivo,  setMotivo]  = useState('');
   const [touched, setTouched] = useState(false);
 
+  // Validación del motivo: debe tener al menos MOTIVO_MIN caracteres
   const motivoError = touched && motivo.trim().length < MOTIVO_MIN
     ? `El motivo debe tener al menos ${MOTIVO_MIN} caracteres.`
     : '';
 
   // ─── Calcular totales ─────────────────────────────────────────────────────
+  // Calcular subtotal, IVA y total basado en los items de la venta
   const items    = sale?.items ?? [];
   const subtotal = items.reduce((acc, i) => acc + i.product.precioDetalle * i.cantidad, 0);
   const iva      = Math.round(subtotal * 0.19);
   const total    = subtotal + iva;
 
-  // ─── Confirmar anulación ──────────────────────────────────────────────────
+  /**
+   * Maneja la confirmación de anulación de la venta.
+   * Valida el motivo, anula la venta en la base de datos y muestra un mensaje de éxito.
+   */
   const handleConfirm = () => {
     setTouched(true);
     if (motivo.trim().length < MOTIVO_MIN) return;
 
+    // Anular la venta y restaurar stock
     SalesDB.anular(sale.id, motivo.trim());
     showSuccess('Venta anulada', `La venta No. ${sale.factura} ha sido anulada exitosamente.`);
     navigate('/admin/sales');
   };
 
+  // Si no hay venta, cerrar el modal
   if (!sale) {
     handleClose();
     return null;
@@ -69,7 +88,7 @@ function AnnularSale() {
         className={`bg-white rounded-lg shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden max-h-[90vh]
           ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
       >
-        {/* Header */}
+        {/* Header del modal con título y botón de cierre */}
         <div className="flex items-center justify-between px-6 py-4 bg-red-600 shrink-0">
           <div className="flex items-center gap-2.5">
             <XCircle className="w-5 h-5 text-white" strokeWidth={2} />
@@ -86,7 +105,7 @@ function AnnularSale() {
           </button>
         </div>
 
-        {/* Aviso */}
+        {/* Aviso de que la acción es permanente */}
         <div className="flex items-start gap-3 px-6 py-3 bg-red-50 border-b border-red-100 shrink-0">
           <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" strokeWidth={2} />
           <p className="text-xs text-red-700 leading-relaxed">
@@ -95,11 +114,11 @@ function AnnularSale() {
           </p>
         </div>
 
-        {/* Body */}
+        {/* Cuerpo del modal con detalles y productos */}
         <div className="overflow-y-auto flex-1">
           <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-200">
 
-            {/* Columna izquierda: Detalles + Motivo */}
+            {/* Columna izquierda: Detalles de la venta y motivo */}
             <div className="px-6 py-5 flex flex-col gap-5">
 
               {/* Detalles de la venta */}
@@ -122,7 +141,7 @@ function AnnularSale() {
                 )}
               </div>
 
-              {/* Motivo de anulación */}
+              {/* Campo para ingresar el motivo de anulación */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Motivo de anulación <span className="text-red-500">*</span>
@@ -154,13 +173,13 @@ function AnnularSale() {
               </div>
             </div>
 
-            {/* Columna derecha: Productos */}
+            {/* Columna derecha: Lista de productos */}
             <div className="px-6 py-5 flex flex-col">
               <p className="text-sm font-bold text-gray-700 mb-3">Productos del pedido</p>
 
               {items.length > 0 ? (
                 <>
-                  {/* Encabezado tabla */}
+                  {/* Encabezado de la tabla de productos */}
                   <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 pb-1.5 border-b-2 border-gray-200 mb-1">
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Producto</span>
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide text-right">Cant</span>
@@ -197,7 +216,7 @@ function AnnularSale() {
                     ))}
                   </div>
 
-                  {/* Totales */}
+                  {/* Sección de totales */}
                   <div className="mt-auto border-t border-gray-200 pt-3 flex flex-col gap-1.5">
                     <div className="flex justify-between">
                       <span className="text-xs font-semibold text-gray-500">Subtotal</span>
@@ -227,7 +246,7 @@ function AnnularSale() {
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer con botones de acción */}
         <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
           <button
             onClick={handleClose}

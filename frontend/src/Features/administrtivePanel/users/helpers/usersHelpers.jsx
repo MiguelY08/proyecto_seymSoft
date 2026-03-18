@@ -1,12 +1,32 @@
 import * as XLSX from 'xlsx';
 
+// ─── Archivo de utilidades para el módulo de usuarios ──────────────────────────
+/**
+ * Este archivo contiene funciones auxiliares para el manejo de usuarios:
+ * - Normalización de texto
+ * - Filtrado y búsqueda
+ * - Resaltado de texto en búsquedas
+ * - Formateo de fechas
+ * - Exportación a Excel
+ */
 
 // ─── Normalizar texto (quitar tildes, minúsculas) ─────────────────────────────
+/**
+ * Normaliza un string: convierte a minúsculas, quita acentos y espacios extra.
+ * Útil para comparaciones case-insensitive y sin acentos.
+ * @param {string} str - El texto a normalizar.
+ * @returns {string} Texto normalizado.
+ */
 export const normalizar = (str) =>
   str.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-
 // ─── Dividir nombre completo en nombres y apellidos ───────────────────────────
+/**
+ * Divide un nombre completo en nombres y apellidos.
+ * Si hay 3 o más palabras, divide por la mitad; de lo contrario, toma la primera como nombre.
+ * @param {string} fullName - Nombre completo del usuario.
+ * @returns {object} Objeto con propiedades 'nombres' y 'apellidos'.
+ */
 export const splitName = (fullName = '') => {
   const palabras = fullName.trim().split(/\s+/).filter(Boolean);
   const mitad    = palabras.length >= 3 ? Math.ceil(palabras.length / 2) : palabras.length;
@@ -16,8 +36,15 @@ export const splitName = (fullName = '') => {
   };
 };
 
-
 // ─── Filtrar usuarios por término de búsqueda ────────────────────────────────
+/**
+ * Filtra una lista de usuarios basada en un término de búsqueda.
+ * Busca en campos como documento, nombre, email, teléfono, rol, tipo de cliente y estado.
+ * Soporta términos como "activo" o "inactivo".
+ * @param {Array} data - Lista de usuarios.
+ * @param {string} search - Término de búsqueda.
+ * @returns {Array} Lista filtrada de usuarios.
+ */
 export const filterUsers = (data, search) => {
   const term = search.toLowerCase().trim();
   if (!term) return data;
@@ -42,8 +69,14 @@ export const filterUsers = (data, search) => {
   });
 };
 
-
 // ─── Resaltador de texto ──────────────────────────────────────────────────────
+/**
+ * Resalta un término en un texto usando JSX <mark>.
+ * Útil para mostrar resultados de búsqueda resaltados.
+ * @param {string} text - Texto original.
+ * @param {string} term - Término a resaltar.
+ * @returns {Array|string} Texto con partes resaltadas o texto original.
+ */
 export const highlight = (text, term) => {
   if (!term || !term.trim()) return text;
   const regex = new RegExp(`(${term.trim()})`, 'gi');
@@ -55,8 +88,13 @@ export const highlight = (text, term) => {
   );
 };
 
-
 // ─── Resaltador para estado activo/inactivo ───────────────────────────────────
+/**
+ * Resalta el estado "Activo" o "Inactivo" si coincide con el término de búsqueda.
+ * @param {boolean} activo - Estado del usuario.
+ * @param {string} term - Término de búsqueda.
+ * @returns {JSX.Element|null} Elemento resaltado o null si no coincide.
+ */
 export const highlightEstado = (activo, term) => {
   const estadoTexto  = activo ? 'Activo' : 'Inactivo';
   const termosEstado = ['activo', 'activos', 'inactivo', 'inactivos'];
@@ -71,8 +109,12 @@ export const highlightEstado = (activo, term) => {
   );
 };
 
-
 // ─── Formatear fecha a formato local colombiano ───────────────────────────────
+/**
+ * Formatea una fecha ISO a formato colombiano (dd/mm/yyyy).
+ * @param {string} dateString - Fecha en formato ISO.
+ * @returns {string} Fecha formateada o '—' si no válida.
+ */
 export const formatDate = (dateString) => {
   if (!dateString) return '—';
   return new Date(dateString).toLocaleDateString('es-CO', {
@@ -80,8 +122,12 @@ export const formatDate = (dateString) => {
   });
 };
 
-
 // ─── Mapear usuarios a filas legibles para Excel ─────────────────────────────
+/**
+ * Convierte una lista de usuarios a filas para exportación Excel.
+ * @param {Array} users - Lista de usuarios.
+ * @returns {Array} Filas formateadas para Excel.
+ */
 const buildExcelRows = (users) =>
   users.map((u) => ({
     'ID':                 u.id,
@@ -96,8 +142,13 @@ const buildExcelRows = (users) =>
     'Registrado Desde':   formatDate(u.createdAt),
   }));
 
-
 // ─── Descargar Excel de usuarios ─────────────────────────────────────────────
+/**
+ * Genera y descarga un archivo Excel con la lista de usuarios.
+ * Incluye anchos de columna predefinidos para legibilidad.
+ * @param {Array} users - Lista de usuarios a exportar.
+ * @returns {boolean} True si se descargó, false si no hay usuarios.
+ */
 export const downloadUsersExcel = (users) => {
   if (!users || users.length === 0) return false;
 

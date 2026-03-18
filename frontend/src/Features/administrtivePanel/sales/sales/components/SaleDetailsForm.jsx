@@ -7,6 +7,11 @@ import { METODOS_PAGO, ESTADOS_VENTA, ENTREGAS }   from '../helpers/salesHelpers
 const MAX_DIRECCION = 250;
 
 // ─── Campo de solo lectura ────────────────────────────────────────────────────
+/**
+ * Componente para mostrar un campo de solo lectura.
+ * @param {Object} props - Propiedades del componente.
+ * @param {string} props.value - Valor a mostrar.
+ */
 function ReadonlyField({ value }) {
   return (
     <div className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed select-none">
@@ -16,6 +21,19 @@ function ReadonlyField({ value }) {
 }
 
 // ─── Select con buscador integrado ────────────────────────────────────────────
+/**
+ * Componente de select con funcionalidad de búsqueda integrada.
+ * Permite filtrar opciones escribiendo en un input.
+ *
+ * @param {Object} props - Propiedades del componente.
+ * @param {string} props.value - Valor seleccionado.
+ * @param {Function} props.onChange - Función para cambiar el valor.
+ * @param {Array} props.options - Lista de opciones.
+ * @param {string} props.placeholder - Placeholder del input.
+ * @param {boolean} props.error - Indica si hay error.
+ * @param {Function} props.getLabel - Función para obtener el label de una opción.
+ * @param {Function} props.getValue - Función para obtener el valor de una opción.
+ */
 function SearchableSelect({ value, onChange, options, placeholder, error, getLabel, getValue }) {
   const [open,  setOpen]  = useState(false);
   const [query, setQuery] = useState('');
@@ -105,6 +123,18 @@ function SearchableSelect({ value, onChange, options, placeholder, error, getLab
 }
 
 // ─── Select simple ────────────────────────────────────────────────────────────
+/**
+ * Componente de select simple sin búsqueda.
+ *
+ * @param {Object} props - Propiedades del componente.
+ * @param {string} props.name - Nombre del campo.
+ * @param {string} props.value - Valor seleccionado.
+ * @param {Function} props.onChange - Función para cambiar el valor.
+ * @param {Array} props.options - Lista de opciones.
+ * @param {string} props.placeholder - Placeholder del select.
+ * @param {boolean} props.error - Indica si hay error.
+ * @param {boolean} props.disabled - Indica si está deshabilitado.
+ */
 function SimpleSelect({ name, value, onChange, options, placeholder, error, disabled }) {
   return (
     <div className="relative">
@@ -135,8 +165,111 @@ function SimpleSelect({ name, value, onChange, options, placeholder, error, disa
   );
 }
 
+// ─── Estilos de badge por estado ─────────────────────────────────────────────
+const ESTADO_STYLES = {
+  'Aprobada':        { badge: 'bg-green-100 text-green-700 border-green-300',  dot: 'bg-green-500'  },
+  'Esp. aprobación': { badge: 'bg-yellow-100 text-yellow-700 border-yellow-300', dot: 'bg-yellow-500' },
+  'Anulada':         { badge: 'bg-red-100 text-red-400 border-red-200',        dot: 'bg-red-400'    },
+  'Desaprobada':     { badge: 'bg-red-100 text-red-600 border-red-300',        dot: 'bg-red-600'    },
+};
+
+// ─── Select de estado con badges coloreados ───────────────────────────────────
+/**
+ * Componente de select para estados de venta con badges coloreados.
+ *
+ * @param {Object} props - Propiedades del componente.
+ * @param {string} props.value - Valor seleccionado.
+ * @param {Function} props.onChange - Función para cambiar el valor.
+ * @param {Array} props.options - Lista de opciones de estado.
+ * @param {string} props.placeholder - Placeholder del select.
+ * @param {boolean} props.error - Indica si hay error.
+ */
+function StatusSelect({ value, onChange, options, placeholder, error }) {
+  const [open, setOpen] = useState(false);
+  const ref             = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const selected = ESTADO_STYLES[value];
+
+  return (
+    <div ref={ref} className="relative">
+      {/* Trigger */}
+      <button
+        type="button"
+        onClick={() => setOpen((p) => !p)}
+        className={`w-full flex items-center justify-between px-4 py-2.5 text-sm border rounded-lg bg-white transition-colors duration-200 ${
+          error
+            ? 'border-red-500 ring-2 ring-red-200'
+            : open
+              ? 'border-[#004D77] ring-2 ring-[#004D77]/20'
+              : 'border-gray-300 hover:border-gray-400'
+        }`}
+      >
+        {value && selected ? (
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${selected.badge}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${selected.dot}`} />
+            {value}
+          </span>
+        ) : (
+          <span className="text-gray-400">{placeholder}</span>
+        )}
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} strokeWidth={2} />
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+          <ul className="py-1">
+            {options.map((estado) => {
+              const style     = ESTADO_STYLES[estado];
+              const isSelected = estado === value;
+              return (
+                <li
+                  key={estado}
+                  onClick={() => { onChange('estado', estado); setOpen(false); }}
+                  className={`flex items-center justify-between px-4 py-2.5 cursor-pointer transition-colors duration-150 ${
+                    isSelected ? 'bg-gray-50' : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${style?.badge}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${style?.dot}`} />
+                    {estado}
+                  </span>
+                  {isSelected && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#004D77]" />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── SaleDetailsForm ──────────────────────────────────────────────────────────
-// isAnulada: true cuando la venta ya fue anulada → Estado se bloquea permanentemente
+/**
+ * Componente principal para el formulario de detalles de venta.
+ * Maneja la selección de cliente, vendedor, método de pago, estado, entrega y dirección.
+ * Soporta modo de edición y anulación.
+ *
+ * @param {Object} props - Propiedades del componente.
+ * @param {Object} props.form - Datos del formulario.
+ * @param {Function} props.onChange - Función para cambiar valores del formulario.
+ * @param {Object} props.errors - Errores de validación.
+ * @param {boolean} props.isEditing - Indica si está en modo edición.
+ * @param {boolean} props.isAnulada - Indica si la venta está anulada.
+ * @param {string} [props.motivoAnulacion=''] - Motivo de anulación.
+ * @param {string} [props.fechaAnulacion=''] - Fecha de anulación.
+ */
 function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoAnulacion = '', fechaAnulacion = '' }) {
   const navigate = useNavigate();
 
@@ -167,7 +300,7 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
   const activeVendors = users.filter((u) => u.activo && (u.rol === 'Empleado' || u.rol === 'Administrador' || u.rol === 'Nulo'));
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-lg border border-gray-200">
 
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gray-50">
@@ -268,10 +401,9 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
               </>
             ) : (
               <>
-                <SimpleSelect
-                  name="estado"
+                <StatusSelect
                   value={form.estado}
-                  onChange={handleChange}
+                  onChange={onChange}
                   options={ESTADOS_VENTA}
                   placeholder="Elija un estado"
                   error={errors?.estado}

@@ -92,32 +92,27 @@ export default function LoginForm() {
 
     try {
 
-      // intentar autenticar usuario
       const session = loginUser(
         formData.email,
         formData.password
       );
 
       console.log("SESSION GENERADA:", session);
+      console.log("ROL DEL USUARIO:", session.user.role);
+      console.log("REDIRECT TO:", session.redirectTo);
 
-      // guardar sesión en almacenamiento
       saveSession(session);
-
-      // actualizar contexto global
       setUser(session.user);
 
-      // alerta de éxito
       showSuccess(
         "Inicio de sesión exitoso",
-        `Bienvenido ${session.user.nombre}`
+        `Bienvenido ${session.user.name}`
       );
 
-      // redirigir al panel administrativo
-      navigate("/admin");
+      navigate(session.redirectTo);
 
     } catch (error) {
 
-      // mostrar alerta si credenciales son incorrectas
       showError(
         "Error de autenticación",
         error.message
@@ -129,8 +124,7 @@ export default function LoginForm() {
 
     }
 
-  };
-
+  } ;
 
   /* ========================================================================== 
      inputStyle
