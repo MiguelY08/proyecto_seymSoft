@@ -129,7 +129,7 @@ export const Purchases = () => {
 
   return (
     <>
-    <div className="px-4 md:px-0 max-w-7xl mx-auto">
+    <div className="h-full flex flex-col gap-2 p-3 sm:p-4">
 
       <div className="flex items-end justify-between">
 

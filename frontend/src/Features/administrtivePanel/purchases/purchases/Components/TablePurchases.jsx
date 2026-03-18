@@ -1,16 +1,15 @@
 import React from "react";
 import { Info, RefreshCw, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
 
-
 const highlightText = (text, search) => {
-  if (!search) return text;
+  if (!search || !text) return text;
 
   const regex = new RegExp(`(${search})`, "gi");
-  const parts = text.split(regex);
+  const parts = text.toString().split(regex);
 
   return parts.map((part, index) =>
     part.toLowerCase() === search.toLowerCase() ? (
-      <span key={index} className="bg-[#004d7726] text-[#004D77]  rounded px-1">
+      <span key={index} className="bg-[#004d7726] text-[#004D77] rounded px-0.5">
         {part}
       </span>
     ) : (
@@ -18,7 +17,6 @@ const highlightText = (text, search) => {
     )
   );
 };
-
 
 export const PurchasesTable = ({
   currentData,
@@ -33,135 +31,133 @@ export const PurchasesTable = ({
   handleReturn,
   search,
 }) => {
-
   return (
     <>
-      <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
-        <div className="overflow-x-auto">
-          <table className="min-w-full w-full text-xs">
-            <thead className="bg-[#004D77] text-white">
+      <div className="overflow-x-auto rounded-xl shadow-md min-h-0 mb-4">
+        <table className="w-full" style={{ tableLayout: "fixed" }}>
+          <colgroup>
+            <col style={{ width: "4%" }}  />
+            <col style={{ width: "12%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "25%" }} />
+            <col style={{ width: "9%" }}  />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "14%" }} />
+            <col style={{ width: "14%" }} />
+          </colgroup>
+
+          <thead className="bg-[#004D77] text-white">
+            <tr>
+              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">#</th>
+              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">No. Facturación</th>
+              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Fecha compra</th>
+              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Proveedor</th>
+              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Cantidad</th>
+              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Precio</th>
+              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Estado</th>
+              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {!currentData.length ? (
               <tr>
-                <th className="px-3 py-2 text-center font-semibold">#</th>
-                <th className="px-3 py-2 text-left font-semibold">
-                  No. Facturación
-                </th>
-                <th className="px-3 py-2 text-left font-semibold">
-                  Fecha compra
-                </th>
-                <th className="px-3 py-2 text-left font-semibold">
-                  Proveedor
-                </th>
-                <th className="px-3 py-2 text-center font-semibold">
-                  Cantidad
-                </th>
-                <th className="px-3 py-2 text-right font-semibold">
-                  Precio
-                </th>
-                <th className="px-3 py-2 text-center font-semibold">
-                  Estado
-                </th>
-                <th className="px-3 py-2 text-center font-semibold">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {currentData.map((compra, index) => (
-                <tr
-                  key={compra.id}
-                  className={
-                    index % 2 === 0
-                      ? "bg-[#FFFFFF] hover:bg-gray-50"
-                      : "bg-gray-50 hover:bg-gray-100"
-                  }
-                >
-                  <td className="px-3 py-2.5 text-center">
-                    {startIndex + index + 1}
-                  </td>
-                  <td className="px-3 py-2.5">
-                     {highlightText(compra.numeroFacturacion || "", search)}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    {compra.fechaCompra}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    {highlightText(compra.proveedor || "", search)}
-                  </td>
-                  <td className="px-3 py-2.5 text-center">
-                    {highlightText(
-                      compra.cantidadProductos?.toString() || "",
-                      search
-                    )}
-                  </td>
-
-                  <td className="px-3 py-2.5 text-right">
-                  $
-                  {highlightText(
-                    Number(compra.precioTotal).toLocaleString(),
-                    search
-                  )}
+                <td colSpan={8} className="py-8 text-center text-sm text-gray-400">
+                  No se encontraron compras.
                 </td>
+              </tr>
+            ) : (
+              currentData.map((compra, index) => {
+                const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-100";
+                const recordNumber = startIndex + index + 1;
 
-                  <td className="px-3 py-2.5 text-center">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        compra.estado === "Completada"
-                          ? "bg-green-100 text-green-700"
-                          : compra.estado === "Anulada"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-yellow-100 text-yellow-700"
-                      }`}
-                    >
-                      {highlightText(compra.estado || "Devuelta", search)}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2.5 text-center">
-                    <div className="flex justify-center gap-2">
-                      <button
-                        onClick={() => handleViewDetail(compra)}
-                        className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-110 cursor-pointer"
-                      >
-                        <Info size={16} />
-                      </button>
-
-                      <button
-                        onClick={() => handleReturn?.(compra)}
-                        disabled={compra.estado === "Anulada"}
-                        title={
-                          compra.estado === "Anulada"
-                            ? "No se puede devolver una compra anulada"
-                            : "Registrar devolución"
-                        }
-                        className={`transition-all duration-200 transform ${
-                          compra.estado === "Anulada"
-                            ? "text-gray-200 cursor-not-allowed"
-                            : "text-gray-400 hover:text-yellow-600 hover:scale-110 cursor-pointer"
+                return (
+                  <tr key={compra.id} className={`transition-colors duration-150 ${rowBg}`}>
+                    {/* # */}
+                    <td className="px-3 py-2 text-center text-xs text-gray-500 font-medium whitespace-nowrap">
+                      {recordNumber}
+                    </td>
+                    {/* No. Facturación */}
+                    <td className="px-3 py-2 text-center text-xs text-gray-700 truncate">
+                      {highlightText(compra.numeroFacturacion || "", search)}
+                    </td>
+                    {/* Fecha */}
+                    <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                      {compra.fechaCompra}
+                    </td>
+                    {/* Proveedor */}
+                    <td className="px-3 py-2 text-center text-xs text-gray-800 font-medium truncate">
+                      {highlightText(compra.proveedor || "", search)}
+                    </td>
+                    {/* Cantidad */}
+                    <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                      {highlightText(compra.cantidadProductos?.toString() || "", search)}
+                    </td>
+                    {/* Precio */}
+                    <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                      ${highlightText(Number(compra.precioTotal).toLocaleString(), search)}
+                    </td>
+                    {/* Estado */}
+                    <td className="px-3 py-2 text-center text-xs whitespace-nowrap">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          compra.estado === "Completada"
+                            ? "bg-green-100 text-green-700"
+                            : compra.estado === "Anulada"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-yellow-100 text-yellow-700"
                         }`}
                       >
-                        <RefreshCw size={16} />
-                      </button>
-
-                      <button
-                        onClick={() => handleCancel(compra.id)}
-                        className="text-gray-400 hover:text-red-600 transition-all duration-200 transform hover:scale-110 cursor-pointer"
-                      >
-                        <XCircle size={16} />
-                      </button>
-                    </div>
-                  </td>
-
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                        {highlightText(compra.estado || "Devuelta", search)}
+                      </span>
+                    </td>
+                    {/* Acciones */}
+                    <td className="px-3 py-2">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => handleViewDetail(compra)}
+                          className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                          title="Ver detalle"
+                        >
+                          <Info className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
+                        <button
+                          onClick={() => handleReturn?.(compra)}
+                          disabled={compra.estado === "Anulada"}
+                          title={
+                            compra.estado === "Anulada"
+                              ? "No se puede devolver una compra anulada"
+                              : "Registrar devolución"
+                          }
+                          className={`transition-all duration-200 ${
+                            compra.estado === "Anulada"
+                              ? "text-gray-200 cursor-not-allowed"
+                              : "text-gray-400 hover:scale-110 hover:text-yellow-600 cursor-pointer"
+                          }`}
+                        >
+                          <RefreshCw className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
+                        <button
+                          onClick={() => handleCancel(compra.id)}
+                          className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
+                          title="Anular compra"
+                        >
+                          <XCircle className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* PAGINADOR */}
       <div className="flex items-center justify-between py-3">
         <p className="text-xs text-gray-600">
-          Mostrando {startIndex + 1} -{" "}
+          Mostrando {startIndex + 1} –{" "}
           {Math.min(endIndex, filteredProducts.length)} de{" "}
           {filteredProducts.length} registros
         </p>
@@ -182,7 +178,6 @@ export const PurchasesTable = ({
           {[...Array(totalPages)].map((_, i) => {
             const pageNum = i + 1;
             const isActive = currentPage === pageNum;
-
             return (
               <button
                 key={i}

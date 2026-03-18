@@ -187,10 +187,10 @@ export const Categories = () => {
   const currentData = filteredCategories.slice(startIndex, endIndex);
 
   return (
-    <div className="px-4 md:px-0 max-w-5xl mx-auto">
+    <div className="h-full flex flex-col gap-1 p-3 sm:p-4">
 
       {/* HEADER */}
-      <div className="flex items-center justify-between gap-2 sm:gap-4 mb-3 mt-7">
+      <div className="flex items-center justify-between gap-2 sm:gap-4 mb-3 mt-1">
 
         <SearchInput
           value={search}

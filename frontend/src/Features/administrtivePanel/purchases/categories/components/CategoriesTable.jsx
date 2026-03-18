@@ -2,7 +2,6 @@ import React from "react";
 import { Edit, Trash2, Info, Layers } from "lucide-react";
 import Pagination from "../../../../shared/PaginationAdmin";
 
-// 🔹 Componente Toggle de estado Activo/Inactivo
 function ActiveToggle({ activo, onChange }) {
   return (
     <button
@@ -27,7 +26,6 @@ function ActiveToggle({ activo, onChange }) {
   );
 }
 
-// 🔹 Badge de subcategorías
 function SubcategoriasBadge({ count }) {
   const total = Number(count) || 0;
 
@@ -48,7 +46,6 @@ function SubcategoriasBadge({ count }) {
   );
 }
 
-// 🔹 Tabla de categorías
 export const CategoriesTable = ({
   currentData,
   filteredCategories,
@@ -65,92 +62,106 @@ export const CategoriesTable = ({
 }) => {
   return (
     <>
-      <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
-        <div className="overflow-x-auto">
-          <table className="min-w-full w-full text-xs">
-            <thead className="bg-[#004D77] text-white">
+      <div className="overflow-x-auto rounded-xl shadow-md min-h-0 mb-4">
+        <table className="w-full" style={{ tableLayout: "fixed" }}>
+          <colgroup>
+            <col style={{ width: "6%" }}  /> {/* # */}
+            <col style={{ width: "42%" }} /> {/* Nombre Categoría */}
+            <col style={{ width: "16%" }} /> {/* Subcategorías */}
+            <col style={{ width: "16%" }} /> {/* Estado */}
+            <col style={{ width: "20%" }} /> {/* Acciones */}
+          </colgroup>
+
+          <thead className="bg-[#004D77] text-white">
+            <tr>
+              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">#</th>
+              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Nombre Categoría</th>
+              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Subcategorías</th>
+              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Estado</th>
+              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {!currentData.length ? (
               <tr>
-                <th className="px-3 py-2 text-center font-semibold">#</th>
-                <th className="px-3 py-2 text-left font-semibold">Nombre Categoría</th>
-                <th className="px-3 py-2 text-center font-semibold">Subcategorías</th>
-                <th className="px-3 py-2 text-center font-semibold">Estado</th>
-                <th className="px-3 py-2 text-center font-semibold">Acciones</th>
+                <td colSpan={5} className="py-8 text-center text-sm text-gray-400">
+                  No se encontraron categorías.
+                </td>
               </tr>
-            </thead>
+            ) : (
+              currentData.map((category, index) => {
+                const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-100";
+                const recordNumber = startIndex + index + 1;
 
-            <tbody>
-              {currentData.map((category, index) => (
-                <tr
-                  key={category.id}
-                  className={
-                    index % 2 === 0
-                      ? "bg-[#FFFFFF] hover:bg-gray-50"
-                      : "bg-gray-50 hover:bg-gray-100"
-                  }
-                >
-                  {/* # */}
-                  <td className="px-3 py-2.5 text-center text-gray-500">
-                    {startIndex + index + 1}
-                  </td>
+                return (
+                  <tr key={category.id} className={`transition-colors duration-150 ${rowBg}`}>
+                    {/* # — misma tipografía que ClientsTable */}
+                    <td className="px-3 py-2 text-center text-xs text-gray-500 font-medium whitespace-nowrap">
+                      {recordNumber}
+                    </td>
 
-                  {/* Nombre */}
-                  <td className="px-3 py-2.5 font-medium text-gray-700">
-                    {highlightText(category.nombre || "")}
-                  </td>
+                    {/* Nombre — misma tipografía que ClientsTable (nombre completo) */}
+                    <td className="px-3 py-2 text-center text-xs text-gray-800 font-medium truncate">
+                      {highlightText(category.nombre || "")}
+                    </td>
 
-                  {/* 🔵 Contador de subcategorías */}
-                  <td className="px-3 py-2.5 text-center">
-                    <SubcategoriasBadge count={category.subcategorias} />
-                  </td>
+                    {/* Subcategorías */}
+                    <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                      <SubcategoriasBadge count={category.subcategorias} />
+                    </td>
 
-                  {/* Estado */}
-                  <td className="px-3 py-2.5 text-center">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        category.estado === "Activo"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {highlightText(category.estado || "")}
-                    </span>
-                  </td>
-
-                  {/* Acciones */}
-                  <td className="px-3 py-2.5 text-center">
-                    <div className="flex justify-center gap-2">
-                      <button
-                        onClick={() => handleViewDetail(category)}
-                        className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-125"
+                    {/* Estado */}
+                    <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          category.estado === "Activo"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
                       >
-                        <Info size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleEdit(category)}
-                        className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-125"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <ActiveToggle
-                        activo={category.estado === "Activo"}
-                        onChange={() => handleToggleStatus(category.id)}
-                      />
-                      <button
-                        onClick={() => handleDelete(category.id)}
-                        className="text-gray-400 hover:text-red-600 transition-all duration-200 transform hover:scale-125"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                        {highlightText(category.estado || "")}
+                      </span>
+                    </td>
+
+                    {/* Acciones */}
+                    <td className="px-3 py-2">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => handleViewDetail(category)}
+                          className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                          title="Ver detalle"
+                        >
+                          <Info className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
+                        <button
+                          onClick={() => handleEdit(category)}
+                          className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                          title="Editar categoría"
+                        >
+                          <Edit className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
+                        <ActiveToggle
+                          activo={category.estado === "Activo"}
+                          onChange={() => handleToggleStatus(category.id)}
+                        />
+                        <button
+                          onClick={() => handleDelete(category.id)}
+                          className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
+                          title="Eliminar categoría"
+                        >
+                          <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
       </div>
 
-      {/* Paginación */}
       <Pagination
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
