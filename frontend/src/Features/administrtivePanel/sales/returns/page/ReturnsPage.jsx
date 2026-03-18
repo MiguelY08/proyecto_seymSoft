@@ -1,4 +1,24 @@
-// page/ReturnsPage.jsx
+/**
+ * Archivo: ReturnsPage.jsx
+ *
+ * Página principal del módulo de gestión de devoluciones de ventas.
+ * Esta página es el núcleo del sistema de devoluciones y contiene toda la lógica
+ * para la creación, edición, visualización y anulación de devoluciones.
+ *
+ * Responsabilidades principales:
+ * - Cargar y mostrar la lista de devoluciones almacenadas
+ * - Manejar la búsqueda y filtrado de devoluciones
+ * - Permitir crear nuevas devoluciones
+ * - Permitir editar devoluciones existentes
+ * - Permitir ver el detalle completo de una devolución
+ * - Permitir anular devoluciones
+ * - Exportar devoluciones a archivo Excel
+ * - Manejar paginación de la tabla
+ *
+ * Este archivo actúa como orquestador principal, coordinando todos los
+ * componentes del módulo (toolbar, tabla, modales, etc.) y los servicios
+ * de almacenamiento en localStorage.
+ */
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import ReturnsToolbar from '../components/ReturnsToolbar';
@@ -16,25 +36,61 @@ import {
 import { filterReturns, exportToExcel, paginateData } from '../utils/returnsHelpers';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 
-const RECORDS_PER_PAGE = 13;
+const RECORDS_PER_PAGE = 13; // Cantidad de registros a mostrar por página en la tabla
 
+/**
+ * Componente: ReturnsPage
+ *
+ * Componente principal que orquesta toda la funcionalidad del módulo de devoluciones.
+ * Maneja estados globales, eventos, modales y la sincronización de datos.
+ */
 function ReturnsPage() {
+  // ======================== ESTADOS PRINCIPALES ========================
+  
+  // Lista completa de devoluciones cargadas desde localStorage
   const [returns, setReturns] = useState([]);
+  
+  // Término de búsqueda ingresado por el usuario en la barra de búsqueda
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Página actual que se está visualizando en la tabla (paginación)
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Controla la visibilidad del modal de formulario (crear/editar)
   const [formOpen, setFormOpen] = useState(false);
+  
+  // Controla la visibilidad del modal de detalle (visualizar información completa)
   const [detailOpen, setDetailOpen] = useState(false);
+  
+  // Controla la visibilidad del modal de anulación
   const [cancelOpen, setCancelOpen] = useState(false);
+  
+  // Guarda la devolución seleccionada para edición o visualización
   const [selectedReturn, setSelectedReturn] = useState(null);
+  
+  // Guarda la devolución que va a ser anulada
   const [returnToCancel, setReturnToCancel] = useState(null);
+  
+  // Indicador de carga durante la obtención de datos
   const [loading, setLoading] = useState(true);
 
+  // Hook para mostrar alertas (confirmación, éxito, error)
   const { showConfirm, showSuccess, showError } = useAlert();
 
+  // ======================== USEEFFECT: CARGA INICIAL ========================
+  
+  // Este useEffect se ejecuta cuando el componente se monta (primera vez)
+  // Su función es cargar las devoluciones almacenadas en localStorage
   useEffect(() => {
     loadReturns();
   }, []);
 
+  // ======================== FUNCIONALIDAD: CARGAR DEVOLUCIONES ========================
+  
+  /**
+   * Carga las devoluciones desde localStorage y las almacena en el estado.
+   * También maneja errores y actualiza el indicador de carga.
+   */
   const loadReturns = () => {
     try {
       const data = getReturns();
@@ -46,16 +102,33 @@ function ReturnsPage() {
     }
   };
 
+  // ======================== FUNCIONALIDAD: BÚSQUEDA ========================
+  
+  /**
+   * Actualiza el término de búsqueda y reinicia la paginación a la página 1
+   */
   const handleSearchChange = (term) => {
     setSearchTerm(term);
     setCurrentPage(1);
   };
 
+  // ======================== FUNCIONALIDAD: CREAR DEVOLUCIÓN ========================
+  
+  /**
+   * Abre el modal de formulario en modo de creación (sin datos previos)
+   */
   const handleNew = () => {
-    setSelectedReturn(null);
+    setSelectedReturn(null); // Sin datos = modo creación
     setFormOpen(true);
   };
 
+  // ======================== FUNCIONALIDAD: EDITAR DEVOLUCIÓN ========================
+  
+  /**
+   * Abre el modal de formulario con los datos de la devolución seleccionada.
+   * Valida que la devolución no esté anulada antes de permitir edición.
+   * @param {Object} returnData - Devolución a editar
+   */
   const handleEdit = (returnData) => {
     if (returnData.estado === 'Anulada') {
       showError('Error', 'No se puede editar una devolución anulada');
@@ -65,11 +138,24 @@ function ReturnsPage() {
     setFormOpen(true);
   };
 
+  // ======================== FUNCIONALIDAD: VER DETALLE ========================
+  
+  /**
+   * Abre el modal de detalle para mostrar toda la información de una devolución
+   * @param {Object} returnData - Devolución a visualizar
+   */
   const handleInfo = (returnData) => {
     setSelectedReturn(returnData);
     setDetailOpen(true);
   };
 
+  // ======================== FUNCIONALIDAD: ANULAR / ELIMINAR DEVOLUCIÓN ========================
+  
+  /**
+   * Abre el modal de anulación para marcar una devolución como anulada.
+   * Valida que la devolución no esté ya anulada.
+   * @param {Object} returnData - Devolución a anular
+   */
   const handleCancelClick = (returnData) => {
     if (returnData.estado === 'Anulada') {
       showError('Error', 'La devolución ya está anulada');
@@ -79,10 +165,22 @@ function ReturnsPage() {
     setCancelOpen(true);
   };
 
+  /**
+   * Callback que se ejecuta después de anular exitosamente una devolución.
+   * Recarga la lista de devoluciones desde localStorage.
+   */
   const handleCancelSuccess = () => {
     loadReturns();
   };
 
+  // ======================== FUNCIONALIDAD: GUARDAR DEVOLUCIÓN (CREAR O EDITAR) ========================
+  
+  /**
+   * Guarda una devolución nueva o actualiza una existente.
+   * Maneja tanto la creación como la edición dependiendo de si hay
+   * una devolución seleccionada.
+   * @param {Object} formData - Datos del formulario a guardar
+   */
   const handleSave = (formData) => {
     console.log('Datos recibidos en handleSave:', formData);
     
@@ -133,6 +231,13 @@ function ReturnsPage() {
     }
   };
 
+  // ======================== FUNCIONALIDAD: DESCARGAR / EXPORTAR ========================
+  
+  /**
+   * Exporta todas las devoluciones a un archivo Excel.
+   * Genera un archivo con extensión .xlsx que puede abrirse en Excel u otros
+   * programas de hojas de cálculo.
+   */
   const handleExport = () => {
     try {
       const allReturns = getAllReturns();
@@ -156,6 +261,9 @@ function ReturnsPage() {
     RECORDS_PER_PAGE
   );
 
+  // ======================== RENDERIZADO: INDICADOR DE CARGA ========================
+  
+  // Mientras se cargan los datos, mostramos un spinner de carga
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -166,6 +274,11 @@ function ReturnsPage() {
       </div>
     );
   }
+  
+  // ======================== APLICAR FILTROS Y PAGINACIÓN ========================
+  
+  // Filtrar devoluciones según el término de búsqueda
+  // Paginar los resultados filtrados
 
   return (
     <div className="h-full flex flex-col gap-4 p-3 sm:p-4">

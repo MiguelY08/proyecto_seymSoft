@@ -1,15 +1,22 @@
-import { ShoppingCart, Info, Heart, ChevronDown, Search } from 'lucide-react';
+import { ShoppingCart, Info, Heart, ChevronDown, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import BgFavoritos from '../../../assets/BgFavoritos.png';
-import { useFavorites } from '../../shared/Context/Favoritescontext'; // ← ajusta ruta si es necesario
+import { useFavorites } from '../../shared/Context/FavoritesContext';
+import { useCart } from '../../shared/Context/Cartcontext';
 import { useAlert } from '../../shared/alerts/useAlert';
 
 function Favorites() {
+  const navigate = useNavigate();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
+  const { addToCart } = useCart();
   const { showConfirm, showSuccess } = useAlert();
 
-  const [ordenar,    setOrdenar]    = useState('A - Z');
+  const [ordenar, setOrdenar] = useState('A - Z');
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const PRODUCTS_PER_PAGE = 4; // 2 filas de 2 columnas
 
   const opcionesOrdenar = [
     'A - Z',
@@ -40,6 +47,39 @@ function Favorites() {
     }
   }, [productosFiltrados, ordenar]);
 
+  // ── Paginación ──────────────────────────────────────────────────────────────
+  const totalPages = Math.ceil(productosOrdenados.length / PRODUCTS_PER_PAGE);
+  const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
+  const endIndex = startIndex + PRODUCTS_PER_PAGE;
+  const currentProducts = productosOrdenados.slice(startIndex, endIndex);
+
+  // Resetear página cuando cambie búsqueda u ordenamiento
+  useMemo(() => {
+    setCurrentPage(1);
+  }, [searchTerm, ordenar]);
+
+  // Función para obtener páginas visibles
+  const getVisiblePages = () => {
+    const pages = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        pages.push(1, 2, 3, 4, '...', totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+      }
+    }
+
+    return pages;
+  };
+
   // ── Quitar de favoritos con confirmación ────────────────────────────────────
   const handleQuitarFavorito = async (producto) => {
     const result = await showConfirm(
@@ -55,14 +95,21 @@ function Favorites() {
 
     toggleFavorite(producto);
     showSuccess('Eliminado', `"${producto.name}" fue quitado de tu lista de deseos.`);
+
+    // Ajustar página si quedó vacía
+    const newTotal = productosOrdenados.length - 1;
+    const newTotalPages = Math.ceil(newTotal / PRODUCTS_PER_PAGE);
+    if (currentPage > newTotalPages && newTotalPages > 0) {
+      setCurrentPage(newTotalPages);
+    }
   };
 
-  const handleAgregarAlCarrito = (productoId) => {
-    console.log('Agregar al carrito:', productoId);
+  const handleAgregarAlCarrito = (producto) => {
+    addToCart(producto, 1);
   };
 
   const handleVerDetalles = (productoId) => {
-    console.log('Ver detalles:', productoId);
+    navigate(`/shop/detail/${productoId}`);
   };
 
   return (
@@ -144,13 +191,13 @@ function Favorites() {
             <p className="text-gray-600 text-center mb-6 max-w-md">
               Agrega productos a tu lista de deseos para encontrarlos fácilmente más tarde
             </p>
-            <a
-              href="/shop"
+            <button
+              onClick={() => navigate('/shop')}
               className="px-6 py-3 text-white rounded-lg hover:opacity-90 transition-colors font-medium"
               style={{ backgroundColor: '#004D77' }}
             >
               Explorar productos
-            </a>
+            </button>
           </div>
 
         ) : productosOrdenados.length === 0 ? (
@@ -174,80 +221,144 @@ function Favorites() {
 
         ) : (
           /* ── Grid de productos favoritos ─────────────────────────────────── */
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {productosOrdenados.map((producto) => (
-              <div
-                key={producto.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-              >
-                <div className="p-6">
-                  <div className="flex gap-6">
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              {currentProducts.map((producto) => (
+                <div
+                  key={producto.id}
+                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                >
+                  <div className="p-6">
+                    <div className="flex gap-6">
 
-                    {/* Imagen */}
-                    <div className="flex-shrink-0">
-                      <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                        <img
-                          src={producto.image}
-                          alt={producto.name}
-                          className="w-full h-full object-contain p-2"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-gray-900 mb-1">{producto.name}</h3>
-                      <p className="text-xs text-gray-500 mb-3 uppercase">{producto.category}</p>
-                      <p className="text-2xl font-bold mb-4" style={{ color: '#004D77' }}>
-                        ${producto.price.toLocaleString()}
-                      </p>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleAgregarAlCarrito(producto.id)}
-                          className="flex items-center gap-2 px-4 py-2 border-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-                          style={{ borderColor: '#004D77', color: '#004D77' }}
-                        >
-                          <ShoppingCart className="w-4 h-4" />
-                          Añadir al carrito
-                        </button>
-
-                        <button
-                          onClick={() => handleVerDetalles(producto.id)}
-                          className="w-10 h-10 border-2 rounded-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
-                          style={{ borderColor: '#004D77' }}
-                        >
-                          <Info className="w-5 h-5" style={{ color: '#004D77' }} />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Divisor */}
-                    <div className="w-px bg-gray-200" />
-
-                    {/* Botón quitar favorito */}
-                    <div className="flex-shrink-0 flex items-center">
-                      <button
-                        onClick={() => handleQuitarFavorito(producto)}
-                        className="p-2 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Quitar de favoritos"
+                      {/* Imagen */}
+                      <div 
+                        className="flex-shrink-0 cursor-pointer"
+                        onClick={() => handleVerDetalles(producto.id)}
                       >
-                        <Heart
-                          className="w-7 h-7"
-                          style={{
-                            color: '#004D77',
-                            fill: isFavorite(producto.id) ? '#004D77' : 'none',
-                            strokeWidth: 2,
-                          }}
-                        />
-                      </button>
-                    </div>
+                        <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                          <img
+                            src={producto.image}
+                            alt={producto.name}
+                            className="w-full h-full object-contain p-2"
+                          />
+                        </div>
+                      </div>
 
+                      {/* Info */}
+                      <div className="flex-1">
+                        <h3 
+                          className="text-lg font-bold text-gray-900 mb-1 cursor-pointer hover:text-[#004D77]"
+                          onClick={() => handleVerDetalles(producto.id)}
+                        >
+                          {producto.name}
+                        </h3>
+                        <p className="text-xs text-gray-500 mb-3 uppercase">{producto.category}</p>
+                        <p className="text-2xl font-bold mb-4" style={{ color: '#004D77' }}>
+                          ${producto.price.toLocaleString()}
+                        </p>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleAgregarAlCarrito(producto)}
+                            className="flex items-center gap-2 px-4 py-2 border-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                            style={{ borderColor: '#004D77', color: '#004D77' }}
+                          >
+                            <ShoppingCart className="w-4 h-4" />
+                            Añadir al carrito
+                          </button>
+
+                          <button
+                            onClick={() => handleVerDetalles(producto.id)}
+                            className="w-10 h-10 border-2 rounded-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
+                            style={{ borderColor: '#004D77' }}
+                          >
+                            <Info className="w-5 h-5" style={{ color: '#004D77' }} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Divisor */}
+                      <div className="w-px bg-gray-200" />
+
+                      {/* Botón quitar favorito */}
+                      <div className="flex-shrink-0 flex items-center">
+                        <button
+                          onClick={() => handleQuitarFavorito(producto)}
+                          className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Quitar de favoritos"
+                        >
+                          <Heart
+                            className="w-7 h-7"
+                            style={{
+                              color: '#004D77',
+                              fill: isFavorite(producto.id) ? '#004D77' : 'none',
+                              strokeWidth: 2,
+                            }}
+                          />
+                        </button>
+                      </div>
+
+                    </div>
                   </div>
                 </div>
+              ))}
+            </div>
+
+            {/* ── Paginación ────────────────────────────────────────────────── */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                
+                {/* Contador de productos */}
+                <p className="text-sm text-gray-600">
+                  Mostrando {startIndex + 1} a {Math.min(endIndex, productosOrdenados.length)} de {productosOrdenados.length} producto{productosOrdenados.length !== 1 ? 's' : ''}
+                </p>
+
+                {/* Controles de paginación */}
+                <div className="flex items-center gap-2 bg-white shadow-md rounded-xl px-3 py-2">
+                  {/* Botón anterior */}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-gray-600" />
+                  </button>
+
+                  {/* Números de página */}
+                  {getVisiblePages().map((page, index) => (
+                    page === '...' ? (
+                      <span key={`ellipsis-${index}`} className="px-3 py-1.5 text-gray-400">
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`min-w-[36px] px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                          currentPage === page
+                            ? 'text-white'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                        style={currentPage === page ? { backgroundColor: '#004D77' } : {}}
+                      >
+                        {page}
+                      </button>
+                    )
+                  ))}
+
+                  {/* Botón siguiente */}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4 text-gray-600" />
+                  </button>
+                </div>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>

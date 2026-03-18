@@ -1,10 +1,32 @@
-// components/FormReturn.jsx
+/**
+ * Archivo: FormReturn.jsx
+ * 
+ * Formulario modal para crear o editar devoluciones de ventas.
+ * Integra la selección de productos, captura de datos de cliente,
+ * adjunción de evidencias y validación completa del formulario.
+ * 
+ * Responsabilidades principales:
+ * - Formulario modal para crear/editar devoluciones
+ * - Selección de productos con múltiples configuraciones
+ * - Captura de datos del cliente, asesor e información de entrega
+ * - Validación en tiempo real y al enviar
+ * - Previsualización de resumen de devolución
+ * - Adjunción y gestión de evidencias
+ * - Cambio de estado general de la devolución
+ * - Soporte para edición y creación de devoluciones
+ */
+
 import React, { useState, useEffect } from 'react';
 import { X, ChevronDown, ChevronLeft, Minus, Plus, Image } from 'lucide-react';
 import Evidence from './Evidence';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 
-// ─── Datos de ejemplo ─────────────────────────────────────────────────────────
+// ======================= DATOS DE REFERENCIA =======================
+
+/**
+ * Lista de productos disponibles para devolución.
+ * Contiene estructura base con ID, nombre, cantidad disponible y precio.
+ */
 const PRODUCTOS_VENTA = [
   { id: 1, nombre: 'Libreta con lapicero',    cantidad: 1, precioUnit: 5000, imagen: null },
   { id: 2, nombre: 'Pincel #10',              cantidad: 6, precioUnit: 1200, imagen: null },
@@ -12,12 +34,33 @@ const PRODUCTOS_VENTA = [
   { id: 4, nombre: 'Silicona liquida ET131 X', cantidad: 8, precioUnit: 2900, imagen: null },
 ];
 
+// Opciones disponibles para motivos de devolución
 const MOTIVOS    = ['Prod. en mal estado', 'Producto roto', 'Producto equivocado', 'Producto incompleto', 'No era el pedido'];
+// Opciones disponibles para métodos de devolución
 const METODOS    = ['Reembolso', 'Cambio de producto', 'Nota crédito'];
+// Opciones de estados para la devolución general
 const ESTADOS_P  = ['Pendiente', 'Aprobada', 'Anulada'];
 
+// ======================= UTILIDADES =======================
+
+/**
+ * Formatea un número como moneda COP (Peso Colombiano).
+ * @param {number} v - Valor a formatear
+ * @returns {string} Valor formateado en notación local
+ */
 const formatCOP = (v) => new Intl.NumberFormat('es-CO').format(v);
 
+// ======================= COMPONENTES AUXILIARES =======================
+
+/**
+ * Componente auxiliar para mostrar imagen de producto.
+ * Muestra imagen cargada o placeholder genérico.
+ * 
+ * @param {Object} props - Props
+ * @param {string} props.src - URL de la imagen
+ * @param {string} props.size - Tamaño ('sm' o 'md')
+ * @returns {JSX.Element} Imagen o placeholder
+ */
 function ProductoImg({ src, size = 'md' }) {
   const dim = size === 'sm' ? 'w-8 h-8' : 'w-10 h-10';
   if (src) return <img src={src} alt="" className={`${dim} rounded-lg object-cover flex-shrink-0`} />;
@@ -28,6 +71,15 @@ function ProductoImg({ src, size = 'md' }) {
   );
 }
 
+/**
+ * Selector visual de estado con badge de color.
+ * Muestra dropdown con opciones de estado disponibles.
+ * 
+ * @param {Object} props - Props
+ * @param {string} props.value - Estado actual
+ * @param {Function} props.onChange - Callback al cambiar
+ * @returns {JSX.Element} Selector con badge
+ */
 function EstadoBadgeSelect({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const color = {
@@ -53,13 +105,39 @@ function EstadoBadgeSelect({ value, onChange }) {
   );
 }
 
-// ─── NUEVA FUNCIÓN para generar IDs temporales ────────────────────────────────
+// ======================= FUNCIONALIDAD: GENERAR IDS =======================
+
+/**
+ * Genera un ID temporal único para configuraciones.
+ * Se usa mientras están en edición del formulario.
+ * @returns {number} ID temporal
+ */
 const generateTempId = () => Date.now() + Math.random();
 
-// ─── COMPONENTE MODIFICADO para soportar múltiples configuraciones ────────────
+// ======================= COMPONENTE: PRODUCTO SELECCIONADO =======================
+
+/**
+ * Componente para mostrar un producto seleccionado con múltiples configuraciones.
+ * Soporta expansión/colapsación, validación de campos,
+ * y gestión de varias configuraciones del mismo producto.
+ * 
+ * @component
+ * @param {Object} props - Props del componente
+ * @param {Object} props.producto - Datos del producto
+ * @param {Array} props.configs - Array de configuraciones actuales
+ * @param {Function} props.onConfigsChange - Callback al cambiar configuraciones
+ * @param {Function} props.onRemove - Callback para deseleccionar producto
+ * @param {boolean} props.submitted - Indica si fue enviado
+ * @returns {JSX.Element} Card del producto
+ */
 function ProductoSeleccionado({ producto, configs, onConfigsChange, onRemove, submitted }) {
+  // ======================= ESTADOS =======================
+  
+  // Estado para controlar si el card está expandido
   const [expanded, setExpanded] = useState(true);
+  // Rastrear campos tocados para validación
   const [touched, setTouched] = useState({});
+  // Cantidad máxima del producto disponible para devolver
   const maxTotalQuantity = producto.cantidad;
 
   // Calcular cantidad total usada
@@ -271,23 +349,55 @@ function ProductoSeleccionado({ producto, configs, onConfigsChange, onRemove, su
   );
 }
 
-// ─── Componente principal ──────────────────────────────────────────────────────
+// ======================= COMPONENTE PRINCIPAL: FORM RETURN =======================
+
+/**
+ * Componente: FormReturn
+ * 
+ * Modal principal para crear o editar una devolución.
+ * Integra selección de productos, datos de cliente, evidencias y validación.
+ * 
+ * @component
+ * @param {Object} props - Props del componente
+ * @param {boolean} props.isOpen - Controla visibilidad del modal
+ * @param {Function} props.onClose - Función para cerrar
+ * @param {Object|null} props.returnData - Datos para edición (null para crear)
+ * @param {Function} props.onSave - Callback al guardar la devolución
+ * 
+ * @returns {JSX.Element|null} Modal del formulario o null si está cerrado
+ */
 function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
+  // Determinar si es edición o creación
   const isEdit = Boolean(returnData);
 
+  // ======================= ESTADOS PRINCIPALES =======================
+  
+  // Datos de factura
   const [noFactura,    setNoFactura]    = useState('');
+  // Datos del cliente
   const [cliente,      setCliente]      = useState('');
+  // Nombre del asesor que atiende
   const [asesor,       setAsesor]       = useState('');
+  // Estado general de la devolución
   const [estadoGral,   setEstadoGral]   = useState('Pendiente');
+  // Array de evidencias adjuntas
   const [evidencias,   setEvidencias]   = useState([]);
+  // Controla visibilidad del modal de evidencias
   const [evidenceOpen, setEvidenceOpen] = useState(false);
+  // Si se requiere envío a domicilio
   const [domicilio,    setDomicilio]    = useState(true);
+  // Dirección de entrega
   const [direccion,    setDireccion]    = useState('');
+  // Descripción adicional de la devolución
   const [descripcion,  setDescripcion]  = useState('');
+  // Productos seleccionados con sus configuraciones
   const [seleccionados, setSeleccionados] = useState({});
+  // Indica si el formulario fue enviado
   const [submitted,    setSubmitted]    = useState(false);
 
-  // Estados de validación
+  // ======================= ESTADOS DE VALIDACIÓN =======================
+  
+  // Errores por campo
   const [errors, setErrors] = useState({
     noFactura: '',
     cliente: '',
@@ -296,6 +406,7 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     evidencias: '',
     productos: ''
   });
+  // Campos que han sido tocados (para mostrar errores)
   const [touched, setTouched] = useState({
     noFactura: false,
     cliente: false,
@@ -304,9 +415,13 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     evidencias: false
   });
 
+  // Hook para mostrar alertas
   const { showError } = useAlert();
 
-  // Cargar datos si es edición
+  // ======================= USEEFFECT: CARGAR DATOS =======================
+  
+  // Se ejecuta cuando se abre el modal o hay cambio en returnData
+  // Carga datos si es edición o limpia el formulario si es creación
   useEffect(() => {
     if (returnData) {
       setNoFactura(returnData.numeroFactura ?? returnData.noFactura ?? '');
@@ -359,7 +474,10 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     });
   }, [returnData, isOpen]);
 
-  // Limpiar error de dirección cuando se desactiva domicilio
+  // ======================= USEEFFECT: LIMPIAR ERROR DIRECCIÓN =======================
+  
+  // Se ejecuta cuando cambia el estado de domicilio
+  // Limpia error de dirección si se desactiva el domicilio
   useEffect(() => {
     if (!domicilio) {
       setErrors(prev => ({ ...prev, direccion: '' }));
@@ -367,7 +485,15 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     }
   }, [domicilio]);
 
-  // Validación en tiempo real para campos individuales
+  // ======================= FUNCIONALIDAD: VALIDACIÓN =======================
+  
+  /**
+   * Valida un campo individual del formulario.
+   * Aplica reglas específicas según el tipo de campo.
+   * @param {string} name - Nombre del campo a validar
+   * @param {*} value - Valor del campo
+   * @returns {string} Mensaje de error (vacío si es válido)
+   */
   const validateField = (name, value) => {
     switch (name) {
       case 'noFactura':
@@ -395,7 +521,11 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     }
   };
 
-  // Validar productos seleccionados (AHORA CON MÚLTIPLES CONFIGURACIONES)
+  /**
+   * Valida que los productos seleccionados tengan configuraciones válidas.
+   * Verifica que cada configuración tenga motivo y método.
+   * @returns {string} Mensaje de error o vacío si es válido
+   */
   const validateProductos = () => {
     const productosConConfigs = Object.entries(seleccionados)
       .filter(([_, configs]) => configs && configs.length > 0)
@@ -421,7 +551,13 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     return '';
   };
 
-  // Manejadores con validación en tiempo real
+  // ======================= FUNCIONALIDAD: MANEJO DE CAMBIOS =======================
+  
+  /**
+   * Maneja cambios en campos con validación en tiempo real.
+   * @param {string} field - Nombre del campo
+   * @param {*} value - Nuevo valor
+   */
   const handleFieldChange = (field, value) => {
     switch (field) {
       case 'noFactura': setNoFactura(value); break;
@@ -438,6 +574,11 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     }
   };
 
+  /**
+   * Maneja evento blur (salida del campo).
+   * Marca el campo como tocado y valida.
+   * @param {string} field - Nombre del campo
+   */
   const handleBlur = (field) => {
     setTouched(prev => ({ ...prev, [field]: true }));
     
@@ -454,6 +595,10 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     setErrors(prev => ({ ...prev, [field]: err }));
   };
 
+  /**
+   * Maneja cambios en las evidencias adjuntas.
+   * @param {Array} files - Array de archivos adjuntos
+   */
   const handleEvidenceChange = (files) => {
     setEvidencias(files);
     if (touched.evidencias) {
@@ -462,7 +607,13 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     }
   };
 
-  // MODIFICADO: Ahora maneja múltiples configuraciones
+  // ======================= FUNCIONALIDAD: SELECCIÓN DE PRODUCTOS =======================
+  
+  /**
+   * Alterna selección de un producto individual.
+   * Crea la configuración inicial si no existe.
+   * @param {Object} prod - Producto a alternar
+   */
   const toggleProducto = (prod) => {
     setSeleccionados((prev) => {
       if (prev[prod.id]) {
@@ -490,7 +641,11 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     }, 0);
   };
 
-  // MODIFICADO: Ahora recibe un array de configuraciones
+  /**
+   * Actualiza las configuraciones de un producto.
+   * @param {number} id - ID del producto
+   * @param {Array} nuevasConfigs - Nuevo array de configuraciones
+   */
   const updateConfigs = (id, nuevasConfigs) => {
     setSeleccionados((prev) => ({
       ...prev,
@@ -503,6 +658,9 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     }, 0);
   };
 
+  /**
+   * Alterna selección de todos los productos.
+   */
   const toggleAll = () => {
     if (Object.keys(seleccionados).length === PRODUCTOS_VENTA.length) {
       setSeleccionados({});
@@ -528,6 +686,11 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     }, 0);
   };
 
+  // ======================= CÓMPUTO DE TOTALES =======================
+  
+  /**
+   * Calcula productos devueltos con todas sus configuraciones.
+   */
   // MODIFICADO: Calcular productos devueltos con múltiples configuraciones
   const productosDevueltos = Object.entries(seleccionados)
     .filter(([_, configs]) => configs && configs.length > 0)
@@ -547,6 +710,10 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     return acc + productTotal;
   }, 0);
 
+  /**
+   * Valida todo el formulario.
+   * @returns {Object} Objeto con errores por campo
+   */
   const validateForm = () => {
     const newErrors = {};
     
@@ -562,6 +729,12 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     return newErrors;
   };
 
+  // ======================= FUNCIONALIDAD: ENVIAR =======================
+  
+  /**
+   * Maneja el envío del formulario.
+   * Valida todos los campos y enviar datos o mostrar errores.
+   */
   const handleSubmit = () => {
     setSubmitted(true);
     
@@ -637,6 +810,13 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     onClose?.();
   };
 
+  // ======================= UTILIDADES PARA RENDERIZADO =======================
+  
+  /**
+   * Retorna clases CSS para input según estado de validación.
+   * @param {string} field - Nombre del campo
+   * @returns {string} Clases Tailwind
+   */
   const inputClass = (field) => {
     const hasError = errors[field] && (touched[field] || submitted);
     return `w-full border rounded-lg px-3 py-2 text-sm text-gray-500 outline-none placeholder-gray-300 transition-colors ${
@@ -646,6 +826,11 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     }`;
   };
 
+  /**
+   * Renderiza el mensaje de error de un campo si existe.
+   * @param {string} field - Nombre del campo
+   * @returns {JSX.Element|null} Elemento de error o null
+   */
   const renderError = (field) => {
     if ((touched[field] || submitted) && errors[field]) {
       return <p className="mt-0.5 text-xs text-red-600">{errors[field]}</p>;
@@ -653,8 +838,12 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     return null;
   };
 
+  // Validar si el modal debe mostrarse
   if (!isOpen) return null;
   
+  // ======================= CÓMPUTO DE COLORES =======================
+  
+  // Determinar color del estado para visualización
   const estadoColor = { 
     Pendiente: '#dc2626', 
     Aprobada: '#15803d', 
@@ -666,10 +855,12 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
       <div className="bg-white rounded-2xl shadow-2xl w-full flex flex-col overflow-hidden"
         style={{ maxWidth: 1060, maxHeight: '92vh' }}>
 
+        {/* Header del modal */}
         <div className="bg-[#004D77] px-6 py-3.5 flex items-center justify-between flex-shrink-0">
           <h2 className="text-white font-bold text-[15px]">
             {isEdit ? `Editar devolución — ${returnData?.numeroDevolucion || ''}` : 'Nueva devolución'}
           </h2>
+          {/* Botón para cerrar el modal */}
           <button type="button" onClick={onClose}
             className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 text-white transition cursor-pointer">
             <X className="w-4 h-4" />

@@ -1,6 +1,21 @@
+/**
+ * Archivo: providerHelpers.js
+ *
+ * Conjunto de funciones auxiliares utilizadas por el módulo de proveedores.
+ * Estas utilidades se encargan de formatear datos, validar entradas,
+ * filtrar y paginar resultados, así como proporcionar textos y clases de
+ * estilo basadas en el estado de un proveedor.
+ *
+ * Responsabilidades principales:
+ * - Formateo de números de teléfono, tipos y categorías
+ * - Validación de campos de formulario relacionados con proveedores
+ * - Filtrado y paginación de listas de proveedores
+ * - Proveer helpers de estado (activo/inactivo)
+ */
+
 // Provider Helper Functions
 
-// Format phone number
+// Formatea un número de teléfono a formato legible
 export const formatPhoneNumber = (phone) => {
   if (!phone) return 'N/A';
   const cleaned = phone.replace(/\D/g, '');
@@ -10,78 +25,78 @@ export const formatPhoneNumber = (phone) => {
   return phone;
 };
 
-// Validate email
+// Valida que el correo tenga formato correcto
 export const isValidEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 };
 
-// Validate phone
+// Verifica que el teléfono tenga entre 7 y 10 dígitos numéricos
 export const isValidPhone = (phone) => {
   const phoneRegex = /^[0-9]{7,10}$/;
   return phoneRegex.test(phone);
 };
 
-// Validate numbers only (allow hyphen for NIT)
+// Comprueba que una cadena contenga solo números (y guiones opcionales)
 export const isOnlyNumbers = (value) => {
   const numbersRegex = /^[0-9-]+$/;
   return numbersRegex.test(value);
 };
 
-// Validate letters and spaces only
+// Verifica que una cadena tenga únicamente letras y espacios
 export const isOnlyLetters = (value) => {
   const lettersRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
   return lettersRegex.test(value);
 };
 
-// Get provider status badge class
+// Devuelve la clase CSS para el badge de estado según activo/inactivo
 export const getStatusBadgeClass = (isActive) => {
   return isActive 
     ? 'bg-green-100 text-green-800' 
     : 'bg-red-100 text-red-800';
 };
 
-// Get provider status text
+// Retorna el texto 'Activo' o 'Inactivo' según el booleano
 export const getStatusText = (isActive) => {
   return isActive ? 'Activo' : 'Inactivo';
 };
 
-// Format person type
+// Convierte el valor de tipoPersona en texto legible
 export const formatPersonType = (tipoPersona) => {
   if (tipoPersona === 'natural') return 'Natural';
   if (tipoPersona === 'juridica') return 'Jurídica';
   return 'N/A';
 };
 
-// Format client type
+// Convierte el tipo de cliente en su representación legible
 export const formatClientType = (tipoCliente) => {
   if (tipoCliente === 'mayorista') return 'Mayorista';
   if (tipoCliente === 'minorista') return 'Minorista';
   return 'N/A';
 };
 
-// Format RUT
+// Formatea la indicación de RUT a 'Sí' o 'No'
 export const formatRut = (rut) => {
   if (rut === 'si') return 'Sí';
   if (rut === 'no') return 'No';
   return 'N/A';
 };
 
-// Format categories (string to array)
+// Convierte la lista de categorías a un array limpio
 export const formatCategories = (categories) => {
   if (!categories) return [];
   if (Array.isArray(categories)) return categories;
   return categories.split(', ').filter(cat => cat.trim() !== '');
 };
 
-// Format categories for display
+// Prepara las categorías para mostrar en la interfaz (string)
 export const formatCategoriesDisplay = (categories) => {
   if (!categories) return 'N/A';
   if (Array.isArray(categories)) return categories.join(', ');
   return categories;
 };
 
-// Filter providers by search term
+// Filtra la lista de proveedores según un término de búsqueda
 export const filterProviders = (providers, searchTerm) => {
   if (!searchTerm) return providers;
   
@@ -97,7 +112,7 @@ export const filterProviders = (providers, searchTerm) => {
   );
 };
 
-// Paginate data
+// Devuelve un subconjunto de datos paginados
 export const paginateData = (data, page, itemsPerPage) => {
   const startIndex = (page - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -109,7 +124,7 @@ export const paginateData = (data, page, itemsPerPage) => {
   };
 };
 
-// Validate provider form
+// Valida los campos del formulario de proveedor y devuelve errores
 export const validateProviderForm = (formData) => {
   const errors = {};
 
