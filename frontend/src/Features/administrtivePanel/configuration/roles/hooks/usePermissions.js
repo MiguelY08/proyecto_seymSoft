@@ -18,9 +18,10 @@ export function usePermissions() {
     [user?.permissions],
   );
 
-  const hasPermission = (perm) => {
-    if (!perm) return false;
-    return permissions.includes(perm);
+  // NOTE: Por ahora no se están aplicando restricciones a nivel de acciones/botones.
+  // Esto evita que botones desaparezcan mientras no se implemente la lógica de privilegios.
+  const hasPermission = (_perm) => {
+    return true;
   };
 
   const hasAnyPermission = (perms = []) => {

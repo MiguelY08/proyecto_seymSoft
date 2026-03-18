@@ -1,7 +1,6 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
-import PermissionGuard from "../../Features/administrtivePanel/configuration/roles/guards/PermissionGuard";
 
 /* ========= ACCESO ========= */
 import LoginPage from "../../Features/access/pages/LoginPage.jsx";
@@ -112,100 +111,20 @@ const AppRouter = () => {
         <Route path="/perfil/editar" element={<EditProfilePage />} />
 
         <Route path="/admin" element={<AdminLayout />}>
-          <Route
-            index
-            element={
-              <PermissionGuard
-                permission="dashboard.ver"
-                fallback={<Navigate to="/admin" replace />}
-              >
-                <DashboardPage />
-              </PermissionGuard>
-            }
-          />
+          <Route index element={<DashboardPage />} />
 
           {/* PERFORMANCE */}
-          <Route
-            path="dashboard"
-            element={
-              <PermissionGuard
-                permission="dashboard.ver"
-                fallback={<Navigate to="/admin" replace />}
-              >
-                <IndicatorsPage />
-              </PermissionGuard>
-            }
-          />
+          <Route path="dashboard" element={<IndicatorsPage />} />
 
           {/* USERS */}
-          <Route
-            path="users"
-            element={
-              <PermissionGuard
-                permission="usuarios.ver"
-                fallback={<Navigate to="/admin" replace />}
-              >
-                <Users />
-              </PermissionGuard>
-            }
-          />
-          <Route
-            path="users/form-user"
-            element={
-              <PermissionGuard
-                permission="usuarios.ver"
-                fallback={<Navigate to="/admin" replace />}
-              >
-                <FormUser />
-              </PermissionGuard>
-            }
-          />
-          <Route
-            path="users/info-user"
-            element={
-              <PermissionGuard
-                permission="usuarios.ver"
-                fallback={<Navigate to="/admin" replace />}
-              >
-                <InfoUser />
-              </PermissionGuard>
-            }
-          />
+          <Route path="users" element={<Users />} />
+          <Route path="users/form-user" element={<FormUser />} />
+          <Route path="users/info-user" element={<InfoUser />} />
 
           {/* PURCHASES */}
-          <Route
-            path="purchases/categories"
-            element={
-              <PermissionGuard
-                permission="categorias.ver"
-                fallback={<Navigate to="/admin" replace />}
-              >
-                <Categories />
-              </PermissionGuard>
-            }
-          />
-          <Route
-            path="purchases/products"
-            element={
-              <PermissionGuard
-                permission="productos.ver"
-                fallback={<Navigate to="/admin" replace />}
-              >
-                <Products />
-              </PermissionGuard>
-            }
-          />
-          <Route
-            path="purchases/providers"
-            element={
-              <PermissionGuard
-                permission="proveedores.ver"
-                fallback={<Navigate to="/admin" replace />}
-              >
-                <ProvidersPage />
-              </PermissionGuard>
-            }
-          />
+          <Route path="purchases/categories" element={<Categories />} />
+          <Route path="purchases/products" element={<Products />} />
+          <Route path="purchases/providers" element={<ProvidersPage />} />
           <Route path="purchases" element={<Purchases />} />
           <Route path="purchases/create" element={<CreatePurchase />} />
           <Route path="purchases/returns-p" element={<ReturnsP />} />
@@ -252,17 +171,7 @@ const AppRouter = () => {
           />
 
           {/* CONFIGURATION */}
-          <Route
-            path="configuration/roles"
-            element={
-              <PermissionGuard
-                permission="roles.ver"
-                fallback={<Navigate to="/admin" replace />}
-              >
-                <RolesPage />
-              </PermissionGuard>
-            }
-          />
+          <Route path="configuration/roles" element={<RolesPage />} />
           <Route path="configuration/banners" element={<Banners />} />
         </Route>
       </Route>
