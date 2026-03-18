@@ -131,10 +131,9 @@ function SalesTable({ data = [], search = '', totalData = 0, offset = 0 }) {
       <table className="min-w-max w-full">
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="sticky left-0 z-10 bg-[#004D77] px-3 py-2.5 text-center text-xs font-semibold">#</th>
+            <th className="sticky left-0 z-10 bg-[#004D77] px-3 py-2.5 text-center text-xs font-semibold">No. Factura</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Cliente</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Vendedor</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">No. Factura</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Fecha</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">M. Pago</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Total</th>
@@ -156,8 +155,8 @@ function SalesTable({ data = [], search = '', totalData = 0, offset = 0 }) {
             return (
               <tr key={row.id} className={`transition-colors duration-150 ${rowBg}`}>
 
-                <td className={`sticky left-0 z-10 ${rowBg} px-3 py-2 text-center text-xs text-gray-500 font-medium`}>
-                  {offset + index + 1}
+                <td className={`sticky left-0 z-10 ${rowBg} px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap font-mono`}>
+                  {highlight(String(row.factura), search)}
                 </td>
 
                 <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap">
@@ -174,9 +173,6 @@ function SalesTable({ data = [], search = '', totalData = 0, offset = 0 }) {
                   }
                 </td>
 
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap font-mono">
-                  {highlight(String(row.factura), search)}
-                </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(row.fecha, search)}
                 </td>
