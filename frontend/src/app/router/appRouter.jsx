@@ -1,7 +1,7 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
-
+import PermissionGuard from "../../Features/administrtivePanel/configuration/roles/guards/PermissionGuard";
 
 /* ========= ACCESO ========= */
 import LoginPage from "../../Features/access/pages/LoginPage.jsx";
@@ -30,8 +30,6 @@ import ShoppingCart from "../../Features/landing/shoppingCart/ShoppingCart.jsx";
 import AdminLayout from "../../Features/layouts/AdminLayout";
 import DashboardPage from "../../Features/layouts/DashboardPage";
 
-
-
 /* USERS */
 import Users from "../../Features/administrtivePanel/users/pages/Users.jsx";
 import FormUser from "../../Features/administrtivePanel/users/components/FormUser.jsx";
@@ -45,10 +43,11 @@ import Categories from "../../Features/administrtivePanel/purchases/categories/p
 import Products from "../../Features/administrtivePanel/purchases/products/pages/Products.jsx";
 import ProvidersPage from "../../Features/administrtivePanel/purchases/providers/page/ProvidersPage.jsx";
 import Purchases from "../../Features/administrtivePanel/purchases/purchases/pages/Purchases.jsx";
+// import CreatePurchase from "../../Features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx";
 import CreatePurchase from "../../Features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx";
 import ReturnsP from "../../Features/administrtivePanel/purchases/returns/pages/Returns.jsx";
-import ReturnForm from "../../Features/administrtivePanel/purchases/returns/modals/ReturnForm.jsx";
-import ReturnInfo from "../../Features/administrtivePanel/purchases/returns/modals/ReturnInfo.jsx";
+// import ReturnForm from "../../Features/administrtivePanel/purchases/returns/modals/ReturnForm.jsx";
+// import ReturnInfo from "../../Features/administrtivePanel/purchases/returns/modals/ReturnInfo.jsx";
 import NonConformingProducts from "../../Features/administrtivePanel/purchases/nonConformingProducts/pages/NonConformingProducts.jsx";
 
 /* SALES */
@@ -56,11 +55,14 @@ import ClientsPage from "../../Features/administrtivePanel/sales/clients/page/Cl
 import OrdersA from "../../Features/administrtivePanel/sales/orders/pages/Orders.jsx";
 
 import Sales from "../../Features/administrtivePanel/sales/sales/pages/Sales.jsx";
+// import SaleForm from "../../Features/administrtivePanel/sales/sales/pages/SaleForm.jsx";
 import SaleForm from "../../Features/administrtivePanel/sales/sales/pages/SaleForm.jsx";
+// import SaleInfo from "../../Features/administrtivePanel/sales/sales/modals/SaleInfo.jsx";
+// import AnnularSale from "../../Features/administrtivePanel/sales/sales/modals/AnnularSale.jsx";
 import SaleInfo from "../../Features/administrtivePanel/sales/sales/modals/SaleInfo.jsx";
-import AnnularSale from "../../Features/administrtivePanel/sales/sales/modals/AnnularSale.jsx"
+import AnnularSale from "../../Features/administrtivePanel/sales/sales/modals/AnnularSale.jsx";
 
-import ReturnsPage from "../../Features/administrtivePanel/sales/returns/page/ReturnsPage.jsx"; 
+import ReturnsPage from "../../Features/administrtivePanel/sales/returns/page/ReturnsPage.jsx";
 
 import PaymentsPage from "../../Features/administrtivePanel/sales/paymentsAndCredits/pages/PaymentsPage.jsx";
 import AccountDetailsPage from "../../Features/administrtivePanel/sales/paymentsAndCredits/pages/AccountDetailsPage.jsx";
@@ -73,27 +75,20 @@ import Banners from "../../Features/administrtivePanel/configuration/carousel/pa
 import FormProduct from "../../Features/administrtivePanel/purchases/products/modals/CreateProduct.jsx";
 import EditProduct from "../../Features/administrtivePanel/purchases/products/modals/EditProduct.jsx";
 
-
-
 const AppRouter = () => {
   return (
     <Routes>
-
       {/* ========= ACCESO ========= */}
       <Route element={<PublicRoute />}>
-
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgotpassword" element={<ForgotPasswordPage />} />
         <Route path="/resetpassword" element={<ResetPasswordPage />} />
-        
-
       </Route>
 
       {/* ========= LANDING ========= */}
       <Route path="/" element={<Landing />}>
         <Route index element={<Home />} />
-        
 
         <Route path="shop" element={<Shop />} />
         <Route path="shop/detail" element={<ShopDetail />} />
@@ -111,32 +106,129 @@ const AppRouter = () => {
       </Route>
 
       {/* ========= PANEL ADMIN ========= */}
-      <Route element={<PrivateRoute requireRole={false}/>}>
 
-        <Route path="/perfil/editar" element={<EditProfilePage />} /> // Ruta para editar perfil, accesible para cualquier usuario autenticado
+      <Route element={<PrivateRoute requireRole={false} />}>
+        {/* Ruta para editar perfil, accesible para cualquier usuario autenticado */}
+        <Route path="/perfil/editar" element={<EditProfilePage />} />
+
         <Route path="/admin" element={<AdminLayout />}>
-
-          <Route index element={<DashboardPage />} />
-          
+          <Route
+            index
+            element={
+              <PermissionGuard
+                permission="dashboard.ver"
+                fallback={<Navigate to="/admin" replace />}
+              >
+                <DashboardPage />
+              </PermissionGuard>
+            }
+          />
 
           {/* PERFORMANCE */}
-          <Route path="dashboard" element={<IndicatorsPage/>} />
+          <Route
+            path="dashboard"
+            element={
+              <PermissionGuard
+                permission="dashboard.ver"
+                fallback={<Navigate to="/admin" replace />}
+              >
+                <IndicatorsPage />
+              </PermissionGuard>
+            }
+          />
 
           {/* USERS */}
-          <Route path="users" element={<Users />} />
-          <Route path="users/form-user" element={<FormUser />} />
-          <Route path="users/info-user" element={<InfoUser />} />
+          <Route
+            path="users"
+            element={
+              <PermissionGuard
+                permission="usuarios.ver"
+                fallback={<Navigate to="/admin" replace />}
+              >
+                <Users />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="users/form-user"
+            element={
+              <PermissionGuard
+                permission="usuarios.ver"
+                fallback={<Navigate to="/admin" replace />}
+              >
+                <FormUser />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="users/info-user"
+            element={
+              <PermissionGuard
+                permission="usuarios.ver"
+                fallback={<Navigate to="/admin" replace />}
+              >
+                <InfoUser />
+              </PermissionGuard>
+            }
+          />
 
           {/* PURCHASES */}
-          <Route path="purchases/categories" element={<Categories />} />
-          <Route path="purchases/products" element={<Products />} />
-          <Route path="purchases/providers" element={<ProvidersPage />} />
+          <Route
+            path="purchases/categories"
+            element={
+              <PermissionGuard
+                permission="categorias.ver"
+                fallback={<Navigate to="/admin" replace />}
+              >
+                <Categories />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="purchases/products"
+            element={
+              <PermissionGuard
+                permission="productos.ver"
+                fallback={<Navigate to="/admin" replace />}
+              >
+                <Products />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="purchases/providers"
+            element={
+              <PermissionGuard
+                permission="proveedores.ver"
+                fallback={<Navigate to="/admin" replace />}
+              >
+                <ProvidersPage />
+              </PermissionGuard>
+            }
+          />
           <Route path="purchases" element={<Purchases />} />
           <Route path="purchases/create" element={<CreatePurchase />} />
           <Route path="purchases/returns-p" element={<ReturnsP />} />
-          <Route path="purchases/return-form" element={ <ReturnForm /> } />
-          <Route path="purchases/return-info" element={ <ReturnInfo /> } />
-          <Route path="purchases/non-conforming-products" element={<NonConformingProducts />} />
+          {/* <Route
+            path="purchases/return-form"
+            element={
+              <PermissionGuard permission="devoluciones_en_compras.ver" fallback={<Navigate to="/admin" replace />}>
+                <ReturnForm />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="purchases/return-info"
+            element={
+              <PermissionGuard permission="devoluciones_en_compras.ver" fallback={<Navigate to="/admin" replace />}>
+                <ReturnInfo />
+              </PermissionGuard>
+            }
+          /> */}
+          <Route
+            path="purchases/non-conforming-products"
+            element={<NonConformingProducts />}
+          />
 
           {/* SALES */}
           <Route path="sales" element={<Sales />} />
@@ -150,20 +242,30 @@ const AppRouter = () => {
 
           {/* PAYMENTS */}
           <Route path="sales/payments-and-credits" element={<PaymentsPage />} />
-          <Route path="sales/payments-and-credits/:id" element={<AccountDetailsPage mode="view" />} />
-          <Route path="sales/payments-and-credits/:id/payment" element={<AccountDetailsPage mode="payment" />} />
+          <Route
+            path="sales/payments-and-credits/:id"
+            element={<AccountDetailsPage mode="view" />}
+          />
+          <Route
+            path="sales/payments-and-credits/:id/payment"
+            element={<AccountDetailsPage mode="payment" />}
+          />
 
           {/* CONFIGURATION */}
-          <Route path="configuration/roles" element={<RolesPage />} />
+          <Route
+            path="configuration/roles"
+            element={
+              <PermissionGuard
+                permission="roles.ver"
+                fallback={<Navigate to="/admin" replace />}
+              >
+                <RolesPage />
+              </PermissionGuard>
+            }
+          />
           <Route path="configuration/banners" element={<Banners />} />
-
-          {/* PRODUCTS MODALS */}
-          <Route path="create" element={<FormProduct />} />
-          <Route path="edit" element={<EditProduct />} />
-
         </Route>
       </Route>
-
     </Routes>
   );
 };

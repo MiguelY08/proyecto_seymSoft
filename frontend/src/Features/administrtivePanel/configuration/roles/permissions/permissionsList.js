@@ -8,10 +8,11 @@ export const permissionsList = [
     modulo: "usuarios",
     acciones: [
       "ver",
+      "ver_informacion",
       "crear",
       "editar",
       "eliminar",
-      "cambiar_estado",
+      "activar_desactivar",
       "descargar"
     ]
   },
@@ -24,9 +25,12 @@ export const permissionsList = [
     modulo: "roles",
     acciones: [
       "ver",
+      "ver_informacion",
       "crear",
       "editar",
-      "eliminar"
+      "eliminar",
+      "activar_desactivar",
+
     ]
   },
 
@@ -38,6 +42,7 @@ export const permissionsList = [
     modulo: "clientes",
     acciones: [
       "ver",
+      "ver_informacion",
       "crear",
       "editar",
       "eliminar"
@@ -52,6 +57,7 @@ export const permissionsList = [
     modulo: "productos",
     acciones: [
       "ver",
+      "ver_informacion",
       "crear",
       "editar",
       "activar_desactivar"
@@ -66,7 +72,9 @@ export const permissionsList = [
     modulo: "categorias",
     acciones: [
       "ver",
-      "crear",
+      "ver_informacion",
+      "crear_categotia",
+      "crear_subcategoria",
       "editar",
       "eliminar",
       "activar_desactivar"
@@ -81,8 +89,10 @@ export const permissionsList = [
     modulo: "proveedores",
     acciones: [
       "ver",
+      "ver_informacion",
       "crear",
       "editar",
+      "activar_desactivar",
       "eliminar"
     ]
   },
@@ -98,7 +108,7 @@ export const permissionsList = [
       "crear",
       "anular",
       "devolver",
-      "ver_detalle"
+      "ver_informacion"
     ]
   },
 
@@ -111,8 +121,8 @@ export const permissionsList = [
     acciones: [
       "ver",
       "crear",
-      "editar",
-      "ver_detalle",
+      "exportar",
+      "ver_informacion",
       "anular"
     ]
   },
@@ -125,9 +135,10 @@ export const permissionsList = [
     modulo: "pedidos",
     acciones: [
       "ver",
+      "ver_informacion",
       "editar",
       "anular",
-      "descargar"
+      "exportar"
     ]
   },
 
@@ -170,9 +181,13 @@ export const permissionsList = [
     modulo: "pagos_y_abonos",
     acciones: [
       "ver",
-      "crear",
-      "editar",
-      "descargar"
+      "ver_informacion",
+      "abonar",
+      "anular",
+      "descargar",
+      "exportar",
+      "contactar",
+      "generar_interes"
     ]
   },
 
@@ -186,7 +201,7 @@ export const permissionsList = [
       "ver",
       "subir_imagen",
       "eliminar",
-      "cambiar_estado",
+      "activar_desactivar",
       "ordenar"
     ]
   },
@@ -201,7 +216,7 @@ export const permissionsList = [
       "ver",
       "ver_informacion",
       "editar",
-      "descargar"
+      "anular"
     ]
   },
 
