@@ -43,19 +43,9 @@ export const CartProvider = ({ children }) => {
         return [...prevItems, { ...product, quantity }];
       }
     });
-
-    Swal.fire({
-      icon: 'success',
-      title: '¡Agregado al carrito!',
-      text: `${quantity} x ${product.name} ${quantity > 1 ? 'fueron agregados' : 'fue agregado'} al carrito`,
-      timer: 2000,
-      showConfirmButton: false,
-      toast: true,
-      position: 'top-end',
-      background: '#10B981',
-      color: '#fff',
-      iconColor: '#fff'
-    });
+    
+    // Retorna true para que el componente muestre la alerta
+    return true;
   };
 
   const increaseQuantity = (productId) => {

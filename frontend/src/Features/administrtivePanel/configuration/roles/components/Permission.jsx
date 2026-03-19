@@ -1,14 +1,10 @@
 import { usePermissions } from "../hooks/usePermissions";
 
-export default function PermissionGuard({
-  permission,
-  children,
-  fallback = null,
-}) {
+export default function Permission({ permission, children }) {
   const { hasPermission } = usePermissions();
 
   if (!hasPermission(permission)) {
-    return fallback;
+    return null;
   }
 
   return children;
