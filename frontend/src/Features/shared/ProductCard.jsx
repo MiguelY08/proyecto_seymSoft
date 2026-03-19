@@ -1,29 +1,48 @@
 import React, { useState } from "react";
 import { ShoppingCart, Heart, HeartCrack } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useCart } from "../shared/Context/Cartcontext";
+import { useFavorites } from "../shared/Context/Favoritescontext";
 import { useAlert } from "../shared/alerts/useAlert";
 
-function ProductCard({ image, name, category, price, productId, onAddToCart, onAddToFavorites }) {
+function ProductCard({
+  image,
+  name,
+  category,
+  price,
+  productData, // objeto completo del producto
+}) {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
+  const { toggleFavorite, isFavorite } = useFavorites();
   const { showSuccess } = useAlert();
-
-  const [isFavorite,      setIsFavorite]      = useState(false);
+  
   const [isHoveringHeart, setIsHoveringHeart] = useState(false);
+
+  // Construir objeto de producto
+  const product = productData || {
+    id: Math.random(),
+    image,
+    name,
+    category,
+    price
+  };
 
   const handleFavorite = (e) => {
     e.stopPropagation();
-    const adding = !isFavorite;
-    setIsFavorite(adding);
-    if (adding) {
-      onAddToFavorites?.();
-      showSuccess('Añadido a favoritos', `${name} se ha agregado a tus favoritos.`);
+    const wasAdded = toggleFavorite(product);
+    
+    if (wasAdded) {
+      showSuccess('Agregado a favoritos', `${product.name} se agregó a tu lista de deseos`);
+    } else {
+      showSuccess('Eliminado de favoritos', `${product.name} se eliminó de tu lista de deseos`);
     }
   };
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
-    onAddToCart?.();
-    showSuccess('Añadido al carrito', `${name} se ha agregado al carrito.`);
+    addToCart(product, 1);
+    showSuccess('Añadido al carrito', `${product.name} se ha agregado al carrito.`);
   };
 
   const goToDetail = () => {
@@ -69,7 +88,7 @@ function ProductCard({ image, name, category, price, productId, onAddToCart, onA
             onMouseLeave={() => setIsHoveringHeart(false)}
             className="w-9 h-9 flex items-center justify-center"
           >
-            {isFavorite ? (
+            {isFavorite(product.id) ? (
               isHoveringHeart ? (
                 <HeartCrack className="w-6 h-6 text-[#004D77]" strokeWidth={2} />
               ) : (
