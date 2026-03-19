@@ -1,6 +1,11 @@
 import React from "react";
-import { Info, RefreshCw, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
-
+import {
+  Info,
+  RefreshCw,
+  XCircle,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 const highlightText = (text, search) => {
   if (!search) return text;
@@ -15,7 +20,7 @@ const highlightText = (text, search) => {
       </span>
     ) : (
       part
-    )
+    ),
   );
 };
 
@@ -32,7 +37,6 @@ export const PurchasesTable = ({
   handleReturn,
   search,
 }) => {
-
   return (
     <>
       <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
@@ -47,18 +51,12 @@ export const PurchasesTable = ({
                 <th className="px-3 py-2 text-left font-semibold">
                   Fecha compra
                 </th>
-                <th className="px-3 py-2 text-left font-semibold">
-                  Proveedor
-                </th>
+                <th className="px-3 py-2 text-left font-semibold">Proveedor</th>
                 <th className="px-3 py-2 text-center font-semibold">
                   Cantidad
                 </th>
-                <th className="px-3 py-2 text-right font-semibold">
-                  Precio
-                </th>
-                <th className="px-3 py-2 text-center font-semibold">
-                  Estado
-                </th>
+                <th className="px-3 py-2 text-right font-semibold">Precio</th>
+                <th className="px-3 py-2 text-center font-semibold">Estado</th>
                 <th className="px-3 py-2 text-center font-semibold">
                   Acciones
                 </th>
@@ -79,28 +77,26 @@ export const PurchasesTable = ({
                     {startIndex + index + 1}
                   </td>
                   <td className="px-3 py-2.5">
-                     {highlightText(compra.numeroFacturacion || "", search)}
+                    {highlightText(compra.numeroFacturacion || "", search)}
                   </td>
-                  <td className="px-3 py-2.5">
-                    {compra.fechaCompra}
-                  </td>
+                  <td className="px-3 py-2.5">{compra.fechaCompra}</td>
                   <td className="px-3 py-2.5">
                     {highlightText(compra.proveedor || "", search)}
                   </td>
                   <td className="px-3 py-2.5 text-center">
                     {highlightText(
                       compra.cantidadProductos?.toString() || "",
-                      search
+                      search,
                     )}
                   </td>
 
                   <td className="px-3 py-2.5 text-right">
-                  $
-                  {highlightText(
-                    Number(compra.precioTotal).toLocaleString(),
-                    search
-                  )}
-                </td>
+                    $
+                    {highlightText(
+                      Number(compra.precioTotal).toLocaleString(),
+                      search,
+                    )}
+                  </td>
 
                   <td className="px-3 py-2.5 text-center">
                     <span
@@ -108,8 +104,8 @@ export const PurchasesTable = ({
                         compra.estado === "Completada" || compra.estado === "Completada*" 
                           ? "bg-green-100 text-green-700"
                           : compra.estado === "Anulada"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-yellow-100 text-yellow-700"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-yellow-100 text-yellow-700"
                       }`}
                     >
                       {highlightText(compra.estado || "Devuelta", search)}
@@ -149,7 +145,6 @@ export const PurchasesTable = ({
                       </button>
                     </div>
                   </td>
-
                 </tr>
               ))}
             </tbody>

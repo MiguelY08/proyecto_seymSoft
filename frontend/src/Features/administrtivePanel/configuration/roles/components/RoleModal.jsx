@@ -36,7 +36,15 @@ export default function RoleModal({
     if (mode === "create") {
       setNombre("")
       setDescripcion("")
-      setPermisosRol([])
+      // Inicializar permisosRol con estructura vacía
+      const permisosIniciales = permissionsList.map(modulo => ({
+        id: modulo.id,
+        acciones: modulo.acciones.reduce((acc, accion) => {
+          acc[accion] = false
+          return acc
+        }, {})
+      }))
+      setPermisosRol(permisosIniciales)
     }
 
     setErrors({})

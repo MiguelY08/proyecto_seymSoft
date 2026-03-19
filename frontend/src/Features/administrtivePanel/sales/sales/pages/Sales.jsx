@@ -63,7 +63,6 @@ function Sales() {
           data={paginatedData}
           search={search}
           totalData={data.length}
-          offset={(currentPage - 1) * RECORDS_PER_PAGE}
         />
       </div>
 
