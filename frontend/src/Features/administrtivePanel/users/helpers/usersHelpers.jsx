@@ -29,7 +29,7 @@ export const normalizar = (str) =>
  */
 export const splitName = (fullName = '') => {
   const palabras = fullName.trim().split(/\s+/).filter(Boolean);
-  const mitad    = palabras.length >= 3 ? Math.ceil(palabras.length / 2) : palabras.length;
+  const mitad    = palabras.length >= 2 ? Math.ceil(palabras.length / 2) : palabras.length;
   return {
     nombres:   palabras.slice(0, mitad).join(' '),
     apellidos: palabras.slice(mitad).join(' '),
@@ -49,7 +49,13 @@ export const filterUsers = (data, search) => {
   const term = search.toLowerCase().trim();
   if (!term) return data;
 
-  const termosEstado = ['activo', 'activos', 'inactivo', 'inactivos'];
+  const termosEstado   = ['activo', 'activos', 'inactivo', 'inactivos'];
+  const termosCliente  = ['cliente', 'clientes'];
+  const termosNoClient = ['no cliente', 'no clientes'];
+
+  // Filtro exclusivo por condición de cliente — cortocircuita el resto
+  if (termosNoClient.includes(term)) return data.filter(row => !row.isClient);
+  if (termosCliente.includes(term))  return data.filter(row =>  row.isClient);
 
   return data.filter((row) => {
     const estadoTexto = row.active ? 'activo' : 'inactivo';

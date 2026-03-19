@@ -1,50 +1,34 @@
-/**
- * Archivo: InfoClient.jsx
- *
- * Modal de sólo lectura que muestra los detalles completos de un cliente.
- * Incluye un botón para alternar una gráfica histórica del cliente.
- *
- * Props:
- * @param {boolean} isOpen - Controla visibilidad del modal
- * @param {Function} onClose - Cierra el modal
- * @param {object} client - Cliente cuyos datos se muestran (requerido)
- */
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { X, ChevronRight } from 'lucide-react';
-import GraphClient from './GraphClient';
-import { 
-  formatPersonType, 
-  formatPhoneNumber, 
-  formatContactPhone, 
-  formatClientType, 
+import GraphClient from '../components/GraphClient';
+import {
+  formatPersonType,
+  formatPhoneNumber,
+  formatContactPhone,
+  formatClientType,
   formatRut,
   getStatusBadgeClass,
-  getStatusText
-} from '../utils/clientHelpers';
+  getStatusText,
+} from '../helpers/clientHelpers';
 
 function InfoClient({ isOpen, onClose, client }) {
-  // controla visibilidad de la sección de gráfico adicional
   const [showGraph, setShowGraph] = useState(false);
 
-  // si no está abierto o no hay cliente no renderizamos nada
   if (!isOpen || !client) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Modal Container */}
+      {/* Modal */}
       <div className={`relative bg-white rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex transition-all h-[90vh] ${
         showGraph ? 'w-[95vw] max-w-[1600px]' : 'w-full max-w-3xl'
       }`}>
-        
-        {/* Info Section */}
+
+        {/* Info section */}
         <div className={`flex flex-col ${showGraph ? 'w-1/2 border-r border-gray-200' : 'w-full'}`}>
-          
+
           {/* Header */}
           <div className="bg-[#004D77] text-white px-6 py-4 flex items-center justify-between shrink-0">
             <h2 className="text-lg font-semibold">Detalle del cliente</h2>
@@ -56,11 +40,11 @@ function InfoClient({ isOpen, onClose, client }) {
             </button>
           </div>
 
-          {/* Content - adapted to provider style */}
+          {/* Content */}
           <div className="overflow-y-auto flex-1 px-8 py-5">
             <div className="grid grid-cols-3 gap-x-6 gap-y-3">
 
-              {/* Número Cliente full width */}
+              {/* Client ID */}
               <div className="col-span-3">
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Número Cliente
@@ -68,111 +52,111 @@ function InfoClient({ isOpen, onClose, client }) {
                 <p className="text-sm text-gray-900 font-medium">{client.id || 'N/A'}</p>
               </div>
 
-              <div className="col-span-3 border-t border-gray-200 my-1"></div>
+              <div className="col-span-3 border-t border-gray-200 my-1" />
 
-              {/* fila 1: tipo persona, tipo doc, número documento */}
+              {/* Person type / Document type / Document */}
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Tipo Persona
                 </label>
                 <p className="text-sm text-gray-900 font-medium capitalize">
-                  {formatPersonType(client.tipoPersona)}
+                  {formatPersonType(client.personType)}
                 </p>
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Tipo Doc.
                 </label>
-                <p className="text-sm text-gray-900 font-medium">{client.tipo || 'N/A'}</p>
+                <p className="text-sm text-gray-900 font-medium">{client.documentType || 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Número Documento
                 </label>
-                <p className="text-sm text-gray-900 font-medium">{client.numero || 'N/A'}</p>
+                <p className="text-sm text-gray-900 font-medium">{client.document || 'N/A'}</p>
               </div>
 
-              <div className="col-span-3 border-t border-gray-200 my-1"></div>
+              <div className="col-span-3 border-t border-gray-200 my-1" />
 
-              {/* fila 2: nombres, apellidos, estado */}
+              {/* First name / Last name / Status */}
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Nombres
                 </label>
-                <p className="text-sm text-gray-900 font-medium">{client.nombres || 'N/A'}</p>
+                <p className="text-sm text-gray-900 font-medium">{client.firstName || 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Apellidos
                 </label>
-                <p className="text-sm text-gray-900 font-medium">{client.apellidos || 'N/A'}</p>
+                <p className="text-sm text-gray-900 font-medium">{client.lastName || 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Estado
                 </label>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusBadgeClass(client.activo)}`}>
-                  {getStatusText(client.activo)}
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusBadgeClass(client.active)}`}>
+                  {getStatusText(client.active)}
                 </span>
               </div>
 
-              <div className="col-span-3 border-t border-gray-200 my-1"></div>
+              <div className="col-span-3 border-t border-gray-200 my-1" />
 
-              {/* fila 3: correo, teléfono, crédito */}
+              {/* Email / Phone / Credit */}
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Correo Electrónico
                 </label>
-                <p className="text-sm text-gray-900 font-medium break-words">{client.correo || 'N/A'}</p>
+                <p className="text-sm text-gray-900 font-medium break-words">{client.email || 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Teléfono
                 </label>
-                <p className="text-sm text-gray-900 font-medium">{formatPhoneNumber(client.telefono)}</p>
+                <p className="text-sm text-gray-900 font-medium">{formatPhoneNumber(client.phone)}</p>
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Crédito Cliente
                 </label>
-                <p className="text-sm text-gray-900 font-medium">{client.creditoCliente || 'N/A'}</p>
+                <p className="text-sm text-gray-900 font-medium">{client.clientCredit || 'N/A'}</p>
               </div>
 
-              <div className="col-span-3 border-t border-gray-200 my-1"></div>
+              <div className="col-span-3 border-t border-gray-200 my-1" />
 
-              {/* Dirección fila completa */}
+              {/* Address */}
               <div className="col-span-3">
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Dirección
                 </label>
-                <p className="text-sm text-gray-900 font-medium">{client.direccion || 'N/A'}</p>
+                <p className="text-sm text-gray-900 font-medium">{client.address || 'N/A'}</p>
               </div>
 
-              <div className="col-span-3 border-t border-gray-200 my-1"></div>
+              <div className="col-span-3 border-t border-gray-200 my-1" />
 
-              {/* fila 5: contacto, teléfono contacto, tipo cliente */}
+              {/* Contact name / Contact phone / Client type */}
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Persona Contacto
                 </label>
-                <p className="text-sm text-gray-900 font-medium">{client.nombreContacto || 'N/A'}</p>
+                <p className="text-sm text-gray-900 font-medium">{client.contactName || 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Teléfono Contacto
                 </label>
-                <p className="text-sm text-gray-900 font-medium">{formatContactPhone(client.numeroContacto)}</p>
+                <p className="text-sm text-gray-900 font-medium">{formatContactPhone(client.contactPhone)}</p>
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Tipo Cliente
                 </label>
-                <p className="text-sm text-gray-900 font-medium capitalize">{formatClientType(client.tipoCliente)}</p>
+                <p className="text-sm text-gray-900 font-medium capitalize">{formatClientType(client.clientType)}</p>
               </div>
 
-              <div className="col-span-3 border-t border-gray-200 my-1"></div>
+              <div className="col-span-3 border-t border-gray-200 my-1" />
 
-              {/* fila 6: RUT, CIU */}
+              {/* RUT / CIU code */}
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   RUT
@@ -183,9 +167,9 @@ function InfoClient({ isOpen, onClose, client }) {
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                   Código CIU
                 </label>
-                <p className="text-sm text-gray-900 font-medium">{client.codigoCIU || 'N/A'}</p>
+                <p className="text-sm text-gray-900 font-medium">{client.ciuCode || 'N/A'}</p>
               </div>
-              <div></div>
+              <div />
 
             </div>
           </div>
@@ -199,17 +183,16 @@ function InfoClient({ isOpen, onClose, client }) {
               Cerrar
             </button>
           </div>
-
         </div>
 
-        {/* Graph Section (expandable) */}
+        {/* Graph section (expandable) */}
         {showGraph && (
           <div className="w-1/2 flex flex-col">
-            <GraphClient clientStartDate={client.clienteSince || '07/05/2023'} />
+            <GraphClient clientStartDate={client.clientSince || '07/05/2023'} />
           </div>
         )}
 
-        {/* Toggle Graph Button */}
+        {/* Toggle graph button */}
         <button
           onClick={() => setShowGraph(!showGraph)}
           className={`absolute top-1/2 -translate-y-1/2 bg-[#004D77] text-white p-2 rounded-full shadow-lg hover:bg-[#003a5c] transition-all z-10 ${

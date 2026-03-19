@@ -1,6 +1,5 @@
-import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Info, SquarePen, Trash2, Users, Plus } from "lucide-react";
+import { Info, SquarePen, Trash2, Users, Plus, ShoppingBag } from "lucide-react";
 import { useAlert } from "../../../shared/alerts/useAlert";
 import { highlight, highlightEstado } from "../helpers/usersHelpers";
 import { usePermissions } from "../../configuration/roles/hooks/usePermissions";
@@ -119,7 +118,6 @@ function UsersTable({
   onToggle,
   search = "",
   totalData = 0,
-  offset = 0,
 }) {
   const navigate = useNavigate();
   const { showConfirm, showSuccess, showWarning } = useAlert();
@@ -163,9 +161,13 @@ function UsersTable({
     }, new Set());
 
     const rolesTexto = [...roles].join(" y ");
+    const clienteNote = row.isClient
+      ? ' Además, su perfil de cliente será eliminado y sus créditos y pagos quedarán registrados bajo el Cliente de Caja.'
+      : '';
+
     const subtitulo = tieneVentas
-      ? `Este usuario aparece como ${rolesTexto} en ${ventasAsociadas.length} venta(s) registrada(s). Al eliminarlo, esas ventas mostrarán "Usuario eliminado". Esta acción no se podrá revertir.`
-      : "No se podrá revertir la acción.";
+      ? `Este usuario aparece como ${rolesTexto} en ${ventasAsociadas.length} venta(s) registrada(s). Al eliminarlo, esas ventas mostrarán "Usuario eliminado".${clienteNote} Esta acción no se podrá revertir.`
+      : `No se podrá revertir la acción.${clienteNote}`;
 
     showConfirm(
       "warning",
@@ -196,9 +198,6 @@ function UsersTable({
         {/* Header de la tabla con columnas fijas */}
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="sticky left-0 z-10 bg-[#004D77] px-3 py-2.5 text-center text-xs font-semibold">
-              #
-            </th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Tipo y Documento
             </th>
@@ -215,9 +214,6 @@ function UsersTable({
               Rol
             </th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">
-              T. Cliente
-            </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Acciones
             </th>
           </tr>
@@ -232,11 +228,6 @@ function UsersTable({
                 key={row.id}
                 className={`transition-colors duration-150 ${rowBg}`}
               >
-                <td
-                  className={`sticky left-0 z-10 ${rowBg} px-3 py-1.5 text-center text-xs text-gray-500 font-medium`}
-                >
-                  {offset + index + 1}
-                </td>
                 {/* Datos del usuario con resaltado de búsqueda */}
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                   <span className="font-medium">
@@ -245,7 +236,17 @@ function UsersTable({
                   {highlight(row.document, search)}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">
-                  {highlight(row.name, search)}
+                  <div className="flex items-center justify-center gap-1.5">
+                    {highlight(row.name, search)}
+                    {row.isClient && (
+                      <span
+                        title="También es cliente"
+                        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#004D77]/10 shrink-0"
+                      >
+                        <ShoppingBag className="w-2.5 h-2.5 text-[#004D77]" strokeWidth={2} />
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(row.email, search)}
@@ -255,9 +256,6 @@ function UsersTable({
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(row.role, search)}
-                </td>
-                <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(row.clientType ?? "Detal", search)}
                 </td>
                 {/* Acciones: info, editar, toggle activo, eliminar */}
                 <td className="px-3 py-1.5">

@@ -1,159 +1,100 @@
-/**
- * Archivo: FormClient.jsx
- *
- * Modal que despliega el formulario para crear o editar un cliente.
- * Contiene lógica de estado local, validación en tiempo real y manejo
- * de envío. También permite alternar una gráfica histórica cuando se
- * edita un cliente existente.
- *
- * Props:
- * @param {boolean} isOpen  - Controla la visibilidad del modal
- * @param {Function} onClose - Callback al cerrar el modal
- * @param {object|null} client - Objeto cliente para editar (null al crear)
- * @param {Function} onSave - Función que se ejecuta con los datos validados
- */
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, ChevronRight } from 'lucide-react';
-import GraphClient from './GraphClient';
-import { useAlert } from '../../../../shared/alerts/useAlert';
-import { clientsService } from '../data/clientsService';
-import { validateClientForm } from '../utils/clientHelpers';
+import GraphClient    from '../components/GraphClient';
+import { validateClientForm } from '../helpers/clientHelpers';
 
 function FormClient({ isOpen, onClose, client, onSave }) {
-  // muestra/oculta sección de gráfica cuando se edita un cliente existente
   const [showGraph, setShowGraph] = useState(false);
 
-  // estado base con todos los campos del formulario
   const initialState = {
-    tipoPersona: '',
-    tipo: 'CC',
-    numero: '',
-    nombres: '',
-    apellidos: '',
-    direccion: '',
-    telefono: '',
-    correo: '',
-    nombreContacto: '',
-    numeroContacto: '',
-    creditoCliente: '',  // Se guardará como '0' si está vacío
-    tipoCliente: '',
-    rut: '',
-    codigoCIU: '',
-  };  
+    personType:   '',
+    documentType: 'CC',
+    document:     '',
+    firstName:    '',
+    lastName:     '',
+    address:      '',
+    phone:        '',
+    email:        '',
+    contactName:  '',
+    contactPhone: '',
+    clientCredit: '',
+    clientType:   '',
+    rut:          '',
+    ciuCode:      '',
+  };
 
-  // estados manejados por el formulario
   const [formData, setFormData] = useState(initialState);
-  const [errors, setErrors] = useState({});     // mensajes de validación
-  const [touched, setTouched] = useState({});   // campos visitados por el usuario
+  const [errors,   setErrors]   = useState({});
+  const [touched,  setTouched]  = useState({});
 
-  const { showSuccess } = useAlert(); // alerta de éxito tras guardado
-
-  // cuando cambia el cliente o se abre el modal, rellenamos el formulario
-  // si venimos a editar; si es creación, se limpia todo.
+  // Populate or reset form when client or isOpen changes
   useEffect(() => {
     if (client) {
       setFormData({
-        tipoPersona: client.tipoPersona || '',
-        tipo: client.tipo || 'CC',
-        numero: client.numero || '',
-        nombres: client.nombres || '',
-        apellidos: client.apellidos || '',
-        direccion: client.direccion || '',
-        telefono: client.telefono || '',
-        correo: client.correo || '',
-        nombreContacto: client.nombreContacto || '',
-        numeroContacto: client.numeroContacto || '',
-        creditoCliente: client.creditoCliente || '',
-        tipoCliente: client.tipoCliente || '',
-        rut: client.rut || '',
-        codigoCIU: client.codigoCIU || '',
+        personType:   client.personType   || '',
+        documentType: client.documentType || 'CC',
+        document:     client.document     || '',
+        firstName:    client.firstName    || '',
+        lastName:     client.lastName     || '',
+        address:      client.address      || '',
+        phone:        client.phone        || '',
+        email:        client.email        || '',
+        contactName:  client.contactName  || '',
+        contactPhone: client.contactPhone || '',
+        clientCredit: client.clientCredit || '',
+        clientType:   client.clientType   || '',
+        rut:          client.rut          || '',
+        ciuCode:      client.ciuCode      || '',
       });
-      
-      // marcamos todos los campos como tocados para que los errores se muestren
-      setTouched(
-        Object.keys(initialState).reduce((acc, key) => ({ ...acc, [key]: true }), {})
-      );
+      setTouched(Object.keys(initialState).reduce((acc, k) => ({ ...acc, [k]: true }), {}));
     } else {
-      // inicializar para nuevo cliente
       setFormData(initialState);
       setTouched({});
     }
-
-    // limpiar errores previos cada vez que el modal se abre o cambia el cliente
     setErrors({});
   }, [client, isOpen]);
 
-  // restaura estados al valor inicial (limpia formulario, errores y gráfica)
   const resetForm = () => {
     setFormData(initialState);
     setErrors({});
     setTouched({});
     setShowGraph(false);
-  };  
+  };
 
-  // Se ejecuta en cada cambio de campo para mantener formData actualizado
   const handleChange = (e) => {
     const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    // validación en vivo solo si el campo ya fue tocado
     if (touched[name]) {
       const validationErrors = validateClientForm({ ...formData, [name]: value });
-      setErrors((prev) => ({
-        ...prev,
-        [name]: validationErrors[name] || '',
-      }));
+      setErrors(prev => ({ ...prev, [name]: validationErrors[name] || '' }));
     } else if (errors[name]) {
-      // limpiar error anterior si el usuario corrige antes de perder el foco
-      setErrors((prev) => ({
-        ...prev,
-        [name]: '',
-      }));
+      setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
-  // Marca el campo como tocado y ejecuta validación completa
   const handleBlur = (e) => {
     const { name } = e.target;
-    setTouched((prev) => ({
-      ...prev,
-      [name]: true,
-    }));
+    setTouched(prev => ({ ...prev, [name]: true }));
     const validationErrors = validateClientForm(formData);
-    setErrors((prev) => ({
-      ...prev,
-      [name]: validationErrors[name] || '',
-    }));
+    setErrors(prev => ({ ...prev, [name]: validationErrors[name] || '' }));
   };
 
-  // Procesa el envío del formulario
   const handleSubmit = (e) => {
     e.preventDefault();
-
     const validationErrors = validateClientForm(formData);
     setErrors(validationErrors);
-    setTouched(
-      Object.keys(formData).reduce((acc, key) => ({ ...acc, [key]: true }), {})
-    );
+    setTouched(Object.keys(formData).reduce((acc, k) => ({ ...acc, [k]: true }), {}));
 
-    // si hay errores, no continuar
     if (Object.keys(validationErrors).length > 0) return;
 
-    // El crédito se enviará como está, y en el service se convertirá a '0' si está vacío
     onSave?.(formData);
-
     resetForm();
     onClose();
   };
 
-  // no renderear nada si el modal está cerrado
   if (!isOpen) return null;
 
-  // devuelve la clase de CSS para un campo considerando si tiene error
   const inputClass = (field) =>
     `w-full px-3 py-1.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors ${
       errors[field] && touched[field]
@@ -161,7 +102,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
 
-  // muestra el mensaje de error si el campo está tocado y tiene error
   const renderError = (field) =>
     errors[field] && touched[field] && (
       <p className="mt-0.5 text-xs text-red-600">{errors[field]}</p>
@@ -169,21 +109,16 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={() => {
-          resetForm();
-          onClose();
-        }}
+        onClick={() => { resetForm(); onClose(); }}
       />
 
-      {/* Modal Container */}
       <div className={`relative bg-white rounded-lg shadow-2xl overflow-hidden flex transition-all h-[95vh] ${
         showGraph ? 'w-[95vw] max-w-1600px' : 'w-full max-w-5xl'
       }`}>
 
-        {/* Form Section */}
+        {/* Form section */}
         <div className={`flex flex-col ${showGraph ? 'w-1/2 border-r border-gray-200' : 'w-full'}`}>
 
           {/* Header */}
@@ -192,10 +127,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
               {client ? 'Editar cliente' : 'Nuevo cliente'}
             </h2>
             <button
-              onClick={() => {
-                resetForm();
-                onClose();
-              }}
+              onClick={() => { resetForm(); onClose(); }}
               className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
             >
               <X className="w-5 h-5" strokeWidth={2} />
@@ -206,216 +138,216 @@ function FormClient({ isOpen, onClose, client, onSave }) {
             <div className="overflow-y-auto flex-1 p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 max-w-6xl mx-auto">
 
-                {/* Tipo persona */}
+                {/* Person type */}
                 <div className="md:col-span-2">
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Tipo de persona <span className="text-red-500">*</span>
                   </label>
                   <select
-                    name="tipoPersona"
-                    value={formData.tipoPersona}
+                    name="personType"
+                    value={formData.personType}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    className={inputClass('tipoPersona')}
+                    className={inputClass('personType')}
                   >
                     <option value="">Selecciona una opción</option>
                     <option value="natural">Persona Natural</option>
                     <option value="juridica">Persona Jurídica</option>
                   </select>
-                  {renderError('tipoPersona')}
+                  {renderError('personType')}
                 </div>
 
-                {/* Tipo */}
+                {/* Document type */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Tipo <span className="text-red-500">*</span>
                   </label>
                   <select
-                    name="tipo"
-                    value={formData.tipo}
+                    name="documentType"
+                    value={formData.documentType}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    className={inputClass('tipo')}
+                    className={inputClass('documentType')}
                   >
                     <option value="CC">CC</option>
                     <option value="CE">CE</option>
                     <option value="NIT">NIT</option>
                   </select>
-                  {renderError('tipo')}
+                  {renderError('documentType')}
                 </div>
 
-                {/* Numero */}
+                {/* Document number */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Número <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    name="numero"
-                    value={formData.numero}
+                    name="document"
+                    value={formData.document}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     placeholder="Ej: 123456789"
-                    className={inputClass('numero')}
+                    className={inputClass('document')}
                   />
-                  {renderError('numero')}
+                  {renderError('document')}
                 </div>
 
-                {/* Nombres */}
+                {/* First name */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Nombres <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    name="nombres"
-                    value={formData.nombres}
+                    name="firstName"
+                    value={formData.firstName}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     placeholder="Ej: Juan Carlos"
-                    className={inputClass('nombres')}
+                    className={inputClass('firstName')}
                   />
-                  {renderError('nombres')}
+                  {renderError('firstName')}
                 </div>
 
-                {/* Apellidos */}
+                {/* Last name */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Apellidos<span className="text-red-500">*</span>
+                    Apellidos <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    name="apellidos"
-                    value={formData.apellidos}
+                    name="lastName"
+                    value={formData.lastName}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     placeholder="Ej: Pérez Gómez"
-                    className={inputClass('apellidos')}
+                    className={inputClass('lastName')}
                   />
-                  {renderError('apellidos')}
+                  {renderError('lastName')}
                 </div>
 
-                {/* Dirección */}
+                {/* Address */}
                 <div className="md:col-span-2">
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Dirección <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    name="direccion"
-                    value={formData.direccion}
+                    name="address"
+                    value={formData.address}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     placeholder="Ej: Calle 10 # 15-25"
-                    className={inputClass('direccion')}
+                    className={inputClass('address')}
                   />
-                  {renderError('direccion')}
+                  {renderError('address')}
                 </div>
 
-                {/* Teléfono */}
+                {/* Phone */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Teléfono <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="tel"
-                    name="telefono"
-                    value={formData.telefono}
+                    name="phone"
+                    value={formData.phone}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     placeholder="Ej: 3001234567"
-                    className={inputClass('telefono')}
+                    className={inputClass('phone')}
                   />
-                  {renderError('telefono')}
+                  {renderError('phone')}
                 </div>
 
-                {/* Correo */}
+                {/* Email */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Correo electrónico <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
-                    name="correo"
-                    value={formData.correo}
+                    name="email"
+                    value={formData.email}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     placeholder="Ej: cliente@email.com"
-                    className={inputClass('correo')}
+                    className={inputClass('email')}
                   />
-                  {renderError('correo')}
+                  {renderError('email')}
                 </div>
 
-                {/* Nombre persona contacto */}
+                {/* Contact name */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Nombre persona contacto
                   </label>
                   <input
                     type="text"
-                    name="nombreContacto"
-                    value={formData.nombreContacto}
+                    name="contactName"
+                    value={formData.contactName}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     placeholder="Ej: María López"
-                    className={inputClass('nombreContacto')}
+                    className={inputClass('contactName')}
                   />
-                  {renderError('nombreContacto')}
+                  {renderError('contactName')}
                 </div>
 
-                {/* Número persona contacto */}
+                {/* Contact phone */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Número persona contacto
                   </label>
                   <input
                     type="tel"
-                    name="numeroContacto"
-                    value={formData.numeroContacto}
+                    name="contactPhone"
+                    value={formData.contactPhone}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     placeholder="Ej: 3009876543"
-                    className={inputClass('numeroContacto')}
+                    className={inputClass('contactPhone')}
                   />
-                  {renderError('numeroContacto')}
+                  {renderError('contactPhone')}
                 </div>
 
-                {/* Crédito cliente - AHORA OPCIONAL */}
+                {/* Client credit (optional) */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Crédito cliente
                   </label>
                   <input
                     type="text"
-                    name="creditoCliente"
-                    value={formData.creditoCliente}
+                    name="clientCredit"
+                    value={formData.clientCredit}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="0"  // Placeholder cambiado a "0"
-                    className={inputClass('creditoCliente')}
+                    placeholder="0"
+                    className={inputClass('clientCredit')}
                   />
-                  {renderError('creditoCliente')}
+                  {renderError('clientCredit')}
                 </div>
 
-                {/* Tipo Cliente */}
+                {/* Client type */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Tipo de cliente <span className="text-red-500">*</span>
                   </label>
                   <select
-                    name="tipoCliente"
-                    value={formData.tipoCliente}
+                    name="clientType"
+                    value={formData.clientType}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    className={inputClass('tipoCliente')}
+                    className={inputClass('clientType')}
                   >
                     <option value="">Selecciona una opción</option>
-                    <option value="detal">Detal</option>
-                    <option value="mayorista">Mayorista</option>
-                    <option value="colegas">Colegas</option>
-                    <option value="pacas">Pacas</option>
+                    <option value="Detal">Detal</option>
+                    <option value="Mayorista">Mayorista</option>
+                    <option value="Colegas">Colegas</option>
+                    <option value="Por paca">Por paca</option>
                   </select>
-                  {renderError('tipoCliente')}
+                  {renderError('clientType')}
                 </div>
 
                 {/* RUT */}
@@ -437,19 +369,19 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   {renderError('rut')}
                 </div>
 
-                {/* Codigo CIU junto a RUT */}
+                {/* CIU code */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Código CIU
                   </label>
                   <input
                     type="text"
-                    name="codigoCIU"
-                    value={formData.codigoCIU}
+                    name="ciuCode"
+                    value={formData.ciuCode}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     placeholder="Ej: 4669"
-                    className={inputClass('codigoCIU')}
+                    className={inputClass('ciuCode')}
                   />
                 </div>
 
@@ -459,10 +391,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
             <div className="border-t px-6 py-4 flex justify-end gap-3 shrink-0">
               <button
                 type="button"
-                onClick={() => {
-                  resetForm();
-                  onClose();
-                }}
+                onClick={() => { resetForm(); onClose(); }}
                 className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg"
               >
                 Cancelar
@@ -474,19 +403,17 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                 {client ? 'Actualizar' : 'Crear'}
               </button>
             </div>
-
           </form>
-
         </div>
 
-        {/* Graph Section (expandable) - Solo si está editando */}
+        {/* Graph section — only when editing */}
         {showGraph && client && (
           <div className="w-1/2 flex flex-col">
-            <GraphClient clientStartDate={client.clienteSince || '07/05/2023'} />
+            <GraphClient clientStartDate={client.clientSince || '07/05/2023'} />
           </div>
         )}
 
-        {/* Toggle Graph Button - Solo aparece cuando está editando */}
+        {/* Toggle graph button — only when editing */}
         {client && (
           <button
             onClick={() => setShowGraph(!showGraph)}

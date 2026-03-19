@@ -42,22 +42,72 @@ export default function RolesPage() {
     setCurrentPage(1);
   }, [search, startDate, endDate, estado]);
 
-  const filteredRoles = roles.filter((role) => {
-    const matchesSearch =
-      role.name.toLowerCase().includes(search.toLowerCase()) ||
-      role.description.toLowerCase().includes(search.toLowerCase());
+  // Formatear fecha para comparación (YYYY-MM-DD)
+  const formatDateForComparison = (dateString) => {
+    if (!dateString) return null;
 
+    // Si es ISO (contiene T), extraer solo la fecha
+    if (dateString.includes("T")) {
+      return dateString.split("T")[0]; // "2026-03-18"
+    }
+
+    // Si es formato DD/MM/YYYY, convertir a YYYY-MM-DD
+    if (dateString.includes("/")) {
+      const [day, month, year] = dateString.split("/");
+      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+
+    // Si ya está en YYYY-MM-DD, devolverlo tal cual
+    return dateString;
+  };
+
+  const filteredRoles = roles.filter((role) => {
+    //  BÚSQUEDA COMPLETA: nombre, descripción, estado y fechas
+    const searchLower = search.toLowerCase();
+    const estadoTexto = role.active ? "activo" : "inactivo";
+    const dateString = role.createdAt
+      ? new Date(role.createdAt).toLocaleDateString("es-ES")
+      : "";
+
+    const matchesSearch =
+      role.name.toLowerCase().includes(searchLower) ||
+      role.description.toLowerCase().includes(searchLower) ||
+      estadoTexto.includes(searchLower) ||
+      dateString.includes(searchLower);
+
+    //  FILTRO POR ESTADO
     const matchesEstado =
       estado === "todos" ||
       (estado === "activo" && role.active) ||
       (estado === "inactivo" && !role.active);
 
-    const roleDate = new Date(role.createdAt);
-    const start = startDate ? new Date(startDate) : null;
-    const end = endDate ? new Date(endDate) : null;
+    //  FILTRO POR FECHAS - Comparación en formato YYYY-MM-DD
+    const roleDate = role.createdAt
+      ? formatDateForComparison(role.createdAt)
+      : null;
+    const startDateFormatted = startDate
+      ? formatDateForComparison(startDate)
+      : null;
+    const endDateFormatted = endDate ? formatDateForComparison(endDate) : null;
 
-    const matchesStartDate = !start || roleDate >= start;
-    const matchesEndDate = !end || roleDate <= end;
+    // Lógica mejorada:
+    // Si no hay filtros de fecha, pasar el filtro
+    // Si hay filtros pero el rol no tiene fecha, no pasar
+    // Si hay filtros y el rol tiene fecha, comparar
+    let matchesStartDate = true;
+    let matchesEndDate = true;
+
+    if (startDateFormatted && roleDate) {
+      matchesStartDate = roleDate >= startDateFormatted;
+    } else if (startDateFormatted && !roleDate) {
+      matchesStartDate = false; // Hay filtro pero sin fecha en rol
+    }
+
+    if (endDateFormatted && roleDate) {
+      matchesEndDate = roleDate <= endDateFormatted;
+    } else if (endDateFormatted && !roleDate) {
+      matchesEndDate = false; // Hay filtro pero sin fecha en rol
+    }
 
     return matchesSearch && matchesEstado && matchesStartDate && matchesEndDate;
   });

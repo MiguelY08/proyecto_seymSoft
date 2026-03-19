@@ -92,7 +92,6 @@ function Users() {
           onDelete={handleDelete}
           search={search}
           totalData={data.length}
-          offset={(currentPage - 1) * RECORDS_PER_PAGE}
         />
       </div>
 
