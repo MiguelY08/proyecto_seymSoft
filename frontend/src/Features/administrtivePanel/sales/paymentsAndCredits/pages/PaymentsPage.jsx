@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { FileSpreadsheet } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 
@@ -8,12 +9,9 @@ import PaymentsPaginator from "../components/PaymentsPaginator";
 import ContactClientModal from "../components/ContactClientModal";
 
 import { exportAccountsToExcel } from "../utils/paymentHelpers";
-
 import { initializePayments, getAccounts } from "../data/paymentsServices";
-
 import {
   calculateSaldoCliente,
-  getPaymentStatus,
   getClienteStatus,
 } from "../utils/paymentHelpers";
 
@@ -28,18 +26,16 @@ export default function PaymentsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedAccount, setSelectedAccount] = useState(null);
 
-  const itemsPerPage = 10;
+  const itemsPerPage = 11;
 
   /* ===============================
      Inicializar datos
   ================================ */
-  // Recargar accounts cada vez que se navega a esta vista
   useEffect(() => {
     initializePayments();
     setAccounts(getAccounts());
   }, [location]);
 
-  // Escuchar cambios en los datos para mantener el estado sincronizado
   useEffect(() => {
     const handlePaymentsUpdate = () => {
       setAccounts(getAccounts());
@@ -56,11 +52,24 @@ export default function PaymentsPage() {
     return accounts.filter((item) => {
       const saldo = calculateSaldoCliente(item);
       const status = getClienteStatus(item);
+      const credito = item.creditoAsignado ?? 0;
+      const disponible = Math.max(0, credito - saldo);
 
+      // Filtrar por estado
       if (estado !== "todos" && status !== estado) return false;
 
-      if (search && !item.nombre.toLowerCase().includes(search.toLowerCase()))
-        return false;
+      if (search) {
+        const searchLower = search.toLowerCase();
+        const matchNombre = item.nombre.toLowerCase().includes(searchLower);
+
+        // Buscar también en números
+        const matchNumeros =
+          saldo.toString().includes(search) ||
+          credito.toString().includes(search) ||
+          disponible.toString().includes(search);
+
+        if (!matchNombre && !matchNumeros) return false;
+      }
 
       return true;
     });
@@ -76,7 +85,7 @@ export default function PaymentsPage() {
 
       return {
         ...item,
-        valor: item.valorCredito, // Nota: Esto puede no existir en cliente, revisar
+        valor: item.valorCredito,
         saldo,
         estado: status,
       };
@@ -122,14 +131,13 @@ export default function PaymentsPage() {
       {
         confirmButtonText: "Sí, exportar",
         cancelButtonText: "Cancelar",
-      },
+      }
     );
 
     if (!confirm.isConfirmed) return;
 
     try {
       const success = exportAccountsToExcel(filteredData);
-
       if (!success) {
         showError("Error", "No se pudo generar el archivo.");
         return;
@@ -137,25 +145,22 @@ export default function PaymentsPage() {
 
       showSuccess(
         "Exportación completada",
-        "El archivo Excel fue generado correctamente.",
+        "El archivo Excel fue generado correctamente."
       );
     } catch (error) {
-      showError(
-        "Error al exportar",
-        "Ocurrió un problema al generar el Excel.",
-      );
+      showError("Error al exportar", "Ocurrió un problema al generar el Excel.");
     }
   };
 
   return (
-    <div className="p-6 font-lexend space-y-6">
+    <div className="p-6 font-lexend space-y-3">
       {/* ENCABEZADO PERSONALIZADO */}
-      <div className="flex items-center justify-between gap-4">
-        {/* BUSCADOR - LADO IZQUIERDO */}
+      <div className="flex items-center justify-between gap-3">
+        {/* BUSCADOR */}
         <div className="relative flex-1 max-w-md">
           <input
             type="text"
-            placeholder="Buscar cliente..."
+            placeholder="Buscar cliente o monto..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -178,7 +183,7 @@ export default function PaymentsPage() {
           </svg>
         </div>
 
-        {/* FILTROS Y EXPORTAR - LADO DERECHO */}
+        {/* FILTROS Y EXPORTAR */}
         <div className="flex items-end gap-4">
           <div className="w-48">
             <label className="block text-xs font-medium mb-1">Estado</label>
@@ -198,15 +203,17 @@ export default function PaymentsPage() {
           </div>
 
           <ButtonComponent
-            className="bg-white text-green-600 border-green-600 hover:bg-green-400"
+            className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-6 flex items-center gap-2"
             onClick={handleExportExcel}
           >
-            Exportar Excel +
+            <FileSpreadsheet className="w-4 h-4" />
+            Exportar Excel
           </ButtonComponent>
         </div>
       </div>
 
-      <div className="mt-10">
+      {/* TABLA */}
+      <div className="mt-3">
         <PaymentsTable
           data={paginatedData}
           onView={handleView}
@@ -216,6 +223,7 @@ export default function PaymentsPage() {
         />
       </div>
 
+      {/* PAGINADOR */}
       <div className="mt-4">
         <PaymentsPaginator
           itemsPerPage={itemsPerPage}
@@ -225,6 +233,7 @@ export default function PaymentsPage() {
         />
       </div>
 
+      {/* MODAL */}
       {selectedAccount && (
         <ContactClientModal
           account={selectedAccount}

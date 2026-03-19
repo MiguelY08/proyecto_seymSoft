@@ -9,14 +9,8 @@ import {
   countUsersByRole,
 } from "../services/rolesServices";
 
-/* ======================================================
-Roles protegidos del sistema
-No pueden eliminarse ni desactivarse
-====================================================== */
-
 const PROTECTED_ROLES = ["Administrador"];
 
-// ── Resaltador de texto ──────────────────────────────────────────────────────
 const highlight = (text, term) => {
   if (!term || !term.trim()) return text;
   const regex = new RegExp(`(${term.trim()})`, "gi");
@@ -26,203 +20,106 @@ const highlight = (text, term) => {
       ? React.createElement(
           "mark",
           { key: i, className: "bg-[#004d7726] text-[#004D77] rounded px-0.5" },
-          part,
+          part
         )
-      : part,
+      : part
   );
 };
 
-export default function RolesTable({
-  roles = [],
-  onEdit,
-  onView,
-  onToggleActive,
-  search = "",
-}) {
+const formatDate = (dateString) => {
+  if (!dateString) return "";
+  return new Date(dateString).toLocaleDateString("es-ES");
+};
+
+export default function RolesTable({ roles = [], onEdit, onView, onToggleActive, search = "" }) {
   const { hasPermission } = usePermissions();
-
-  /* ======================================================
-  Sistema global de alertas
-  ====================================================== */
-
   const { showConfirm, showSuccess, showWarning } = useAlert();
 
-  /* ======================================================
-  Activar / desactivar rol
-  Esta función solo confirma la acción.
-  El cambio real lo hace RolesPage.
-  ====================================================== */
-
   const handleToggleActive = async (role) => {
-    /* proteger roles críticos */
-
     if (PROTECTED_ROLES.includes(role.name)) {
       showWarning("Rol protegido", "Este rol no puede ser desactivado");
-
       return;
     }
-
     const action = role.active ? "desactivar" : "activar";
-
     const result = await showConfirm(
       "warning",
       `${action === "desactivar" ? "Desactivar" : "Activar"} rol`,
-      `¿Deseas ${action} el rol "${role.name}"?`,
+      `¿Deseas ${action} el rol "${role.name}"?`
     );
-
     if (!result.isConfirmed) return;
-
-    /* delegar cambio a RolesPage */
-
     onToggleActive && onToggleActive(role.id);
-
     showSuccess(
       "Estado actualizado",
-      `El rol fue ${action === "desactivar" ? "desactivado" : "activado"} correctamente`,
+      `El rol fue ${action === "desactivar" ? "desactivado" : "activado"} correctamente`
     );
   };
 
-  /* ======================================================
-  Eliminar rol con validaciones empresariales
-  ====================================================== */
-
   const handleDeleteRole = async (role) => {
-    /* proteger roles críticos */
-
     if (PROTECTED_ROLES.includes(role.name)) {
       showWarning("Rol protegido", "Este rol no puede eliminarse");
-
       return;
     }
-
-    /* validar si el rol está activo */
-
     if (role.active) {
       showWarning("Rol activo", "Debes desactivar el rol antes de eliminarlo");
-
       return;
     }
-
-    /* confirmación inicial */
-
-    const result = await showConfirm(
-      "warning",
-      "Eliminar rol",
-      `¿Deseas eliminar el rol "${role.name}"?`,
-    );
-
+    const result = await showConfirm("warning", "Eliminar rol", `¿Deseas eliminar el rol "${role.name}"?`);
     if (!result.isConfirmed) return;
-
-    /* validar usuarios asociados */
-
     const hasUsers = roleHasUsers(role.name);
-
     if (hasUsers) {
       const confirmUsers = await showConfirm(
         "error",
         "Usuarios asociados",
-        "Este rol tiene usuarios asignados. Si lo eliminas perderán permisos. ¿Deseas continuar?",
+        "Este rol tiene usuarios asignados. Si lo eliminas perderán permisos. ¿Deseas continuar?"
       );
-
       if (!confirmUsers.isConfirmed) return;
     }
-
     deleteRole(role.id);
-
     showSuccess("Rol eliminado", "El rol fue eliminado correctamente");
-
-    /* refrescar tabla */
-
     onToggleActive && onToggleActive(role.id);
   };
 
-  /* ======================================================
-  Si no hay roles
-  ====================================================== */
-
   if (!roles.length) {
-    return (
-      <div className="text-center py-10 text-gray-500">
-        No hay roles disponibles
-      </div>
-    );
+    return <div className="text-center py-10 text-gray-500">No hay roles disponibles</div>;
   }
-
-  /* ======================================================
-  Render tabla
-  ====================================================== */
 
   return (
     <div className="flex-1 overflow-x-auto rounded-xl shadow-md font-lexend">
       <table className="min-w-max w-full">
-        {/* HEADER */}
-
         <thead className="bg-[#004D77] text-white">
           <tr>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">#</th>
-
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
-              Nombre del Rol
-            </th>
-
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
-              Descripción
-            </th>
-
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
-              Fecha Creación
-            </th>
-
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
-              Funciones
-            </th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Nombre del Rol</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Descripción</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Fecha Creación</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Funciones</th>
           </tr>
         </thead>
-
-        {/* BODY */}
-
         <tbody>
           {roles.map((role, index) => {
             const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-100";
-
             const usersCount = countUsersByRole(role.name);
 
             return (
-              <tr key={role.id} className={`${rowBg} transition-colors`}>
-                {/* Número */}
-
+              <tr
+                key={role.id}
+                className={`${rowBg} hover:bg-blue-50 cursor-pointer transition-colors`}
+              >
                 <td className="px-3 py-2 text-center text-xs">{index + 1}</td>
-
-                {/* Nombre + contador usuarios */}
 
                 <td className="px-3 py-2 text-center text-xs font-semibold">
                   {highlight(role.name, search)}
-
                   {usersCount > 0 && (
-                    <span className="ml-1 text-[10px] text-gray-500">
-                      ({usersCount})
-                    </span>
+                    <span className="ml-1 text-[10px] text-gray-500">({usersCount})</span>
                   )}
                 </td>
 
-                {/* Descripción */}
+                <td className="px-3 py-2 text-center text-xs">{highlight(role.description, search)}</td>
 
-                <td className="px-3 py-2 text-center text-xs">
-                  {highlight(role.description, search)}
-                </td>
-
-                {/* Fecha */}
-
-                <td className="px-3 py-2 text-center text-xs">
-                  {role.createdAt}
-                </td>
-
-                {/* Funciones */}
+                <td className="px-3 py-2 text-center text-xs">{highlight(formatDate(role.createdAt), search)}</td>
 
                 <td className="px-3 py-2">
                   <div className="flex items-center justify-center gap-3">
-                    {/* Toggle estado */}
-
                     {hasPermission("roles.activar_desactivar") && (
                       <button
                         onClick={() => handleToggleActive(role)}
@@ -237,7 +134,6 @@ export default function RolesTable({
                         >
                           {role.active ? "A" : "I"}
                         </span>
-
                         <span
                           className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
                             role.active ? "left-6" : "left-0.5"
@@ -245,8 +141,6 @@ export default function RolesTable({
                         />
                       </button>
                     )}
-
-                    {/* Ver */}
 
                     {hasPermission("roles.ver_informacion") && (
                       <Info
@@ -256,8 +150,6 @@ export default function RolesTable({
                       />
                     )}
 
-                    {/* Editar */}
-
                     {hasPermission("roles.editar") && (
                       <SquarePen
                         size={16}
@@ -265,8 +157,6 @@ export default function RolesTable({
                         className="text-gray-400 cursor-pointer hover:scale-110 hover:text-[#004D77] transition"
                       />
                     )}
-
-                    {/* Eliminar */}
 
                     {hasPermission("roles.eliminar") && (
                       <Trash2

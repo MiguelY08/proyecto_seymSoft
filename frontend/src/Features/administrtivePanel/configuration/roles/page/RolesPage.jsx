@@ -62,7 +62,7 @@ export default function RolesPage() {
   };
 
   const filteredRoles = roles.filter((role) => {
-    // 🔍 BÚSQUEDA COMPLETA: nombre, descripción, estado y fechas
+    //  BÚSQUEDA COMPLETA: nombre, descripción, estado y fechas
     const searchLower = search.toLowerCase();
     const estadoTexto = role.active ? "activo" : "inactivo";
     const dateString = role.createdAt
@@ -75,13 +75,13 @@ export default function RolesPage() {
       estadoTexto.includes(searchLower) ||
       dateString.includes(searchLower);
 
-    // 📊 FILTRO POR ESTADO
+    //  FILTRO POR ESTADO
     const matchesEstado =
       estado === "todos" ||
       (estado === "activo" && role.active) ||
       (estado === "inactivo" && !role.active);
 
-    // 📅 FILTRO POR FECHAS - Comparación en formato YYYY-MM-DD
+    //  FILTRO POR FECHAS - Comparación en formato YYYY-MM-DD
     const roleDate = role.createdAt
       ? formatDateForComparison(role.createdAt)
       : null;
@@ -107,12 +107,6 @@ export default function RolesPage() {
       matchesEndDate = roleDate <= endDateFormatted;
     } else if (endDateFormatted && !roleDate) {
       matchesEndDate = false; // Hay filtro pero sin fecha en rol
-    }
-
-    if (startDateFormatted || endDateFormatted) {
-      console.log(
-        `${role.name}: roleDate=${roleDate}, start=${startDateFormatted}, end=${endDateFormatted}, matchStart=${matchesStartDate}, matchEnd=${matchesEndDate}`,
-      );
     }
 
     return matchesSearch && matchesEstado && matchesStartDate && matchesEndDate;

@@ -19,7 +19,7 @@ import {
 
 const STORAGE_KEY = "creditAccounts";
 const MOCK_VERSION_KEY = "creditAccounts_version";
-const CURRENT_VERSION = "1.1"; // Incrementar cuando se actualicen los datos mock
+const CURRENT_VERSION = "1.3"; // Incrementar cuando se actualicen los datos mock
 
 /* -----------------------------------------------------------------------
    Carga los datos mock en localStorage solo si no existen o si la versión cambió.
@@ -53,6 +53,12 @@ export const getAccounts = () => {
 export const getAccountById = (id) => {
   const accounts = getAccounts();
   return accounts.find((acc) => acc.id === id || acc.id === Number(id));
+};
+
+//Persiste el array completo de clientes en localStorage.
+
+const saveAccounts = (accounts) => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts));
 };
 
 /* -----------------------------------------------------------------------
