@@ -1,173 +1,148 @@
-import React, { useState, useEffect } from 'react';
-import { X, Upload, AlertCircle } from 'lucide-react';
+import { AlertCircle, X, Upload } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 
-function CompletePay({ isOpen, onClose, total, deliveryMethod }) {
-  const [timeLeft, setTimeLeft] = useState(48 * 60 * 60); // 48 horas en segundos
-  const [proofFile, setProofFile] = useState(null);
+// ── Contador regresivo desde 48h ──────────────────────────────────────────────
+const INITIAL_SECONDS = 48 * 60 * 60;
+
+function useCountdown() {
+  const [secondsLeft, setSecondsLeft] = useState(INITIAL_SECONDS);
+  const intervalRef = useRef(null);
 
   useEffect(() => {
-    if (!isOpen) return;
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
+    intervalRef.current = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) { clearInterval(intervalRef.current); return 0; }
         return prev - 1;
       });
     }, 1000);
+    return () => clearInterval(intervalRef.current);
+  }, []);
 
-    return () => clearInterval(timer);
-  }, [isOpen]);
+  const h = String(Math.floor(secondsLeft / 3600)).padStart(2, '0');
+  const m = String(Math.floor((secondsLeft % 3600) / 60)).padStart(2, '0');
+  const s = String(secondsLeft % 60).padStart(2, '0');
 
-  const formatTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${hours}h ${minutes}m ${secs}s`;
-  };
+  return { h, m, s, expired: secondsLeft === 0 };
+}
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setProofFile(file);
-    }
-  };
+// ─────────────────────────────────────────────────────────────────────────────
 
-  const handleSubmit = () => {
-    console.log('Comprobante enviado:', proofFile);
-    onClose();
-  };
+function CompletePay({ isOpen, onClose, totalAmount, deliveryMethod }) {
+  const { h, m, s, expired } = useCountdown();
+  const [archivo, setArchivo] = useState(null);
 
   if (!isOpen) return null;
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { alert('Máximo 10MB.'); return; }
+    if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+      alert('Solo PNG, JPG o JPEG.'); return;
+    }
+    setArchivo(file);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadeIn">
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        @keyframes slideUp {
-          from { 
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to { 
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-black/30">
+      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
 
-        .animate-fadeIn {
-          animation: fadeIn 0.2s ease-out;
-        }
-
-        .animate-slideUp {
-          animation: slideUp 0.3s ease-out;
-        }
-      `}</style>
-
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      
-      <div className="bg-white rounded-lg shadow-2xl relative z-10 w-full max-w-md animate-slideUp">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2.5 border-b">
-          <h2 className="text-sm font-bold text-gray-900">Completar pago</h2>
-          <button 
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="w-4 h-4" />
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-lg font-bold text-gray-900">Completar pago</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Contenido */}
-        <div className="px-4 py-3 space-y-3">
-          {/* Alerta de tiempo */}
-          <div className="bg-orange-50 border border-orange-200 rounded-md p-2 flex items-start gap-1.5">
-            <AlertCircle className="w-3.5 h-3.5 text-orange-600 flex-shrink-0 mt-0.5" />
-            <p className="text-[11px] text-orange-800 leading-tight">
-              Tiene <span className="font-semibold">{formatTime(timeLeft)}</span> para pagar antes de que el pedido sea cancelado
+        <div className="px-6 py-4 space-y-4">
+
+          {/* Contador */}
+          <div className={`border rounded-lg px-3 py-2 flex items-center gap-2 ${
+            expired ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'
+          }`}>
+            <AlertCircle className={`w-4 h-4 flex-shrink-0 ${expired ? 'text-red-500' : 'text-yellow-600'}`} />
+            <p className={`text-xs ${expired ? 'text-red-700 font-semibold' : 'text-yellow-800'}`}>
+              {expired
+                ? 'El tiempo ha expirado. El pedido será cancelado.'
+                : <>Tienes <span className="font-bold tabular-nums">{h}h {m}m {s}s</span> para pagar antes de que el pedido sea cancelado.</>
+              }
             </p>
           </div>
 
-          {/* Total a pagar */}
-          <div className="text-center py-1">
-            <p className="text-[11px] text-gray-600 mb-0.5">Total a pagar</p>
-            <p className="text-2xl font-bold text-gray-900 mb-0.5">{total.toLocaleString()} COP</p>
-            <p className="text-[11px] text-gray-500">
-              Método de envío: {deliveryMethod === 'delivery' ? 'Domicilio' : 'Recoger en tienda'}
-            </p>
-          </div>
+          {/* Total + QR en fila */}
+          <div className="flex items-center gap-6">
 
-          {/* Código QR */}
-          <div>
-            <p className="text-[11px] text-center text-gray-700 mb-1.5 font-medium">
-              Escanee el código QR para pagar
-            </p>
-            <div className="flex items-center justify-center">
-              {/* QR Code placeholder */}
-              <div className="w-32 h-32 bg-[#3E5266] rounded-md flex items-center justify-center border-2 border-gray-300">
-                <div className="text-center">
-                  <p className="text-white text-xs font-medium">QR Code</p>
-                  <p className="text-white text-[10px]">Placeholder</p>
+            {/* Total y método */}
+            <div className="flex-1 text-center">
+              <p className="text-xs text-gray-500 mb-1">Total a pagar</p>
+              <p className="text-3xl font-bold text-gray-900">
+                $ {totalAmount ? totalAmount.toLocaleString() : '0'}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {deliveryMethod === 'domicilio' ? ' Domicilio' : 'Recoger en tienda'}
+              </p>
+            </div>
+
+            {/* Divisor */}
+            <div className="w-px h-24 bg-gray-200" />
+
+            {/* QR */}
+            <div className="flex-1 text-center">
+              <p className="text-xs text-gray-500 mb-2">Escanea para pagar</p>
+              <div className="w-24 h-24 bg-gray-800 rounded-xl mx-auto flex items-center justify-center">
+                <div className="text-white text-center">
+                  <p className="font-semibold text-xs">QR Code</p>
+                  <p className="text-[10px] mt-0.5 opacity-70">Placeholder</p>
                 </div>
               </div>
             </div>
+
           </div>
 
-          {/* Información bancaria */}
-          <div>
-            <p className="text-[10px] text-gray-500 text-center leading-tight">
-              Cuenta bancaria: 1234567890 - Bancolombia - Cuenta de Ahorros
-            </p>
-          </div>
+          {/* Info bancaria */}
+          <p className="text-[11px] text-center text-gray-400">
+            Cuenta: 1234567890 · Bancolombia · Ahorros
+          </p>
 
-          {/* Subir comprobante */}
+          {/* Upload */}
           <div>
-            <p className="text-xs font-semibold text-gray-700 mb-1.5">
-              Comprobante de transferencia
-            </p>
-            <label className="block">
+            <p className="text-xs font-medium text-gray-700 mb-1.5">Comprobante de transferencia</p>
+            <label className="block cursor-pointer">
               <input
                 type="file"
-                accept="image/*,.pdf,.jpg,.jpeg,.png"
+                accept="image/png,image/jpeg,image/jpg"
                 onChange={handleFileChange}
                 className="hidden"
               />
-              <div className="border-2 border-dashed border-gray-300 rounded-md p-4 cursor-pointer hover:border-[#004D77] hover:bg-gray-50 transition-all">
-                <div className="flex flex-col items-center gap-1.5">
-                  <Upload className="w-7 h-7 text-gray-400" />
-                  <p className="text-[11px] text-gray-600 text-center leading-tight">
-                    {proofFile ? proofFile.name : 'Haga clic para subir el comprobante'}
+              <div className="border-2 border-dashed border-gray-300 rounded-xl py-4 px-3 text-center hover:border-[#004D77] transition-colors flex items-center justify-center gap-3">
+                <Upload className="w-7 h-7 text-gray-400 flex-shrink-0" />
+                <div className="text-left">
+                  <p className="text-xs text-gray-600">
+                    {archivo ? archivo.name : 'Haga clic para subir el comprobante'}
                   </p>
-                  <p className="text-[9px] text-gray-400">
-                    PNG, JPG o JPEG (máx. 10MB)
-                  </p>
+                  <p className="text-[10px] text-gray-400">PNG, JPG o JPEG (máx. 10MB)</p>
                 </div>
               </div>
             </label>
           </div>
-        </div>
 
-        {/* Footer con botones */}
-        <div className="px-4 pb-3 flex gap-2.5">
-          <button
-            onClick={onClose}
-            className="flex-1 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium text-xs"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!proofFile}
-            className="flex-1 px-3 py-2 bg-[#004D77] text-white rounded-md hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium text-xs"
-          >
-            Enviar comprobante
-          </button>
+          {/* Botones */}
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <button
+              onClick={onClose}
+              className="py-2.5 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+            > 
+              Cancelar
+            </button>
+            <button
+              className="py-2.5 rounded-xl text-white hover:opacity-90 transition-colors text-sm font-medium"
+              style={{ backgroundColor: '#004D77' }}
+            >
+              Enviar comprobante
+            </button>
+          </div>
+
         </div>
       </div>
     </div>

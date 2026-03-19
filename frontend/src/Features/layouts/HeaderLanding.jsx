@@ -9,11 +9,15 @@ import {
 import logo from "../../assets/PapeleriaMagicLogo.png";
 import { useAuth } from "../access/context/AuthContext";
 import { useAlert } from "../shared/alerts/useAlert";
+import { useCart } from "../shared/Context/Cartcontext";
+import { useFavorites } from "../shared/Context/Favoritescontext";
 
 function HeaderLanding() {
 
   const { user, logout }  = useAuth();
   const { showConfirm }   = useAlert();
+  const { cartCount } = useCart();
+  const { favoritesCount } = useFavorites();
   const navigate          = useNavigate();
   const location          = useLocation();
 
@@ -138,8 +142,8 @@ function HeaderLanding() {
             {/* ICONOS */}
             <div className="flex items-center gap-1 sm:gap-2">
 
-              <IconButton icon={Heart}        to="/favorites" badge={0} className="hidden sm:block" scrolled={scrolled} />
-              <IconButton icon={ShoppingCart} to="/cart"      badge={0} scrolled={scrolled} />
+              <IconButton icon={Heart}        to="/favorites" badge={favoritesCount} className="hidden sm:block" scrolled={scrolled} />
+              <IconButton icon={ShoppingCart} to="/cart"      badge={cartCount} scrolled={scrolled} />
 
               {/* PERFIL */}
               <div className="relative hidden sm:block" ref={modalRef}>
@@ -298,8 +302,8 @@ const IconButton = ({ icon: Icon, to, badge, className = "", scrolled }) => (
   >
     <Icon className={`${scrolled ? "w-4 h-4" : "w-5 h-5"} text-gray-700`} />
     {badge > 0 && (
-      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
-        {badge}
+      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+        {badge > 99 ? '99+' : badge}
       </span>
     )}
   </Link>
