@@ -502,6 +502,148 @@ const mockCreditAccounts = [
         ]
       }
     ]
+  },
+    /* ── 10. JULIÁN SALAZAR ───────────────────────────────────────────────────
+     Pendiente | Dentro del plazo, sin interés                                */
+  {
+    id:               "cliente-010",
+    nombre:           "Julián Salazar",
+    documento:        "7788990011",
+    telefono:         "3001234567",
+    creditoAsignado:  1800000,
+    facturas: [
+      {
+        id:           "fac-016",
+        nroFactura:   "FAC-016",
+        valorCredito: 500000,
+        interes:      0,
+        fechaCredito: "2026-02-01",
+        abonos: [
+          {
+            id:          "abo-019",
+            nroAbono:    1,
+            monto:       150000,
+            fecha:       "2026-02-20",
+            medioPago:   "Efectivo",
+            observacion: "Abono parcial",
+            tipo:        "capital",
+            anulado:     false,
+            createdAt:   "2026-02-20T10:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          }
+        ]
+      }
+    ]
+  },
+
+  /* ── 11. NATALIA RÍOS ─────────────────────────────────────────────────────
+     Pendiente | Sin abonos aún                                              */
+  {
+    id:               "cliente-011",
+    nombre:           "Natalia Ríos",
+    documento:        "8899001122",
+    telefono:         "3012223344",
+    creditoAsignado:  2200000,
+    facturas: [
+      {
+        id:           "fac-017",
+        nroFactura:   "FAC-017",
+        valorCredito: 700000,
+        interes:      0,
+        fechaCredito: "2026-02-10",
+        abonos: []
+      }
+    ]
+  },
+
+  /* ── 12. FELIPE DUQUE ─────────────────────────────────────────────────────
+     Pendiente | Con varios abonos dentro del plazo                          */
+  {
+    id:               "cliente-012",
+    nombre:           "Felipe Duque",
+    documento:        "9900112233",
+    telefono:         "3023334455",
+    creditoAsignado:  2500000,
+    facturas: [
+      {
+        id:           "fac-018",
+        nroFactura:   "FAC-018",
+        valorCredito: 900000,
+        interes:      0,
+        fechaCredito: "2026-01-25",
+        abonos: [
+          {
+            id:          "abo-020",
+            nroAbono:    1,
+            monto:       200000,
+            fecha:       "2026-02-05",
+            medioPago:   "Transferencia",
+            observacion: "Primer abono",
+            tipo:        "capital",
+            anulado:     false,
+            createdAt:   "2026-02-05T09:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          },
+          {
+            id:          "abo-021",
+            nroAbono:    2,
+            monto:       150000,
+            fecha:       "2026-02-25",
+            medioPago:   "Efectivo",
+            observacion: "Segundo abono",
+            tipo:        "capital",
+            anulado:     false,
+            createdAt:   "2026-02-25T11:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          }
+        ]
+      }
+    ]
+  },
+
+  /* ── 13. PAULA MEJÍA ──────────────────────────────────────────────────────
+     Pendiente | Múltiples facturas dentro del plazo                         */
+  {
+    id:               "cliente-013",
+    nombre:           "Paula Mejía",
+    documento:        "1011223344",
+    telefono:         "3034445566",
+    creditoAsignado:  3000000,
+    facturas: [
+      {
+        id:           "fac-019",
+        nroFactura:   "FAC-019",
+        valorCredito: 600000,
+        interes:      0,
+        fechaCredito: "2026-02-01",
+        abonos: [
+          {
+            id:          "abo-022",
+            nroAbono:    1,
+            monto:       100000,
+            fecha:       "2026-02-18",
+            medioPago:   "Efectivo",
+            observacion: "Abono inicial",
+            tipo:        "capital",
+            anulado:     false,
+            createdAt:   "2026-02-18T10:00:00",
+            cancelledAt: null,
+            motivoCancelacion: null
+          }
+        ]
+      },
+      {
+        id:           "fac-020",
+        nroFactura:   "FAC-020",
+        valorCredito: 400000,
+        interes:      0,
+        fechaCredito: "2026-02-12",
+        abonos: []
+      }
+    ]
   }
 
 ]
