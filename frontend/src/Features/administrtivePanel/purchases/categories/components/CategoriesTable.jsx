@@ -95,7 +95,14 @@ export const CategoriesTable = ({
                 const recordNumber = startIndex + index + 1;
 
                 return (
-                  <tr key={category.id} className={`transition-colors duration-150 ${rowBg}`}>
+                  <tr
+                      key={category.id}
+                      className={`${
+                      index % 2 === 0
+                        ? "bg-white hover:bg-gray-50"
+                        : "bg-gray-50 hover:bg-gray-100"
+                    }`}
+                    >
                     {/* # — misma tipografía que ClientsTable */}
                     <td className="px-3 py-2 text-center text-xs text-gray-500 font-medium whitespace-nowrap">
                       {recordNumber}

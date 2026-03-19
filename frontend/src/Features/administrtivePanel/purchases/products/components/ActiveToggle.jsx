@@ -1,6 +1,9 @@
-// ─── Toggle activo/inactivo ───────────────────────────────────────────────────
+import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 function ActiveToggle({ activo, onChange }) {
-  return (
+
+  const { hasPermission } = usePermissions();
+
+  return hasPermission("productos.activar_desactivar") && (
     <button
       onClick={onChange}
       className={`relative w-11 h-5 rounded-full transition-colors duration-300 cursor-pointer shrink-0 ${
@@ -14,6 +17,7 @@ function ActiveToggle({ activo, onChange }) {
       >
         {activo ? 'A' : 'I'}
       </span>
+
       <span
         className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
           activo ? 'left-[1.4rem]' : 'left-0.5'
@@ -23,4 +27,4 @@ function ActiveToggle({ activo, onChange }) {
   );
 }
 
-export default ActiveToggle;
+export default ActiveToggle
