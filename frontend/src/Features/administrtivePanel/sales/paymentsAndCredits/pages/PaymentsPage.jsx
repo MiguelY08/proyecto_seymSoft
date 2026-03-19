@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 
 import ButtonComponent from "../../../../shared/ButtonComponent";
-import TableFilters from "../../../../shared/TableFilters";
 import PaymentsTable from "../components/PaymentsTable";
 import PaymentsPaginator from "../components/PaymentsPaginator";
 import ContactClientModal from "../components/ContactClientModal";
@@ -25,8 +24,6 @@ export default function PaymentsPage() {
 
   const [accounts, setAccounts] = useState([]);
   const [search, setSearch] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
   const [estado, setEstado] = useState("todos");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedAccount, setSelectedAccount] = useState(null);
@@ -64,9 +61,6 @@ export default function PaymentsPage() {
 
       if (search && !item.nombre.toLowerCase().includes(search.toLowerCase()))
         return false;
-
-      // Nota: Filtros de fecha removidos ya que los clientes no tienen fechaCredito única
-      // Si se necesita, implementar lógica para fecha de factura más antigua
 
       return true;
     });
@@ -155,17 +149,38 @@ export default function PaymentsPage() {
 
   return (
     <div className="p-6 font-lexend space-y-6">
-      <TableFilters
-        search={search}
-        setSearch={setSearch}
-        startDate={startDate}
-        setStartDate={setStartDate}
-        endDate={endDate}
-        setEndDate={setEndDate}
-        setCurrentPage={setCurrentPage}
-      >
-        <div className="flex items-end gap-4 flex-wrap">
-          <div className="w-full sm:w-56">
+      {/* ENCABEZADO PERSONALIZADO */}
+      <div className="flex items-center justify-between gap-4">
+        {/* BUSCADOR - LADO IZQUIERDO */}
+        <div className="relative flex-1 max-w-md">
+          <input
+            type="text"
+            placeholder="Buscar cliente..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full pl-4 pr-10 py-2.5 bg-white rounded-xl border border-gray-300 shadow-sm outline-none focus:ring-2 focus:ring-sky-900 text-black text-sm"
+          />
+          <svg
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </div>
+
+        {/* FILTROS Y EXPORTAR - LADO DERECHO */}
+        <div className="flex items-end gap-4">
+          <div className="w-48">
             <label className="block text-xs font-medium mb-1">Estado</label>
             <select
               value={estado}
@@ -189,7 +204,7 @@ export default function PaymentsPage() {
             Exportar Excel +
           </ButtonComponent>
         </div>
-      </TableFilters>
+      </div>
 
       <div className="mt-10">
         <PaymentsTable

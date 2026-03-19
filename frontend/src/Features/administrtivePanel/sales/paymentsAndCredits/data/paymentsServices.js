@@ -10,53 +10,71 @@
      Si el monto cubre el interés completo, el resto va a capital.
 ============================================================================= */
 
-import mockCreditAccounts from "./mockCreditAccounts"
+import mockCreditAccounts from "./mockCreditAccounts";
 import {
   calculateSaldoCapital,
   calculateSaldoInteres,
-  calculateSaldoFactura
-} from "../utils/paymentHelpers"
+  calculateSaldoFactura,
+} from "../utils/paymentHelpers";
 
-const STORAGE_KEY = "creditAccounts"
+const STORAGE_KEY = "creditAccounts";
+const MOCK_VERSION_KEY = "creditAccounts_version";
+const CURRENT_VERSION = "1.1"; // Incrementar cuando se actualicen los datos mock
 
 /* -----------------------------------------------------------------------
-   Carga los datos mock en localStorage solo si no existen previamente.
+   Carga los datos mock en localStorage solo si no existen o si la versión cambió.
 ----------------------------------------------------------------------- */
 export const initializePayments = () => {
-  const existing = localStorage.getItem(STORAGE_KEY)
+  const existing = localStorage.getItem(STORAGE_KEY);
+  const currentVersion = localStorage.getItem(MOCK_VERSION_KEY);
 
-  if (!existing) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(mockCreditAccounts))
+  // Si no hay datos o la versión cambió, cargar datos mock
+  if (!existing || currentVersion !== CURRENT_VERSION) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(mockCreditAccounts));
+    localStorage.setItem(MOCK_VERSION_KEY, CURRENT_VERSION);
+    console.log(
+      "Datos mock de pagos y abonos actualizados a versión",
+      CURRENT_VERSION,
+    );
   }
-}
-
+};
 
 /* -----------------------------------------------------------------------
    Retorna el array completo de clientes desde localStorage.
 ----------------------------------------------------------------------- */
 export const getAccounts = () => {
-  const data = localStorage.getItem(STORAGE_KEY)
-  return data ? JSON.parse(data) : []
-}
-
+  const data = localStorage.getItem(STORAGE_KEY);
+  return data ? JSON.parse(data) : [];
+};
 
 /* -----------------------------------------------------------------------
    Retorna un cliente por su id, o undefined si no existe.
 ----------------------------------------------------------------------- */
 export const getAccountById = (id) => {
-  const accounts = getAccounts()
-  return accounts.find(acc => acc.id === id || acc.id === Number(id))
-}
-
+  const accounts = getAccounts();
+  return accounts.find((acc) => acc.id === id || acc.id === Number(id));
+};
 
 /* -----------------------------------------------------------------------
-   Persiste el array completo de clientes en localStorage.
+   Fuerza la recarga de datos mock (útil para desarrollo/testing)
 ----------------------------------------------------------------------- */
-export const saveAccounts = (accounts) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts))
+export const resetPaymentsData = () => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(mockCreditAccounts));
+  localStorage.setItem(MOCK_VERSION_KEY, CURRENT_VERSION);
 
-  //  NUEVO: notifica a toda la app que cambió la información
-  window.dispatchEvent(new Event("paymentsUpdated"))
+  // Notificar actualización
+  window.dispatchEvent(new Event("paymentsUpdated"));
+
+  console.log(
+    "Datos mock de pagos y abonos reseteados a versión",
+    CURRENT_VERSION,
+  );
+  return mockCreditAccounts;
+};
+
+// ── Función global para desarrollo ──────────────────────────────────────
+if (typeof window !== "undefined") {
+  window.resetPaymentsMock = resetPaymentsData;
 }
 
 /* -----------------------------------------------------------------------
@@ -75,98 +93,94 @@ export const saveAccounts = (accounts) => {
    @throws  {Error} Si cliente/factura no existen o el monto es inválido
 ----------------------------------------------------------------------- */
 export const addPayment = (clienteId, facturaId, paymentData) => {
-
-  const accounts = getAccounts()
+  const accounts = getAccounts();
 
   const clienteIndex = accounts.findIndex(
-    acc => acc.id === clienteId || acc.id === Number(clienteId)
-  )
-  if (clienteIndex === -1) throw new Error("Cliente no encontrado.")
+    (acc) => acc.id === clienteId || acc.id === Number(clienteId),
+  );
+  if (clienteIndex === -1) throw new Error("Cliente no encontrado.");
 
   const facturaIndex = accounts[clienteIndex].facturas.findIndex(
-    fac => fac.id === facturaId || fac.id === Number(facturaId)
-  )
-  if (facturaIndex === -1) throw new Error("Factura no encontrada.")
+    (fac) => fac.id === facturaId || fac.id === Number(facturaId),
+  );
+  if (facturaIndex === -1) throw new Error("Factura no encontrada.");
 
-  const factura      = accounts[clienteIndex].facturas[facturaIndex]
-  const saldoTotal   = calculateSaldoFactura(factura)
-  const montoIngreso = Number(paymentData.monto)
+  const factura = accounts[clienteIndex].facturas[facturaIndex];
+  const saldoTotal = calculateSaldoFactura(factura);
+  const montoIngreso = Number(paymentData.monto);
 
   // ── Validaciones ─────────────────────────────────────────────────────────
   if (montoIngreso <= 0) {
-    throw new Error("El monto del abono debe ser mayor a cero.")
+    throw new Error("El monto del abono debe ser mayor a cero.");
   }
   if (montoIngreso > saldoTotal) {
     throw new Error(
       `El monto (${montoIngreso.toLocaleString("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 })}) ` +
-      `supera el saldo pendiente (${saldoTotal.toLocaleString("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 })}).`
-    )
+        `supera el saldo pendiente (${saldoTotal.toLocaleString("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 })}).`,
+    );
   }
 
-  const abonos        = factura.abonos ?? []
-  const nextNro       = abonos.length + 1
-  const createdAt     = new Date().toISOString()
-  const nuevosAbonos  = []
+  const abonos = factura.abonos ?? [];
+  const nextNro = abonos.length + 1;
+  const createdAt = new Date().toISOString();
+  const nuevosAbonos = [];
 
-  const saldoInteres  = calculateSaldoInteres(factura)
-  const saldoCapital  = calculateSaldoCapital(factura)
+  const saldoInteres = calculateSaldoInteres(factura);
+  const saldoCapital = calculateSaldoCapital(factura);
 
-  let montoRestante = montoIngreso
+  let montoRestante = montoIngreso;
 
   // ── 1° Cubrir interés pendiente ───────────────────────────────────────────
   if (saldoInteres > 0 && montoRestante > 0) {
-
-    const montoInteres = Math.min(montoRestante, saldoInteres)
+    const montoInteres = Math.min(montoRestante, saldoInteres);
 
     const abonoInteres = {
-      id:               Date.now(),
-      nroAbono:         nextNro,
-      monto:            montoInteres,
-      medioPago:        paymentData.medioPago   || "Efectivo",
-      observacion:      paymentData.observacion
-                          ? `${paymentData.observacion} (interés)`
-                          : "Pago interés mora",
-      fecha:            paymentData.fecha,
-      tipo:             "interes",
-      anulado:          false,
+      id: Date.now(),
+      nroAbono: nextNro,
+      monto: montoInteres,
+      medioPago: paymentData.medioPago || "Efectivo",
+      observacion: paymentData.observacion
+        ? `${paymentData.observacion} (interés)`
+        : "Pago interés mora",
+      fecha: paymentData.fecha,
+      tipo: "interes",
+      anulado: false,
       createdAt,
-      cancelledAt:      null,
-      motivoCancelacion: null
-    }
+      cancelledAt: null,
+      motivoCancelacion: null,
+    };
 
-    nuevosAbonos.push(abonoInteres)
-    montoRestante -= montoInteres
+    nuevosAbonos.push(abonoInteres);
+    montoRestante -= montoInteres;
   }
 
   // ── 2° Cubrir capital pendiente ───────────────────────────────────────────
   if (saldoCapital > 0 && montoRestante > 0) {
-
-    const montoCapital = Math.min(montoRestante, saldoCapital)
+    const montoCapital = Math.min(montoRestante, saldoCapital);
 
     const abonoCapital = {
-      id:               Date.now() + 1,   // +1 para evitar colisión de id en el mismo ms
-      nroAbono:         nextNro + (nuevosAbonos.length > 0 ? 1 : 0),
-      monto:            montoCapital,
-      medioPago:        paymentData.medioPago   || "Efectivo",
-      observacion:      paymentData.observacion || "Abono a capital",
-      fecha:            paymentData.fecha,
-      tipo:             "capital",
-      anulado:          false,
+      id: Date.now() + 1, // +1 para evitar colisión de id en el mismo ms
+      nroAbono: nextNro + (nuevosAbonos.length > 0 ? 1 : 0),
+      monto: montoCapital,
+      medioPago: paymentData.medioPago || "Efectivo",
+      observacion: paymentData.observacion || "Abono a capital",
+      fecha: paymentData.fecha,
+      tipo: "capital",
+      anulado: false,
       createdAt,
-      cancelledAt:      null,
-      motivoCancelacion: null
-    }
+      cancelledAt: null,
+      motivoCancelacion: null,
+    };
 
-    nuevosAbonos.push(abonoCapital)
+    nuevosAbonos.push(abonoCapital);
   }
 
   // ── Persistir ─────────────────────────────────────────────────────────────
-  accounts[clienteIndex].facturas[facturaIndex].abonos.push(...nuevosAbonos)
-  saveAccounts(accounts)
+  accounts[clienteIndex].facturas[facturaIndex].abonos.push(...nuevosAbonos);
+  saveAccounts(accounts);
 
-  return nuevosAbonos
-}
-
+  return nuevosAbonos;
+};
 
 /* -----------------------------------------------------------------------
    Anula un abono de una factura específica.
@@ -185,54 +199,60 @@ export const addPayment = (clienteId, facturaId, paymentData) => {
    @returns {boolean} true si anuló correctamente
    @throws  {Error}   Si validación falla
 ----------------------------------------------------------------------- */
-export const cancelPayment = (clienteId, facturaId, abonoId, reason, password) => {
-
+export const cancelPayment = (
+  clienteId,
+  facturaId,
+  abonoId,
+  reason,
+  password,
+) => {
   // Validar contraseña del administrador
-  const users = JSON.parse(localStorage.getItem("users")) || []
-  const admin = users.find(user => user.role === "Administrador")
+  const users = JSON.parse(localStorage.getItem("users")) || [];
+  const admin = users.find((user) => user.role === "Administrador");
 
   if (!admin || admin.password !== password) {
-    throw new Error("Contraseña del administrador incorrecta.")
+    throw new Error("Contraseña del administrador incorrecta.");
   }
 
-  const accounts = getAccounts()
+  const accounts = getAccounts();
 
   const clienteIndex = accounts.findIndex(
-    acc => acc.id === clienteId || acc.id === Number(clienteId)
-  )
-  if (clienteIndex === -1) throw new Error("Cliente no encontrado.")
+    (acc) => acc.id === clienteId || acc.id === Number(clienteId),
+  );
+  if (clienteIndex === -1) throw new Error("Cliente no encontrado.");
 
   const facturaIndex = accounts[clienteIndex].facturas.findIndex(
-    fac => fac.id === facturaId || fac.id === Number(facturaId)
-  )
-  if (facturaIndex === -1) throw new Error("Factura no encontrada.")
+    (fac) => fac.id === facturaId || fac.id === Number(facturaId),
+  );
+  if (facturaIndex === -1) throw new Error("Factura no encontrada.");
 
-  const abonoIndex = accounts[clienteIndex].facturas[facturaIndex].abonos.findIndex(
-    a => a.id === abonoId
-  )
-  if (abonoIndex === -1) throw new Error("Abono no encontrado.")
+  const abonoIndex = accounts[clienteIndex].facturas[
+    facturaIndex
+  ].abonos.findIndex((a) => a.id === abonoId);
+  if (abonoIndex === -1) throw new Error("Abono no encontrado.");
 
-  const abono = accounts[clienteIndex].facturas[facturaIndex].abonos[abonoIndex]
+  const abono =
+    accounts[clienteIndex].facturas[facturaIndex].abonos[abonoIndex];
 
   if (abono.anulado) {
-    throw new Error("Este abono ya fue anulado.")
+    throw new Error("Este abono ya fue anulado.");
   }
 
   if (abono.createdAt) {
-    const diffHours = (new Date() - new Date(abono.createdAt)) / (1000 * 60 * 60)
+    const diffHours =
+      (new Date() - new Date(abono.createdAt)) / (1000 * 60 * 60);
     if (diffHours > 48) {
-      throw new Error("No se puede anular un abono después de 48 horas.")
+      throw new Error("No se puede anular un abono después de 48 horas.");
     }
   }
 
-  abono.anulado           = true
-  abono.motivoCancelacion = reason
-  abono.cancelledAt       = new Date().toISOString()
+  abono.anulado = true;
+  abono.motivoCancelacion = reason;
+  abono.cancelledAt = new Date().toISOString();
 
-  saveAccounts(accounts)
-  return true
-}
-
+  saveAccounts(accounts);
+  return true;
+};
 
 /* -----------------------------------------------------------------------
    Aplica un porcentaje de interés sobre el saldo de capital pendiente
@@ -248,28 +268,30 @@ export const cancelPayment = (clienteId, facturaId, abonoId, reason, password) =
    @returns {Object|null} La factura actualizada, o null si no se encontró
 ----------------------------------------------------------------------- */
 export const applyInterest = (clienteId, facturaId, percentage) => {
-
-  const accounts = getAccounts()
+  const accounts = getAccounts();
 
   const clienteIndex = accounts.findIndex(
-    acc => acc.id === clienteId || acc.id === Number(clienteId)
-  )
-  if (clienteIndex === -1) return null
+    (acc) => acc.id === clienteId || acc.id === Number(clienteId),
+  );
+  if (clienteIndex === -1) return null;
 
   const facturaIndex = accounts[clienteIndex].facturas.findIndex(
-    fac => fac.id === facturaId || fac.id === Number(facturaId)
-  )
-  if (facturaIndex === -1) return null
+    (fac) => fac.id === facturaId || fac.id === Number(facturaId),
+  );
+  if (facturaIndex === -1) return null;
 
-  const factura      = accounts[clienteIndex].facturas[facturaIndex]
-  const saldoCapital = calculateSaldoCapital(factura)
+  const factura = accounts[clienteIndex].facturas[facturaIndex];
+  const saldoCapital = calculateSaldoCapital(factura);
 
   // Interés se calcula sobre el saldo de CAPITAL (no sobre el interés previo)
-  const nuevoInteres = Math.round((saldoCapital * percentage) / 100)
+  const nuevoInteres = Math.round((saldoCapital * percentage) / 100);
 
   // Se acumula sobre el interés existente
-  factura.interes = (factura.interes ?? 0) + nuevoInteres
+  factura.interes = (factura.interes ?? 0) + nuevoInteres;
 
-  saveAccounts(accounts)
-  return factura
-}
+  saveAccounts(accounts);
+  return factura;
+};
+
+// ── Auto-inicializar al importar (igual que los demás módulos) ──
+initializePayments();
