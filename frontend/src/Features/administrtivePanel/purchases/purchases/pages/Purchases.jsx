@@ -129,7 +129,7 @@ export const Purchases = () => {
 
   return (
     <>
-    <div className="h-full flex flex-col gap-2 p-3 sm:p-4">
+    <div className="h-full flex flex-col  gap-0.5 p-3 sm:p-3">
 
       <div className="flex items-end justify-between">
 
@@ -161,20 +161,22 @@ export const Purchases = () => {
       )}
 
       {filteredProducts.length > 0 && (
-        <PurchasesTable
-          currentData={currentData}
-          filteredProducts={filteredProducts}
-          currentPage={currentPage}
-          setCurrentPage={setCurrentPage}
-          totalPages={totalPages}
-          startIndex={startIndex}
-          endIndex={endIndex}
-          handleCancel={handleCancel}
-          handleViewDetail={handleViewDetail}
-          handleReturn={handleReturn}
-          search={search}
-        />
-      )}
+  <div className="flex-1 overflow-auto  min-h-0">
+    <PurchasesTable
+      currentData={currentData}
+      filteredProducts={filteredProducts}
+      currentPage={currentPage}
+      setCurrentPage={setCurrentPage}
+      totalPages={totalPages}
+      startIndex={startIndex}
+      endIndex={endIndex}
+      handleCancel={handleCancel}
+      handleViewDetail={handleViewDetail}
+      handleReturn={handleReturn}
+      search={search}
+    />
+  </div>
+)}
     </div>
     {selectedPurchase && (
   <DetailPurchases

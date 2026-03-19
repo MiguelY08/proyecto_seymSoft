@@ -3,6 +3,7 @@ import { Trash2, SquarePen } from "lucide-react";
 import Pagination from "../../../../shared/PaginationLanding";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import { getSubcategories, saveSubcategories, deleteSubcategory } from "../services/categoriesService";
+import { subcategoryHasProducts } from "../services/categoryproductsService";
 
 function ActiveToggle({ activo, onChange }) {
   return (
@@ -104,19 +105,30 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
     refreshCategories();
   };
 
-  const handleDelete = async (id) => {
-    const result = await showConfirm(
-      "warning",
-      "Eliminar subcategoría",
-      "¿Deseas eliminar esta subcategoría?",
-      { confirmButtonText: "Sí, eliminar", cancelButtonText: "Cancelar" }
+
+const handleDelete = async (id) => {
+  // 🔴 Bloquear si tiene productos
+  if (subcategoryHasProducts(id)) {
+    showWarning(
+      "No se puede eliminar",
+      "Esta subcategoría tiene productos asociados. Reasígnalos antes de eliminarla."
     );
-    if (!result?.isConfirmed) return;
-    deleteSubcategory(id);
-    loadSubcategories();
-    showSuccess("Eliminado", "La subcategoría fue eliminada correctamente.");
-    refreshCategories();
-  };
+    return;
+  }
+
+  const result = await showConfirm(
+    "warning",
+    "Eliminar subcategoría",
+    "¿Deseas eliminar esta subcategoría?",
+    { confirmButtonText: "Sí, eliminar", cancelButtonText: "Cancelar" }
+  );
+  if (!result?.isConfirmed) return;
+
+  deleteSubcategory(id);
+  loadSubcategories();
+  showSuccess("Eliminado", "La subcategoría fue eliminada correctamente.");
+  refreshCategories();
+};
 
   const handleToggleEstado = (subId, nuevoEstado) => {
     const allSubs = getSubcategories().map((s) =>

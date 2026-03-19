@@ -1,18 +1,13 @@
 const PRODUCTS_KEY = 'pm_products';
-const SEED_VERSION = 'products_v4';  // ← bumped: fuerza reseed con categorías corregidas
+const SEED_VERSION = 'products_v3';
 const VERSION_KEY  = 'pm_products_version';
 
-// ─── Nombres de categoría alineados con categoriesService.js ─────────────────
-// Activas:   "Oficina" | "Útiles Escolares" | "Arte y Manualidades"
-// Inactivas: "Escritura y Corrección" | "Tecnología"  (no se usan en seed)
-
+// ─── Seed con esquema completo — 10 productos ─────────────────────────────────
 const SEED_PRODUCTS = [
   {
     id: 1, activo: true,
     nombre: 'Libreta con Lapicero', codBarras: '7701234000011', referencia: 'REF-001',
-    proveedor: 'Papelera El Punto S.A.S',
-    categorias: ['Útiles Escolares'],
-    descripcion: '', imagen: null,
+    proveedor: 'Papelera El Punto S.A.S', categorias: ['Escolar'], descripcion: '', imagen: null,
     stock: 200, cantidadXPaca: 12,
     precioDetalle: 5000,  precioDetallePaca: 4500,
     precioMayorista: 4200, precioMayoristaPaca: 3800,
@@ -22,9 +17,7 @@ const SEED_PRODUCTS = [
   {
     id: 2, activo: true,
     nombre: 'Silicona Líquida ET131', codBarras: '7701234000022', referencia: 'REF-002',
-    proveedor: 'Distribuciones Andina Ltda.',
-    categorias: ['Arte y Manualidades'],
-    descripcion: '', imagen: null,
+    proveedor: 'Distribuciones Andina Ltda.', categorias: ['Arte'], descripcion: '', imagen: null,
     stock: 500, cantidadXPaca: 24,
     precioDetalle: 2900,  precioDetallePaca: 2600,
     precioMayorista: 2400, precioMayoristaPaca: 2100,
@@ -34,9 +27,7 @@ const SEED_PRODUCTS = [
   {
     id: 3, activo: true,
     nombre: 'Resma Papel Bond A4 500 Hojas', codBarras: '7701234000033', referencia: 'REF-003',
-    proveedor: 'Industrias Bolívar S.A.',
-    categorias: ['Oficina'],
-    descripcion: '', imagen: null,
+    proveedor: 'Industrias Bolívar S.A.', categorias: ['Oficina'], descripcion: '', imagen: null,
     stock: 350, cantidadXPaca: 5,
     precioDetalle: 18500, precioDetallePaca: 17000,
     precioMayorista: 15800, precioMayoristaPaca: 14500,
@@ -46,9 +37,7 @@ const SEED_PRODUCTS = [
   {
     id: 4, activo: true,
     nombre: 'Bolígrafo Kilométrico x12', codBarras: '7701234000044', referencia: 'REF-004',
-    proveedor: 'Comercializadora Sur Ltda.',
-    categorias: ['Útiles Escolares', 'Oficina'],
-    descripcion: '', imagen: null,
+    proveedor: 'Comercializadora Sur Ltda.', categorias: ['Escolar', 'Oficina'], descripcion: '', imagen: null,
     stock: 800, cantidadXPaca: 12,
     precioDetalle: 8400,  precioDetallePaca: 7600,
     precioMayorista: 6900, precioMayoristaPaca: 6200,
@@ -58,9 +47,7 @@ const SEED_PRODUCTS = [
   {
     id: 5, activo: true,
     nombre: 'Caja de Colores 24 Und', codBarras: '7701234000055', referencia: 'REF-005',
-    proveedor: 'Papelera El Punto S.A.S',
-    categorias: ['Arte y Manualidades', 'Útiles Escolares'],
-    descripcion: '', imagen: null,
+    proveedor: 'Papelera El Punto S.A.S', categorias: ['Arte', 'Escolar'], descripcion: '', imagen: null,
     stock: 150, cantidadXPaca: 12,
     precioDetalle: 12000, precioDetallePaca: 10800,
     precioMayorista: 10000, precioMayoristaPaca: 9000,
@@ -70,9 +57,7 @@ const SEED_PRODUCTS = [
   {
     id: 6, activo: true,
     nombre: 'Corrector Líquido Faster', codBarras: '7701234000066', referencia: 'REF-006',
-    proveedor: 'Distribuciones Andina Ltda.',
-    categorias: ['Oficina', 'Útiles Escolares'],
-    descripcion: '', imagen: null,
+    proveedor: 'Distribuciones Andina Ltda.', categorias: ['Oficina', 'Escolar'], descripcion: '', imagen: null,
     stock: 420, cantidadXPaca: 12,
     precioDetalle: 3500,  precioDetallePaca: 3100,
     precioMayorista: 2800, precioMayoristaPaca: 2500,
@@ -82,9 +67,7 @@ const SEED_PRODUCTS = [
   {
     id: 7, activo: true,
     nombre: 'Carpeta Argollada Oficio', codBarras: '7701234000077', referencia: 'REF-007',
-    proveedor: 'Comercializadora Central S.A.S',
-    categorias: ['Oficina'],
-    descripcion: '', imagen: null,
+    proveedor: 'Comercializadora Central S.A.S', categorias: ['Oficina'], descripcion: '', imagen: null,
     stock: 180, cantidadXPaca: 6,
     precioDetalle: 9800,  precioDetallePaca: 8800,
     precioMayorista: 8200, precioMayoristaPaca: 7400,
@@ -94,9 +77,7 @@ const SEED_PRODUCTS = [
   {
     id: 8, activo: true,
     nombre: 'Tijeras Escolar Punta Roma', codBarras: '7701234000088', referencia: 'REF-008',
-    proveedor: 'Industrias Bolívar S.A.',
-    categorias: ['Útiles Escolares', 'Arte y Manualidades'],
-    descripcion: '', imagen: null,
+    proveedor: 'Industrias Bolívar S.A.', categorias: ['Escolar', 'Arte'], descripcion: '', imagen: null,
     stock: 300, cantidadXPaca: 12,
     precioDetalle: 4200,  precioDetallePaca: 3800,
     precioMayorista: 3500, precioMayoristaPaca: 3100,
@@ -106,9 +87,7 @@ const SEED_PRODUCTS = [
   {
     id: 9, activo: true,
     nombre: 'Marcadores Borrables x6', codBarras: '7701234000099', referencia: 'REF-009',
-    proveedor: 'Papelera El Punto S.A.S',
-    categorias: ['Oficina', 'Arte y Manualidades'],
-    descripcion: '', imagen: null,
+    proveedor: 'Papelera El Punto S.A.S', categorias: ['Oficina', 'Arte'], descripcion: '', imagen: null,
     stock: 240, cantidadXPaca: 6,
     precioDetalle: 11500, precioDetallePaca: 10400,
     precioMayorista: 9600, precioMayoristaPaca: 8600,
@@ -118,9 +97,7 @@ const SEED_PRODUCTS = [
   {
     id: 10, activo: true,
     nombre: 'Block Cuadriculado 50 Hojas', codBarras: '7701234000100', referencia: 'REF-010',
-    proveedor: 'Distribuciones Andina Ltda.',
-    categorias: ['Útiles Escolares'],       // 'Papelería Básica' no existe en categoriesService
-    descripcion: '', imagen: null,
+    proveedor: 'Distribuciones Andina Ltda.', categorias: ['Escolar', 'Papelería Básica'], descripcion: '', imagen: null,
     stock: 600, cantidadXPaca: 12,
     precioDetalle: 3800,  precioDetallePaca: 3400,
     precioMayorista: 3100, precioMayoristaPaca: 2800,
@@ -167,6 +144,7 @@ export const ProductsService = {
 
   /**
    * Crea un producto nuevo.
+   * Recibe el objeto emitido por onCreate() en CreateProduct.
    * Los valores numéricos llegan como string desde el form → se convierten aquí.
    */
   create(data) {
@@ -193,6 +171,7 @@ export const ProductsService = {
 
   /**
    * Actualiza un producto existente.
+   * Recibe el objeto emitido por onUpdate() en EditProduct (incluye id).
    * Los valores numéricos llegan como string desde el form → se convierten aquí.
    */
   update(data) {

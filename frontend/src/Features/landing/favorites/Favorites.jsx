@@ -7,85 +7,50 @@ import notebookAndPen from '../../../assets/products/notebookAndPen.png';
 import sharpie from '../../../assets/products/setsharpiex30.png';
 import sewingmachine from '../../../assets/products/sewingmachine.png';
 import tijeras from '../../../assets/products/tijeraspuntaroma.png';
+import { useFavorites } from '../../shared/Context/Favoritescontext';
+import { useCart } from '../../shared/Context/Cartcontext';
+import { useAlert } from '../../shared/alerts/useAlert';
 
 function Favorites() {
+  const { favorites, toggleFavorite, isFavorite } = useFavorites();
+  const { addToCart } = useCart();
+  const { showSuccess, showConfirm } = useAlert();
   const [ordenar, setOrdenar] = useState('A - Z');
-
-  const productosFavoritos = [
-    {
-      id: 1,
-      nombre: 'LIBRETA CON LAPICERO',
-      categorias: 'LIBRETAS, OFICINA, ESCUELA',
-      precio: 5000,
-      imagen: notebookAndPen,
-      enFavoritos: true
-    },
-    {
-      id: 2,
-      nombre: 'SET SHARPIE X30',
-      categorias: 'ESCOLAR, ARTE',
-      precio: 120000,
-      imagen: sharpie,
-      enFavoritos: true
-    },
-    {
-      id: 3,
-      nombre: 'COSEDORA XINGLI XL207 Y',
-      categorias: 'OFICINA, ESCOLAR',
-      precio: 5000,
-      imagen: sewingmachine,
-      enFavoritos: true
-    },
-    {
-      id: 4,
-      nombre: 'CORRECTOR EN CINTA',
-      categorias: 'ESCOLAR, OFICINA',
-      precio: 4000,
-      imagen: corrector,
-      enFavoritos: true
-    },
-    {
-      id: 5,
-      nombre: 'CUADERNO PRIMAVERA X100N',
-      categorias: 'ESCOLAR, LIBRETAS',
-      precio: 8000,
-      imagen: cuaderno,
-      enFavoritos: true
-    },
-    {
-      id: 6,
-      nombre: 'TIJERAS PUNTO ROMA',
-      categorias: 'OFICINA, ESCOLAR',
-      precio: 6500,
-      imagen: tijeras,
-      enFavoritos: true
-    }
-  ];
 
   const opcionesOrdenar = ['A - Z', 'Z - A', 'Precio: Menor a Mayor', 'Precio: Mayor a Menor'];
 
   const productosOrdenados = useMemo(() => {
-    let productos = [...productosFavoritos];
+    let productos = [...favorites];
     switch (ordenar) {
       case 'A - Z':
-        return productos.sort((a, b) => a.nombre.localeCompare(b.nombre));
+        return productos.sort((a, b) => a.name.localeCompare(b.name));
       case 'Z - A':
-        return productos.sort((a, b) => b.nombre.localeCompare(a.nombre));
+        return productos.sort((a, b) => b.name.localeCompare(a.name));
       case 'Precio: Menor a Mayor':
-        return productos.sort((a, b) => a.precio - b.precio);
+        return productos.sort((a, b) => a.price - b.price);
       case 'Precio: Mayor a Menor':
-        return productos.sort((a, b) => b.precio - a.precio);
+        return productos.sort((a, b) => b.price - a.price);
       default:
         return productos;
     }
-  }, [ordenar]);
+  }, [ordenar, favorites]);
 
-  const handleToggleFavorito = (productoId) => {
-    console.log('Toggle favorito:', productoId);
+  const handleToggleFavorito = async (producto) => {
+    const result = await showConfirm(
+      'warning',
+      '¿Quitar de favoritos?',
+      `¿Estás seguro de eliminar "${producto.name}" de tu lista de deseos?`
+    );
+
+    if (result.isConfirmed) {
+      toggleFavorite(producto);
+      showSuccess('Eliminado', 'El producto fue eliminado de tu lista de deseos.');
+    }
   };
 
-  const handleAgregarAlCarrito = (productoId) => {
-    console.log('Agregar al carrito:', productoId);
+  const handleAgregarAlCarrito = (producto) => {
+    addToCart(producto, 1);
+    showSuccess('Añadido al carrito', `${producto.name} se ha agregado al carrito.`);
   };
 
   const handleVerDetalles = (productoId) => {
@@ -142,8 +107,8 @@ function Favorites() {
                   <div className="flex-shrink-0">
                     <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
                       <img
-                        src={producto.imagen}
-                        alt={producto.nombre}
+                        src={producto.image}
+                        alt={producto.name}
                         className="w-full h-full object-contain p-2"
                       />
                     </div>
@@ -151,16 +116,16 @@ function Favorites() {
 
                   {/* Información del producto */}
                   <div className="flex-1">
-                    <h3 className="text-lg font-bold text-gray-900 mb-1">{producto.nombre}</h3>
-                    <p className="text-xs text-gray-500 mb-3 uppercase">{producto.categorias}</p>
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">{producto.name}</h3>
+                    <p className="text-xs text-gray-500 mb-3 uppercase">{producto.category}</p>
                     <p className="text-2xl font-bold mb-4" style={{ color: '#004D77' }}>
-                      ${producto.precio.toLocaleString()}
+                      ${producto.price.toLocaleString()}
                     </p>
 
                     {/* Botones */}
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => handleAgregarAlCarrito(producto.id)}
+                        onClick={() => handleAgregarAlCarrito(producto)}
                         className="flex items-center gap-2 px-4 py-2 border-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
                         style={{ borderColor: '#004D77', color: '#004D77' }}
                       >
@@ -184,14 +149,14 @@ function Favorites() {
                   {/* Botón de favorito */}
                   <div className="flex-shrink-0 flex items-center">
                     <button
-                      onClick={() => handleToggleFavorito(producto.id)}
+                      onClick={() => handleToggleFavorito(producto)}
                       className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                     >
                       <Heart
                         className="w-7 h-7"
                         style={{
                           color: '#004D77',
-                          fill: producto.enFavoritos ? '#004D77' : 'none',
+                          fill: isFavorite(producto.id) ? '#004D77' : 'none',
                           strokeWidth: 2
                         }}
                       />

@@ -13,6 +13,7 @@ import {
   createCategory,        // 🔵 importar createCategory
   updateCategory,        // 🔵 importar updateCategory
 } from "../services/categoriesService";
+import { categoryHasProducts } from "../services/categoryproductsService";
 
 export const Categories = () => {
 
@@ -97,27 +98,38 @@ export const Categories = () => {
   };
 
   // ───────────── ELIMINAR ─────────────
-  const handleDelete = async (id) => {
+// getSubcategories ya lo tienes importado desde categoriesService
 
-    const category = categories.find((c) => c.id === id);
-    if (!category) return;
+const handleDelete = async (id) => {
+  const category = categories.find((c) => c.id === id);
+  if (!category) return;
 
-    const result = await showConfirm(
-      "warning",
-      "Eliminar categoría",
-      `¿Seguro que deseas eliminar "${category.nombre}"?`,
-      { confirmButtonText: "Sí, eliminar", cancelButtonText: "Cancelar" }
+  // 🔴 Obtener IDs de subcategorías de esta categoría
+  const subcategoriaIds = getSubcategories()
+    .filter((s) => s.categoriaId === id)
+    .map((s) => s.id);
+
+  if (categoryHasProducts(subcategoriaIds)) {
+    showError(
+      "No se puede eliminar",
+      `"${category.nombre}" tiene subcategorías con productos asociados. Elimínalos primero.`
     );
+    return;
+  }
 
-    if (!result?.isConfirmed) return;
+  const result = await showConfirm(
+    "warning",
+    "Eliminar categoría",
+    `¿Seguro que deseas eliminar "${category.nombre}"?`,
+    { confirmButtonText: "Sí, eliminar", cancelButtonText: "Cancelar" }
+  );
+  if (!result?.isConfirmed) return;
 
-    const updated = categories.filter((cat) => cat.id !== id);
-
-    setCategories(updated);
-    saveCategories(updated);
-
-    showSuccess("Eliminado", "La categoría fue eliminada.");
-  };
+  const updated = categories.filter((cat) => cat.id !== id);
+  setCategories(updated);
+  saveCategories(updated);
+  showSuccess("Eliminado", "La categoría fue eliminada.");
+};
 
   // ───────────── GUARDAR ─────────────
   const handleSave = (categoryData, isEditing) => {

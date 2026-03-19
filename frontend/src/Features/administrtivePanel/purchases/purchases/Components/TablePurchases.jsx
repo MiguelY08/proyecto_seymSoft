@@ -33,9 +33,9 @@ export const PurchasesTable = ({
 }) => {
   return (
     <>
-      <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
+      <div className="bg-white rounded-xl shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full w-full text-xs">
+       <table className="min-w-full w-full text-xs">
             <thead className="bg-[#004D77] text-white">
               <tr>
                 <th className="px-3 py-2 text-center font-semibold">#</th>
