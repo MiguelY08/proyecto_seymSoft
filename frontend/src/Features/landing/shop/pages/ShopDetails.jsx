@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import ProductCard from "../../../shared/ProductCard";
 import ShopHero from "../components/ShopHero";
 import { Minus, Plus } from "lucide-react";
+import { useCart } from "../../../shared/Context/Cartcontext";
+import { useAlert } from "../../../shared/alerts/useAlert";
 
 import notebookPen from "../../../../assets/products/notebookAndPen.png";
 import correctorcinta from "../../../../assets/products/correctorencinta.png";
@@ -13,10 +15,10 @@ import Tijeraspunta from "../../../../assets/products/Tijeraspuntaroma.png";
 import vinilopq from "../../../../assets/products/vinilopqpowercolorrojo.png";
 import BgTienda from "../../../../assets/BgTienda.png";
 import SortDropdown from "../components/SortDropdown";
-import { useAlert } from "../../../shared/alerts/useAlert";
 
 function ShopDetail() {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
   const { showSuccess } = useAlert();
 
   const [quantity, setQuantity] = useState(1);
@@ -61,10 +63,12 @@ function ShopDetail() {
   const totalPrice = product.price * quantity;
 
   const handleAddToCart = () => {
+    addToCart(product, quantity);
     showSuccess(
       "Añadido al carrito",
       `${quantity} x ${product.name} se ha agregado al carrito.`
     );
+    setQuantity(1); // Resetear cantidad
   };
 
   return (
@@ -153,10 +157,7 @@ function ShopDetail() {
             />
           </div>
 
-          <Carousel
-            products={sortedRelatedProducts}
-            showSuccess={showSuccess}
-          />
+          <Carousel products={sortedRelatedProducts} />
 
         </div>
 
@@ -165,7 +166,7 @@ function ShopDetail() {
   );
 }
 
-function Carousel({ products, showSuccess }) {
+function Carousel({ products }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -219,13 +220,7 @@ function Carousel({ products, showSuccess }) {
                   name={product.name}
                   category={product.category}
                   price={product.price}
-                  productId={product.id}
-                  onAddToCart={() =>
-                    showSuccess(
-                      "Añadido al carrito",
-                      `${product.name} se ha agregado al carrito.`
-                    )
-                  }
+                  productData={product}
                 />
               </div>
             </div>
