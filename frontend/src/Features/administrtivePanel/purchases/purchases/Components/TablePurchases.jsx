@@ -1,26 +1,20 @@
 import React from "react";
-import {
-  Info,
-  RefreshCw,
-  XCircle,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Info, RefreshCw, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
 
 const highlightText = (text, search) => {
-  if (!search) return text;
+  if (!search || !text) return text;
 
   const regex = new RegExp(`(${search})`, "gi");
-  const parts = text.split(regex);
+  const parts = text.toString().split(regex);
 
   return parts.map((part, index) =>
     part.toLowerCase() === search.toLowerCase() ? (
-      <span key={index} className="bg-[#004d7726] text-[#004D77]  rounded px-1">
+      <span key={index} className="bg-[#004d7726] text-[#004D77] rounded px-0.5">
         {part}
       </span>
     ) : (
       part
-    ),
+    )
   );
 };
 
@@ -39,114 +33,131 @@ export const PurchasesTable = ({
 }) => {
   return (
     <>
-      <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
+      <div className="bg-white rounded-xl shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full w-full text-xs">
+       <table className="min-w-full w-full text-xs">
             <thead className="bg-[#004D77] text-white">
               <tr>
                 <th className="px-3 py-2 text-center font-semibold">#</th>
-                <th className="px-3 py-2 text-left font-semibold">
-                  No. Facturación
-                </th>
-                <th className="px-3 py-2 text-left font-semibold">
-                  Fecha compra
-                </th>
-                <th className="px-3 py-2 text-left font-semibold">Proveedor</th>
-                <th className="px-3 py-2 text-center font-semibold">
-                  Cantidad
-                </th>
-                <th className="px-3 py-2 text-right font-semibold">Precio</th>
+                <th className="px-3 py-2 text-center font-semibold">No. Facturación</th>
+                <th className="px-3 py-2 text-center font-semibold">Fecha compra</th>
+                <th className="px-3 py-2 text-center font-semibold">Proveedor</th>
+                <th className="px-3 py-2 text-center font-semibold">Cantidad</th>
+                <th className="px-3 py-2 text-center font-semibold">Precio</th>
                 <th className="px-3 py-2 text-center font-semibold">Estado</th>
-                <th className="px-3 py-2 text-center font-semibold">
-                  Acciones
-                </th>
+                <th className="px-3 py-2 text-center font-semibold">Acciones</th>
               </tr>
             </thead>
 
             <tbody>
-              {currentData.map((compra, index) => (
-                <tr
-                  key={compra.id}
-                  className={
-                    index % 2 === 0
-                      ? "bg-[#FFFFFF] hover:bg-gray-50"
-                      : "bg-gray-50 hover:bg-gray-100"
-                  }
-                >
-                  <td className="px-3 py-2.5 text-center">
-                    {startIndex + index + 1}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    {highlightText(compra.numeroFacturacion || "", search)}
-                  </td>
-                  <td className="px-3 py-2.5">{compra.fechaCompra}</td>
-                  <td className="px-3 py-2.5">
-                    {highlightText(compra.proveedor || "", search)}
-                  </td>
-                  <td className="px-3 py-2.5 text-center">
-                    {highlightText(
-                      compra.cantidadProductos?.toString() || "",
-                      search,
-                    )}
-                  </td>
-
-                  <td className="px-3 py-2.5 text-right">
-                    $
-                    {highlightText(
-                      Number(compra.precioTotal).toLocaleString(),
-                      search,
-                    )}
-                  </td>
-
-                  <td className="px-3 py-2.5 text-center">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        compra.estado === "Completada"
-                          ? "bg-green-100 text-green-700"
-                          : compra.estado === "Anulada"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-yellow-100 text-yellow-700"
-                      }`}
-                    >
-                      {highlightText(compra.estado || "Devuelta", search)}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2.5 text-center">
-                    <div className="flex justify-center gap-2">
-                      <button
-                        onClick={() => handleViewDetail(compra)}
-                        className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-110 cursor-pointer"
-                      >
-                        <Info size={16} />
-                      </button>
-
-                      <button
-                        onClick={() => handleReturn?.(compra)}
-                        disabled={compra.estado === "Anulada"}
-                        title={
-                          compra.estado === "Anulada"
-                            ? "No se puede devolver una compra anulada"
-                            : "Registrar devolución"
-                        }
-                        className={`transition-all duration-200 transform ${
-                          compra.estado === "Anulada"
-                            ? "text-gray-200 cursor-not-allowed"
-                            : "text-gray-400 hover:text-yellow-600 hover:scale-110 cursor-pointer"
-                        }`}
-                      >
-                        <RefreshCw size={16} />
-                      </button>
-
-                      <button
-                        onClick={() => handleCancel(compra.id)}
-                        className="text-gray-400 hover:text-red-600 transition-all duration-200 transform hover:scale-110 cursor-pointer"
-                      >
-                        <XCircle size={16} />
-                      </button>
-                    </div>
+              {!currentData.length ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-sm text-gray-400">
+                    No se encontraron compras.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                currentData.map((compra, index) => {
+                  const recordNumber = startIndex + index + 1;
+
+                  return (
+                    <tr
+                      key={compra.id}
+                      className={`${
+                      index % 2 === 0
+                        ? "bg-white hover:bg-gray-50"
+                        : "bg-gray-50 hover:bg-gray-100"
+                    }`}
+                    >
+                      {/* # */}
+                      <td className="px-3 py-2.5 text-center">
+                        {recordNumber}
+                      </td>
+
+                      {/* No. Facturación */}
+                      <td className="px-3 py-2.5 text-center">
+                        {highlightText(compra.numeroFacturacion || "", search)}
+                      </td>
+
+                      {/* Fecha */}
+                      <td className="px-3 py-2.5 text-center">
+                        {compra.fechaCompra}
+                      </td>
+
+                      {/* Proveedor */}
+                      <td className="px-3 py-2.5">
+                        {highlightText(compra.proveedor || "", search)}
+                      </td>
+
+                      {/* Cantidad */}
+                      <td className="px-3 py-2.5 text-center">
+                        {highlightText(compra.cantidadProductos?.toString() || "", search)}
+                      </td>
+
+                      {/* Precio */}
+                      <td className="px-3 py-2.5 text-center">
+                        ${highlightText(Number(compra.precioTotal).toLocaleString(), search)}
+                      </td>
+
+                      {/* Estado */}
+                      <td className="px-3 py-2.5 text-center">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            compra.estado === "Completada"
+                              ? "bg-green-100 text-green-700"
+                              : compra.estado === "Anulada"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-yellow-100 text-yellow-700"
+                          }`}
+                        >
+                          {highlightText(compra.estado || "Devuelta", search)}
+                        </span>
+                      </td>
+
+                      {/* Acciones */}
+                      <td className="px-3 py-2.5 text-center">
+                        <div className="flex justify-center gap-3">
+                          <button
+                            onClick={() => handleViewDetail(compra)}
+                            className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-125"
+                            title="Ver detalle"
+                          >
+                            <Info size={16} />
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              if (compra.estado !== "Anulada") {
+                                handleReturn?.(compra);
+                              }
+                            }}
+                            title={
+                              compra.estado === "Anulada"
+                                ? "No se puede devolver una compra anulada"
+                                : "Registrar devolución"
+                            }
+                            className={`transition-all duration-200 transform hover:scale-125 ${
+                              compra.estado === "Anulada"
+                                ? "text-gray-200 cursor-not-allowed"
+                                : "text-gray-400 hover:text-yellow-600"
+                            }`}
+                          >
+                            <RefreshCw size={16} />
+                          </button>
+
+                          <button
+                            onClick={() => handleCancel(compra.id)}
+                            className="text-gray-400 hover:text-red-600 transition-all duration-200 transform hover:scale-125"
+                            title="Anular compra"
+                          >
+                            <XCircle size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -155,7 +166,7 @@ export const PurchasesTable = ({
       {/* PAGINADOR */}
       <div className="flex items-center justify-between py-3">
         <p className="text-xs text-gray-600">
-          Mostrando {startIndex + 1} -{" "}
+          Mostrando {startIndex + 1} –{" "}
           {Math.min(endIndex, filteredProducts.length)} de{" "}
           {filteredProducts.length} registros
         </p>
@@ -176,7 +187,6 @@ export const PurchasesTable = ({
           {[...Array(totalPages)].map((_, i) => {
             const pageNum = i + 1;
             const isActive = currentPage === pageNum;
-
             return (
               <button
                 key={i}
