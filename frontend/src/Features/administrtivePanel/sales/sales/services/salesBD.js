@@ -1,7 +1,7 @@
+import { UsersDB } from '../../../users/services/usersDB';
 import ProductsService from '../../../purchases/products/services/productsServices';
 
 const SALES_KEY = 'pm_sales';
-const USERS_KEY = 'pm_users';
 
 /**
  * Formateador de precio para mostrar valores en formato colombiano.
@@ -34,7 +34,7 @@ const calcTotal = (items) => {
 };
 
 // ─── Control de versión del seed ──────────────────────────────────────────────
-const SEED_VERSION = 'sales_v3';
+const SEED_VERSION = 'sales_v4';
 
 /**
  * Seed dinámico de ventas.
@@ -135,8 +135,8 @@ const seedSales = () => {
       },
       {
         id: 7, factura: '560294817', fecha: '07/02/2025',
-        clienteId: 14, vendedorId: 19,
-        cliente: 'Isabella Fernanda López Arango', vendedor: 'Tomás Alejandro Herrera Zuluaga',
+        clienteId: 14, vendedorId: 3,
+        cliente: 'Isabella Fernanda López Arango', vendedor: 'Carlos Andrés Muñoz Zapata',
         metodoPago: 'Crédito', estado: 'Desaprobada',
         entrega: 'Cliente lo recoge', direccion: '',
         items: [
@@ -149,8 +149,8 @@ const seedSales = () => {
       },
       {
         id: 8, factura: '728405193', fecha: '12/02/2025',
-        clienteId: 16, vendedorId: 12,
-        cliente: 'Camila Andrea Sánchez Vélez', vendedor: 'Natalia Paola Ospina Cano',
+        clienteId: 8, vendedorId: 12,
+        cliente: 'Natalia Andrea Gómez Salazar', vendedor: 'Distribuidora El Éxito SAS',
         metodoPago: 'Transferencia', estado: 'Aprobada',
         entrega: 'Domicilio', direccion: 'Calle 10 # 43-20, Barrio El Estadio, Medellín',
         items: [
@@ -163,8 +163,8 @@ const seedSales = () => {
       },
       {
         id: 9, factura: '394817205', fecha: '17/02/2025',
-        clienteId: 17, vendedorId: 9,
-        cliente: 'Sebastián David Gutiérrez Mejía', vendedor: 'Miguel Ángel Castillo Duque',
+        clienteId: 10, vendedorId: 9,
+        cliente: 'Valentina Morales Fuentes', vendedor: 'Andrés Camilo Vargas Moreno',
         metodoPago: 'Efectivo', estado: 'Desaprobada',
         entrega: 'Cliente lo recoge', direccion: '',
         items: [
@@ -176,8 +176,8 @@ const seedSales = () => {
       },
       {
         id: 10, factura: '612038475', fecha: '20/02/2025',
-        clienteId: 20, vendedorId: 2,
-        cliente: 'Manuela Sofía Álvarez Montoya', vendedor: 'Laura Milena Restrepo Cardona',
+        clienteId: 11, vendedorId: 2,
+        cliente: 'Miguel Ángel Pérez Castañeda', vendedor: 'Laura Milena Restrepo Cardona',
         metodoPago: 'Transferencia', estado: 'Aprobada',
         entrega: 'Domicilio', direccion: 'Transversal 39 # 72-15, Barrio Laureles, Medellín',
         items: [
@@ -247,18 +247,6 @@ export const SalesDB = {
   },
 
   /**
-   * Carga la lista de usuarios desde localStorage.
-   * @private
-   * @returns {Array} Lista de usuarios.
-   */
-  _loadUsers() {
-    try {
-      const stored = localStorage.getItem(USERS_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch { return []; }
-  },
-
-  /**
    * Calcula subtotal, IVA y total de una lista de items.
    * @private
    * @param {Array} items - Lista de items con product y cantidad.
@@ -280,7 +268,7 @@ export const SalesDB = {
    */
   create(form, items, facturaNo) {
     const sales    = this.list();
-    const users    = this._loadUsers();
+    const users    = UsersDB.list();
     const cliente  = users.find((u) => String(u.id) === String(form.clienteId));
     const vendedor = users.find((u) => String(u.id) === String(form.vendedorId));
     const { total } = this._calcTotals(items);
@@ -292,8 +280,8 @@ export const SalesDB = {
       fecha:           new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }),
       clienteId:       form.clienteId,
       vendedorId:      form.vendedorId,
-      cliente:         cliente?.nombre  ?? '',
-      vendedor:        vendedor?.nombre ?? '',
+      cliente:         cliente?.name  ?? '',
+      vendedor:        vendedor?.name ?? '',
       metodoPago:      form.metodoPago,
       estado:          form.estado,
       entrega:         form.entrega,
@@ -319,7 +307,7 @@ export const SalesDB = {
    */
   update(saleId, form, items, originalItems) {
     const sales    = this.list();
-    const users    = this._loadUsers();
+    const users    = UsersDB.list();
     const cliente  = users.find((u) => String(u.id) === String(form.clienteId));
     const vendedor = users.find((u) => String(u.id) === String(form.vendedorId));
     const { total } = this._calcTotals(items);
@@ -330,8 +318,8 @@ export const SalesDB = {
             ...s,
             clienteId:  form.clienteId,
             vendedorId: form.vendedorId,
-            cliente:    cliente?.nombre  ?? '',
-            vendedor:   vendedor?.nombre ?? '',
+            cliente:    cliente?.name  ?? '',
+            vendedor:   vendedor?.name ?? '',
             metodoPago: form.metodoPago,
             estado:     form.estado,
             entrega:    form.entrega,

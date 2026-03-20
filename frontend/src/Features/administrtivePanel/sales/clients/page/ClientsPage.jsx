@@ -168,7 +168,7 @@ function ClientsPage() {
   };
 
   const filteredClients                       = filterClients(clients, searchTerm);
-  const { currentData, startIndex } = paginateData(
+  const { currentData } = paginateData(
     filteredClients,
     currentPage,
     RECORDS_PER_PAGE
@@ -197,7 +197,6 @@ function ClientsPage() {
       <div className="bg-white rounded-xl shadow-md">
         <ClientsTable
           clients={currentData}
-          startIndex={startIndex}
           searchTerm={searchTerm}
           onInfo={handleInfo}
           onEdit={handleEdit}
@@ -206,25 +205,14 @@ function ClientsPage() {
         />
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-gray-700">
-          Mostrando{' '}
-          <span className="text-[#004D77]">{currentData.length}</span>
-          {' '}registros de{' '}
-          <span className="text-[#004D77]">{filteredClients.length}</span>
-        </p>
-
-        {filteredClients.length > 0 && (
-          <div className="bg-white shadow-md rounded-xl px-3 py-2">
-            <PaginationAdmin
-              currentPage={currentPage}
-              onPageChange={setCurrentPage}
-              totalRecords={filteredClients.length}
-              recordsPerPage={RECORDS_PER_PAGE}
-            />
-          </div>
-        )}
-      </div>
+      {filteredClients.length > 0 && (
+        <PaginationAdmin
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          totalRecords={filteredClients.length}
+          recordsPerPage={RECORDS_PER_PAGE}
+        />
+      )}
 
       <FormClient
         isOpen={isFormModalOpen}

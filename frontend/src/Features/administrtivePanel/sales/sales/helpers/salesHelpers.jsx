@@ -3,7 +3,7 @@ import { UsersDB } from '../../../users/services/usersDB';
 
 // ─── Claves de almacenamiento ─────────────────────────────────────────────────
 export const SALES_STORAGE_KEY = 'pm_sales';
-export const USERS_STORAGE_KEY = 'pm_users';
+export const USERS_STORAGE_KEY = 'users';
 
 // ─── Constantes de formulario ─────────────────────────────────────────────────
 export const METODOS_PAGO  = ['Efectivo', 'Crédito', 'Transferencia'];

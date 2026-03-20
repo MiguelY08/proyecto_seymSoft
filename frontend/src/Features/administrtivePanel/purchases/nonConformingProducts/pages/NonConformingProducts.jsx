@@ -3,7 +3,7 @@ import { useAlert } from "../../../../shared/alerts/useAlert";
 import NonConformingProductsTable from "../components/NonConformingProductsTable";
 import FormNonConformingProduct from "./FormNonConformingProduct";
 import { PurchasesFilters } from "../../../../shared/DateFilter";
-import { Plus, Download } from "lucide-react";
+import { Plus, FileSpreadsheet } from "lucide-react";
 import { Link } from "react-router-dom";
 import ViewDetailsPN from "./ViewDetailsPN";
 import * as XLSX from "xlsx";
@@ -168,7 +168,7 @@ export const NonConformingProducts = () => {
 
   return (
     <>
-      <div className="px-4 md:px-0 max-w-6xl mx-auto">
+      <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
         <div className="flex items-end justify-between">
 
           {/* Filtro por fecha */}
@@ -186,10 +186,11 @@ export const NonConformingProducts = () => {
           <div className="flex items-center gap-2 mb-3">
             <button
               onClick={handleDownloadExcel}
-              className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-sky-700 rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap shrink-0"
+             className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
+          aria-label="Exportar a Excel"
             >
-              <span className="hidden sm:inline">Exportar Excel</span>
-              <Download className="w-4 h-4" strokeWidth={1.8} />
+              <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
+          <span className="hidden sm:inline">Export Excel</span>
             </button>
 
             <button

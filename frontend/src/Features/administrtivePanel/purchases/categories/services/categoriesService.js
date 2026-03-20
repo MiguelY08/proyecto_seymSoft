@@ -23,10 +23,7 @@ export const getCategories = () => {
     return JSON.parse(stored);
   }
 
-  localStorage.setItem(
-    CATEGORY_KEY,
-    JSON.stringify(mockCategories)
-  );
+  localStorage.setItem(CATEGORY_KEY, JSON.stringify(mockCategories));
 
   return mockCategories;
 
@@ -36,15 +33,12 @@ export const getCategories = () => {
 // 🔵 Guardar categorías
 export const saveCategories = (categories) => {
 
-  localStorage.setItem(
-    CATEGORY_KEY,
-    JSON.stringify(categories)
-  );
+  localStorage.setItem(CATEGORY_KEY, JSON.stringify(categories));
 
 };
 
 
-// 🔵 Crear categoría
+// 🔵 Crear categoría (con subcategorías iniciales opcionales)
 export const createCategory = (newCategory) => {
 
   const categories = getCategories();
@@ -54,16 +48,41 @@ export const createCategory = (newCategory) => {
       ? Math.max(...categories.map((c) => c.id)) + 1
       : 1;
 
+  // Subcategorías que vienen del formulario (pueden ser [] o undefined)
+  const subcategoriasIniciales = newCategory.subcategoriasIniciales ?? [];
+
   const category = {
     id: newId,
     nombre: newCategory.nombre,
     estado: newCategory.activo ? "Activo" : "Inactivo",
-    subcategorias: 0
+    subcategorias: subcategoriasIniciales.length   // Contador real desde el inicio
   };
 
   const updated = [...categories, category];
 
   saveCategories(updated);
+
+  // 🔵 Crear cada subcategoría inicial vinculada a la nueva categoría
+  if (subcategoriasIniciales.length > 0) {
+
+    const existingSubcategories = getSubcategories();
+
+    let nextSubId =
+      existingSubcategories.length > 0
+        ? Math.max(...existingSubcategories.map((s) => s.id)) + 1
+        : 1;
+
+    const newSubcategories = subcategoriasIniciales.map((sub) => ({
+      id: nextSubId++,
+      nombre: sub.nombre,
+      descripcion: sub.descripcion ?? "",
+      categoriaId: newId,
+      estado: sub.activo ? "Activo" : "Inactivo"
+    }));
+
+    saveSubcategories([...existingSubcategories, ...newSubcategories]);
+
+  }
 
   return category;
 
@@ -109,15 +128,12 @@ export const getSubcategories = () => {
 // 🔵 Guardar subcategorías
 export const saveSubcategories = (subcategories) => {
 
-  localStorage.setItem(
-    SUBCATEGORY_KEY,
-    JSON.stringify(subcategories)
-  );
+  localStorage.setItem(SUBCATEGORY_KEY, JSON.stringify(subcategories));
 
 };
 
 
-// 🔵 Crear subcategoría
+// 🔵 Crear subcategoría individual (para el formulario independiente)
 export const createSubcategory = (data) => {
 
   const subcategories = getSubcategories();

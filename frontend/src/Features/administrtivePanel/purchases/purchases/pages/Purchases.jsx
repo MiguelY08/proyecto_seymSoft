@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PurchasesFilters } from "../../../../shared/DateFilter";
 import PurchasesTable from "../Components/TablePurchases";
@@ -9,6 +9,7 @@ import { Plus } from "lucide-react";
 import { PurchasesDB } from "../services/Purchases.service";
 
 export const Purchases = () => {
+
   // 🔹 Estados principales
   const [products, setProducts] = useState(() => PurchasesDB.list());
   const [search, setSearch] = useState("");
@@ -24,6 +25,8 @@ export const Purchases = () => {
   // 🔹 Control para evitar alertas repetidas
   const alertShownRef = useRef(false);
 
+
+
   const navigate = useNavigate();
 
   // 🔥 Abrir formulario de devolución para una compra
@@ -34,18 +37,22 @@ export const Purchases = () => {
   };
 
   // 🔥 Anular compra
-  const handleCancel = (id) => {
-    const compra = products.find((c) => c.id === id);
+ const handleCancel = (id) => {
 
-    if (!compra) return;
+  const compra = products.find((c) => c.id === id);
 
-    if (compra.estado === "Anulada") {
-      showInfo("Compra ya Anulada", "Esta compra ya se encuentra Anulada.");
-      return;
-    }
+  if (!compra) return;
 
-    setCancelPurchase(compra);
-  };
+  if (compra.estado === "Anulada") {
+    showInfo(
+      "Compra ya Anulada",
+      "Esta compra ya se encuentra Anulada."
+    );
+    return;
+  }
+
+  setCancelPurchase(compra);
+};
   const confirmCancelPurchase = (motivo) => {
     try {
       const updated = PurchasesDB.annul(cancelPurchase.id, motivo);
@@ -59,12 +66,12 @@ export const Purchases = () => {
   };
 
   const handleViewDetail = (purchase) => {
-    setSelectedPurchase(purchase);
+  setSelectedPurchase(purchase);
   };
 
   const handleCloseModal = () => {
-    setSelectedPurchase(null);
-  };
+  setSelectedPurchase(null);
+};
 
   const RECORDS_PER_PAGE = 13;
 
@@ -101,10 +108,7 @@ export const Purchases = () => {
       hayFiltrosActivos &&
       !alertShownRef.current
     ) {
-      showInfo(
-        "Sin resultados",
-        "No se encontraron compras con los filtros aplicados.",
-      );
+      showInfo("Sin resultados", "No se encontraron compras con los filtros aplicados.");
       alertShownRef.current = true;
     }
 
@@ -125,64 +129,71 @@ export const Purchases = () => {
 
   return (
     <>
-      <div className="px-4 md:px-0 max-w-7xl mx-auto">
-        <div className="flex items-end justify-between">
-          <PurchasesFilters
-            search={search}
-            setSearch={setSearch}
-            fechaInicial={fechaInicial}
-            setFechaInicial={setFechaInicial}
-            fechaFinal={fechaFinal}
-            setFechaFinal={setFechaFinal}
-            setCurrentPage={setCurrentPage}
-          />
+    <div className="h-full flex flex-col  gap-0.5 p-3 sm:p-3">
 
-          <div className="flex justify-end mb-3">
-            <Link
-              to="/admin/purchases/create"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 whitespace-nowrap"
-            >
-              <span className="hidden sm:inline">Crear Compra </span>
-              <Plus className="w-4 h-4" strokeWidth={2} />
-            </Link>
-          </div>
+      <div className="flex items-end justify-between">
+
+        <PurchasesFilters
+          search={search}
+          setSearch={setSearch}
+          fechaInicial={fechaInicial}
+          setFechaInicial={setFechaInicial}
+          fechaFinal={fechaFinal}
+          setFechaFinal={setFechaFinal}
+          setCurrentPage={setCurrentPage}
+        />
+
+        <div className="flex justify-end mb-3">
+          <Link
+            to="/admin/purchases/create"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 whitespace-nowrap"
+          >
+            <span className="hidden sm:inline">Crear Compra </span>
+                    <Plus className="w-4 h-4" strokeWidth={2} />
+          </Link>
         </div>
-
-        {filteredProducts.length === 0 && (
-          <p className="text-gray-500">No hay compras registradas aún.</p>
-        )}
-
-        {filteredProducts.length > 0 && (
-          <PurchasesTable
-            currentData={currentData}
-            filteredProducts={filteredProducts}
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-            totalPages={totalPages}
-            startIndex={startIndex}
-            endIndex={endIndex}
-            handleCancel={handleCancel}
-            handleViewDetail={handleViewDetail}
-            handleReturn={handleReturn}
-            search={search}
-          />
-        )}
       </div>
-      {selectedPurchase && (
-        <DetailPurchases
-          purchase={selectedPurchase}
-          onClose={() => setSelectedPurchase(null)}
-        />
+
+      {filteredProducts.length === 0 && (
+        <p className="text-gray-500">
+          No hay compras registradas aún.
+        </p>
       )}
-      {cancelPurchase && (
-        <Anulatepurchase
-          purchase={cancelPurchase}
-          onClose={() => setCancelPurchase(null)}
-          onConfirm={confirmCancelPurchase}
-        />
-      )}
-    </>
+
+      {filteredProducts.length > 0 && (
+  <div className="flex-1 overflow-auto  min-h-0">
+    <PurchasesTable
+      currentData={currentData}
+      filteredProducts={filteredProducts}
+      currentPage={currentPage}
+      setCurrentPage={setCurrentPage}
+      totalPages={totalPages}
+      startIndex={startIndex}
+      endIndex={endIndex}
+      handleCancel={handleCancel}
+      handleViewDetail={handleViewDetail}
+      handleReturn={handleReturn}
+      search={search}
+    />
+  </div>
+)}
+    </div>
+    {selectedPurchase && (
+  <DetailPurchases
+    purchase={selectedPurchase}
+    onClose={() => setSelectedPurchase(null)}
+  />
+  )}
+  {cancelPurchase && (
+  <Anulatepurchase
+    purchase={cancelPurchase}
+    onClose={() => setCancelPurchase(null)}
+    onConfirm={confirmCancelPurchase}
+  />
+)}
+  </>
   );
+  
 };
 
 export default Purchases;

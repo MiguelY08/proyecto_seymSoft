@@ -1,20 +1,37 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X, Download, SquarePen, Clock, XCircle } from 'lucide-react';
+import { X, Download, SquarePen, Clock, XCircle, Hash, Calendar, User, UserCheck, CreditCard, Tag, Truck, MapPin, Receipt, Package } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { useModalAnimation } from '../../../../shared/useModalAnimation';
 import { formatPrice }       from '../helpers/salesHelpers';
-import SaleDetailRow         from '../components/SaleDetailRow';
 
-/**
- * Componente que muestra un banner informativo basado en el estado de la venta.
- * Muestra mensajes específicos para ventas en espera de aprobación o anuladas.
- *
- * @component
- * @param {Object} props - Propiedades del componente.
- * @param {Object} props.sale - Objeto de la venta con propiedades como estado, motivoAnulacion, etc.
- * @returns {JSX.Element|null} El banner correspondiente al estado o null si no aplica.
- */
+// ─── DetailRow ────────────────────────────────────────────────────────────────
+function DetailRow({ icon: Icon, label, value, placeholder, highlight = false }) {
+  const hasValue = value && String(value).trim() !== '';
+  return (
+    <div className="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0">
+      <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5 ${
+        hasValue ? 'bg-[#004D77]/10' : 'bg-gray-100'
+      }`}>
+        <Icon className={`w-3.5 h-3.5 ${hasValue ? 'text-[#004D77]' : 'text-gray-300'}`} strokeWidth={1.8} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wide leading-none mb-0.5">
+          {label}
+        </span>
+        <span className={`block text-sm font-medium truncate ${
+          hasValue
+            ? highlight ? 'text-[#004D77] font-semibold' : 'text-gray-800'
+            : 'text-gray-300 italic font-normal'
+        }`}>
+          {hasValue ? value : (placeholder || '—')}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── StatusBanner ─────────────────────────────────────────────────────────────
 function StatusBanner({ sale }) {
   if (sale.estado === 'Esp. aprobación') {
     return (
@@ -50,50 +67,32 @@ function StatusBanner({ sale }) {
   return null;
 }
 
-/**
- * Componente modal para mostrar información detallada de una venta.
- * Incluye detalles de la venta, productos, totales y opciones para editar o exportar a PDF.
- * Maneja banners informativos según el estado de la venta.
- *
- * @component
- * @param {Object} props - Propiedades del componente (ninguna requerida, usa location.state).
- * @returns {JSX.Element|null} El modal de información o null si no hay venta.
- */
+// ─── SaleInfo ─────────────────────────────────────────────────────────────────
 function SaleInfo() {
   const navigate    = useNavigate();
   const location    = useLocation();
   const [downloading, setDownloading] = useState(false);
 
-  // Obtener datos de la venta y origen desde el estado de navegación
   const sale   = location.state?.sale   ?? null;
   const origin = location.state?.origin ?? null;
 
-  // Hook para manejar la animación y cierre del modal
   const { visible, handleClose } = useModalAnimation('/admin/sales');
 
-  // Calcular el origen de transformación para la animación
   const transformOrigin = origin
     ? `${origin.x}px ${origin.y}px`
     : 'center center';
 
-  // ─── Calcular totales desde los items ─────────────────────────────────────
-  // Calcular subtotal, IVA y total basado en los items de la venta
+  // ─── Totales ─────────────────────────────────────────────────────────────
   const items    = sale?.items ?? [];
   const subtotal = items.reduce((acc, i) => acc + i.product.precioDetalle * i.cantidad, 0);
   const iva      = Math.round(subtotal * 0.19);
   const total    = subtotal + iva;
 
-  /**
-   * Navega al formulario de edición de la venta.
-   */
   const handleEdit = () => {
     navigate('/admin/sales/form-sale', { state: { sale } });
   };
 
-  /**
-   * Genera y descarga un PDF con los detalles de la venta.
-   * Utiliza jsPDF para crear el documento con layout personalizado.
-   */
+  // ─── PDF ──────────────────────────────────────────────────────────────────
   const handleDownload = () => {
     if (downloading) return;
     setDownloading(true);
@@ -105,11 +104,10 @@ function SaleInfo() {
       const colMid = pageW / 2;
       let y        = 0;
 
-      // Función auxiliar para formatear precios
       const fmt = (v) =>
         new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
 
-      // Header del PDF
+      // Header
       pdf.setFillColor(0, 77, 119);
       pdf.rect(0, 0, pageW, 18, 'F');
       pdf.setTextColor(255, 255, 255);
@@ -122,36 +120,36 @@ function SaleInfo() {
 
       y = 26;
 
-      // Subtítulos de columnas
       pdf.setTextColor(30, 30, 30);
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(10);
       pdf.text('Detalles de la venta', margin, y);
-      pdf.text('Detalles del pedido', colMid + 4, y);
+      pdf.text('Detalles del pedido',  colMid + 4, y);
 
       y += 2;
       pdf.setDrawColor(0, 77, 119);
       pdf.setLineWidth(0.4);
       pdf.line(margin, y, colMid - 4, y);
       pdf.line(colMid + 4, y, pageW - margin, y);
-
       pdf.setDrawColor(220, 220, 220);
       pdf.setLineWidth(0.3);
 
-      // Detalles de la venta (columna izquierda)
+      const metodoPagoLabel = Array.isArray(sale.metodoPago)
+        ? sale.metodoPago.filter(Boolean).join(' · ')
+        : sale.metodoPago;
+
       const fields = [
         ['Factura No.',    sale.factura],
         ['Fecha',         sale.fecha],
         ['Cliente',       sale.cliente],
         ['Vendedor',      sale.vendedor],
-        ['Método de pago',sale.metodoPago],
+        ['Método de pago', metodoPagoLabel],
         ['Estado',        sale.estado],
         ['Entrega',       sale.entrega],
         ['Dirección',     sale.direccion],
         ['Registrado',    sale.registradoDesde],
       ];
 
-      // Si está anulada, agregar motivo y fecha al PDF
       if (sale.estado === 'Anulada') {
         fields.push(['Motivo de anulación', sale.motivoAnulacion || 'Sin motivo registrado.']);
         if (sale.fechaAnulacion) fields.push(['Fecha de anulación', sale.fechaAnulacion]);
@@ -172,7 +170,6 @@ function SaleInfo() {
         yLeft += lines.length * 4.5 + 1.5;
       });
 
-      // Detalles del pedido (columna derecha)
       const rightX = colMid + 4;
       const rightW = pageW - margin - rightX;
       let yRight   = y + 6;
@@ -226,10 +223,10 @@ function SaleInfo() {
         pdf.setFontSize(8);
         pdf.setTextColor(50, 50, 50);
 
-        pdf.text(nameLines,                                                           c1,                   yRight);
-        pdf.text(String(cantidad),                                                    c2,                   yRight, { align: 'right' });
-        pdf.text(product.precioDetalle.toLocaleString('es-CO'),                       c3,                   yRight, { align: 'right' });
-        pdf.text((product.precioDetalle * cantidad).toLocaleString('es-CO'),          c4 + (rightW * 0.22), yRight, { align: 'right' });
+        pdf.text(nameLines,                                                     c1,                   yRight);
+        pdf.text(String(cantidad),                                              c2,                   yRight, { align: 'right' });
+        pdf.text(product.precioDetalle.toLocaleString('es-CO'),                 c3,                   yRight, { align: 'right' });
+        pdf.text((product.precioDetalle * cantidad).toLocaleString('es-CO'),    c4 + (rightW * 0.22), yRight, { align: 'right' });
         yRight += nameLines.length * 4.5;
 
         if (descLines.length) {
@@ -266,7 +263,6 @@ function SaleInfo() {
         yRight += 5.5;
       });
 
-      // Footer del PDF
       const footerY = pdf.internal.pageSize.getHeight() - 10;
       pdf.setFillColor(0, 77, 119);
       pdf.rect(0, footerY - 2, pageW, 12, 'F');
@@ -284,11 +280,7 @@ function SaleInfo() {
     }
   };
 
-  // Si no hay venta, cerrar el modal
-  if (!sale) {
-    handleClose();
-    return null;
-  }
+  if (!sale) { handleClose(); return null; }
 
   return (
     <div
@@ -306,127 +298,139 @@ function SaleInfo() {
         className={`bg-white rounded-lg shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden max-h-[90vh]
           ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
       >
-        {/* Header del modal */}
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
           <h2 className="text-white font-semibold text-lg">Más información</h2>
-          <button
-            onClick={handleClose}
-            className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
-          >
+          <button onClick={handleClose} className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer">
             <X className="w-5 h-5" strokeWidth={2} />
           </button>
         </div>
 
-        {/* Cuerpo del modal con scroll */}
+        {/* Cuerpo */}
         <div className="overflow-y-auto flex-1">
-
-          {/* Banner informativo — sticky dentro del scroll */}
           <StatusBanner sale={sale} />
 
-          <div className="bg-white">
-            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
 
-              {/* Columna izquierda: Detalles de la venta */}
-              <div className="px-6 py-5">
-                <p className="text-sm font-bold text-gray-700 text-center mb-3">
+            {/* ── Detalles de la venta ─────────────────────────────────── */}
+            <div className="px-6 py-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-px flex-1 bg-gray-100" />
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">
                   Detalles de la venta
-                </p>
-                <SaleDetailRow label="Factura No."    value={sale.factura}         />
-                <SaleDetailRow label="Fecha"          value={sale.fecha}           />
-                <SaleDetailRow label="Cliente"        value={sale.cliente}         />
-                <SaleDetailRow label="Vendedor"       value={sale.vendedor}        />
-                <SaleDetailRow label="Método de pago" value={sale.metodoPago}      />
-                <SaleDetailRow label="Estado"         value={sale.estado}          />
-                <SaleDetailRow label="Entrega"        value={sale.entrega}         />
-                <SaleDetailRow label="Dirección"      value={sale.direccion}       />
-                <SaleDetailRow label="Registrado"     value={sale.registradoDesde} />
-                {sale.estado === 'Anulada' && (
-                  <>
-                    <SaleDetailRow
-                      label="Motivo de anulación"
-                      value={sale.motivoAnulacion || 'Sin motivo registrado.'}
-                    />
-                    {sale.fechaAnulacion && (
-                      <SaleDetailRow label="Fecha de anulación" value={sale.fechaAnulacion} />
-                    )}
-                  </>
-                )}
+                </span>
+                <div className="h-px flex-1 bg-gray-100" />
               </div>
 
-              {/* Columna derecha: Detalles del pedido */}
-              <div className="px-6 py-5 flex flex-col">
-                <p className="text-sm font-bold text-gray-700 text-center mb-3">
+              <DetailRow icon={Hash}       label="Factura No."    value={sale.factura}         highlight />
+              <DetailRow icon={Calendar}   label="Fecha"          value={sale.fecha}                      />
+              <DetailRow icon={User}       label="Cliente"        value={sale.cliente}                    />
+              <DetailRow icon={UserCheck}  label="Vendedor"       value={sale.vendedor}                   />
+              <DetailRow icon={CreditCard} label="Método de pago"
+                value={
+                  Array.isArray(sale.metodoPago)
+                    ? sale.metodoPago.filter(Boolean).join(' · ')
+                    : sale.metodoPago
+                }
+              />
+              <DetailRow icon={Tag}        label="Estado"         value={sale.estado}                     />
+              <DetailRow icon={Truck}      label="Entrega"        value={sale.entrega}                    />
+              <DetailRow icon={MapPin}     label="Dirección"      value={sale.direccion}                  />
+              <DetailRow icon={Calendar}   label="Registrado"     value={sale.registradoDesde}            />
+              {sale.estado === 'Anulada' && (
+                <>
+                  <DetailRow icon={Receipt}  label="Motivo de anulación" value={sale.motivoAnulacion || 'Sin motivo registrado.'} />
+                  {sale.fechaAnulacion && (
+                    <DetailRow icon={Calendar} label="Fecha de anulación" value={sale.fechaAnulacion} />
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* ── Detalles del pedido ──────────────────────────────────── */}
+            <div className="px-6 py-5 flex flex-col">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-px flex-1 bg-gray-100" />
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">
                   Detalles del pedido
-                </p>
+                </span>
+                <div className="h-px flex-1 bg-gray-100" />
+              </div>
 
-                {sale.entrega === 'Domicilio' && sale.direccion && (
-                  <p className="text-xs text-gray-600 mb-3">
-                    <span className="font-semibold">Domicilio: </span>{sale.direccion}
-                  </p>
-                )}
+              {sale.entrega === 'Domicilio' && sale.direccion && (
+                <div className="mb-3">
+                  <DetailRow icon={MapPin} label="Domicilio" value={sale.direccion} />
+                </div>
+              )}
 
-                {items.length > 0 ? (
-                  <>
-                    {/* Encabezado de la tabla de productos */}
-                    <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 pb-1.5 border-b-2 border-gray-800 mb-1">
-                      <span className="text-xs font-bold text-gray-700">Prod</span>
-                      <span className="text-xs font-bold text-gray-700 text-right">Cant</span>
-                      <span className="text-xs font-bold text-gray-700 text-right">V. Unit</span>
-                      <span className="text-xs font-bold text-gray-700 text-right">Total</span>
-                    </div>
+              {items.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-2 py-1.5 rounded-md bg-[#004D77]/5 mb-1">
+                    <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide">Producto</span>
+                    <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide text-right">Cant</span>
+                    <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide text-right">V. Unit</span>
+                    <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide text-right">Total</span>
+                  </div>
 
-                    {/* Filas de productos */}
-                    <div className="flex flex-col divide-y divide-gray-100 mb-4">
-                      {items.map(({ product, cantidad, descripcion }) => (
-                        <div
-                          key={product.id}
-                          className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 py-1.5 items-start"
-                        >
+                  <div className="flex flex-col mb-3 flex-1">
+                    {items.map(({ product, cantidad, descripcion }, idx) => (
+                      <div
+                        key={product.id}
+                        className={`grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-2 py-2 items-start rounded-md ${
+                          idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-start gap-2 min-w-0">
+                          <div className="w-5 h-5 rounded bg-[#004D77]/10 flex items-center justify-center shrink-0 mt-0.5">
+                            <Package className="w-3 h-3 text-[#004D77]/60" strokeWidth={1.5} />
+                          </div>
                           <div className="flex flex-col min-w-0">
                             <span className="text-xs text-gray-700">{product.nombre}</span>
                             {descripcion && (
                               <span className="text-[10px] text-gray-400 italic mt-0.5 leading-tight">{descripcion}</span>
                             )}
                           </div>
-                          <span className="text-xs text-gray-600 text-right tabular-nums">{cantidad}</span>
-                          <span className="text-xs text-gray-600 text-right tabular-nums">
-                            {product.precioDetalle.toLocaleString('es-CO')}
-                          </span>
-                          <span className="text-xs text-gray-700 text-right tabular-nums">
-                            {(product.precioDetalle * cantidad).toLocaleString('es-CO')}
-                          </span>
                         </div>
-                      ))}
-                    </div>
+                        <span className="text-xs text-gray-500 text-right tabular-nums font-medium">{cantidad}</span>
+                        <span className="text-xs text-gray-500 text-right tabular-nums">
+                          {product.precioDetalle.toLocaleString('es-CO')}
+                        </span>
+                        <span className="text-xs font-semibold text-gray-700 text-right tabular-nums">
+                          {(product.precioDetalle * cantidad).toLocaleString('es-CO')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
 
-                    {/* Sección de totales */}
-                    <div className="mt-auto border-t border-gray-200 pt-3 flex flex-col gap-1.5">
-                      <div className="flex justify-between">
-                        <span className="text-xs font-semibold text-gray-600">Subtotal</span>
-                        <span className="text-xs text-gray-700 tabular-nums">{formatPrice(subtotal)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-xs font-semibold text-gray-600">IVA (19%)</span>
-                        <span className="text-xs text-gray-700 tabular-nums">{formatPrice(iva)}</span>
-                      </div>
-                      <div className="flex justify-between pt-1.5 border-t border-gray-800">
-                        <span className="text-sm font-bold text-gray-800">Total</span>
-                        <span className="text-sm font-bold text-gray-900 tabular-nums">{formatPrice(total)}</span>
-                      </div>
+                  <div className="border-t border-gray-100 pt-3 flex flex-col gap-1">
+                    <div className="flex justify-between items-center px-2">
+                      <span className="text-xs text-gray-400">Subtotal</span>
+                      <span className="text-xs text-gray-600 tabular-nums">{formatPrice(subtotal)}</span>
                     </div>
-                  </>
-                ) : (
-                  <p className="text-xs text-gray-400 text-center py-6">
-                    Sin productos registrados
-                  </p>
-                )}
-              </div>
-
+                    <div className="flex justify-between items-center px-2">
+                      <span className="text-xs text-gray-400">IVA (19%)</span>
+                      <span className="text-xs text-gray-600 tabular-nums">{formatPrice(iva)}</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-1 px-3 py-2.5 bg-[#004D77] rounded-lg">
+                      <span className="text-xs font-bold text-white/80 uppercase tracking-wide">Total</span>
+                      <span className="text-sm font-bold text-white tabular-nums">{formatPrice(total)}</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-10 gap-3 flex-1 rounded-lg border-2 border-dashed border-gray-100">
+                  <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center">
+                    <Package className="w-5 h-5 text-gray-200" strokeWidth={1.5} />
+                  </div>
+                  <p className="text-xs text-gray-300 text-center">Sin productos registrados</p>
+                </div>
+              )}
             </div>
+
           </div>
         </div>
 
-        {/* Footer con botones de acción */}
+        {/* Footer */}
         <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
           <button
             onClick={handleDownload}
@@ -438,16 +442,10 @@ function SaleInfo() {
           </button>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleClose}
-              className="px-6 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
-            >
+            <button onClick={handleClose} className="px-6 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer">
               Cerrar
             </button>
-            <button
-              onClick={handleEdit}
-              className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"
-            >
+            <button onClick={handleEdit} className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer">
               <SquarePen className="w-4 h-4" strokeWidth={1.8} />
               Editar venta
             </button>

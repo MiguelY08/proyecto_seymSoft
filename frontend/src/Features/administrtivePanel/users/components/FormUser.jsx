@@ -193,7 +193,7 @@ function FormUser() {
 
   const ErrorMsg = ({ field }) =>
     touched[field] && errors[field]
-      ? <p className="mt-1 text-xs text-red-500">{errors[field]}</p>
+      ? <p className="mt-0.5 text-xs text-red-500">{errors[field]}</p>
       : null;
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -227,7 +227,7 @@ function FormUser() {
         </div>
 
         {/* Cuerpo */}
-        <div className="px-6 py-5 flex flex-col gap-4 overflow-y-auto">
+        <div className="px-6 py-3 flex flex-col gap-3 overflow-y-auto">
 
           {/* Tipo y Documento */}
           <div className="flex gap-3">

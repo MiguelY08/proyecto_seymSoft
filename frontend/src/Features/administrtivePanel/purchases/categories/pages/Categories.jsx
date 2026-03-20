@@ -1,19 +1,22 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
-import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 import CategoriesTable from "../components/CategoriesTable";
 import SearchInput from "../components/SearchInput";
 import CategoryDetail from "./CategoryDetail";
-import FormSubCategory from "./FormSubCategory";
 import FormCategory from "./FormCategory";
+import EditCategory from "./EditCategory";
 import { Plus } from "lucide-react";
 import {
   getCategories,
   saveCategories,
   getSubcategories,
+  createCategory,        // 🔵 importar createCategory
+  updateCategory,        // 🔵 importar updateCategory
 } from "../services/categoriesService";
+import { categoryHasProducts } from "../services/categoryproductsService";
 
 export const Categories = () => {
+
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -21,17 +24,17 @@ export const Categories = () => {
   const [error, setError] = useState(null);
 
   const [showForm, setShowForm] = useState(false);
-  const [showSubForm, setShowSubForm] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState(null);
   const [categoryDetail, setCategoryDetail] = useState(null);
 
   const { showConfirm, showSuccess, showError } = useAlert();
-  const { hasPermission } = usePermissions();
   const alertShownRef = useRef(false);
 
-  // ─── CARGAR CATEGORÍAS ───────────────────────
-  const fetchCategories = async () => {
+  // ───────────── CARGAR CATEGORÍAS ─────────────
+  // 🔵 Recalcula el conteo real de subcategorías desde localStorage
+  const fetchCategories = () => {
     try {
+
       setLoading(true);
       setError(null);
 
@@ -44,11 +47,16 @@ export const Categories = () => {
       }));
 
       setCategories(categoriesWithCount);
+
     } catch {
+
       setError("Error al cargar categorías");
       showError("Error", "No se pudieron cargar las categorías.");
+
     } finally {
+
       setLoading(false);
+
     }
   };
 
@@ -56,13 +64,15 @@ export const Categories = () => {
     fetchCategories();
   }, []);
 
-  // ─── FUNCIONES ─────────────────────────────
+  // ───────────── EDITAR ─────────────
   const handleEdit = (category) => {
     setCategoryToEdit(category);
     setShowForm(true);
   };
 
+  // ───────────── CAMBIAR ESTADO ─────────────
   const handleToggleStatus = async (id) => {
+
     const category = categories.find((c) => c.id === id);
     if (!category) return;
 
@@ -70,71 +80,97 @@ export const Categories = () => {
       "question",
       "Cambiar estado",
       `¿Deseas cambiar el estado de "${category.nombre}"?`,
-      { confirmButtonText: "Sí", cancelButtonText: "No" },
+      { confirmButtonText: "Sí", cancelButtonText: "No" }
     );
+
     if (!result?.isConfirmed) return;
 
     const updated = categories.map((cat) =>
       cat.id === id
         ? { ...cat, estado: cat.estado === "Activo" ? "Inactivo" : "Activo" }
-        : cat,
+        : cat
     );
 
     setCategories(updated);
     saveCategories(updated);
+
     showSuccess("Actualizado", "El estado fue actualizado.");
   };
 
-  const handleDelete = async (id) => {
-    const category = categories.find((c) => c.id === id);
-    if (!category) return;
+  // ───────────── ELIMINAR ─────────────
+// getSubcategories ya lo tienes importado desde categoriesService
 
-    const result = await showConfirm(
-      "warning",
-      "Eliminar categoría",
-      `¿Seguro que deseas eliminar "${category.nombre}"?`,
-      { confirmButtonText: "Sí, eliminar", cancelButtonText: "Cancelar" },
+const handleDelete = async (id) => {
+  const category = categories.find((c) => c.id === id);
+  if (!category) return;
+
+  // 🔴 Obtener IDs de subcategorías de esta categoría
+  const subcategoriaIds = getSubcategories()
+    .filter((s) => s.categoriaId === id)
+    .map((s) => s.id);
+
+  if (categoryHasProducts(subcategoriaIds)) {
+    showError(
+      "No se puede eliminar",
+      `"${category.nombre}" tiene subcategorías con productos asociados. Elimínalos primero.`
     );
-    if (!result?.isConfirmed) return;
+    return;
+  }
 
-    const updated = categories.filter((cat) => cat.id !== id);
-    setCategories(updated);
-    saveCategories(updated);
-    showSuccess("Eliminado", "La categoría fue eliminada.");
-  };
+  const result = await showConfirm(
+    "warning",
+    "Eliminar categoría",
+    `¿Seguro que deseas eliminar "${category.nombre}"?`,
+    { confirmButtonText: "Sí, eliminar", cancelButtonText: "Cancelar" }
+  );
+  if (!result?.isConfirmed) return;
 
-  const handleSave = (category, isEditing) => {
+  const updated = categories.filter((cat) => cat.id !== id);
+  setCategories(updated);
+  saveCategories(updated);
+  showSuccess("Eliminado", "La categoría fue eliminada.");
+};
+
+  // ───────────── GUARDAR ─────────────
+  const handleSave = (categoryData, isEditing) => {
+
     if (isEditing) {
-      const updated = categories.map((c) =>
-        c.id === category.id ? category : c,
-      );
-      setCategories(updated);
-      saveCategories(updated);
+
+      // 🔵 Actualiza en localStorage
+      updateCategory(categoryData.id, categoryData);
+
     } else {
-      const newId =
-        categories.length > 0
-          ? Math.max(...categories.map((c) => c.id)) + 1
-          : 1;
-      const updated = [...categories, { ...category, id: newId }];
-      setCategories(updated);
-      saveCategories(updated);
+
+      // 🔵 Delega a createCategory, que guarda categoría + subcategorías iniciales
+      createCategory(categoryData);
+
     }
+
+    // 🔵 Recarga desde localStorage para que el conteo sea correcto en la tabla
+    fetchCategories();
   };
 
-  const handleViewDetail = (category) => setCategoryDetail(category);
+  // ───────────── VER DETALLE ─────────────
+  const handleViewDetail = (category) => {
+    setCategoryDetail(category);
+  };
 
+  // ───────────── BUSCAR ─────────────
   const filteredCategories = categories.filter((cat) =>
     Object.values(cat).some((value) =>
-      String(value).toLowerCase().includes(search.toLowerCase()),
-    ),
+      String(value).toLowerCase().includes(search.toLowerCase())
+    )
   );
 
   const highlightText = (text = "") => {
+
     if (!search) return text;
+
     const regex = new RegExp(
       `(${search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
-      "gi",
+      "gi"
     );
+
     return String(text)
       .split(regex)
       .map((part, index) =>
@@ -147,50 +183,53 @@ export const Categories = () => {
           </span>
         ) : (
           part
-        ),
+        )
       );
   };
 
+  // ───────────── PAGINACIÓN ─────────────
   const RECORDS_PER_PAGE = 13;
+
   const totalPages = Math.ceil(filteredCategories.length / RECORDS_PER_PAGE);
+
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
+
   const endIndex = startIndex + RECORDS_PER_PAGE;
+
   const currentData = filteredCategories.slice(startIndex, endIndex);
 
   return (
-    <div className="px-4 md:px-0 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between gap-2 sm:gap-4 mb-3 mt-7">
+    <div className="h-full flex flex-col gap-1 p-3 sm:p-4">
+
+      {/* HEADER */}
+      <div className="flex items-center justify-between gap-2 sm:gap-4 mb-3 mt-1">
+
         <SearchInput
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar"
         />
-        <div className="flex gap-2">
-          {hasPermission("categorias.crear") && (
-            <>
-              <button
-                onClick={() => setShowSubForm(true)}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-purple-700 rounded-lg text-purple-700 bg-white hover:bg-purple-50 transition"
-              >
-                Crear Subcategoría
-                <Plus className="w-4 h-4" />
-              </button>
 
-              <button
-                onClick={() => {
-                  setCategoryToEdit(null);
-                  setShowForm(true);
-                }}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 transition"
-              >
-                Crear Categoría
-                <Plus className="w-4 h-4" />
-              </button>
-            </>
-          )}
+        <div className="flex gap-2">
+
+          
+
+          {/* CREAR CATEGORÍA */}
+          <button
+            onClick={() => {
+              setCategoryToEdit(null);
+              setShowForm(true);
+            }}
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 transition"
+          >
+            Crear Categoría
+            <Plus className="w-4 h-4" />
+          </button>
+
         </div>
       </div>
 
+      {/* TABLA */}
       {!loading && !error && filteredCategories.length > 0 && (
         <CategoriesTable
           currentData={currentData}
@@ -208,23 +247,35 @@ export const Categories = () => {
         />
       )}
 
+      {/* FORMULARIO CREAR / EDITAR */}
       {showForm && (
-        <FormCategory
-          category={categoryToEdit}
-          onClose={() => setShowForm(false)}
-          onSave={handleSave}
-        />
+
+        categoryToEdit ? (
+
+          <EditCategory
+            category={categoryToEdit}
+            allCategories={categories}
+            onClose={() => {
+              setShowForm(false);
+              setCategoryToEdit(null);
+            }}
+            onSave={handleSave}
+          />
+
+        ) : (
+
+          <FormCategory
+            onClose={() => setShowForm(false)}
+            onSave={handleSave}
+          />
+
+        )
+
       )}
 
-      {showSubForm && (
-        <FormSubCategory
-          onClose={() => {
-            setShowSubForm(false);
-            fetchCategories();
-          }}
-        />
-      )}
+      
 
+      {/* DETALLE CATEGORÍA */}
       {categoryDetail && (
         <CategoryDetail
           category={categoryDetail}
@@ -232,6 +283,7 @@ export const Categories = () => {
           refreshCategories={fetchCategories}
         />
       )}
+
     </div>
   );
 };

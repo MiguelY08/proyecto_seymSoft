@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
-import { X, ChevronRight } from 'lucide-react';
-import GraphClient    from '../components/GraphClient';
+import {
+  X, ChevronDown, ChevronRight,
+  UserCircle, Users, IdCard, MapPin, Phone,
+  Mail, UserCheck, CreditCard, ShoppingCart,
+  FileText, Hash, BarChart2,
+} from 'lucide-react';
+import GraphClient        from '../components/GraphClient';
 import { validateClientForm } from '../helpers/clientHelpers';
 
 function FormClient({ isOpen, onClose, client, onSave }) {
@@ -27,7 +32,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
   const [errors,   setErrors]   = useState({});
   const [touched,  setTouched]  = useState({});
 
-  // Populate or reset form when client or isOpen changes
   useEffect(() => {
     if (client) {
       setFormData({
@@ -52,6 +56,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       setTouched({});
     }
     setErrors({});
+    setShowGraph(false);
   }, [client, isOpen]);
 
   const resetForm = () => {
@@ -64,7 +69,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-
     if (touched[name]) {
       const validationErrors = validateClientForm({ ...formData, [name]: value });
       setErrors(prev => ({ ...prev, [name]: validationErrors[name] || '' }));
@@ -85,9 +89,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     const validationErrors = validateClientForm(formData);
     setErrors(validationErrors);
     setTouched(Object.keys(formData).reduce((acc, k) => ({ ...acc, [k]: true }), {}));
-
     if (Object.keys(validationErrors).length > 0) return;
-
     onSave?.(formData);
     resetForm();
     onClose();
@@ -95,17 +97,36 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
   if (!isOpen) return null;
 
+  // ─── Helpers de UI — mismos tamaños que FormUser ──────────────────────────
   const inputClass = (field) =>
-    `w-full px-3 py-1.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors ${
+    `w-full pl-9 pr-3 py-2 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
       errors[field] && touched[field]
         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
 
-  const renderError = (field) =>
-    errors[field] && touched[field] && (
-      <p className="mt-0.5 text-xs text-red-600">{errors[field]}</p>
-    );
+  const selectClass = (field) =>
+    `appearance-none w-full pl-9 pr-8 py-2 text-sm border rounded-lg outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 ${
+      errors[field] && touched[field]
+        ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+        : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
+    }`;
+
+  // Icono izquierdo del campo — mismo patrón que FormUser
+  const FIcon = ({ icon: Icon }) => (
+    <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
+  );
+
+  const ErrorMsg = ({ field }) =>
+    errors[field] && touched[field]
+      ? <p className="mt-0.5 text-xs text-red-500">{errors[field]}</p>
+      : null;
+
+  const Label = ({ children, required }) => (
+    <label className="block text-xs font-semibold text-gray-600">
+      {children}{required && <span className="text-red-500">*</span>}
+    </label>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -114,317 +135,260 @@ function FormClient({ isOpen, onClose, client, onSave }) {
         onClick={() => { resetForm(); onClose(); }}
       />
 
-      <div className={`relative bg-white rounded-lg shadow-2xl overflow-hidden flex transition-all h-[95vh] ${
-        showGraph ? 'w-[95vw] max-w-1600px' : 'w-full max-w-5xl'
+      {/* Modal — se expande con la gráfica */}
+      <div className={`relative bg-white rounded-lg shadow-2xl overflow-hidden flex transition-all duration-500 ease-in-out ${
+        showGraph ? 'w-[95vw] max-w-325' : 'w-full max-w-2xl'
       }`}>
 
-        {/* Form section */}
-        <div className={`flex flex-col ${showGraph ? 'w-1/2 border-r border-gray-200' : 'w-full'}`}>
-
+        {/* ── Sección del formulario ────────────────────────────────────────── */}
+        <div
+          className="flex flex-col min-w-0"
+          style={{ width: showGraph ? '50%' : '100%', transition: 'width 500ms ease-in-out' }}
+        >
           {/* Header */}
-          <div className="bg-[#004D77] text-white px-6 py-4 flex items-center justify-between shrink-0">
-            <h2 className="text-lg font-semibold">
+          <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
+            <h2 className="text-white font-semibold text-lg">
               {client ? 'Editar cliente' : 'Nuevo cliente'}
             </h2>
             <button
               onClick={() => { resetForm(); onClose(); }}
-              className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+              className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" strokeWidth={2} />
             </button>
           </div>
 
+          {/* Cuerpo */}
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-            <div className="overflow-y-auto flex-1 p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 max-w-6xl mx-auto">
+            <div className="px-5 py-2 grid grid-cols-2 gap-x-4 gap-y-0">
 
-                {/* Person type */}
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Tipo de persona <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="personType"
-                    value={formData.personType}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={inputClass('personType')}
-                  >
-                    <option value="">Selecciona una opción</option>
-                    <option value="natural">Persona Natural</option>
-                    <option value="juridica">Persona Jurídica</option>
-                  </select>
-                  {renderError('personType')}
+              {/* ── Columna izquierda: Datos personales ────────────────────── */}
+              <div className="flex flex-col gap-2.5">
+
+                {/* Separador de sección */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Datos personales</span>
+                  <div className="flex-1 h-px bg-[#004D77]/15" />
                 </div>
 
-                {/* Document type */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Tipo <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="documentType"
-                    value={formData.documentType}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={inputClass('documentType')}
-                  >
-                    <option value="CC">CC</option>
-                    <option value="CE">CE</option>
-                    <option value="NIT">NIT</option>
-                  </select>
-                  {renderError('documentType')}
+                {/* Tipo de persona */}
+                <div className="flex flex-col gap-1">
+                  <Label required>Tipo de persona</Label>
+                  <div className="relative">
+                    <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
+                    <select name="personType" value={formData.personType} onChange={handleChange} onBlur={handleBlur} className={selectClass('personType')}>
+                      <option value="">Selecciona una opción</option>
+                      <option value="natural">Persona Natural</option>
+                      <option value="juridica">Persona Jurídica</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
+                  </div>
+                  <ErrorMsg field="personType" />
                 </div>
 
-                {/* Document number */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Número <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="document"
-                    value={formData.document}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Ej: 123456789"
-                    className={inputClass('document')}
-                  />
-                  {renderError('document')}
+                {/* Tipo + Documento */}
+                <div className="flex gap-2">
+                  <div className="flex flex-col gap-1">
+                    <Label>Tipo<span className="text-red-500">*</span></Label>
+                    <div className="relative">
+                      <select name="documentType" value={formData.documentType} onChange={handleChange} onBlur={handleBlur}
+                        className="appearance-none w-20 px-4 py-2 text-sm border rounded-lg outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20">
+                        <option value="CC">CC</option>
+                        <option value="CE">CE</option>
+                        <option value="NIT">NIT</option>
+                      </select>
+                      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1 flex-1">
+                    <Label required>Documento</Label>
+                    <div className="relative">
+                      <FIcon icon={IdCard} />
+                      <input type="text" name="document" value={formData.document} onChange={handleChange} onBlur={handleBlur} placeholder="Ej: 123456789" autoComplete="off" className={inputClass('document')} />
+                    </div>
+                    <ErrorMsg field="document" />
+                  </div>
                 </div>
 
-                {/* First name */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Nombres <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Ej: Juan Carlos"
-                    className={inputClass('firstName')}
-                  />
-                  {renderError('firstName')}
+                {/* Nombres */}
+                <div className="flex flex-col gap-1">
+                  <Label required>Nombres</Label>
+                  <div className="relative">
+                    <FIcon icon={UserCheck} />
+                    <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} onBlur={handleBlur} placeholder="Ej: Juan Carlos" autoComplete="off" className={inputClass('firstName')} />
+                  </div>
+                  <ErrorMsg field="firstName" />
                 </div>
 
-                {/* Last name */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Apellidos <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Ej: Pérez Gómez"
-                    className={inputClass('lastName')}
-                  />
-                  {renderError('lastName')}
+                {/* Apellidos */}
+                <div className="flex flex-col gap-1">
+                  <Label required>Apellidos</Label>
+                  <div className="relative">
+                    <FIcon icon={Users} />
+                    <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} onBlur={handleBlur} placeholder="Ej: Pérez Gómez" autoComplete="off" className={inputClass('lastName')} />
+                  </div>
+                  <ErrorMsg field="lastName" />
                 </div>
 
-                {/* Address */}
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Dirección <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Ej: Calle 10 # 15-25"
-                    className={inputClass('address')}
-                  />
-                  {renderError('address')}
+                {/* Dirección */}
+                <div className="flex flex-col gap-1">
+                  <Label required>Dirección</Label>
+                  <div className="relative">
+                    <FIcon icon={MapPin} />
+                    <input type="text" name="address" value={formData.address} onChange={handleChange} onBlur={handleBlur} placeholder="Ej: Calle 10 # 15-25" autoComplete="off" className={inputClass('address')} />
+                  </div>
+                  <ErrorMsg field="address" />
                 </div>
 
-                {/* Phone */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Teléfono <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Ej: 3001234567"
-                    className={inputClass('phone')}
-                  />
-                  {renderError('phone')}
-                </div>
-
-                {/* Email */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Correo electrónico <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Ej: cliente@email.com"
-                    className={inputClass('email')}
-                  />
-                  {renderError('email')}
-                </div>
-
-                {/* Contact name */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Nombre persona contacto
-                  </label>
-                  <input
-                    type="text"
-                    name="contactName"
-                    value={formData.contactName}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Ej: María López"
-                    className={inputClass('contactName')}
-                  />
-                  {renderError('contactName')}
-                </div>
-
-                {/* Contact phone */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Número persona contacto
-                  </label>
-                  <input
-                    type="tel"
-                    name="contactPhone"
-                    value={formData.contactPhone}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Ej: 3009876543"
-                    className={inputClass('contactPhone')}
-                  />
-                  {renderError('contactPhone')}
-                </div>
-
-                {/* Client credit (optional) */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Crédito cliente
-                  </label>
-                  <input
-                    type="text"
-                    name="clientCredit"
-                    value={formData.clientCredit}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="0"
-                    className={inputClass('clientCredit')}
-                  />
-                  {renderError('clientCredit')}
-                </div>
-
-                {/* Client type */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Tipo de cliente <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="clientType"
-                    value={formData.clientType}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={inputClass('clientType')}
-                  >
-                    <option value="">Selecciona una opción</option>
-                    <option value="Detal">Detal</option>
-                    <option value="Mayorista">Mayorista</option>
-                    <option value="Colegas">Colegas</option>
-                    <option value="Por paca">Por paca</option>
-                  </select>
-                  {renderError('clientType')}
-                </div>
-
-                {/* RUT */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    RUT <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="rut"
-                    value={formData.rut}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={inputClass('rut')}
-                  >
-                    <option value="">Seleccione</option>
-                    <option value="si">Sí</option>
-                    <option value="no">No</option>
-                  </select>
-                  {renderError('rut')}
-                </div>
-
-                {/* CIU code */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Código CIU
-                  </label>
-                  <input
-                    type="text"
-                    name="ciuCode"
-                    value={formData.ciuCode}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Ej: 4669"
-                    className={inputClass('ciuCode')}
-                  />
+                {/* Teléfono + Correo */}
+                <div className="flex gap-2">
+                  <div className="flex flex-col gap-1 flex-1">
+                    <Label required>Teléfono</Label>
+                    <div className="relative">
+                      <FIcon icon={Phone} />
+                      <input type="tel" name="phone" value={formData.phone} onChange={handleChange} onBlur={handleBlur} placeholder="3001234567" autoComplete="off" className={inputClass('phone')} />
+                    </div>
+                    <ErrorMsg field="phone" />
+                  </div>
+                  <div className="flex flex-col gap-1 flex-1">
+                    <Label required>Correo</Label>
+                    <div className="relative">
+                      <FIcon icon={Mail} />
+                      <input type="email" name="email" value={formData.email} onChange={handleChange} onBlur={handleBlur} placeholder="cliente@email.com" autoComplete="off" className={inputClass('email')} />
+                    </div>
+                    <ErrorMsg field="email" />
+                  </div>
                 </div>
 
               </div>
+
+              {/* ── Columna derecha: Información adicional ──────────────────── */}
+              <div className="flex flex-col gap-2.5">
+
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Información adicional</span>
+                  <div className="flex-1 h-px bg-[#004D77]/15" />
+                </div>
+
+                {/* Persona contacto + Tel. contacto */}
+                <div className="flex gap-2">
+                  <div className="flex flex-col gap-1 flex-1">
+                    <Label>Persona contacto</Label>
+                    <div className="relative">
+                      <FIcon icon={UserCheck} />
+                      <input type="text" name="contactName" value={formData.contactName} onChange={handleChange} onBlur={handleBlur} placeholder="Ej: María López" autoComplete="off" className={inputClass('contactName')} />
+                    </div>
+                    <ErrorMsg field="contactName" />
+                  </div>
+                  <div className="flex flex-col gap-1 flex-1">
+                    <Label>Tel. contacto</Label>
+                    <div className="relative">
+                      <FIcon icon={Phone} />
+                      <input type="tel" name="contactPhone" value={formData.contactPhone} onChange={handleChange} onBlur={handleBlur} placeholder="3009876543" autoComplete="off" className={inputClass('contactPhone')} />
+                    </div>
+                    <ErrorMsg field="contactPhone" />
+                  </div>
+                </div>
+
+                {/* Tipo cliente */}
+                <div className="flex flex-col gap-1">
+                  <Label required>Tipo de cliente</Label>
+                  <div className="relative">
+                    <FIcon icon={ShoppingCart} />
+                    <select name="clientType" value={formData.clientType} onChange={handleChange} onBlur={handleBlur} className={selectClass('clientType')}>
+                      <option value="">Selecciona una opción</option>
+                      <option value="Detal">Detal</option>
+                      <option value="Mayorista">Mayorista</option>
+                      <option value="Colegas">Colegas</option>
+                      <option value="Por paca">Por paca</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
+                  </div>
+                  <ErrorMsg field="clientType" />
+                </div>
+
+                {/* Crédito cliente */}
+                <div className="flex flex-col gap-1">
+                  <Label>Crédito cliente</Label>
+                  <div className="relative">
+                    <FIcon icon={CreditCard} />
+                    <input type="text" name="clientCredit" value={formData.clientCredit} onChange={handleChange} onBlur={handleBlur} placeholder="0" autoComplete="off" className={inputClass('clientCredit')} />
+                  </div>
+                  <ErrorMsg field="clientCredit" />
+                </div>
+
+                {/* RUT + Código CIU */}
+                <div className="flex gap-2">
+                  <div className="flex flex-col gap-1 flex-1">
+                    <Label required>RUT</Label>
+                    <div className="relative">
+                      <FIcon icon={FileText} />
+                      <select name="rut" value={formData.rut} onChange={handleChange} onBlur={handleBlur} className={selectClass('rut')}>
+                        <option value="">Seleccione</option>
+                        <option value="si">Sí</option>
+                        <option value="no">No</option>
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
+                    </div>
+                    <ErrorMsg field="rut" />
+                  </div>
+                  <div className="flex flex-col gap-1 flex-1">
+                    <Label>Código CIU</Label>
+                    <div className="relative">
+                      <FIcon icon={Hash} />
+                      <input type="text" name="ciuCode" value={formData.ciuCode} onChange={handleChange} onBlur={handleBlur} placeholder="Ej: 4669" autoComplete="off" className={inputClass('ciuCode')} />
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
             </div>
 
-            <div className="border-t px-6 py-4 flex justify-end gap-3 shrink-0">
-              <button
-                type="button"
-                onClick={() => { resetForm(); onClose(); }}
-                className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg"
-              >
-                {client ? 'Actualizar' : 'Crear'}
-              </button>
+            {/* Footer */}
+            <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
+              {/* Botón gráfica — solo en modo editar, mismo estilo que InfoClient */}
+              {client ? (
+                <button
+                  type="button"
+                  onClick={() => setShowGraph(v => !v)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#004D77] border border-[#004D77]/30 rounded-lg hover:bg-[#004D77]/5 hover:border-[#004D77] transition-all cursor-pointer"
+                >
+                  <BarChart2 className="w-3.5 h-3.5" strokeWidth={2} />
+                  {showGraph ? 'Ocultar gráfica' : 'Ver gráfica'}
+                </button>
+              ) : (
+                <span />
+              )}
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => { resetForm(); onClose(); }}
+                  className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"
+                >
+                  {client ? 'Actualizar' : 'Crear'}
+                </button>
+              </div>
             </div>
           </form>
         </div>
 
-        {/* Graph section — only when editing */}
-        {showGraph && client && (
-          <div className="w-1/2 flex flex-col">
-            <GraphClient clientStartDate={client.clientSince || '07/05/2023'} />
+        {/* ── Panel gráfica — animado igual que InfoClient ──────────────────── */}
+        <div
+          className="overflow-hidden shrink-0 transition-all duration-500 ease-in-out border-l border-gray-100"
+          style={{ width: showGraph ? '50%' : '0%', opacity: showGraph ? 1 : 0 }}
+        >
+          <div className="w-full h-full flex flex-col" style={{ minWidth: '360px' }}>
+            {client && <GraphClient clientStartDate={client.clientSince || '07/05/2023'} />}
           </div>
-        )}
-
-        {/* Toggle graph button — only when editing */}
-        {client && (
-          <button
-            onClick={() => setShowGraph(!showGraph)}
-            className={`absolute top-1/2 -translate-y-1/2 bg-[#004D77] text-white p-2 rounded-full shadow-lg hover:bg-[#003a5c] transition-all z-10 ${
-              showGraph ? 'left-1/2 -translate-x-1/2' : 'right-4'
-            }`}
-            title={showGraph ? 'Ocultar gráfica' : 'Ver gráfica'}
-          >
-            <ChevronRight className={`w-5 h-5 transition-transform ${showGraph ? 'rotate-180' : ''}`} strokeWidth={2.5} />
-          </button>
-        )}
+        </div>
 
       </div>
     </div>
