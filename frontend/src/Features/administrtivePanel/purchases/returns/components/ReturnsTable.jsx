@@ -8,7 +8,13 @@ import {
   formatCurrency,
 } from "../helpers/returnsHelpers";
 
-// ─── Highlight de texto buscado ───────────────────────────────────────────────
+/**
+ * Función highlight.
+ * Resalta el texto buscado en una cadena, envolviéndolo en un span con estilo.
+ * @param {string} text - Texto original a resaltar.
+ * @param {string} search - Término de búsqueda.
+ * @returns {string|JSX.Element} Texto con resaltado o '-' si no hay texto.
+ */
 const highlight = (text, search) => {
   if (!search || !text) return text ?? "-";
   const str = String(text);
@@ -29,7 +35,13 @@ const highlight = (text, search) => {
   );
 };
 
-// ─── Badge de estado ──────────────────────────────────────────────────────────
+/**
+ * Componente EstadoBadge.
+ * Muestra un badge con el estado de la devolución, usando estilos dinámicos.
+ * @param {object} props - Props del componente.
+ * @param {string} props.estado - Estado de la devolución.
+ * @returns {JSX.Element} Badge con estilo basado en el estado.
+ */
 const EstadoBadge = ({ estado }) => {
   const style = getBadgeEstadoDevolucion(estado);
   return (
@@ -42,8 +54,11 @@ const EstadoBadge = ({ estado }) => {
   );
 };
 
-// ─── Hook: posición fija del tooltip ─────────────────────────────────────────
-// Calcula coords para que el tooltip aparezca encima o debajo sin salirse del viewport
+/**
+ * Hook useTooltipPos.
+ * Calcula la posición óptima para un tooltip flotante, evitando salirse del viewport.
+ * @returns {object} Objeto con ref, pos, show y hide.
+ */
 function useTooltipPos() {
   const [pos, setPos] = useState(null);
   const ref = useRef(null);
@@ -66,7 +81,14 @@ function useTooltipPos() {
   return { ref, pos, show, hide };
 }
 
-// ─── Tooltip genérico flotante (fixed, sobre todo) ────────────────────────────
+/**
+ * Componente FloatingTooltip.
+ * Tooltip flotante genérico, posicionado fixed sobre el viewport.
+ * @param {object} props - Props del componente.
+ * @param {object} props.pos - Posición calculada para el tooltip.
+ * @param {JSX.Element} props.children - Contenido del tooltip.
+ * @returns {JSX.Element|null} Tooltip renderizado o null si no hay posición.
+ */
 const FloatingTooltip = ({ pos, children }) => {
   if (!pos) return null;
   return (
@@ -85,7 +107,14 @@ const FloatingTooltip = ({ pos, children }) => {
   );
 };
 
-// ─── Tooltip Productos ────────────────────────────────────────────────────────
+/**
+ * Componente ProductosTooltip.
+ * Tooltip que muestra la lista de productos a devolver con cantidades.
+ * @param {object} props - Props del componente.
+ * @param {Array} props.productos - Lista de productos.
+ * @param {string} props.search - Término de búsqueda para resaltar.
+ * @returns {JSX.Element} Tooltip con productos o texto vacío.
+ */
 const ProductosTooltip = ({ productos, search }) => {
   const { ref, pos, show, hide } = useTooltipPos();
 
@@ -143,7 +172,13 @@ const ProductosTooltip = ({ productos, search }) => {
   );
 };
 
-// ─── Tooltip Estado ───────────────────────────────────────────────────────────
+/**
+ * Componente EstadoTooltip.
+ * Tooltip que muestra el estado general y el detalle de estados por producto.
+ * @param {object} props - Props del componente.
+ * @param {object} props.devolucion - Objeto de devolución con productos.
+ * @returns {JSX.Element} Badge con tooltip o solo badge.
+ */
 const EstadoTooltip = ({ devolucion }) => {
   const { ref, pos, show, hide } = useTooltipPos();
 
@@ -228,7 +263,13 @@ const EstadoTooltip = ({ devolucion }) => {
   );
 };
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
+/**
+ * Componente EmptyState.
+ * Muestra estado vacío cuando no hay devoluciones o resultados de búsqueda.
+ * @param {object} props - Props del componente.
+ * @param {boolean} props.isSearching - Indica si se está buscando.
+ * @returns {JSX.Element} Mensaje de estado vacío.
+ */
 function EmptyState({ isSearching }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 gap-4">
@@ -260,7 +301,19 @@ function EmptyState({ isSearching }) {
   );
 }
 
-// ─── Componente principal ─────────────────────────────────────────────────────
+/**
+ * Componente ReturnsTable.
+ * Tabla principal para mostrar devoluciones con tooltips, acciones y paginación.
+ * @param {object} props - Props del componente.
+ * @param {Array} props.currentData - Datos actuales de devoluciones a mostrar.
+ * @param {string} props.search - Término de búsqueda.
+ * @param {boolean} props.isSearching - Indica si hay búsqueda activa.
+ * @param {number} props.offset - Offset para numeración de filas.
+ * @param {function} props.onViewDetail - Función para ver detalle.
+ * @param {function} props.onEdit - Función para editar.
+ * @param {function} props.onAnnul - Función para anular.
+ * @returns {JSX.Element} Tabla con devoluciones o estado vacío.
+ */
 function ReturnsTable({
   currentData,
   search,

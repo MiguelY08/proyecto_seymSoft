@@ -9,7 +9,7 @@
  * @param {string} clientStartDate - Fecha de inicio del cliente (no se usa
  *   actualmente, sirve de referencia para potencial lógica futura)
  */
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 // Genera datos ficticios para el gráfico. Esta función puede sustituirse por
 // una llamada real al backend cuando existan datos verdaderos.

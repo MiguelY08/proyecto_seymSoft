@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 
 import TopBar          from '../components/TopBar';
@@ -9,25 +9,40 @@ import { filterSales } from '../helpers/salesHelpers';
 
 const RECORDS_PER_PAGE = 13;
 
-// ─── Sales ────────────────────────────────────────────────────────────────────
+/**
+ * Componente principal para la gestión de ventas.
+ * Muestra una lista de ventas con opciones de búsqueda, tabla paginada y navegación a formularios.
+ * Recarga los datos al volver de otras rutas.
+ *
+ * @component
+ * @returns {JSX.Element} La interfaz de gestión de ventas.
+ */
 function Sales() {
   const location                     = useLocation();
   const [data,        setData]        = useState(() => SalesDB.list());
   const [search,      setSearch]      = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Recargar al volver del formulario
+  // Recargar datos al volver del formulario o otras rutas
   useEffect(() => {
     setData(SalesDB.list());
   }, [location.pathname]);
 
+  /**
+   * Maneja el cambio en el campo de búsqueda.
+   * Actualiza el estado de búsqueda y resetea la página actual a 1.
+   *
+   * @param {string} value - El nuevo valor de búsqueda.
+   */
   const handleSearchChange = (value) => {
     setSearch(value);
     setCurrentPage(1);
   };
 
+  // Filtrar datos según la búsqueda
   const filtered = filterSales(data, search);
 
+  // Paginar los datos filtrados
   const paginatedData = filtered.slice(
     (currentPage - 1) * RECORDS_PER_PAGE,
     currentPage * RECORDS_PER_PAGE
@@ -36,22 +51,22 @@ function Sales() {
   return (
     <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
 
+      {/* Barra superior con búsqueda */}
       <TopBar
         search={search}
         onSearchChange={handleSearchChange}
       />
 
-      {/* Tabla */}
+      {/* Tabla de ventas */}
       <div className="bg-white rounded-xl shadow-md">
         <SalesTable
           data={paginatedData}
           search={search}
           totalData={data.length}
-          offset={(currentPage - 1) * RECORDS_PER_PAGE}
         />
       </div>
 
-      {/* Paginador */}
+      {/* Paginador, solo si hay datos filtrados */}
       {filtered.length > 0 && (
         <PaginationAdmin
           currentPage={currentPage}
@@ -61,6 +76,7 @@ function Sales() {
         />
       )}
 
+      {/* Outlet para rutas anidadas como modales */}
       <Outlet />
     </div>
   );

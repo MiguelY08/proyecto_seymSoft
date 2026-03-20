@@ -2,8 +2,18 @@ import React from 'react';
 import { Search, Calendar, X } from 'lucide-react';
 
 /**
- * TopBar — Devoluciones en Compras
+ * Componente TopBar — Barra superior para filtros en Devoluciones de Compras.
+ * Incluye buscador, filtros de fecha y botón para limpiar filtros.
  * Estilos alineados con el módulo de Usuarios.
+ * @param {object} props - Props del componente.
+ * @param {string} props.search - Valor actual del buscador.
+ * @param {function} props.setSearch - Función para actualizar el buscador.
+ * @param {string} props.fechaInicial - Fecha inicial del filtro.
+ * @param {function} props.setFechaInicial - Función para actualizar fecha inicial.
+ * @param {string} props.fechaFinal - Fecha final del filtro.
+ * @param {function} props.setFechaFinal - Función para actualizar fecha final.
+ * @param {function} props.setCurrentPage - Función para resetear página actual.
+ * @returns {JSX.Element} Barra superior con controles de filtro.
  */
 function TopBar({
   search,
@@ -14,6 +24,9 @@ function TopBar({
   setFechaFinal,
   setCurrentPage,
 }) {
+  /**
+   * Maneja el limpiado de filtros, reseteando todos los valores y la página.
+   */
   const handleClearFilters = () => {
     setSearch('');
     setFechaInicial('');
@@ -21,6 +34,7 @@ function TopBar({
     setCurrentPage(1);
   };
 
+  // Verificar si hay filtros activos para mostrar el botón de limpiar
   const hayFiltrosActivos = search || fechaInicial || fechaFinal;
 
   return (

@@ -1,8 +1,9 @@
 import * as XLSX from 'xlsx';
+import { UsersDB } from '../../../users/services/usersDB';
 
 // ─── Claves de almacenamiento ─────────────────────────────────────────────────
 export const SALES_STORAGE_KEY = 'pm_sales';
-export const USERS_STORAGE_KEY = 'pm_users';
+export const USERS_STORAGE_KEY = 'users';
 
 // ─── Constantes de formulario ─────────────────────────────────────────────────
 export const METODOS_PAGO  = ['Efectivo', 'Crédito', 'Transferencia'];
@@ -25,13 +26,8 @@ export const today = () =>
 export const generateFactura = () =>
   String(Math.floor(100000000 + Math.random() * 900000000));
 
-// ─── Cargar usuarios desde localStorage ──────────────────────────────────────
-export const loadSalesUsers = () => {
-  try {
-    const stored = localStorage.getItem(USERS_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch { return []; }
-};
+// ─── Cargar usuarios desde UsersDB ───────────────────────────────────────────
+export const loadSalesUsers = () => UsersDB.list();
 
 // ─── Resaltador de texto para la tabla ───────────────────────────────────────
 export function highlight(text, term) {
@@ -49,15 +45,28 @@ export function highlight(text, term) {
 export const filterSales = (data, search) => {
   const term = search.toLowerCase().trim();
   if (!term) return data;
-  return data.filter((row) =>
-    row.cliente.toLowerCase().includes(term)         ||
-    row.vendedor.toLowerCase().includes(term)        ||
-    String(row.factura).toLowerCase().includes(term) ||
-    row.fecha.toLowerCase().includes(term)           ||
-    row.metodoPago.toLowerCase().includes(term)      ||
-    String(row.total).toLowerCase().includes(term)   ||
-    row.estado.toLowerCase().includes(term)
-  );
+
+  // Resuelve el nombre igual que resolveUserName en SalesTable
+  const users = UsersDB.list();
+  const resolveName = (userId, storedName) => {
+    if (!userId) return storedName || '';
+    const found = users.find((u) => String(u.id) === String(userId));
+    return found ? found.name : (storedName || '');
+  };
+
+  return data.filter((row) => {
+    const cliente  = resolveName(row.clienteId,  row.cliente).toLowerCase();
+    const vendedor = resolveName(row.vendedorId, row.vendedor).toLowerCase();
+    return (
+      cliente.includes(term)                           ||
+      vendedor.includes(term)                          ||
+      String(row.factura).toLowerCase().includes(term) ||
+      row.fecha.toLowerCase().includes(term)           ||
+      row.metodoPago.toLowerCase().includes(term)      ||
+      String(row.total).toLowerCase().includes(term)   ||
+      row.estado.toLowerCase().includes(term)
+    );
+  });
 };
 
 // ─── Validación del formulario de venta ──────────────────────────────────────
@@ -81,11 +90,17 @@ export const downloadSalesExcel = () => {
 
   if (sales.length === 0) return false;
 
-  const rows = sales.map((s, index) => ({
-    '#':                 index + 1,
-    'Cliente':           s.cliente,
-    'Vendedor':          s.vendedor,
+  const users = UsersDB.list();
+  const resolveName = (userId, storedName) => {
+    if (!userId) return storedName || '—';
+    const found = users.find((u) => String(u.id) === String(userId));
+    return found ? found.name : (storedName || '—');
+  };
+
+  const rows = sales.map((s) => ({
     'No. Factura':       s.factura,
+    'Cliente':           resolveName(s.clienteId,  s.cliente),
+    'Vendedor':          resolveName(s.vendedorId, s.vendedor),
     'Fecha':             s.fecha,
     'Método de Pago':    s.metodoPago,
     'Total':             s.total,
@@ -97,10 +112,9 @@ export const downloadSalesExcel = () => {
   const workbook  = XLSX.utils.book_new();
 
   worksheet['!cols'] = [
-    { wch: 6  },
-    { wch: 28 },
-    { wch: 28 },
     { wch: 16 },
+    { wch: 28 },
+    { wch: 28 },
     { wch: 14 },
     { wch: 18 },
     { wch: 14 },

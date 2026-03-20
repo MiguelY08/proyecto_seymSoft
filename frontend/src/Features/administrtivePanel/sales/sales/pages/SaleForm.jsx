@@ -9,22 +9,32 @@ import DataSalePreview          from '../components/DataSalePreview';
 import { SalesDB }              from '../services/salesBD';
 import { generateFactura, validateForm } from '../helpers/salesHelpers';
 
-// ─── SaleForm ─────────────────────────────────────────────────────────────────
+/**
+ * Componente para crear o editar una venta.
+ * Maneja el formulario de detalles de venta, productos y vista previa.
+ * Incluye validación, confirmaciones y navegación.
+ *
+ * @component
+ * @returns {JSX.Element} El formulario de venta.
+ */
 function SaleForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const { showConfirm, showWarning, showSuccess } = useAlert();
 
+  // Determinar si es edición y obtener datos de la venta
   const saleToEdit = location.state?.sale ?? null;
   const isEditing  = saleToEdit !== null;
 
   // Una venta anulada no puede cambiar su estado
   const isAnulada  = isEditing && saleToEdit?.estado === 'Anulada';
 
+  // Generar o usar número de factura
   const [facturaNo] = useState(() =>
     isEditing ? saleToEdit.factura : generateFactura()
   );
 
+  // Estado del formulario
   const [form, setForm] = useState({
     clienteId:  location.state?.newUserId
       ?? (saleToEdit ? String(saleToEdit.clienteId ?? '') : ''),
@@ -35,24 +45,42 @@ function SaleForm() {
     direccion:  saleToEdit?.direccion  ?? '',
   });
 
+  // Items originales para edición (para restaurar stock si cambian)
   const [originalItems] = useState(() =>
     isEditing && saleToEdit.items ? saleToEdit.items : []
   );
 
+  // Items actuales del pedido
   const [items,  setItems]  = useState(() => isEditing && saleToEdit.items ? saleToEdit.items : []);
   const [errors, setErrors] = useState({});
 
+  /**
+   * Maneja cambios en los campos del formulario.
+   * Actualiza el estado del formulario y limpia errores relacionados.
+   *
+   * @param {string} name - Nombre del campo.
+   * @param {string} value - Nuevo valor del campo.
+   */
   const handleFormChange = useCallback((name, value) => {
     setForm((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: '' }));
   }, []);
 
+  /**
+   * Maneja cambios en la lista de items del pedido.
+   * Actualiza el estado de items y limpia errores si hay items.
+   *
+   * @param {Array} newItems - Nueva lista de items.
+   */
   const handleItemsChange = useCallback((newItems) => {
     setItems(newItems);
     if (newItems.length > 0) setErrors((prev) => ({ ...prev, items: '' }));
   }, []);
 
-  // ─── Cancelar ─────────────────────────────────────────────────────────────
+  /**
+   * Maneja la cancelación del formulario.
+   * Muestra una confirmación antes de navegar de vuelta.
+   */
   const handleCancel = () => {
     showConfirm(
       'warning',
@@ -64,7 +92,10 @@ function SaleForm() {
     });
   };
 
-  // ─── Guardar — con confirmación previa ────────────────────────────────────
+  /**
+   * Maneja el guardado de la venta.
+   * Valida el formulario, confirma con el usuario y guarda o actualiza la venta.
+   */
   const handleSave = async () => {
     // 1. Validar campos
     const newErrors = validateForm(form, items);
@@ -102,7 +133,7 @@ function SaleForm() {
   return (
     <div className="flex flex-col gap-5 p-4 sm:p-6 max-w-7xl mx-auto">
 
-      {/* Volver + Título */}
+      {/* Header con botón volver y título */}
       <div className="flex flex-col gap-1">
         <button
           type="button"
@@ -122,7 +153,7 @@ function SaleForm() {
         )}
       </div>
 
-      {/* Grid principal */}
+      {/* Grid principal con formularios */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <SaleDetailsForm
           form={form}
@@ -136,15 +167,15 @@ function SaleForm() {
         <OrderForm
           items={items}
           onItemsChange={handleItemsChange}
-          isEditing={isEditing}
         />
       </div>
 
+      {/* Error de items si no hay productos */}
       {errors.items && (
         <p className="text-sm text-red-600 -mt-2">{errors.items}</p>
       )}
 
-      {/* Botones */}
+      {/* Botones de acción */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <button
           type="button"
@@ -162,7 +193,7 @@ function SaleForm() {
         </button>
       </div>
 
-      {/* Vista previa */}
+      {/* Vista previa de la venta */}
       <DataSalePreview
         form={form}
         items={items}

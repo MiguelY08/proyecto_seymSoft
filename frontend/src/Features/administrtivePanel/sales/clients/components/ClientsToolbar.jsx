@@ -10,7 +10,6 @@
  * @param {Function} onSearchChange Callback cuando el usuario modifica la búsqueda
  * @param {Function} onNewClick Acción al pulsar el botón "Nuevo cliente"
  */
-import React from 'react';
 import { Search, Plus } from 'lucide-react';
 
 function ClientsToolbar({ searchTerm, onSearchChange, onNewClick }) {
@@ -21,16 +20,14 @@ function ClientsToolbar({ searchTerm, onSearchChange, onNewClick }) {
       <div className="relative flex-1 sm:flex-none sm:w-72 md:w-96">
         <input
           type="text"
-          placeholder="Buscar por nombre, documento, correo..."
+          placeholder="Buscar"
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full pl-4 pr-10 py-2 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400"
-          aria-label="Buscar clientes"
         />
         <Search
           className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
           strokeWidth={2}
-          aria-hidden="true"
         />
       </div>
 
@@ -39,10 +36,10 @@ function ClientsToolbar({ searchTerm, onSearchChange, onNewClick }) {
         <button
           onClick={onNewClick}
           className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-sky-700 rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
-          aria-label="Nuevo cliente"
+          title="Nuevo cliente"
         >
           <span className="hidden sm:inline">Nuevo cliente</span>
-          <Plus className="w-4 h-4" strokeWidth={2} aria-hidden="true" />
+          <Plus className="w-4 h-4" strokeWidth={2} />
         </button>
       </div>
 

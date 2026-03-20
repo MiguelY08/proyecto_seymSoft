@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { ChevronDown, FileText, Search, UserPlus } from 'lucide-react';
+import {
+  ChevronDown, FileText, Search, UserPlus, X, Plus,
+  Users, UserCheck, CreditCard, Tag, Truck, MapPin,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { UsersDB }                                  from '../../../users/services/usersDB';
-import { METODOS_PAGO, ESTADOS_VENTA, ENTREGAS }   from '../helpers/salesHelpers';
+import { UsersDB }                                from '../../../users/services/usersDB';
+import { METODOS_PAGO, ESTADOS_VENTA, ENTREGAS }  from '../helpers/salesHelpers';
 
 const MAX_DIRECCION = 250;
 
@@ -15,8 +18,16 @@ function ReadonlyField({ value }) {
   );
 }
 
+// ─── Icono de campo ───────────────────────────────────────────────────────────
+const FIcon = ({ icon: Icon }) => (
+  <Icon
+    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10"
+    strokeWidth={1.8}
+  />
+);
+
 // ─── Select con buscador integrado ────────────────────────────────────────────
-function SearchableSelect({ value, onChange, options, placeholder, error, getLabel, getValue }) {
+function SearchableSelect({ value, onChange, options, placeholder, error, getLabel, getValue, icon }) {
   const [open,  setOpen]  = useState(false);
   const [query, setQuery] = useState('');
   const ref               = useRef(null);
@@ -47,10 +58,11 @@ function SearchableSelect({ value, onChange, options, placeholder, error, getLab
 
   return (
     <div ref={ref} className="relative">
+      {icon && <FIcon icon={icon} />}
       <button
         type="button"
         onClick={() => setOpen((p) => !p)}
-        className={`w-full flex items-center justify-between px-4 py-2.5 text-sm border rounded-lg bg-white transition-colors duration-200 ${
+        className={`w-full flex items-center justify-between ${icon ? 'pl-10' : 'pl-4'} pr-4 py-2.5 text-sm border rounded-lg bg-white transition-colors duration-200 ${
           error
             ? 'border-red-500 ring-2 ring-red-200'
             : open
@@ -61,7 +73,7 @@ function SearchableSelect({ value, onChange, options, placeholder, error, getLab
         <span className={selectedLabel ? 'text-gray-700' : 'text-gray-400'}>
           {selectedLabel || placeholder}
         </span>
-        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} strokeWidth={2} />
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0 ${open ? 'rotate-180' : ''}`} strokeWidth={2} />
       </button>
 
       {open && (
@@ -105,15 +117,16 @@ function SearchableSelect({ value, onChange, options, placeholder, error, getLab
 }
 
 // ─── Select simple ────────────────────────────────────────────────────────────
-function SimpleSelect({ name, value, onChange, options, placeholder, error, disabled }) {
+function SimpleSelect({ name, value, onChange, options, placeholder, error, disabled, icon }) {
   return (
     <div className="relative">
+      {icon && <FIcon icon={icon} />}
       <select
         name={name}
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className={`appearance-none w-full px-4 py-2.5 text-sm border rounded-lg outline-none bg-white transition-colors duration-200 ${
+        className={`appearance-none w-full ${icon ? 'pl-10' : 'pl-4'} pr-8 py-2.5 text-sm border rounded-lg outline-none bg-white transition-colors duration-200 ${
           disabled
             ? 'bg-gray-50 text-gray-500 border-gray-200 cursor-not-allowed'
             : value ? 'text-gray-700 cursor-pointer' : 'text-gray-400 cursor-pointer'
@@ -135,11 +148,86 @@ function SimpleSelect({ name, value, onChange, options, placeholder, error, disa
   );
 }
 
+// ─── Estilos de badge por estado ─────────────────────────────────────────────
+const ESTADO_STYLES = {
+  'Aprobada':        { badge: 'bg-green-100 text-green-700 border-green-300',    dot: 'bg-green-500'  },
+  'Esp. aprobación': { badge: 'bg-yellow-100 text-yellow-700 border-yellow-300', dot: 'bg-yellow-500' },
+  'Anulada':         { badge: 'bg-red-100 text-red-400 border-red-200',          dot: 'bg-red-400'    },
+  'Desaprobada':     { badge: 'bg-red-100 text-red-600 border-red-300',          dot: 'bg-red-600'    },
+};
+
+// ─── Select de estado con badges coloreados ───────────────────────────────────
+function StatusSelect({ value, onChange, options, placeholder, error, icon }) {
+  const [open, setOpen] = useState(false);
+  const ref             = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const selected = ESTADO_STYLES[value];
+
+  return (
+    <div ref={ref} className="relative">
+      {icon && <FIcon icon={icon} />}
+      <button
+        type="button"
+        onClick={() => setOpen((p) => !p)}
+        className={`w-full flex items-center justify-between ${icon ? 'pl-10' : 'pl-4'} pr-4 py-2.5 text-sm border rounded-lg bg-white transition-colors duration-200 ${
+          error
+            ? 'border-red-500 ring-2 ring-red-200'
+            : open
+              ? 'border-[#004D77] ring-2 ring-[#004D77]/20'
+              : 'border-gray-300 hover:border-gray-400'
+        }`}
+      >
+        {value && selected ? (
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${selected.badge}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${selected.dot}`} />
+            {value}
+          </span>
+        ) : (
+          <span className="text-gray-400">{placeholder}</span>
+        )}
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0 ${open ? 'rotate-180' : ''}`} strokeWidth={2} />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+          <ul className="py-1">
+            {options.map((estado) => {
+              const style      = ESTADO_STYLES[estado];
+              const isSelected = estado === value;
+              return (
+                <li
+                  key={estado}
+                  onClick={() => { onChange('estado', estado); setOpen(false); }}
+                  className={`flex items-center justify-between px-4 py-2.5 cursor-pointer transition-colors duration-150 ${
+                    isSelected ? 'bg-gray-50' : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${style?.badge}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${style?.dot}`} />
+                    {estado}
+                  </span>
+                  {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#004D77]" />}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── SaleDetailsForm ──────────────────────────────────────────────────────────
-// isAnulada: true cuando la venta ya fue anulada → Estado se bloquea permanentemente
 function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoAnulacion = '', fechaAnulacion = '' }) {
   const navigate = useNavigate();
-
   const [users, setUsers] = useState(() => UsersDB.list());
 
   useEffect(() => {
@@ -163,11 +251,13 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
     </label>
   );
 
-  const activeUsers   = users.filter((u) => u.activo);
-  const activeVendors = users.filter((u) => u.activo && (u.rol === 'Empleado' || u.rol === 'Administrador' || u.rol === 'Nulo'));
+  // Clientes: usuarios con isClient: true y activos
+  const activeClients = users.filter((u) => u.isClient && u.active);
+  // Vendedores: usuarios activos con un rol asignado (distinto de 'Nulo' y no nulo)
+  const activeVendors = users.filter((u) => u.active && u.role && u.role !== 'Nulo');
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-lg border border-gray-200">
 
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gray-50">
@@ -184,7 +274,6 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
         </div>
       </div>
 
-      {/* Campos */}
       <div className="p-5 flex flex-col gap-4">
 
         {/* Cliente + Vendedor */}
@@ -199,11 +288,12 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
                   <SearchableSelect
                     value={form.clienteId}
                     onChange={(val) => onChange('clienteId', val)}
-                    options={activeUsers}
-                    placeholder="Cliente"
+                    options={activeClients}
+                    placeholder="Selecciona un cliente"
                     error={errors?.clienteId}
                     getLabel={(u) => u.name}
                     getValue={(u) => String(u.id)}
+                    icon={Users}
                   />
                 )}
               </div>
@@ -230,56 +320,113 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
                 value={form.vendedorId}
                 onChange={(val) => onChange('vendedorId', val)}
                 options={activeVendors}
-                placeholder="Vendedor"
+                placeholder="Selecciona un vendedor"
                 error={errors?.vendedorId}
                 getLabel={(u) => u.name}
                 getValue={(u) => String(u.id)}
+                icon={UserCheck}
               />
             )}
             <ErrorMsg field="vendedorId" />
           </div>
         </div>
 
-        {/* Método de pago + Estado */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <Label required>Método de pago</Label>
-            {isEditing ? (
-              <ReadonlyField value={form.metodoPago} />
-            ) : (
-              <SimpleSelect
-                name="metodoPago"
-                value={form.metodoPago}
-                onChange={handleChange}
-                options={METODOS_PAGO}
-                placeholder="Elija el método de pago"
-                error={errors?.metodoPago}
-              />
-            )}
-            <ErrorMsg field="metodoPago" />
-          </div>
+        {/* Método de pago — fila completa, multi-select (máx. 3) */}
+        <div>
+          <Label required>Método de pago</Label>
+          <div className="flex items-center gap-2">
+            {/* Un select por cada método agregado */}
+            {(Array.isArray(form.metodoPago) ? form.metodoPago : form.metodoPago ? [form.metodoPago] : ['']).map((metodo, idx) => {
+              const allSelected = Array.isArray(form.metodoPago) ? form.metodoPago : [form.metodoPago];
+              // Opciones disponibles: las no elegidas en los otros slots + la del slot actual
+              const available = METODOS_PAGO.filter(
+                (m) => !allSelected.filter((_, i) => i !== idx).includes(m)
+              );
+              const canRemove = allSelected.length > 1 && !isAnulada;
+              return (
+                <div key={idx} className="flex items-center flex-1 min-w-0">
+                  <div className="relative flex-1 min-w-0">
+                    <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" strokeWidth={1.8} />
+                    <select
+                      value={metodo}
+                      disabled={isAnulada}
+                      onChange={(e) => {
+                        const updated = [...allSelected];
+                        updated[idx] = e.target.value;
+                        onChange('metodoPago', updated);
+                      }}
+                      className={`appearance-none w-full pl-10 pr-7 py-2.5 text-sm border ${canRemove ? 'rounded-l-lg border-r-0' : 'rounded-lg'} outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 ${
+                        errors?.metodoPago
+                          ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+                          : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
+                      } ${isAnulada ? 'opacity-60 cursor-not-allowed bg-gray-50' : ''}`}
+                    >
+                      {available.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
+                  </div>
+                  {/* Botón quitar */}
+                  {canRemove && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onChange('metodoPago', allSelected.filter((_, i) => i !== idx));
+                      }}
+                      className="h-10.5 px-2.5 border border-gray-300 rounded-r-lg text-gray-400 hover:text-red-500 hover:border-red-300 hover:bg-red-50 transition-colors cursor-pointer shrink-0"
+                      title="Quitar método"
+                    >
+                      <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
 
-          <div>
-            <Label required>Estado</Label>
-            {isAnulada ? (
-              <>
-                <ReadonlyField value="Anulada" />
-                <p className="mt-1 text-xs text-red-500">La anulación es permanente y no puede revertirse.</p>
-              </>
-            ) : (
-              <>
-                <SimpleSelect
-                  name="estado"
-                  value={form.estado}
-                  onChange={handleChange}
-                  options={ESTADOS_VENTA}
-                  placeholder="Elija un estado"
-                  error={errors?.estado}
-                />
-                <ErrorMsg field="estado" />
-              </>
+            {/* Botón agregar — visible si quedan métodos sin usar */}
+            {!isAnulada && (() => {
+              const current = Array.isArray(form.metodoPago) ? form.metodoPago : form.metodoPago ? [form.metodoPago] : [''];
+              return current.length < METODOS_PAGO.length;
+            })() && (
+              <button
+                type="button"
+                onClick={() => {
+                  const current = Array.isArray(form.metodoPago) ? form.metodoPago : form.metodoPago ? [form.metodoPago] : [''];
+                  const next = METODOS_PAGO.find((m) => !current.includes(m));
+                  if (next) onChange('metodoPago', [...current, next]);
+                }}
+                className="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg text-gray-500 hover:border-[#004D77] hover:text-[#004D77] hover:bg-[#004D77]/5 transition-colors duration-200 cursor-pointer shrink-0"
+                title="Agregar método de pago"
+              >
+                <Plus className="w-4 h-4" strokeWidth={2} />
+              </button>
             )}
           </div>
+          <ErrorMsg field="metodoPago" />
+        </div>
+
+        {/* Estado — fila completa */}
+        <div>
+          <Label required>Estado</Label>
+          {isAnulada ? (
+            <>
+              <ReadonlyField value="Anulada" />
+              <p className="mt-1 text-xs text-red-500">La anulación es permanente y no puede revertirse.</p>
+            </>
+          ) : (
+            <>
+              <StatusSelect
+                value={form.estado}
+                onChange={onChange}
+                options={ESTADOS_VENTA}
+                placeholder="Elija un estado"
+                error={errors?.estado}
+                icon={Tag}
+              />
+              <ErrorMsg field="estado" />
+            </>
+          )}
         </div>
 
         {/* Motivo y fecha de anulación */}
@@ -308,15 +455,17 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
             options={ENTREGAS}
             placeholder="Elija una opción"
             error={errors?.entrega}
+            icon={Truck}
           />
           <ErrorMsg field="entrega" />
         </div>
 
-        {/* Dirección — solo cuando entrega es Domicilio */}
+        {/* Dirección */}
         {form.entrega === 'Domicilio' && (
           <div>
             <Label required>Dirección</Label>
             <div className="relative">
+              <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
               <textarea
                 name="direccion"
                 value={form.direccion}
@@ -325,7 +474,7 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
                 }}
                 placeholder="Digite la dirección, barrio y descripción del punto de encuentro"
                 rows={3}
-                className={`w-full px-4 py-2.5 text-sm border rounded-lg outline-none resize-none text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
+                className={`w-full pl-10 pr-4 py-2.5 text-sm border rounded-lg outline-none resize-none text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
                   errors?.direccion
                     ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
                     : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'

@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { X, ChevronDown, IdCard, User, Users, Mail, Phone, ShieldCheck } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useAlert }           from '../../../shared/alerts/useAlert';
 import { useModalAnimation }  from '../../../shared/useModalAnimation';
@@ -15,7 +15,6 @@ import {
   checkDuplicates,
   validateUserForm,
 } from '../validators/usersValidators';
-
 
 function FormUser() {
   const navigate  = useNavigate();
@@ -50,7 +49,6 @@ function FormUser() {
 
   const context       = { isEditing, userToEdit };
   const existingUsers = useMemo(() => UsersDB.list(), []);
-  const tipoCliente   = userToEdit?.clientType ?? 'Detal';
 
   const roles = [
     'Nulo',
@@ -59,8 +57,7 @@ function FormUser() {
       .map((r) => r.name),
   ];
 
-
-  // ─── Handlers de cambio ───────────────────────────────────────────────────
+  // ─── Handlers ─────────────────────────────────────────────────────────────
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -103,7 +100,6 @@ function FormUser() {
     }
   };
 
-
   // ─── Guardar ──────────────────────────────────────────────────────────────
   const handleSubmit = () => {
     const allTouched = Object.keys(form).reduce((acc, k) => ({ ...acc, [k]: true }), {});
@@ -141,14 +137,12 @@ function FormUser() {
         phone:        form.telefono,
         role,
       });
-      console.log(`Contraseña generada para "${name}":`, newUser.password);
       showSuccess('Usuario creado', 'El nuevo usuario ha sido registrado exitosamente.');
       navigate(returnTo, {
         state: returnTo !== '/admin/users' ? { newUserId: String(newUser.id) } : undefined,
       });
     }
   };
-
 
   // ─── Detectar cambios sin guardar ─────────────────────────────────────────
   const isDirty = (() => {
@@ -182,42 +176,25 @@ function FormUser() {
     if (confirmed?.isConfirmed) animatedClose();
   };
 
-
   // ─── Helpers de UI ────────────────────────────────────────────────────────
-  const isValid = (field) =>
-    touched[field] && !errors[field] && form[field].toString().trim() !== '';
-
   const inputClass = (field) =>
-    `w-full px-4 py-2.5 pr-10 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
+    `w-full px-10 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 py-2.5 ${
       touched[field] && errors[field]
         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-        : isValid(field)
-        ? 'border-green-500 focus:border-green-500 focus:ring-2 focus:ring-green-200'
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
 
   const selectClass = (field) =>
-    `appearance-none w-full px-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 ${
+    `appearance-none w-full pl-10 pr-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 ${
       touched[field] && errors[field]
         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-        : isValid(field)
-        ? 'border-green-500 focus:border-green-500 focus:ring-2 focus:ring-green-200'
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
 
   const ErrorMsg = ({ field }) =>
     touched[field] && errors[field]
-      ? <p className="mt-1 text-xs text-red-500">{errors[field]}</p>
+      ? <p className="mt-0.5 text-xs text-red-500">{errors[field]}</p>
       : null;
-
-  const FieldCheck = ({ field }) =>
-    isValid(field) ? (
-      <CheckCircle2
-        className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500 pointer-events-none"
-        strokeWidth={2}
-      />
-    ) : null;
-
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
@@ -249,10 +226,10 @@ function FormUser() {
           </button>
         </div>
 
-        {/* Body */}
-        <div className="px-6 py-5 flex flex-col gap-4 overflow-y-auto">
+        {/* Cuerpo */}
+        <div className="px-6 py-3 flex flex-col gap-3 overflow-y-auto">
 
-          {/* Tipo + Documento */}
+          {/* Tipo y Documento */}
           <div className="flex gap-3">
             <div className="flex flex-col gap-1.5">
               <label className="block text-sm font-medium text-gray-700">
@@ -276,6 +253,7 @@ function FormUser() {
                 Documento<span className="text-red-500">*</span>
               </label>
               <div className="relative">
+                <IdCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
                 <input
                   type="text"
                   name="documento"
@@ -286,19 +264,19 @@ function FormUser() {
                   autoComplete="off"
                   className={inputClass('documento')}
                 />
-                <FieldCheck field="documento" />
               </div>
               <ErrorMsg field="documento" />
             </div>
           </div>
 
-          {/* Nombres + Apellidos */}
+          {/* Nombres y Apellidos */}
           <div className="flex gap-3">
             <div className="flex flex-col gap-1.5 flex-1">
               <label className="block text-sm font-medium text-gray-700">
                 Nombres<span className="text-red-500">*</span>
               </label>
               <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
                 <input
                   type="text"
                   name="nombres"
@@ -308,7 +286,6 @@ function FormUser() {
                   autoComplete="off"
                   className={inputClass('nombres')}
                 />
-                <FieldCheck field="nombres" />
               </div>
               <ErrorMsg field="nombres" />
             </div>
@@ -321,6 +298,7 @@ function FormUser() {
                 )}
               </label>
               <div className="relative">
+                <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
                 <input
                   type="text"
                   name="apellidos"
@@ -330,7 +308,6 @@ function FormUser() {
                   autoComplete="off"
                   className={inputClass('apellidos')}
                 />
-                <FieldCheck field="apellidos" />
               </div>
               <ErrorMsg field="apellidos" />
             </div>
@@ -342,6 +319,7 @@ function FormUser() {
               Correo electrónico<span className="text-red-500">*</span>
             </label>
             <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
               <input
                 type="email"
                 name="correo"
@@ -351,7 +329,6 @@ function FormUser() {
                 autoComplete="off"
                 className={inputClass('correo')}
               />
-              <FieldCheck field="correo" />
             </div>
             <ErrorMsg field="correo" />
           </div>
@@ -362,6 +339,7 @@ function FormUser() {
               Teléfono / Celular<span className="text-red-500">*</span>
             </label>
             <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
               <input
                 type="tel"
                 name="telefono"
@@ -372,7 +350,6 @@ function FormUser() {
                 autoComplete="off"
                 className={inputClass('telefono')}
               />
-              <FieldCheck field="telefono" />
             </div>
             <ErrorMsg field="telefono" />
           </div>
@@ -386,6 +363,7 @@ function FormUser() {
               </span>
             </label>
             <div className="relative">
+              <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" strokeWidth={1.8} />
               <select
                 name="rol"
                 value={form.rol}
@@ -395,19 +373,6 @@ function FormUser() {
                 {roles.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
-            </div>
-          </div>
-
-          {/* Tipo de cliente — inmutable */}
-          <div className="flex flex-col gap-1.5">
-            <label className="block text-sm font-medium text-gray-700">
-              Tipo de cliente
-              <span className="ml-1.5 text-xs text-gray-400 font-normal">
-                (se gestiona desde el módulo de clientes)
-              </span>
-            </label>
-            <div className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed select-none">
-              {tipoCliente}
             </div>
           </div>
 

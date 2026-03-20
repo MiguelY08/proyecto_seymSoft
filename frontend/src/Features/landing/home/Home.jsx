@@ -16,11 +16,20 @@ import marcadorEterna      from '../../../assets/products/marcadoreseterna.png';
 
 import mayoristaBg from '../../../assets/mayoristasBg.png';
 
+/**
+ * Componente principal de la página de inicio del landing.
+ * Incluye carrusel de imágenes, categorías, productos destacados y sección de mayoristas.
+ * Maneja carga dinámica de slides desde localStorage e IndexedDB.
+ *
+ * @component
+ * @returns {JSX.Element} La página de inicio completa.
+ */
 function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [slides,       setSlides]       = useState([]);
   const urlsRef = useRef([]);
 
+  // Datos estáticos de categorías
   const categories = [
     { id: 1, name: 'ESCOLAR',          icon: ShoppingBag,  href: '/categoria/escolar'         },
     { id: 2, name: 'OFICINA',          icon: Briefcase,    href: '/categoria/oficina'          },
@@ -29,6 +38,7 @@ function Home() {
     { id: 5, name: 'ARTE',             icon: Palette,      href: '/categoria/arte'             },
   ];
 
+  // Datos estáticos de productos destacados
   const products = [
     { id: 1, image: correctorCinta,    name: 'Corrector en Cinta',       category: 'ESCRITURA', price: 4500  },
     { id: 2, image: cuadernoPrimavera, name: 'Cuaderno Primavera x100h', category: 'ESCOLAR',   price: 8900  },
@@ -41,6 +51,7 @@ function Home() {
   ];
 
   // ─── Cargar slides desde localStorage + IndexedDB ─────────────────────────
+  // Carga imágenes activas del carrusel, crea Object URLs y limpia al desmontar
   useEffect(() => {
     const load = async () => {
       try {
@@ -96,8 +107,20 @@ function Home() {
     return () => clearInterval(interval);
   }, [slides.length]);
 
+  /**
+   * Avanza al siguiente slide.
+   */
   const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % slides.length);
+
+  /**
+   * Retrocede al slide anterior.
+   */
   const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+
+  /**
+   * Va a un slide específico por índice.
+   * @param {number} index - Índice del slide.
+   */
   const goToSlide = (index) => setCurrentSlide(index);
 
   return (
@@ -127,6 +150,7 @@ function Home() {
               ))}
             </div>
 
+            {/* Botones de navegación */}
             <button onClick={prevSlide} className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer group z-20">
               <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white group-hover:scale-110 transition-transform" strokeWidth={3} />
             </button>
@@ -134,6 +158,7 @@ function Home() {
               <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white group-hover:scale-110 transition-transform" strokeWidth={3} />
             </button>
 
+            {/* Indicadores de slides */}
             <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 bg-black/40 backdrop-blur-sm px-2 sm:px-3 py-1.5 sm:py-2 rounded-full z-20">
               <div className="flex gap-1.5 sm:gap-2">
                 {slides.map((_, index) => (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
-import { X, AlertTriangle } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { X, AlertTriangle, ChevronLeft } from 'lucide-react';
 import ReturnsDB from '../services/returnsServices';
 import { PurchasesDB } from '../../purchases/services/Purchases.service';
 import { validateMotivoCancelacion } from '../validators/returnsValidators';
@@ -13,11 +13,22 @@ import ReturnInfo          from '../modals/ReturnInfo';
 
 const RECORDS_PER_PAGE = 13;
 
-// ─── Modal de anulación ───────────────────────────────────────────────────────
+/**
+ * Modal para confirmar la anulación de una devolución.
+ * Permite al usuario ingresar un motivo de anulación y confirmar la acción.
+ *
+ * @param {Object} props - Propiedades del componente.
+ * @param {Object} props.devolucion - Objeto de la devolución a anular.
+ * @param {Function} props.onClose - Función para cerrar el modal.
+ * @param {Function} props.onConfirm - Función para confirmar la anulación con el motivo.
+ */
 const AnulacionModal = ({ devolucion, onClose, onConfirm }) => {
   const [motivo, setMotivo] = useState('');
   const [error,  setError]  = useState(null);
 
+  /**
+   * Maneja la confirmación de anulación, validando el motivo antes de proceder.
+   */
   const handleConfirmar = () => {
     const err = validateMotivoCancelacion(motivo);
     if (err) { setError(err); return; }
@@ -101,8 +112,14 @@ const AnulacionModal = ({ devolucion, onClose, onConfirm }) => {
 };
 
 // ─── Página principal ─────────────────────────────────────────────────────────
+/**
+ * Página principal para gestionar devoluciones.
+ * Permite listar, filtrar, crear, editar, ver detalles y anular devoluciones.
+ * Incluye integración con compras para crear devoluciones desde compras existentes.
+ */
 const Returns = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { showSuccess, showError, showInfo } = useAlert();
 
   const [returns,      setReturns]      = useState(() => ReturnsDB.list());
@@ -133,6 +150,10 @@ const Returns = () => {
   }, [location.state]);
 
   // ── Filtrado ──────────────────────────────────────────────────────────────
+  /**
+   * Filtra las devoluciones basándose en búsqueda de texto y rango de fechas.
+   * Busca en ID, ID de compra, estado y productos (nombre, motivo, tipo).
+   */
   const filtered = returns.filter((r) => {
     const q = search.toLowerCase();
     const coincide =
@@ -168,11 +189,19 @@ const Returns = () => {
   const isSearching  = returns.length > 0 && !!(search || fechaInicial || fechaFinal);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
+  /**
+   * Maneja la visualización de detalles de una devolución.
+   * @param {Object} devolucion - La devolución a mostrar.
+   */
   const handleViewDetail = (devolucion) => {
     setSelectedReturn(devolucion);
     setFormMode(null);
   };
 
+  /**
+   * Maneja la edición de una devolución, buscando la compra original.
+   * @param {Object} devolucion - La devolución a editar.
+   */
   const handleEdit = (devolucion) => {
     const compra = PurchasesDB.list().find(
       (p) => p.numeroFacturacion === devolucion.idCompra
@@ -186,8 +215,16 @@ const Returns = () => {
     setFormMode('edit');
   };
 
+  /**
+   * Inicia el proceso de anulación de una devolución.
+   * @param {Object} devolucion - La devolución a anular.
+   */
   const handleAnnul = (devolucion) => setAnulando(devolucion);
 
+  /**
+   * Confirma la anulación de la devolución con el motivo proporcionado.
+   * @param {string} motivo - Motivo de la anulación.
+   */
   const confirmAnnul = (motivo) => {
     try {
       ReturnsDB.annul(anulando.id, motivo);
@@ -200,8 +237,14 @@ const Returns = () => {
     }
   };
 
+  /**
+   * Actualiza la lista de devoluciones después de guardar cambios.
+   */
   const handleSaved = () => setReturns(ReturnsDB.list());
 
+  /**
+   * Cierra el formulario de devolución y resetea estados relacionados.
+   */
   const handleCloseForm = () => {
     setFormMode(null);
     setPurchaseForForm(null);
@@ -211,6 +254,21 @@ const Returns = () => {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
+
+      {/* ── Volver ─────────────────────────────────────────────────────── */}
+      <div>
+        <button
+          onClick={() => navigate('/admin/purchases')}
+          className="flex items-center gap-1 text-sm font-semibold text-[#004D77]
+                     hover:text-[#003a5c] transition-colors duration-200 cursor-pointer group"
+        >
+          <ChevronLeft
+            className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-0.5"
+            strokeWidth={2.5}
+          />
+          Volver
+        </button>
+      </div>
 
       <TopBar
         search={search}

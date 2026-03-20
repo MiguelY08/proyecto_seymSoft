@@ -1,6 +1,5 @@
-import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Info, SquarePen, Trash2, Users, Plus } from "lucide-react";
+import { Info, SquarePen, Trash2, Users, Plus, ShoppingBag } from "lucide-react";
 import { useAlert } from "../../../shared/alerts/useAlert";
 import { highlight, highlightEstado } from "../helpers/usersHelpers";
 import { usePermissions } from "../../configuration/roles/hooks/usePermissions";
@@ -10,6 +9,9 @@ function ActiveToggle({ activo, onChange, search }) {
   const { showConfirm, showSuccess } = useAlert();
   const estadoResaltado = highlightEstado(activo, search);
 
+  /**
+   * Maneja el clic en el toggle, con confirmación para desactivar.
+   */
   const handleClick = () => {
     if (activo) {
       showConfirm(
@@ -116,13 +118,16 @@ function UsersTable({
   onToggle,
   search = "",
   totalData = 0,
-  offset = 0,
 }) {
   const navigate = useNavigate();
   const { showConfirm, showSuccess, showWarning } = useAlert();
   const { hasPermission } = usePermissions();
 
-  // ─── Eliminar usuario ─────────────────────────────────────────────────────
+  /**
+   * Maneja eliminación de usuario con validaciones y confirmación.
+   * Verifica si está activo y si tiene ventas asociadas.
+   * @param {object} row - Datos del usuario a eliminar.
+   */
   const handleDelete = (row) => {
     if (row.active) {
       showWarning(
@@ -132,7 +137,7 @@ function UsersTable({
       return;
     }
 
-    // Verificar ventas asociadas
+    // Verificar ventas asociadas desde localStorage
     const ventas = (() => {
       try {
         const stored = localStorage.getItem("pm_sales");
@@ -156,9 +161,13 @@ function UsersTable({
     }, new Set());
 
     const rolesTexto = [...roles].join(" y ");
+    const clienteNote = row.isClient
+      ? ' Además, su perfil de cliente será eliminado y sus créditos y pagos quedarán registrados bajo el Cliente de Caja.'
+      : '';
+
     const subtitulo = tieneVentas
-      ? `Este usuario aparece como ${rolesTexto} en ${ventasAsociadas.length} venta(s) registrada(s). Al eliminarlo, esas ventas mostrarán "Usuario eliminado". Esta acción no se podrá revertir.`
-      : "No se podrá revertir la acción.";
+      ? `Este usuario aparece como ${rolesTexto} en ${ventasAsociadas.length} venta(s) registrada(s). Al eliminarlo, esas ventas mostrarán "Usuario eliminado".${clienteNote} Esta acción no se podrá revertir.`
+      : `No se podrá revertir la acción.${clienteNote}`;
 
     showConfirm(
       "warning",
@@ -176,6 +185,7 @@ function UsersTable({
     });
   };
 
+  // Renderizar estado vacío si no hay datos
   if (data.length === 0) {
     return (
       <EmptyState isSearching={totalData > 0 && search.trim().length > 0} />
@@ -185,11 +195,9 @@ function UsersTable({
   return (
     <div className="flex-1 overflow-x-auto rounded-xl shadow-md min-h-0">
       <table className="min-w-max w-full">
+        {/* Header de la tabla con columnas fijas */}
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="sticky left-0 z-10 bg-[#004D77] px-3 py-2.5 text-center text-xs font-semibold">
-              #
-            </th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Tipo y Documento
             </th>
@@ -206,14 +214,12 @@ function UsersTable({
               Rol
             </th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">
-              T. Cliente
-            </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Acciones
             </th>
           </tr>
         </thead>
 
+        {/* Cuerpo de la tabla con filas de usuarios */}
         <tbody>
           {data.map((row, index) => {
             const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-100";
@@ -222,11 +228,7 @@ function UsersTable({
                 key={row.id}
                 className={`transition-colors duration-150 ${rowBg}`}
               >
-                <td
-                  className={`sticky left-0 z-10 ${rowBg} px-3 py-1.5 text-center text-xs text-gray-500 font-medium`}
-                >
-                  {offset + index + 1}
-                </td>
+                {/* Datos del usuario con resaltado de búsqueda */}
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                   <span className="font-medium">
                     {highlight(row.documentType, search)}
@@ -234,7 +236,17 @@ function UsersTable({
                   {highlight(row.document, search)}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">
-                  {highlight(row.name, search)}
+                  <div className="flex items-center justify-center gap-1.5">
+                    {highlight(row.name, search)}
+                    {row.isClient && (
+                      <span
+                        title="También es cliente"
+                        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#004D77]/10 shrink-0"
+                      >
+                        <ShoppingBag className="w-2.5 h-2.5 text-[#004D77]" strokeWidth={2} />
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(row.email, search)}
@@ -245,9 +257,7 @@ function UsersTable({
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(row.role, search)}
                 </td>
-                <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(row.clientType ?? "Detal", search)}
-                </td>
+                {/* Acciones: info, editar, toggle activo, eliminar */}
                 <td className="px-3 py-1.5">
                   <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                     {/* {hasPermission("usuarios.ver") && ( */}

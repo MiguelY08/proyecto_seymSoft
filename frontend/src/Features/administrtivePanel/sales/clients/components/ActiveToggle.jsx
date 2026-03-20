@@ -9,7 +9,6 @@
  * - Disparar callback cuando el usuario hace clic para cambiar estado
  */
 
-import React from 'react';
 /**
  * Componente: ActiveToggle
  *

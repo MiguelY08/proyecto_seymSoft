@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Download, Plus } from 'lucide-react';
 import { useAlert }              from '../../../../shared/alerts/useAlert';
@@ -6,6 +5,14 @@ import { downloadSalesExcel }    from '../helpers/salesHelpers';
 import { SalesDB }               from '../services/salesBD';
 
 // ─── TopBar ───────────────────────────────────────────────────────────────────
+/**
+ * Componente de barra superior para la página de ventas.
+ * Incluye buscador, botón de descarga de Excel y botón para nueva venta.
+ *
+ * @param {Object} props - Propiedades del componente.
+ * @param {string} props.search - Valor del campo de búsqueda.
+ * @param {Function} props.onSearchChange - Función para cambiar el valor de búsqueda.
+ */
 function TopBar({ search, onSearchChange }) {
   const navigate = useNavigate();
   const { showConfirm, showTimer, showWarning } = useAlert();

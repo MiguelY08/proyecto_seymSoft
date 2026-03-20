@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { X, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
 import Pagination from "../../../../shared/PaginationLanding";
 
 // 🔥 Mock data (solo desarrollo)
@@ -29,9 +31,10 @@ mockPurchase.precioTotal =
 // Componente para mostrar el estado
 const EstadoBadge = ({ estado }) => {
   const styles = {
-    Activo: { bg: "#dcfce7", color: "#15803d" },
-    Anulada: { bg: "#fee2e2", color: "#b91c1c" },
-    Pendiente: { bg: "#fef9c3", color: "#a16207" },
+    "Completada":        { bg: "#dcfce7", color: "#15803d" },
+    "Completada*":       { bg: "#d1fae5", color: "#065f46" },
+    "Proc. devolución":  { bg: "#fef9c3", color: "#a16207" },
+    "Anulada":           { bg: "#fee2e2", color: "#b91c1c" },
   };
   const s = styles[estado] ?? { bg: "#f3f4f6", color: "#374151" };
   return (
@@ -45,8 +48,9 @@ const EstadoBadge = ({ estado }) => {
 };
 
 const DetailPurchases = ({ purchase, onClose }) => {
+  const navigate  = useNavigate();
   // Datos seguros: purchase o mock
-  const data = purchase ?? mockPurchase;
+  const data      = purchase ?? mockPurchase;
   const productos = Array.isArray(data.productos) ? data.productos : [];
 
   // Función de formato de números
@@ -68,7 +72,9 @@ const DetailPurchases = ({ purchase, onClose }) => {
     setCurrentPage(1); // reset paginación cuando cambien los productos
   }, [productos]);
 
-  const isAnulada = data.estado === "Anulada";
+  const isAnulada        = data.estado === "Anulada";
+  const isCompletadaStar = data.estado === "Completada*";
+  const isProcDevolucion = data.estado === "Proc. devolución";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md">
@@ -83,9 +89,9 @@ const DetailPurchases = ({ purchase, onClose }) => {
           </h2>
           <button
             onClick={onClose}
-            className="ml-auto text-white text-lg font-bold hover:opacity-75 transition"
+            className="ml-auto text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
           >
-            ✕
+            <X className="w-5 h-5" strokeWidth={2} />
           </button>
         </div>
 
@@ -102,19 +108,54 @@ const DetailPurchases = ({ purchase, onClose }) => {
             </div>
           </div>
 
-          {/* Motivo de anulación */}
+          {/* ── Banner de estado especial ────────────────────────────────── */}
+
+          {/* Anulada — rojo */}
           {isAnulada && data.motivoAnulacion && (
             <div
-              className="flex gap-2 items-start rounded-lg px-3 py-2 mb-3 text-xs"
+              className="flex gap-2.5 items-start rounded-lg px-3 py-2.5 mb-3 text-xs"
               style={{ backgroundColor: "#fff1f2", border: "1px solid #fecaca" }}
             >
-              <span style={{ color: "#b91c1c", fontSize: "14px", marginTop: "1px" }}>⚠</span>
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#b91c1c" }} strokeWidth={1.8} />
               <div>
                 <p className="font-semibold mb-0.5" style={{ color: "#b91c1c" }}>
                   Motivo de anulación
                 </p>
-                <p style={{ color: "#7f1d1d" }}>{data.motivoAnulacion ?? "-"}</p>
+                <p style={{ color: "#7f1d1d" }}>{data.motivoAnulacion}</p>
               </div>
+            </div>
+          )}
+
+          {/* Completada* — verde */}
+          {isCompletadaStar && (
+            <div
+              className="flex gap-2.5 items-start rounded-lg px-3 py-2.5 mb-3 text-xs"
+              style={{ backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0" }}
+            >
+              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#15803d" }} strokeWidth={1.8} />
+              <p style={{ color: "#166534" }}>
+                Esta compra ha pasado por un proceso de devolución.
+              </p>
+            </div>
+          )}
+
+          {/* Proc. devolución — amarillo con enlace */}
+          {isProcDevolucion && (
+            <div
+              className="flex gap-2.5 items-start rounded-lg px-3 py-2.5 mb-3 text-xs"
+              style={{ backgroundColor: "#fefce8", border: "1px solid #fde68a" }}
+            >
+              <Clock className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#a16207" }} strokeWidth={1.8} />
+              <p style={{ color: "#854d0e" }}>
+                Esta compra tiene un proceso de devolución en curso.{" "}
+                <button
+                  onClick={() => { onClose(); navigate("/admin/purchases/returns-p"); }}
+                  className="font-semibold underline underline-offset-2 cursor-pointer transition-opacity hover:opacity-75"
+                  style={{ color: "#a16207" }}
+                >
+                  Pulse aquí para ir a Devoluciones en Compras.
+                </button>
+              </p>
             </div>
           )}
 

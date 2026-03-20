@@ -103,11 +103,12 @@ export const formatPersonType = (tipoPersona) => {
 };
 
 // Transforma el tipo de cliente a texto legible
-export const formatClientType = (tipoCliente) => {
-  if (tipoCliente === 'detal') return 'Detal';
-  if (tipoCliente === 'mayorista') return 'Mayorista';
-  if (tipoCliente === 'colegas') return 'Colegas';
-  if (tipoCliente === 'pacas') return 'Pacas';
+export const formatClientType = (clientType) => {
+  const val = (clientType || '').toLowerCase();
+  if (val === 'detal')                       return 'Detal';
+  if (val === 'mayorista')                   return 'Mayorista';
+  if (val === 'colegas')                     return 'Colegas';
+  if (val === 'por paca' || val === 'pacas') return 'Por paca';
   return 'N/A';
 };
 
@@ -119,18 +120,38 @@ export const formatRut = (rut) => {
 };
 
 // Filtra clientes en función del término de búsqueda (nombre, doc, etc.)
+// Soporta búsqueda combinada "CC 123456" o "cc 123456" para Tipo y Documento.
 export const filterClients = (clients, searchTerm) => {
   if (!searchTerm) return clients;
-  
-  const term = searchTerm.toLowerCase();
-  return clients.filter(client => 
-    client.nombreCompleto?.toLowerCase().includes(term) ||
-    client.numero?.toLowerCase().includes(term) ||
-    client.tipo?.toLowerCase().includes(term) ||
-    client.correo?.toLowerCase().includes(term) ||
-    client.tipoCliente?.toLowerCase().includes(term) ||
-    client.telefono?.toLowerCase().includes(term)
-  );
+
+  const term   = searchTerm.toLowerCase().trim();
+  const parts  = term.split(/\s+/);
+  const TIPOS  = ['cc', 'ce', 'nit', 'ti', 'pp'];
+
+  // Detectar búsqueda combinada: primera parte es un tipo de documento
+  const isCombined = parts.length >= 2 && TIPOS.includes(parts[0]);
+  const tipoTerm   = isCombined ? parts[0] : null;
+  const numTerm    = isCombined ? parts.slice(1).join(' ') : null;
+
+  return clients.filter(client => {
+    // Búsqueda combinada: tipo Y número deben coincidir
+    if (isCombined) {
+      return (
+        client.documentType?.toLowerCase() === tipoTerm &&
+        client.document?.toLowerCase().includes(numTerm)
+      );
+    }
+
+    // Búsqueda normal en todos los campos
+    return (
+      client.fullName?.toLowerCase().includes(term)      ||
+      client.document?.toLowerCase().includes(term)      ||
+      client.documentType?.toLowerCase().includes(term)  ||
+      client.email?.toLowerCase().includes(term)         ||
+      client.clientType?.toLowerCase().includes(term)    ||
+      client.phone?.toLowerCase().includes(term)
+    );
+  });
 };
 
 // Pagina un arreglo devolviendo datos de la página actual y metadatos
@@ -149,67 +170,67 @@ export const paginateData = (data, page, itemsPerPage) => {
 export const validateClientForm = (formData) => {
   const errors = {};
 
-  if (!formData.tipoPersona?.trim()) {
-    errors.tipoPersona = 'Seleccione el tipo de persona';
+  if (!formData.personType?.trim()) {
+    errors.personType = 'Seleccione el tipo de persona';
   }
 
-  if (!formData.tipo?.trim()) {
-    errors.tipo = 'Seleccione el tipo de documento';
+  if (!formData.documentType?.trim()) {
+    errors.documentType = 'Seleccione el tipo de documento';
   }
 
-  if (!formData.numero?.trim()) {
-    errors.numero = 'El número es obligatorio';
-  } else if (!isOnlyNumbers(formData.numero)) {
-    errors.numero = 'Solo números permitidos';
+  if (!formData.document?.trim()) {
+    errors.document = 'El número es obligatorio';
+  } else if (!isOnlyNumbers(formData.document)) {
+    errors.document = 'Solo números permitidos';
   }
 
-  if (!formData.nombres?.trim()) {
-    errors.nombres = 'El nombre es obligatorio';
-  } else if (formData.nombres.trim().length < 2) {
-    errors.nombres = 'Debe tener al menos 2 caracteres';
-  } else if (!isOnlyLetters(formData.nombres)) {
-    errors.nombres = 'Solo se permiten letras';
+  if (!formData.firstName?.trim()) {
+    errors.firstName = 'El nombre es obligatorio';
+  } else if (formData.firstName.trim().length < 2) {
+    errors.firstName = 'Debe tener al menos 2 caracteres';
+  } else if (!isOnlyLetters(formData.firstName)) {
+    errors.firstName = 'Solo se permiten letras';
   }
 
-  if (!formData.apellidos?.trim()) {
-    errors.apellidos = 'El apellido es obligatorio';
-  } else if (formData.apellidos.trim().length < 2) {
-    errors.apellidos = 'Debe tener al menos 2 caracteres';
-  } else if (!isOnlyLetters(formData.apellidos)) {
-    errors.apellidos = 'Solo se permiten letras';
+  if (!formData.lastName?.trim()) {
+    errors.lastName = 'El apellido es obligatorio';
+  } else if (formData.lastName.trim().length < 2) {
+    errors.lastName = 'Debe tener al menos 2 caracteres';
+  } else if (!isOnlyLetters(formData.lastName)) {
+    errors.lastName = 'Solo se permiten letras';
   }
 
-  if (!formData.direccion?.trim()) {
-    errors.direccion = 'La dirección es obligatoria';
+  if (!formData.address?.trim()) {
+    errors.address = 'La dirección es obligatoria';
   }
 
-  if (!formData.telefono?.trim()) {
-    errors.telefono = 'El teléfono es obligatorio';
-  } else if (!isValidPhone(formData.telefono)) {
-    errors.telefono = 'Teléfono inválido (7-10 dígitos)';
+  if (!formData.phone?.trim()) {
+    errors.phone = 'El teléfono es obligatorio';
+  } else if (!isValidPhone(formData.phone)) {
+    errors.phone = 'Teléfono inválido (7-10 dígitos)';
   }
 
-  if (!formData.correo?.trim()) {
-    errors.correo = 'El correo es obligatorio';
-  } else if (!isValidEmail(formData.correo)) {
-    errors.correo = 'Correo inválido';
+  if (!formData.email?.trim()) {
+    errors.email = 'El correo es obligatorio';
+  } else if (!isValidEmail(formData.email)) {
+    errors.email = 'Correo inválido';
   }
 
-  if (formData.nombreContacto && formData.nombreContacto.trim().length < 3) {
-    errors.nombreContacto = 'Debe tener mínimo 3 caracteres';
+  if (formData.contactName && formData.contactName.trim().length < 3) {
+    errors.contactName = 'Debe tener mínimo 3 caracteres';
   }
 
-  if (formData.numeroContacto && !isOnlyNumbers(formData.numeroContacto)) {
-    errors.numeroContacto = 'Solo números permitidos';
+  if (formData.contactPhone && !isOnlyNumbers(formData.contactPhone)) {
+    errors.contactPhone = 'Solo números permitidos';
   }
 
-  // ✅ CRÉDITO AHORA ES OPCIONAL - Solo validar si tiene contenido
-  if (formData.creditoCliente?.trim() && !isOnlyNumbers(formData.creditoCliente)) {
-    errors.creditoCliente = 'Solo números permitidos';
+  // clientCredit is optional — only validate if it has content
+  if (formData.clientCredit?.trim() && !isOnlyNumbers(formData.clientCredit)) {
+    errors.clientCredit = 'Solo números permitidos';
   }
 
-  if (!formData.tipoCliente?.trim()) {
-    errors.tipoCliente = 'Seleccione el tipo de cliente';
+  if (!formData.clientType?.trim()) {
+    errors.clientType = 'Seleccione el tipo de cliente';
   }
 
   if (!formData.rut?.trim()) {

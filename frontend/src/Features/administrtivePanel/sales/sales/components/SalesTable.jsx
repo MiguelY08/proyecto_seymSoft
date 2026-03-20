@@ -1,4 +1,3 @@
-import React from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Info,
@@ -12,12 +11,18 @@ import { UsersDB } from "../../../users/services/usersDB";
 import { highlight } from "../helpers/salesHelpers";
 
 // ─── Resolver nombre de usuario por ID ───────────────────────────────────────
+/**
+ * Resuelve el nombre de un usuario por su ID, con fallback a nombre almacenado o 'Usuario eliminado'.
+ * @param {string|number} userId - ID del usuario.
+ * @param {string} storedName - Nombre almacenado como fallback.
+ * @returns {string} Nombre del usuario.
+ */
 const resolveUserName = (userId, storedName) => {
   if (!userId) return storedName || "Usuario eliminado";
   try {
     const users = UsersDB.list();
     const found = users.find((u) => String(u.id) === String(userId));
-    return found ? found.nombre || found.name : "Usuario eliminado";
+    return found ? found.name : "Usuario eliminado";
   } catch {
     return "Usuario eliminado";
   }
@@ -32,6 +37,12 @@ const estadoVariants = {
   Cancelada: "bg-orange-100 text-orange-600 border-orange-300",
 };
 
+/**
+ * Componente para mostrar un badge coloreado según el estado de la venta.
+ * @param {Object} props - Propiedades del componente.
+ * @param {string} props.estado - Estado de la venta.
+ * @param {string} props.term - Término de búsqueda para resaltar.
+ */
 function EstadoBadge({ estado, term }) {
   const classes =
     estadoVariants[estado] ?? "bg-gray-100 text-gray-600 border-gray-300";
@@ -46,6 +57,11 @@ function EstadoBadge({ estado, term }) {
 }
 
 // ─── Permisos por estado ──────────────────────────────────────────────────────
+/**
+ * Determina los permisos disponibles según el estado de la venta.
+ * @param {string} estado - Estado de la venta.
+ * @returns {Object} Objeto con permisos: puedeDevolver, puedeAnular, deshabilitado.
+ */
 const getPermisos = (estado) => {
   if (estado === "Aprobada")
     return { puedeDevolver: true, puedeAnular: true, deshabilitado: false };
@@ -55,6 +71,11 @@ const getPermisos = (estado) => {
 };
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
+/**
+ * Componente para mostrar estado vacío cuando no hay ventas.
+ * @param {Object} props - Propiedades del componente.
+ * @param {boolean} props.isSearching - Indica si se está buscando.
+ */
 function EmptyState({ isSearching }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 gap-4">
@@ -129,16 +150,13 @@ function SalesTable({ data = [], search = "", totalData = 0, offset = 0 }) {
         <thead className="bg-[#004D77] text-white">
           <tr>
             <th className="sticky left-0 z-10 bg-[#004D77] px-3 py-2.5 text-center text-xs font-semibold">
-              #
+              No. Factura
             </th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Cliente
             </th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Vendedor
-            </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
-              No. Factura
             </th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Fecha
@@ -179,9 +197,9 @@ function SalesTable({ data = [], search = "", totalData = 0, offset = 0 }) {
                 className={`transition-colors duration-150 ${rowBg}`}
               >
                 <td
-                  className={`sticky left-0 z-10 ${rowBg} px-3 py-2 text-center text-xs text-gray-500 font-medium`}
+                  className={`sticky left-0 z-10 ${rowBg} px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap font-mono`}
                 >
-                  {offset + index + 1}
+                  {highlight(String(row.factura), search)}
                 </td>
 
                 <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap">
@@ -204,9 +222,6 @@ function SalesTable({ data = [], search = "", totalData = 0, offset = 0 }) {
                   )}
                 </td>
 
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap font-mono">
-                  {highlight(String(row.factura), search)}
-                </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(row.fecha, search)}
                 </td>

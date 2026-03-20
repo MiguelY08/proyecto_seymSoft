@@ -1,11 +1,12 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { X, Plus, Minus, AlertCircle, CheckCircle2, ChevronDown } from 'lucide-react';
 import {
   MOTIVOS_DEVOLUCION,
   TIPOS_DEVOLUCION,
   getEstadosByTipo,
   getEstadoInicial,
-  calcularTotalesProducto,
   formatCurrency,
   getBadgeEstadoProducto,
 } from '../helpers/returnsHelpers';
@@ -16,17 +17,154 @@ import {
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import ReturnsDB from '../services/returnsServices';
 
-// ─── Clases de input (estilo FormUser) ────────────────────────────────────────
-const inputBase =
-  'w-full px-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200';
+/**
+ * Hook useLongPress.
+ * Maneja eventos de presión prolongada para incrementar/decrementar valores.
+ * @param {function} callback - Función a ejecutar al presionar.
+ * @param {object} options - Opciones de configuración.
+ * @param {number} options.delay - Retraso inicial en ms.
+ * @param {number} options.interval - Intervalo entre ejecuciones en ms.
+ * @returns {object} Objeto con handlers para mouse y touch.
+ */
+function useLongPress(callback, { delay = 380, interval = 75 } = {}) {
+  const timerRef    = useRef(null);
+  const intervalRef = useRef(null);
+  const cbRef       = useRef(callback);
+  useEffect(() => { cbRef.current = callback; }, [callback]);
 
-const inputClass = (hasError) =>
-  `${inputBase} ${
-    hasError
-      ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-      : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
-  }`;
+  const start = useCallback(() => {
+    cbRef.current();
+    timerRef.current = setTimeout(() => {
+      intervalRef.current = setInterval(() => cbRef.current(), interval);
+    }, delay);
+  }, [delay, interval]);
 
+  const stop = useCallback(() => {
+    clearTimeout(timerRef.current);
+    clearInterval(intervalRef.current);
+  }, []);
+
+  return { onMouseDown: start, onMouseUp: stop, onMouseLeave: stop,
+           onTouchStart: start, onTouchEnd: stop };
+}
+
+/**
+ * Componente EstadoDropdown.
+ * Dropdown personalizado para seleccionar estado de producto con badges.
+ * Usa portal para renderizar fuera del contenedor.
+ * @param {object} props - Props del componente.
+ * @param {string} props.value - Valor seleccionado.
+ * @param {boolean} props.disabled - Si está deshabilitado.
+ * @param {string[]} props.estados - Lista de estados disponibles.
+ * @param {function} props.onChange - Función al cambiar selección.
+ * @param {boolean} props.hasError - Si hay error de validación.
+ * @returns {JSX.Element} Dropdown renderizado.
+ */
+function EstadoDropdown({ value, disabled, estados, onChange, hasError }) {
+  const [open, setOpen] = useState(false);
+  const [pos,  setPos]  = useState(null);
+  const btnRef          = useRef(null);
+  const dropdownRef     = useRef(null);
+
+  const toggle = () => {
+    if (disabled) return;
+    if (!open && btnRef.current) {
+      const r          = btnRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - r.bottom;
+      const listH      = Math.min(estados.length * 38 + 8, 200);
+      const openUp     = spaceBelow < listH && r.top > spaceBelow;
+      setPos({
+        left:   r.left,
+        width:  r.width,
+        top:    openUp ? undefined : r.bottom + 2,
+        bottom: openUp ? window.innerHeight - r.top + 2 : undefined,
+      });
+    }
+    setOpen((o) => !o);
+  };
+
+  // Cierre al hacer click fuera — excluye tanto el botón disparador como el portal
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      const insideBtn      = btnRef.current?.contains(e.target);
+      const insideDropdown = dropdownRef.current?.contains(e.target);
+      if (!insideBtn && !insideDropdown) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const selectedStyle = value ? getBadgeEstadoProducto(value) : null;
+
+  const borderClass = disabled
+    ? 'border-gray-200 opacity-50 cursor-not-allowed'
+    : hasError
+    ? 'border-red-500 focus:ring-2 focus:ring-red-200'
+    : 'border-gray-300 hover:border-[#004D77] cursor-pointer';
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={toggle}
+        disabled={disabled}
+        className={`w-full flex items-center justify-between px-3 py-2 text-xs border rounded-lg
+                    bg-white outline-none transition-colors duration-200 ${borderClass}`}
+      >
+        {value
+          ? <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={selectedStyle}>{value}</span>
+          : <span className="text-gray-400">Seleccionar...</span>
+        }
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          strokeWidth={2}
+        />
+      </button>
+
+      {open && pos && createPortal(
+        <div
+          ref={dropdownRef}
+          className="fixed z-9999 bg-white border border-gray-200 rounded-lg shadow-2xl overflow-hidden py-1"
+          style={{ left: pos.left, width: pos.width, top: pos.top, bottom: pos.bottom }}
+        >
+          <button
+            type="button"
+            onClick={() => { onChange(''); setOpen(false); }}
+            className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:bg-gray-50 transition-colors"
+          >
+            Seleccionar...
+          </button>
+          {estados.map((estado) => {
+            const style    = getBadgeEstadoProducto(estado);
+            const isActive = value === estado;
+            return (
+              <button
+                key={estado}
+                type="button"
+                onClick={() => { onChange(estado); setOpen(false); }}
+                className={`w-full px-3 py-1.5 flex items-center gap-2 transition-colors
+                  ${isActive ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+              >
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={style}>
+                  {estado}
+                </span>
+                {isActive && (
+                  <CheckCircle2 className="w-3 h-3 ml-auto text-[#004D77] shrink-0" strokeWidth={2} />
+                )}
+              </button>
+            );
+          })}
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
+// ─── Clases base de inputs ────────────────────────────────────────────────────
+const inputBase = 'w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200';
 const selectClass = (hasError) =>
   `appearance-none ${inputBase} cursor-pointer ${
     hasError
@@ -34,7 +172,16 @@ const selectClass = (hasError) =>
       : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
   }`;
 
-// ─── Sub-componente: configuración de producto (panel derecho) ────────────────
+/**
+ * Componente ProductConfig.
+ * Panel de configuración para un producto seleccionado en la devolución.
+ * Incluye campos para motivo, tipo, estado y cantidad con validación.
+ * @param {object} props - Props del componente.
+ * @param {object} props.producto - Datos del producto.
+ * @param {function} props.onChange - Función para actualizar campos.
+ * @param {object} props.errores - Errores de validación por campo.
+ * @returns {JSX.Element} Panel de configuración.
+ */
 const ProductConfig = ({ producto, onChange, errores }) => {
   const estadosDisponibles = producto.tipoDevolucion
     ? getEstadosByTipo(producto.tipoDevolucion)
@@ -46,34 +193,42 @@ const ProductConfig = ({ producto, onChange, errores }) => {
     onChange(producto.codigoBarras, { tipoDevolucion: nuevoTipo, estado: getEstadoInicial() });
   };
 
-  const handleCantidad = (delta) => {
-    const nueva = Math.min(
-      Math.max(1, (producto.cantidadDevolver ?? 1) + delta),
-      producto.cantidadComprada
-    );
-    onChange(producto.codigoBarras, { cantidadDevolver: nueva });
-  };
+  // Cantidad: long press
+  const decCb = useCallback(() => {
+    onChange(producto.codigoBarras, {
+      cantidadDevolver: Math.max(1, (producto.cantidadDevolver ?? 1) - 1),
+    });
+  }, [producto.codigoBarras, producto.cantidadDevolver, onChange]);
+
+  const incCb = useCallback(() => {
+    onChange(producto.codigoBarras, {
+      cantidadDevolver: Math.min(producto.cantidadComprada, (producto.cantidadDevolver ?? 1) + 1),
+    });
+  }, [producto.codigoBarras, producto.cantidadDevolver, producto.cantidadComprada, onChange]);
+
+  const lpDec = useLongPress(decCb);
+  const lpInc = useLongPress(incCb);
 
   const fieldError = (campo) => errores?.[campo];
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+    <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
 
       {/* Nombre + badge estado */}
-      <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-semibold text-gray-800 uppercase tracking-wide truncate pr-2">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-xs font-semibold text-gray-800 uppercase tracking-wide truncate pr-2">
           {producto.nombre}
         </h4>
-        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full shrink-0" style={badgeStyle}>
+        <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0" style={badgeStyle}>
           {producto.estado || '—'}
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2">
 
         {/* Motivo */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-gray-700">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-600">
             Motivo <span className="text-red-500">*</span>
           </label>
           <div className="relative">
@@ -85,18 +240,18 @@ const ProductConfig = ({ producto, onChange, errores }) => {
               <option value="">Seleccionar...</option>
               {MOTIVOS_DEVOLUCION.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
           </div>
           {fieldError('motivo') && (
             <p className="text-xs text-red-500 flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" /> {fieldError('motivo')}
+              <AlertCircle className="w-3 h-3 shrink-0" /> {fieldError('motivo')}
             </p>
           )}
         </div>
 
-        {/* Tipo de devolución */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-gray-700">
+        {/* Tipo */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-600">
             Tipo <span className="text-red-500">*</span>
           </label>
           <div className="relative">
@@ -108,85 +263,84 @@ const ProductConfig = ({ producto, onChange, errores }) => {
               <option value="">Seleccionar...</option>
               {TIPOS_DEVOLUCION.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
           </div>
           {fieldError('tipoDevolucion') && (
             <p className="text-xs text-red-500 flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" /> {fieldError('tipoDevolucion')}
+              <AlertCircle className="w-3 h-3 shrink-0" /> {fieldError('tipoDevolucion')}
             </p>
           )}
         </div>
 
-        {/* Estado */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-gray-700">
+        {/* Estado — dropdown custom con badges */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-600">
             Estado <span className="text-red-500">*</span>
           </label>
-          <div className="relative">
-            <select
-              value={producto.estado ?? ''}
-              disabled={!producto.tipoDevolucion}
-              onChange={(e) => onChange(producto.codigoBarras, { estado: e.target.value })}
-              className={`${selectClass(!!fieldError('estado'))} ${!producto.tipoDevolucion ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <option value="">Seleccionar...</option>
-              {estadosDisponibles.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
-          </div>
+          <EstadoDropdown
+            value={producto.estado ?? ''}
+            disabled={!producto.tipoDevolucion}
+            estados={estadosDisponibles}
+            onChange={(val) => onChange(producto.codigoBarras, { estado: val })}
+            hasError={!!fieldError('estado')}
+          />
           {fieldError('estado') && (
             <p className="text-xs text-red-500 flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" /> {fieldError('estado')}
+              <AlertCircle className="w-3 h-3 shrink-0" /> {fieldError('estado')}
             </p>
           )}
         </div>
 
-        {/* Cantidad */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-gray-700">
+        {/* Cantidad — control compacto con long press */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-600">
             Cantidad <span className="text-red-500">*</span>
           </label>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => handleCantidad(-1)}
-              disabled={(producto.cantidadDevolver ?? 1) <= 1}
-              className="w-9 h-9 flex items-center justify-center border border-gray-300 rounded-lg
-                         text-gray-600 hover:bg-gray-100 bg-white
-                         disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-            >
-              <Minus className="w-3.5 h-3.5" strokeWidth={2} />
-            </button>
-            <input
-              type="number"
-              min={1}
-              max={producto.cantidadComprada}
-              value={producto.cantidadDevolver ?? 1}
-              onChange={(e) => {
-                const val = parseInt(e.target.value, 10);
-                if (!isNaN(val))
-                  onChange(producto.codigoBarras, {
-                    cantidadDevolver: Math.min(Math.max(1, val), producto.cantidadComprada),
-                  });
-              }}
-              className="w-14 text-center py-2 text-sm border border-gray-300 rounded-lg
-                         outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 font-semibold bg-white"
-            />
-            <button
-              type="button"
-              onClick={() => handleCantidad(1)}
-              disabled={(producto.cantidadDevolver ?? 1) >= producto.cantidadComprada}
-              className="w-9 h-9 flex items-center justify-center border border-[#004D77]
-                         bg-[#004D77] text-white rounded-lg hover:bg-[#003a5c]
-                         disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" strokeWidth={2} />
-            </button>
+          <div className="flex flex-col items-start gap-0.5">
+            <div className="flex items-center border border-gray-300 rounded-md overflow-hidden">
+              <button
+                type="button"
+                {...lpDec}
+                disabled={(producto.cantidadDevolver ?? 1) <= 1}
+                className="w-6 h-6 flex items-center justify-center text-gray-500
+                           hover:bg-gray-100 transition-colors cursor-pointer select-none
+                           disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Minus className="w-2.5 h-2.5" strokeWidth={2.5} />
+              </button>
+              <input
+                type="number"
+                value={producto.cantidadDevolver ?? 1}
+                min={1}
+                max={producto.cantidadComprada}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  if (!isNaN(val))
+                    onChange(producto.codigoBarras, {
+                      cantidadDevolver: Math.min(Math.max(1, val), producto.cantidadComprada),
+                    });
+                }}
+                className="w-10 text-center text-xs font-semibold text-gray-700
+                           border-x border-gray-200 outline-none py-0.5
+                           [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none
+                           [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <button
+                type="button"
+                {...lpInc}
+                disabled={(producto.cantidadDevolver ?? 1) >= producto.cantidadComprada}
+                className="w-6 h-6 flex items-center justify-center text-gray-500
+                           hover:bg-gray-100 transition-colors cursor-pointer select-none
+                           disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Plus className="w-2.5 h-2.5" strokeWidth={2.5} />
+              </button>
+            </div>
+            <span className="text-[9px] text-gray-400 leading-tight">Máx: {producto.cantidadComprada}</span>
           </div>
-          <p className="text-xs text-gray-400">Máx. {producto.cantidadComprada}</p>
           {fieldError('cantidadDevolver') && (
             <p className="text-xs text-red-500 flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" /> {fieldError('cantidadDevolver')}
+              <AlertCircle className="w-3 h-3 shrink-0" /> {fieldError('cantidadDevolver')}
             </p>
           )}
         </div>
@@ -196,31 +350,38 @@ const ProductConfig = ({ producto, onChange, errores }) => {
   );
 };
 
-// ─── Componente principal ─────────────────────────────────────────────────────
 /**
- * ReturnForm — Crear o editar una devolución.
- * Props:
- *   mode        {"create"|"edit"}
- *   purchase    {Object}
- *   devolucion  {Object|null}
- *   onClose     {Function}
- *   onSaved     {Function}
+ * Componente ReturnForm.
+ * Modal para crear o editar devoluciones de compras.
+ * Incluye selección de productos, configuración y validación.
+ * @param {object} props - Props del componente.
+ * @param {string} props.mode - Modo: 'create' o 'edit'.
+ * @param {object} props.purchase - Datos de la compra.
+ * @param {object} props.devolucion - Datos de la devolución (en modo edit).
+ * @param {function} props.onClose - Función para cerrar el modal.
+ * @param {function} props.onSaved - Función al guardar exitosamente.
+ * @returns {JSX.Element} Modal del formulario.
  */
 const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved }) => {
   const { showConfirm, showSuccess, showError, showWarning } = useAlert();
-  const isEdit = mode === 'edit';
+  const navigate = useNavigate();
+  const isEdit   = mode === 'edit';
 
-  // ── Productos de la compra ────────────────────────────────────────────────
+  // ── Productos de la compra (fuente de verdad, nunca cambia) ───────────────
   const productosCompra = useMemo(() =>
     (purchase?.productos ?? []).map((p) => ({
-      nombre:           p.nombre     ?? p.producto ?? 'Producto',
+      nombre:           p.nombre       ?? p.producto ?? 'Producto',
       codigoBarras:     p.codigoBarras,
       valorUnit:        p.valorUnit,
-      iva:              p.iva ?? 0,
-      cantidadComprada: p.cantidad   ?? p.cantidadProductos ?? 1,
+      iva:              p.iva          ?? 0,
+      cantidadComprada: p.cantidad     ?? p.cantidadProductos ?? 1,
     })),
     [purchase]
   );
+
+  // ── Total original (siempre desde la compra, nunca cambia) ───────────────
+  const totalOriginal = (p) =>
+    Math.round(p.valorUnit * p.cantidadComprada * (1 + p.iva / 100));
 
   // ── Inicialización en modo edición ────────────────────────────────────────
   const initState = useMemo(() => {
@@ -240,15 +401,21 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
   }, [isEdit, devolucion, productosCompra]);
 
   // ── Estado ────────────────────────────────────────────────────────────────
-  const [seleccionados, setSeleccionados]     = useState(initState.seleccionados);
-  const [datosProducto, setDatosProducto]     = useState(initState.datosProducto);
+  const [seleccionados,   setSeleccionados]   = useState(initState.seleccionados);
+  const [datosProducto,   setDatosProducto]   = useState(initState.datosProducto);
   const [erroresProducto, setErroresProducto] = useState({});
   const [erroresGenerales, setErroresGenerales] = useState([]);
-  const [touched, setTouched]                 = useState(false);
+  const [touched,         setTouched]         = useState(false);
+
+  // ── Navegación al cerrar según modo ──────────────────────────────────────
+  const cerrarYNavegar = useCallback(() => {
+    if (!isEdit) navigate('/admin/purchases');
+    else onClose();
+  }, [isEdit, navigate, onClose]);
 
   // ── Cerrar con confirmación si hay datos ──────────────────────────────────
   const handleCerrar = async () => {
-    if (seleccionados.size === 0) { onClose(); return; }
+    if (seleccionados.size === 0) { cerrarYNavegar(); return; }
     const result = await showConfirm(
       'warning',
       '¿Salir sin guardar?',
@@ -257,7 +424,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
         : 'Tienes información ingresada. Si sales ahora perderás todo lo que has ingresado.',
       { confirmButtonText: 'Sí, salir', cancelButtonText: 'Seguir editando' }
     );
-    if (result?.isConfirmed) onClose();
+    if (result?.isConfirmed) cerrarYNavegar();
   };
 
   // ── Selección / deselección ───────────────────────────────────────────────
@@ -346,7 +513,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
         showSuccess('Devolución registrada', `Se creó la devolución ${nueva.id} correctamente.`);
       }
       onSaved?.();
-      onClose();
+      cerrarYNavegar();
     } catch {
       showError('Error', `No se pudo ${isEdit ? 'actualizar' : 'registrar'} la devolución.`);
     }
@@ -389,45 +556,43 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
         {/* ── Body ───────────────────────────────────────────────────────── */}
         <div className="flex flex-1 overflow-hidden divide-x divide-gray-200">
 
-          {/* Panel izquierdo — lista de productos */}
-          <div className="w-[42%] shrink-0 flex flex-col overflow-hidden">
-            <div className="px-6 pt-5 pb-2 shrink-0">
-              <p className="text-sm font-medium text-gray-700 mb-0.5">
-                1. Productos a devolver
-              </p>
-              <p className="text-xs text-gray-400 mb-3">
+          {/* Panel izquierdo — lista de productos de la compra */}
+          <div className="w-[40%] shrink-0 flex flex-col overflow-hidden">
+            <div className="px-5 pt-4 pb-2 shrink-0">
+              <p className="text-sm font-medium text-gray-700 mb-0.5">1. Productos a devolver</p>
+              <p className="text-xs text-gray-400 mb-2">
                 {isEdit ? 'Modifica los productos de esta devolución' : 'Escoja los productos que desea devolver'}
               </p>
-              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer mb-3 select-none">
+              <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer mb-2 select-none">
                 <input
                   type="checkbox"
                   checked={productosCompra.length > 0 && seleccionados.size === productosCompra.length}
                   onChange={toggleTodos}
-                  className="accent-[#004D77] w-4 h-4"
+                  className="accent-[#004D77] w-3.5 h-3.5"
                 />
                 Seleccionar todos
               </label>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 pb-5 flex flex-col gap-2">
+            <div className="flex-1 overflow-y-auto px-5 pb-4 flex flex-col gap-1.5">
               {productosCompra.length === 0 && (
-                <p className="text-sm text-gray-400 text-center mt-8">
+                <p className="text-xs text-gray-400 text-center mt-8">
                   Esta compra no tiene productos registrados.
                 </p>
               )}
+
               {productosCompra.map((p) => {
                 const isSelected = seleccionados.has(p.codigoBarras);
                 const tieneError = productoTieneError(p.codigoBarras, erroresProducto);
-                const datos      = datosProducto[p.codigoBarras];
-                const { total }  = isSelected && datos
-                  ? calcularTotalesProducto(datos)
-                  : { total: p.valorUnit * p.cantidadComprada };
+
+                // Total siempre desde la compra original — nunca cambia
+                const total = totalOriginal(p);
 
                 return (
                   <div
                     key={p.codigoBarras}
                     onClick={() => toggleSeleccion(p.codigoBarras)}
-                    className={`border rounded-lg p-3 cursor-pointer transition-colors duration-150 ${
+                    className={`border rounded-lg p-2.5 cursor-pointer transition-colors duration-150 ${
                       isSelected
                         ? tieneError
                           ? 'border-red-400 bg-red-50'
@@ -440,34 +605,36 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => {}}
-                        className="accent-[#004D77] w-4 h-4 mt-0.5 shrink-0"
+                        className="accent-[#004D77] w-3.5 h-3.5 mt-0.5 shrink-0"
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1 mb-1.5">
+                        <div className="flex items-center justify-between gap-1 mb-1">
                           <p className="text-xs font-semibold text-gray-800 truncate">{p.nombre}</p>
                           {isSelected && tieneError && (
-                            <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                            <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
                           )}
                           {isSelected && !tieneError && touched && (
-                            <CheckCircle2 className="w-3.5 h-3.5 text-[#004D77] shrink-0" strokeWidth={2} />
+                            <CheckCircle2 className="w-3 h-3 text-[#004D77] shrink-0" strokeWidth={2} />
                           )}
                         </div>
-                        <div className="grid grid-cols-4 gap-x-2 text-xs text-gray-500">
-                          <span className="font-medium text-gray-600">Cant.</span>
-                          <span className="font-medium text-gray-600">Precio</span>
-                          <span className="font-medium text-gray-600">%IVA</span>
-                          <span className="font-medium text-gray-600 text-right">Total</span>
-                          <span>{p.cantidadComprada}</span>
-                          <span>{formatCurrency(p.valorUnit)}</span>
-                          <span>{p.iva}%</span>
-                          <span className="text-right font-semibold text-gray-700">{formatCurrency(total)}</span>
+                        {/* Datos de la compra — siempre estáticos */}
+                        <div className="grid grid-cols-4 gap-x-1.5 text-[10px] text-gray-500">
+                          <span className="font-medium text-gray-500">Cant.</span>
+                          <span className="font-medium text-gray-500">Precio</span>
+                          <span className="font-medium text-gray-500">%IVA</span>
+                          <span className="font-medium text-gray-500 text-right">Total</span>
+                          <span className="text-gray-700">{p.cantidadComprada}</span>
+                          <span className="text-gray-700">{formatCurrency(p.valorUnit)}</span>
+                          <span className="text-gray-700">{p.iva}%</span>
+                          <span className="text-right font-semibold text-gray-800">{formatCurrency(total)}</span>
                         </div>
                       </div>
                     </div>
                   </div>
                 );
               })}
-              <p className="text-xs text-gray-400 mt-1">
+
+              <p className="text-[10px] text-gray-400 mt-0.5">
                 (Productos de la compra {purchase?.numeroFacturacion ?? devolucion?.idCompra})
               </p>
             </div>
@@ -475,17 +642,15 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
 
           {/* Panel derecho — configuración por producto */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="px-6 pt-5 pb-2 shrink-0">
-              <p className="text-sm font-medium text-gray-700 mb-0.5">
-                2. Configurar productos seleccionados
-              </p>
+            <div className="px-5 pt-4 pb-2 shrink-0">
+              <p className="text-sm font-medium text-gray-700 mb-0.5">2. Configurar productos seleccionados</p>
               <p className="text-xs text-gray-400">
                 Gestiona la cantidad, el estado y el motivo de cada producto
               </p>
             </div>
 
             {erroresGenerales.length > 0 && (
-              <div className="mx-6 mb-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+              <div className="mx-5 mb-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
                 {erroresGenerales.map((e, i) => (
                   <p key={i} className="text-xs text-red-500 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" /> {e}
@@ -494,7 +659,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto px-6 pb-5 flex flex-col gap-3">
+            <div className="flex-1 overflow-y-auto px-5 pb-4 flex flex-col gap-2">
               {productosSeleccionadosArray.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 gap-2">
                   <p className="text-sm">Ningún producto seleccionado</p>

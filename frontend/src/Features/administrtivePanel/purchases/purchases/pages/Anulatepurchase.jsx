@@ -25,7 +25,7 @@ const AnulatePurchase = ({ purchase, onClose, onConfirm }) => {
         {/* Header */}
         <div
           className="flex items-center justify-center py-6 px-8 relative"
-          style={{ backgroundColor: "#1a5276" }}
+          style={{ backgroundColor: "#a93226" }}
         >
           <h2
             className="text-xl font-bold tracking-wide text-white"

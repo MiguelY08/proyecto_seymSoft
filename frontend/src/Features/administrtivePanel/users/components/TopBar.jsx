@@ -5,13 +5,25 @@ import { useAlert } from "../../../shared/alerts/useAlert";
 import { downloadUsersExcel } from "../helpers/usersHelpers";
 import { usePermissions } from "../../configuration/roles/hooks/usePermissions";
 
-// ─── TopBar ───────────────────────────────────────────────────────────────────
-// users : array completo de usuarios (proviene de Users.jsx)
+/**
+ * Componente TopBar.
+ * Barra superior con buscador, botón de descarga Excel y botón para crear usuario.
+ * Maneja búsqueda en tiempo real y exportación de datos.
+ * @param {object} props - Props del componente.
+ * @param {string} props.search - Valor actual del término de búsqueda.
+ * @param {function} props.onSearchChange - Función para actualizar el término de búsqueda.
+ * @param {Array} props.users - Array completo de usuarios para exportación.
+ * @returns {JSX.Element} Barra con controles de búsqueda y acciones.
+ */
 function TopBar({ search, onSearchChange, users = [] }) {
   const navigate = useNavigate();
   const { showConfirm, showTimer, showWarning } = useAlert();
   const { hasPermission } = usePermissions();
 
+  /**
+   * Maneja la descarga de usuarios en formato Excel.
+   * Valida que haya usuarios y confirma la acción antes de exportar.
+   */
   const handleDownload = () => {
     if (users.length === 0) {
       showWarning(
@@ -58,7 +70,7 @@ function TopBar({ search, onSearchChange, users = [] }) {
         />
       </div>
 
-      {/* Botones */}
+      {/* Botones de acción: descargar y crear usuario */}
       <div className="flex items-center gap-2 shrink-0">
         {hasPermission("usuarios.descargar") && (
           <button
