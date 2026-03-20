@@ -4,8 +4,7 @@ import { Info, SquarePen, Search, Plus, ChevronLeft, ChevronRight } from 'lucide
 import DetailProduct from './modals/DetailProduct.jsx';
 import CreateProduct from './modals/CreateProduct.jsx';
 import EditProduct from './modals/EditProduct.jsx';
-import { useAlert } from '../../../shared/alerts/useAlert.js';
-import ProductsService from './services/productsServices.js';
+import { useAlert } from '../../../shared/alerts/useAlert.js'; // ← ajusta la ruta según tu proyecto
 
 const RECORDS_PER_PAGE = 13;
 
@@ -133,47 +132,79 @@ function EmptyState({ onCreateProduct }) {
   );
 }
 
+// ─── Función para migrar productos antiguos ───────────────────────────────────
+function migrateOldProducts(products) {
+  return products.map(product => ({
+    ...product,
+    categorias: product.categorias || (product.categoria ? [product.categoria] : []),
+    proveedores: product.proveedores || (product.proveedor ? [product.proveedor] : []),
+    precioColegas: product.precioColegas || 0,
+    precioPacas: product.precioPacas || 0,
+    precioMayorista: product.precioMayorista || 0,
+  }));
+}
+
 // ─── Products ─────────────────────────────────────────────────────────────────
 function Products() {
-  const { showConfirm, showSuccess } = useAlert();
+  const { showConfirm, showSuccess } = useAlert(); // ← alertas de confirmación y éxito
+  const [data, setData] = useState([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showModal, setShowModal] = useState(false);
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const navigate = useNavigate();
 
-  // Estado inicializado directamente desde el servicio
-  const [data, setData]                       = useState(() => ProductsService.list());
-  const [search, setSearch]                   = useState('');
-  const [currentPage, setCurrentPage]         = useState(1);
-  const [showModal, setShowModal]             = useState(false);
-  const [showFormModal, setShowFormModal]     = useState(false);
-  const [showEditModal, setShowEditModal]     = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  // Cargar productos del localStorage al montar el componente (SOLO UNA VEZ)
+  useEffect(() => {
+    const storedProducts = localStorage.getItem('products');
+    if (storedProducts) {
+      try {
+        const products = JSON.parse(storedProducts);
+        const migratedProducts = migrateOldProducts(products);
+        setData(migratedProducts);
+        localStorage.setItem('products', JSON.stringify(migratedProducts));
+      } catch (error) {
+        console.error('Error al cargar productos:', error);
+        setData([]);
+      }
+    } else {
+      setData([]);
+    }
+    setIsLoaded(true);
+  }, []); // Array vacío = solo se ejecuta al montar
 
-  // Refresca la lista desde el servicio (localStorage pm_products)
-  const refreshData = () => setData(ProductsService.list());
+  // Guardar productos en localStorage SOLO después de la carga inicial
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('products', JSON.stringify(data));
+      console.log('Productos guardados en localStorage:', data.length);
+    }
+  }, [data, isLoaded]);
 
   // ── Filtrado por búsqueda ─────────────────────────────────────────────────
   const filteredData = data.filter((row) => {
     const query = search.toLowerCase().trim();
     if (!query) return true;
     return (
-      row.nombre?.toLowerCase().includes(query) ||
-      row.codBarras?.toLowerCase().includes(query) ||
-      row.referencia?.toLowerCase().includes(query) ||
-      (row.categorias || []).join(' ').toLowerCase().includes(query) ||
-      String(row.precioDetalle).includes(query) ||
-      String(row.stock).includes(query)
+      row.nombre.toLowerCase().includes(query) ||
+      row.codBarras.toLowerCase().includes(query) ||
+      row.referencia.toLowerCase().includes(query) ||
+      (row.subcategorias || []).join(' ').toLowerCase().includes(query) ||
+      row.precio.toString().includes(query) ||
+      row.stock.toString().includes(query)
     );
   });
 
-  // Resetear a página 1 cuando cambia la búsqueda
-  useEffect(() => { setCurrentPage(1); }, [search]);
-
   // Calcular paginación
-  const totalPages = Math.max(1, Math.ceil(filteredData.length / RECORDS_PER_PAGE));
+  const totalPages = Math.ceil(filteredData.length / RECORDS_PER_PAGE);
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
-  const endIndex   = startIndex + RECORDS_PER_PAGE;
+  const endIndex = startIndex + RECORDS_PER_PAGE;
   const currentData = filteredData.slice(startIndex, endIndex);
 
-  // ── Toggle activo/inactivo ────────────────────────────────────────────────
+  // ── Alerta: Confirmación y éxito al desactivar/activar producto ─────────
   const handleToggle = async (id) => {
     const producto = data.find((row) => row.id === id);
     if (!producto) return;
@@ -183,38 +214,54 @@ function Products() {
         'warning',
         '¿Desactivar este producto?',
         'El producto dejará de estar disponible para los usuarios, pero podrá activarse nuevamente más adelante.',
-        { confirmButtonText: 'Sí, desactivar', cancelButtonText: 'Cancelar' }
+        {
+          confirmButtonText: 'Sí, desactivar',
+          cancelButtonText: 'Cancelar',
+        }
       );
       if (!result.isConfirmed) return;
-      const updated = ProductsService.update({ ...producto, activo: false });
-      refreshData();
-      showSuccess('Producto desactivado', `"${updated.nombre}" fue desactivado exitosamente.`);
+
+      setData((prev) =>
+        prev.map((row) => row.id === id ? { ...row, activo: false } : row)
+      );
+      showSuccess('Producto desactivado', 'El producto fue desactivado exitosamente.');
     } else {
-      const updated = ProductsService.update({ ...producto, activo: true });
-      refreshData();
-      showSuccess('Producto activado', `"${updated.nombre}" está disponible nuevamente.`);
+      setData((prev) =>
+        prev.map((row) => row.id === id ? { ...row, activo: true } : row)
+      );
+      showSuccess('Producto activado', 'El producto está disponible nuevamente para los usuarios.');
     }
   };
 
-  // ── Crear producto ────────────────────────────────────────────────────────
-  // CreateProduct llama a ProductsService.create() internamente y devuelve
-  // el producto guardado via onCreate. Solo refrescamos la lista.
-  const handleProductoCreado = () => {
-    refreshData();
+  const handleNuevoProducto = () => {
+    setShowFormModal(true);
+  };
+
+  const handleCrearProducto = (nuevoProducto) => {
+    const newId = data.length > 0 ? Math.max(...data.map(p => p.id)) + 1 : 1;
+    
+    const productoCompleto = {
+      id: newId,
+      nombre: nuevoProducto.nombre,
+      codBarras: nuevoProducto.codBarras,
+      referencia: nuevoProducto.referencia,
+      categorias: nuevoProducto.categorias || [],
+      stock: parseInt(nuevoProducto.stock),
+      precio: parseInt(nuevoProducto.precioDetalle),
+      precioMayorista: parseInt(nuevoProducto.precioMayorista),
+      precioColegas: parseInt(nuevoProducto.precioColegas),
+      precioPacas: parseInt(nuevoProducto.precioPacas),
+      proveedores: nuevoProducto.proveedores || [],
+      descripcion: nuevoProducto.descripcion,
+      imagen: nuevoProducto.imagen,
+      activo: true
+    };
+
+    setData([productoCompleto, ...data]);
     setCurrentPage(1);
     setShowFormModal(false);
   };
 
-  // ── Editar producto ───────────────────────────────────────────────────────
-  // EditProduct llama a ProductsService.update() internamente y devuelve
-  // el producto actualizado via onUpdate. Solo refrescamos la lista.
-  const handleProductoActualizado = () => {
-    refreshData();
-    setShowEditModal(false);
-    setSelectedProduct(null);
-  };
-
-  // ── Handlers de modales ───────────────────────────────────────────────────
   const handleVerDetalles = (producto) => {
     setSelectedProduct(producto);
     setShowModal(true);
@@ -223,6 +270,32 @@ function Products() {
   const handleEditarProducto = (producto) => {
     setSelectedProduct(producto);
     setShowEditModal(true);
+  };
+
+  const handleActualizarProducto = (productoEditado) => {
+    setData((prev) =>
+      prev.map((row) =>
+        row.id === productoEditado.id
+          ? {
+              ...row,
+              nombre: productoEditado.nombre,
+              codBarras: productoEditado.codBarras,
+              referencia: productoEditado.referencia,
+              categorias: productoEditado.categorias || [],
+              stock: parseInt(productoEditado.stock),
+              precio: parseInt(productoEditado.precioDetalle),
+              precioMayorista: parseInt(productoEditado.precioMayorista),
+              precioColegas: parseInt(productoEditado.precioColegas),
+              precioPacas: parseInt(productoEditado.precioPacas),
+              proveedores: productoEditado.proveedores || [],
+              descripcion: productoEditado.descripcion,
+              imagen: productoEditado.imagen || row.imagen
+            }
+          : row
+      )
+    );
+    setShowEditModal(false);
+    setSelectedProduct(null);
   };
 
   const handleCloseModal = () => {
@@ -239,17 +312,16 @@ function Products() {
     setSelectedProduct(null);
   };
 
-  // Abrir edición directamente desde el modal de detalle
   const handleEditFromDetail = (producto) => {
-    setShowModal(false);
     setSelectedProduct(producto);
     setShowEditModal(true);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
+      
       <div className={`h-full flex flex-col gap-3 p-3 sm:p-4 ${showModal || showFormModal || showEditModal ? 'blur-sm' : ''}`}>
-
+        
         {/* ── Barra superior (solo si hay productos) ───────────────────────── */}
         {data.length > 0 && (
           <div className="flex items-center justify-between gap-2 sm:gap-4 shrink-0">
@@ -260,29 +332,36 @@ function Products() {
                 type="text"
                 placeholder="Buscar"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="w-full pl-4 pr-10 py-2.5 bg-white rounded-xl border border-gray-300 shadow-sm outline-none focus:ring-2 focus:ring-sky-900 text-black text-sm"
               />
-              <Search size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600" />
+              <Search
+                size={18}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
+              />
             </div>
 
             {/* Botón Nuevo */}
-            <button
-              onClick={() => setShowFormModal(true)}
-              title="Crear nuevo producto"
-              className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-sky-700 rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
-            >
-              <span className="hidden sm:inline">Crear nuevo producto</span>
-              <span className="sm:hidden">Nuevo</span>
-              <Plus className="w-4 h-4" strokeWidth={2} />
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={handleNuevoProducto}
+                title="Crear nuevo producto"
+                className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-sky-700 rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
+              >
+                <span className="hidden sm:inline">Crear nuevo producto</span>
+                <span className="sm:hidden">Nuevo</span>
+                <Plus className="w-4 h-4" strokeWidth={2} />
+              </button>
+            </div>
           </div>
         )}
 
-        {/* ── Estado vacío / sin resultados / Tabla ───────────────────────── */}
+        {/* ── Estado vacío o Tabla ─────────────────────────────────────────── */}
         {data.length === 0 ? (
-          <EmptyState onCreateProduct={() => setShowFormModal(true)} />
-
+          <EmptyState onCreateProduct={handleNuevoProducto} />
         ) : filteredData.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
@@ -300,7 +379,6 @@ function Products() {
               Limpiar búsqueda
             </button>
           </div>
-
         ) : (
           <>
             {/* ── Tabla ────────────────────────────────────────────────────── */}
@@ -311,7 +389,7 @@ function Products() {
                     <th className="px-3 py-2.5 text-center text-xs font-semibold">Nombre del producto</th>
                     <th className="px-3 py-2.5 text-center text-xs font-semibold">Cod Barras</th>
                     <th className="px-3 py-2.5 text-center text-xs font-semibold">Referencia</th>
-                    <th className="px-3 py-2.5 text-center text-xs font-semibold">Categoría</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold">Subcategoría</th>
                     <th className="px-3 py-2.5 text-center text-xs font-semibold">Stock</th>
                     <th className="px-3 py-2.5 text-center text-xs font-semibold">Precio detal</th>
                     <th className="px-3 py-2.5 text-center text-xs font-semibold">Funciones</th>
@@ -321,34 +399,32 @@ function Products() {
                 <tbody>
                   {currentData.map((row, index) => {
                     const rowBg = index % 2 === 0 ? 'bg-white' : 'bg-gray-100';
-                    const categoriaDisplay = (row.categorias || []).length > 0
-                      ? row.categorias.join(', ')
-                      : 'N/A';
-
+                    const categoriaDisplay = row.categorias && row.categorias.length > 0 
+                      ? row.subcategorias.join(', ') 
+                      : (row.categoria || 'N/A');
+                    
                     return (
                       <tr key={row.id} className={`transition-colors duration-150 ${rowBg}`}>
+
                         <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">
                           <HighlightText text={row.nombre} highlight={search} />
                         </td>
                         <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                          <HighlightText text={row.codBarras || ''} highlight={search} />
+                          <HighlightText text={row.codBarras} highlight={search} />
                         </td>
                         <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                          <HighlightText text={row.referencia || ''} highlight={search} />
+                          <HighlightText text={row.referencia} highlight={search} />
                         </td>
                         <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                           <HighlightText text={categoriaDisplay} highlight={search} />
                         </td>
                         <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                          <HighlightText text={String(row.stock)} highlight={search} />
+                          <HighlightText text={row.stock.toString()} highlight={search} />
                         </td>
                         <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                          {/* precioDetalle es el campo canónico del nuevo esquema */}
-                          <HighlightText
-                            text={Number(row.precioDetalle).toLocaleString('es-CO')}
-                            highlight={search}
-                          />
+                          <HighlightText text={row.precio.toLocaleString()} highlight={search} />
                         </td>
+                        
                         <td className="px-3 py-1.5">
                           <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                             <button
@@ -365,7 +441,7 @@ function Products() {
                             >
                               <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                             </button>
-                            <ActiveToggle activo={row.activo ?? true} onChange={() => handleToggle(row.id)} />
+                            <ActiveToggle activo={row.activo} onChange={() => handleToggle(row.id)} />
                           </div>
                         </td>
                       </tr>
@@ -412,9 +488,7 @@ function Products() {
         <Outlet />
       </div>
 
-      {/* ── Modales ──────────────────────────────────────────────────────────── */}
-
-      {/* Detalle */}
+      {/* Modal de detalles del producto */}
       <DetailProduct
         producto={selectedProduct}
         isOpen={showModal}
@@ -422,20 +496,21 @@ function Products() {
         onEdit={handleEditFromDetail}
       />
 
-      {/* Crear — onCreate se dispara después de que el modal ya guardó en el servicio */}
+      {/* Modal de crear producto */}
       <CreateProduct
         isOpen={showFormModal}
         onClose={handleCloseFormModal}
-        onCreate={handleProductoCreado}
+        onCreate={handleCrearProducto}
       />
 
-      {/* Editar — onUpdate se dispara después de que el modal ya guardó en el servicio */}
+      {/* Modal de editar producto */}
       <EditProduct
         producto={selectedProduct}
         isOpen={showEditModal}
         onClose={handleCloseEditModal}
-        onUpdate={handleProductoActualizado}
+        onUpdate={handleActualizarProducto}
       />
+
     </div>
   );
 }
