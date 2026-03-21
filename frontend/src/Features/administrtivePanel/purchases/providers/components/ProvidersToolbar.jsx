@@ -34,7 +34,7 @@ function ProvidersToolbar({ searchTerm, onSearchChange, onNewClick }) {
       <div className="relative flex-1 sm:flex-none sm:w-72 md:w-96">
         <input
           type="text"
-          placeholder="Buscar por nombre, documento, contacto..."
+          placeholder="Buscar "
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full pl-4 pr-10 py-2 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400"
