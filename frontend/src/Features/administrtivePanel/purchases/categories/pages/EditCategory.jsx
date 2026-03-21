@@ -4,6 +4,8 @@ import { useAlert } from "../../../../shared/alerts/useAlert";
 import {
   getSubcategories,
   createSubcategory,
+  deactivateCategoryWithSubcategories,
+  activateCategoryWithSubcategories,
 } from "../services/categoriesService";
 import SubcategoriesTable from "../components/SubcategoriesTable";
 
@@ -170,7 +172,7 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
 
 // ─── EditCategory principal ───────────────────────────────────────────────────
 const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategories }) => {
-  const { showWarning, showSuccess } = useAlert();
+  const { showWarning, showSuccess, showConfirm } = useAlert();
   const isEditing = !!category;
 
   const [form, setForm] = useState({
@@ -202,9 +204,36 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
     setError(existe ? "Ya existe una categoría con ese nombre." : "");
   }, [form.nombre, allCategories, category]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (error) { showWarning("Campo inválido", error); return; }
-    onSave({ ...category, nombre: form.nombre.trim(), estado: form.activo ? "Activo" : "Inactivo" }, isEditing);
+
+    const wasActive = category?.estado === "Activo";
+    const willBeActive = form.activo;
+
+    // ── Desactivar: pedir confirmación y bajar subcategorías ──
+    if (wasActive && !willBeActive) {
+      const result = await showConfirm(
+        "warning",
+        "Desactivar categoría",
+        `Al desactivar "${category.nombre}" también se desactivarán todas sus subcategorías. ¿Deseas continuar?`,
+        { confirmButtonText: "Sí, desactivar", cancelButtonText: "Cancelar" }
+      );
+      if (!result?.isConfirmed) return;
+
+      deactivateCategoryWithSubcategories(category.id);
+      // Actualizar nombre si cambió
+      onSave({ ...category, nombre: form.nombre.trim(), estado: "Inactivo" }, isEditing);
+
+    // ── Activar: subir categoría y todas sus subcategorías ──
+    } else if (!wasActive && willBeActive) {
+      activateCategoryWithSubcategories(category.id);
+      onSave({ ...category, nombre: form.nombre.trim(), estado: "Activo" }, isEditing);
+
+    // ── Solo cambió el nombre ──
+    } else {
+      onSave({ ...category, nombre: form.nombre.trim(), estado: category.estado }, isEditing);
+    }
+
     if (refreshCategories) refreshCategories();
     showSuccess("Categoría actualizada", "Los cambios se guardaron correctamente.");
     onClose();
