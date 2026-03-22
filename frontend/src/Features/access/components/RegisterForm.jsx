@@ -12,133 +12,87 @@ export default function RegisterForm() {
   const navigate = useNavigate();
 
   // ─── Sistema de alertas ───────────────────────────────────────────────────
-  const { showSuccess, showError, showWarning } = useAlert();
+  const { showSuccess, showError, showWarning, showConfirm } = useAlert();
 
   // ─── Mostrar / ocultar contraseñas ────────────────────────────────────────
-  const [showPassword,setShowPassword] = useState(false);
-  const [showConfirmPassword,setShowConfirmPassword] = useState(false);
+  const [showPassword,        setShowPassword]        = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // ─── Estado del formulario ────────────────────────────────────────────────
-  const [formData,setFormData] = useState({
-    documentType:"",
-    document:"",
-    fullName:"",
-    email:"",
-    phone:"",
-    address:"",
-    password:"",
-    confirmPassword:"",
-    terms:false
+  const [formData, setFormData] = useState({
+    documentType:    "",
+    document:        "",
+    fullName:        "",
+    email:           "",
+    phone:           "",
+    address:         "",
+    password:        "",
+    confirmPassword: "",
+    terms:           false,
   });
 
   // ─── Errores de validación ────────────────────────────────────────────────
-  const [errors,setErrors] = useState({});
+  const [errors, setErrors] = useState({});
 
 
   /* ==========================================================================
      handleChange
-     Se ejecuta cuando el usuario escribe o modifica un campo.
-
-     Funciones:
-     1. Obtener valor del input
-     2. Sanitizar datos (seguridad)
-     3. Actualizar estado del formulario
-     4. Validar solo el campo modificado (UX correcta)
   ========================================================================== */
-
-  const handleChange = (e)=>{
-
-    const { name,value,type,checked } = e.target;
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
 
     let newValue = type === "checkbox" ? checked : value;
+    newValue = sanitizeInput(name, newValue);
 
-    // sanitización desde validator (elimina caracteres no permitidos)
-    newValue = sanitizeInput(name,newValue);
-
-    const updatedForm = {
-      ...formData,
-      [name]:newValue
-    };
-
+    const updatedForm = { ...formData, [name]: newValue };
     setFormData(updatedForm);
 
-    // validar formulario completo
     const validationErrors = validateRegister(updatedForm);
-
-    // guardar solo error del campo modificado
-    setErrors(prev => ({
-      ...prev,
-      [name]: validationErrors[name]
-    }));
-
+    setErrors((prev) => ({ ...prev, [name]: validationErrors[name] }));
   };
 
 
   /* ==========================================================================
      handleSubmit
-     Se ejecuta al enviar el formulario.
-
-     Flujo:
-     1. Validar todos los campos
-     2. Si hay errores → detener envío
-     3. Registrar usuario
-     4. Mostrar alerta de éxito
-     5. Redirigir al login
   ========================================================================== */
-
-  const handleSubmit = (e)=>{
-
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const validationErrors = validateRegister(formData);
 
-    // si existen errores no continuar
-    if(Object.keys(validationErrors).length > 0){
-
+    if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-
       showWarning(
         "Campos incompletos",
         "Por favor revisa los campos obligatorios"
       );
-
       return;
     }
 
-    try{
+    // ── Alerta de confirmación con resumen de datos ───────────────────────
+    const result = await showConfirm(
+      "info",
+      "¿Confirmar registro?",
+      `Revisa tus datos antes de continuar:\n\n👤 Nombre: ${formData.fullName}\n🪪 Documento: ${formData.documentType} - ${formData.document}\n📧 Correo: ${formData.email}\n📞 Teléfono: ${formData.phone}\n📍 Dirección: ${formData.address}\n\n¿Estás seguro de que deseas crear tu cuenta con estos datos?`,
+      { confirmButtonText: "Sí, registrarme", cancelButtonText: "Revisar de nuevo" }
+    );
 
-      // eliminar campos que no deben guardarse
-      const { confirmPassword,terms,...userData } = formData;
+    if (!result?.isConfirmed) return;
 
-      // registrar usuario
+    try {
+      const { confirmPassword, terms, ...userData } = formData;
       registerUser(userData);
-
-      // alerta de éxito
-      showSuccess(
-        "Registro exitoso",
-        "Tu cuenta fue creada correctamente"
-      );
-
-      // redirigir al login
+      showSuccess("Registro exitoso", "Tu cuenta fue creada correctamente");
       navigate("/login");
-
-    }catch(error){
-
-      showError(
-        "Error en el registro",
-        error.message
-      );
-
+    } catch (error) {
+      showError("Error en el registro", error.message);
     }
-
   };
 
 
   /* ==========================================================================
      Label reutilizable
-     Muestra label con indicador de campo obligatorio (*)
   ========================================================================== */
-
   const Label = ({ text }) => (
     <label className="flex items-center gap-1 mb-1 text-sm font-medium text-gray-700">
       {text}
@@ -149,19 +103,16 @@ export default function RegisterForm() {
 
   /* ==========================================================================
      inputStyle
-     Genera estilos dinámicos dependiendo si el campo tiene error
   ========================================================================== */
+  const inputStyle = (field) =>
+    `w-full border rounded-lg px-3 py-2 text-sm outline-none
+    ${errors[field]
+      ? "border-red-500 focus:ring-red-500"
+      : "focus:ring-2 focus:ring-blue-600"
+    }`;
 
-  const inputStyle = (field)=>
-  `w-full border rounded-lg px-3 py-2 text-sm outline-none
-  ${errors[field]
-    ? "border-red-500 focus:ring-red-500"
-    : "focus:ring-2 focus:ring-blue-600"
-  }`;
 
-
-return (
-
+  return (
     <div className="max-w-6xl w-full mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
 
       {/* ─── Header ─────────────────────────────────────────────────────── */}
@@ -172,7 +123,6 @@ return (
       </div>
 
       <div className="p-5 md:p-5">
-
         <form
           onSubmit={handleSubmit}
           className="grid grid-cols-1 md:grid-cols-2 gap-5"
@@ -180,8 +130,7 @@ return (
 
           {/* Tipo Documento */}
           <div>
-            <Label text="Tipo de Documento"/>
-
+            <Label text="Tipo de Documento" />
             <select
               name="documentType"
               value={formData.documentType}
@@ -193,16 +142,13 @@ return (
               <option value="TI">TI</option>
               <option value="CE">CE</option>
             </select>
-
             {errors.documentType &&
-            <p className="text-red-500 text-xs mt-1">{errors.documentType}</p>}
+              <p className="text-red-500 text-xs mt-1">{errors.documentType}</p>}
           </div>
-
 
           {/* Documento */}
           <div>
-            <Label text="Documento"/>
-
+            <Label text="Documento" />
             <input
               type="text"
               name="document"
@@ -211,16 +157,13 @@ return (
               onChange={handleChange}
               className={inputStyle("document")}
             />
-
             {errors.document &&
-            <p className="text-red-500 text-xs mt-1">{errors.document}</p>}
+              <p className="text-red-500 text-xs mt-1">{errors.document}</p>}
           </div>
-
 
           {/* Nombre */}
           <div>
-            <Label text="Nombre Completo"/>
-
+            <Label text="Nombre Completo" />
             <input
               type="text"
               name="fullName"
@@ -228,16 +171,13 @@ return (
               onChange={handleChange}
               className={inputStyle("fullName")}
             />
-
             {errors.fullName &&
-            <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>}
+              <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>}
           </div>
-
 
           {/* Email */}
           <div>
-            <Label text="Correo Electrónico"/>
-
+            <Label text="Correo Electrónico" />
             <input
               type="email"
               name="email"
@@ -245,16 +185,13 @@ return (
               onChange={handleChange}
               className={inputStyle("email")}
             />
-
             {errors.email &&
-            <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+              <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
           </div>
-
 
           {/* Dirección */}
           <div>
-            <Label text="Dirección"/>
-
+            <Label text="Dirección" />
             <input
               type="text"
               name="address"
@@ -262,16 +199,13 @@ return (
               onChange={handleChange}
               className={inputStyle("address")}
             />
-
             {errors.address &&
-            <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
+              <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
           </div>
-
 
           {/* Teléfono */}
           <div>
-            <Label text="Teléfono"/>
-
+            <Label text="Teléfono" />
             <input
               type="text"
               name="phone"
@@ -280,16 +214,13 @@ return (
               onChange={handleChange}
               className={inputStyle("phone")}
             />
-
             {errors.phone &&
-            <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+              <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
           </div>
-
 
           {/* Contraseña */}
           <div className="relative">
-            <Label text="Contraseña"/>
-
+            <Label text="Contraseña" />
             <input
               type={showPassword ? "text" : "password"}
               name="password"
@@ -297,24 +228,20 @@ return (
               onChange={handleChange}
               className={inputStyle("password")}
             />
-
             <button
               type="button"
-              onClick={()=>setShowPassword(!showPassword)}
+              onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-[34px] text-gray-500"
             >
-              {showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
-
             {errors.password &&
-            <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+              <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
           </div>
-
 
           {/* Confirmar contraseña */}
           <div className="relative">
-            <Label text="Confirmar Contraseña"/>
-
+            <Label text="Confirmar Contraseña" />
             <input
               type={showConfirmPassword ? "text" : "password"}
               name="confirmPassword"
@@ -322,52 +249,44 @@ return (
               onChange={handleChange}
               className={inputStyle("confirmPassword")}
             />
-
             <button
               type="button"
-              onClick={()=>setShowConfirmPassword(!showConfirmPassword)}
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               className="absolute right-3 top-[34px] text-gray-500"
             >
-              {showConfirmPassword ? <EyeOff size={16}/> : <Eye size={16}/>}
+              {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
-
             {errors.confirmPassword &&
-            <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
+              <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
           </div>
-
 
           {/* Términos */}
           <div className="col-span-full flex items-center gap-2 mt-2">
-
             <input
               type="checkbox"
               name="terms"
               checked={formData.terms}
               onChange={handleChange}
             />
-
             <label className="text-sm">
               Aceptar términos y condiciones
             </label>
-
           </div>
 
-          {errors.terms &&
-          <div className="col-span-full">
-            <p className="text-red-500 text-xs">{errors.terms}</p>
-          </div>}
-
+          {errors.terms && (
+            <div className="col-span-full">
+              <p className="text-red-500 text-xs">{errors.terms}</p>
+            </div>
+          )}
 
           {/* Botones */}
           <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-
             <button
               type="submit"
               className="w-full bg-[#004D77] text-white py-2.5 rounded-lg text-sm hover:bg-[#005D8A] transition cursor-pointer"
-              >
+            >
               Registrar
             </button>
-
             <button
               type="button"
               onClick={() => navigate("/login")}
@@ -375,11 +294,9 @@ return (
             >
               Cancelar
             </button>
-
           </div>
 
         </form>
-
       </div>
 
     </div>
