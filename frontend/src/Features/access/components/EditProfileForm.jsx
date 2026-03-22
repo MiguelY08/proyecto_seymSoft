@@ -17,8 +17,8 @@ const ErrorMsg = ({ field, touched, errors }) =>
 const ReadOnlyField = ({ label, value }) => (
   <div className="flex flex-col gap-1.5">
     <label className="block text-sm font-medium text-gray-700">{label}</label>
-    <div className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed select-none">
-      {value ?? "—"}
+    <div className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed select-none flex items-center gap-2">
+       {value ?? "—"}
     </div>
   </div>
 );
@@ -72,9 +72,6 @@ function EditProfileForm({ onClose }) {
   const isAdminContext = location.pathname.startsWith("/admin");
 
   const [form, setForm] = useState({
-    documentType:    user?.documentType ?? "",
-    document:        user?.document     ?? "",
-    name:            user?.name         ?? "",
     email:           user?.email        ?? "",
     phone:           user?.phone        ?? "",
     address:         user?.address      ?? "",
@@ -94,21 +91,6 @@ function EditProfileForm({ onClose }) {
     const v = value.trim();
 
     switch (name) {
-
-      case "documentType":
-        if (!v) return "Seleccione tipo de documento.";
-        return "";
-
-      case "document":
-        if (!v)                         return "El documento es obligatorio.";
-        if (!patterns.document.test(v)) return "Documento inválido (6-12 números).";
-        return "";
-
-      case "name":
-        if (!v)                         return "El nombre es obligatorio.";
-        if (!patterns.fullName.test(v)) return "Solo letras y espacios (3-50 caracteres).";
-        return "";
-
       case "email":
         if (!v)                         return "El correo es obligatorio.";
         if (!patterns.email.test(v))    return "Correo inválido.";
@@ -151,7 +133,7 @@ function EditProfileForm({ onClose }) {
     const { name, value } = e.target;
 
     let filtered = value;
-    if (name === "phone" || name === "document") {
+    if (name === "phone") {
       filtered = value.replace(/\D/g, "");
     }
 
@@ -176,12 +158,9 @@ function EditProfileForm({ onClose }) {
 
   // ── isDirty ──────────────────────────────────────────────────────────────
   const isDirty =
-    form.documentType    !== (user?.documentType ?? "") ||
-    form.document        !== (user?.document     ?? "") ||
-    form.name            !== (user?.name         ?? "") ||
-    form.email           !== (user?.email        ?? "") ||
-    form.phone           !== (user?.phone        ?? "") ||
-    form.address         !== (user?.address      ?? "") ||
+    form.email           !== (user?.email   ?? "") ||
+    form.phone           !== (user?.phone   ?? "") ||
+    form.address         !== (user?.address ?? "") ||
     form.newPassword.trim() !== "";
 
   // ── Cancelar ─────────────────────────────────────────────────────────────
@@ -205,8 +184,8 @@ function EditProfileForm({ onClose }) {
   const handleSubmit = async () => {
 
     const fields = [
-      "documentType", "document", "name", "email",
-      "phone", "address", "currentPassword", "newPassword", "confirmPassword"
+      "email", "phone", "address",
+      "currentPassword", "newPassword", "confirmPassword"
     ];
 
     setTouched(fields.reduce((acc, k) => ({ ...acc, [k]: true }), {}));
@@ -223,22 +202,20 @@ function EditProfileForm({ onClose }) {
       return;
     }
 
+    // ── Alerta de confirmación con resumen de cambios ────────────────────
     const result = await showConfirm(
       "info",
       "¿Guardar cambios?",
-      "Se actualizarán tus datos de perfil.",
-      { confirmButtonText: "Sí, guardar", cancelButtonText: "Cancelar" }
+      `Revisa tus datos antes de confirmar:\n\n📧 Correo: ${form.email.trim()}\n📞 Teléfono: ${form.phone.trim()}\n📍 Dirección: ${form.address.trim()}${form.newPassword.trim() ? "\n🔑 Contraseña: será actualizada" : ""}\n\n¿Estás seguro de que deseas guardar estos cambios?`,
+      { confirmButtonText: "Sí, guardar", cancelButtonText: "Revisar de nuevo" }
     );
 
     if (!result?.isConfirmed) return;
 
     const changes = {
-      documentType: form.documentType.trim(),
-      document:     form.document.trim(),
-      name:         form.name.trim(),
-      email:        form.email.trim().toLowerCase(),
-      phone:        form.phone.trim(),
-      address:      form.address.trim(),
+      email:   form.email.trim().toLowerCase(),
+      phone:   form.phone.trim(),
+      address: form.address.trim(),
     };
 
     const isChangingPassword = form.newPassword.trim() !== "";
@@ -296,58 +273,28 @@ function EditProfileForm({ onClose }) {
       </div>
 
       {/* Body */}
-      <div className="px-6 py-5">
+      <div className="px-6 py-5 overflow-y-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-          {/* Tipo Documento */}
-          <div className="flex flex-col gap-1.5">
-            <label className="block text-sm font-medium text-gray-700">
-              Tipo Documento<span className="text-red-500">*</span>
-            </label>
-            <select
-              name="documentType"
-              value={form.documentType}
-              onChange={handleChange}
-              className={inputClass("documentType")}
-            >
-              <option value="">Seleccione</option>
-              <option value="CC">CC</option>
-              <option value="TI">TI</option>
-              <option value="CE">CE</option>
-            </select>
-            <ErrorMsg field="documentType" touched={touched} errors={errors} />
-          </div>
+          {/* Campos bloqueados — solo lectura */}
+          <ReadOnlyField label="Tipo Documento" value={user?.documentType} />
+          <ReadOnlyField label="Documento"       value={user?.document}     />
+          <ReadOnlyField label="Nombre Completo" value={user?.name}         />
+          <ReadOnlyField label="Rol"             value={user?.role ?? "Cliente"} />
 
-          {/* Documento */}
-          <div className="flex flex-col gap-1.5">
+          {/* Correo */}
+          <div className="sm:col-span-2 flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
-              Documento<span className="text-red-500">*</span>
+              Correo Electrónico<span className="text-red-500">*</span>
             </label>
             <input
-              type="text"
-              name="document"
-              inputMode="numeric"
-              value={form.document}
+              type="email"
+              name="email"
+              value={form.email}
               onChange={handleChange}
-              maxLength={12}
-              className={inputClass("document")}
+              className={inputClass("email")}
             />
-            <ErrorMsg field="document" touched={touched} errors={errors} />
-          </div>
-
-          {/* Nombre */}
-          <div className="flex flex-col gap-1.5">
-            <label className="block text-sm font-medium text-gray-700">
-              Nombre Completo<span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              className={inputClass("name")}
-            />
-            <ErrorMsg field="name" touched={touched} errors={errors} />
+            <ErrorMsg field="email" touched={touched} errors={errors} />
           </div>
 
           {/* Teléfono */}
@@ -366,8 +313,8 @@ function EditProfileForm({ onClose }) {
             <ErrorMsg field="phone" touched={touched} errors={errors} />
           </div>
 
-          {/* Dirección — fila completa */}
-          <div className="sm:col-span-2 flex flex-col gap-1.5">
+          {/* Dirección */}
+          <div className="flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
               Dirección<span className="text-red-500">*</span>
             </label>
@@ -382,22 +329,11 @@ function EditProfileForm({ onClose }) {
             <ErrorMsg field="address" touched={touched} errors={errors} />
           </div>
 
-          {/* Rol — solo lectura */}
-          <ReadOnlyField label="Rol" value={user?.role ?? "Cliente"} />
-
-          {/* Correo */}
-          <div className="flex flex-col gap-1.5">
-            <label className="block text-sm font-medium text-gray-700">
-              Correo Electrónico<span className="text-red-500">*</span>
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              className={inputClass("email")}
-            />
-            <ErrorMsg field="email" touched={touched} errors={errors} />
+          {/* Separador sección contraseña */}
+          <div className="sm:col-span-2 border-t border-gray-200 pt-2">
+            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">
+              Cambio de contraseña (opcional)
+            </p>
           </div>
 
           {/* Contraseña actual */}
@@ -415,7 +351,7 @@ function EditProfileForm({ onClose }) {
 
           {/* Nueva contraseña */}
           <PasswordField
-            label="Cambiar Contraseña"
+            label="Nueva Contraseña"
             name="newPassword"
             form={form}
             show={showNew}
@@ -426,7 +362,7 @@ function EditProfileForm({ onClose }) {
             touched={touched}
           />
 
-          {/* Confirmar contraseña — fila completa */}
+          {/* Confirmar contraseña */}
           <div className="sm:col-span-2">
             <PasswordField
               label="Confirmar Contraseña"
