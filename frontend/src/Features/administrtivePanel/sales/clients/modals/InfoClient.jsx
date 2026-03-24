@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   X, IdCard, User, Mail, Phone,
   MapPin, UserCheck, CreditCard,
-  CalendarDays, BarChart2,
+  CalendarDays, BarChart2, TrendingUp,
 } from 'lucide-react';
 import GraphClient from '../components/GraphClient';
 import {
@@ -34,6 +34,44 @@ function DetailRow({ icon: Icon, label, value, fullWidth = false }) {
 // ─── InfoClient ───────────────────────────────────────────────────────────────
 function InfoClient({ isOpen, onClose, client }) {
   const [showGraph, setShowGraph] = useState(false);
+  const [montoOcupado, setMontoOcupado] = useState(0);
+  const [loadingMonto, setLoadingMonto] = useState(false);
+
+  // KEY para localStorage - para conectar con módulo de pagos y abonos
+  const CREDIT_USAGE_KEY = 'client_credit_usage';
+
+  useEffect(() => {
+    if (client && isOpen) {
+      loadMontoOcupado(client.id);
+    }
+  }, [client, isOpen]);
+
+  // Función para cargar el monto ocupado desde localStorage
+  const loadMontoOcupado = (clientId) => {
+    setLoadingMonto(true);
+    try {
+      const storedData = localStorage.getItem(CREDIT_USAGE_KEY);
+      const usageData = storedData ? JSON.parse(storedData) : {};
+      const clientUsage = usageData[clientId];
+      
+      if (clientUsage && clientUsage.occupiedAmount !== undefined) {
+        setMontoOcupado(clientUsage.occupiedAmount);
+      } else {
+        setMontoOcupado(0);
+      }
+    } catch (error) {
+      console.error('Error al cargar monto ocupado:', error);
+      setMontoOcupado(0);
+    } finally {
+      setLoadingMonto(false);
+    }
+  };
+
+  // Calcular crédito disponible
+  const getCreditoDisponible = () => {
+    const creditoTotal = parseInt(client?.clientCredit) || 0;
+    return creditoTotal - montoOcupado;
+  };
 
   if (!isOpen || !client) return null;
 
@@ -51,6 +89,9 @@ function InfoClient({ isOpen, onClose, client }) {
     colegas:    'bg-amber-50 text-amber-700 border-amber-200',
     'por paca': 'bg-orange-50 text-orange-700 border-orange-200',
   }[(client.clientType || '').toLowerCase()] || 'bg-gray-50 text-gray-600 border-gray-200';
+
+  const creditoTotal = parseInt(client.clientCredit) || 0;
+  const disponible = getCreditoDisponible();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -102,29 +143,58 @@ function InfoClient({ isOpen, onClose, client }) {
             </div>
           </div>
 
-          {/* Card de crédito / RUT / CIU */}
+          {/* Card de crédito / Monto Ocupado / RUT / CIU */}
           <div className="mx-4 mt-3 shrink-0">
-            <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-2.5 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-[#004D77]/10 flex items-center justify-center">
-                  <CreditCard className="w-3.5 h-3.5 text-[#004D77]" strokeWidth={1.8} />
+            <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-2.5">
+              {/* Primera fila: Crédito y Monto Ocupado */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-[#004D77]/10 flex items-center justify-center">
+                    <CreditCard className="w-3.5 h-3.5 text-[#004D77]" strokeWidth={1.8} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Crédito</p>
+                    <p className="text-sm font-bold text-gray-800">
+                      {creditoTotal ? formatCurrency(creditoTotal) : '$ 0'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Crédito</p>
-                  <p className="text-sm font-bold text-gray-800">
-                    {client.clientCredit ? formatCurrency(parseInt(client.clientCredit)) : '$ 0'}
+
+                {/* Monto Ocupado - nuevo campo */}
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
+                    <TrendingUp className="w-3.5 h-3.5 text-amber-600" strokeWidth={1.8} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Monto ocupado</p>
+                    <p className="text-sm font-bold text-amber-600">
+                      {loadingMonto ? '...' : (montoOcupado > 0 ? formatCurrency(montoOcupado) : '$ 0')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Línea separadora */}
+              <div className="border-t border-gray-200 my-2" />
+
+              {/* Segunda fila: RUT, CIU y Crédito disponible */}
+              <div className="flex items-center justify-between">
+                <div className="text-center">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">RUT</p>
+                  <p className="text-sm font-bold text-gray-800">{formatRut(client.rut)}</p>
+                </div>
+                <div className="h-8 w-px bg-gray-200" />
+                <div className="text-center">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Cód. CIU</p>
+                  <p className="text-sm font-bold text-gray-800">{client.ciuCode || '—'}</p>
+                </div>
+                <div className="h-8 w-px bg-gray-200" />
+                <div className="text-center">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Crédito disponible</p>
+                  <p className="text-sm font-bold text-green-600">
+                    {loadingMonto ? '...' : formatCurrency(disponible)}
                   </p>
                 </div>
-              </div>
-              <div className="h-8 w-px bg-gray-200" />
-              <div className="text-center">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">RUT</p>
-                <p className="text-sm font-bold text-gray-800">{formatRut(client.rut)}</p>
-              </div>
-              <div className="h-8 w-px bg-gray-200" />
-              <div className="text-center">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Cód. CIU</p>
-                <p className="text-sm font-bold text-gray-800">{client.ciuCode || '—'}</p>
               </div>
             </div>
           </div>

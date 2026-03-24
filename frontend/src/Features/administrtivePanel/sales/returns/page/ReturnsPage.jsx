@@ -12,7 +12,7 @@
  * - Permitir editar devoluciones existentes
  * - Permitir ver el detalle completo de una devolución
  * - Permitir anular devoluciones
- * - Exportar devoluciones a archivo Excel
+ * - Exportar devoluciones a archivo Excel con detalle de productos
  * - Manejar paginación de la tabla
  *
  * Este archivo actúa como orquestador principal, coordinando todos los
@@ -20,10 +20,9 @@
  * de almacenamiento en localStorage.
  */
 import React, { useState, useEffect } from 'react';
-import * as XLSX from 'xlsx';
 import ReturnsToolbar from '../components/ReturnsToolbar';
 import ReturnsTable from '../components/ReturnsTable';
-import Pagination from '../components/Pagination';
+import PaginationAdmin from '../../../../shared/PaginationAdmin';
 import FormReturn from '../components/FormReturn';
 import DetailReturn from '../components/DetailReturn';
 import CancelReturn from '../components/CancelReturn';
@@ -33,7 +32,8 @@ import {
   createReturn, 
   updateReturn
 } from '../data/returnsService';
-import { filterReturns, exportToExcel, paginateData } from '../utils/returnsHelpers';
+import { filterReturns, paginateData } from '../utils/returnsHelpers';
+import { exportReturnsToExcel, exportReturnsSummaryToExcel } from '../utils/excelExporter';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 
 const RECORDS_PER_PAGE = 13; // Cantidad de registros a mostrar por página en la tabla
@@ -234,32 +234,36 @@ function ReturnsPage() {
   // ======================== FUNCIONALIDAD: DESCARGAR / EXPORTAR ========================
   
   /**
-   * Exporta todas las devoluciones a un archivo Excel.
-   * Genera un archivo con extensión .xlsx que puede abrirse en Excel u otros
-   * programas de hojas de cálculo.
+   * Exporta todas las devoluciones a un archivo Excel con detalle completo.
+   * Genera un archivo con tres hojas:
+   * - Resumen Devoluciones
+   * - Detalle Productos (cada producto devuelto con todos sus detalles)
+   * - Estadísticas
    */
   const handleExport = () => {
     try {
       const allReturns = getAllReturns();
-      const { headers, data } = exportToExcel(allReturns);
-      
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-      XLSX.utils.book_append_sheet(wb, ws, 'Devoluciones');
-      XLSX.writeFile(wb, `devoluciones_${new Date().toISOString().split('T')[0]}.xlsx`);
-      
+      exportReturnsToExcel(allReturns);
       showSuccess('Exportación exitosa', 'El archivo Excel se generó correctamente');
     } catch (error) {
+      console.error('Error en exportación:', error);
       showError('Error', 'No se pudo exportar el archivo');
     }
   };
 
+  // ======================== APLICAR FILTROS Y PAGINACIÓN ========================
+  
+  // Filtrar devoluciones según el término de búsqueda
   const filteredReturns = filterReturns(returns, searchTerm);
-  const { currentData, totalPages, startIndex } = paginateData(
+  
+  // Obtener datos paginados para la tabla
+  const paginatedResult = paginateData(
     filteredReturns,
     currentPage,
     RECORDS_PER_PAGE
   );
+  
+  const currentData = paginatedResult.currentData || [];
 
   // ======================== RENDERIZADO: INDICADOR DE CARGA ========================
   
@@ -274,14 +278,12 @@ function ReturnsPage() {
       </div>
     );
   }
-  
-  // ======================== APLICAR FILTROS Y PAGINACIÓN ========================
-  
-  // Filtrar devoluciones según el término de búsqueda
-  // Paginar los resultados filtrados
 
+  // ======================== RENDERIZADO: INTERFAZ PRINCIPAL ========================
+  
   return (
     <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
+      {/* Toolbar: Búsqueda y botones de acción */}
       <ReturnsToolbar
         search={searchTerm}
         onSearchChange={handleSearchChange}
@@ -289,10 +291,10 @@ function ReturnsPage() {
         onExport={handleExport}
       />
 
+      {/* Tabla de devoluciones */}
       <div className="bg-white rounded-xl shadow-md">
         <ReturnsTable
           data={currentData}
-          startIndex={startIndex}
           searchTerm={searchTerm}
           onInfo={handleInfo}
           onEdit={handleEdit}
@@ -300,25 +302,17 @@ function ReturnsPage() {
         />
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-gray-700">
-          Mostrando{' '}
-          <span className="text-[#004D77]">{currentData.length}</span>
-          {' '}registros de{' '}
-          <span className="text-[#004D77]">{filteredReturns.length}</span>
-        </p>
+      {/* Paginación - mismo estilo que ClientsPage y ProvidersPage */}
+      {filteredReturns.length > 0 && (
+        <PaginationAdmin
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          totalRecords={filteredReturns.length}
+          recordsPerPage={RECORDS_PER_PAGE}
+        />
+      )}
 
-        {totalPages > 1 && (
-          <div className="bg-white shadow-md rounded-xl px-3 py-2">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          </div>
-        )}
-      </div>
-
+      {/* Modal para crear/editar devolución */}
       <FormReturn
         isOpen={formOpen}
         onClose={() => setFormOpen(false)}
@@ -326,12 +320,14 @@ function ReturnsPage() {
         onSave={handleSave}
       />
 
+      {/* Modal para ver detalle de devolución */}
       <DetailReturn
         isOpen={detailOpen}
         onClose={() => setDetailOpen(false)}
         devolucion={selectedReturn}
       />
 
+      {/* Modal para anular devolución */}
       <CancelReturn
         isOpen={cancelOpen}
         onClose={() => setCancelOpen(false)}

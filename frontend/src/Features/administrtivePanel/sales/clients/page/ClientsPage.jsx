@@ -109,13 +109,7 @@ function ClientsPage() {
       return;
     }
 
-    if (client.active) {
-      showWarning(
-        'No es posible eliminar este cliente',
-        'Debes desactivar el cliente antes de poder eliminarlo.'
-      );
-      return;
-    }
+    
 
     // Verificar ventas asociadas desde localStorage
     const ventas = (() => {
