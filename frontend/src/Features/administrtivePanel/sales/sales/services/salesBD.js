@@ -1,5 +1,11 @@
 import { UsersDB } from '../../../users/services/usersDB';
+import { clientsService } from '../../clients/services/clientsService';
 import ProductsService from '../../../purchases/products/services/productsServices';
+import {
+  getCreditInfoForSale,
+  createFacturaForSale,
+  voidFacturaFromSale,
+} from '../../paymentsAndCredits/data/paymentsServices';
 
 const SALES_KEY = 'pm_sales';
 
@@ -31,6 +37,14 @@ const mkItem = (prod, cantidad, descripcion = '') => ({ product: prod, cantidad,
 const calcTotal = (items) => {
   const subtotal = items.reduce((a, i) => a + i.product.precioDetalle * i.cantidad, 0);
   return fmt(subtotal + Math.round(subtotal * 0.19));
+};
+
+// ─── Helper: detecta si el método de pago es exclusivamente "Crédito" ────────
+// El formulario puede enviar metodoPago como string o array.
+// Solo aplica crédito cuando es el único método seleccionado.
+const isSoloCredito = (metodoPago) => {
+  if (Array.isArray(metodoPago)) return metodoPago.length === 1 && metodoPago[0] === 'Crédito';
+  return metodoPago === 'Crédito';
 };
 
 // ─── Control de versión del seed ──────────────────────────────────────────────
@@ -227,7 +241,38 @@ export const SalesDB = {
   },
 
   /**
-   * Lista todas las ventas.
+   * Obtiene la lista de clientes activos (excluye cliente de caja).
+   * Delega a clientsService.
+   * @returns {Array} Lista de clientes activos.
+   */
+  getClients() {
+    return clientsService.getAll().filter((c) => c.active && !c.isSystem);
+  },
+
+  /**
+   * Obtiene un cliente por ID.
+   * Delega a clientsService.
+   * @param {number|string} id - ID del cliente.
+   * @returns {Object|null} Cliente encontrado o null.
+   */
+  getClientById(id) {
+    return clientsService.getById(id);
+  },
+
+  /**
+   * Consulta el cupo de crédito disponible de un cliente.
+   * Delega a paymentsServices para obtener cupo real basado en facturas activas.
+   * Usado por el formulario de venta para validar antes de guardar.
+   * @param {string|number} clienteId - ID del cliente.
+   * @returns {{ tieneCredito, creditoAsignado, cupoOcupado, cupoDisponible }}
+   */
+  getCreditInfo(clienteId) {
+    const cliente = clientsService.getById(clienteId);
+    const creditoAsignado = parseInt(cliente?.clientCredit ?? '0') || 0;
+    return getCreditInfoForSale(clienteId, creditoAsignado);
+  },
+
+  /**
    * @returns {Array} Lista de ventas desde localStorage.
    */
   list() {
@@ -268,9 +313,8 @@ export const SalesDB = {
    */
   create(form, items, facturaNo) {
     const sales    = this.list();
-    const users    = UsersDB.list();
-    const cliente  = users.find((u) => String(u.id) === String(form.clienteId));
-    const vendedor = users.find((u) => String(u.id) === String(form.vendedorId));
+    const cliente  = clientsService.getById(form.clienteId);
+    const vendedor = UsersDB.list().find((u) => String(u.id) === String(form.vendedorId));
     const { total } = this._calcTotals(items);
 
     const newId   = sales.length > 0 ? Math.max(...sales.map((s) => s.id)) + 1 : 1;
@@ -293,6 +337,21 @@ export const SalesDB = {
 
     this._save([...sales, newSale]);
     ProductsService.decrementStock(items);
+
+    // Generar factura de crédito solo si el único método es "Crédito" y la venta está Aprobada
+    if (isSoloCredito(form.metodoPago) && form.estado === 'Aprobada') {
+      try {
+        const creditoAsignado = parseInt(cliente?.clientCredit ?? '0') || 0;
+        createFacturaForSale(form.clienteId, creditoAsignado, {
+          nroFactura:   facturaNo,
+          valorCredito: total,
+          fechaCredito: new Date().toISOString().split('T')[0],
+        });
+      } catch (e) {
+        console.error('[SalesDB] Error al crear factura de crédito:', e);
+      }
+    }
+
     return newSale;
   },
 
@@ -307,9 +366,8 @@ export const SalesDB = {
    */
   update(saleId, form, items, originalItems) {
     const sales    = this.list();
-    const users    = UsersDB.list();
-    const cliente  = users.find((u) => String(u.id) === String(form.clienteId));
-    const vendedor = users.find((u) => String(u.id) === String(form.vendedorId));
+    const cliente  = clientsService.getById(form.clienteId);
+    const vendedor = UsersDB.list().find((u) => String(u.id) === String(form.vendedorId));
     const { total } = this._calcTotals(items);
 
     const updated = sales.map((s) =>
@@ -359,6 +417,16 @@ export const SalesDB = {
     );
     this._save(updated);
     if (sale?.items) ProductsService.restoreStock(sale.items);
+
+    // Anular la factura de crédito si la venta era de crédito exclusivo
+    if (sale && isSoloCredito(sale.metodoPago)) {
+      try {
+        voidFacturaFromSale(sale.clienteId, sale.factura);
+      } catch (e) {
+        console.error('[SalesDB] Error al anular factura de crédito:', e);
+      }
+    }
+
     return updated;
   },
 };

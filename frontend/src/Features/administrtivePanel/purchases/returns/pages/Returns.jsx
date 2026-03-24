@@ -149,17 +149,24 @@ const Returns = () => {
     }
   }, [location.state]);
 
+  // ── Mapa idCompra → proveedor (debe ir ANTES del filtrado) ─────────────────
+  const proveedorMap = React.useMemo(() => {
+    const map = {};
+    PurchasesDB.list().forEach((c) => {
+      map[c.numeroFacturacion] = c.proveedor ?? '—';
+    });
+    return map;
+  }, []);
+
   // ── Filtrado ──────────────────────────────────────────────────────────────
-  /**
-   * Filtra las devoluciones basándose en búsqueda de texto y rango de fechas.
-   * Busca en ID, ID de compra, estado y productos (nombre, motivo, tipo).
-   */
   const filtered = returns.filter((r) => {
     const q = search.toLowerCase();
+    const proveedor = (proveedorMap[r.idCompra] ?? '').toLowerCase();
     const coincide =
       r.id?.toLowerCase().includes(q)       ||
       r.idCompra?.toLowerCase().includes(q) ||
       r.estado?.toLowerCase().includes(q)   ||
+      proveedor.includes(q)                 ||
       r.productos?.some((p) =>
         p.nombre?.toLowerCase().includes(q)        ||
         p.motivo?.toLowerCase().includes(q)        ||
@@ -170,18 +177,6 @@ const Returns = () => {
     const hastaValida = fechaFinal   ? fecha <= new Date(fechaFinal)   : true;
     return coincide && desdeValida && hastaValida;
   });
-
-  // ── Alerta sin resultados ─────────────────────────────────────────────────
-  useEffect(() => {
-    const hayFiltros = search || fechaInicial || fechaFinal;
-    if (filtered.length === 0 && hayFiltros && !alertShownRef.current) {
-      showInfo('Sin resultados', 'No se encontraron devoluciones con los filtros aplicados.');
-      alertShownRef.current = true;
-    }
-    if (filtered.length > 0) alertShownRef.current = false;
-  }, [filtered.length, search, fechaInicial, fechaFinal]);
-
-  useEffect(() => { setCurrentPage(1); }, [search, fechaInicial, fechaFinal]);
 
   // ── Paginación ────────────────────────────────────────────────────────────
   const offset       = (currentPage - 1) * RECORDS_PER_PAGE;
@@ -278,15 +273,18 @@ const Returns = () => {
         fechaFinal={fechaFinal}
         setFechaFinal={setFechaFinal}
         setCurrentPage={setCurrentPage}
+        returns={filtered}
+        proveedorMap={proveedorMap}
       />
 
       {/* ── Tabla ──────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl shadow-md">
+      <div className="bg-white rounded-xl shadow-md overflow-hidden">
         <ReturnsTable
           currentData={currentData}
           search={search}
           isSearching={isSearching}
           offset={offset}
+          proveedorMap={proveedorMap}
           onViewDetail={handleViewDetail}
           onEdit={handleEdit}
           onAnnul={handleAnnul}

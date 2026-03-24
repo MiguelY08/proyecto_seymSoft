@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UsersDB }                                from '../../../users/services/usersDB';
+import { SalesDB }                                from '../services/salesBD';
 import { METODOS_PAGO, ESTADOS_VENTA, ENTREGAS }  from '../helpers/salesHelpers';
 
 const MAX_DIRECCION = 250;
@@ -228,10 +229,18 @@ function StatusSelect({ value, onChange, options, placeholder, error, icon }) {
 // ─── SaleDetailsForm ──────────────────────────────────────────────────────────
 function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoAnulacion = '', fechaAnulacion = '' }) {
   const navigate = useNavigate();
+
+  // Clientes desde clientsService (vía SalesDB) — se refresca al enfocar la ventana
+  const [clients, setClients] = useState(() => SalesDB.getClients());
+
+  // Vendedores desde UsersDB: activos con rol asignado (distinto de null y 'Nulo')
   const [users, setUsers] = useState(() => UsersDB.list());
 
   useEffect(() => {
-    const sync = () => setUsers(UsersDB.list());
+    const sync = () => {
+      setClients(SalesDB.getClients());
+      setUsers(UsersDB.list());
+    };
     window.addEventListener('focus', sync);
     return () => window.removeEventListener('focus', sync);
   }, []);
@@ -251,10 +260,20 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
     </label>
   );
 
-  // Clientes: usuarios con isClient: true y activos
-  const activeClients = users.filter((u) => u.isClient && u.active);
-  // Vendedores: usuarios activos con un rol asignado (distinto de 'Nulo' y no nulo)
+  // Vendedores: usuarios activos con rol asignado (distinto de null y 'Nulo')
   const activeVendors = users.filter((u) => u.active && u.role && u.role !== 'Nulo');
+
+  // Nombre del cliente al editar — busca en clientsService
+  const clienteEditName = useMemo(() => {
+    const found = SalesDB.getClientById(form.clienteId);
+    return found?.name ?? '—';
+  }, [form.clienteId]);
+
+  // Nombre del vendedor al editar — busca en UsersDB
+  const vendedorEditName = useMemo(() => {
+    const found = users.find((u) => String(u.id) === String(form.vendedorId));
+    return found?.name ?? '—';
+  }, [form.vendedorId, users]);
 
   return (
     <div className="bg-white rounded-lg border border-gray-200">
@@ -283,16 +302,16 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
             <div className="flex gap-2">
               <div className="flex-1">
                 {isEditing ? (
-                  <ReadonlyField value={users.find((u) => String(u.id) === String(form.clienteId))?.name} />
+                  <ReadonlyField value={clienteEditName} />
                 ) : (
                   <SearchableSelect
                     value={form.clienteId}
                     onChange={(val) => onChange('clienteId', val)}
-                    options={activeClients}
+                    options={clients}
                     placeholder="Selecciona un cliente"
                     error={errors?.clienteId}
-                    getLabel={(u) => u.name}
-                    getValue={(u) => String(u.id)}
+                    getLabel={(c) => c.name}
+                    getValue={(c) => String(c.id)}
                     icon={Users}
                   />
                 )}
@@ -301,7 +320,7 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
                 <button
                   type="button"
                   onClick={() => navigate('/admin/sales/new-user', { state: { returnTo: '/admin/sales/form-sale' } })}
-                  title="Nuevo usuario"
+                  title="Nuevo cliente"
                   className="shrink-0 w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg text-gray-500 hover:border-[#004D77] hover:text-[#004D77] hover:bg-[#004D77]/5 transition-colors duration-200 cursor-pointer"
                 >
                   <UserPlus className="w-4 h-4" strokeWidth={1.8} />
@@ -314,7 +333,7 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
           <div>
             <Label required>Vendedor</Label>
             {isEditing ? (
-              <ReadonlyField value={users.find((u) => String(u.id) === String(form.vendedorId))?.name} />
+              <ReadonlyField value={vendedorEditName} />
             ) : (
               <SearchableSelect
                 value={form.vendedorId}
@@ -331,14 +350,12 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
           </div>
         </div>
 
-        {/* Método de pago — fila completa, multi-select (máx. 3) */}
+        {/* Método de pago */}
         <div>
           <Label required>Método de pago</Label>
           <div className="flex items-center gap-2">
-            {/* Un select por cada método agregado */}
             {(Array.isArray(form.metodoPago) ? form.metodoPago : form.metodoPago ? [form.metodoPago] : ['']).map((metodo, idx) => {
               const allSelected = Array.isArray(form.metodoPago) ? form.metodoPago : [form.metodoPago];
-              // Opciones disponibles: las no elegidas en los otros slots + la del slot actual
               const available = METODOS_PAGO.filter(
                 (m) => !allSelected.filter((_, i) => i !== idx).includes(m)
               );
@@ -367,13 +384,10 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
                     </select>
                     <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
                   </div>
-                  {/* Botón quitar */}
                   {canRemove && (
                     <button
                       type="button"
-                      onClick={() => {
-                        onChange('metodoPago', allSelected.filter((_, i) => i !== idx));
-                      }}
+                      onClick={() => onChange('metodoPago', allSelected.filter((_, i) => i !== idx))}
                       className="h-10.5 px-2.5 border border-gray-300 rounded-r-lg text-gray-400 hover:text-red-500 hover:border-red-300 hover:bg-red-50 transition-colors cursor-pointer shrink-0"
                       title="Quitar método"
                     >
@@ -384,7 +398,6 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
               );
             })}
 
-            {/* Botón agregar — visible si quedan métodos sin usar */}
             {!isAnulada && (() => {
               const current = Array.isArray(form.metodoPago) ? form.metodoPago : form.metodoPago ? [form.metodoPago] : [''];
               return current.length < METODOS_PAGO.length;
@@ -406,7 +419,7 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
           <ErrorMsg field="metodoPago" />
         </div>
 
-        {/* Estado — fila completa */}
+        {/* Estado */}
         <div>
           <Label required>Estado</Label>
           {isAnulada ? (

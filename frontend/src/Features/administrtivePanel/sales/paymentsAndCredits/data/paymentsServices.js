@@ -301,3 +301,152 @@ export const applyInterest = (clienteId, facturaId, percentage) => {
 
 // ── Auto-inicializar al importar (igual que los demás módulos) ──
 initializePayments();
+
+/* =============================================================================
+   INTEGRACIÓN CON VENTAS
+   Las siguientes funciones conectan el módulo de Créditos con el de Ventas.
+   Usan el campo "clienteUserId" (ID numérico de UsersDB) para identificar
+   al cliente, sin alterar los IDs existentes del mock ("cliente-001", etc.).
+============================================================================= */
+
+/* -----------------------------------------------------------------------
+   Busca la cuenta de crédito de un cliente por su ID numérico de UsersDB.
+   Retorna null si el cliente no tiene cuenta de crédito registrada.
+
+   @param {string|number} clienteId - ID numérico del cliente en UsersDB
+   @returns {Object|null} La cuenta del cliente, o null
+----------------------------------------------------------------------- */
+export const findAccountByClienteId = (clienteId) => {
+  const accounts = getAccounts();
+  return (
+    accounts.find((acc) => acc.clienteUserId === Number(clienteId)) ?? null
+  );
+};
+
+/* -----------------------------------------------------------------------
+   Retorna información del cupo de crédito de un cliente para validar
+   antes de guardar una venta.
+
+   @param {string|number} clienteId     - ID numérico del cliente en UsersDB
+   @param {number}        creditoAsignado - Límite de crédito del cliente
+   @returns {{ cupoDisponible, cupoOcupado, creditoAsignado, tieneCredito }}
+----------------------------------------------------------------------- */
+export const getCreditInfoForSale = (clienteId, creditoAsignado = 0) => {
+  const account = findAccountByClienteId(clienteId);
+
+  if (!account) {
+    // El cliente no tiene cuenta aún — cupo disponible es el límite completo
+    return {
+      tieneCredito:    creditoAsignado > 0,
+      creditoAsignado,
+      cupoOcupado:     0,
+      cupoDisponible:  creditoAsignado,
+    };
+  }
+
+  // Calcular cupo ocupado solo con capital activo (igual que el módulo de pagos)
+  const cupoOcupado = (account.facturas ?? []).reduce((total, factura) => {
+    // Excluir facturas anuladas
+    if (factura.anulada) return total;
+    return total + calculateSaldoCapital(factura);
+  }, 0);
+
+  const cupoDisponible = Math.max(0, creditoAsignado - cupoOcupado);
+
+  return {
+    tieneCredito:    creditoAsignado > 0,
+    creditoAsignado,
+    cupoOcupado,
+    cupoDisponible,
+  };
+};
+
+/* -----------------------------------------------------------------------
+   Crea una factura de crédito vinculada a una venta aprobada.
+   Si el cliente no tiene cuenta de crédito, se crea una nueva entrada.
+
+   SOLO se llama cuando:
+     - La venta tiene método de pago "Crédito" (único método)
+     - El estado de la venta es "Aprobada"
+
+   @param {string|number} clienteId       - ID numérico del cliente en UsersDB
+   @param {number}        creditoAsignado  - Límite de crédito del cliente
+   @param {Object}        facturaData      - { nroFactura, valorCredito, fechaCredito }
+   @returns {Object} La factura creada
+----------------------------------------------------------------------- */
+export const createFacturaForSale = (clienteId, creditoAsignado, facturaData) => {
+  const accounts    = getAccounts();
+  const numClienteId = Number(clienteId);
+
+  // Buscar cuenta existente por clienteUserId
+  let clienteIndex = accounts.findIndex(
+    (acc) => acc.clienteUserId === numClienteId,
+  );
+
+  // Si no existe cuenta para este cliente, crear una nueva entrada
+  if (clienteIndex === -1) {
+    const newAccount = {
+      id:             `sale-client-${numClienteId}`,
+      clienteUserId:  numClienteId,
+      creditoAsignado,
+      facturas:       [],
+    };
+    accounts.push(newAccount);
+    clienteIndex = accounts.length - 1;
+  } else {
+    // Actualizar creditoAsignado en caso de que haya cambiado
+    accounts[clienteIndex].creditoAsignado = creditoAsignado;
+  }
+
+  const newFactura = {
+    id:            `fac-sale-${facturaData.nroFactura}`,
+    nroFactura:    facturaData.nroFactura,
+    valorCredito:  facturaData.valorCredito,
+    interes:       0,
+    fechaCredito:  facturaData.fechaCredito,
+    abonos:        [],
+    // Campos de trazabilidad — identifican el origen en ventas
+    fromSale:      true,
+    saleFacturaNo: facturaData.nroFactura,
+    anulada:       false,
+  };
+
+  accounts[clienteIndex].facturas.push(newFactura);
+  saveAccounts(accounts);
+  return newFactura;
+};
+
+/* -----------------------------------------------------------------------
+   Anula la factura de crédito vinculada a una venta al momento de anularla.
+   Marca la factura como anulada sin eliminarla (trazabilidad).
+
+   @param {string|number} clienteId    - ID numérico del cliente en UsersDB
+   @param {string}        saleFacturaNo - Número de factura de la venta
+   @returns {boolean} true si anuló correctamente, false si no encontró
+----------------------------------------------------------------------- */
+export const voidFacturaFromSale = (clienteId, saleFacturaNo) => {
+  const accounts     = getAccounts();
+  const numClienteId = Number(clienteId);
+
+  const clienteIndex = accounts.findIndex(
+    (acc) => acc.clienteUserId === numClienteId,
+  );
+  if (clienteIndex === -1) return false;
+
+  const facturaIndex = accounts[clienteIndex].facturas.findIndex(
+    (fac) => fac.saleFacturaNo === saleFacturaNo,
+  );
+  if (facturaIndex === -1) return false;
+
+  // Ya estaba anulada — no hacer nada
+  if (accounts[clienteIndex].facturas[facturaIndex].anulada) return true;
+
+  accounts[clienteIndex].facturas[facturaIndex].anulada       = true;
+  accounts[clienteIndex].facturas[facturaIndex].fechaAnulacion =
+    new Date().toLocaleDateString('es-CO', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+    });
+
+  saveAccounts(accounts);
+  return true;
+};

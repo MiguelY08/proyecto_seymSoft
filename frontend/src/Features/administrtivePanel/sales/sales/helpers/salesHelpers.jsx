@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
-import { UsersDB } from '../../../users/services/usersDB';
+import { UsersDB }        from '../../../users/services/usersDB';
+import { clientsService } from '../../clients/services/clientsService';
 
 // ─── Claves de almacenamiento ─────────────────────────────────────────────────
 export const SALES_STORAGE_KEY = 'pm_sales';
@@ -46,17 +47,23 @@ export const filterSales = (data, search) => {
   const term = search.toLowerCase().trim();
   if (!term) return data;
 
-  // Resuelve el nombre igual que resolveUserName en SalesTable
-  const users = UsersDB.list();
-  const resolveName = (userId, storedName) => {
-    if (!userId) return storedName || '';
-    const found = users.find((u) => String(u.id) === String(userId));
+  // Carga una sola vez por llamada
+  const vendors = UsersDB.list();
+
+  const resolveClient = (clientId, storedName) => {
+    const found = clientsService.getById(clientId);
+    return found ? found.name : (storedName || '');
+  };
+
+  const resolveVendor = (vendorId, storedName) => {
+    if (!vendorId) return storedName || '';
+    const found = vendors.find((u) => String(u.id) === String(vendorId));
     return found ? found.name : (storedName || '');
   };
 
   return data.filter((row) => {
-    const cliente  = resolveName(row.clienteId,  row.cliente).toLowerCase();
-    const vendedor = resolveName(row.vendedorId, row.vendedor).toLowerCase();
+    const cliente  = resolveClient(row.clienteId,  row.cliente).toLowerCase();
+    const vendedor = resolveVendor(row.vendedorId, row.vendedor).toLowerCase();
     return (
       cliente.includes(term)                           ||
       vendedor.includes(term)                          ||
@@ -90,17 +97,23 @@ export const downloadSalesExcel = () => {
 
   if (sales.length === 0) return false;
 
-  const users = UsersDB.list();
-  const resolveName = (userId, storedName) => {
-    if (!userId) return storedName || '—';
-    const found = users.find((u) => String(u.id) === String(userId));
+  const vendors = UsersDB.list();
+
+  const resolveClient = (clientId, storedName) => {
+    const found = clientsService.getById(clientId);
+    return found ? found.name : (storedName || '—');
+  };
+
+  const resolveVendor = (vendorId, storedName) => {
+    if (!vendorId) return storedName || '—';
+    const found = vendors.find((u) => String(u.id) === String(vendorId));
     return found ? found.name : (storedName || '—');
   };
 
   const rows = sales.map((s) => ({
     'No. Factura':       s.factura,
-    'Cliente':           resolveName(s.clienteId,  s.cliente),
-    'Vendedor':          resolveName(s.vendedorId, s.vendedor),
+    'Cliente':           resolveClient(s.clienteId,  s.cliente),
+    'Vendedor':          resolveVendor(s.vendedorId, s.vendedor),
     'Fecha':             s.fecha,
     'Método de Pago':    s.metodoPago,
     'Total':             s.total,

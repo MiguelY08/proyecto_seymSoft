@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 
 import SaleDetailsForm          from '../components/SaleDetailsForm';
@@ -20,7 +20,7 @@ import { generateFactura, validateForm } from '../helpers/salesHelpers';
 function SaleForm() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { showConfirm, showWarning, showSuccess } = useAlert();
+  const { showConfirm, showWarning, showSuccess, showError } = useAlert();
 
   // Determinar si es edición y obtener datos de la venta
   const saleToEdit = location.state?.sale ?? null;
@@ -53,6 +53,30 @@ function SaleForm() {
   // Items actuales del pedido
   const [items,  setItems]  = useState(() => isEditing && saleToEdit.items ? saleToEdit.items : []);
   const [errors, setErrors] = useState({});
+
+  // Ref para los botones de acción y control de visibilidad del FAB
+  const actionsRef     = useRef(null);
+  const [atBottom, setAtBottom] = useState(false);
+
+  // IntersectionObserver — detecta si los botones de acción son visibles
+  useEffect(() => {
+    const el = actionsRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setAtBottom(entry.isIntersecting),
+      { threshold: 0.5 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const scrollToActions = () => {
+    actionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   /**
    * Maneja cambios en los campos del formulario.
@@ -108,7 +132,36 @@ function SaleForm() {
       return;
     }
 
-    // 2. Confirmación — "Enviar" guarda, "Revisar" vuelve al formulario
+    // 2. Validar crédito — solo en creación, método exclusivo "Crédito" y estado "Aprobada"
+    const esCredito = Array.isArray(form.metodoPago)
+      ? form.metodoPago.length === 1 && form.metodoPago[0] === 'Crédito'
+      : form.metodoPago === 'Crédito';
+
+    if (!isEditing && esCredito && form.estado === 'Aprobada') {
+      const { total: totalNum } = SalesDB._calcTotals(items);
+      const creditInfo = SalesDB.getCreditInfo(form.clienteId);
+
+      if (!creditInfo.tieneCredito) {
+        showError(
+          'Sin crédito asignado',
+          'Este cliente no tiene un límite de crédito asignado. Asígnele un cupo desde el módulo de Clientes antes de registrar ventas a crédito.'
+        );
+        return;
+      }
+
+      if (totalNum > creditInfo.cupoDisponible) {
+        const fmt = (v) => new Intl.NumberFormat('es-CO', {
+          style: 'currency', currency: 'COP', minimumFractionDigits: 0,
+        }).format(v);
+        showError(
+          'Cupo insuficiente',
+          `El total de la venta (${fmt(totalNum)}) supera el cupo disponible del cliente (${fmt(creditInfo.cupoDisponible)}). Reduzca el pedido o cambie el método de pago.`
+        );
+        return;
+      }
+    }
+
+    // 3. Confirmación — "Enviar" guarda, "Revisar" vuelve al formulario
     const result = await showConfirm(
       'info',
       '¿Listo para guardar?',
@@ -118,7 +171,7 @@ function SaleForm() {
 
     if (!result?.isConfirmed) return;
 
-    // 3. Guardar
+    // 4. Guardar
     if (isEditing) {
       SalesDB.update(saleToEdit.id, form, items, originalItems);
       showSuccess('Venta actualizada', 'Los datos de la venta han sido actualizados correctamente.');
@@ -175,8 +228,18 @@ function SaleForm() {
         <p className="text-sm text-red-600 -mt-2">{errors.items}</p>
       )}
 
-      {/* Botones de acción */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Vista previa de la venta */}
+      <DataSalePreview
+        form={form}
+        items={items}
+        facturaNo={facturaNo}
+        isAnulada={isAnulada}
+        motivoAnulacion={saleToEdit?.motivoAnulacion ?? ''}
+        fechaAnulacion={saleToEdit?.fechaAnulacion  ?? ''}
+      />
+
+      {/* Botones de acción — al final del formulario */}
+      <div ref={actionsRef} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <button
           type="button"
           onClick={handleSave}
@@ -193,15 +256,18 @@ function SaleForm() {
         </button>
       </div>
 
-      {/* Vista previa de la venta */}
-      <DataSalePreview
-        form={form}
-        items={items}
-        facturaNo={facturaNo}
-        isAnulada={isAnulada}
-        motivoAnulacion={saleToEdit?.motivoAnulacion ?? ''}
-        fechaAnulacion={saleToEdit?.fechaAnulacion  ?? ''}
-      />
+      {/* FAB — sube o baja según posición */}
+      <button
+        type="button"
+        onClick={atBottom ? scrollToTop : scrollToActions}
+        title={atBottom ? 'Ir al inicio' : 'Ir a los botones'}
+        className="fixed bottom-6 right-6 z-40 w-11 h-11 flex items-center justify-center rounded-full bg-[#004D77] text-white shadow-lg hover:bg-[#003a5c] active:scale-95 transition-all duration-200 cursor-pointer"
+      >
+        {atBottom
+          ? <ChevronUp  className="w-5 h-5" strokeWidth={2.5} />
+          : <ChevronDown className="w-5 h-5" strokeWidth={2.5} />
+        }
+      </button>
     </div>
   );
 }

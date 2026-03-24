@@ -73,6 +73,15 @@ export const getEstadoTerminal = (tipo) =>
 export const isProductoTerminado = (producto) =>
   producto.estado === getEstadoTerminal(producto.tipoDevolucion);
 
+/**
+ * Indica si un estado es terminal (proceso de devolución completado).
+ * Los estados terminales son inmutables en el formulario de edición.
+ * @param {string} estado
+ * @returns {boolean}
+ */
+export const isEstadoTerminal = (estado) =>
+  estado === "Recibido" || estado === "Enviado";
+
 // ─── Estilos de badge de estado (devolución general) ─────────────────────────
 
 /**
