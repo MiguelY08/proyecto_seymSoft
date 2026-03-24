@@ -6,26 +6,27 @@ import {
   XCircle,
   ShoppingCart,
 } from "lucide-react";
-import { useAlert } from "../../../../shared/alerts/useAlert";
-import { UsersDB } from "../../../users/services/usersDB";
-import { highlight } from "../helpers/salesHelpers";
+import { useAlert }          from "../../../../shared/alerts/useAlert";
+import { UsersDB }           from "../../../users/services/usersDB";
+import { clientsService }    from "../../clients/services/clientsService";
+import { highlight }         from "../helpers/salesHelpers";
 
-// ─── Resolver nombre de usuario por ID ───────────────────────────────────────
-/**
- * Resuelve el nombre de un usuario por su ID, con fallback a nombre almacenado o 'Usuario eliminado'.
- * @param {string|number} userId - ID del usuario.
- * @param {string} storedName - Nombre almacenado como fallback.
- * @returns {string} Nombre del usuario.
- */
-const resolveUserName = (userId, storedName) => {
-  if (!userId) return storedName || "Usuario eliminado";
+// ─── Resolver nombre de cliente por ID ───────────────────────────────────────
+const resolveClientName = (clientId, storedName) => {
+  if (!clientId) return storedName || "Cliente eliminado";
   try {
-    const users = UsersDB.list();
-    const found = users.find((u) => String(u.id) === String(userId));
-    return found ? found.name : "Usuario eliminado";
-  } catch {
-    return "Usuario eliminado";
-  }
+    const found = clientsService.getById(clientId);
+    return found ? found.name : (storedName || "Cliente eliminado");
+  } catch { return storedName || "Cliente eliminado"; }
+};
+
+// ─── Resolver nombre de vendedor por ID ──────────────────────────────────────
+const resolveVendorName = (vendorId, storedName) => {
+  if (!vendorId) return storedName || "Usuario eliminado";
+  try {
+    const found = UsersDB.list().find((u) => String(u.id) === String(vendorId));
+    return found ? found.name : (storedName || "Usuario eliminado");
+  } catch { return storedName || "Usuario eliminado"; }
 };
 
 // ─── Badge de estado ──────────────────────────────────────────────────────────
@@ -183,12 +184,9 @@ function SalesTable({ data = [], search = "", totalData = 0, offset = 0 }) {
               row.estado,
             );
 
-            const nombreCliente = resolveUserName(row.clienteId, row.cliente);
-            const nombreVendedor = resolveUserName(
-              row.vendedorId,
-              row.vendedor,
-            );
-            const clienteEliminado = nombreCliente === "Usuario eliminado";
+            const nombreCliente  = resolveClientName(row.clienteId,  row.cliente);
+            const nombreVendedor = resolveVendorName(row.vendedorId, row.vendedor);
+            const clienteEliminado  = nombreCliente  === "Cliente eliminado";
             const vendedorEliminado = nombreVendedor === "Usuario eliminado";
 
             return (
