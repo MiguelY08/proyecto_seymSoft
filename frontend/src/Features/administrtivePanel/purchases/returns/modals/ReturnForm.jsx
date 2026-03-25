@@ -1,7 +1,10 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { X, Plus, Minus, AlertCircle, CheckCircle2, ChevronDown } from 'lucide-react';
+import {
+  X, Plus, Minus, AlertCircle, CheckCircle2,
+  ChevronDown, Trash2, Lock,
+} from 'lucide-react';
 import {
   MOTIVOS_DEVOLUCION,
   TIPOS_DEVOLUCION,
@@ -9,23 +12,20 @@ import {
   getEstadoInicial,
   formatCurrency,
   getBadgeEstadoProducto,
+  isEstadoTerminal,
 } from '../helpers/returnsHelpers';
 import {
-  validateReturnForm,
-  productoTieneError,
+  validateReturnFormConLineas,
+  productoTieneErrorConLineas,
 } from '../validators/returnsValidators';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import ReturnsDB from '../services/returnsServices';
 
-/**
- * Hook useLongPress.
- * Maneja eventos de presión prolongada para incrementar/decrementar valores.
- * @param {function} callback - Función a ejecutar al presionar.
- * @param {object} options - Opciones de configuración.
- * @param {number} options.delay - Retraso inicial en ms.
- * @param {number} options.interval - Intervalo entre ejecuciones en ms.
- * @returns {object} Objeto con handlers para mouse y touch.
- */
+// ─── ID único para líneas ─────────────────────────────────────────────────────
+const newLineaId = () =>
+  `linea-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+// ─── useLongPress ─────────────────────────────────────────────────────────────
 function useLongPress(callback, { delay = 380, interval = 75 } = {}) {
   const timerRef    = useRef(null);
   const intervalRef = useRef(null);
@@ -44,22 +44,13 @@ function useLongPress(callback, { delay = 380, interval = 75 } = {}) {
     clearInterval(intervalRef.current);
   }, []);
 
-  return { onMouseDown: start, onMouseUp: stop, onMouseLeave: stop,
-           onTouchStart: start, onTouchEnd: stop };
+  return {
+    onMouseDown: start, onMouseUp: stop, onMouseLeave: stop,
+    onTouchStart: start, onTouchEnd: stop,
+  };
 }
 
-/**
- * Componente EstadoDropdown.
- * Dropdown personalizado para seleccionar estado de producto con badges.
- * Usa portal para renderizar fuera del contenedor.
- * @param {object} props - Props del componente.
- * @param {string} props.value - Valor seleccionado.
- * @param {boolean} props.disabled - Si está deshabilitado.
- * @param {string[]} props.estados - Lista de estados disponibles.
- * @param {function} props.onChange - Función al cambiar selección.
- * @param {boolean} props.hasError - Si hay error de validación.
- * @returns {JSX.Element} Dropdown renderizado.
- */
+// ─── EstadoDropdown (portal fixed) ────────────────────────────────────────────
 function EstadoDropdown({ value, disabled, estados, onChange, hasError }) {
   const [open, setOpen] = useState(false);
   const [pos,  setPos]  = useState(null);
@@ -70,8 +61,8 @@ function EstadoDropdown({ value, disabled, estados, onChange, hasError }) {
     if (disabled) return;
     if (!open && btnRef.current) {
       const r          = btnRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - r.bottom;
       const listH      = Math.min(estados.length * 38 + 8, 200);
+      const spaceBelow = window.innerHeight - r.bottom;
       const openUp     = spaceBelow < listH && r.top > spaceBelow;
       setPos({
         left:   r.left,
@@ -83,7 +74,6 @@ function EstadoDropdown({ value, disabled, estados, onChange, hasError }) {
     setOpen((o) => !o);
   };
 
-  // Cierre al hacer click fuera — excluye tanto el botón disparador como el portal
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
@@ -96,11 +86,10 @@ function EstadoDropdown({ value, disabled, estados, onChange, hasError }) {
   }, [open]);
 
   const selectedStyle = value ? getBadgeEstadoProducto(value) : null;
-
-  const borderClass = disabled
+  const borderClass   = disabled
     ? 'border-gray-200 opacity-50 cursor-not-allowed'
     : hasError
-    ? 'border-red-500 focus:ring-2 focus:ring-red-200'
+    ? 'border-red-500'
     : 'border-gray-300 hover:border-[#004D77] cursor-pointer';
 
   return (
@@ -126,7 +115,7 @@ function EstadoDropdown({ value, disabled, estados, onChange, hasError }) {
       {open && pos && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-9999 bg-white border border-gray-200 rounded-lg shadow-2xl overflow-hidden py-1"
+          className="fixed z-[9999] bg-white border border-gray-200 rounded-lg shadow-2xl overflow-hidden py-1"
           style={{ left: pos.left, width: pos.width, top: pos.top, bottom: pos.bottom }}
         >
           <button
@@ -164,64 +153,84 @@ function EstadoDropdown({ value, disabled, estados, onChange, hasError }) {
 }
 
 // ─── Clases base de inputs ────────────────────────────────────────────────────
-const inputBase = 'w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200';
-const selectClass = (hasError) =>
+const inputBase    = 'w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200';
+const selectClass  = (hasError) =>
   `appearance-none ${inputBase} cursor-pointer ${
     hasError
       ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
       : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
   }`;
 
-/**
- * Componente ProductConfig.
- * Panel de configuración para un producto seleccionado en la devolución.
- * Incluye campos para motivo, tipo, estado y cantidad con validación.
- * @param {object} props - Props del componente.
- * @param {object} props.producto - Datos del producto.
- * @param {function} props.onChange - Función para actualizar campos.
- * @param {object} props.errores - Errores de validación por campo.
- * @returns {JSX.Element} Panel de configuración.
- */
-const ProductConfig = ({ producto, onChange, errores }) => {
-  const estadosDisponibles = producto.tipoDevolucion
-    ? getEstadosByTipo(producto.tipoDevolucion)
-    : [];
+// ─── LineaConfig — una fila de devolución por producto ────────────────────────
+const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errores }) => {
+  const esTerminal     = isEstadoTerminal(linea.estado);
+  const badgeStyle     = getBadgeEstadoProducto(linea.estado);
+  const estadosDisp    = linea.tipoDevolucion ? getEstadosByTipo(linea.tipoDevolucion) : [];
+  const fieldError     = (campo) => errores?.[campo];
 
-  const badgeStyle = getBadgeEstadoProducto(producto.estado);
+  const handleTipoChange = (nuevoTipo) =>
+    onChange({ tipoDevolucion: nuevoTipo, estado: getEstadoInicial() });
 
-  const handleTipoChange = (nuevoTipo) => {
-    onChange(producto.codigoBarras, { tipoDevolucion: nuevoTipo, estado: getEstadoInicial() });
-  };
+  const decCb = useCallback(() =>
+    onChange({ cantidadDevolver: Math.max(1, (linea.cantidadDevolver ?? 1) - 1) }),
+    [linea.cantidadDevolver, onChange]);
 
-  // Cantidad: long press
-  const decCb = useCallback(() => {
-    onChange(producto.codigoBarras, {
-      cantidadDevolver: Math.max(1, (producto.cantidadDevolver ?? 1) - 1),
-    });
-  }, [producto.codigoBarras, producto.cantidadDevolver, onChange]);
-
-  const incCb = useCallback(() => {
-    onChange(producto.codigoBarras, {
-      cantidadDevolver: Math.min(producto.cantidadComprada, (producto.cantidadDevolver ?? 1) + 1),
-    });
-  }, [producto.codigoBarras, producto.cantidadDevolver, producto.cantidadComprada, onChange]);
+  const incCb = useCallback(() =>
+    onChange({ cantidadDevolver: Math.min(maxCantidad, (linea.cantidadDevolver ?? 1) + 1) }),
+    [linea.cantidadDevolver, maxCantidad, onChange]);
 
   const lpDec = useLongPress(decCb);
   const lpInc = useLongPress(incCb);
 
-  const fieldError = (campo) => errores?.[campo];
+  // ── Terminal: solo lectura ─────────────────────────────────────────────────
+  if (esTerminal) {
+    return (
+      <div className="border border-green-200 rounded-lg p-2.5 bg-green-50">
+        <div className="flex items-center justify-between mb-2">
+          <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={badgeStyle}>
+            {linea.estado}
+          </span>
+          <span className="text-[9px] text-emerald-600 flex items-center gap-0.5 italic">
+            <Lock className="w-2.5 h-2.5" strokeWidth={2} />
+            Proceso completado — inmutable
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-x-3 text-[10px]">
+          <div>
+            <span className="font-medium text-gray-500">Motivo</span>
+            <p className="text-gray-700 mt-0.5">{linea.motivo || '—'}</p>
+          </div>
+          <div>
+            <span className="font-medium text-gray-500">Tipo</span>
+            <p className="text-gray-700 mt-0.5">{linea.tipoDevolucion || '—'}</p>
+          </div>
+          <div>
+            <span className="font-medium text-gray-500">Cantidad</span>
+            <p className="text-gray-700 font-semibold mt-0.5">{linea.cantidadDevolver}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
+  // ── Editable ──────────────────────────────────────────────────────────────
   return (
-    <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
-
-      {/* Nombre + badge estado */}
+    <div className="border border-gray-200 rounded-lg p-2.5 bg-white">
+      {/* Cabecera de la línea */}
       <div className="flex items-center justify-between mb-2">
-        <h4 className="text-xs font-semibold text-gray-800 uppercase tracking-wide truncate pr-2">
-          {producto.nombre}
-        </h4>
-        <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0" style={badgeStyle}>
-          {producto.estado || '—'}
+        <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={badgeStyle}>
+          {linea.estado || '—'}
         </span>
+        {canRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            title="Eliminar esta línea"
+            className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+          >
+            <Trash2 className="w-3 h-3" strokeWidth={2} />
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -233,8 +242,8 @@ const ProductConfig = ({ producto, onChange, errores }) => {
           </label>
           <div className="relative">
             <select
-              value={producto.motivo ?? ''}
-              onChange={(e) => onChange(producto.codigoBarras, { motivo: e.target.value })}
+              value={linea.motivo ?? ''}
+              onChange={(e) => onChange({ motivo: e.target.value })}
               className={selectClass(!!fieldError('motivo'))}
             >
               <option value="">Seleccionar...</option>
@@ -256,7 +265,7 @@ const ProductConfig = ({ producto, onChange, errores }) => {
           </label>
           <div className="relative">
             <select
-              value={producto.tipoDevolucion ?? ''}
+              value={linea.tipoDevolucion ?? ''}
               onChange={(e) => handleTipoChange(e.target.value)}
               className={selectClass(!!fieldError('tipoDevolucion'))}
             >
@@ -272,16 +281,16 @@ const ProductConfig = ({ producto, onChange, errores }) => {
           )}
         </div>
 
-        {/* Estado — dropdown custom con badges */}
+        {/* Estado */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-gray-600">
             Estado <span className="text-red-500">*</span>
           </label>
           <EstadoDropdown
-            value={producto.estado ?? ''}
-            disabled={!producto.tipoDevolucion}
-            estados={estadosDisponibles}
-            onChange={(val) => onChange(producto.codigoBarras, { estado: val })}
+            value={linea.estado ?? ''}
+            disabled={!linea.tipoDevolucion}
+            estados={estadosDisp}
+            onChange={(val) => onChange({ estado: val })}
             hasError={!!fieldError('estado')}
           />
           {fieldError('estado') && (
@@ -291,7 +300,7 @@ const ProductConfig = ({ producto, onChange, errores }) => {
           )}
         </div>
 
-        {/* Cantidad — control compacto con long press */}
+        {/* Cantidad con long press */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-gray-600">
             Cantidad <span className="text-red-500">*</span>
@@ -299,44 +308,38 @@ const ProductConfig = ({ producto, onChange, errores }) => {
           <div className="flex flex-col items-start gap-0.5">
             <div className="flex items-center border border-gray-300 rounded-md overflow-hidden">
               <button
-                type="button"
-                {...lpDec}
-                disabled={(producto.cantidadDevolver ?? 1) <= 1}
-                className="w-6 h-6 flex items-center justify-center text-gray-500
-                           hover:bg-gray-100 transition-colors cursor-pointer select-none
-                           disabled:opacity-40 disabled:cursor-not-allowed"
+                type="button" {...lpDec}
+                disabled={(linea.cantidadDevolver ?? 1) <= 1}
+                className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100
+                           transition-colors cursor-pointer select-none disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Minus className="w-2.5 h-2.5" strokeWidth={2.5} />
               </button>
               <input
                 type="number"
-                value={producto.cantidadDevolver ?? 1}
+                value={linea.cantidadDevolver ?? 1}
                 min={1}
-                max={producto.cantidadComprada}
+                max={maxCantidad}
                 onChange={(e) => {
                   const val = parseInt(e.target.value, 10);
                   if (!isNaN(val))
-                    onChange(producto.codigoBarras, {
-                      cantidadDevolver: Math.min(Math.max(1, val), producto.cantidadComprada),
-                    });
+                    onChange({ cantidadDevolver: Math.min(Math.max(1, val), maxCantidad) });
                 }}
-                className="w-10 text-center text-xs font-semibold text-gray-700
-                           border-x border-gray-200 outline-none py-0.5
-                           [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none
+                className="w-10 text-center text-xs font-semibold text-gray-700 border-x border-gray-200
+                           outline-none py-0.5 [appearance:textfield]
+                           [&::-webkit-outer-spin-button]:appearance-none
                            [&::-webkit-inner-spin-button]:appearance-none"
               />
               <button
-                type="button"
-                {...lpInc}
-                disabled={(producto.cantidadDevolver ?? 1) >= producto.cantidadComprada}
-                className="w-6 h-6 flex items-center justify-center text-gray-500
-                           hover:bg-gray-100 transition-colors cursor-pointer select-none
-                           disabled:opacity-40 disabled:cursor-not-allowed"
+                type="button" {...lpInc}
+                disabled={(linea.cantidadDevolver ?? 1) >= maxCantidad}
+                className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100
+                           transition-colors cursor-pointer select-none disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Plus className="w-2.5 h-2.5" strokeWidth={2.5} />
               </button>
             </div>
-            <span className="text-[9px] text-gray-400 leading-tight">Máx: {producto.cantidadComprada}</span>
+            <span className="text-[9px] text-gray-400 leading-tight">Máx: {maxCantidad}</span>
           </div>
           {fieldError('cantidadDevolver') && (
             <p className="text-xs text-red-500 flex items-center gap-1">
@@ -350,24 +353,74 @@ const ProductConfig = ({ producto, onChange, errores }) => {
   );
 };
 
-/**
- * Componente ReturnForm.
- * Modal para crear o editar devoluciones de compras.
- * Incluye selección de productos, configuración y validación.
- * @param {object} props - Props del componente.
- * @param {string} props.mode - Modo: 'create' o 'edit'.
- * @param {object} props.purchase - Datos de la compra.
- * @param {object} props.devolucion - Datos de la devolución (en modo edit).
- * @param {function} props.onClose - Función para cerrar el modal.
- * @param {function} props.onSaved - Función al guardar exitosamente.
- * @returns {JSX.Element} Modal del formulario.
- */
+// ─── ProductConfig — panel de un producto con sus líneas ─────────────────────
+const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, errores }) => {
+  const totalUsado       = (producto.lineas ?? []).reduce((sum, l) => sum + (Number(l.cantidadDevolver) || 0), 0);
+  const cantidadRestante = producto.cantidadComprada - totalUsado;
+  const puedeAgregar     = cantidadRestante > 0;
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+
+      {/* Cabecera del producto */}
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-xs font-semibold text-gray-800 uppercase tracking-wide truncate pr-2">
+          {producto.nombre}
+        </h4>
+        <span className="text-[9px] shrink-0 bg-white border border-gray-200 rounded px-1.5 py-0.5 text-gray-500">
+          {totalUsado}/{producto.cantidadComprada} u.
+        </span>
+      </div>
+
+      {/* Líneas */}
+      <div className="flex flex-col gap-2 mb-2">
+        {(producto.lineas ?? []).map((linea, idx) => {
+          const usadoOtras = (producto.lineas ?? [])
+            .filter((_, i) => i !== idx)
+            .reduce((sum, l) => sum + (Number(l.cantidadDevolver) || 0), 0);
+          const maxParaEstaLinea = producto.cantidadComprada - usadoOtras;
+          const erroresLinea     = errores?.lineas?.[idx] ?? {};
+          const canRemove        = !isEstadoTerminal(linea.estado) && (producto.lineas ?? []).length > 1;
+
+          return (
+            <LineaConfig
+              key={linea.lineaId}
+              linea={linea}
+              maxCantidad={maxParaEstaLinea}
+              onChange={(cambios) => onLineaChange(idx, cambios)}
+              onRemove={() => onRemoveLinea(idx)}
+              canRemove={canRemove}
+              errores={erroresLinea}
+            />
+          );
+        })}
+      </div>
+
+      {/* Agregar línea */}
+      {puedeAgregar && (
+        <button
+          type="button"
+          onClick={onAddLinea}
+          className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium
+                     text-[#004D77] border border-dashed border-[#004D77]/40 rounded-lg
+                     hover:bg-[#004D77]/5 hover:border-[#004D77] transition-colors cursor-pointer"
+        >
+          <Plus className="w-3 h-3" strokeWidth={2.5} />
+          Agregar línea ({cantidadRestante} u. disponibles)
+        </button>
+      )}
+
+    </div>
+  );
+};
+
+// ─── ReturnForm — componente principal ────────────────────────────────────────
 const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved }) => {
   const { showConfirm, showSuccess, showError, showWarning } = useAlert();
   const navigate = useNavigate();
   const isEdit   = mode === 'edit';
 
-  // ── Productos de la compra (fuente de verdad, nunca cambia) ───────────────
+  // ── Productos de la compra (fuente de verdad estática) ────────────────────
   const productosCompra = useMemo(() =>
     (purchase?.productos ?? []).map((p) => ({
       nombre:           p.nombre       ?? p.producto ?? 'Producto',
@@ -379,41 +432,58 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
     [purchase]
   );
 
-  // ── Total original (siempre desde la compra, nunca cambia) ───────────────
+  // Total original siempre desde la compra
   const totalOriginal = (p) =>
     Math.round(p.valorUnit * p.cantidadComprada * (1 + p.iva / 100));
 
-  // ── Inicialización en modo edición ────────────────────────────────────────
+  // ── Inicialización ────────────────────────────────────────────────────────
   const initState = useMemo(() => {
     if (!isEdit || !devolucion?.productos?.length)
-      return { seleccionados: new Set(), datosProducto: {} };
+      return { seleccionados: new Set(), datosProducto: {}, productosLocked: new Set() };
 
-    const seleccionados = new Set(devolucion.productos.map((p) => p.codigoBarras));
+    // Agrupar productos planos por codigoBarras → modelo multi-línea
     const datosProducto = {};
-    devolucion.productos.forEach((p) => {
+    devolucion.productos.forEach((p, idx) => {
       const original = productosCompra.find((o) => o.codigoBarras === p.codigoBarras);
-      datosProducto[p.codigoBarras] = {
-        ...original, ...p,
-        cantidadComprada: original?.cantidadComprada ?? p.cantidadComprada ?? 1,
-      };
+      if (!datosProducto[p.codigoBarras]) {
+        datosProducto[p.codigoBarras] = {
+          nombre:           p.nombre,
+          codigoBarras:     p.codigoBarras,
+          valorUnit:        p.valorUnit,
+          iva:              p.iva ?? 0,
+          cantidadComprada: original?.cantidadComprada ?? p.cantidadComprada ?? 1,
+          lineas:           [],
+        };
+      }
+      datosProducto[p.codigoBarras].lineas.push({
+        lineaId:         `existing-${p.codigoBarras}-${idx}`,
+        motivo:          p.motivo          ?? '',
+        tipoDevolucion:  p.tipoDevolucion  ?? '',
+        estado:          p.estado          ?? getEstadoInicial(),
+        cantidadDevolver: p.cantidadDevolver ?? 1,
+      });
     });
-    return { seleccionados, datosProducto };
+
+    const seleccionados   = new Set(Object.keys(datosProducto));
+    const productosLocked = new Set(Object.keys(datosProducto));
+
+    return { seleccionados, datosProducto, productosLocked };
   }, [isEdit, devolucion, productosCompra]);
 
   // ── Estado ────────────────────────────────────────────────────────────────
-  const [seleccionados,   setSeleccionados]   = useState(initState.seleccionados);
-  const [datosProducto,   setDatosProducto]   = useState(initState.datosProducto);
-  const [erroresProducto, setErroresProducto] = useState({});
+  const [seleccionados,    setSeleccionados]    = useState(initState.seleccionados);
+  const [datosProducto,    setDatosProducto]    = useState(initState.datosProducto);
+  const [productosLocked]                       = useState(initState.productosLocked);
+  const [erroresProducto,  setErroresProducto]  = useState({});
   const [erroresGenerales, setErroresGenerales] = useState([]);
-  const [touched,         setTouched]         = useState(false);
+  const [touched,          setTouched]          = useState(false);
 
-  // ── Navegación al cerrar según modo ──────────────────────────────────────
+  // ── Cerrar ────────────────────────────────────────────────────────────────
   const cerrarYNavegar = useCallback(() => {
     if (!isEdit) navigate('/admin/purchases');
     else onClose();
   }, [isEdit, navigate, onClose]);
 
-  // ── Cerrar con confirmación si hay datos ──────────────────────────────────
   const handleCerrar = async () => {
     if (seleccionados.size === 0) { cerrarYNavegar(); return; }
     const result = await showConfirm(
@@ -427,8 +497,10 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
     if (result?.isConfirmed) cerrarYNavegar();
   };
 
-  // ── Selección / deselección ───────────────────────────────────────────────
+  // ── Selección / deselección (izquierdo) ───────────────────────────────────
   const toggleSeleccion = (codigoBarras) => {
+    if (productosLocked.has(codigoBarras)) return; // los del edit no se pueden quitar
+
     setSeleccionados((prev) => {
       const next = new Set(prev);
       if (next.has(codigoBarras)) {
@@ -440,7 +512,10 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
         const prod = productosCompra.find((p) => p.codigoBarras === codigoBarras);
         setDatosProducto((d) => ({
           ...d,
-          [codigoBarras]: { ...prod, cantidadDevolver: 1, motivo: '', tipoDevolucion: '', estado: getEstadoInicial() },
+          [codigoBarras]: {
+            ...prod,
+            lineas: [{ lineaId: newLineaId(), motivo: '', tipoDevolucion: '', estado: getEstadoInicial(), cantidadDevolver: 1 }],
+          },
         }));
       }
       return next;
@@ -448,35 +523,98 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
   };
 
   const toggleTodos = () => {
-    if (seleccionados.size === productosCompra.length) {
-      setSeleccionados(new Set());
-      setDatosProducto({});
+    const nonLocked           = productosCompra.filter((p) => !productosLocked.has(p.codigoBarras));
+    const allNonLockedSelected = nonLocked.every((p) => seleccionados.has(p.codigoBarras));
+
+    if (allNonLockedSelected && nonLocked.length > 0) {
+      // Deseleccionar solo los no bloqueados
+      const newSel   = new Set(productosLocked);
+      const newDatos = {};
+      productosLocked.forEach((cod) => { if (datosProducto[cod]) newDatos[cod] = datosProducto[cod]; });
+      setSeleccionados(newSel);
+      setDatosProducto(newDatos);
       setErroresProducto({});
     } else {
-      const todos = new Set(productosCompra.map((p) => p.codigoBarras));
-      const datos = {};
-      productosCompra.forEach((p) => {
-        datos[p.codigoBarras] = datosProducto[p.codigoBarras] ?? {
-          ...p, cantidadDevolver: 1, motivo: '', tipoDevolucion: '', estado: getEstadoInicial(),
-        };
+      // Seleccionar todos los no bloqueados
+      const newSel   = new Set([...seleccionados]);
+      const newDatos = { ...datosProducto };
+      nonLocked.forEach((p) => {
+        if (!newSel.has(p.codigoBarras)) {
+          newSel.add(p.codigoBarras);
+          newDatos[p.codigoBarras] = {
+            ...p,
+            lineas: [{ lineaId: newLineaId(), motivo: '', tipoDevolucion: '', estado: getEstadoInicial(), cantidadDevolver: 1 }],
+          };
+        }
       });
-      setSeleccionados(todos);
-      setDatosProducto(datos);
+      setSeleccionados(newSel);
+      setDatosProducto(newDatos);
     }
   };
 
-  // ── Actualizar campo de un producto ───────────────────────────────────────
-  const handleProductoChange = useCallback((codigoBarras, cambios) => {
-    setDatosProducto((prev) => ({
-      ...prev,
-      [codigoBarras]: { ...prev[codigoBarras], ...cambios },
-    }));
+  // ── Handlers de líneas (derecho) ──────────────────────────────────────────
+  const handleAddLinea = useCallback((codigoBarras) => {
+    setDatosProducto((prev) => {
+      const prod = prev[codigoBarras];
+      return {
+        ...prev,
+        [codigoBarras]: {
+          ...prod,
+          lineas: [
+            ...prod.lineas,
+            { lineaId: newLineaId(), motivo: '', tipoDevolucion: '', estado: getEstadoInicial(), cantidadDevolver: 1 },
+          ],
+        },
+      };
+    });
+  }, []);
+
+  const handleRemoveLinea = useCallback((codigoBarras, lineaIdx) => {
+    setDatosProducto((prev) => {
+      const prod = prev[codigoBarras];
+      return {
+        ...prev,
+        [codigoBarras]: {
+          ...prod,
+          lineas: prod.lineas.filter((_, i) => i !== lineaIdx),
+        },
+      };
+    });
     if (touched) {
       setErroresProducto((prev) => {
-        if (!prev[codigoBarras]) return prev;
-        const updated = { ...prev[codigoBarras] };
-        Object.keys(cambios).forEach((k) => delete updated[k]);
-        return { ...prev, [codigoBarras]: updated };
+        const prodErr = prev[codigoBarras];
+        if (!prodErr) return prev;
+        const newLineas = (prodErr.lineas ?? []).filter((_, i) => i !== lineaIdx);
+        return { ...prev, [codigoBarras]: { ...prodErr, lineas: newLineas } };
+      });
+    }
+  }, [touched]);
+
+  const handleLineaChange = useCallback((codigoBarras, lineaIdx, cambios) => {
+    setDatosProducto((prev) => {
+      const prod    = prev[codigoBarras];
+      const newLineas = prod.lineas.map((l, i) => {
+        if (i !== lineaIdx) return l;
+        const updated = { ...l, ...cambios };
+        // Si cambia el tipo, resetear estado
+        if (cambios.tipoDevolucion && cambios.tipoDevolucion !== l.tipoDevolucion) {
+          updated.estado = getEstadoInicial();
+        }
+        return updated;
+      });
+      return { ...prev, [codigoBarras]: { ...prod, lineas: newLineas } };
+    });
+    if (touched) {
+      setErroresProducto((prev) => {
+        const prodErr = prev[codigoBarras];
+        if (!prodErr) return prev;
+        const newLineas = (prodErr.lineas ?? []).map((le, i) => {
+          if (i !== lineaIdx) return le;
+          const updated = { ...le };
+          Object.keys(cambios).forEach((k) => delete updated[k]);
+          return updated;
+        });
+        return { ...prev, [codigoBarras]: { ...prodErr, lineas: newLineas } };
       });
     }
   }, [touched]);
@@ -484,8 +622,11 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
   // ── Guardar ───────────────────────────────────────────────────────────────
   const handleGuardar = async () => {
     setTouched(true);
-    const productosADevolver = [...seleccionados].map((cod) => datosProducto[cod]);
-    const { valid, erroresGenerales: eg, erroresProducto: ep } = validateReturnForm(productosADevolver);
+
+    const productosParaValidar = [...seleccionados].map((cod) => datosProducto[cod]);
+    const { valid, erroresGenerales: eg, erroresProducto: ep } =
+      validateReturnFormConLineas(productosParaValidar);
+
     setErroresGenerales(eg);
     setErroresProducto(ep);
 
@@ -504,12 +645,28 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
     );
     if (!result?.isConfirmed) return;
 
+    // Aplanar modelo multi-línea → array plano para el servicio
+    const productosAGuardar = [...seleccionados].flatMap((cod) => {
+      const prod = datosProducto[cod];
+      return (prod.lineas ?? []).map((linea) => ({
+        nombre:           prod.nombre,
+        codigoBarras:     prod.codigoBarras,
+        valorUnit:        prod.valorUnit,
+        iva:              prod.iva,
+        cantidadComprada: prod.cantidadComprada,
+        cantidadDevolver: linea.cantidadDevolver,
+        motivo:           linea.motivo,
+        tipoDevolucion:   linea.tipoDevolucion,
+        estado:           linea.estado,
+      }));
+    });
+
     try {
       if (isEdit) {
-        ReturnsDB.update(devolucion.id, productosADevolver);
+        ReturnsDB.update(devolucion.id, productosAGuardar);
         showSuccess('Devolución actualizada', `Los cambios en ${devolucion.id} se guardaron correctamente.`);
       } else {
-        const nueva = ReturnsDB.create(purchase.numeroFacturacion, productosADevolver);
+        const nueva = ReturnsDB.create(purchase.numeroFacturacion, productosAGuardar);
         showSuccess('Devolución registrada', `Se creó la devolución ${nueva.id} correctamente.`);
       }
       onSaved?.();
@@ -520,7 +677,12 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
-  const productosSeleccionadosArray = [...seleccionados].map((cod) => datosProducto[cod]);
+  const productosSeleccionadosArray = [...seleccionados]
+    .map((cod) => datosProducto[cod])
+    .filter(Boolean);
+
+  const nonLocked            = productosCompra.filter((p) => !productosLocked.has(p.codigoBarras));
+  const allNonLockedSelected = productosCompra.length > 0 && seleccionados.size === productosCompra.length;
 
   return (
     <div
@@ -530,7 +692,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
       <div
         onClick={(e) => e.stopPropagation()}
         className="bg-white rounded-lg shadow-2xl flex flex-col overflow-hidden"
-        style={{ width: '900px', maxWidth: '96vw', maxHeight: '92vh' }}
+        style={{ width: '920px', maxWidth: '96vw', maxHeight: '92vh' }}
       >
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
@@ -561,14 +723,17 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
             <div className="px-5 pt-4 pb-2 shrink-0">
               <p className="text-sm font-medium text-gray-700 mb-0.5">1. Productos a devolver</p>
               <p className="text-xs text-gray-400 mb-2">
-                {isEdit ? 'Modifica los productos de esta devolución' : 'Escoja los productos que desea devolver'}
+                {isEdit
+                  ? 'Puedes agregar nuevos productos. Los ya incluidos son inmutables.'
+                  : 'Escoja los productos que desea devolver'}
               </p>
               <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer mb-2 select-none">
                 <input
                   type="checkbox"
-                  checked={productosCompra.length > 0 && seleccionados.size === productosCompra.length}
+                  checked={allNonLockedSelected}
                   onChange={toggleTodos}
                   className="accent-[#004D77] w-3.5 h-3.5"
+                  disabled={nonLocked.length === 0}
                 />
                 Seleccionar todos
               </label>
@@ -583,41 +748,48 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
 
               {productosCompra.map((p) => {
                 const isSelected = seleccionados.has(p.codigoBarras);
-                const tieneError = productoTieneError(p.codigoBarras, erroresProducto);
-
-                // Total siempre desde la compra original — nunca cambia
-                const total = totalOriginal(p);
+                const isLocked   = productosLocked.has(p.codigoBarras);
+                const tieneError = productoTieneErrorConLineas(p.codigoBarras, erroresProducto);
+                const total      = totalOriginal(p);
 
                 return (
                   <div
                     key={p.codigoBarras}
-                    onClick={() => toggleSeleccion(p.codigoBarras)}
-                    className={`border rounded-lg p-2.5 cursor-pointer transition-colors duration-150 ${
-                      isSelected
+                    onClick={() => !isLocked && toggleSeleccion(p.codigoBarras)}
+                    className={`border rounded-lg p-2.5 transition-colors duration-150 ${
+                      isLocked
+                        ? 'border-[#004D77]/30 bg-blue-50/40 cursor-default'
+                        : isSelected
                         ? tieneError
-                          ? 'border-red-400 bg-red-50'
-                          : 'border-[#004D77] bg-blue-50'
-                        : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                          ? 'border-red-400 bg-red-50 cursor-pointer'
+                          : 'border-[#004D77] bg-blue-50 cursor-pointer'
+                        : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 cursor-pointer'
                     }`}
                   >
                     <div className="flex items-start gap-2">
                       <input
                         type="checkbox"
                         checked={isSelected}
+                        disabled={isLocked}
                         onChange={() => {}}
                         className="accent-[#004D77] w-3.5 h-3.5 mt-0.5 shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1 mb-1">
                           <p className="text-xs font-semibold text-gray-800 truncate">{p.nombre}</p>
-                          {isSelected && tieneError && (
-                            <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
-                          )}
-                          {isSelected && !tieneError && touched && (
-                            <CheckCircle2 className="w-3 h-3 text-[#004D77] shrink-0" strokeWidth={2} />
-                          )}
+                          <div className="flex items-center gap-1 shrink-0">
+                            {isLocked && (
+                              <Lock className="w-3 h-3 text-[#004D77]/50" strokeWidth={2} />
+                            )}
+                            {isSelected && tieneError && !isLocked && (
+                              <AlertCircle className="w-3 h-3 text-red-500" />
+                            )}
+                            {isSelected && !tieneError && touched && (
+                              <CheckCircle2 className="w-3 h-3 text-[#004D77]" strokeWidth={2} />
+                            )}
+                          </div>
                         </div>
-                        {/* Datos de la compra — siempre estáticos */}
+                        {/* Datos siempre estáticos de la compra */}
                         <div className="grid grid-cols-4 gap-x-1.5 text-[10px] text-gray-500">
                           <span className="font-medium text-gray-500">Cant.</span>
                           <span className="font-medium text-gray-500">Precio</span>
@@ -640,12 +812,12 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
             </div>
           </div>
 
-          {/* Panel derecho — configuración por producto */}
+          {/* Panel derecho — configuración con líneas */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="px-5 pt-4 pb-2 shrink-0">
               <p className="text-sm font-medium text-gray-700 mb-0.5">2. Configurar productos seleccionados</p>
               <p className="text-xs text-gray-400">
-                Gestiona la cantidad, el estado y el motivo de cada producto
+                Cada producto puede tener múltiples líneas con distinto motivo, tipo y cantidad
               </p>
             </div>
 
@@ -659,19 +831,21 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto px-5 pb-4 flex flex-col gap-2">
+            <div className="flex-1 overflow-y-auto px-5 pb-4 flex flex-col gap-3">
               {productosSeleccionadosArray.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 gap-2">
                   <p className="text-sm">Ningún producto seleccionado</p>
                   <p className="text-xs">Selecciona productos del panel izquierdo para configurar su devolución</p>
                 </div>
               ) : (
-                productosSeleccionadosArray.map((p) => (
+                productosSeleccionadosArray.map((prod) => (
                   <ProductConfig
-                    key={p.codigoBarras}
-                    producto={p}
-                    onChange={handleProductoChange}
-                    errores={erroresProducto[p.codigoBarras]}
+                    key={prod.codigoBarras}
+                    producto={prod}
+                    onAddLinea={() => handleAddLinea(prod.codigoBarras)}
+                    onRemoveLinea={(idx) => handleRemoveLinea(prod.codigoBarras, idx)}
+                    onLineaChange={(idx, cambios) => handleLineaChange(prod.codigoBarras, idx, cambios)}
+                    errores={erroresProducto[prod.codigoBarras]}
                   />
                 ))
               )}

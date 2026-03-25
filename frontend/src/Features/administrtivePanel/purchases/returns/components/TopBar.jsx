@@ -1,19 +1,11 @@
 import React from 'react';
-import { Search, Calendar, X } from 'lucide-react';
+import { Search, Calendar, X, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { useAlert } from '../../../../shared/alerts/useAlert';
 
 /**
  * Componente TopBar — Barra superior para filtros en Devoluciones de Compras.
- * Incluye buscador, filtros de fecha y botón para limpiar filtros.
- * Estilos alineados con el módulo de Usuarios.
- * @param {object} props - Props del componente.
- * @param {string} props.search - Valor actual del buscador.
- * @param {function} props.setSearch - Función para actualizar el buscador.
- * @param {string} props.fechaInicial - Fecha inicial del filtro.
- * @param {function} props.setFechaInicial - Función para actualizar fecha inicial.
- * @param {string} props.fechaFinal - Fecha final del filtro.
- * @param {function} props.setFechaFinal - Función para actualizar fecha final.
- * @param {function} props.setCurrentPage - Función para resetear página actual.
- * @returns {JSX.Element} Barra superior con controles de filtro.
+ * Incluye buscador, filtros de fecha, botón limpiar y botón exportar Excel.
  */
 function TopBar({
   search,
@@ -23,10 +15,11 @@ function TopBar({
   fechaFinal,
   setFechaFinal,
   setCurrentPage,
+  returns = [],
+  proveedorMap = {},
 }) {
-  /**
-   * Maneja el limpiado de filtros, reseteando todos los valores y la página.
-   */
+  const { showWarning, showConfirm, showTimer } = useAlert();
+
   const handleClearFilters = () => {
     setSearch('');
     setFechaInicial('');
@@ -34,8 +27,78 @@ function TopBar({
     setCurrentPage(1);
   };
 
-  // Verificar si hay filtros activos para mostrar el botón de limpiar
   const hayFiltrosActivos = search || fechaInicial || fechaFinal;
+
+  /**
+   * Exporta el listado actual de devoluciones a un archivo Excel.
+   * Incluye todos los productos de cada devolución en filas separadas.
+   */
+  const handleDownload = () => {
+    if (returns.length === 0) {
+      showWarning('Sin registros', 'No hay devoluciones registradas para exportar.');
+      return;
+    }
+
+    showConfirm(
+      'question',
+      '¿Desea descargar las devoluciones?',
+      `Se exportarán ${returns.length} registro${returns.length !== 1 ? 's' : ''} en formato Excel.`,
+      { confirmButtonText: 'Descargar', cancelButtonText: 'Cancelar' }
+    ).then((result) => {
+      if (!result?.isConfirmed) return;
+
+      // Una fila por producto dentro de cada devolución
+      const rows = [];
+      returns.forEach((dev) => {
+        const proveedor = proveedorMap[dev.idCompra] ?? '—';
+        (dev.productos ?? []).forEach((p) => {
+          rows.push({
+            'No. Devolución':  dev.id,
+            'No. Factura':     dev.idCompra,
+            'Proveedor':       proveedor,
+            'F. Devolución':   dev.fechaDevolucion,
+            'Estado':          dev.estado,
+            'Producto':        p.nombre,
+            'Cod. Barras':     p.codigoBarras,
+            'Cant. Devolver':  p.cantidadDevolver ?? 0,
+            'Motivo':          p.motivo ?? '—',
+            'Tipo':            p.tipoDevolucion ?? '—',
+            'Estado Producto': p.estado ?? '—',
+            'Valor Unit.':     p.valorUnit ?? 0,
+            'IVA %':           p.iva ?? 0,
+          });
+        });
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook  = XLSX.utils.book_new();
+
+      worksheet['!cols'] = [
+        { wch: 16 }, // No. Devolución
+        { wch: 14 }, // No. Factura
+        { wch: 22 }, // Proveedor
+        { wch: 16 }, // F. Devolución
+        { wch: 16 }, // Estado
+        { wch: 28 }, // Producto
+        { wch: 18 }, // Cod. Barras
+        { wch: 14 }, // Cant. Devolver
+        { wch: 22 }, // Motivo
+        { wch: 16 }, // Tipo
+        { wch: 16 }, // Estado Producto
+        { wch: 12 }, // Valor Unit.
+        { wch: 8  }, // IVA %
+      ];
+
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Devoluciones');
+
+      const fecha = new Date().toLocaleDateString('es-CO', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+      }).replace(/\//g, '-');
+
+      XLSX.writeFile(workbook, `devoluciones_${fecha}.xlsx`);
+      showTimer('success', 'Descarga completada', 'El archivo Excel se ha generado exitosamente.', 4000);
+    });
+  };
 
   return (
     <div className="flex items-center justify-between gap-2 sm:gap-4 shrink-0 mb-4">
@@ -109,6 +172,18 @@ function TopBar({
             <X className="w-4 h-4" strokeWidth={2} />
           </button>
         )}
+
+        {/* Exportar Excel */}
+        <button
+          onClick={handleDownload}
+          className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold
+                     border border-sky-700 rounded-lg text-[#004D77] bg-white
+                     hover:bg-sky-50 active:scale-95 transition-all duration-200
+                     cursor-pointer whitespace-nowrap"
+        >
+          <span className="hidden sm:inline">Exportar Excel</span>
+          <Download className="w-4 h-4" strokeWidth={1.8} />
+        </button>
 
       </div>
     </div>

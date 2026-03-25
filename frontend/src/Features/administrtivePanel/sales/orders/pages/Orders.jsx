@@ -91,6 +91,8 @@ function Orders() {
   const { showSuccess } = useAlert();
   const [orders, setOrders]           = useState(() => OrdersService.list());
   const [search, setSearch]           = useState('');
+  const [fechaInicial, setFechaInicial] = useState('');
+  const [fechaFinal,   setFechaFinal]   = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isDetailOpen, setIsDetailOpen]   = useState(false);
@@ -104,26 +106,48 @@ function Orders() {
    * Busca en campos como número de pedido, cliente, dirección, fecha, estado y total.
    */
   const filteredOrders = useMemo(() => {
-    if (!search.trim()) return orders;
     const searchLower = search.toLowerCase();
+
     return orders.filter((order) => {
-      const searchableFields = [
-        order.numerosPedido,
-        order.cliente.nombre,
-        order.cliente.telefono,
-        order.cliente.email,
-        order.cliente.direccion,
-        order.direccionEntrega,
-        order.fecha,
-        order.estado,
-        order.total?.toString(),
-        `$${order.total?.toLocaleString()}`,
-      ];
-      return searchableFields.some(
-        (field) => field && field.toString().toLowerCase().includes(searchLower)
-      );
+      // ── Búsqueda de texto ───────────────────────────────────────────────────
+      const matchesSearch = !search.trim() || (() => {
+        const searchableFields = [
+          order.numerosPedido,
+          order.cliente.nombre,
+          order.cliente.telefono,
+          order.cliente.email,
+          order.cliente.direccion,
+          order.direccionEntrega,
+          order.fecha,
+          order.estado,
+          order.total?.toString(),
+          `$${order.total?.toLocaleString()}`,
+        ];
+        return searchableFields.some(
+          (field) => field && field.toString().toLowerCase().includes(searchLower)
+        );
+      })();
+
+      // ── Filtro de fechas ────────────────────────────────────────────────────
+      // Las fechas de los pedidos están en formato DD/MM/YYYY
+      // Los inputs devuelven YYYY-MM-DD → convertimos para comparar
+      let matchesFecha = true;
+      if (fechaInicial || fechaFinal) {
+        // Convertir "DD/MM/YYYY" → "YYYY-MM-DD"
+        const partes    = (order.fecha ?? '').split('/');
+        const fechaOrden = partes.length === 3
+          ? `${partes[2]}-${partes[1]}-${partes[0]}`
+          : null;
+
+        if (fechaOrden) {
+          if (fechaInicial && fechaOrden < fechaInicial) matchesFecha = false;
+          if (fechaFinal   && fechaOrden > fechaFinal)   matchesFecha = false;
+        }
+      }
+
+      return matchesSearch && matchesFecha;
     });
-  }, [orders, search]);
+  }, [orders, search, fechaInicial, fechaFinal]);
 
   // ─── Paginación ───────────────────────────────────────────
   const totalPages   = Math.ceil(filteredOrders.length / RECORDS_PER_PAGE);
@@ -247,7 +271,16 @@ function Orders() {
               strokeWidth={2}
             />
           </div>
-          <TopBar orders={filteredOrders} />
+          <TopBar
+            orders={filteredOrders}
+            search={search}
+            onSearchChange={handleSearchChange}
+            fechaInicial={fechaInicial}
+            setFechaInicial={(val) => { setFechaInicial(val); setCurrentPage(1); }}
+            fechaFinal={fechaFinal}
+            setFechaFinal={(val) => { setFechaFinal(val); setCurrentPage(1); }}
+            setCurrentPage={setCurrentPage}
+          />
         </div>
 
         {/* ── Tabla ──────────────────────────────────────────────────── */}
@@ -267,7 +300,7 @@ function Orders() {
         {filteredOrders.length > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
             <p className="text-xs sm:text-sm font-semibold text-gray-700">
-              {search.trim() ? (
+              {search.trim() || fechaInicial || fechaFinal ? (
                 <>
                   <span className="text-[#004D77]">{filteredOrders.length}</span>
                   {' '}resultado{filteredOrders.length !== 1 ? 's' : ''} encontrado{filteredOrders.length !== 1 ? 's' : ''}

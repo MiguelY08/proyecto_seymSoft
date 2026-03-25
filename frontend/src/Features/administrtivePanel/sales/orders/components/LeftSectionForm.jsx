@@ -1,27 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { FileText, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { FileText, ChevronDown, CheckCircle2, Download, FileImage, File } from 'lucide-react';
 import { ESTADO_STYLES, EstadoBadgePill } from '../helpers/ordersHelpers';
 
 // ─── Dropdown custom de Estado (portal fixed) ─────────────────────────────────
-/**
- * EstadoDropdown — Dropdown personalizado para seleccionar estado de orden.
- * Usa portal para renderizar fuera del contenedor y evitar overflow.
- * Incluye confirmación al seleccionar "Cancelado".
- *
- * @param {Object} props
- * @param {string} props.value - Estado seleccionado.
- * @param {Array<string>} props.options - Opciones disponibles.
- * @param {Function} props.onChange - Callback para cambio (name, value).
- * @param {boolean} props.hasError - Si hay error de validación.
- */
 const EstadoDropdown = ({ value, options, onChange, hasError }) => {
   const [open, setOpen] = useState(false);
   const [pos,  setPos]  = useState(null);
   const btnRef          = useRef(null);
   const dropdownRef     = useRef(null);
 
-  // ── Toggle dropdown y calcular posición ─────────────────────────────────────
   const toggle = () => {
     if (!open && btnRef.current) {
       const r          = btnRef.current.getBoundingClientRect();
@@ -38,7 +26,6 @@ const EstadoDropdown = ({ value, options, onChange, hasError }) => {
     setOpen((o) => !o);
   };
 
-  // ── Cerrar al click fuera ──────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
@@ -117,32 +104,60 @@ const EstadoDropdown = ({ value, options, onChange, hasError }) => {
 };
 
 // ─── Campo de solo lectura ────────────────────────────────────────────────────
-/**
- * ReadonlyField — Campo de solo lectura para datos no editables.
- * @param {Object} props
- * @param {string} props.value - Valor a mostrar.
- */
 const ReadonlyField = ({ value }) => (
   <div className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed select-none">
     {value || '—'}
   </div>
 );
 
+// ─── Componente para mostrar comprobante (solo lectura) ──────────────────────
+const ComprobanteDisplay = ({ comprobante, nombreArchivo }) => {
+  if (!comprobante) return null;
+
+  // Determinar si es base64 (empieza con data:)
+  const esBase64 = typeof comprobante === 'string' && comprobante.startsWith('data:');
+  const nombreMostrar = nombreArchivo || (esBase64 ? 'comprobante.' + (comprobante.split(';')[0].split('/')[1] || 'bin') : 'comprobante.pdf');
+
+  const handleDownload = () => {
+    if (esBase64) {
+      const link = document.createElement('a');
+      link.href = comprobante;
+      link.download = nombreMostrar;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      // Si no es base64, no podemos descargar realmente, solo mostramos alerta
+      alert('El archivo no está disponible para descarga directa.');
+    }
+  };
+
+  return (
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-2">
+      <div className="flex items-start gap-3">
+        <File className="w-5 h-5 text-[#004D77] mt-0.5 shrink-0" />
+        <div className="flex-1">
+          <p className="text-sm font-medium text-gray-800 mb-1">Comprobante de pago</p>
+          <p className="text-xs text-gray-600 break-all">{nombreMostrar}</p>
+        </div>
+        {esBase64 && (
+          <button
+            onClick={handleDownload}
+            className="text-[#004D77] hover:text-[#003b5c] transition-colors p-1"
+            title="Descargar comprobante"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ─── LeftSectionForm ──────────────────────────────────────────────────────────
-/**
- * LeftSectionForm — Sección izquierda del formulario de edición de orden.
- * Contiene campos editables: dirección de entrega, estado y motivo de cancelación.
- * Incluye dropdown personalizado y validación visual.
- *
- * @param {Object} props
- * @param {Object} props.order - Datos de la orden.
- * @param {Function} props.onChange - Callback para cambios (name, value).
- * @param {Object} props.errors - Errores de validación por campo.
- */
 const LeftSectionForm = ({ order, onChange, errors = {} }) => {
   if (!order) return null;
 
-  // ── Handler para inputs estándar ────────────────────────────────────────────
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     onChange(name, value);
@@ -259,6 +274,14 @@ const LeftSectionForm = ({ order, onChange, errors = {} }) => {
               </span>
             </div>
           </div>
+        )}
+
+        {/* Comprobante de pago — solo visualización si es transferencia */}
+        {order.metodoPago === 'Transferencia' && order.comprobantePago && (
+          <ComprobanteDisplay
+            comprobante={order.comprobantePago}
+            nombreArchivo={order.comprobantePagoNombre}
+          />
         )}
 
       </div>
