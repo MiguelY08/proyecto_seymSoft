@@ -102,6 +102,12 @@ function DetailProduct({ producto, isOpen, onClose, onEdit }) {
                   <span className="font-semibold text-gray-700">Código de barras:</span>
                   <span className="text-gray-600">{producto.codBarras}</span>
                 </div>
+                {producto.codBarras2 && (
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-700">Código de barras 2:</span>
+                    <span className="text-gray-600">{producto.codBarras2}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-gray-700">Referencia:</span>
                   <span className="text-gray-600">{producto.referencia}</span>
