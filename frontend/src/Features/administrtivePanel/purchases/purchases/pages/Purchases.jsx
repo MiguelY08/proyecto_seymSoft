@@ -5,8 +5,9 @@ import PurchasesTable from "../Components/TablePurchases";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import DetailPurchases from "./DetailPurchases";
 import Anulatepurchase from "./Anulatepurchase";
-import { Plus } from "lucide-react";
+import { Plus, FileSpreadsheet } from "lucide-react";
 import { PurchasesDB } from "../services/Purchases.service";
+import * as XLSX from "xlsx";
 
 export const Purchases = () => {
 
@@ -72,6 +73,43 @@ export const Purchases = () => {
   const handleCloseModal = () => {
   setSelectedPurchase(null);
 };
+
+  // 🔥 Exportar Excel
+  const handleDownloadExcel = () => {
+    if (filteredProducts.length === 0) {
+      showInfo("Sin datos", "No hay compras para exportar.");
+      return;
+    }
+
+    const rows = filteredProducts.map((c) => ({
+      "No. Facturación":    c.numeroFacturacion,
+      "Fecha Compra":       c.fechaCompra,
+      "Proveedor":          c.proveedor,
+      "Cantidad Productos": c.cantidadProductos,
+      "Precio Total":       c.precioTotal,
+      "Estado":             c.estado,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook  = XLSX.utils.book_new();
+
+    worksheet["!cols"] = [
+      { wch: 20 }, // No. Facturación
+      { wch: 15 }, // Fecha
+      { wch: 28 }, // Proveedor
+      { wch: 20 }, // Cantidad
+      { wch: 16 }, // Precio
+      { wch: 14 }, // Estado
+    ];
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Compras");
+
+    const fecha = new Date()
+      .toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit", year: "numeric" })
+      .replace(/\//g, "-");
+
+    XLSX.writeFile(workbook, `compras_${fecha}.xlsx`);
+  };
 
   const RECORDS_PER_PAGE = 13;
 
@@ -143,13 +181,22 @@ export const Purchases = () => {
           setCurrentPage={setCurrentPage}
         />
 
-        <div className="flex justify-end mb-3">
+        <div className="flex items-center gap-2 mb-3">
+          <button
+            onClick={handleDownloadExcel}
+            className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
+            aria-label="Exportar a Excel"
+          >
+            <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
+            <span className="hidden sm:inline">Export Excel</span>
+          </button>
+
           <Link
             to="/admin/purchases/create"
             className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 whitespace-nowrap"
           >
             <span className="hidden sm:inline">Crear Compra </span>
-                    <Plus className="w-4 h-4" strokeWidth={2} />
+            <Plus className="w-4 h-4" strokeWidth={2} />
           </Link>
         </div>
       </div>

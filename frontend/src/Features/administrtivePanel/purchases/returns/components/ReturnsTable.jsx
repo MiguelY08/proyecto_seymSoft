@@ -226,7 +226,7 @@ function ReturnsTable({
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="flex-1 overflow-x-auto rounded-xl shadow-md min-h-0">
       <table className="min-w-max w-full">
 
         <thead className="bg-[#004D77] text-white">

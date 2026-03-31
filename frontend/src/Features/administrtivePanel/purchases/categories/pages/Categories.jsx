@@ -10,8 +10,10 @@ import {
   getCategories,
   saveCategories,
   getSubcategories,
-  createCategory,        // 🔵 importar createCategory
-  updateCategory,        // 🔵 importar updateCategory
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  deactivateCategoryWithSubcategories,
 } from "../services/categoriesService";
 import { categoryHasProducts } from "../services/categoryproductsService";
 
@@ -76,23 +78,32 @@ export const Categories = () => {
     const category = categories.find((c) => c.id === id);
     if (!category) return;
 
+    const isActivating = category.estado === "Inactivo";
+
     const result = await showConfirm(
-      "question",
-      "Cambiar estado",
-      `¿Deseas cambiar el estado de "${category.nombre}"?`,
-      { confirmButtonText: "Sí", cancelButtonText: "No" }
+      isActivating ? "question" : "warning",
+      isActivating ? "Activar categoría" : "Desactivar categoría",
+      isActivating
+        ? `¿Deseas activar "${category.nombre}"?`
+        : `Al desactivar "${category.nombre}" también se desactivarán todas sus subcategorías. ¿Deseas continuar?`,
+      {
+        confirmButtonText: isActivating ? "Sí, activar" : "Sí, desactivar",
+        cancelButtonText: "Cancelar",
+      }
     );
 
     if (!result?.isConfirmed) return;
 
-    const updated = categories.map((cat) =>
-      cat.id === id
-        ? { ...cat, estado: cat.estado === "Activo" ? "Inactivo" : "Activo" }
-        : cat
-    );
-
-    setCategories(updated);
-    saveCategories(updated);
+    if (isActivating) {
+      const updated = categories.map((cat) =>
+        cat.id === id ? { ...cat, estado: "Activo" } : cat
+      );
+      setCategories(updated);
+      saveCategories(updated);
+    } else {
+      const { updatedCategories } = deactivateCategoryWithSubcategories(id);
+      setCategories(updatedCategories);
+    }
 
     showSuccess("Actualizado", "El estado fue actualizado.");
   };
@@ -120,19 +131,19 @@ const handleDelete = async (id) => {
   const result = await showConfirm(
     "warning",
     "Eliminar categoría",
-    `¿Seguro que deseas eliminar "${category.nombre}"?`,
+    `¿Seguro que deseas eliminar "${category.nombre}"? También se eliminarán todas sus subcategorías.`,
     { confirmButtonText: "Sí, eliminar", cancelButtonText: "Cancelar" }
   );
   if (!result?.isConfirmed) return;
 
-  const updated = categories.filter((cat) => cat.id !== id);
-  setCategories(updated);
-  saveCategories(updated);
-  showSuccess("Eliminado", "La categoría fue eliminada.");
+  // 🔵 Elimina categoría + subcategorías del localStorage en una sola operación
+  const { updatedCategories } = deleteCategory(id);
+  setCategories(updatedCategories);
+  showSuccess("Eliminado", "La categoría y sus subcategorías fueron eliminadas.");
 };
 
   // ───────────── GUARDAR ─────────────
-  const handleSave = (categoryData, isEditing) => {
+  const handleSave = async (categoryData, isEditing) => {
 
     if (isEditing) {
 
@@ -141,8 +152,18 @@ const handleDelete = async (id) => {
 
     } else {
 
+      // 🔵 Confirmación antes de crear
+      const result = await showConfirm(
+        "question",
+        "Crear categoría",
+        `¿Deseas crear la categoría "${categoryData.nombre}"?`,
+        { confirmButtonText: "Sí, crear", cancelButtonText: "Cancelar" }
+      );
+      if (!result?.isConfirmed) return;
+
       // 🔵 Delega a createCategory, que guarda categoría + subcategorías iniciales
       createCategory(categoryData);
+      showSuccess("Categoría creada", `"${categoryData.nombre}" fue creada correctamente.`);
 
     }
 

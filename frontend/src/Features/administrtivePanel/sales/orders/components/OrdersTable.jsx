@@ -82,31 +82,31 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
             return (
               <tr key={order.id} className={`transition-colors duration-150 ${rowBg}`}>
 
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap font-mono">
+                <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap font-mono">
                   {highlight(order.numerosPedido, search)}
                 </td>
 
-                <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap">
+                <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">
                   {highlight(order.cliente.nombre, search)}
                 </td>
 
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(order.fecha, search)}
                 </td>
 
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap max-w-xs truncate">
+                <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap max-w-xs truncate">
                   {highlight(direccionMostrar, search)}
                 </td>
 
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(`$${order.total.toLocaleString()}`, search)}
                 </td>
 
-                <td className="px-3 py-2 text-center whitespace-nowrap">
+                <td className="px-3 py-1.5 text-center whitespace-nowrap">
                   <EstadoBadgeTable estado={order.estado} term={search} />
                 </td>
 
-                <td className="px-3 py-2">
+                <td className="px-3 py-1.5">
                   <div className="flex items-center justify-center gap-1.5">
 
                     {/* Ver detalle */}

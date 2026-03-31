@@ -2,11 +2,19 @@ const CATEGORY_KEY = "pm_categories";
 const SUBCATEGORY_KEY = "pm_subcategories";
 
 const mockCategories = [
-  { id: 1, nombre: "Oficina", estado: "Activo", subcategorias: 0 },
-  { id: 2, nombre: "Útiles Escolares", estado: "Activo", subcategorias: 0 },
-  { id: 3, nombre: "Escritura y Corrección", estado: "Inactivo", subcategorias: 0 },
-  { id: 4, nombre: "Arte y Manualidades", estado: "Activo", subcategorias: 0 },
-  { id: 5, nombre: "Tecnología", estado: "Inactivo", subcategorias: 0 }
+  { id: 1, nombre: "Oficina", estado: "Activo", subcategorias: 1 },
+  { id: 2, nombre: "Útiles Escolares", estado: "Activo", subcategorias: 1 },
+  { id: 3, nombre: "Escritura y Corrección", estado: "Inactivo", subcategorias: 1 },
+  { id: 4, nombre: "Arte y Manualidades", estado: "Activo", subcategorias: 1 },
+  { id: 5, nombre: "Tecnología", estado: "Inactivo", subcategorias: 1 }
+];
+
+const mockSubcategories = [
+  { id: 1, nombre: "Papelería de Oficina", descripcion: "Productos de papelería para uso en oficina", categoriaId: 1, estado: "Activo" },
+  { id: 2, nombre: "Útiles de Escritorio", descripcion: "Artículos esenciales para el escritorio escolar", categoriaId: 2, estado: "Activo" },
+  { id: 3, nombre: "Bolígrafos y Lápices", descripcion: "Instrumentos de escritura y corrección", categoriaId: 3, estado: "Inactivo" },
+  { id: 4, nombre: "Pinturas y Pinceles", descripcion: "Materiales para arte y manualidades", categoriaId: 4, estado: "Activo" },
+  { id: 5, nombre: "Accesorios Tecnológicos", descripcion: "Periféricos y accesorios para dispositivos", categoriaId: 5, estado: "Inactivo" },
 ];
 
 
@@ -89,7 +97,68 @@ export const createCategory = (newCategory) => {
 };
 
 
-// 🔵 Actualizar categoría
+// 🔵 Desactivar categoría y todas sus subcategorías
+export const deactivateCategoryWithSubcategories = (categoryId) => {
+
+  const categories = getCategories();
+  const subcategories = getSubcategories();
+
+  const updatedCategories = categories.map((c) =>
+    c.id === categoryId ? { ...c, estado: "Inactivo" } : c
+  );
+
+  const updatedSubcategories = subcategories.map((s) =>
+    s.categoriaId === categoryId ? { ...s, estado: "Inactivo" } : s
+  );
+
+  saveCategories(updatedCategories);
+  saveSubcategories(updatedSubcategories);
+
+  return { updatedCategories, updatedSubcategories };
+
+};
+
+
+// 🔵 Activar categoría y todas sus subcategorías
+export const activateCategoryWithSubcategories = (categoryId) => {
+
+  const categories = getCategories();
+  const subcategories = getSubcategories();
+
+  const updatedCategories = categories.map((c) =>
+    c.id === categoryId ? { ...c, estado: "Activo" } : c
+  );
+
+  const updatedSubcategories = subcategories.map((s) =>
+    s.categoriaId === categoryId ? { ...s, estado: "Activo" } : s
+  );
+
+  saveCategories(updatedCategories);
+  saveSubcategories(updatedSubcategories);
+
+  return { updatedCategories, updatedSubcategories };
+
+};
+
+
+// 🔵 Eliminar categoría y todas sus subcategorías
+export const deleteCategory = (categoryId) => {
+
+  const categories = getCategories();
+  const subcategories = getSubcategories();
+
+  const updatedCategories = categories.filter((c) => c.id !== categoryId);
+  const updatedSubcategories = subcategories.filter((s) => s.categoriaId !== categoryId);
+
+  saveCategories(updatedCategories);
+  saveSubcategories(updatedSubcategories);
+
+  return { updatedCategories, updatedSubcategories };
+
+};
+
+
+// 🔵 Actualizar categoría (nombre; estado lo manejan activate/deactivate)
 export const updateCategory = (categoryId, data) => {
 
   const categories = getCategories();
@@ -99,7 +168,7 @@ export const updateCategory = (categoryId, data) => {
       ? {
           ...c,
           nombre: data.nombre,
-          estado: data.activo ? "Activo" : "Inactivo",
+          estado: data.estado ?? (data.activo ? "Activo" : "Inactivo"),
         }
       : c
   );
@@ -120,7 +189,13 @@ export const getSubcategories = () => {
 
   const stored = localStorage.getItem(SUBCATEGORY_KEY);
 
-  return stored ? JSON.parse(stored) : [];
+  if (stored) {
+    return JSON.parse(stored);
+  }
+
+  localStorage.setItem(SUBCATEGORY_KEY, JSON.stringify(mockSubcategories));
+
+  return mockSubcategories;
 
 };
 

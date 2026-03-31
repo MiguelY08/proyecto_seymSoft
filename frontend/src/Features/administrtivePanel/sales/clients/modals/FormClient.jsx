@@ -68,7 +68,22 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Lógica para RUT y código CIU
+    let newFormData = { ...formData, [name]: value };
+    
+    if (name === 'rut') {
+      if (value === 'si') {
+        // Si RUT es "Sí", el código CIU debe ser obligatorio, lo dejamos vacío para que el usuario lo llene
+        newFormData.ciuCode = newFormData.ciuCode || '';
+      } else if (value === 'no') {
+        // Si RUT es "No", el código CIU se genera automáticamente
+        newFormData.ciuCode = 'No aplica';
+      }
+    }
+    
+    setFormData(newFormData);
+    
     if (touched[name]) {
       const validationErrors = validateClientForm({ ...formData, [name]: value });
       setErrors(prev => ({ ...prev, [name]: validationErrors[name] || '' }));
@@ -86,6 +101,14 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Validación específica: si RUT es "Sí", código CIU es obligatorio
+    if (formData.rut === 'si' && !formData.ciuCode?.trim()) {
+      setErrors(prev => ({ ...prev, ciuCode: 'El código CIU es obligatorio cuando RUT es Sí' }));
+      setTouched(prev => ({ ...prev, ciuCode: true }));
+      return;
+    }
+    
     const validationErrors = validateClientForm(formData);
     setErrors(validationErrors);
     setTouched(Object.keys(formData).reduce((acc, k) => ({ ...acc, [k]: true }), {}));
@@ -97,25 +120,34 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
   if (!isOpen) return null;
 
-  // ─── Helpers de UI — mismos tamaños que FormUser ──────────────────────────
+  // ─── Helpers de UI ─────────────────────────────────────────────────────────
   const inputClass = (field) =>
-    `w-full pl-9 pr-3 py-2 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
+    `w-full px-3 py-2 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
       errors[field] && touched[field]
         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
 
   const selectClass = (field) =>
-    `appearance-none w-full pl-9 pr-8 py-2 text-sm border rounded-lg outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 ${
+    `appearance-none w-full px-3 pr-8 py-2 text-sm border rounded-lg outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 ${
       errors[field] && touched[field]
         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
 
-  // Icono izquierdo del campo — mismo patrón que FormUser
-  const FIcon = ({ icon: Icon }) => (
-    <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-  );
+  const disabledInputClass = (field) =>
+    `w-full px-3 py-2 text-sm border rounded-lg outline-none bg-gray-100 text-gray-500 cursor-not-allowed ${
+      errors[field] && touched[field]
+        ? 'border-red-500'
+        : 'border-gray-300'
+    }`;
+
+  const disabledSelectClass = (field) =>
+    `appearance-none w-full px-3 pr-8 py-2 text-sm border rounded-lg outline-none bg-gray-100 text-gray-500 cursor-not-allowed ${
+      errors[field] && touched[field]
+        ? 'border-red-500'
+        : 'border-gray-300'
+    }`;
 
   const ErrorMsg = ({ field }) =>
     errors[field] && touched[field]
@@ -127,6 +159,9 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       {children}{required && <span className="text-red-500">*</span>}
     </label>
   );
+
+  // Determinar si estamos editando un cliente existente
+  const isEditing = !!client;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -148,7 +183,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
             <h2 className="text-white font-semibold text-lg">
-              {client ? 'Editar cliente' : 'Nuevo cliente'}
+              {isEditing ? 'Editar cliente' : 'Nuevo cliente'}
             </h2>
             <button
               onClick={() => { resetForm(); onClose(); }}
@@ -175,8 +210,13 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                 <div className="flex flex-col gap-1">
                   <Label required>Tipo de persona</Label>
                   <div className="relative">
-                    <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                    <select name="personType" value={formData.personType} onChange={handleChange} onBlur={handleBlur} className={selectClass('personType')}>
+                    <select 
+                      name="personType" 
+                      value={formData.personType} 
+                      onChange={handleChange} 
+                      onBlur={handleBlur} 
+                      className={selectClass('personType')}
+                    >
                       <option value="">Selecciona una opción</option>
                       <option value="natural">Persona Natural</option>
                       <option value="juridica">Persona Jurídica</option>
@@ -191,8 +231,14 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   <div className="flex flex-col gap-1">
                     <Label>Tipo<span className="text-red-500">*</span></Label>
                     <div className="relative">
-                      <select name="documentType" value={formData.documentType} onChange={handleChange} onBlur={handleBlur}
-                        className="appearance-none w-20 px-4 py-2 text-sm border rounded-lg outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20">
+                      <select 
+                        name="documentType" 
+                        value={formData.documentType} 
+                        onChange={handleChange} 
+                        onBlur={handleBlur}
+                        className={isEditing ? disabledSelectClass('documentType') : selectClass('documentType')}
+                        disabled={isEditing}
+                      >
                         <option value="CC">CC</option>
                         <option value="CE">CE</option>
                         <option value="NIT">NIT</option>
@@ -202,10 +248,18 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
                     <Label required>Documento</Label>
-                    <div className="relative">
-                      <FIcon icon={IdCard} />
-                      <input type="text" name="document" value={formData.document} onChange={handleChange} onBlur={handleBlur} placeholder="Ej: 123456789" autoComplete="off" className={inputClass('document')} />
-                    </div>
+                    <input 
+                      type="text" 
+                      name="document" 
+                      value={formData.document} 
+                      onChange={handleChange} 
+                      onBlur={handleBlur} 
+                      placeholder="Ej: 123456789" 
+                      autoComplete="off" 
+                      className={isEditing ? disabledInputClass('document') : inputClass('document')}
+                      disabled={isEditing}
+                    />
+                    {isEditing && <p className="text-xs text-gray-400 mt-0.5">No se puede modificar en edición</p>}
                     <ErrorMsg field="document" />
                   </div>
                 </div>
@@ -213,30 +267,48 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                 {/* Nombres */}
                 <div className="flex flex-col gap-1">
                   <Label required>Nombres</Label>
-                  <div className="relative">
-                    <FIcon icon={UserCheck} />
-                    <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} onBlur={handleBlur} placeholder="Ej: Juan Carlos" autoComplete="off" className={inputClass('firstName')} />
-                  </div>
+                  <input 
+                    type="text" 
+                    name="firstName" 
+                    value={formData.firstName} 
+                    onChange={handleChange} 
+                    onBlur={handleBlur} 
+                    placeholder="Ej: Juan Carlos" 
+                    autoComplete="off" 
+                    className={inputClass('firstName')} 
+                  />
                   <ErrorMsg field="firstName" />
                 </div>
 
                 {/* Apellidos */}
                 <div className="flex flex-col gap-1">
                   <Label required>Apellidos</Label>
-                  <div className="relative">
-                    <FIcon icon={Users} />
-                    <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} onBlur={handleBlur} placeholder="Ej: Pérez Gómez" autoComplete="off" className={inputClass('lastName')} />
-                  </div>
+                  <input 
+                    type="text" 
+                    name="lastName" 
+                    value={formData.lastName} 
+                    onChange={handleChange} 
+                    onBlur={handleBlur} 
+                    placeholder="Ej: Pérez Gómez" 
+                    autoComplete="off" 
+                    className={inputClass('lastName')} 
+                  />
                   <ErrorMsg field="lastName" />
                 </div>
 
                 {/* Dirección */}
                 <div className="flex flex-col gap-1">
                   <Label required>Dirección</Label>
-                  <div className="relative">
-                    <FIcon icon={MapPin} />
-                    <input type="text" name="address" value={formData.address} onChange={handleChange} onBlur={handleBlur} placeholder="Ej: Calle 10 # 15-25" autoComplete="off" className={inputClass('address')} />
-                  </div>
+                  <input 
+                    type="text" 
+                    name="address" 
+                    value={formData.address} 
+                    onChange={handleChange} 
+                    onBlur={handleBlur} 
+                    placeholder="Ej: Calle 10 # 15-25" 
+                    autoComplete="off" 
+                    className={inputClass('address')} 
+                  />
                   <ErrorMsg field="address" />
                 </div>
 
@@ -244,18 +316,30 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1 flex-1">
                     <Label required>Teléfono</Label>
-                    <div className="relative">
-                      <FIcon icon={Phone} />
-                      <input type="tel" name="phone" value={formData.phone} onChange={handleChange} onBlur={handleBlur} placeholder="3001234567" autoComplete="off" className={inputClass('phone')} />
-                    </div>
+                    <input 
+                      type="tel" 
+                      name="phone" 
+                      value={formData.phone} 
+                      onChange={handleChange} 
+                      onBlur={handleBlur} 
+                      placeholder="3001234567" 
+                      autoComplete="off" 
+                      className={inputClass('phone')} 
+                    />
                     <ErrorMsg field="phone" />
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
                     <Label required>Correo</Label>
-                    <div className="relative">
-                      <FIcon icon={Mail} />
-                      <input type="email" name="email" value={formData.email} onChange={handleChange} onBlur={handleBlur} placeholder="cliente@email.com" autoComplete="off" className={inputClass('email')} />
-                    </div>
+                    <input 
+                      type="email" 
+                      name="email" 
+                      value={formData.email} 
+                      onChange={handleChange} 
+                      onBlur={handleBlur} 
+                      placeholder="cliente@email.com" 
+                      autoComplete="off" 
+                      className={inputClass('email')} 
+                    />
                     <ErrorMsg field="email" />
                   </div>
                 </div>
@@ -274,18 +358,30 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1 flex-1">
                     <Label>Persona contacto</Label>
-                    <div className="relative">
-                      <FIcon icon={UserCheck} />
-                      <input type="text" name="contactName" value={formData.contactName} onChange={handleChange} onBlur={handleBlur} placeholder="Ej: María López" autoComplete="off" className={inputClass('contactName')} />
-                    </div>
+                    <input 
+                      type="text" 
+                      name="contactName" 
+                      value={formData.contactName} 
+                      onChange={handleChange} 
+                      onBlur={handleBlur} 
+                      placeholder="Ej: María López" 
+                      autoComplete="off" 
+                      className={inputClass('contactName')} 
+                    />
                     <ErrorMsg field="contactName" />
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
                     <Label>Tel. contacto</Label>
-                    <div className="relative">
-                      <FIcon icon={Phone} />
-                      <input type="tel" name="contactPhone" value={formData.contactPhone} onChange={handleChange} onBlur={handleBlur} placeholder="3009876543" autoComplete="off" className={inputClass('contactPhone')} />
-                    </div>
+                    <input 
+                      type="tel" 
+                      name="contactPhone" 
+                      value={formData.contactPhone} 
+                      onChange={handleChange} 
+                      onBlur={handleBlur} 
+                      placeholder="3009876543" 
+                      autoComplete="off" 
+                      className={inputClass('contactPhone')} 
+                    />
                     <ErrorMsg field="contactPhone" />
                   </div>
                 </div>
@@ -294,8 +390,13 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                 <div className="flex flex-col gap-1">
                   <Label required>Tipo de cliente</Label>
                   <div className="relative">
-                    <FIcon icon={ShoppingCart} />
-                    <select name="clientType" value={formData.clientType} onChange={handleChange} onBlur={handleBlur} className={selectClass('clientType')}>
+                    <select 
+                      name="clientType" 
+                      value={formData.clientType} 
+                      onChange={handleChange} 
+                      onBlur={handleBlur} 
+                      className={selectClass('clientType')}
+                    >
                       <option value="">Selecciona una opción</option>
                       <option value="Detal">Detal</option>
                       <option value="Mayorista">Mayorista</option>
@@ -310,10 +411,16 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                 {/* Crédito cliente */}
                 <div className="flex flex-col gap-1">
                   <Label>Crédito cliente</Label>
-                  <div className="relative">
-                    <FIcon icon={CreditCard} />
-                    <input type="text" name="clientCredit" value={formData.clientCredit} onChange={handleChange} onBlur={handleBlur} placeholder="0" autoComplete="off" className={inputClass('clientCredit')} />
-                  </div>
+                  <input 
+                    type="text" 
+                    name="clientCredit" 
+                    value={formData.clientCredit} 
+                    onChange={handleChange} 
+                    onBlur={handleBlur} 
+                    placeholder="0" 
+                    autoComplete="off" 
+                    className={inputClass('clientCredit')} 
+                  />
                   <ErrorMsg field="clientCredit" />
                 </div>
 
@@ -322,8 +429,13 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   <div className="flex flex-col gap-1 flex-1">
                     <Label required>RUT</Label>
                     <div className="relative">
-                      <FIcon icon={FileText} />
-                      <select name="rut" value={formData.rut} onChange={handleChange} onBlur={handleBlur} className={selectClass('rut')}>
+                      <select 
+                        name="rut" 
+                        value={formData.rut} 
+                        onChange={handleChange} 
+                        onBlur={handleBlur} 
+                        className={selectClass('rut')}
+                      >
                         <option value="">Seleccione</option>
                         <option value="si">Sí</option>
                         <option value="no">No</option>
@@ -333,11 +445,26 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     <ErrorMsg field="rut" />
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
-                    <Label>Código CIU</Label>
-                    <div className="relative">
-                      <FIcon icon={Hash} />
-                      <input type="text" name="ciuCode" value={formData.ciuCode} onChange={handleChange} onBlur={handleBlur} placeholder="Ej: 4669" autoComplete="off" className={inputClass('ciuCode')} />
-                    </div>
+                    <Label>Código CIU {formData.rut === 'si' && <span className="text-red-500">*</span>}</Label>
+                    <input 
+                      type="text" 
+                      name="ciuCode" 
+                      value={formData.ciuCode} 
+                      onChange={handleChange} 
+                      onBlur={handleBlur} 
+                      placeholder={formData.rut === 'si' ? "Obligatorio" : "Se genera automáticamente"}
+                      autoComplete="off" 
+                      className={formData.rut === 'si' ? inputClass('ciuCode') : disabledInputClass('ciuCode')}
+                      disabled={formData.rut === 'no'}
+                      readOnly={formData.rut === 'no'}
+                    />
+                    {formData.rut === 'no' && (
+                      <p className="text-xs text-gray-400 mt-0.5">Automático: No aplica</p>
+                    )}
+                    {formData.rut === 'si' && (
+                      <p className="text-xs text-gray-400 mt-0.5">Ingrese el código CIU</p>
+                    )}
+                    <ErrorMsg field="ciuCode" />
                   </div>
                 </div>
 
@@ -347,8 +474,8 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
             {/* Footer */}
             <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
-              {/* Botón gráfica — solo en modo editar, mismo estilo que InfoClient */}
-              {client ? (
+              {/* Botón gráfica — solo en modo editar */}
+              {isEditing ? (
                 <button
                   type="button"
                   onClick={() => setShowGraph(v => !v)}
@@ -373,7 +500,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   type="submit"
                   className="px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"
                 >
-                  {client ? 'Actualizar' : 'Crear'}
+                  {isEditing ? 'Actualizar' : 'Crear'}
                 </button>
               </div>
             </div>
@@ -386,7 +513,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
           style={{ width: showGraph ? '50%' : '0%', opacity: showGraph ? 1 : 0 }}
         >
           <div className="w-full h-full flex flex-col" style={{ minWidth: '360px' }}>
-            {client && <GraphClient clientStartDate={client.clientSince || '07/05/2023'} />}
+            {isEditing && <GraphClient clientStartDate={client?.clientSince || '07/05/2023'} />}
           </div>
         </div>
 

@@ -84,7 +84,7 @@ function Shop() {
     setSelectedCategories(updated);
     setCurrentPage(1);
   };
-
+  
   const handleBrandChange=(brand)=>{
     const updated=selectedBrands.includes(brand)
       ?selectedBrands.filter(b=>b!==brand)

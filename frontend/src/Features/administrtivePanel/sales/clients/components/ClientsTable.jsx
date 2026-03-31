@@ -1,6 +1,7 @@
+import React from 'react';
 import { Info, SquarePen, Trash2 } from 'lucide-react';
 import ActiveToggle from './ActiveToggle';
-import { formatClientType } from '../helpers/clientHelpers';
+import { formatClientType, formatCurrency } from '../helpers/clientHelpers';
 
 const TIPOS_DOC = ['cc', 'ce', 'nit', 'ti', 'pp'];
 
@@ -45,12 +46,13 @@ function ClientsTable({
   onToggleActive,
   onDelete,
 }) {
+  // Header para tabla vacía
   const emptyHeader = (
     <thead className="bg-[#004D77] text-white">
       <tr>
         <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Tipo y Documento</th>
         <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Nombre</th>
-        <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Correo electrónico</th>
+        <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Crédito</th>
         <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Teléfono</th>
         <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Tipo cliente</th>
         <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Funciones</th>
@@ -82,7 +84,7 @@ function ClientsTable({
           <tr>
             <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Tipo y Documento</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Nombre</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Correo electrónico</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Crédito</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Teléfono</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Tipo cliente</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Funciones</th>
@@ -106,7 +108,7 @@ function ClientsTable({
                   {highlightText(client.fullName, searchTerm)}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlightText(client.email, searchTerm)}
+                  {highlightText(formatCurrency(parseInt(client.clientCredit) || 0), searchTerm)}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlightText(client.phone, searchTerm)}

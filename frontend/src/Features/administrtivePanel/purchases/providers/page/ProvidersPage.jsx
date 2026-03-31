@@ -18,7 +18,7 @@
 import React, { useState, useEffect } from 'react';
 import ProvidersToolbar from '../components/ProvidersToolbar';
 import ProvidersTable from '../components/ProvidersTable';
-import ProvidersPagination from '../components/ProvidersPagination';
+import PaginationAdmin from '../../../../shared/PaginationAdmin';
 import FormProvider from '../components/FormProvider';
 import InfoProvider from '../components/InfoProvider';
 import { useAlert } from '../../../../shared/alerts/useAlert';
@@ -66,11 +66,6 @@ function ProvidersPage() {
     loadProviders();
   }, []);
 
-  // ======== FUNCIONALIDAD: Cargar Proveedores ========
-  /**
-   * Obtiene la lista de proveedores del servicio (localStorage)
-   * y la guarda en el estado. Maneja el estado de carga.
-   */
   // ======== FUNCIONALIDAD: Cargar Proveedores ========
   /**
    * Obtiene la lista de proveedores del servicio (localStorage)
@@ -216,7 +211,7 @@ function ProvidersPage() {
   const filteredProviders = filterProviders(providers, searchTerm);
   
   // Pagina los proveedores filtrados según la página actual
-  const { currentData, totalPages, startIndex } = paginateData(
+  const { currentData } = paginateData(
     filteredProviders,
     currentPage,
     RECORDS_PER_PAGE
@@ -249,7 +244,6 @@ function ProvidersPage() {
       <div className="bg-white rounded-xl shadow-md">
         <ProvidersTable
           providers={currentData}
-          startIndex={startIndex}
           searchTerm={searchTerm}
           onInfo={handleInfo}
           onEdit={handleEdit}
@@ -258,28 +252,16 @@ function ProvidersPage() {
         />
       </div>
 
-      {/* Información de resultados y controles de paginación */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-gray-700">
-          Mostrando{' '}
-          <span className="text-[#004D77]">{currentData.length}</span>
-          {' '}registros de{' '}
-          <span className="text-[#004D77]">{filteredProviders.length}</span>
-        </p>
+      {/* Paginación - mismo estilo que ClientsPage */}
+      {filteredProviders.length > 0 && (
+        <PaginationAdmin
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          totalRecords={filteredProviders.length}
+          recordsPerPage={RECORDS_PER_PAGE}
+        />
+      )}
 
-        {/* Componente de paginación se muestra solo si hay múltiples páginas */}
-        {totalPages > 1 && (
-          <div className="bg-white shadow-md rounded-xl px-3 py-2">
-            <ProvidersPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Modal para crear o editar un proveedor */}
       {/* Modal para crear o editar un proveedor */}
       <FormProvider
         isOpen={isFormModalOpen}
@@ -298,5 +280,4 @@ function ProvidersPage() {
   );
 }
 
-{/* Exporta el componente ProvidersPage como componente por defecto */}
 export default ProvidersPage;
