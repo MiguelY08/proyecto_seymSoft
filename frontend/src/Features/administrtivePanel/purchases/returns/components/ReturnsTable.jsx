@@ -232,7 +232,7 @@ function ReturnsTable({
         <thead className="bg-[#004D77] text-white">
           <tr>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">No. Devolución</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">No. Factura</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Compra</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Proveedor</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">F. Devolución</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Productos</th>
@@ -258,7 +258,7 @@ function ReturnsTable({
                   {highlight(devolucion.id, search)}
                 </td>
 
-                {/* No. Factura */}
+                {/* Compra */}
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(devolucion.idCompra, search)}
                 </td>

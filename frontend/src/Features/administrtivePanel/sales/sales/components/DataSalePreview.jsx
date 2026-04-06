@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ClipboardList, Package, Hash, Calendar, User, UserCheck, CreditCard, Tag, Truck, MapPin, Receipt } from 'lucide-react';
+import { ClipboardList, Package, Hash, Calendar, User, UserCheck, CreditCard, Tag, Truck, MapPin, Receipt, DollarSign } from 'lucide-react';
 import { formatPrice, today, loadSalesUsers } from '../helpers/salesHelpers';
 
 // ─── Fila de detalle ──────────────────────────────────────────────────────────
@@ -36,6 +36,7 @@ function DataSalePreview({
   isAnulada      = false,
   motivoAnulacion = '',
   fechaAnulacion  = '',
+  paymentAmounts = {},
 }) {
   const users = loadSalesUsers();
 
@@ -48,6 +49,14 @@ function DataSalePreview({
 
   const iva   = Math.round(subtotal * 0.19);
   const total = subtotal + iva;
+
+  // Obtener métodos de pago seleccionados (array)
+  const selectedMethods = Array.isArray(form?.metodoPago) ? form.metodoPago : (form?.metodoPago ? [form.metodoPago] : []);
+
+  // Filtrar montos solo para métodos seleccionados y con valor > 0
+  const paymentEntries = selectedMethods
+    .map(method => ({ method, amount: paymentAmounts[method] || 0 }))
+    .filter(entry => entry.amount > 0);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
@@ -90,12 +99,25 @@ function DataSalePreview({
           <DetailRow icon={User}       label="Cliente"        value={cliente?.name}      placeholder="(Elija un cliente)"                  />
           <DetailRow icon={UserCheck}  label="Vendedor"       value={vendedor?.name}     placeholder="(Elija un vendedor)"                 />
           <DetailRow icon={CreditCard} label="Método de pago"
-            value={
-              Array.isArray(form?.metodoPago)
-                ? form.metodoPago.filter(Boolean).join(' · ')
-                : form?.metodoPago
-            }
-            placeholder="(Elija un método de pago)"           />
+            value={selectedMethods.length ? selectedMethods.join(' · ') : null}
+            placeholder="(Elija al menos un método de pago)" />
+          
+          {/* ─── Montos de pago (solo si hay métodos seleccionados y montos >0) ─── */}
+          {paymentEntries.length > 0 && (
+            <div className="mt-2 pt-1 border-t border-dashed border-gray-100">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <DollarSign className="w-3 h-3 text-gray-400" strokeWidth={1.8} />
+                <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">Desglose de pagos</span>
+              </div>
+              {paymentEntries.map(({ method, amount }) => (
+                <div key={method} className="flex justify-between items-center text-xs py-0.5">
+                  <span className="text-gray-500">{method}</span>
+                  <span className="font-medium text-gray-700">{formatPrice(amount)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           <DetailRow icon={Tag}        label="Estado"         value={form?.estado}       placeholder="(Elija el estado)"                   />
           <DetailRow icon={Truck}      label="Entrega"        value={form?.entrega}      placeholder="(Elija una opción)"                  />
           <DetailRow icon={MapPin}     label="Dirección"      value={form?.direccion}    placeholder="(Sin dirección)"                     />

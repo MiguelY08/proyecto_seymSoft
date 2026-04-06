@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Outlet } from "react-router-dom";
-import { Search, Plus, Info, SquarePen } from "lucide-react";
+import { Search, Plus, Info, SquarePen, Trash2, Download, Filter } from "lucide-react";
+import * as XLSX from 'xlsx';
 
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 import ActiveToggle from "../components/ActiveToggle";
@@ -48,16 +49,19 @@ function EmptyState({ onCreateProduct, canCreate }) {
 }
 
 function Products() {
-  const { showConfirm, showSuccess } = useAlert();
+  const { showConfirm, showSuccess, showError } = useAlert();
   const { hasPermission } = usePermissions();
 
   const canCreate = hasPermission("productos.crear");
   const canEdit   = hasPermission("productos.editar");
+  const canDelete = hasPermission("productos.eliminar");
   const canToggle = hasPermission("productos.activar_desactivar");
   const canView   = hasPermission("productos.ver");
 
   const [data, setData]                       = useState(() => ProductsService.list());
   const [search, setSearch]                   = useState("");
+  const [filterCategory, setFilterCategory]   = useState("all");
+  const [filterSubcategory, setFilterSubcategory] = useState("all");
   const [currentPage, setCurrentPage]         = useState(1);
   const [showModal, setShowModal]             = useState(false);
   const [showFormModal, setShowFormModal]     = useState(false);
@@ -66,21 +70,94 @@ function Products() {
 
   const refreshData = () => setData(ProductsService.list());
 
-  useEffect(() => { setCurrentPage(1); }, [search]);
+  useEffect(() => { setCurrentPage(1); }, [search, filterCategory, filterSubcategory]);
 
-  const filteredData = data.filter((row) => {
-    const query = search.toLowerCase().trim();
-    if (!query) return true;
-    const subcatsText = (row.categorias || []).filter(c => c.includes(" > ")).map(c => c.split(" > ")[1]).join(" ").toLowerCase();
-    return (
-      row.nombre?.toLowerCase().includes(query) ||
-      row.codBarras?.toLowerCase().includes(query) ||
-      row.referencia?.toLowerCase().includes(query) ||
-      subcatsText.includes(query) ||
-      String(row.precioDetalle).includes(query) ||
-      String(row.stock).includes(query)
-    );
-  });
+  // Resetear subcategoría cuando cambia la categoría
+  useEffect(() => {
+    setFilterSubcategory("all");
+  }, [filterCategory]);
+
+  // Extraer categorías únicas
+  const categories = useMemo(() => {
+    const allCategories = new Set();
+    data.forEach(product => {
+      (product.categorias || []).forEach(cat => {
+        if (!cat.includes(' > ')) {
+          allCategories.add(cat);
+        }
+      });
+    });
+    return Array.from(allCategories).sort();
+  }, [data]);
+
+  // Extraer subcategorías únicas (filtradas por categoría si aplica)
+  const subcategories = useMemo(() => {
+    const allSubcategories = new Set();
+    data.forEach(product => {
+      (product.categorias || []).forEach(cat => {
+        if (cat.includes(' > ')) {
+          const [parent, sub] = cat.split(' > ');
+          if (filterCategory === "all" || parent === filterCategory) {
+            allSubcategories.add(sub);
+          }
+        }
+      });
+    });
+    return Array.from(allSubcategories).sort();
+  }, [data, filterCategory]);
+
+  // Filtrar productos
+  const filteredData = useMemo(() => {
+    return data.filter((row) => {
+      // Filtro de búsqueda
+      const query = search.toLowerCase().trim();
+      let matchesSearch = true;
+      if (query) {
+        const subcatsText = (row.categorias || [])
+          .filter(c => c.includes(" > "))
+          .map(c => c.split(" > ")[1])
+          .join(" ")
+          .toLowerCase();
+        
+        matchesSearch = (
+          row.nombre?.toLowerCase().includes(query) ||
+          row.codBarras?.toLowerCase().includes(query) ||
+          row.referencia?.toLowerCase().includes(query) ||
+          subcatsText.includes(query) ||
+          String(row.precioDetalle).includes(query) ||
+          String(row.stock).includes(query)
+        );
+      }
+
+      // Filtro de categoría
+      let matchesCategory = true;
+      if (filterCategory !== "all") {
+        const hasCategory = (row.categorias || []).some(cat => {
+          if (cat.includes(' > ')) {
+            const [parent] = cat.split(' > ');
+            return parent === filterCategory;
+          }
+          return cat === filterCategory;
+        });
+        matchesCategory = hasCategory;
+      }
+
+      // Filtro de subcategoría
+      let matchesSubcategory = true;
+      if (filterSubcategory !== "all") {
+        const hasSubcategory = (row.categorias || []).some(cat => {
+          if (cat.includes(' > ')) {
+            const [, sub] = cat.split(' > ');
+            return sub === filterSubcategory;
+          }
+          return false;
+        });
+        matchesSubcategory = hasSubcategory;
+      }
+
+      return matchesSearch && matchesCategory && matchesSubcategory;
+    });
+  }, [data, search, filterCategory, filterSubcategory]);
 
   const totalPages  = Math.max(1, Math.ceil(filteredData.length / RECORDS_PER_PAGE));
   const startIndex  = (currentPage - 1) * RECORDS_PER_PAGE;
@@ -109,6 +186,83 @@ function Products() {
     }
   };
 
+  const handleDelete = async (producto) => {
+    const result = await showConfirm(
+      "warning",
+      "¿Eliminar este producto?",
+      `¿Estás seguro de eliminar "${producto.nombre}"? Esta acción no se puede deshacer.`,
+      { confirmButtonText: "Sí, eliminar", cancelButtonText: "Cancelar" }
+    );
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const products = data.filter(p => p.id !== producto.id);
+      ProductsService._save(products);
+      refreshData();
+      showSuccess("Producto eliminado", `"${producto.nombre}" fue eliminado exitosamente.`);
+      
+      // Ajustar página si es necesario
+      const newTotalPages = Math.max(1, Math.ceil((filteredData.length - 1) / RECORDS_PER_PAGE));
+      if (currentPage > newTotalPages) {
+        setCurrentPage(newTotalPages);
+      }
+    } catch (error) {
+      showError("Error", "No se pudo eliminar el producto. Intenta de nuevo.");
+    }
+  };
+
+  const handleExportExcel = () => {
+    try {
+      // Preparar datos para exportar
+      const exportData = filteredData.map(product => ({
+        'Nombre': product.nombre,
+        'Código de Barras': product.codBarras || '',
+        'Referencia': product.referencia || '',
+        'Proveedor': product.proveedor || '',
+        'Categorías': (product.categorias || []).join(', '),
+        'Stock': product.stock,
+        'Precio Detalle': product.precioDetalle,
+        'Precio Mayorista': product.precioMayorista,
+        'Precio Colegas': product.precioColegas,
+        'Precio Pacas': product.precioPacas,
+        'Cantidad x Paca': product.cantidadXPaca,
+        'Estado': product.activo ? 'Activo' : 'Inactivo'
+      }));
+
+      // Crear libro de Excel
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Productos');
+
+      // Ajustar ancho de columnas
+      const colWidths = [
+        { wch: 30 }, // Nombre
+        { wch: 15 }, // Código de Barras
+        { wch: 15 }, // Referencia
+        { wch: 25 }, // Proveedor
+        { wch: 30 }, // Categorías
+        { wch: 10 }, // Stock
+        { wch: 15 }, // Precio Detalle
+        { wch: 15 }, // Precio Mayorista
+        { wch: 15 }, // Precio Colegas
+        { wch: 15 }, // Precio Pacas
+        { wch: 15 }, // Cantidad x Paca
+        { wch: 10 }, // Estado
+      ];
+      ws['!cols'] = colWidths;
+
+      // Descargar archivo
+      const fileName = `productos_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      showSuccess("Excel exportado", `Se descargaron ${exportData.length} productos exitosamente.`);
+    } catch (error) {
+      showError("Error al exportar", "No se pudo generar el archivo Excel. Intenta de nuevo.");
+      console.error('Error al exportar:', error);
+    }
+  };
+
   const handleProductoCreado      = () => { refreshData(); setCurrentPage(1); setShowFormModal(false); };
   const handleProductoActualizado = () => { refreshData(); setShowEditModal(false); setSelectedProduct(null); };
 
@@ -119,16 +273,91 @@ function Products() {
   const handleCloseEditModal = ()  => { setShowEditModal(false); setSelectedProduct(null); };
   const handleEditFromDetail = (p) => { setShowModal(false); setSelectedProduct(p); setShowEditModal(true); };
 
+  const resetFilters = () => {
+    setFilterCategory("all");
+    setFilterSubcategory("all");
+    setSearch("");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className={`h-full flex flex-col gap-3 p-3 sm:p-4 ${showModal || showFormModal || showEditModal ? "blur-sm" : ""}`}>
 
+        {/* Toolbar con búsqueda y botón crear */}
         {data.length > 0 && (
-          <ProductsToolbar
-            search={search}
-            onSearchChange={setSearch}
-            onNewClick={() => setShowFormModal(true)}
-          />
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <ProductsToolbar
+              search={search}
+              onSearchChange={setSearch}
+              onNewClick={() => setShowFormModal(true)}
+            />
+            
+            {/* Botón Exportar Excel */}
+            <button
+              onClick={handleExportExcel}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border border-green-600 rounded-lg text-green-700 bg-white hover:bg-green-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap w-full sm:w-auto justify-center"
+              title="Exportar a Excel"
+            >
+              <Download className="w-4 h-4" strokeWidth={2} />
+              <span>Exportar Excel</span>
+            </button>
+          </div>
+        )}
+
+        {/* Filtros por Categoría y Subcategoría */}
+        {data.length > 0 && (categories.length > 0 || subcategories.length > 0) && (
+          <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-xl shadow-sm">
+            <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <Filter className="w-4 h-4" />
+              Filtros:
+            </span>
+
+            {/* Filtro Categoría */}
+            {categories.length > 0 && (
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#004D77] bg-white"
+              >
+                <option value="all">Todas las categorías</option>
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            )}
+
+            {/* Filtro Subcategoría */}
+            {subcategories.length > 0 && (
+              <select
+                value={filterSubcategory}
+                onChange={(e) => setFilterSubcategory(e.target.value)}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#004D77] bg-white"
+                disabled={subcategories.length === 0}
+              >
+                <option value="all">Todas las subcategorías</option>
+                {subcategories.map(sub => (
+                  <option key={sub} value={sub}>{sub}</option>
+                ))}
+              </select>
+            )}
+
+            {/* Botón limpiar filtros */}
+            {(filterCategory !== "all" || filterSubcategory !== "all" || search) && (
+              <button
+                onClick={resetFilters}
+                className="px-3 py-1.5 text-sm text-gray-600 hover:text-[#004D77] underline"
+              >
+                Limpiar filtros
+              </button>
+            )}
+
+            {/* Contador de resultados filtrados */}
+            {(filterCategory !== "all" || filterSubcategory !== "all") && (
+              <span className="text-sm text-gray-600 ml-auto">
+                {filteredData.length} producto{filteredData.length !== 1 ? 's' : ''} encontrado{filteredData.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
         )}
 
         {data.length === 0 ? (
@@ -141,14 +370,14 @@ function Products() {
             </div>
             <h3 className="text-xl font-bold text-gray-800 mb-2">No se encontraron resultados</h3>
             <p className="text-gray-600 text-center mb-6 max-w-md">
-              No hay productos que coincidan con "{search}". Intenta con otra búsqueda.
+              {search ? `No hay productos que coincidan con "${search}".` : 'No hay productos con los filtros seleccionados.'} 
             </p>
             <button
-              onClick={() => setSearch("")}
+              onClick={resetFilters}
               className="px-6 py-2.5 text-white rounded-lg hover:opacity-90 transition-all duration-200 font-medium"
               style={{ backgroundColor: "#004D77" }}
             >
-              Limpiar búsqueda
+              Limpiar filtros y búsqueda
             </button>
           </div>
 
@@ -216,6 +445,15 @@ function Products() {
                                 <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                               </button>
                             )}
+                            {canDelete && (
+                              <button
+                                onClick={() => handleDelete(row)}
+                                className="text-gray-400 hover:text-red-600 hover:scale-110 transition cursor-pointer"
+                                title="Eliminar"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                              </button>
+                            )}
                             {canToggle && (
                               <ActiveToggle
                                 activo={row.activo ?? true}
@@ -233,7 +471,7 @@ function Products() {
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
               <p className="text-xs sm:text-sm font-semibold text-gray-700">
-                {search.trim() ? (
+                {search.trim() || filterCategory !== "all" || filterSubcategory !== "all" ? (
                   <>
                     <span className="text-[#004D77]">{filteredData.length}</span>{" "}
                     resultado{filteredData.length !== 1 ? "s" : ""} encontrado{filteredData.length !== 1 ? "s" : ""}

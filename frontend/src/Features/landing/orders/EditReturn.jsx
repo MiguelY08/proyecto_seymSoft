@@ -1,32 +1,385 @@
-import { ChevronRight, X, AlertTriangle, Phone, Upload, Plus, Minus, ChevronDown } from 'lucide-react';
+import { ChevronRight, X, AlertTriangle, Phone, Upload, Plus, Minus, ChevronDown, Package } from 'lucide-react';
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaInstagram, FaTiktok } from 'react-icons/fa';
+import ShopHero from '../shop/components/ShopHero';
 import BgPedidos from '../../../assets/BgPedidos.png';
 
+/* ── Estilos inyectados (coherentes con el sistema) ── */
+const EDIT_RETURN_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito:wght@400;600;700;800;900&display=swap');
+
+  @keyframes edit-fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .edit-return-page {
+    background: #f6f9fc;
+    font-family: 'Nunito', sans-serif;
+    min-height: 100vh;
+  }
+
+  .edit-return-container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: clamp(24px, 4vw, 40px) 20px;
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 24px;
+  }
+  .breadcrumb a {
+    color: #004D77;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .btn-back {
+    background: transparent;
+    border: 1.5px solid #e2edf5;
+    border-radius: 40px;
+    padding: 8px 16px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: #1e4060;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .btn-back:hover {
+    background: #f0f8ff;
+    border-color: #afd0e6;
+    transform: translateY(-1px);
+  }
+
+  .edit-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  @media (min-width: 1024px) {
+    .edit-grid {
+      grid-template-columns: 2fr 1fr;
+    }
+  }
+
+  /* Tarjeta principal */
+  .form-card {
+    background: #ffffff;
+    border: 1.5px solid #e4eff6;
+    border-radius: 28px;
+    padding: 28px;
+    box-shadow: 0 4px 20px rgba(0, 77, 119, 0.05);
+    animation: edit-fadeUp 0.4s ease;
+  }
+  .form-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #0c2a3a;
+    margin-bottom: 8px;
+  }
+  .form-subtitle {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 24px;
+  }
+
+  /* Seleccionar todos */
+  .select-all {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #eef2f6;
+    margin-bottom: 20px;
+  }
+  .select-all input {
+    width: 18px;
+    height: 18px;
+    accent-color: #004D77;
+    cursor: pointer;
+  }
+  .select-all label {
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: #1e4060;
+    cursor: pointer;
+  }
+
+  /* Producto expandible */
+  .product-item {
+    border: 1px solid #eef2f6;
+    border-radius: 20px;
+    margin-bottom: 16px;
+    transition: all 0.2s;
+  }
+  .product-item.selected {
+    border-color: #004D77;
+    background: #fafcff;
+  }
+  .product-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    cursor: pointer;
+  }
+  .product-checkbox {
+    width: 20px;
+    height: 20px;
+    accent-color: #004D77;
+    cursor: pointer;
+  }
+  .product-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(150deg, #eef6fb, #e0eef7);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .product-info {
+    flex: 1;
+  }
+  .product-name {
+    font-weight: 800;
+    font-size: 0.9rem;
+    color: #0c2a3a;
+    margin-bottom: 4px;
+  }
+  .product-quantity {
+    font-size: 0.7rem;
+    color: #64748b;
+    font-weight: 600;
+  }
+  .expand-icon {
+    color: #9abcce;
+    transition: transform 0.2s;
+  }
+  .expand-icon.open {
+    transform: rotate(180deg);
+  }
+
+  /* Formulario expandido */
+  .product-form {
+    padding: 0 16px 20px 16px;
+    border-top: 1px solid #eef2f6;
+    margin-top: 8px;
+  }
+  .form-row {
+    margin-bottom: 16px;
+  }
+  .form-row label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #1e4060;
+    margin-bottom: 6px;
+  }
+  .form-select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid #e2edf5;
+    border-radius: 14px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.85rem;
+    background: white;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239abcce' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 14px;
+  }
+  .form-select:focus {
+    outline: none;
+    border-color: #004D77;
+  }
+  .upload-area {
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .upload-area:hover {
+    border-color: #004D77;
+    background: #f0f8ff;
+  }
+  .quantity-control {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .quantity-btn {
+    width: 36px;
+    height: 36px;
+    border: 1.5px solid #e2edf5;
+    border-radius: 12px;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .quantity-btn:hover {
+    border-color: #004D77;
+    background: #f0f8ff;
+  }
+  .quantity-input {
+    width: 60px;
+    text-align: center;
+    padding: 8px;
+    border: 1.5px solid #e2edf5;
+    border-radius: 12px;
+    font-weight: 700;
+  }
+  .btn-primary-full {
+    width: 100%;
+    background: #004D77;
+    border: none;
+    border-radius: 40px;
+    padding: 14px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 20px;
+  }
+  .btn-primary-full:hover {
+    background: #0c5c88;
+    transform: translateY(-2px);
+  }
+
+  /* Alerta */
+  .alert-box {
+    margin-top: 24px;
+    background: #fef9e3;
+    border: 1px solid #fde68a;
+    border-radius: 20px;
+    padding: 16px;
+    display: flex;
+    gap: 12px;
+  }
+  .alert-content {
+    font-size: 0.8rem;
+    color: #92400e;
+    line-height: 1.5;
+  }
+
+  /* Contacto sidebar */
+  .contact-card {
+    background: #ffffff;
+    border: 1.5px solid #e4eff6;
+    border-radius: 28px;
+    padding: 24px;
+    position: sticky;
+    top: 24px;
+    box-shadow: 0 4px 20px rgba(0, 77, 119, 0.05);
+  }
+  .contact-title {
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: #0c2a3a;
+    margin-bottom: 12px;
+  }
+  .contact-text {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+  .whatsapp-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .whatsapp-icon {
+    width: 40px;
+    height: 40px;
+    background: #dcfce7;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .social-title {
+    font-weight: 800;
+    font-size: 0.8rem;
+    color: #1e4060;
+    margin-bottom: 12px;
+  }
+  .social-icons {
+    display: flex;
+    gap: 12px;
+  }
+  .social-link {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+  }
+  .social-link:hover {
+    transform: scale(1.1);
+  }
+
+  @media (max-width: 768px) {
+    .form-card {
+      padding: 20px;
+    }
+    .contact-card {
+      position: static;
+    }
+  }
+`;
+
+let editStylesInjected = false;
+function injectEditStyles() {
+  if (editStylesInjected) return;
+  const style = document.createElement('style');
+  style.textContent = EDIT_RETURN_STYLES;
+  document.head.appendChild(style);
+  editStylesInjected = true;
+}
+
 function EditReturn() {
+  injectEditStyles();
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
+  // Estados originales
   const [seleccionarTodos, setSeleccionarTodos] = useState(true);
   const [productosSeleccionados, setProductosSeleccionados] = useState([1]);
-  
-  // Estados para el formulario
   const [motivo, setMotivo] = useState('Prod. en mal estado');
   const [metodoDevolucion, setMetodoDevolucion] = useState('Reemplazo');
   const [cantidad, setCantidad] = useState(15);
   const [evidencias, setEvidencias] = useState([]);
+  const [expandedProduct, setExpandedProduct] = useState(1); // para controlar qué producto está expandido (el único producto)
 
-  // Datos de ejemplo del pedido
   const pedido = {
     id: '4512',
     productos: [
-      {
-        id: 1,
-        nombre: 'LIBRETA CON LAPICERO',
-        cantidad: 50,
-        imagen: '/placeholder.png'
-      }
+      { id: 1, nombre: 'LIBRETA CON LAPICERO', cantidad: 50, imagen: '/placeholder.png' }
     ]
   };
 
@@ -38,10 +391,7 @@ function EditReturn() {
     'Otro'
   ];
 
-  const metodosDevolucion = [
-    'Reemplazo',
-    'Reembolso'
-  ];
+  const metodosDevolucion = ['Reemplazo', 'Reembolso'];
 
   const handleSeleccionarTodos = () => {
     if (!seleccionarTodos) {
@@ -61,22 +411,15 @@ function EditReturn() {
   };
 
   const handleIncrementarCantidad = () => {
-    if (cantidad < 50) {
-      setCantidad(cantidad + 1);
-    }
+    if (cantidad < 50) setCantidad(cantidad + 1);
   };
-
   const handleDecrementarCantidad = () => {
-    if (cantidad > 1) {
-      setCantidad(cantidad - 1);
-    }
+    if (cantidad > 1) setCantidad(cantidad - 1);
   };
-
   const handleEvidenciaChange = (e) => {
     const files = Array.from(e.target.files);
     setEvidencias([...evidencias, ...files]);
   };
-
   const handleGuardar = () => {
     if (productosSeleccionados.length === 0) {
       alert('Por favor selecciona al menos un producto');
@@ -89,276 +432,144 @@ function EditReturn() {
       cantidad,
       evidencias
     });
-    // Aquí iría la lógica para guardar la devolución
+    alert('Solicitud de devolución actualizada correctamente');
+    navigate(`/returns/${id}`);
   };
 
+  const producto = pedido.productos[0];
+  const isSelected = productosSeleccionados.includes(producto.id);
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="edit-return-page">
+      <ShopHero
+        image={BgPedidos}
+        title="Devoluciones"
+        tag="Editar"
+        subtitle="Modifica tu solicitud de devolución"
+      />
 
-      {/* Banner */}
-      <div className="px-4 sm:px-6 lg:px-8 py-4">
-        <div className="w-full h-[15vh] sm:h-[18vh] lg:h-[22vh] relative overflow-hidden rounded-2xl">
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${BgPedidos})` }}
-          />
-          <div className="absolute inset-0 bg-blue-950/75" />
-          <div className="relative z-10 w-full h-full flex items-center justify-center">
-            <h2 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white">
-              Pedidos / Devoluciones
-            </h2>
-          </div>
-        </div>
-      </div>
-
-      {/* Contenido principal */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Botón volver y Breadcrumb */}
-        <div className="mb-6">
-          <button 
-            onClick={() => navigate(`/returns/${id}`)}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors mb-4"
-          >
-            <X className="w-4 h-4" />
-            Volver
-          </button>
-
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <a href="/devoluciones" className="hover:text-blue-600">Devoluciones</a>
-            <ChevronRight className="w-4 h-4" />
-            <span className="text-gray-900">Modificando devolución No. {pedido.id}</span>
-          </div>
+      <div className="edit-return-container">
+        <button onClick={() => navigate(`/returns/${id}`)} className="btn-back">
+          <X size={14} /> Volver
+        </button>
+        <div className="breadcrumb">
+          <a href="/returnsOnOrders">Devoluciones</a>
+          <ChevronRight size={14} />
+          <span>Modificando devolución No. {pedido.id}</span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Columna izquierda - Productos */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Productos del pedido</h2>
-              <p className="text-sm text-gray-600 mb-6">Escoja los productos que desea devolver</p>
+        <div className="edit-grid">
+          {/* Columna izquierda - Formulario */}
+          <div className="form-card">
+            <h2 className="form-title">Productos del pedido</h2>
+            <p className="form-subtitle">Escoja los productos que desea devolver</p>
 
-              {/* Checkbox seleccionar todos */}
-              <div className="flex items-center gap-2 mb-4 pb-4 border-b">
-                <input
-                  type="checkbox"
-                  id="seleccionar-todos"
-                  checked={seleccionarTodos}
-                  onChange={handleSeleccionarTodos}
-                  className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label htmlFor="seleccionar-todos" className="text-sm font-medium text-gray-700 cursor-pointer">
-                  Seleccionar todos
-                </label>
-              </div>
+            <div className="select-all">
+              <input
+                type="checkbox"
+                id="seleccionar-todos"
+                checked={seleccionarTodos}
+                onChange={handleSeleccionarTodos}
+              />
+              <label htmlFor="seleccionar-todos">Seleccionar todos</label>
+            </div>
 
-              {/* Lista de productos */}
-              <div className="space-y-4">
-                {pedido.productos.map((producto) => (
-                  <div key={producto.id} className="border border-gray-300 rounded-lg p-4">
-                    <div className="flex items-start gap-4 mb-4">
-                      <input
-                        type="checkbox"
-                        id={`producto-${producto.id}`}
-                        checked={productosSeleccionados.includes(producto.id)}
-                        onChange={() => handleSeleccionarProducto(producto.id)}
-                        className="w-5 h-5 mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      
-                      <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <span className="text-2xl">📦</span>
-                      </div>
-
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-1">{producto.nombre}</h3>
-                        <p className="text-sm text-gray-600">Cantidad: {producto.cantidad}</p>
-                      </div>
-
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
-                    </div>
-
-                    {/* Formulario expandido */}
-                    {productosSeleccionados.includes(producto.id) && (
-                      <div className="pl-9 space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          {/* Motivo */}
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Motivo <span className="text-red-500">*</span>
-                            </label>
-                            <div className="relative">
-                              <select
-                                value={motivo}
-                                onChange={(e) => setMotivo(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
-                              >
-                                {motivosDevolucion.map((m) => (
-                                  <option key={m} value={m}>{m}</option>
-                                ))}
-                              </select>
-                              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                            </div>
-                          </div>
-
-                          {/* Método de devolución */}
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Método de devolución <span className="text-red-500">*</span>
-                            </label>
-                            <div className="relative">
-                              <select
-                                value={metodoDevolucion}
-                                onChange={(e) => setMetodoDevolucion(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
-                              >
-                                {metodosDevolucion.map((m) => (
-                                  <option key={m} value={m}>{m}</option>
-                                ))}
-                              </select>
-                              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Evidencias */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Evidencias <span className="text-red-500">*</span>
-                          </label>
-                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-                            <div className="flex items-center gap-4">
-                              {evidencias.length > 0 && (
-                                <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
-                                  <span className="text-sm text-gray-500">📷</span>
-                                </div>
-                              )}
-                              <label className="flex-1 cursor-pointer">
-                                <div className="flex flex-col items-center justify-center">
-                                  <Plus className="w-8 h-8 text-gray-400 mb-2" />
-                                  <span className="text-sm text-gray-600">
-                                    PNG, JPG o JPEG (máx. 10MB)
-                                  </span>
-                                </div>
-                                <input
-                                  type="file"
-                                  multiple
-                                  accept="image/png,image/jpeg,image/jpg"
-                                  onChange={handleEvidenciaChange}
-                                  className="hidden"
-                                />
-                              </label>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Cantidad */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Cantidad <span className="text-red-500">*</span>
-                          </label>
-                          <div className="flex items-center gap-4">
-                            <button
-                              onClick={handleDecrementarCantidad}
-                              className="w-10 h-10 border border-gray-300 rounded-lg flex items-center justify-center hover:bg-gray-50"
-                            >
-                              <Minus className="w-4 h-4" />
-                            </button>
-                            <input
-                              type="number"
-                              value={cantidad}
-                              onChange={(e) => setCantidad(parseInt(e.target.value) || 1)}
-                              className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                            <button
-                              onClick={handleIncrementarCantidad}
-                              className="w-10 h-10 border border-gray-300 rounded-lg flex items-center justify-center hover:bg-gray-50"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
-                            <span className="text-sm text-gray-500">Máx. 50</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+            <div className="product-list">
+              <div className={`product-item ${isSelected ? 'selected' : ''}`}>
+                <div className="product-header" onClick={() => setExpandedProduct(expandedProduct === producto.id ? null : producto.id)}>
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => handleSeleccionarProducto(producto.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="product-checkbox"
+                  />
+                  <div className="product-icon">
+                    <Package size={24} className="text-gray-500" />
                   </div>
-                ))}
-              </div>
-
-              {/* Botón guardar */}
-              <button 
-                onClick={handleGuardar}
-                className="w-full mt-6 px-6 py-3 text-white rounded-lg hover:opacity-90 transition-colors font-medium"
-                style={{ backgroundColor: '#004D77' }}
-              >
-                Guardar
-              </button>
-
-              {/* Alerta */}
-              <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3">
-                <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-yellow-800">
-                  <p className="mb-2">
-                    En el momento de "Guardar", se enviará la solicitud de devolución. Nuestro equipo estará al tanto y se 
-                    encargará de aprobar o desaprobar esta devolución.
-                  </p>
-                  <p>En cualquier caso, te avisaremos a través de tu correo electrónico.</p>
+                  <div className="product-info">
+                    <div className="product-name">{producto.nombre}</div>
+                    <div className="product-quantity">Cantidad: {producto.cantidad}</div>
+                  </div>
+                  <ChevronDown size={18} className={`expand-icon ${expandedProduct === producto.id ? 'open' : ''}`} />
                 </div>
+
+                {expandedProduct === producto.id && isSelected && (
+                  <div className="product-form">
+                    <div className="form-row">
+                      <label>Motivo <span className="text-red-500">*</span></label>
+                      <select className="form-select" value={motivo} onChange={(e) => setMotivo(e.target.value)}>
+                        {motivosDevolucion.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-row">
+                      <label>Método de devolución <span className="text-red-500">*</span></label>
+                      <select className="form-select" value={metodoDevolucion} onChange={(e) => setMetodoDevolucion(e.target.value)}>
+                        {metodosDevolucion.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-row">
+                      <label>Evidencias <span className="text-red-500">*</span></label>
+                      <label className="upload-area">
+                        <input type="file" multiple accept="image/png,image/jpeg,image/jpg" onChange={handleEvidenciaChange} className="hidden" />
+                        <Upload size={24} className="text-gray-400 mx-auto mb-2" />
+                        <p className="text-xs text-gray-600">
+                          {evidencias.length > 0 ? `${evidencias.length} archivo(s) seleccionado(s)` : 'Haz clic para subir evidencias'}
+                        </p>
+                        <p className="text-[10px] text-gray-400 mt-1">PNG, JPG o JPEG (máx. 10MB por archivo)</p>
+                      </label>
+                    </div>
+                    <div className="form-row">
+                      <label>Cantidad <span className="text-red-500">*</span></label>
+                      <div className="quantity-control">
+                        <button className="quantity-btn" onClick={handleDecrementarCantidad}><Minus size={14} /></button>
+                        <input type="number" className="quantity-input" value={cantidad} onChange={(e) => setCantidad(parseInt(e.target.value) || 1)} />
+                        <button className="quantity-btn" onClick={handleIncrementarCantidad}><Plus size={14} /></button>
+                        <span className="text-xs text-gray-500">Máx. 50</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button className="btn-primary-full" onClick={handleGuardar}>
+              Guardar
+            </button>
+
+            <div className="alert-box">
+              <AlertTriangle size={20} className="text-yellow-600 flex-shrink-0" />
+              <div className="alert-content">
+                <p className="mb-2">
+                  En el momento de "Guardar", se enviará la solicitud de devolución. Nuestro equipo estará al tanto y se
+                  encargará de aprobar o desaprobar esta devolución.
+                </p>
+                <p>En cualquier caso, te avisaremos a través de tu correo electrónico.</p>
               </div>
             </div>
           </div>
 
           {/* Columna derecha - Contacto */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6 sticky top-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Contacto</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                ¿Tienes dudas sobre cómo generar la devolución? Comunícate con nosotros y te 
-                ayudaremos con todo lo que necesites saber.
-              </p>
-
-              {/* WhatsApp */}
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <Phone className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <a 
-                    href="https://wa.me/573002936722" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-sm font-medium text-gray-900 hover:text-blue-600"
-                  >
-                    +57 300 293 6722
-                  </a>
-                </div>
-              </div>
-
-              {/* Redes sociales */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">Nuestras redes</h4>
-                <div className="flex gap-3">
-                  <a 
-                    href="https://instagram.com" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity"
-                  >
-                    <FaInstagram className="w-5 h-5 text-white" />
-                  </a>
-                  <a 
-                    href="https://tiktok.com" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 bg-black rounded-full flex items-center justify-center hover:opacity-80 transition-opacity"
-                  >
-                    <FaTiktok className="w-5 h-5 text-white" />
-                  </a>
-                </div>
+          <div className="contact-card">
+            <h3 className="contact-title">Contacto</h3>
+            <p className="contact-text">
+              ¿Tienes dudas sobre cómo generar la devolución? Comunícate con nosotros y te
+              ayudaremos con todo lo que necesites saber.
+            </p>
+            <div className="whatsapp-link">
+              <div className="whatsapp-icon"><Phone size={20} className="text-green-600" /></div>
+              <a href="https://wa.me/573002936722" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-gray-900 hover:text-[#004D77] transition-colors">+57 300 293 6722</a>
+            </div>
+            <div>
+              <h4 className="social-title">Nuestras redes</h4>
+              <div className="social-icons">
+                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="social-link bg-gradient-to-br from-purple-500 to-pink-500"><FaInstagram className="w-5 h-5 text-white" /></a>
+                <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" className="social-link bg-black"><FaTiktok className="w-5 h-5 text-white" /></a>
               </div>
             </div>
           </div>
         </div>
       </div>
-
     </div>
   );
 }

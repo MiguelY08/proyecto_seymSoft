@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ProductCard from "../../../shared/ProductCard";
-import ShopHero from "../components/ShopHero";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, ShoppingCart, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { useCart } from "../../../shared/Context/Cartcontext";
 import { useAlert } from "../../../shared/alerts/useAlert";
 
@@ -14,9 +13,331 @@ import sewingmachine from "../../../../assets/products/sewingmachine.png";
 import Tijeraspunta from "../../../../assets/products/Tijeraspuntaroma.png";
 import vinilopq from "../../../../assets/products/vinilopqpowercolorrojo.png";
 import BgTienda from "../../../../assets/BgTienda.png";
-import SortDropdown from "../components/SortDropdown";
+
+/* ── Estilos inyectados (coherentes con Home/Favorites) ── */
+const DETAIL_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito:wght@400;600;700;800;900&display=swap');
+
+  @keyframes detail-fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes detail-slideIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .detail-page {
+    background: #f6f9fc;
+    font-family: 'Nunito', 'Segoe UI', sans-serif;
+    min-height: 100vh;
+  }
+
+  .detail-container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: clamp(24px, 4vw, 40px) 20px;
+  }
+
+  /* Botón volver */
+  .back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #004D77;
+    cursor: pointer;
+    padding: 8px 0;
+    margin-bottom: 24px;
+    transition: all 0.2s;
+  }
+  .back-button:hover {
+    gap: 12px;
+    color: #0c5c88;
+  }
+
+  /* Layout principal */
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 32px;
+    margin-bottom: 64px;
+  }
+
+  @media (min-width: 768px) {
+    .detail-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+    }
+  }
+
+  /* Imagen */
+  .detail-image-wrapper {
+    background: linear-gradient(150deg, #eef6fb 0%, #e0eef7 100%);
+    border-radius: 28px;
+    padding: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid #e4eff6;
+    transition: all 0.3s ease;
+  }
+  .detail-image-wrapper:hover {
+    box-shadow: 0 12px 32px rgba(0, 77, 119, 0.12);
+    transform: translateY(-2px);
+  }
+  .detail-image {
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  .detail-image-wrapper:hover .detail-image {
+    transform: scale(1.03);
+  }
+
+  /* Info producto */
+  .detail-info {
+    animation: detail-slideIn 0.4s ease;
+  }
+  .detail-name {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 3vw, 2.2rem);
+    font-weight: 700;
+    color: #0c2a3a;
+    margin-bottom: 16px;
+  }
+  .detail-category {
+    display: inline-block;
+    background: #e8f4fd;
+    color: #004D77;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 40px;
+    margin-bottom: 20px;
+  }
+  .detail-description {
+    color: #475569;
+    line-height: 1.65;
+    margin-bottom: 24px;
+    font-size: 0.95rem;
+  }
+  .detail-price {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #004D77;
+    margin-bottom: 24px;
+  }
+  .detail-price span {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #9abcce;
+  }
+
+  /* Control de cantidad */
+  .quantity-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .quantity-control {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: 1.5px solid #e2edf5;
+    border-radius: 60px;
+    overflow: hidden;
+  }
+  .quantity-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #1e4060;
+  }
+  .quantity-btn:hover {
+    background: #eef6fb;
+    color: #004D77;
+  }
+  .quantity-btn:active {
+    transform: scale(0.95);
+  }
+  .quantity-number {
+    min-width: 48px;
+    text-align: center;
+    font-weight: 800;
+    font-size: 1rem;
+    color: #0c2a3a;
+  }
+  .add-to-cart-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: #004D77;
+    color: white;
+    border: 2px solid #004D77;
+    padding: 10px 28px;
+    border-radius: 60px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .add-to-cart-btn:hover {
+    background: transparent;
+    color: #004D77;
+    transform: translateY(-2px);
+  }
+  .add-to-cart-btn:active {
+    transform: scale(0.97);
+  }
+
+  /* Características */
+  .features-section {
+    border-top: 1.5px solid #e2edf5;
+    padding-top: 24px;
+    margin-top: 16px;
+  }
+  .features-title {
+    font-weight: 800;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #1e4060;
+    margin-bottom: 12px;
+  }
+  .features-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .features-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #475569;
+    padding: 6px 0;
+  }
+  .features-list li::before {
+    content: "✓";
+    color: #004D77;
+    font-weight: 800;
+  }
+
+  /* Productos relacionados */
+  .related-section {
+    margin-top: 48px;
+  }
+  .related-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .related-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #0c2a3a;
+    margin: 0;
+  }
+  .related-eyebrow {
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #004D77;
+    margin-bottom: 4px;
+  }
+
+  /* Carrusel mejorado */
+  .carousel-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .carousel-track {
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    display: flex;
+    gap: 20px;
+    padding: 8px 4px;
+    flex: 1;
+  }
+  .carousel-track::-webkit-scrollbar {
+    display: none;
+  }
+  .carousel-slide {
+    flex: 0 0 auto;
+    width: 260px;
+    transition: transform 0.3s;
+  }
+  .carousel-slide:hover {
+    transform: translateY(-4px);
+  }
+  .carousel-btn {
+    background: #ffffff;
+    border: 1.5px solid #e2edf5;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .carousel-btn:hover {
+    border-color: #004D77;
+    background: #f0f8ff;
+    transform: scale(1.05);
+  }
+  .carousel-btn:active {
+    transform: scale(0.95);
+  }
+  .carousel-btn.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+`;
+
+let detailStylesInjected = false;
+function injectDetailStyles() {
+  if (detailStylesInjected) return;
+  const style = document.createElement('style');
+  style.textContent = DETAIL_STYLES;
+  document.head.appendChild(style);
+  detailStylesInjected = true;
+}
 
 function ShopDetail() {
+  injectDetailStyles();
+
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { showSuccess } = useAlert();
@@ -68,71 +389,66 @@ function ShopDetail() {
       "Añadido al carrito",
       `${quantity} x ${product.name} se ha agregado al carrito.`
     );
-    setQuantity(1); // Resetear cantidad
+    setQuantity(1);
+  };
+
+  // Carrusel manual con scroll
+  const scrollCarousel = (direction) => {
+    const container = document.querySelector('.carousel-track');
+    if (container) {
+      const scrollAmount = 280; // ancho aproximado de cada tarjeta + gap
+      container.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
   };
 
   return (
-    <>
-      <ShopHero image={BgTienda} title="Tienda" />
-
-      <section className="w-full max-w-7xl mx-auto px-4 pt-4 pb-16">
-
-        <button
-          onClick={() => navigate("/shop")}
-          className="mb-4 text-[#004D77] font-semibold hover:underline transition"
-        >
-          ← Volver a tienda
+    <div className="detail-page"><div className="detail-container">
+        {/* Botón volver */}
+        <button onClick={() => navigate("/shop")} className="back-button">
+          <ChevronLeft size={18} /> Volver a tienda
         </button>
 
-        <div className="grid md:grid-cols-2 gap-10">
-
-          <div className="bg-gray-100 rounded-xl p-6 flex items-center justify-center h-105 shadow-xl">
-            <img
-              src={product.image}
-              alt={product.name}
-              className="h-96 object-contain transition-transform duration-300 hover:scale-105"
-            />
+        {/* Producto principal */}
+        <div className="detail-grid">
+          <div className="detail-image-wrapper">
+            <img src={product.image} alt={product.name} className="detail-image" />
           </div>
 
-          <div>
-            <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
+          <div className="detail-info">
+            <div className="detail-category">{product.category}</div>
+            <h1 className="detail-name">{product.name}</h1>
+            <p className="detail-description">{product.description}</p>
+            <div className="detail-price">
+              ${totalPrice.toLocaleString("es-CO")} <span>COP</span>
+            </div>
 
-            <p className="text-gray-600 mb-6">{product.description}</p>
-
-            <p className="text-2xl font-bold text-[#004D77] mb-6">
-              ${totalPrice.toLocaleString("es-CO")} COP
-            </p>
-
-            <div className="flex items-center gap-4 mb-6">
-              <div className="flex items-center border rounded-lg overflow-hidden">
+            <div className="quantity-section">
+              <div className="quantity-control">
                 <button
+                  className="quantity-btn"
                   onClick={() => quantity > 1 && setQuantity(quantity - 1)}
-                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200 transition"
                 >
-                  <Minus size={18} />
+                  <Minus size={16} />
                 </button>
-
-                <span className="px-4">{quantity}</span>
-
+                <span className="quantity-number">{quantity}</span>
                 <button
+                  className="quantity-btn"
                   onClick={() => setQuantity(quantity + 1)}
-                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200 transition"
                 >
-                  <Plus size={18} />
+                  <Plus size={16} />
                 </button>
               </div>
-
-              <button
-                onClick={handleAddToCart}
-                className="bg-[#004D77] text-white px-6 py-3 rounded-lg hover:bg-[#003456] transition"
-              >
-                Añadir al carrito
+              <button className="add-to-cart-btn" onClick={handleAddToCart}>
+                <ShoppingCart size={16} /> Añadir al carrito
               </button>
             </div>
 
-            <div className="mt-10 border-t pt-6">
-              <h3 className="font-semibold mb-2">Características</h3>
-              <ul className="text-sm text-gray-600 space-y-1">
+            <div className="features-section">
+              <h3 className="features-title">Características</h3>
+              <ul className="features-list">
                 <li>Set extragrande</li>
                 <li>Diseño degradado</li>
                 <li>Ideal para dibujo y pintura</li>
@@ -141,102 +457,47 @@ function ShopDetail() {
           </div>
         </div>
 
-        <div className="mt-24">
-
-          <div className="flex items-center mb-10">
-            <h2 className="text-2xl font-bold flex-1">
-              Productos relacionados
-            </h2>
-
-            <SortDropdown
-              selectedSort={selectedSort}
-              setSelectedSort={setSelectedSort}
-              sortOpen={sortOpen}
-              setSortOpen={setSortOpen}
-              sortOptions={sortOptions}
-            />
+        {/* Productos relacionados */}
+        <div className="related-section">
+          <div className="related-header">
+            <div>
+              <p className="related-eyebrow">También te puede interesar</p>
+              <h2 className="related-title">Productos relacionados</h2>
+            </div>
+            {/* Aquí podrías agregar el SortDropdown si lo deseas, pero se omite por simplicidad visual */}
           </div>
 
-          <Carousel products={sortedRelatedProducts} />
-
-        </div>
-
-      </section>
-    </>
-  );
-}
-
-function Carousel({ products }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-      setCurrentIndex(0);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const visibleRange = isMobile ? 0 : 2;
-  const maxIndex = products.length - 1;
-
-  const prev = () => {
-    if (currentIndex > 0) setCurrentIndex(prev => prev - 1);
-  };
-
-  const next = () => {
-    if (currentIndex < maxIndex) setCurrentIndex(prev => prev + 1);
-  };
-
-  return (
-    <div className="relative w-full flex items-center justify-center">
-
-      <button
-        onClick={prev}
-        disabled={currentIndex === 0}
-        className="absolute left-0 z-20 bg-white shadow-xl rounded-full p-4 hover:scale-105 transition disabled:opacity-30"
-      >
-        ‹
-      </button>
-
-      <div className="flex items-center justify-center gap-8 w-full overflow-hidden py-10">
-
-        {products.map((product, index) => {
-          const shouldHide = isMobile
-            ? index !== currentIndex
-            : Math.abs(index - currentIndex) > visibleRange;
-
-          return (
-            <div
-              key={product.id}
-              style={{ display: shouldHide ? "none" : "block" }}
+          <div className="carousel-container">
+            <button
+              className="carousel-btn"
+              onClick={() => scrollCarousel('left')}
             >
-              <div className="w-[260px]">
-                <ProductCard
-                  image={product.image}
-                  name={product.name}
-                  category={product.category}
-                  price={product.price}
-                  productData={product}
-                />
-              </div>
+              <ChevronLeft size={18} />
+            </button>
+
+            <div className="carousel-track">
+              {sortedRelatedProducts.map((relProduct) => (
+                <div key={relProduct.id} className="carousel-slide">
+                  <ProductCard
+                    image={relProduct.image}
+                    name={relProduct.name}
+                    category={relProduct.category}
+                    price={relProduct.price}
+                    productData={relProduct}
+                  />
+                </div>
+              ))}
             </div>
-          );
-        })}
 
+            <button
+              className="carousel-btn"
+              onClick={() => scrollCarousel('right')}
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
       </div>
-
-      <button
-        onClick={next}
-        disabled={currentIndex === maxIndex}
-        className="absolute right-0 z-20 bg-white shadow-xl rounded-full p-4 hover:scale-105 transition disabled:opacity-30"
-      >
-        ›
-      </button>
-
     </div>
   );
 }

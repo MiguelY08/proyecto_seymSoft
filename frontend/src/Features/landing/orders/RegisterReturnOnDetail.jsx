@@ -1,225 +1,365 @@
-import { ChevronRight, X, AlertTriangle, Phone } from 'lucide-react';
-import { useState } from 'react';
+import { ChevronLeft, Package, Phone, MessageCircle, Info } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaInstagram, FaTiktok } from 'react-icons/fa';
-import BgPedidos from '../../../assets/BgPedidos.png';
+import { pedidos } from './Orders'; // Importar los pedidos reales
+
+/* ── Estilos inyectados (coherentes con el sistema) ── */
+const REGISTER_RETURN_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito:wght@400;600;700;800;900&display=swap');
+
+  @keyframes view-fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .register-return-page {
+    background: #f6f9fc;
+    font-family: 'Nunito', sans-serif;
+    min-height: 100vh;
+  }
+
+  .register-return-container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: clamp(24px, 4vw, 40px) 20px;
+  }
+
+  .btn-back {
+    background: transparent;
+    border: 1.5px solid #e2edf5;
+    border-radius: 40px;
+    padding: 8px 16px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: #1e4060;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .btn-back:hover {
+    background: #f0f8ff;
+    border-color: #afd0e6;
+    transform: translateY(-1px);
+  }
+
+  .view-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  @media (min-width: 1024px) {
+    .view-grid {
+      grid-template-columns: 2fr 1fr;
+    }
+  }
+
+  /* Tarjeta principal */
+  .info-card {
+    background: #ffffff;
+    border: 1.5px solid #e4eff6;
+    border-radius: 28px;
+    padding: 28px;
+    box-shadow: 0 4px 20px rgba(0, 77, 119, 0.05);
+    animation: view-fadeUp 0.4s ease;
+  }
+  .card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #0c2a3a;
+    margin-bottom: 8px;
+  }
+  .card-subtitle {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 24px;
+  }
+
+  /* Tabla de productos */
+  .products-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 28px;
+  }
+  .products-table th {
+    text-align: left;
+    padding: 12px 8px;
+    font-weight: 800;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #9abcce;
+    border-bottom: 1px solid #eef2f6;
+  }
+  .products-table td {
+    padding: 12px 8px;
+    font-size: 0.85rem;
+    color: #334155;
+    border-bottom: 1px solid #eef2f6;
+  }
+  .product-name-cell {
+    font-weight: 800;
+    color: #0c2a3a;
+  }
+
+  /* Mensaje informativo */
+  .info-message {
+    background: #e8f4fd;
+    border-radius: 20px;
+    padding: 20px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-top: 20px;
+  }
+  .info-message-content {
+    flex: 1;
+  }
+  .info-message-title {
+    font-weight: 800;
+    font-size: 0.9rem;
+    color: #004D77;
+    margin-bottom: 8px;
+  }
+  .info-message-text {
+    font-size: 0.8rem;
+    color: #1e4060;
+    line-height: 1.5;
+  }
+  .contact-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #25D366;
+    color: white;
+    border: none;
+    border-radius: 40px;
+    padding: 10px 20px;
+    font-weight: 800;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 12px;
+    text-decoration: none;
+  }
+  .contact-button:hover {
+    background: #128C7E;
+    transform: translateY(-2px);
+  }
+
+  /* Contacto sidebar */
+  .contact-card {
+    background: #ffffff;
+    border: 1.5px solid #e4eff6;
+    border-radius: 28px;
+    padding: 24px;
+    position: sticky;
+    top: 24px;
+    box-shadow: 0 4px 20px rgba(0, 77, 119, 0.05);
+  }
+  .contact-title {
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: #0c2a3a;
+    margin-bottom: 12px;
+  }
+  .contact-text {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+  .whatsapp-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .whatsapp-icon {
+    width: 40px;
+    height: 40px;
+    background: #dcfce7;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .social-title {
+    font-weight: 800;
+    font-size: 0.8rem;
+    color: #1e4060;
+    margin-bottom: 12px;
+  }
+  .social-icons {
+    display: flex;
+    gap: 12px;
+  }
+  .social-link {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+  }
+  .social-link:hover {
+    transform: scale(1.1);
+  }
+
+  @media (max-width: 768px) {
+    .info-card {
+      padding: 20px;
+    }
+    .products-table th, .products-table td {
+      padding: 8px 4px;
+    }
+    .contact-card {
+      position: static;
+    }
+  }
+`;
+
+let registerStylesInjected = false;
+function injectRegisterStyles() {
+  if (registerStylesInjected) return;
+  const style = document.createElement('style');
+  style.textContent = REGISTER_RETURN_STYLES;
+  document.head.appendChild(style);
+  registerStylesInjected = true;
+}
 
 function RegisterReturnOnDetail() {
+  injectRegisterStyles();
   const { id } = useParams();
   const navigate = useNavigate();
-  
-  const [seleccionarTodos, setSeleccionarTodos] = useState(false);
-  const [productosSeleccionados, setProductosSeleccionados] = useState([]);
-  
-  // Datos de ejemplo del pedido
-  const pedido = {
-    id: '123456789',
-    productos: [
-      {
-        id: 1,
-        nombre: 'LIBRETA CON LAPICERO',
-        cantidad: 50,
-        imagen: '/placeholder.png'
-      },
-      {
-        id: 2,
-        nombre: 'Cuaderno Norma',
-        cantidad: 20,
-        imagen: '/placeholder.png'
-      },
-      {
-        id: 3,
-        nombre: 'Lapicero Bic',
-        cantidad: 100,
-        imagen: '/placeholder.png'
-      }
-    ]
-  };
 
-  const handleSeleccionarTodos = () => {
-    if (!seleccionarTodos) {
-      setProductosSeleccionados(pedido.productos.map(p => p.id));
-    } else {
-      setProductosSeleccionados([]);
-    }
-    setSeleccionarTodos(!seleccionarTodos);
-  };
+  // Buscar el pedido por ID
+  const pedido = pedidos.find((p) => p.id === id);
 
-  const handleSeleccionarProducto = (productoId) => {
-    if (productosSeleccionados.includes(productoId)) {
-      setProductosSeleccionados(productosSeleccionados.filter(id => id !== productoId));
-    } else {
-      setProductosSeleccionados([...productosSeleccionados, productoId]);
-    }
-  };
+  // Si no se encuentra el pedido, mostrar mensaje de error
+  if (!pedido) {
+    return (
+      <div className="register-return-page">
+        <div className="register-return-container text-center py-20">
+          <p className="text-xl font-semibold text-gray-700 mb-4">Pedido no encontrado</p>
+          <button
+            onClick={() => navigate('/orders-l')}
+            className="btn-back"
+            style={{ margin: '0 auto' }}
+          >
+            Volver a pedidos
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  const handleGuardar = () => {
-    if (productosSeleccionados.length === 0) {
-      alert('Por favor selecciona al menos un producto');
-      return;
-    }
-    console.log('Productos seleccionados:', productosSeleccionados);
-    // Aquí iría la lógica para guardar la devolución
-  };
+  const whatsappNumber = '+573212828628';
+  const whatsappMessage = encodeURIComponent(`Hola, necesito ayuda con una devolución de mi pedido No. ${pedido.id}`);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="register-return-page">
+      <div className="register-return-container">
+        <button onClick={() => navigate('/orders-l')} className="btn-back">
+          <ChevronLeft size={14} /> Volver
+        </button>
 
-      {/* Banner */}
-      <div className="px-4 sm:px-6 lg:px-8 py-4">
-        <div className="w-full h-[15vh] sm:h-[18vh] lg:h-[22vh] relative overflow-hidden rounded-xl">
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${BgPedidos})` }}
-          />
-          <div className="absolute inset-0 bg-blue-950/75" />
-          <div className="relative z-10 w-full h-full flex items-center justify-center">
-            <h2 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white">
-              Pedidos / Devoluciones
-            </h2>
-          </div>
-        </div>
-      </div>
+        <div className="view-grid">
+          {/* Columna izquierda - Información del pedido */}
+          <div className="info-card">
+            <h2 className="card-title">Productos del pedido</h2>
+            <p className="card-subtitle">Revisa los artículos que solicitaste (Pedido No. {pedido.id})</p>
 
-      {/* Contenido principal */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Botón volver y Breadcrumb */}
-        <div className="mb-6">
-          <button 
-            onClick={() => navigate(`/orders-l`)}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors mb-4"
-          >
-            <X className="w-4 h-4" />
-            Volver
-          </button>
-
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <a href="/returnsOnOrders" className="hover:text-blue-600">Devoluciones</a>
-            <ChevronRight className="w-4 h-4" />
-            <span className="text-gray-900">Registrando devolución en el pedido No. {pedido.id}</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Columna izquierda - Productos */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Productos del pedido</h2>
-              <p className="text-sm text-gray-600 mb-6">Escoja los productos que desea devolver</p>
-
-              {/* Checkbox seleccionar todos */}
-              <div className="flex items-center gap-2 mb-4 pb-4 border-b">
-                <input
-                  type="checkbox"
-                  id="seleccionar-todos"
-                  checked={seleccionarTodos}
-                  onChange={handleSeleccionarTodos}
-                  className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label htmlFor="seleccionar-todos" className="text-sm font-medium text-gray-700 cursor-pointer">
-                  Seleccionar todos
-                </label>
-              </div>
-
-              {/* Lista de productos */}
-              <div className="space-y-4">
+            <table className="products-table">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Cantidad</th>
+                </tr>
+              </thead>
+              <tbody>
                 {pedido.productos.map((producto) => (
-                  <div key={producto.id} className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      id={`producto-${producto.id}`}
-                      checked={productosSeleccionados.includes(producto.id)}
-                      onChange={() => handleSeleccionarProducto(producto.id)}
-                      className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    
-                    <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <span className="text-2xl">📦</span>
-                    </div>
-
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{producto.nombre}</h3>
-                      <p className="text-sm text-gray-600">Cantidad: {producto.cantidad}</p>
-                    </div>
-                  </div>
+                  <tr key={producto.id}>
+                    <td className="product-name-cell">{producto.nombre}</td>
+                    <td>{producto.cantidad} und.</td>
+                  </tr>
                 ))}
-              </div>
+              </tbody>
+            </table>
 
-              {/* Botón guardar */}
-              <button 
-                onClick={handleGuardar}
-                className="w-full mt-6 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-              >
-                Guardar
-              </button>
-
-              {/* Alerta */}
-              <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3">
-                <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-yellow-800">
-                  <p className="mb-2">
-                    En el momento de "Guardar", se enviará la solicitud de devolución. Nuestro equipo estará al tanto y se 
-                    encargará de aprobar o desaprobar esta devolución.
-                  </p>
-                  <p>En cualquier caso, te avisaremos a través de tu correo electrónico.</p>
+            {/* Mensaje informativo sobre devoluciones */}
+            <div className="info-message">
+              <Info size={24} className="text-[#004D77] flex-shrink-0" />
+              <div className="info-message-content">
+                <div className="info-message-title">¿Necesitas realizar una devolución?</div>
+                <div className="info-message-text">
+                  Las devoluciones se gestionan directamente con un asesor de atención al cliente. 
+                  Por favor, contáctanos por WhatsApp para recibir asistencia personalizada.
                 </div>
+                <a
+                  href={`https://wa.me/${whatsappNumber}?text=${whatsappMessage}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="contact-button"
+                >
+                  <MessageCircle size={18} /> Contactar asesor
+                </a>
               </div>
             </div>
           </div>
 
-          {/* Columna derecha - Contacto */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6 sticky top-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Contacto</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                ¿Tienes dudas sobre cómo generar la devolución? Comunícate con nosotros y te 
-                ayudaremos con todo lo que necesites saber.
-              </p>
+          {/* Columna derecha - Contacto (reforzado) */}
+          <div className="contact-card">
+            <h3 className="contact-title">Contacto para devoluciones</h3>
+            <p className="contact-text">
+              Nuestro equipo de atención al cliente está listo para ayudarte con cualquier 
+              solicitud de devolución o cambio. Escríbenos y te guiaremos en el proceso.
+            </p>
 
-              {/* WhatsApp */}
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <Phone className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <a 
-                    href="https://wa.me/573002936722" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-sm font-medium text-gray-900 hover:text-blue-600"
-                  >
-                    +57 300 293 6722
-                  </a>
-                </div>
+            <div className="whatsapp-link">
+              <div className="whatsapp-icon">
+                <Phone size={20} className="text-green-600" />
               </div>
+              <a
+                href={`https://wa.me/${whatsappNumber}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-gray-900 hover:text-[#004D77] transition-colors"
+              >
+                (+57) 321 282 8628
+              </a>
+            </div>
 
-              {/* Redes sociales */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">Nuestras redes</h4>
-                <div className="flex gap-3">
-                  <a 
-                    href="https://instagram.com" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity"
-                  >
-                    <FaInstagram className="w-5 h-5 text-white" />
-                  </a>
-                  <a 
-                    href="https://tiktok.com" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 bg-black rounded-full flex items-center justify-center hover:opacity-80 transition-opacity"
-                  >
-                    <FaTiktok className="w-5 h-5 text-white" />
-                  </a>
-                </div>
+            <div>
+              <h4 className="social-title">Nuestras redes</h4>
+              <div className="social-icons">
+                <a
+                  href="https://instagram.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="social-link bg-gradient-to-br from-purple-500 to-pink-500"
+                >
+                  <FaInstagram className="w-5 h-5 text-white" />
+                </a>
+                <a
+                  href="https://tiktok.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="social-link bg-black"
+                >
+                  <FaTiktok className="w-5 h-5 text-white" />
+                </a>
               </div>
             </div>
           </div>
         </div>
       </div>
-
     </div>
   );
 }

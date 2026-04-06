@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import { UsersDB }        from '../../../users/services/usersDB';
-import { clientsService } from '../../clients/services/clientsService';
+import { clientsService, creditAccountService } from '../../clients/services/clientsService';
 
 // ─── Claves de almacenamiento ─────────────────────────────────────────────────
 export const SALES_STORAGE_KEY = 'pm_sales';
@@ -10,6 +10,49 @@ export const USERS_STORAGE_KEY = 'users';
 export const METODOS_PAGO  = ['Efectivo', 'Crédito', 'Transferencia'];
 export const ESTADOS_VENTA = ['Aprobada', 'Anulada', 'Esp. aprobación', 'Desaprobada'];
 export const ENTREGAS      = ['Cliente lo recoge', 'Domicilio'];
+
+export const getClientCreditInfo = (clienteId) => {
+  if (!clienteId) return { creditAmount: 0, balance: 0, available: 0 };
+  const account = creditAccountService.getByClientId(clienteId);
+  if (!account) return { creditAmount: 0, balance: 0, available: 0 };
+  const available = account.creditAmount - account.balance;
+  return {
+    creditAmount: account.creditAmount,
+    balance: account.balance,
+    available: available > 0 ? available : 0,
+  };
+};
+
+// ─── Estructura inicial de montos de pago ─────────────────────────────────────
+export const getInitialPaymentAmounts = () => ({
+  'Efectivo': 0,
+  'Crédito': 0,
+  'Transferencia': 0,
+});
+
+// ─── Validación de montos de pago ────────────────────────────────────────────
+/**
+ * Valida que la suma de los montos de pago no supere el total de la venta.
+ * @param {Object} paymentAmounts - Objeto con montos por método de pago.
+ * @param {number} total - Total de la venta (número, no formateado).
+ * @returns {string|null} Mensaje de error o null si es válido.
+ */
+export const validatePaymentAmounts = (paymentAmounts, total, clienteId) => {
+  const suma = Object.values(paymentAmounts).reduce((acc, val) => acc + (Number(val) || 0), 0);
+  if (suma > total) {
+    const formatter = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+    return `La suma de los pagos (${formatter.format(suma)}) supera el total de la venta (${formatter.format(total)}).`;
+  }
+  const creditAmount = paymentAmounts['Crédito'] || 0;
+  if (creditAmount > 0 && clienteId) {
+    const creditInfo = getClientCreditInfo(clienteId);
+    if (creditAmount > creditInfo.available) {
+      const fmt = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
+      return `El monto a crédito (${fmt(creditAmount)}) supera el cupo disponible (${fmt(creditInfo.available)}).`;
+    }
+  }
+  return null;
+};
 
 // ─── Formateador de precios ───────────────────────────────────────────────────
 export const formatPrice = (value) =>
@@ -47,7 +90,6 @@ export const filterSales = (data, search) => {
   const term = search.toLowerCase().trim();
   if (!term) return data;
 
-  // Carga una sola vez por llamada
   const vendors = UsersDB.list();
 
   const resolveClient = (clientId, storedName) => {
@@ -76,12 +118,13 @@ export const filterSales = (data, search) => {
   });
 };
 
-// ─── Validación del formulario de venta ──────────────────────────────────────
+// ─── Validación del formulario de venta (sin pagos) ──────────────────────────
 export const validateForm = (form, items) => {
   const errors = {};
   if (!form.clienteId)                                       errors.clienteId  = 'Seleccione un cliente.';
   if (!form.vendedorId)                                      errors.vendedorId = 'Seleccione un vendedor.';
-  if (!form.metodoPago)                                      errors.metodoPago = 'Seleccione un método de pago.';
+  if (!form.metodoPago || (Array.isArray(form.metodoPago) && form.metodoPago.length === 0))
+                                                             errors.metodoPago = 'Seleccione al menos un método de pago.';
   if (!form.estado)                                          errors.estado     = 'Seleccione un estado.';
   if (!form.entrega)                                         errors.entrega    = 'Seleccione una opción de entrega.';
   if (form.entrega === 'Domicilio' && !form.direccion?.trim())
@@ -115,7 +158,7 @@ export const downloadSalesExcel = () => {
     'Cliente':           resolveClient(s.clienteId,  s.cliente),
     'Vendedor':          resolveVendor(s.vendedorId, s.vendedor),
     'Fecha':             s.fecha,
-    'Método de Pago':    s.metodoPago,
+    'Método de Pago':    Array.isArray(s.metodoPago) ? s.metodoPago.join(', ') : s.metodoPago,
     'Total':             s.total,
     'Estado':            s.estado,
     'Registrado Desde':  s.registradoDesde ?? '—',

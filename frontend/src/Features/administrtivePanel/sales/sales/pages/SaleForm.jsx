@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
@@ -7,7 +7,7 @@ import SaleDetailsForm          from '../components/SaleDetailsForm';
 import OrderForm                from '../components/OrderForm';
 import DataSalePreview          from '../components/DataSalePreview';
 import { SalesDB }              from '../services/salesBD';
-import { generateFactura, validateForm } from '../helpers/salesHelpers';
+import { generateFactura, validateForm, validatePaymentAmounts, getInitialPaymentAmounts } from '../helpers/salesHelpers';
 
 /**
  * Componente para crear o editar una venta.
@@ -39,10 +39,18 @@ function SaleForm() {
     clienteId:  location.state?.newUserId
       ?? (saleToEdit ? String(saleToEdit.clienteId ?? '') : ''),
     vendedorId: saleToEdit ? String(saleToEdit.vendedorId ?? '') : '',
-    metodoPago: saleToEdit?.metodoPago ?? '',
+    metodoPago: saleToEdit?.metodoPago ?? [],
     estado:     saleToEdit?.estado     ?? '',
     entrega:    saleToEdit?.entrega    ?? '',
     direccion:  saleToEdit?.direccion  ?? '',
+  });
+
+  // Estado para montos de pago
+  const [paymentAmounts, setPaymentAmounts] = useState(() => {
+    if (isEditing && saleToEdit?.paymentAmounts) {
+      return { ...getInitialPaymentAmounts(), ...saleToEdit.paymentAmounts };
+    }
+    return getInitialPaymentAmounts();
   });
 
   // Items originales para edición (para restaurar stock si cambian)
@@ -53,6 +61,13 @@ function SaleForm() {
   // Items actuales del pedido
   const [items,  setItems]  = useState(() => isEditing && saleToEdit.items ? saleToEdit.items : []);
   const [errors, setErrors] = useState({});
+
+  // Calcular el total de la venta en tiempo real (número, no formateado)
+  const totalAmount = useMemo(() => {
+    if (!items || items.length === 0) return 0;
+    const { total } = SalesDB._calcTotals(items);
+    return total;
+  }, [items]);
 
   // Ref para los botones de acción y control de visibilidad del FAB
   const actionsRef     = useRef(null);
@@ -91,6 +106,15 @@ function SaleForm() {
   }, []);
 
   /**
+   * Maneja cambios en los montos de pago.
+   * @param {Object} newAmounts - Nuevo objeto con montos por método.
+   */
+  const handlePaymentAmountChange = useCallback((newAmounts) => {
+    setPaymentAmounts(newAmounts);
+    if (errors.paymentAmounts) setErrors((prev) => ({ ...prev, paymentAmounts: '' }));
+  }, [errors.paymentAmounts]);
+
+  /**
    * Maneja cambios en la lista de items del pedido.
    * Actualiza el estado de items y limpia errores si hay items.
    *
@@ -118,10 +142,10 @@ function SaleForm() {
 
   /**
    * Maneja el guardado de la venta.
-   * Valida el formulario, confirma con el usuario y guarda o actualiza la venta.
+   * Valida el formulario, los pagos, confirma con el usuario y guarda o actualiza la venta.
    */
   const handleSave = async () => {
-    // 1. Validar campos
+    // 1. Validar campos básicos
     const newErrors = validateForm(form, items);
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -132,15 +156,22 @@ function SaleForm() {
       return;
     }
 
-    // 2. Validar crédito — solo en creación, método exclusivo "Crédito" y estado "Aprobada"
+    // 2. Validar montos de pago (usando la función helper)
+    // 🔁 Se pasa form.clienteId para validar también el cupo de crédito
+    const paymentError = validatePaymentAmounts(paymentAmounts, totalAmount, form.clienteId);
+    if (paymentError) {
+      setErrors(prev => ({ ...prev, paymentAmounts: paymentError }));
+      showWarning('Error en los pagos', paymentError);
+      return;
+    }
+
+    // 3. Validar crédito — solo en creación, método exclusivo "Crédito" y estado "Aprobada"
     const esCredito = Array.isArray(form.metodoPago)
       ? form.metodoPago.length === 1 && form.metodoPago[0] === 'Crédito'
       : form.metodoPago === 'Crédito';
 
     if (!isEditing && esCredito && form.estado === 'Aprobada') {
-      const { total: totalNum } = SalesDB._calcTotals(items);
       const creditInfo = SalesDB.getCreditInfo(form.clienteId);
-
       if (!creditInfo.tieneCredito) {
         showError(
           'Sin crédito asignado',
@@ -148,39 +179,41 @@ function SaleForm() {
         );
         return;
       }
-
-      if (totalNum > creditInfo.cupoDisponible) {
+      if (totalAmount > creditInfo.cupoDisponible) {
         const fmt = (v) => new Intl.NumberFormat('es-CO', {
           style: 'currency', currency: 'COP', minimumFractionDigits: 0,
         }).format(v);
         showError(
           'Cupo insuficiente',
-          `El total de la venta (${fmt(totalNum)}) supera el cupo disponible del cliente (${fmt(creditInfo.cupoDisponible)}). Reduzca el pedido o cambie el método de pago.`
+          `El total de la venta (${fmt(totalAmount)}) supera el cupo disponible del cliente (${fmt(creditInfo.cupoDisponible)}). Reduzca el pedido o cambie el método de pago.`
         );
         return;
       }
     }
 
-    // 3. Confirmación — "Enviar" guarda, "Revisar" vuelve al formulario
+    // 4. Confirmación
     const result = await showConfirm(
       'info',
       '¿Listo para guardar?',
       'Revisa que todos los datos sean correctos antes de confirmar. Esta acción guardará la venta en el sistema.',
       { confirmButtonText: 'Enviar', cancelButtonText: 'Revisar' }
     );
-
     if (!result?.isConfirmed) return;
 
-    // 4. Guardar
-    if (isEditing) {
-      SalesDB.update(saleToEdit.id, form, items, originalItems);
-      showSuccess('Venta actualizada', 'Los datos de la venta han sido actualizados correctamente.');
-    } else {
-      SalesDB.create(form, items, facturaNo);
-      showSuccess('Venta creada', 'La venta ha sido registrada exitosamente.');
+    // 5. Guardar
+    try {
+      if (isEditing) {
+        SalesDB.update(saleToEdit.id, form, items, originalItems, paymentAmounts);
+        showSuccess('Venta actualizada', 'Los datos de la venta han sido actualizados correctamente.');
+      } else {
+        SalesDB.create(form, items, facturaNo, paymentAmounts);
+        showSuccess('Venta creada', 'La venta ha sido registrada exitosamente.');
+      }
+      navigate('/admin/sales');
+    } catch (error) {
+      console.error(error);
+      showError('Error', 'No se pudo guardar la venta. Intente nuevamente.');
     }
-
-    navigate('/admin/sales');
   };
 
   return (
@@ -216,6 +249,9 @@ function SaleForm() {
           isAnulada={isAnulada}
           motivoAnulacion={saleToEdit?.motivoAnulacion ?? ''}
           fechaAnulacion={saleToEdit?.fechaAnulacion  ?? ''}
+          paymentAmounts={paymentAmounts}
+          onPaymentAmountChange={handlePaymentAmountChange}
+          totalAmount={totalAmount}
         />
         <OrderForm
           items={items}
@@ -228,6 +264,11 @@ function SaleForm() {
         <p className="text-sm text-red-600 -mt-2">{errors.items}</p>
       )}
 
+      {/* Error de pagos (global) */}
+      {errors.paymentAmounts && (
+        <p className="text-sm text-red-600">{errors.paymentAmounts}</p>
+      )}
+
       {/* Vista previa de la venta */}
       <DataSalePreview
         form={form}
@@ -236,6 +277,7 @@ function SaleForm() {
         isAnulada={isAnulada}
         motivoAnulacion={saleToEdit?.motivoAnulacion ?? ''}
         fechaAnulacion={saleToEdit?.fechaAnulacion  ?? ''}
+        paymentAmounts={paymentAmounts}
       />
 
       {/* Botones de acción — al final del formulario */}
