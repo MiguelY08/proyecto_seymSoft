@@ -33,7 +33,7 @@ function PriceCard({ label, fieldMain, fieldPaca, placeholderMain, placeholderPa
 }
 
 const EMPTY = {
-  imagen: null, categorias: [], descripcion: '', nombre: '', codBarras: '',
+  imagen: null, categorias: [], descripcion: '', nombre: '', codBarras: '', codBarras2: '',
   referencia: '', stock: '', cantidadXPaca: '',
   precioDetalle: '', precioDetallePaca: '', precioMayorista: '', precioMayoristaPaca: '',
   precioColegas: '', precioColegasPaca: '', precioPacas: '', precioPacasPaca: '',
@@ -255,6 +255,10 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
                   <label className="block text-xs font-medium text-gray-700 mb-1">Código de barras <span className="text-red-500">*</span></label>
                   <input type="text" name="codBarras" value={formData.codBarras} onChange={handleChange} placeholder="123456789" className={inputCls('codBarras')} />
                   <ErrMsg field="codBarras" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Código de barras 2 <span className="text-gray-400 font-normal">(opcional)</span></label>
+                  <input type="text" name="codBarras2" value={formData.codBarras2} onChange={handleChange} placeholder="Código alternativo" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Referencia <span className="text-red-500">*</span></label>
