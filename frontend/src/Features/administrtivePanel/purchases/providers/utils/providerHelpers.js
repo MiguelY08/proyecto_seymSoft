@@ -68,13 +68,6 @@ export const formatPersonType = (tipoPersona) => {
   return 'N/A';
 };
 
-// Convierte el tipo de cliente en su representación legible
-export const formatClientType = (tipoCliente) => {
-  if (tipoCliente === 'mayorista') return 'Mayorista';
-  if (tipoCliente === 'minorista') return 'Minorista';
-  return 'N/A';
-};
-
 // Formatea la indicación de RUT a 'Sí' o 'No'
 export const formatRut = (rut) => {
   if (rut === 'si') return 'Sí';
@@ -180,10 +173,6 @@ export const validateProviderForm = (formData) => {
     errors.direccion = 'La dirección es obligatoria';
   } else if (formData.direccion.trim().length < 5) {
     errors.direccion = 'Debe tener al menos 5 caracteres';
-  }
-
-  if (!formData.tipoCliente?.trim()) {
-    errors.tipoCliente = 'Seleccione el tipo de cliente';
   }
 
   if (!formData.categorias || formData.categorias.length === 0) {
