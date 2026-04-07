@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   X, Plus, Minus, AlertCircle, CheckCircle2,
-  ChevronDown, Trash2, Lock,
+  ChevronDown, Trash2, Lock, ChevronUp,
 } from 'lucide-react';
 import {
   MOTIVOS_DEVOLUCION,
@@ -153,36 +153,118 @@ function EstadoDropdown({ value, disabled, estados, onChange, hasError }) {
 }
 
 // ─── Clases base de inputs ────────────────────────────────────────────────────
-const inputBase    = 'w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200';
-const selectClass  = (hasError) =>
+const inputBase = 'w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200';
+const selectClass = (hasError) =>
   `appearance-none ${inputBase} cursor-pointer ${
     hasError
       ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
       : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
   }`;
 
-// ─── LineaConfig — una fila de devolución por producto ────────────────────────
-const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errores }) => {
+// ─── Selector de motivo (editable) ───────────────────────────────────────────
+const MotivoSelect = ({ value, onChange, hasError }) => (
+  <div className="relative">
+    <select
+      value={value || ''}
+      onChange={(e) => onChange(e.target.value)}
+      className={`appearance-none w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white cursor-pointer ${inputBase} ${
+        hasError
+          ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+          : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
+      }`}
+    >
+      <option value="">Seleccionar...</option>
+      {MOTIVOS_DEVOLUCION.map((m) => (
+        <option key={m} value={m}>{m}</option>
+      ))}
+    </select>
+    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
+  </div>
+);
+
+// ─── Selector de tipo (editable) ─────────────────────────────────────────────
+const TipoSelect = ({ value, onChange, hasError }) => (
+  <div className="relative">
+    <select
+      value={value || ''}
+      onChange={(e) => onChange(e.target.value)}
+      className={`appearance-none w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white cursor-pointer ${inputBase} ${
+        hasError
+          ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+          : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
+      }`}
+    >
+      <option value="">Seleccionar...</option>
+      {TIPOS_DEVOLUCION.map((t) => (
+        <option key={t} value={t}>{t}</option>
+      ))}
+    </select>
+    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
+  </div>
+);
+
+// ─── Campo cantidad editable con botones (+/-) (mejorado) ─────────────────────
+const CantidadInput = ({ value, max, onChange, hasError }) => {
+  const cantidad = value ?? 1;
+  const decCb = useCallback(() => onChange(Math.max(1, cantidad - 1)), [cantidad, onChange]);
+  const incCb = useCallback(() => onChange(Math.min(max, cantidad + 1)), [cantidad, max, onChange]);
+  const lpDec = useLongPress(decCb);
+  const lpInc = useLongPress(incCb);
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      <div className="flex items-center border border-gray-300 rounded-md overflow-hidden w-fit">
+        <button
+          type="button" {...lpDec}
+          disabled={cantidad <= 1}
+          className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100
+                     transition-colors cursor-pointer select-none disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <Minus className="w-2.5 h-2.5" strokeWidth={2.5} />
+        </button>
+        <input
+          type="number"
+          value={cantidad}
+          min={1}
+          max={max}
+          onChange={(e) => {
+            const val = parseInt(e.target.value, 10);
+            if (!isNaN(val)) onChange(Math.min(Math.max(1, val), max));
+          }}
+          className={`w-12 text-center text-xs font-semibold text-gray-700 border-x border-gray-200
+                     outline-none py-0.5 [appearance:textfield]
+                     [&::-webkit-outer-spin-button]:appearance-none
+                     [&::-webkit-inner-spin-button]:appearance-none ${hasError ? 'text-red-600' : ''}`}
+        />
+        <button
+          type="button" {...lpInc}
+          disabled={cantidad >= max}
+          className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100
+                     transition-colors cursor-pointer select-none disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <Plus className="w-2.5 h-2.5" strokeWidth={2.5} />
+        </button>
+      </div>
+      <span className="text-[9px] text-gray-400 leading-tight">Máx: {max}</span>
+    </div>
+  );
+};
+
+// ─── Campo de solo lectura ───────────────────────────────────────────────────
+const ReadonlyField = ({ value, placeholder = '—' }) => (
+  <div className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed select-none">
+    {value || placeholder}
+  </div>
+);
+
+// ─── LineaConfig — una fila de devolución por producto (con editable condicional) ──
+const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errores, editableCompleto, isEditMode }) => {
   const esTerminal     = isEstadoTerminal(linea.estado);
   const badgeStyle     = getBadgeEstadoProducto(linea.estado);
   const estadosDisp    = linea.tipoDevolucion ? getEstadosByTipo(linea.tipoDevolucion) : [];
   const fieldError     = (campo) => errores?.[campo];
 
-  const handleTipoChange = (nuevoTipo) =>
-    onChange({ tipoDevolucion: nuevoTipo, estado: getEstadoInicial() });
-
-  const decCb = useCallback(() =>
-    onChange({ cantidadDevolver: Math.max(1, (linea.cantidadDevolver ?? 1) - 1) }),
-    [linea.cantidadDevolver, onChange]);
-
-  const incCb = useCallback(() =>
-    onChange({ cantidadDevolver: Math.min(maxCantidad, (linea.cantidadDevolver ?? 1) + 1) }),
-    [linea.cantidadDevolver, maxCantidad, onChange]);
-
-  const lpDec = useLongPress(decCb);
-  const lpInc = useLongPress(incCb);
-
-  // ── Terminal: solo lectura ─────────────────────────────────────────────────
+  // Caso terminal: todo solo lectura (no editable)
   if (esTerminal) {
     return (
       <div className="border border-green-200 rounded-lg p-2.5 bg-green-50">
@@ -213,10 +295,11 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
     );
   }
 
-  // ── Editable ──────────────────────────────────────────────────────────────
+  // Caso no terminal: según editableCompleto se muestran inputs o solo lectura
+  const mostrarInputs = editableCompleto;
+
   return (
     <div className="border border-gray-200 rounded-lg p-2.5 bg-white">
-      {/* Cabecera de la línea */}
       <div className="flex items-center justify-between mb-2">
         <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={badgeStyle}>
           {linea.estado || '—'}
@@ -234,23 +317,18 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-
         {/* Motivo */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-600">
-            Motivo <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <select
-              value={linea.motivo ?? ''}
-              onChange={(e) => onChange({ motivo: e.target.value })}
-              className={selectClass(!!fieldError('motivo'))}
-            >
-              <option value="">Seleccionar...</option>
-              {MOTIVOS_DEVOLUCION.map((m) => <option key={m} value={m}>{m}</option>)}
-            </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
-          </div>
+          <label className="text-xs font-medium text-gray-600">Motivo <span className="text-red-500">*</span></label>
+          {mostrarInputs ? (
+            <MotivoSelect
+              value={linea.motivo}
+              onChange={(val) => onChange({ motivo: val })}
+              hasError={!!fieldError('motivo')}
+            />
+          ) : (
+            <ReadonlyField value={linea.motivo} placeholder="Seleccionar..." />
+          )}
           {fieldError('motivo') && (
             <p className="text-xs text-red-500 flex items-center gap-1">
               <AlertCircle className="w-3 h-3 shrink-0" /> {fieldError('motivo')}
@@ -260,20 +338,18 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
 
         {/* Tipo */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-600">
-            Tipo <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <select
-              value={linea.tipoDevolucion ?? ''}
-              onChange={(e) => handleTipoChange(e.target.value)}
-              className={selectClass(!!fieldError('tipoDevolucion'))}
-            >
-              <option value="">Seleccionar...</option>
-              {TIPOS_DEVOLUCION.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
-          </div>
+          <label className="text-xs font-medium text-gray-600">Tipo <span className="text-red-500">*</span></label>
+          {mostrarInputs ? (
+            <TipoSelect
+              value={linea.tipoDevolucion}
+              onChange={(val) => {
+                onChange({ tipoDevolucion: val, estado: getEstadoInicial() });
+              }}
+              hasError={!!fieldError('tipoDevolucion')}
+            />
+          ) : (
+            <ReadonlyField value={linea.tipoDevolucion} placeholder="Seleccionar..." />
+          )}
           {fieldError('tipoDevolucion') && (
             <p className="text-xs text-red-500 flex items-center gap-1">
               <AlertCircle className="w-3 h-3 shrink-0" /> {fieldError('tipoDevolucion')}
@@ -281,11 +357,9 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
           )}
         </div>
 
-        {/* Estado */}
+        {/* Estado (siempre editable en no terminal, pero se deshabilita si no hay tipo) */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-600">
-            Estado <span className="text-red-500">*</span>
-          </label>
+          <label className="text-xs font-medium text-gray-600">Estado <span className="text-red-500">*</span></label>
           <EstadoDropdown
             value={linea.estado ?? ''}
             disabled={!linea.tipoDevolucion}
@@ -300,116 +374,115 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
           )}
         </div>
 
-        {/* Cantidad con long press */}
+        {/* Cantidad */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-600">
-            Cantidad <span className="text-red-500">*</span>
-          </label>
-          <div className="flex flex-col items-start gap-0.5">
-            <div className="flex items-center border border-gray-300 rounded-md overflow-hidden">
-              <button
-                type="button" {...lpDec}
-                disabled={(linea.cantidadDevolver ?? 1) <= 1}
-                className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100
-                           transition-colors cursor-pointer select-none disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <Minus className="w-2.5 h-2.5" strokeWidth={2.5} />
-              </button>
-              <input
-                type="number"
-                value={linea.cantidadDevolver ?? 1}
-                min={1}
-                max={maxCantidad}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  if (!isNaN(val))
-                    onChange({ cantidadDevolver: Math.min(Math.max(1, val), maxCantidad) });
-                }}
-                className="w-10 text-center text-xs font-semibold text-gray-700 border-x border-gray-200
-                           outline-none py-0.5 [appearance:textfield]
-                           [&::-webkit-outer-spin-button]:appearance-none
-                           [&::-webkit-inner-spin-button]:appearance-none"
-              />
-              <button
-                type="button" {...lpInc}
-                disabled={(linea.cantidadDevolver ?? 1) >= maxCantidad}
-                className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100
-                           transition-colors cursor-pointer select-none disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <Plus className="w-2.5 h-2.5" strokeWidth={2.5} />
-              </button>
-            </div>
-            <span className="text-[9px] text-gray-400 leading-tight">Máx: {maxCantidad}</span>
-          </div>
+          <label className="text-xs font-medium text-gray-600">Cantidad <span className="text-red-500">*</span></label>
+          {mostrarInputs ? (
+            <CantidadInput
+              value={linea.cantidadDevolver}
+              max={maxCantidad}
+              onChange={(val) => onChange({ cantidadDevolver: val })}
+              hasError={!!fieldError('cantidadDevolver')}
+            />
+          ) : (
+            <ReadonlyField value={linea.cantidadDevolver} placeholder="1" />
+          )}
           {fieldError('cantidadDevolver') && (
             <p className="text-xs text-red-500 flex items-center gap-1">
               <AlertCircle className="w-3 h-3 shrink-0" /> {fieldError('cantidadDevolver')}
             </p>
           )}
         </div>
-
       </div>
     </div>
   );
 };
 
-// ─── ProductConfig — panel de un producto con sus líneas ─────────────────────
-const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, errores }) => {
+// ─── ProductConfig — panel de un producto con sus líneas (colapsable con animación) ──
+const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, errores, isExpanded, onToggleExpand, isEditMode }) => {
   const totalUsado       = (producto.lineas ?? []).reduce((sum, l) => sum + (Number(l.cantidadDevolver) || 0), 0);
   const cantidadRestante = producto.cantidadComprada - totalUsado;
   const puedeAgregar     = cantidadRestante > 0;
 
+  const estadoPrincipal = producto.lineas?.[0]?.estado || getEstadoInicial();
+  const badgeStyle = getBadgeEstadoProducto(estadoPrincipal);
+
   return (
-    <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
-
-      {/* Cabecera del producto */}
-      <div className="flex items-center justify-between mb-2">
-        <h4 className="text-xs font-semibold text-gray-800 uppercase tracking-wide truncate pr-2">
-          {producto.nombre}
-        </h4>
-        <span className="text-[9px] shrink-0 bg-white border border-gray-200 rounded px-1.5 py-0.5 text-gray-500">
-          {totalUsado}/{producto.cantidadComprada} u.
-        </span>
+    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+      <div
+        className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+        onClick={onToggleExpand}
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="text-sm font-semibold text-gray-800 truncate">{producto.nombre}</h4>
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={badgeStyle}>
+              {estadoPrincipal}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+            <span>Devolución: {totalUsado}/{producto.cantidadComprada} u.</span>
+            <span>Tipo: {producto.lineas?.[0]?.tipoDevolucion || '—'}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {isExpanded ? (
+            <ChevronUp className="w-4 h-4 text-gray-400" strokeWidth={2} />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-gray-400" strokeWidth={2} />
+          )}
+        </div>
       </div>
 
-      {/* Líneas */}
-      <div className="flex flex-col gap-2 mb-2">
-        {(producto.lineas ?? []).map((linea, idx) => {
-          const usadoOtras = (producto.lineas ?? [])
-            .filter((_, i) => i !== idx)
-            .reduce((sum, l) => sum + (Number(l.cantidadDevolver) || 0), 0);
-          const maxParaEstaLinea = producto.cantidadComprada - usadoOtras;
-          const erroresLinea     = errores?.lineas?.[idx] ?? {};
-          const canRemove        = !isEstadoTerminal(linea.estado) && (producto.lineas ?? []).length > 1;
+      {/* Contenido expandible con animación de altura usando grid */}
+      <div
+        className="grid transition-all duration-300 ease-in-out"
+        style={{ gridTemplateRows: isExpanded ? '1fr' : '0fr' }}
+      >
+        <div className="overflow-hidden">
+          <div className="border-t border-gray-100 p-3 bg-gray-50">
+            <div className="flex flex-col gap-2 mb-2">
+              {(producto.lineas ?? []).map((linea, idx) => {
+                const usadoOtras = (producto.lineas ?? [])
+                  .filter((_, i) => i !== idx)
+                  .reduce((sum, l) => sum + (Number(l.cantidadDevolver) || 0), 0);
+                const maxParaEstaLinea = producto.cantidadComprada - usadoOtras;
+                const erroresLinea     = errores?.lineas?.[idx] ?? {};
+                const canRemove        = !isEstadoTerminal(linea.estado) && (producto.lineas ?? []).length > 1;
+                const esNueva = !linea.lineaId?.startsWith('existing-');
+                const editableCompleto = !isEditMode || esNueva;
 
-          return (
-            <LineaConfig
-              key={linea.lineaId}
-              linea={linea}
-              maxCantidad={maxParaEstaLinea}
-              onChange={(cambios) => onLineaChange(idx, cambios)}
-              onRemove={() => onRemoveLinea(idx)}
-              canRemove={canRemove}
-              errores={erroresLinea}
-            />
-          );
-        })}
+                return (
+                  <LineaConfig
+                    key={linea.lineaId}
+                    linea={linea}
+                    maxCantidad={maxParaEstaLinea}
+                    onChange={(cambios) => onLineaChange(idx, cambios)}
+                    onRemove={() => onRemoveLinea(idx)}
+                    canRemove={canRemove}
+                    errores={erroresLinea}
+                    editableCompleto={editableCompleto}
+                    isEditMode={isEditMode}
+                  />
+                );
+              })}
+            </div>
+
+            {puedeAgregar && (
+              <button
+                type="button"
+                onClick={onAddLinea}
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium
+                           text-[#004D77] border border-dashed border-[#004D77]/40 rounded-lg
+                           hover:bg-[#004D77]/5 hover:border-[#004D77] transition-colors cursor-pointer"
+              >
+                <Plus className="w-3 h-3" strokeWidth={2.5} />
+                Agregar línea ({cantidadRestante} u. disponibles)
+              </button>
+            )}
+          </div>
+        </div>
       </div>
-
-      {/* Agregar línea */}
-      {puedeAgregar && (
-        <button
-          type="button"
-          onClick={onAddLinea}
-          className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium
-                     text-[#004D77] border border-dashed border-[#004D77]/40 rounded-lg
-                     hover:bg-[#004D77]/5 hover:border-[#004D77] transition-colors cursor-pointer"
-        >
-          <Plus className="w-3 h-3" strokeWidth={2.5} />
-          Agregar línea ({cantidadRestante} u. disponibles)
-        </button>
-      )}
-
     </div>
   );
 };
@@ -420,7 +493,10 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
   const navigate = useNavigate();
   const isEdit   = mode === 'edit';
 
-  // ── Productos de la compra (fuente de verdad estática) ────────────────────
+  // Estado para controlar qué card está expandida (solo una a la vez)
+  const [expandedProductId, setExpandedProductId] = useState(null);
+
+  // ── Productos de la compra (solo se usan en modo creación) ──────────────────
   const productosCompra = useMemo(() =>
     (purchase?.productos ?? []).map((p) => ({
       nombre:           p.nombre       ?? p.producto ?? 'Producto',
@@ -432,75 +508,65 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
     [purchase]
   );
 
-  // Total original siempre desde la compra
-  const totalOriginal = (p) =>
-    Math.round(p.valorUnit * p.cantidadComprada * (1 + p.iva / 100));
-
-  // ── Inicialización ────────────────────────────────────────────────────────
+  // ── Inicialización de estados ──────────────────────────────────────────────
   const initState = useMemo(() => {
-    if (!isEdit || !devolucion?.productos?.length)
-      return { seleccionados: new Set(), datosProducto: {}, productosLocked: new Set() };
-
-    // Agrupar productos planos por codigoBarras → modelo multi-línea
-    const datosProducto = {};
-    devolucion.productos.forEach((p, idx) => {
-      const original = productosCompra.find((o) => o.codigoBarras === p.codigoBarras);
-      if (!datosProducto[p.codigoBarras]) {
-        datosProducto[p.codigoBarras] = {
-          nombre:           p.nombre,
-          codigoBarras:     p.codigoBarras,
-          valorUnit:        p.valorUnit,
-          iva:              p.iva ?? 0,
-          cantidadComprada: original?.cantidadComprada ?? p.cantidadComprada ?? 1,
-          lineas:           [],
-        };
-      }
-      datosProducto[p.codigoBarras].lineas.push({
-        lineaId:         `existing-${p.codigoBarras}-${idx}`,
-        motivo:          p.motivo          ?? '',
-        tipoDevolucion:  p.tipoDevolucion  ?? '',
-        estado:          p.estado          ?? getEstadoInicial(),
-        cantidadDevolver: p.cantidadDevolver ?? 1,
+    if (isEdit && devolucion?.productos?.length) {
+      const datosProducto = {};
+      devolucion.productos.forEach((p, idx) => {
+        const original = productosCompra.find((o) => o.codigoBarras === p.codigoBarras);
+        if (!datosProducto[p.codigoBarras]) {
+          datosProducto[p.codigoBarras] = {
+            nombre:           p.nombre,
+            codigoBarras:     p.codigoBarras,
+            valorUnit:        p.valorUnit,
+            iva:              p.iva ?? 0,
+            cantidadComprada: original?.cantidadComprada ?? p.cantidadComprada ?? 1,
+            lineas:           [],
+          };
+        }
+        datosProducto[p.codigoBarras].lineas.push({
+          lineaId:         `existing-${p.codigoBarras}-${idx}`,
+          motivo:          p.motivo          ?? '',
+          tipoDevolucion:  p.tipoDevolucion  ?? '',
+          estado:          p.estado          ?? getEstadoInicial(),
+          cantidadDevolver: p.cantidadDevolver ?? 1,
+        });
       });
-    });
-
-    const seleccionados   = new Set(Object.keys(datosProducto));
-    const productosLocked = new Set(Object.keys(datosProducto));
-
-    return { seleccionados, datosProducto, productosLocked };
+      return { datosProducto, seleccionados: new Set(Object.keys(datosProducto)) };
+    }
+    return { datosProducto: {}, seleccionados: new Set() };
   }, [isEdit, devolucion, productosCompra]);
 
-  // ── Estado ────────────────────────────────────────────────────────────────
-  const [seleccionados,    setSeleccionados]    = useState(initState.seleccionados);
-  const [datosProducto,    setDatosProducto]    = useState(initState.datosProducto);
-  const [productosLocked]                       = useState(initState.productosLocked);
-  const [erroresProducto,  setErroresProducto]  = useState({});
+  const [datosProducto, setDatosProducto] = useState(initState.datosProducto);
+  const [seleccionados, setSeleccionados] = useState(initState.seleccionados);
+  const [erroresProducto, setErroresProducto] = useState({});
   const [erroresGenerales, setErroresGenerales] = useState([]);
-  const [touched,          setTouched]          = useState(false);
+  const [touched, setTouched] = useState(false);
 
-  // ── Cerrar ────────────────────────────────────────────────────────────────
-  const cerrarYNavegar = useCallback(() => {
-    if (!isEdit) navigate('/admin/purchases');
-    else onClose();
-  }, [isEdit, navigate, onClose]);
+  // En modo edición, los productos seleccionados son todos los que ya están en datosProducto
+  let productosSeleccionadosArray = useMemo(() => {
+    if (isEdit) return Object.values(datosProducto);
+    return [...seleccionados].map((cod) => datosProducto[cod]).filter(Boolean);
+  }, [isEdit, datosProducto, seleccionados]);
 
-  const handleCerrar = async () => {
-    if (seleccionados.size === 0) { cerrarYNavegar(); return; }
-    const result = await showConfirm(
-      'warning',
-      '¿Salir sin guardar?',
-      isEdit
-        ? 'Tienes cambios sin guardar. Si sales ahora perderás todo lo que has modificado.'
-        : 'Tienes información ingresada. Si sales ahora perderás todo lo que has ingresado.',
-      { confirmButtonText: 'Sí, salir', cancelButtonText: 'Seguir editando' }
-    );
-    if (result?.isConfirmed) cerrarYNavegar();
-  };
+  // Ordenar cards en modo edición: primero los que tienen estado "Enviado" o "Recibido"
+  if (isEdit) {
+    productosSeleccionadosArray = [...productosSeleccionadosArray].sort((a, b) => {
+      const estadoA = a.lineas?.[0]?.estado || '';
+      const estadoB = b.lineas?.[0]?.estado || '';
+      const esTerminalA = estadoA === 'Enviado' || estadoA === 'Recibido';
+      const esTerminalB = estadoB === 'Enviado' || estadoB === 'Recibido';
+      if (esTerminalA && !esTerminalB) return -1;
+      if (!esTerminalA && esTerminalB) return 1;
+      return 0;
+    });
+  }
 
-  // ── Selección / deselección (izquierdo) ───────────────────────────────────
+  // ── Handlers de selección (solo para modo creación) ─────────────────────────
+  const totalOriginal = (p) => Math.round(p.valorUnit * p.cantidadComprada * (1 + p.iva / 100));
+
   const toggleSeleccion = (codigoBarras) => {
-    if (productosLocked.has(codigoBarras)) return; // los del edit no se pueden quitar
-
+    if (isEdit) return;
     setSeleccionados((prev) => {
       const next = new Set(prev);
       if (next.has(codigoBarras)) {
@@ -523,20 +589,15 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
   };
 
   const toggleTodos = () => {
-    const nonLocked           = productosCompra.filter((p) => !productosLocked.has(p.codigoBarras));
-    const allNonLockedSelected = nonLocked.every((p) => seleccionados.has(p.codigoBarras));
-
-    if (allNonLockedSelected && nonLocked.length > 0) {
-      // Deseleccionar solo los no bloqueados
-      const newSel   = new Set(productosLocked);
-      const newDatos = {};
-      productosLocked.forEach((cod) => { if (datosProducto[cod]) newDatos[cod] = datosProducto[cod]; });
-      setSeleccionados(newSel);
-      setDatosProducto(newDatos);
+    if (isEdit) return;
+    const nonLocked = productosCompra.filter((p) => true);
+    const allSelected = nonLocked.every((p) => seleccionados.has(p.codigoBarras));
+    if (allSelected && nonLocked.length > 0) {
+      setSeleccionados(new Set());
+      setDatosProducto({});
       setErroresProducto({});
     } else {
-      // Seleccionar todos los no bloqueados
-      const newSel   = new Set([...seleccionados]);
+      const newSel = new Set(seleccionados);
       const newDatos = { ...datosProducto };
       nonLocked.forEach((p) => {
         if (!newSel.has(p.codigoBarras)) {
@@ -552,7 +613,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
     }
   };
 
-  // ── Handlers de líneas (derecho) ──────────────────────────────────────────
+  // ── Handlers de líneas ─────────────────────────────────────────────────────
   const handleAddLinea = useCallback((codigoBarras) => {
     setDatosProducto((prev) => {
       const prod = prev[codigoBarras];
@@ -596,7 +657,6 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
       const newLineas = prod.lineas.map((l, i) => {
         if (i !== lineaIdx) return l;
         const updated = { ...l, ...cambios };
-        // Si cambia el tipo, resetear estado
         if (cambios.tipoDevolucion && cambios.tipoDevolucion !== l.tipoDevolucion) {
           updated.estado = getEstadoInicial();
         }
@@ -619,11 +679,10 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
     }
   }, [touched]);
 
-  // ── Guardar ───────────────────────────────────────────────────────────────
+  // ── Guardar ────────────────────────────────────────────────────────────────
   const handleGuardar = async () => {
     setTouched(true);
-
-    const productosParaValidar = [...seleccionados].map((cod) => datosProducto[cod]);
+    const productosParaValidar = productosSeleccionadosArray;
     const { valid, erroresGenerales: eg, erroresProducto: ep } =
       validateReturnFormConLineas(productosParaValidar);
 
@@ -645,10 +704,8 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
     );
     if (!result?.isConfirmed) return;
 
-    // Aplanar modelo multi-línea → array plano para el servicio
-    const productosAGuardar = [...seleccionados].flatMap((cod) => {
-      const prod = datosProducto[cod];
-      return (prod.lineas ?? []).map((linea) => ({
+    const productosAGuardar = productosSeleccionadosArray.flatMap((prod) =>
+      (prod.lineas ?? []).map((linea) => ({
         nombre:           prod.nombre,
         codigoBarras:     prod.codigoBarras,
         valorUnit:        prod.valorUnit,
@@ -658,8 +715,8 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
         motivo:           linea.motivo,
         tipoDevolucion:   linea.tipoDevolucion,
         estado:           linea.estado,
-      }));
-    });
+      }))
+    );
 
     try {
       if (isEdit) {
@@ -676,14 +733,25 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
     }
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
-  const productosSeleccionadosArray = [...seleccionados]
-    .map((cod) => datosProducto[cod])
-    .filter(Boolean);
+  const cerrarYNavegar = useCallback(() => {
+    if (!isEdit) navigate('/admin/purchases');
+    else onClose();
+  }, [isEdit, navigate, onClose]);
 
-  const nonLocked            = productosCompra.filter((p) => !productosLocked.has(p.codigoBarras));
-  const allNonLockedSelected = productosCompra.length > 0 && seleccionados.size === productosCompra.length;
+  const handleCerrar = async () => {
+    if (productosSeleccionadosArray.length === 0) { cerrarYNavegar(); return; }
+    const result = await showConfirm(
+      'warning',
+      '¿Salir sin guardar?',
+      isEdit
+        ? 'Tienes cambios sin guardar. Si sales ahora perderás todo lo que has modificado.'
+        : 'Tienes información ingresada. Si sales ahora perderás todo lo que has ingresado.',
+      { confirmButtonText: 'Sí, salir', cancelButtonText: 'Seguir editando' }
+    );
+    if (result?.isConfirmed) cerrarYNavegar();
+  };
 
+  // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div
       onClick={handleCerrar}
@@ -694,8 +762,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
         className="bg-white rounded-lg shadow-2xl flex flex-col overflow-hidden"
         style={{ width: '920px', maxWidth: '96vw', maxHeight: '92vh' }}
       >
-
-        {/* ── Header ─────────────────────────────────────────────────────── */}
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
           <div>
             <h2 className="text-white font-semibold text-lg leading-tight">
@@ -715,110 +782,71 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
           </button>
         </div>
 
-        {/* ── Body ───────────────────────────────────────────────────────── */}
+        {/* Body: dos columnas solo en creación; una columna en edición */}
         <div className="flex flex-1 overflow-hidden divide-x divide-gray-200">
-
-          {/* Panel izquierdo — lista de productos de la compra */}
-          <div className="w-[40%] shrink-0 flex flex-col overflow-hidden">
-            <div className="px-5 pt-4 pb-2 shrink-0">
-              <p className="text-sm font-medium text-gray-700 mb-0.5">1. Productos a devolver</p>
-              <p className="text-xs text-gray-400 mb-2">
-                {isEdit
-                  ? 'Puedes agregar nuevos productos. Los ya incluidos son inmutables.'
-                  : 'Escoja los productos que desea devolver'}
-              </p>
-              <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer mb-2 select-none">
-                <input
-                  type="checkbox"
-                  checked={allNonLockedSelected}
-                  onChange={toggleTodos}
-                  className="accent-[#004D77] w-3.5 h-3.5"
-                  disabled={nonLocked.length === 0}
-                />
-                Seleccionar todos
-              </label>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-5 pb-4 flex flex-col gap-1.5">
-              {productosCompra.length === 0 && (
-                <p className="text-xs text-gray-400 text-center mt-8">
-                  Esta compra no tiene productos registrados.
-                </p>
-              )}
-
-              {productosCompra.map((p) => {
-                const isSelected = seleccionados.has(p.codigoBarras);
-                const isLocked   = productosLocked.has(p.codigoBarras);
-                const tieneError = productoTieneErrorConLineas(p.codigoBarras, erroresProducto);
-                const total      = totalOriginal(p);
-
-                return (
-                  <div
-                    key={p.codigoBarras}
-                    onClick={() => !isLocked && toggleSeleccion(p.codigoBarras)}
-                    className={`border rounded-lg p-2.5 transition-colors duration-150 ${
-                      isLocked
-                        ? 'border-[#004D77]/30 bg-blue-50/40 cursor-default'
-                        : isSelected
-                        ? tieneError
-                          ? 'border-red-400 bg-red-50 cursor-pointer'
-                          : 'border-[#004D77] bg-blue-50 cursor-pointer'
-                        : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 cursor-pointer'
-                    }`}
-                  >
-                    <div className="flex items-start gap-2">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        disabled={isLocked}
-                        onChange={() => {}}
-                        className="accent-[#004D77] w-3.5 h-3.5 mt-0.5 shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1 mb-1">
-                          <p className="text-xs font-semibold text-gray-800 truncate">{p.nombre}</p>
-                          <div className="flex items-center gap-1 shrink-0">
-                            {isLocked && (
-                              <Lock className="w-3 h-3 text-[#004D77]/50" strokeWidth={2} />
-                            )}
-                            {isSelected && tieneError && !isLocked && (
-                              <AlertCircle className="w-3 h-3 text-red-500" />
-                            )}
-                            {isSelected && !tieneError && touched && (
-                              <CheckCircle2 className="w-3 h-3 text-[#004D77]" strokeWidth={2} />
-                            )}
+          {!isEdit && (
+            <div className="w-[40%] shrink-0 flex flex-col overflow-hidden">
+              <div className="px-5 pt-4 pb-2 shrink-0">
+                <p className="text-sm font-medium text-gray-700 mb-0.5">Productos a devolver</p>
+                <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer mb-2 select-none">
+                  <input
+                    type="checkbox"
+                    checked={productosCompra.length > 0 && seleccionados.size === productosCompra.length}
+                    onChange={toggleTodos}
+                    className="accent-[#004D77] w-3.5 h-3.5"
+                    disabled={productosCompra.length === 0}
+                  />
+                  Seleccionar todos
+                </label>
+              </div>
+              <div className="flex-1 overflow-y-auto px-5 pb-4 flex flex-col gap-1.5">
+                {productosCompra.map((p) => {
+                  const isSelected = seleccionados.has(p.codigoBarras);
+                  const tieneError = productoTieneErrorConLineas(p.codigoBarras, erroresProducto);
+                  const total = totalOriginal(p);
+                  return (
+                    <div
+                      key={p.codigoBarras}
+                      onClick={() => toggleSeleccion(p.codigoBarras)}
+                      className={`border rounded-lg p-2.5 transition-colors duration-150 cursor-pointer ${
+                        isSelected
+                          ? tieneError
+                            ? 'border-red-400 bg-red-50'
+                            : 'border-[#004D77] bg-blue-50'
+                          : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {}}
+                          className="accent-[#004D77] w-3.5 h-3.5 mt-0.5 shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <p className="text-xs font-semibold text-gray-800 truncate">{p.nombre}</p>
+                            {isSelected && tieneError && <AlertCircle className="w-3 h-3 text-red-500" />}
                           </div>
-                        </div>
-                        {/* Datos siempre estáticos de la compra */}
-                        <div className="grid grid-cols-4 gap-x-1.5 text-[10px] text-gray-500">
-                          <span className="font-medium text-gray-500">Cant.</span>
-                          <span className="font-medium text-gray-500">Precio</span>
-                          <span className="font-medium text-gray-500">%IVA</span>
-                          <span className="font-medium text-gray-500 text-right">Total</span>
-                          <span className="text-gray-700">{p.cantidadComprada}</span>
-                          <span className="text-gray-700">{formatCurrency(p.valorUnit)}</span>
-                          <span className="text-gray-700">{p.iva}%</span>
-                          <span className="text-right font-semibold text-gray-800">{formatCurrency(total)}</span>
+                          <div className="grid grid-cols-4 gap-x-1.5 text-[10px] text-gray-500">
+                            <span>Cant.</span><span>Precio</span><span>%IVA</span><span className="text-right">Total</span>
+                            <span className="text-gray-700">{p.cantidadComprada}</span>
+                            <span className="text-gray-700">{formatCurrency(p.valorUnit)}</span>
+                            <span className="text-gray-700">{p.iva}%</span>
+                            <span className="text-right font-semibold text-gray-800">{formatCurrency(total)}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-
-              <p className="text-[10px] text-gray-400 mt-0.5">
-                (Productos de la compra {purchase?.numeroFacturacion ?? devolucion?.idCompra})
-              </p>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Panel derecho — configuración con líneas */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="px-5 pt-4 pb-2 shrink-0">
-              <p className="text-sm font-medium text-gray-700 mb-0.5">2. Configurar productos seleccionados</p>
-              <p className="text-xs text-gray-400">
-                Cada producto puede tener múltiples líneas con distinto motivo, tipo y cantidad
-              </p>
+              <p className="text-sm font-medium text-gray-700 mb-0.5">Configurar productos</p>
             </div>
 
             {erroresGenerales.length > 0 && (
@@ -846,15 +874,17 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
                     onRemoveLinea={(idx) => handleRemoveLinea(prod.codigoBarras, idx)}
                     onLineaChange={(idx, cambios) => handleLineaChange(prod.codigoBarras, idx, cambios)}
                     errores={erroresProducto[prod.codigoBarras]}
+                    isExpanded={expandedProductId === prod.codigoBarras}
+                    onToggleExpand={() => setExpandedProductId(prev => prev === prod.codigoBarras ? null : prod.codigoBarras)}
+                    isEditMode={isEdit}
                   />
                 ))
               )}
             </div>
           </div>
-
         </div>
 
-        {/* ── Footer ─────────────────────────────────────────────────────── */}
+        {/* Footer */}
         <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
           <button
             onClick={handleCerrar}
@@ -869,7 +899,6 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
             {isEdit ? 'Guardar cambios' : 'Guardar'}
           </button>
         </div>
-
       </div>
     </div>
   );

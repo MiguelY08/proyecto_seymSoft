@@ -1,11 +1,297 @@
-import { ChevronRight, Package, Building2, Truck, RotateCcw, CheckCircle, X, Check } from 'lucide-react';
+import { ChevronLeft, Package, Building2, Truck, RotateCcw, CheckCircle, Check } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
-import BgPedidos from '../../../assets/BgPedidos.png';
 import { devoluciones } from './Returns_On_Orders';
+
+/* ── Estilos inyectados (coherentes con Home/Favorites) ── */
+const DETAIL_RETURN_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito:wght@400;600;700;800;900&display=swap');
+
+  @keyframes returnDetail-fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .return-detail-page {
+    background: #f6f9fc;
+    font-family: 'Nunito', sans-serif;
+    min-height: 100vh;
+  }
+
+  .return-detail-container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: clamp(24px, 4vw, 40px) 20px;
+  }
+
+  /* Botón volver */
+  .nav-header {
+    margin-bottom: 24px;
+  }
+  .btn-back {
+    background: transparent;
+    border: 1.5px solid #e2edf5;
+    border-radius: 40px;
+    padding: 8px 16px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: #1e4060;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-back:hover {
+    background: #f0f8ff;
+    border-color: #afd0e6;
+    transform: translateY(-1px);
+  }
+
+  /* Tarjeta principal */
+  .detail-card {
+    background: #ffffff;
+    border: 1.5px solid #e4eff6;
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 77, 119, 0.06);
+    animation: returnDetail-fadeUp 0.4s ease;
+  }
+  .detail-header {
+    padding: 16px 24px;
+    background: #fefcf5;
+    border-bottom: 1px solid #eef2f6;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .detail-title-section {
+    flex: 1;
+  }
+  .detail-id {
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #9abcce;
+    margin-bottom: 4px;
+  }
+  .detail-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #0c2a3a;
+    margin: 0;
+  }
+  .detail-date {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-top: 4px;
+  }
+  .detail-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .badge {
+    padding: 4px 12px;
+    border-radius: 40px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Cuerpo compacto */
+  .detail-body {
+    padding: 20px 24px;
+  }
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+  .info-panel {
+    background: #f8fafc;
+    border-radius: 20px;
+    padding: 16px;
+    border: 1px solid #eef2f6;
+  }
+  .panel-title {
+    font-weight: 800;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #9abcce;
+    margin-bottom: 12px;
+  }
+  .product-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #eef2f6;
+    gap: 12px;
+  }
+  .product-item:last-child {
+    border-bottom: none;
+  }
+  .product-info {
+    flex: 1;
+  }
+  .product-name {
+    font-weight: 800;
+    font-size: 0.8rem;
+    color: #0c2a3a;
+  }
+  .product-quantity {
+    font-size: 0.65rem;
+    color: #64748b;
+  }
+  .product-subtotal {
+    font-weight: 900;
+    font-size: 0.85rem;
+    color: #004D77;
+    white-space: nowrap;
+  }
+  .total-amount {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 2px solid #e2edf5;
+    display: flex;
+    justify-content: space-between;
+    font-weight: 900;
+    font-size: 0.95rem;
+  }
+  .detail-text {
+    font-size: 0.8rem;
+    color: #334155;
+    margin-bottom: 6px;
+  }
+  .detail-text strong {
+    color: #1e4060;
+    font-weight: 800;
+  }
+
+  /* Timeline horizontal (restaurado) */
+  .timeline-section {
+    margin-top: 8px;
+  }
+  .timeline-title {
+    font-weight: 800;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #9abcce;
+    margin-bottom: 24px;
+  }
+  .timeline-horizontal {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .timeline-step {
+    flex: 1;
+    min-width: 100px;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+  .timeline-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 12px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .timeline-icon.completed {
+    background: #c6f0d0;
+    border: 2px solid #38a169;
+  }
+  .timeline-icon.active {
+    background: #d4e8ff;
+    border: 2px solid #004D77;
+  }
+  .timeline-icon.pending {
+    background: #f1f5f9;
+    border: 2px solid #e2edf5;
+  }
+  .timeline-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #334155;
+    line-height: 1.3;
+  }
+  .timeline-step.completed .timeline-label {
+    color: #38a169;
+  }
+  .timeline-step.active .timeline-label {
+    color: #004D77;
+  }
+  .timeline-progress {
+    position: absolute;
+    top: 24px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #e2edf5;
+    z-index: 0;
+  }
+  .timeline-progress-bar {
+    height: 100%;
+    background: #004D77;
+    transition: width 0.3s;
+  }
+
+  @media (max-width: 768px) {
+    .detail-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .info-grid {
+      grid-template-columns: 1fr;
+    }
+    .timeline-horizontal {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 20px;
+    }
+    .timeline-step {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      text-align: left;
+      width: 100%;
+    }
+    .timeline-icon {
+      margin: 0;
+    }
+    .timeline-progress {
+      display: none;
+    }
+  }
+`;
+
+let detailReturnStylesInjected = false;
+function injectDetailReturnStyles() {
+  if (detailReturnStylesInjected) return;
+  const style = document.createElement('style');
+  style.textContent = DETAIL_RETURN_STYLES;
+  document.head.appendChild(style);
+  detailReturnStylesInjected = true;
+}
 
 const ICONOS_SEGUIMIENTO = [Package, Building2, Truck, RotateCcw, CheckCircle];
 
 function DetailReturnsOnOrders() {
+  injectDetailReturnStyles();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -13,15 +299,15 @@ function DetailReturnsOnOrders() {
 
   if (!dev) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
+      <div className="return-detail-page">
+        <div className="return-detail-container text-center py-20">
           <p className="text-xl font-semibold text-gray-700 mb-4">Devolución no encontrada</p>
           <button
             onClick={() => navigate('/returnsOnOrders')}
-            className="px-6 py-2 text-white rounded-lg hover:opacity-90"
-            style={{ backgroundColor: '#004D77' }}
+            className="btn-back"
+            style={{ margin: '0 auto' }}
           >
-            Volver a devoluciones
+            <ChevronLeft size={14} /> Volver
           </button>
         </div>
       </div>
@@ -29,166 +315,90 @@ function DetailReturnsOnOrders() {
   }
 
   const totalMonto = dev.productos.reduce((s, p) => s + p.precioUnidad * p.cantidad, 0);
+  const pasosCompletados = dev.seguimiento.filter(p => p.completado).length;
+  const totalPasos = dev.seguimiento.length;
+  const progreso = totalPasos > 1 ? ((pasosCompletados) / (totalPasos - 1)) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-
-      {/* Banner */}
-      <div className="px-4 sm:px-6 lg:px-8 py-4">
-        <div className="w-full h-[15vh] sm:h-[18vh] lg:h-[22vh] relative overflow-hidden rounded-2xl">
-          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${BgPedidos})` }} />
-          <div className="absolute inset-0 bg-blue-950/75" />
-          <div className="relative z-10 w-full h-full flex items-center justify-center">
-            <h2 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white">Pedidos / Devoluciones</h2>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        {/* Volver + Breadcrumb */}
-        <div className="mb-6">
-          <button
-            onClick={() => navigate('/returnsOnOrders')}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors mb-4"
-          >
-            <X className="w-4 h-4" />
-            Volver
+    <div className="return-detail-page">
+      <div className="return-detail-container">
+        <div className="nav-header">
+          <button onClick={() => navigate('/returnsOnOrders')} className="btn-back">
+            <ChevronLeft size={14} /> Volver
           </button>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <a href="/returnsOnOrders" className="hover:text-blue-600">Devoluciones</a>
-            <ChevronRight className="w-4 h-4" />
-            <span className="text-gray-900">Devolución No. {dev.id}</span>
-          </div>
         </div>
 
-        {/* Card principal */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
-
-          {/* Header de la card */}
-          <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between">
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Devolución No. {dev.id} · Pedido No. {dev.pedidoId}</p>
-              <h2 className="text-xl font-bold text-gray-900">{dev.titulo}</h2>
-              <p className="text-sm text-gray-500 mt-0.5">{dev.fecha}</p>
+        <div className="detail-card">
+          <div className="detail-header">
+            <div className="detail-title-section">
+              <div className="detail-id">Devolución No. {dev.id}</div>
+              <h2 className="detail-title">{dev.titulo}</h2>
+              <div className="detail-date">{dev.fecha}</div>
             </div>
-            <div className="flex gap-2 flex-shrink-0">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${dev.estadoColor}`}>
-                {dev.estado}
-              </span>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${dev.procesoColor}`}>
-                {dev.proceso}
-              </span>
+            <div className="detail-badges">
+              <span className={`badge ${dev.estadoColor}`}>{dev.estado}</span>
+              <span className={`badge ${dev.procesoColor}`}>{dev.proceso}</span>
             </div>
           </div>
 
-          <div className="p-6 space-y-8">
-
-            {/* ── Información general ─────────────────────────────────── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-
+          <div className="detail-body">
+            <div className="info-grid">
               {/* Productos devueltos */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Productos devueltos</p>
-                <div className="space-y-3">
-                  {dev.productos.map((producto) => (
-                    <div key={producto.id} className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-white border border-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Package className="w-5 h-5 text-gray-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{producto.nombre}</p>
-                        <p className="text-xs text-gray-500">
-                          {producto.cantidad} und. × $ {producto.precioUnidad.toLocaleString()}
-                        </p>
-                      </div>
-                      <p className="text-sm font-bold text-gray-800 whitespace-nowrap">
-                        $ {(producto.precioUnidad * producto.cantidad).toLocaleString()}
-                      </p>
+              <div className="info-panel">
+                <div className="panel-title">Productos devueltos</div>
+                {dev.productos.map((producto) => (
+                  <div key={producto.id} className="product-item">
+                    <div className="product-info">
+                      <div className="product-name">{producto.nombre}</div>
+                      <div className="product-quantity">{producto.cantidad} und. × $ {producto.precioUnidad.toLocaleString()}</div>
                     </div>
-                  ))}
-                </div>
-
-                {/* Monto total */}
-                <div className="mt-4 pt-3 border-t border-gray-200 flex justify-between items-center">
-                  <span className="text-sm font-semibold text-gray-700">Monto de devolución</span>
-                  <span className="text-lg font-bold text-gray-900">$ {totalMonto.toLocaleString()}</span>
+                    <div className="product-subtotal">
+                      $ {(producto.precioUnidad * producto.cantidad).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+                <div className="total-amount">
+                  <span>Monto de devolución</span>
+                  <span>$ {totalMonto.toLocaleString()}</span>
                 </div>
               </div>
 
               {/* Detalle de la solicitud */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Detalle de la solicitud</p>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-xs text-gray-500">Motivo</p>
-                    <p className="text-sm font-medium text-gray-900">{dev.motivoDevolucion}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Resolución solicitada</p>
-                    <p className="text-sm font-medium text-gray-900">{dev.resolucion}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Pedido asociado</p>
-                    <p className="text-sm font-medium text-gray-900">No. {dev.pedidoId}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Fecha de solicitud</p>
-                    <p className="text-sm font-medium text-gray-900">{dev.fecha}</p>
-                  </div>
-                </div>
+              <div className="info-panel">
+                <div className="panel-title">Detalle de la solicitud</div>
+                <div className="detail-text"><strong>Motivo:</strong> {dev.motivoDevolucion}</div>
+                <div className="detail-text"><strong>Resolución solicitada:</strong> {dev.resolucion}</div>
+                <div className="detail-text"><strong>Fecha de solicitud:</strong> {dev.fecha}</div>
               </div>
-
             </div>
 
-            {/* ── Seguimiento ─────────────────────────────────────────── */}
-            <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-5">Seguimiento</p>
-
-              <div className="relative">
-                {/* Línea de progreso */}
-                <div className="absolute top-6 left-6 right-6 h-0.5 bg-gray-200" />
-                <div
-                  className="absolute top-6 left-6 h-0.5 bg-blue-500 transition-all"
-                  style={{
-                    width: `${
-                      ((dev.seguimiento.filter(s => s.completado).length) /
-                      (dev.seguimiento.length - 1)) * 100
-                    }%`
-                  }}
-                />
-
-                <div className="relative flex justify-between">
-                  {dev.seguimiento.map((paso, i) => {
-                    const Icono = ICONOS_SEGUIMIENTO[i];
-                    return (
-                      <div key={paso.id} className="flex flex-col items-center" style={{ width: `${100 / dev.seguimiento.length}%` }}>
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center z-10 mb-3 border-2 transition-colors ${
-                          paso.completado
-                            ? 'bg-green-100 border-green-400'
-                            : paso.activo
-                            ? 'bg-blue-100 border-blue-400'
-                            : 'bg-white border-gray-200'
-                        }`}>
-                          {paso.completado
-                            ? <Check className="w-6 h-6 text-green-600" />
-                            : <Icono className={`w-6 h-6 ${paso.activo ? 'text-blue-600' : 'text-gray-300'}`} />
-                          }
-                        </div>
-                        <p className={`text-xs text-center leading-tight max-w-[80px] ${
-                          paso.completado ? 'text-green-700 font-medium'
-                          : paso.activo   ? 'text-blue-700 font-medium'
-                          : 'text-gray-400'
-                        }`}>
-                          {paso.nombre}
-                        </p>
+            {/* Timeline horizontal */}
+            <div className="timeline-section">
+              <div className="timeline-title">Seguimiento</div>
+              <div className="timeline-horizontal">
+                <div className="timeline-progress">
+                  <div className="timeline-progress-bar" style={{ width: `${progreso}%` }} />
+                </div>
+                {dev.seguimiento.map((paso, i) => {
+                  const Icono = ICONOS_SEGUIMIENTO[i];
+                  let statusClass = 'pending';
+                  if (paso.completado) statusClass = 'completed';
+                  else if (paso.activo) statusClass = 'active';
+                  return (
+                    <div key={paso.id} className={`timeline-step ${statusClass}`}>
+                      <div className={`timeline-icon ${statusClass}`}>
+                        {paso.completado ? (
+                          <Check size={20} className="text-green-600" />
+                        ) : (
+                          <Icono size={20} className={paso.activo ? 'text-[#004D77]' : 'text-gray-400'} />
+                        )}
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className="timeline-label">{paso.nombre}</div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-
           </div>
         </div>
       </div>

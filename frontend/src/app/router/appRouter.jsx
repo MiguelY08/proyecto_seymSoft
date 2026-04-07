@@ -96,7 +96,7 @@ const AppRouter = () => {
         <Route path="orders-l/:id" element={<OrderDetail />} />
 
         <Route path="returnsOnOrders" element={<ReturnsOnOrders />} />
-        <Route path="registerReturn" element={<RegisterReturn />} />
+        <Route path="registerReturn/:id" element={<RegisterReturn />} />
         <Route path="returns/:id" element={<DetailReturnsOnOrders />} />
         <Route path="edit/:id" element={<EditReturn />} />
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X, Download, SquarePen, Clock, XCircle, Hash, Calendar, User, UserCheck, CreditCard, Tag, Truck, MapPin, Receipt, Package } from 'lucide-react';
+import { X, Download, SquarePen, Clock, XCircle, Hash, Calendar, User, UserCheck, CreditCard, Tag, Truck, MapPin, Receipt, Package, DollarSign } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { useModalAnimation } from '../../../../shared/useModalAnimation';
 import { formatPrice }       from '../helpers/salesHelpers';
@@ -88,11 +88,18 @@ function SaleInfo() {
   const iva      = Math.round(subtotal * 0.19);
   const total    = subtotal + iva;
 
+  // ─── Desglose de pagos ──────────────────────────────────────────────────
+  const paymentAmounts = sale?.paymentAmounts || { Efectivo: 0, Crédito: 0, Transferencia: 0 };
+  const selectedMethods = Array.isArray(sale?.metodoPago) ? sale.metodoPago : (sale?.metodoPago ? [sale.metodoPago] : []);
+  const paymentEntries = selectedMethods
+    .map(method => ({ method, amount: paymentAmounts[method] || 0 }))
+    .filter(entry => entry.amount > 0);
+
   const handleEdit = () => {
     navigate('/admin/sales/form-sale', { state: { sale } });
   };
 
-  // ─── PDF ──────────────────────────────────────────────────────────────────
+  // ─── PDF (se debe actualizar para incluir desglose de pagos) ─────────────────
   const handleDownload = () => {
     if (downloading) return;
     setDownloading(true);
@@ -169,6 +176,24 @@ function SaleInfo() {
         pdf.text(lines, margin, yLeft);
         yLeft += lines.length * 4.5 + 1.5;
       });
+
+      // Agregar desglose de pagos en el PDF
+      if (paymentEntries.length > 0) {
+        yLeft += 2;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(7);
+        pdf.setTextColor(120, 120, 120);
+        pdf.text('DESGLOSE DE PAGOS', margin, yLeft);
+        yLeft += 4;
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor(50, 50, 50);
+        paymentEntries.forEach(({ method, amount }) => {
+          pdf.text(`${method}: ${fmt(amount)}`, margin + 4, yLeft);
+          yLeft += 4.5;
+        });
+        yLeft += 2;
+      }
 
       const rightX = colMid + 4;
       const rightW = pageW - margin - rightX;
@@ -333,6 +358,23 @@ function SaleInfo() {
                     : sale.metodoPago
                 }
               />
+              
+              {/* Desglose de pagos */}
+              {paymentEntries.length > 0 && (
+                <div className="mt-2 pt-1 border-t border-dashed border-gray-100">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <DollarSign className="w-3 h-3 text-gray-400" strokeWidth={1.8} />
+                    <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">Desglose de pagos</span>
+                  </div>
+                  {paymentEntries.map(({ method, amount }) => (
+                    <div key={method} className="flex justify-between items-center text-xs py-0.5">
+                      <span className="text-gray-500">{method}</span>
+                      <span className="font-medium text-gray-700">{formatPrice(amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <DetailRow icon={Tag}        label="Estado"         value={sale.estado}                     />
               <DetailRow icon={Truck}      label="Entrega"        value={sale.entrega}                    />
               <DetailRow icon={MapPin}     label="Dirección"      value={sale.direccion}                  />
