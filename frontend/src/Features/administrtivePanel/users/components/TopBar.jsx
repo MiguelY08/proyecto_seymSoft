@@ -1,9 +1,10 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Download, Plus } from "lucide-react";
+import { Search, FileSpreadsheet, Plus } from "lucide-react";
 import { useAlert } from "../../../shared/alerts/useAlert";
 import { downloadUsersExcel } from "../helpers/usersHelpers";
 import { usePermissions } from "../../configuration/roles/hooks/usePermissions";
+import ButtonComponent from "../../../shared/ButtonComponent";
 
 /**
  * Componente TopBar.
@@ -73,25 +74,22 @@ function TopBar({ search, onSearchChange, users = [] }) {
       {/* Botones de acción: descargar y crear usuario */}
       <div className="flex items-center gap-2 shrink-0">
         {hasPermission("usuarios.descargar") && (
-          <button
-            onClick={handleDownload}
-            title="Descargar"
-            className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-sky-700 rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
-          >
-            <span className="hidden sm:inline">Exportar Excel</span>
-            <Download className="w-4 h-4" strokeWidth={1.8} />
-          </button>
+          <ButtonComponent
+            className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-2 flex items-center gap-2"
+            onClick={handleDownload}>
+              <FileSpreadsheet className="w-4 h-4" />
+              Exportar Excel
+          </ButtonComponent>
         )}
 
         {hasPermission("usuarios.crear") && (
-          <button
+          <ButtonComponent
             onClick={() => navigate("/admin/users/form-user")}
             title="Nuevo usuario"
-            className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-sky-700 rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
           >
             <span className="hidden sm:inline">Nuevo usuario</span>
             <Plus className="w-4 h-4" strokeWidth={2} />
-          </button>
+          </ButtonComponent>
         )}
       </div>
     </div>

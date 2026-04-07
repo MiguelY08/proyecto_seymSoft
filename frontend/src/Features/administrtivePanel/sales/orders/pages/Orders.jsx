@@ -251,8 +251,8 @@ function Orders() {
 
   // ─── Render ────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="h-full flex flex-col gap-3 p-3 sm:p-4">
+    <div className="min-h-screen">
+      <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
 
         {/* ── Barra superior ─────────────────────────────────────────── */}
         <div className="flex items-center justify-between gap-2 sm:gap-4 shrink-0">
