@@ -1,6 +1,158 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
+const SIDEBAR_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+  .filter-sidebar {
+    font-family: 'Nunito', sans-serif;
+    background: #ffffff;
+    border: 1.5px solid #e2edf5;
+    border-radius: 20px;
+    padding: 20px 16px;
+    transition: all 0.2s;
+    /* Sin límite de altura ni overflow */
+  }
+
+  .filter-header {
+    margin-bottom: 16px;
+  }
+  .filter-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #0c2a3a;
+    margin-bottom: 4px;
+  }
+  .filter-results {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #9abcce;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .filter-section {
+    border-top: 1px solid #eef2f6;
+    margin-top: 16px;
+  }
+  .filter-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 12px 0 8px 0;
+    font-weight: 800;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #1e4060;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .filter-section-header:hover {
+    color: #004D77;
+  }
+
+  /* Contenedor de opciones SIN scroll interno */
+  .filter-options {
+    margin-bottom: 12px;
+    /* Sin max-height ni overflow */
+  }
+
+  .filter-option {
+    margin-bottom: 8px;
+  }
+  .filter-option-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 0;
+  }
+  .filter-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: #334155;
+  }
+  .filter-checkbox-label input {
+    width: 16px;
+    height: 16px;
+    accent-color: #004D77;
+    cursor: pointer;
+  }
+  .filter-count {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 20px;
+  }
+  .filter-expand-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #9abcce;
+    transition: color 0.2s;
+  }
+  .filter-expand-btn:hover {
+    color: #004D77;
+  }
+
+  /* Subcategorías con animación suave y SIN scroll (max-height enorme) */
+  .filter-subcategory-list {
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, opacity 0.2s ease;
+    max-height: 0;
+    opacity: 0;
+  }
+  .filter-subcategory-list.open {
+    max-height: 2000px;  /* Suficiente para cualquier cantidad */
+    opacity: 1;
+  }
+  .filter-subcategory-item {
+    margin-left: 24px;
+    padding: 4px 0;
+    border-left: 2px solid #e2edf5;
+    padding-left: 12px;
+  }
+  .filter-subcategory-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .filter-child-list {
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    max-height: 0;
+  }
+  .filter-child-list.open {
+    max-height: 2000px;
+  }
+  .filter-child-item {
+    margin-left: 20px;
+    padding: 2px 0;
+  }
+
+  @media (max-width: 767px) {
+    .filter-sidebar {
+      border-radius: 16px;
+      margin-bottom: 16px;
+    }
+  }
+`;
+
+let sidebarStylesInjected = false;
+function injectSidebarStyles() {
+  if (sidebarStylesInjected) return;
+  const style = document.createElement('style');
+  style.textContent = SIDEBAR_STYLES;
+  document.head.appendChild(style);
+  sidebarStylesInjected = true;
+}
+
 function Filters({
   totalProducts,
   categories,
@@ -14,153 +166,134 @@ function Filters({
   handleCategoryChange,
   handleBrandChange
 }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [openCategories, setOpenCategories] = useState({});
-  const [openSubCategories, setOpenSubCategories] = useState({});
+  injectSidebarStyles();
 
-  const toggleCategory = (name) => {
-    setOpenCategories(prev => ({
-      ...prev,
-      [name]: !prev[name]
-    }));
+  const [expandedCategories, setExpandedCategories] = useState({});
+  const [expandedSubs, setExpandedSubs] = useState({});
+
+  const toggleCategory = (catName) => {
+    setExpandedCategories(prev => ({ ...prev, [catName]: !prev[catName] }));
   };
 
-  const toggleSubCategory = (name) => {
-    setOpenSubCategories(prev => ({
-      ...prev,
-      [name]: !prev[name]
-    }));
+  const toggleSubcategory = (subName) => {
+    setExpandedSubs(prev => ({ ...prev, [subName]: !prev[subName] }));
   };
 
   return (
-    <div className="w-full md:w-64">
-      {/* Botón móvil */}
-      <button
-        onClick={() => setMobileOpen(!mobileOpen)}
-        className="md:hidden flex justify-between items-center w-full bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
-      >
-        <span className="font-semibold text-lg">Filtros</span>
-        {mobileOpen ? <ChevronUp /> : <ChevronDown />}
-      </button>
+    <div className="filter-sidebar">
+      <div className="filter-header">
+        <h2 className="filter-title">Filtros</h2>
+        <p className="filter-results">{totalProducts} resultados</p>
+      </div>
 
-      <div
-        className={`
-          ${mobileOpen ? "block" : "hidden"} 
-          md:block
-          bg-white border border-gray-200 rounded-lg p-4 shadow-sm mt-2 md:mt-0
-        `}
-      >
-        <h2 className="text-xl font-semibold">Filtros</h2>
-        <p className="text-sm text-gray-500">{totalProducts} resultados</p>
-
-        {/* CATEGORÍAS */}
+      {/* Sección Categorías */}
+      <div className="filter-section">
         <button
+          className="filter-section-header"
           onClick={() => setCategoryOpen(!categoryOpen)}
-          className="flex justify-between items-center w-full py-2 mt-4"
         >
-          <span className="font-medium">Categorías</span>
-          {categoryOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+          <span>Categorías</span>
+          {categoryOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
 
         {categoryOpen && (
-          <div className="space-y-2 mt-2 max-h-80 overflow-y-auto">
+          <div className="filter-options">
             {categories.map(cat => (
-              <div key={cat.name}>
-                {/* Categoría principal */}
-                <div className="flex justify-between items-center text-sm font-medium">
-                  <label className="flex items-center">
+              <div key={cat.name} className="filter-option">
+                <div className="filter-option-main">
+                  <label className="filter-checkbox-label">
                     <input
                       type="checkbox"
                       checked={selectedCategories.includes(cat.name)}
                       onChange={() => handleCategoryChange(cat.name)}
-                      className="mr-2 accent-black"
                     />
-                    {cat.name} ({cat.count})
+                    <span>{cat.name}</span>
                   </label>
-
-                  {cat.subcategories && (
-                    <button onClick={() => toggleCategory(cat.name)}>
-                      {openCategories[cat.name] ? (
-                        <ChevronUp size={16} />
-                      ) : (
-                        <ChevronDown size={16} />
-                      )}
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <span className="filter-count">{cat.count}</span>
+                    {cat.subcategories && cat.subcategories.length > 0 && (
+                      <button
+                        className="filter-expand-btn"
+                        onClick={() => toggleCategory(cat.name)}
+                      >
+                        {expandedCategories[cat.name] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                {/* Subcategorías */}
-                {openCategories[cat.name] &&
-                  cat.subcategories?.map(sub => (
-                    <div key={sub.name} className="ml-6 mt-1">
-                      <div className="flex justify-between items-center text-sm">
-                        <label className="flex items-center">
+                <div className={`filter-subcategory-list ${expandedCategories[cat.name] ? 'open' : ''}`}>
+                  {cat.subcategories?.map(sub => (
+                    <div key={sub.name} className="filter-subcategory-item">
+                      <div className="filter-subcategory-header">
+                        <label className="filter-checkbox-label">
                           <input
                             type="checkbox"
                             checked={selectedCategories.includes(sub.name)}
                             onChange={() => handleCategoryChange(sub.name)}
-                            className="mr-2 accent-black"
                           />
-                          {sub.name} ({sub.count})
+                          <span>{sub.name}</span>
                         </label>
-
-                        {sub.children && (
-                          <button onClick={() => toggleSubCategory(sub.name)}>
-                            {openSubCategories[sub.name] ? (
-                              <ChevronUp size={14} />
-                            ) : (
-                              <ChevronDown size={14} />
-                            )}
-                          </button>
-                        )}
+                        <div className="flex items-center gap-2">
+                          <span className="filter-count">{sub.count}</span>
+                          {sub.children && sub.children.length > 0 && (
+                            <button
+                              className="filter-expand-btn"
+                              onClick={() => toggleSubcategory(sub.name)}
+                            >
+                              {expandedSubs[sub.name] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                            </button>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Sub-subcategorías */}
-                      {openSubCategories[sub.name] &&
-                        sub.children?.map(child => (
-                          <label
-                            key={child.name}
-                            className="flex items-center text-sm ml-6 mt-1"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedCategories.includes(child.name)}
-                              onChange={() => handleCategoryChange(child.name)}
-                              className="mr-2 accent-black"
-                            />
-                            {child.name} ({child.count})
-                          </label>
+                      <div className={`filter-child-list ${expandedSubs[sub.name] ? 'open' : ''}`}>
+                        {sub.children?.map(child => (
+                          <div key={child.name} className="filter-child-item">
+                            <label className="filter-checkbox-label">
+                              <input
+                                type="checkbox"
+                                checked={selectedCategories.includes(child.name)}
+                                onChange={() => handleCategoryChange(child.name)}
+                              />
+                              <span>{child.name}</span>
+                            </label>
+                            <span className="filter-count ml-2">{child.count}</span>
+                          </div>
                         ))}
+                      </div>
                     </div>
                   ))}
+                </div>
               </div>
             ))}
           </div>
         )}
+      </div>
 
-        <hr className="my-4" />
-
-        {/* MARCAS */}
+      {/* Sección Marcas */}
+      <div className="filter-section">
         <button
+          className="filter-section-header"
           onClick={() => setBrandOpen(!brandOpen)}
-          className="flex justify-between items-center w-full py-2"
         >
-          <span className="font-medium">Marca</span>
-          {brandOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+          <span>Marca</span>
+          {brandOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
 
         {brandOpen && (
-          <div className="space-y-2 mt-2 max-h-60 overflow-y-auto">
+          <div className="filter-options">
             {brands.map(brand => (
-              <label key={brand} className="flex items-center text-sm">
-                <input
-                  type="checkbox"
-                  checked={selectedBrands.includes(brand)}
-                  onChange={() => handleBrandChange(brand)}
-                  className="mr-2 accent-black"
-                />
-                {brand}
-              </label>
+              <div key={brand} className="filter-option-main">
+                <label className="filter-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={selectedBrands.includes(brand)}
+                    onChange={() => handleBrandChange(brand)}
+                  />
+                  <span>{brand}</span>
+                </label>
+              </div>
             ))}
           </div>
         )}

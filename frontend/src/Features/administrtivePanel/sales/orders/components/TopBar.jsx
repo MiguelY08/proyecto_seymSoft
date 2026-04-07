@@ -1,7 +1,8 @@
 import React from 'react';
-import { Download, Calendar, X } from 'lucide-react';
+import { Calendar, X, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useAlert } from '../../../../shared/alerts/useAlert';
+import ButtonComponent from '../../../../shared/ButtonComponent';
 
 /**
  * TopBar — Barra superior con filtros de fecha y exportar Excel.
@@ -118,16 +119,12 @@ function TopBar({
       )}
 
       {/* Exportar Excel */}
-      <button
-        onClick={handleDownloadExcel}
-        className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold
-                   border border-sky-700 rounded-lg text-[#004D77] bg-white
-                   hover:bg-sky-50 active:scale-95 transition-all duration-200
-                   cursor-pointer whitespace-nowrap shrink-0"
-      >
-        <span className="hidden sm:inline">Exportar Excel</span>
-        <Download className="w-4 h-4" strokeWidth={1.8} />
-      </button>
+      <ButtonComponent
+        className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-2 flex items-center gap-2"
+        onClick={handleDownloadExcel}>
+          <FileSpreadsheet className="w-4 h-4" />
+          Exportar Excel
+      </ButtonComponent>
 
     </div>
   );

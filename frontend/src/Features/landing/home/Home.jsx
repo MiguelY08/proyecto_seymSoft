@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ShoppingBag, Briefcase, ClipboardPen, FileText, Palette } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ShoppingBag, Briefcase, ClipboardPen, FileText, Palette, ArrowRight } from 'lucide-react';
 
 import { getImage, seedDefaultImage } from '../../administrtivePanel/configuration/carousel/services/CarouselBD.js';
 
@@ -16,29 +16,263 @@ import marcadorEterna      from '../../../assets/products/marcadoreseterna.png';
 
 import mayoristaBg from '../../../assets/mayoristasBg.png';
 
-/**
- * Componente principal de la página de inicio del landing.
- * Incluye carrusel de imágenes, categorías, productos destacados y sección de mayoristas.
- * Maneja carga dinámica de slides desde localStorage e IndexedDB.
- *
- * @component
- * @returns {JSX.Element} La página de inicio completa.
- */
+/* ── Estilos globales de la página ── */
+const PAGE_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,600&family=Nunito:wght@400;600;700;800&display=swap');
+
+  .home-page {
+    background: #f6f9fc;
+    font-family: 'Nunito', 'Segoe UI', sans-serif;
+  }
+
+  /* ─ Section label ─ */
+  .section-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #004D77;
+    margin-bottom: 8px;
+  }
+  .section-eyebrow::before {
+    content: '';
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: #004D77;
+    border-radius: 2px;
+  }
+
+  /* ─ Section title ─ */
+  .section-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 700;
+    color: #0c2a3a;
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+  .section-subtitle {
+    font-size: 0.88rem;
+    color: #64748b;
+    margin-top: 6px;
+  }
+
+  /* ─ "Ver más" button ─ */
+  .btn-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 22px;
+    border: 2px solid #004D77;
+    color: #004D77;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-radius: 100px;
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s, transform 0.15s;
+  }
+  .btn-outline:hover {
+    background: #004D77;
+    color: #fff;
+    transform: translateY(-1px);
+  }
+  .btn-outline:active { transform: scale(0.97); }
+
+  /* ─ Category cards ─ */
+  .cat-card {
+    background: #ffffff;
+    border: 1.5px solid #e2edf5;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px 12px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+  }
+  .cat-card:hover {
+    box-shadow: 0 8px 28px rgba(0,77,119,0.13);
+    transform: translateY(-3px);
+    border-color: #afd0e6;
+    background: #f0f8ff;
+  }
+  .cat-card:active { transform: scale(0.96); }
+  .cat-icon-wrap {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    background: linear-gradient(140deg, #e8f4fd 0%, #d4ebf8 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.25s ease;
+  }
+  .cat-card:hover .cat-icon-wrap {
+    transform: scale(1.1) rotate(-4deg);
+  }
+  .cat-label {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #1e4060;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  /* ─ Carousel ─ */
+  .carousel-wrap {
+    width: 100%;
+    border-radius: 0;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+  }
+  @media (min-width: 640px) {
+    .carousel-wrap { border-radius: 16px; width: 98%; margin: 0 auto; }
+  }
+  @media (min-width: 1024px) {
+    .carousel-wrap { border-radius: 20px; width: 95%; }
+  }
+
+  /* ─ Staggered card reveal ─ */
+  @keyframes pm-fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .products-grid .pm-card {
+    animation: pm-fadeUp 0.45s ease both;
+  }
+  .products-grid .pm-card:nth-child(1)  { animation-delay: 0.04s; }
+  .products-grid .pm-card:nth-child(2)  { animation-delay: 0.09s; }
+  .products-grid .pm-card:nth-child(3)  { animation-delay: 0.14s; }
+  .products-grid .pm-card:nth-child(4)  { animation-delay: 0.19s; }
+  .products-grid .pm-card:nth-child(5)  { animation-delay: 0.24s; }
+  .products-grid .pm-card:nth-child(6)  { animation-delay: 0.29s; }
+  .products-grid .pm-card:nth-child(7)  { animation-delay: 0.34s; }
+  .products-grid .pm-card:nth-child(8)  { animation-delay: 0.39s; }
+
+  /* ─ Mayoristas section ─ */
+  .mayoristas-wrap {
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+    min-height: 50vh;
+  }
+  @media (min-width: 640px) {
+    .mayoristas-wrap { width: 98%; margin: 0 auto; border-radius: 16px; min-height: 58vh; }
+  }
+  @media (min-width: 1024px) {
+    .mayoristas-wrap { width: 95%; border-radius: 20px; min-height: 72vh; }
+  }
+  .mayoristas-content {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    height: 100%;
+    min-height: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 48px 24px;
+    gap: 0;
+  }
+  .mayoristas-tag {
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 16px;
+  }
+  .mayoristas-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(2.4rem, 7vw, 5.5rem);
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+  .mayoristas-divider {
+    width: 40px;
+    height: 2px;
+    background: rgba(255,255,255,0.45);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+  .mayoristas-subtitle {
+    font-size: clamp(0.88rem, 1.5vw, 1.05rem);
+    color: rgba(255,255,255,0.78);
+    max-width: 420px;
+    line-height: 1.65;
+    margin-bottom: 32px;
+  }
+  .btn-mayoristas {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 32px;
+    border: 2px solid rgba(255,255,255,0.85);
+    color: #ffffff;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background 0.25s, color 0.25s, transform 0.15s;
+  }
+  .btn-mayoristas:hover {
+    background: #ffffff;
+    color: #004D77;
+    transform: translateY(-2px);
+  }
+  .btn-mayoristas:active { transform: scale(0.97); }
+
+  /* ─ Divider ─ */
+  .section-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #d1e5f0, transparent);
+    margin-top: 48px;
+  }
+`;
+
+let homeStylesInjected = false;
+function injectHomeStyles() {
+  if (homeStylesInjected) return;
+  const el = document.createElement('style');
+  el.textContent = PAGE_STYLES;
+  document.head.appendChild(el);
+  homeStylesInjected = true;
+}
+
 function Home() {
+  injectHomeStyles();
+
   const [currentSlide, setCurrentSlide] = useState(0);
   const [slides,       setSlides]       = useState([]);
   const urlsRef = useRef([]);
 
-  // Datos estáticos de categorías
   const categories = [
-    { id: 1, name: 'ESCOLAR',          icon: ShoppingBag,  href: '/categoria/escolar'         },
-    { id: 2, name: 'OFICINA',          icon: Briefcase,    href: '/categoria/oficina'          },
-    { id: 3, name: 'ESCRITURA',        icon: ClipboardPen, href: '/categoria/escritura'        },
-    { id: 4, name: 'PAPELERÍA BÁSICA', icon: FileText,     href: '/categoria/papeleria-basica' },
-    { id: 5, name: 'ARTE',             icon: Palette,      href: '/categoria/arte'             },
+    { id: 1, name: 'Escolar',          icon: ShoppingBag,  href: '/categoria/escolar'         },
+    { id: 2, name: 'Oficina',          icon: Briefcase,    href: '/categoria/oficina'          },
+    { id: 3, name: 'Escritura',        icon: ClipboardPen, href: '/categoria/escritura'        },
+    { id: 4, name: 'Papelería básica', icon: FileText,     href: '/categoria/papeleria-basica' },
+    { id: 5, name: 'Arte',             icon: Palette,      href: '/categoria/arte'             },
   ];
 
-  // Datos estáticos de productos destacados
   const products = [
     { id: 1, image: correctorCinta,    name: 'Corrector en Cinta',       category: 'ESCRITURA', price: 4500  },
     { id: 2, image: cuadernoPrimavera, name: 'Cuaderno Primavera x100h', category: 'ESCOLAR',   price: 8900  },
@@ -50,22 +284,13 @@ function Home() {
     { id: 8, image: marcadorEterna,    name: 'Marcadores Eterna x12',    category: 'ESCRITURA', price: 13500 },
   ];
 
-  // ─── Cargar slides desde localStorage + IndexedDB ─────────────────────────
-  // Carga imágenes activas del carrusel, crea Object URLs y limpia al desmontar
   useEffect(() => {
     const load = async () => {
       try {
-        // Garantizar que la imagen por defecto esté sembrada
         await seedDefaultImage();
-
         const stored = localStorage.getItem('pm_carousel');
         const meta   = stored ? JSON.parse(stored) : [];
-
-        // Solo activos, en orden
-        const activos = meta
-          .filter((s) => s.activo)
-          .sort((a, b) => a.orden - b.orden);
-
+        const activos = meta.filter((s) => s.activo).sort((a, b) => a.orden - b.orden);
         const loaded = await Promise.all(
           activos.map(async (s) => {
             const blob = await getImage(s.id);
@@ -73,7 +298,6 @@ function Home() {
             return { id: s.id, image: url, alt: s.nombre };
           })
         );
-
         const validos = loaded.filter((s) => s.image !== null);
         urlsRef.current = validos.map((s) => s.image);
         setSlides(validos);
@@ -82,23 +306,14 @@ function Home() {
         setSlides([]);
       }
     };
-
     load();
-
-    // Limpiar Object URLs al desmontar
-    return () => {
-      urlsRef.current.forEach((url) => URL.revokeObjectURL(url));
-    };
+    return () => { urlsRef.current.forEach((url) => URL.revokeObjectURL(url)); };
   }, []);
 
-  // ─── Resetear slide actual si se reduce el número de slides ───────────────
   useEffect(() => {
-    if (slides.length > 0 && currentSlide >= slides.length) {
-      setCurrentSlide(0);
-    }
+    if (slides.length > 0 && currentSlide >= slides.length) setCurrentSlide(0);
   }, [slides]);
 
-  // ─── Auto-avance cada 10 segundos ─────────────────────────────────────────
   useEffect(() => {
     if (slides.length === 0) return;
     const interval = setInterval(() => {
@@ -107,111 +322,149 @@ function Home() {
     return () => clearInterval(interval);
   }, [slides.length]);
 
-  /**
-   * Avanza al siguiente slide.
-   */
   const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % slides.length);
-
-  /**
-   * Retrocede al slide anterior.
-   */
   const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
-
-  /**
-   * Va a un slide específico por índice.
-   * @param {number} index - Índice del slide.
-   */
   const goToSlide = (index) => setCurrentSlide(index);
 
   return (
-    <>
-      {/* Sección Carrusel */}
-      <section className="w-full flex items-center justify-center py-2 sm:py-4">
-        {slides.length > 0 && (
-          <div className="w-full sm:w-[98%] lg:w-[95%] h-auto lg:h-[80vh] relative overflow-hidden rounded-none sm:rounded-lg lg:rounded-2xl shadow-2xl">
-            <div className="relative w-full h-full">
-              {slides.map((slide, index) => (
-                <div
-                  key={slide.id}
-                  className={`absolute w-full h-full transition-all duration-700 ease-in-out ${
-                    index === currentSlide
-                      ? 'opacity-100 translate-x-0'
-                      : index < currentSlide
-                      ? 'opacity-0 -translate-x-full'
-                      : 'opacity-0 translate-x-full'
-                  }`}
-                >
-                  <div className="absolute inset-0 bg-cover bg-center blur-2xl scale-110" style={{ backgroundImage: `url(${slide.image})` }} />
-                  <div className="absolute inset-0 bg-black/20" />
-                  <div className="relative w-full h-full flex items-center justify-center p-0 sm:p-2 lg:p-4">
-                    <img src={slide.image} alt={slide.alt} className="w-full lg:max-w-full h-auto lg:max-h-full object-contain relative z-10" />
-                  </div>
+    <div className="home-page">
+
+      {/* ══ Carrusel ══ */}
+      {slides.length > 0 && (
+        <section style={{ padding: '12px 0 0' }}>
+          <div className="carousel-wrap" style={{ height: 'clamp(200px, 52vw, 78vh)' }}>
+
+            {/* Slides */}
+            {slides.map((slide, index) => (
+              <div
+                key={slide.id}
+                style={{
+                  position: 'absolute', inset: 0,
+                  transition: 'opacity 0.7s ease, transform 0.7s ease',
+                  opacity: index === currentSlide ? 1 : 0,
+                  transform: index === currentSlide
+                    ? 'translateX(0)'
+                    : index < currentSlide ? 'translateX(-100%)' : 'translateX(100%)',
+                }}
+              >
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  backgroundImage: `url(${slide.image})`,
+                  backgroundSize: 'cover', backgroundPosition: 'center',
+                  filter: 'blur(22px)', transform: 'scale(1.1)',
+                }} />
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.18)' }} />
+                <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', zIndex: 1 }}>
+                  <img src={slide.image} alt={slide.alt} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                 </div>
+              </div>
+            ))}
+
+            {/* Nav buttons */}
+            {[{ dir: 'prev', Icon: ChevronLeft, action: prevSlide, side: 'left' },
+              { dir: 'next', Icon: ChevronRight, action: nextSlide, side: 'right' }
+            ].map(({ Icon, action, side }) => (
+              <button
+                key={side}
+                onClick={action}
+                style={{
+                  position: 'absolute', top: '50%', [side]: 14,
+                  transform: 'translateY(-50%)',
+                  width: 40, height: 40,
+                  borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.18)',
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255,255,255,0.35)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', zIndex: 20,
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.35)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
+              >
+                <Icon size={20} color="#fff" strokeWidth={2.5} />
+              </button>
+            ))}
+
+            {/* Dots */}
+            <div style={{
+              position: 'absolute', bottom: 14, left: '50%', transform: 'translateX(-50%)',
+              display: 'flex', gap: 6, alignItems: 'center', zIndex: 20,
+              background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(6px)',
+              padding: '5px 10px', borderRadius: 20,
+            }}>
+              {slides.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => goToSlide(i)}
+                  style={{
+                    width: i === currentSlide ? 20 : 7,
+                    height: 7,
+                    borderRadius: 4,
+                    background: i === currentSlide ? '#fff' : 'rgba(255,255,255,0.45)',
+                    border: 'none', cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    padding: 0,
+                  }}
+                />
               ))}
             </div>
-
-            {/* Botones de navegación */}
-            <button onClick={prevSlide} className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer group z-20">
-              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white group-hover:scale-110 transition-transform" strokeWidth={3} />
-            </button>
-            <button onClick={nextSlide} className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer group z-20">
-              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white group-hover:scale-110 transition-transform" strokeWidth={3} />
-            </button>
-
-            {/* Indicadores de slides */}
-            <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 bg-black/40 backdrop-blur-sm px-2 sm:px-3 py-1.5 sm:py-2 rounded-full z-20">
-              <div className="flex gap-1.5 sm:gap-2">
-                {slides.map((_, index) => (
-                  <button key={index} onClick={() => goToSlide(index)} className={`transition-all duration-300 rounded-full cursor-pointer ${index === currentSlide ? 'w-4 sm:w-6 h-1.5 sm:h-2 bg-white' : 'w-1.5 sm:w-2 h-1.5 sm:h-2 bg-white/50 hover:bg-white/75'}`} />
-                ))}
-              </div>
-            </div>
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
-      {/* Sección Categorías */}
-      <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
-        <h2 className="text-2xl sm:text-3xl font-serif italic font-semibold text-[#004D77] tracking-tight text-center mb-6 sm:mb-8">
-          Categorías
-        </h2>
+      {/* ══ Categorías ══ */}
+      <section style={{ maxWidth: 1280, margin: '0 auto', padding: 'clamp(32px,5vw,56px) 20px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 28 }}>
+          <div>
+            <p className="section-eyebrow">Explora</p>
+            <h2 className="section-title">Categorías</h2>
+          </div>
+          <a href="/categorias" className="btn-outline">
+            Ver todas <ArrowRight size={13} strokeWidth={3} />
+          </a>
+        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
-          {categories.map((category) => (
-            <a
-              key={category.id}
-              href={category.href}
-              className="bg-white border-2 border-gray-200 rounded-xl sm:rounded-2xl flex flex-row sm:flex-col items-center justify-start sm:justify-center gap-4 hover:shadow-lg hover:border-gray-300 transition-all duration-300 cursor-pointer group sm:aspect-square p-4 lg:p-6"
-            >
-              <category.icon className="w-10 h-10 lg:w-14 lg:h-14 text-[#004D77] group-hover:scale-110 transition-transform duration-300 shrink-0" strokeWidth={1.5} />
-              <span className="text-sm sm:text-[10px] lg:text-xs font-bold text-gray-700 uppercase tracking-wide sm:text-center leading-tight">
-                {category.name}
-              </span>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}
+          className="categories-grid">
+          <style>{`
+            @media (max-width: 767px) { .categories-grid { grid-template-columns: repeat(2, 1fr) !important; } }
+            @media (min-width: 768px) and (max-width: 1023px) { .categories-grid { grid-template-columns: repeat(3, 1fr) !important; } }
+          `}</style>
+          {categories.map((cat) => (
+            <a key={cat.id} href={cat.href} className="cat-card">
+              <div className="cat-icon-wrap">
+                <cat.icon size={24} color="#004D77" strokeWidth={1.75} />
+              </div>
+              <span className="cat-label">{cat.name}</span>
             </a>
           ))}
         </div>
 
-        <div className="flex justify-center mt-6 sm:mt-8">
-          <a href="/categorias" className="px-6 sm:px-8 py-2.5 sm:py-3 bg-[#004D77] hover:bg-[#003d5e] text-white font-semibold text-xs sm:text-sm rounded-full transition-colors duration-200 cursor-pointer">
-            Ver más categorías
-          </a>
-        </div>
-
-        <div className="h-px bg-gray-200 mt-8 sm:mt-10" />
+        <div className="section-divider" />
       </section>
 
-      {/* Sección Nuestros Productos */}
-      <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
-        <div className="text-center mb-6 sm:mb-8">
-          <h2 className="text-2xl sm:text-3xl font-serif italic font-semibold text-[#004D77] tracking-tight">
-            Nuestros productos
-          </h2>
-          <p className="text-gray-500 text-xs sm:text-sm mt-1 sm:mt-2">
-            Encuentra los productos ideales para ti en un solo lugar
-          </p>
+      {/* ══ Productos destacados ══ */}
+      <section style={{ maxWidth: 1280, margin: '0 auto', padding: 'clamp(32px,5vw,56px) 20px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 28 }}>
+          <div>
+            <p className="section-eyebrow">Destacados</p>
+            <h2 className="section-title">Nuestros productos</h2>
+            <p className="section-subtitle">Encuentra los productos ideales para ti en un solo lugar</p>
+          </div>
+          <Link to="/tienda" className="btn-outline">
+            Ver más <ArrowRight size={13} strokeWidth={3} />
+          </Link>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+        <div
+          className="products-grid"
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}
+        >
+          <style>{`
+            @media (max-width: 639px)  { .products-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; } }
+            @media (min-width: 640px) and (max-width: 1023px) { .products-grid { grid-template-columns: repeat(3, 1fr) !important; } }
+          `}</style>
           {products.map((product) => (
             <ProductCard
               key={product.id}
@@ -223,40 +476,45 @@ function Home() {
           ))}
         </div>
 
-        <div className="flex justify-center mt-6 sm:mt-8">
-          <Link to="/tienda" className="px-6 sm:px-8 py-2.5 sm:py-3 bg-[#004D77] hover:bg-[#003d5e] text-white font-semibold text-xs sm:text-sm rounded-full transition-colors duration-200 cursor-pointer">
-            Ver más productos
-          </Link>
-        </div>
-
-        <div className="h-px bg-gray-200 mt-8 sm:mt-10" />
+        <div className="section-divider" />
       </section>
 
-      {/* Sección Mayoristas */}
-      <section className="w-full flex items-center justify-center py-2 sm:py-6">
-        <div className="w-full sm:w-[98%] lg:w-[95%] h-[50vh] sm:h-[60vh] lg:h-[90vh] relative overflow-hidden rounded-none sm:rounded-lg lg:rounded-2xl">
-          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${mayoristaBg})` }} />
-          <div className="absolute inset-0 bg-[#004D77]/80" />
-          <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-4 sm:px-8 text-center gap-4 sm:gap-6">
-            <h2 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white leading-tight">
-              ¿Eres mayorista?
-            </h2>
-            <p className="text-sm sm:text-base lg:text-xl text-gray-200 max-w-xl">
-              Comunícate con nosotros y con gusto te atenderemos
+      {/* ══ Mayoristas ══ */}
+      <section style={{ padding: 'clamp(32px,5vw,56px) 0 clamp(32px,5vw,56px)' }}>
+        <div className="mayoristas-wrap">
+          {/* Fondo imagen */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            backgroundImage: `url(${mayoristaBg})`,
+            backgroundSize: 'cover', backgroundPosition: 'center',
+          }} />
+          {/* Overlay gradiente */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(135deg, rgba(0,40,70,0.93) 0%, rgba(0,77,119,0.80) 100%)',
+          }} />
+
+          <div className="mayoristas-content">
+            <p className="mayoristas-tag">Canal mayorista</p>
+            <h2 className="mayoristas-title">¿Eres mayorista?</h2>
+            <div className="mayoristas-divider" />
+            <p className="mayoristas-subtitle">
+              Comunícate con nosotros y con gusto te asesoraremos con los mejores precios del mercado.
             </p>
-            <div className="w-24 sm:w-32 h-px bg-white/60 my-1 sm:my-2" />
             <a
               href="https://wa.me/573002936722"
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 px-8 sm:px-10 py-2.5 sm:py-3 border-2 border-white text-white text-xs sm:text-sm font-semibold uppercase tracking-widest hover:bg-white hover:text-[#004D77] transition-all duration-300 cursor-pointer rounded-sm"
+              className="btn-mayoristas"
             >
-              Contáctanos
+              Contáctanos por WhatsApp
+              <ArrowRight size={14} strokeWidth={2.5} />
             </a>
           </div>
         </div>
       </section>
-    </>
+
+    </div>
   );
 }
 

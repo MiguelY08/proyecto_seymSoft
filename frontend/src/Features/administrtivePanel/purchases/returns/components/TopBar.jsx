@@ -1,7 +1,8 @@
 import React from 'react';
-import { Search, Calendar, X, Download } from 'lucide-react';
+import { Search, Calendar, X, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useAlert } from '../../../../shared/alerts/useAlert';
+import ButtonComponent from '../../../../shared/ButtonComponent';
 
 /**
  * Componente TopBar — Barra superior para filtros en Devoluciones de Compras.
@@ -101,7 +102,7 @@ function TopBar({
   };
 
   return (
-    <div className="flex items-center justify-between gap-2 sm:gap-4 shrink-0 mb-4">
+    <div className="flex items-center justify-between gap-2 sm:gap-4 shrink-0">
 
       {/* ── Buscador ──────────────────────────────────────────────────────── */}
       <div className="relative flex-1 sm:flex-none sm:w-72 md:w-96">
@@ -174,16 +175,12 @@ function TopBar({
         )}
 
         {/* Exportar Excel */}
-        <button
-          onClick={handleDownload}
-          className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold
-                     border border-sky-700 rounded-lg text-[#004D77] bg-white
-                     hover:bg-sky-50 active:scale-95 transition-all duration-200
-                     cursor-pointer whitespace-nowrap"
-        >
-          <span className="hidden sm:inline">Exportar Excel</span>
-          <Download className="w-4 h-4" strokeWidth={1.8} />
-        </button>
+        <ButtonComponent
+          className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-2 flex items-center gap-2"
+          onClick={handleDownload}>
+            <FileSpreadsheet className="w-4 h-4" />
+            Exportar Excel
+        </ButtonComponent>
 
       </div>
     </div>

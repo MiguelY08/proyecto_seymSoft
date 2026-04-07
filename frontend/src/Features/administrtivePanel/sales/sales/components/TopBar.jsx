@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { Search, Download, Plus } from 'lucide-react';
+import { Search, Plus, FileSpreadsheet } from 'lucide-react';
 import { useAlert }              from '../../../../shared/alerts/useAlert';
 import { downloadSalesExcel }    from '../helpers/salesHelpers';
 import { SalesDB }               from '../services/salesBD';
+import ButtonComponent from '../../../../shared/ButtonComponent';
 
 // ─── TopBar ───────────────────────────────────────────────────────────────────
 /**
@@ -57,22 +58,21 @@ function TopBar({ search, onSearchChange }) {
 
       {/* Botones */}
       <div className="flex items-center gap-2 shrink-0">
-        <button
-          onClick={handleDownload}
-          title="Descargar ventas"
-          className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-sky-700 rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
-        >
-          <span className="hidden sm:inline">Exportar Excel</span>
-          <Download className="w-4 h-4" strokeWidth={1.8} />
-        </button>
-        <button
+        {/*Botón Excel*/}
+        <ButtonComponent
+          className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-2 flex items-center gap-2"
+          onClick={handleDownload}>
+            <FileSpreadsheet className="w-4 h-4" />
+            Exportar Excel
+        </ButtonComponent>
+
+        <ButtonComponent
           onClick={() => navigate('/admin/sales/form-sale')}
           title="Nueva venta"
-          className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-sky-700 rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
         >
           <span className="hidden sm:inline">Nueva venta</span>
           <Plus className="w-4 h-4" strokeWidth={2} />
-        </button>
+        </ButtonComponent>
       </div>
 
     </div>

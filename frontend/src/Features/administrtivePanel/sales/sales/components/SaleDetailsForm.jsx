@@ -6,7 +6,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { UsersDB }                                from '../../../users/services/usersDB';
 import { SalesDB }                                from '../services/salesBD';
-import { METODOS_PAGO, ESTADOS_VENTA, ENTREGAS }  from '../helpers/salesHelpers';
+import { METODOS_PAGO, ESTADOS_VENTA, ENTREGAS, formatPrice, getClientCreditInfo } from '../helpers/salesHelpers';
 
 const MAX_DIRECCION = 250;
 
@@ -227,14 +227,29 @@ function StatusSelect({ value, onChange, options, placeholder, error, icon }) {
 }
 
 // ─── SaleDetailsForm ──────────────────────────────────────────────────────────
-function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoAnulacion = '', fechaAnulacion = '' }) {
+function SaleDetailsForm({
+  form,
+  onChange,
+  errors,
+  isEditing,
+  isAnulada,
+  motivoAnulacion = '',
+  fechaAnulacion = '',
+  paymentAmounts = {},
+  onPaymentAmountChange,
+  totalAmount = 0,
+}) {
   const navigate = useNavigate();
 
-  // Clientes desde clientsService (vía SalesDB) — se refresca al enfocar la ventana
   const [clients, setClients] = useState(() => SalesDB.getClients());
-
-  // Vendedores desde UsersDB: activos con rol asignado (distinto de null y 'Nulo')
   const [users, setUsers] = useState(() => UsersDB.list());
+  const [paymentErrors, setPaymentErrors] = useState({});
+
+  // Obtener información de crédito del cliente seleccionado
+  const creditInfo = useMemo(() => {
+    if (!form.clienteId) return { available: 0, creditAmount: 0, balance: 0 };
+    return getClientCreditInfo(form.clienteId);
+  }, [form.clienteId]);
 
   useEffect(() => {
     const sync = () => {
@@ -260,24 +275,85 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
     </label>
   );
 
-  // Vendedores: usuarios activos con rol asignado (distinto de null y 'Nulo')
   const activeVendors = users.filter((u) => u.active && u.role && u.role !== 'Nulo');
-
-  // Nombre del cliente al editar — busca en clientsService
   const clienteEditName = useMemo(() => {
     const found = SalesDB.getClientById(form.clienteId);
     return found?.name ?? '—';
   }, [form.clienteId]);
 
-  // Nombre del vendedor al editar — busca en UsersDB
   const vendedorEditName = useMemo(() => {
     const found = users.find((u) => String(u.id) === String(form.vendedorId));
     return found?.name ?? '—';
   }, [form.vendedorId, users]);
 
+  const selectedMethods = useMemo(() => {
+    if (Array.isArray(form.metodoPago)) return form.metodoPago;
+    if (form.metodoPago) return [form.metodoPago];
+    return [];
+  }, [form.metodoPago]);
+
+  const getMaxForMethod = (method) => {
+    if (totalAmount === 0) return 0;
+    const otrosSum = selectedMethods
+      .filter(m => m !== method)
+      .reduce((sum, m) => sum + (paymentAmounts[m] || 0), 0);
+    return Math.max(0, totalAmount - otrosSum);
+  };
+
+  const validateSinglePayment = (method, amount) => {
+    const maxAllowed = getMaxForMethod(method);
+    if (amount > maxAllowed) {
+      return `El monto máximo permitido para ${method} es ${formatPrice(maxAllowed)} (restante del total).`;
+    }
+    if (amount < 0) return 'El monto no puede ser negativo.';
+    if (method === 'Crédito' && amount > creditInfo.available) {
+      return `El monto a crédito (${formatPrice(amount)}) supera el cupo disponible (${formatPrice(creditInfo.available)}).`;
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    const newErrors = {};
+    for (const method of selectedMethods) {
+      const amount = paymentAmounts[method] || 0;
+      const error = validateSinglePayment(method, amount);
+      if (error) newErrors[method] = error;
+    }
+    setPaymentErrors(newErrors);
+  }, [paymentAmounts, totalAmount, selectedMethods, creditInfo.available]);
+
+  const handlePaymentAmountChange = (method, rawValue) => {
+    const numValue = rawValue === '' ? 0 : Number(rawValue);
+    if (isNaN(numValue)) return;
+
+    let newAmount = numValue;
+    const maxAllowed = getMaxForMethod(method);
+    if (newAmount > maxAllowed) newAmount = maxAllowed;
+    if (newAmount < 0) newAmount = 0;
+    if (method === 'Crédito' && newAmount > creditInfo.available) newAmount = creditInfo.available;
+
+    const newAmounts = { ...paymentAmounts, [method]: newAmount };
+    onPaymentAmountChange(newAmounts);
+  };
+
+  const handleMethodChange = (idx, newMethod) => {
+    const oldMethod = selectedMethods[idx];
+    if (oldMethod === newMethod) return;
+
+    const oldAmount = paymentAmounts[oldMethod] || 0;
+    const newAmounts = { ...paymentAmounts };
+    delete newAmounts[oldMethod];
+    newAmounts[newMethod] = (newAmounts[newMethod] || 0) + oldAmount;
+
+    const updatedMethods = [...selectedMethods];
+    updatedMethods[idx] = newMethod;
+
+    onChange('metodoPago', updatedMethods);
+    onPaymentAmountChange(newAmounts);
+  };
+
   return (
     <div className="bg-white rounded-lg border border-gray-200">
-
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gray-50">
         <div className="w-7 h-7 rounded-md bg-[#004D77] flex items-center justify-center shrink-0">
@@ -294,7 +370,6 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
       </div>
 
       <div className="p-5 flex flex-col gap-4">
-
         {/* Cliente + Vendedor */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -350,69 +425,109 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
           </div>
         </div>
 
-        {/* Método de pago */}
+        {/* Método de pago con montos */}
         <div>
           <Label required>Método de pago</Label>
-          <div className="flex items-center gap-2">
-            {(Array.isArray(form.metodoPago) ? form.metodoPago : form.metodoPago ? [form.metodoPago] : ['']).map((metodo, idx) => {
-              const allSelected = Array.isArray(form.metodoPago) ? form.metodoPago : [form.metodoPago];
-              const available = METODOS_PAGO.filter(
-                (m) => !allSelected.filter((_, i) => i !== idx).includes(m)
-              );
+          <div className="flex flex-col gap-3">
+            {selectedMethods.map((metodo, idx) => {
+              const allSelected = selectedMethods;
+              const usedMethods = allSelected.filter((_, i) => i !== idx);
+              const available = METODOS_PAGO.filter((m) => !usedMethods.includes(m));
               const canRemove = allSelected.length > 1 && !isAnulada;
+              const montoActual = paymentAmounts[metodo] ?? 0;
+              const errorMsg = paymentErrors[metodo];
+              const maxAllowed = getMaxForMethod(metodo);
+              const isDisabled = isAnulada || totalAmount === 0;
+              const isCredit = metodo === 'Crédito';
+
               return (
-                <div key={idx} className="flex items-center flex-1 min-w-0">
-                  <div className="relative flex-1 min-w-0">
-                    <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" strokeWidth={1.8} />
-                    <select
-                      value={metodo}
-                      disabled={isAnulada}
-                      onChange={(e) => {
-                        const updated = [...allSelected];
-                        updated[idx] = e.target.value;
-                        onChange('metodoPago', updated);
-                      }}
-                      className={`appearance-none w-full pl-10 pr-7 py-2.5 text-sm border ${canRemove ? 'rounded-l-lg border-r-0' : 'rounded-lg'} outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 ${
-                        errors?.metodoPago
-                          ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-                          : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
-                      } ${isAnulada ? 'opacity-60 cursor-not-allowed bg-gray-50' : ''}`}
-                    >
-                      {available.map((m) => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
+                <div key={idx} className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1 min-w-0">
+                      <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" strokeWidth={1.8} />
+                      <select
+                        value={metodo}
+                        disabled={isAnulada}
+                        onChange={(e) => handleMethodChange(idx, e.target.value)}
+                        className={`appearance-none w-full pl-10 pr-7 py-2.5 text-sm border ${canRemove ? 'rounded-l-lg border-r-0' : 'rounded-lg'} outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 ${
+                          errors?.metodoPago
+                            ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+                            : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
+                        } ${isAnulada ? 'opacity-60 cursor-not-allowed bg-gray-50' : ''}`}
+                      >
+                        {available.map((m) => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
+                    </div>
+
+                    {/* Input de monto */}
+                    <div className="relative w-32 shrink-0">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">$</span>
+                      <input
+                        type="number"
+                        value={montoActual}
+                        onChange={(e) => handlePaymentAmountChange(metodo, e.target.value)}
+                        disabled={isDisabled}
+                        min={0}
+                        max={isCredit ? Math.min(maxAllowed, creditInfo.available) : maxAllowed}
+                        step={1000}
+                        placeholder="0"
+                        className={`w-full pl-7 pr-2 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 transition-colors duration-200 ${
+                          isDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''
+                        } ${errorMsg ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-gray-300'}`}
+                      />
+                    </div>
+
+                    {canRemove && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updatedMethods = allSelected.filter((_, i) => i !== idx);
+                          onChange('metodoPago', updatedMethods);
+                          const newAmounts = { ...paymentAmounts };
+                          delete newAmounts[metodo];
+                          onPaymentAmountChange(newAmounts);
+                        }}
+                        className="h-10.5 px-2.5 border border-gray-300 rounded-lg text-gray-400 hover:text-red-500 hover:border-red-300 hover:bg-red-50 transition-colors cursor-pointer shrink-0"
+                        title="Quitar método"
+                      >
+                        <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+                      </button>
+                    )}
                   </div>
-                  {canRemove && (
-                    <button
-                      type="button"
-                      onClick={() => onChange('metodoPago', allSelected.filter((_, i) => i !== idx))}
-                      className="h-10.5 px-2.5 border border-gray-300 rounded-r-lg text-gray-400 hover:text-red-500 hover:border-red-300 hover:bg-red-50 transition-colors cursor-pointer shrink-0"
-                      title="Quitar método"
-                    >
-                      <X className="w-3.5 h-3.5" strokeWidth={2.5} />
-                    </button>
+                  {errorMsg && (
+                    <p className="text-xs text-red-500 ml-1">{errorMsg}</p>
+                  )}
+                  {!errorMsg && maxAllowed > 0 && totalAmount > 0 && (
+                    <p className="text-[10px] text-gray-400 ml-1">
+                      Máx: {formatPrice(maxAllowed)}
+                      {isCredit && ` · Cupo disponible: ${formatPrice(creditInfo.available)}`}
+                    </p>
+                  )}
+                  {isCredit && creditInfo.available === 0 && totalAmount > 0 && !errorMsg && (
+                    <p className="text-[10px] text-orange-500 ml-1">Cliente sin cupo de crédito disponible.</p>
                   )}
                 </div>
               );
             })}
 
-            {!isAnulada && (() => {
-              const current = Array.isArray(form.metodoPago) ? form.metodoPago : form.metodoPago ? [form.metodoPago] : [''];
-              return current.length < METODOS_PAGO.length;
-            })() && (
+            {!isAnulada && selectedMethods.length < METODOS_PAGO.length && (
               <button
                 type="button"
                 onClick={() => {
-                  const current = Array.isArray(form.metodoPago) ? form.metodoPago : form.metodoPago ? [form.metodoPago] : [''];
+                  const current = selectedMethods;
                   const next = METODOS_PAGO.find((m) => !current.includes(m));
-                  if (next) onChange('metodoPago', [...current, next]);
+                  if (next) {
+                    onChange('metodoPago', [...current, next]);
+                    onPaymentAmountChange({ ...paymentAmounts, [next]: 0 });
+                  }
                 }}
-                className="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg text-gray-500 hover:border-[#004D77] hover:text-[#004D77] hover:bg-[#004D77]/5 transition-colors duration-200 cursor-pointer shrink-0"
-                title="Agregar método de pago"
+                className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-[#004D77] border border-dashed border-[#004D77]/40 rounded-lg hover:bg-[#004D77]/5 transition-colors duration-200 cursor-pointer"
               >
                 <Plus className="w-4 h-4" strokeWidth={2} />
+                Agregar método de pago
               </button>
             )}
           </div>
@@ -442,7 +557,6 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
           )}
         </div>
 
-        {/* Motivo y fecha de anulación */}
         {isAnulada && (
           <div className="flex flex-col gap-3">
             <div>
@@ -458,7 +572,6 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
           </div>
         )}
 
-        {/* Entrega */}
         <div>
           <Label required>Entrega</Label>
           <SimpleSelect
@@ -473,7 +586,6 @@ function SaleDetailsForm({ form, onChange, errors, isEditing, isAnulada, motivoA
           <ErrorMsg field="entrega" />
         </div>
 
-        {/* Dirección */}
         {form.entrega === 'Domicilio' && (
           <div>
             <Label required>Dirección</Label>
