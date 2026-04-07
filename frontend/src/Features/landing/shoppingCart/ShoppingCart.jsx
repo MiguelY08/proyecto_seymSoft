@@ -14,7 +14,6 @@ import {
   AlertCircle,
   CheckCircle,
   ArrowRight,
-  X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../shared/Context/Cartcontext';
@@ -29,7 +28,6 @@ const STYLES = `
     from { opacity: 0; transform: translateY(20px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-
   @keyframes cart-emptyFloat {
     0%, 100% { transform: translateY(0px); }
     50%      { transform: translateY(-8px); }
@@ -372,7 +370,7 @@ const STYLES = `
     transform: translateY(-2px);
   }
 
-  /* ── Empty state (estilo Favorites) ── */
+  /* Empty state (estilo Favorites) */
   .cart-empty {
     text-align: center;
     padding: clamp(48px, 10vw, 96px) 24px;
@@ -656,7 +654,6 @@ function ShoppingCart() {
 
   const subtotal = getSubtotal();
 
-  // ── Empty state rediseñado al estilo Favorites ──
   if (cartItems.length === 0) {
     return (
       <div className="cart-page">
@@ -681,7 +678,6 @@ function ShoppingCart() {
   return (
     <div className="cart-page">
       <div className="cart-container">
-        {/* Header */}
         <div className="cart-header">
           <div className="cart-icon-circle">
             <CartIcon size={26} color="#004D77" strokeWidth={1.8} />
@@ -689,7 +685,6 @@ function ShoppingCart() {
           <h1 className="cart-title">Carrito de compras</h1>
         </div>
 
-        {/* Botones acción */}
         <div className="cart-action-buttons">
           <button onClick={handleClearCart} className="btn-secondary">
             Vaciar carrito
@@ -700,7 +695,6 @@ function ShoppingCart() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Columna izquierda: productos */}
           <div className="lg:col-span-2 space-y-3">
             {cartItems.map((item, idx) => (
               <div
@@ -753,7 +747,6 @@ function ShoppingCart() {
             ))}
           </div>
 
-          {/* Columna derecha: resumen o formulario */}
           <div>
             {deliveryMethod === 'domicilio' ? (
               <div className="delivery-form-card">
@@ -778,7 +771,6 @@ function ShoppingCart() {
                   </div>
                 </div>
 
-                {/* Formulario campos */}
                 {[
                   { name: 'nombreCompleto', label: 'Nombre completo', icon: HomeIcon, type: 'text', placeholder: 'Juan Pérez' },
                   { name: 'correo', label: 'Correo electrónico', icon: Mail, type: 'email', placeholder: 'ejemplo@correo.com' },
@@ -880,7 +872,6 @@ function ShoppingCart() {
                   />
                 </div>
 
-                {/* Resumen dentro del formulario */}
                 <div className="summary-card" style={{ marginTop: 24 }}>
                   <div className="summary-title">Resumen del pedido</div>
                   <div className="price-row">
@@ -944,7 +935,6 @@ function ShoppingCart() {
         </div>
       </div>
 
-      {/* Modal de pago */}
       {showPaymentModal && (
         <CompletePay
           isOpen={showPaymentModal}

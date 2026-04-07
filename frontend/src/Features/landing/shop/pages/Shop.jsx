@@ -42,21 +42,11 @@ const SHOP_STYLES = `
     gap: 32px;
     align-items: start;
   }
+
   @media (max-width: 1023px) {
     .shop-layout {
       grid-template-columns: 1fr;
       gap: 24px;
-    }
-  }
-    
-  .shop-filters-col {
-    position: sticky;
-    top: 20px;
-    align-self: start;
-  }
-  @media (max-width: 1023px) {
-    .shop-filters-col {
-      position: static;
     }
   }
 
@@ -261,15 +251,14 @@ function Shop() {
 
   return (
     <div className="shop-page">
-      <ShopHero 
-        image={BgTienda} 
-        title="Tienda" 
-        tag="Catálogo" 
-        subtitle="Encuentra todo lo que necesitas para tu oficina, escuela o proyectos creativos" 
+      <ShopHero
+        image={BgTienda}
+        title="Tienda"
+        tag="Catálogo"
+        subtitle="Encuentra todo lo que necesitas para tu oficina, escuela o proyectos creativos"
       />
       <div className="shop-container">
         <div className="shop-layout">
-          {/* Columna filtros */}
           <div className="shop-filters-col">
             <Filters
               totalProducts={totalProducts}
@@ -285,8 +274,6 @@ function Shop() {
               handleBrandChange={handleBrandChange}
             />
           </div>
-
-          {/* Columna productos */}
           <div className="shop-products-col">
             <SortDropdown
               selectedSort={selectedSort}
@@ -295,7 +282,6 @@ function Shop() {
               setSortOpen={setSortOpen}
               sortOptions={sortOptions}
             />
-
             {currentProducts.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">
