@@ -113,7 +113,7 @@ function ProvidersTable({
           <tbody>
             <tr>
               <td
-                colSpan={8}
+                colSpan={7}
                 className="py-8 text-center text-sm text-gray-400"
               >
                 {/* Mensaje cuando no hay resultados */}
@@ -164,8 +164,8 @@ function ProvidersTable({
           {providers.map((provider, index) => {
             // Alterna colores de fondo entre filas pares e impares
             const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-100";
-            // Calcula el número de fila basado en el índice de inicio y el índice actual
-            const recordNumber = startIndex + index + 1;
+            // Usa el ID del proveedor como número de registro
+            const recordNumber = provider.id;
 
             return (
               <tr

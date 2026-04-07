@@ -17,7 +17,6 @@ import { X, IdCard, User, Mail, Phone, MapPin, UserCheck, CalendarDays, Building
 import { 
   formatPersonType, 
   formatRut, 
-  formatClientType,
   getStatusBadgeClass,
   getStatusText
 } from '../utils/providerHelpers';
@@ -66,12 +65,6 @@ function InfoProvider({ isOpen, onClose, provider }) {
     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
     : 'bg-red-50 text-red-500 border-red-200';
 
-  // Color del tipo de cliente
-  const clientTypeColor = {
-    mayorista: 'bg-violet-50 text-violet-700 border-violet-200',
-    minorista: 'bg-sky-50 text-sky-700 border-sky-200',
-  }[(provider.tipoCliente || '').toLowerCase()] || 'bg-gray-50 text-gray-600 border-gray-200';
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
@@ -103,9 +96,6 @@ function InfoProvider({ isOpen, onClose, provider }) {
               <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusColor}`}>
                   {getStatusText(provider.activo)}
-                </span>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${clientTypeColor}`}>
-                  {formatClientType(provider.tipoCliente)}
                 </span>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white border border-white/30">
                   {formatPersonType(provider.tipoPersona)}
@@ -199,13 +189,6 @@ function InfoProvider({ isOpen, onClose, provider }) {
             icon={Phone} 
             label="Tel. contacto" 
             value={provider.nuContacto || provider.numeroContacto || '—'} 
-          />
-
-          {/* Tipo cliente */}
-          <DetailRow 
-            icon={Building2} 
-            label="Tipo cliente" 
-            value={formatClientType(provider.tipoCliente)} 
           />
 
           {/* Categorías */}

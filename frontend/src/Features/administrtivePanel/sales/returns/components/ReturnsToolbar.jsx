@@ -8,12 +8,13 @@
  * Responsabilidades:
  * - Renderizar campo de búsqueda
  * - Renderizar filtros de Fecha Inicial y Fecha Final
+ * - Renderizar botón para limpiar filtros
  * - Renderizar botón para crear nueva devolución
  * - Renderizar botón para exportar a Excel
  * - Pasarle los eventos al componente padre
  */
 import React from 'react';
-import { Search, Plus, FileSpreadsheet } from 'lucide-react';
+import { Search, Plus, FileSpreadsheet, Eraser } from 'lucide-react';
 
 /**
  * Componente: ReturnsToolbar
@@ -25,6 +26,7 @@ import { Search, Plus, FileSpreadsheet } from 'lucide-react';
  * @param {Function} onStartDate     - Se ejecuta cuando cambia la fecha inicial
  * @param {string}   endDate         - Fecha final (formato YYYY-MM-DD o '')
  * @param {Function} onEndDate       - Se ejecuta cuando cambia la fecha final
+ * @param {Function} onClearFilters  - Se ejecuta cuando presiona limpiar filtros
  * @param {Function} onNew           - Se ejecuta cuando presiona "Nueva devolución"
  * @param {Function} onExport        - Se ejecuta cuando presiona exportar
  */
@@ -35,9 +37,13 @@ function ReturnsToolbar({
   onStartDate,
   endDate,
   onEndDate,
+  onClearFilters,
   onNew,
   onExport,
 }) {
+  // Verificar si hay filtros activos para mostrar el botón limpiar
+  const hasActiveFilters = search !== '' || startDate !== '' || endDate !== '';
+
   return (
     <div className="flex flex-wrap items-end gap-3 shrink-0">
 
@@ -45,7 +51,7 @@ function ReturnsToolbar({
       <div className="relative w-72">
         <input
           type="text"
-          placeholder="Buscar"
+          placeholder="Buscar por número, factura, cliente..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full pl-4 pr-10 py-2 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400"
@@ -87,6 +93,24 @@ function ReturnsToolbar({
           aria-label="Fecha final"
         />
       </div>
+
+      {/* ===== BOTÓN LIMPIAR FILTROS (solo visible si hay filtros activos) ===== */}
+      {hasActiveFilters && (
+        <div className="flex flex-col gap-0.5">
+          <label className="text-xs text-gray-500 font-medium pl-0.5 invisible">
+            Limpiar
+          </label>
+          <button
+            onClick={onClearFilters}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-400 rounded-lg text-gray-600 bg-white hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 cursor-pointer whitespace-nowrap"
+            aria-label="Limpiar filtros"
+            title="Limpiar todos los filtros"
+          >
+            <Eraser className="w-4 h-4" strokeWidth={2} />
+            <span>Limpiar filtros</span>
+          </button>
+        </div>
+      )}
 
       {/* ===== ESPACIADOR ===== */}
       <div className="flex-1" />

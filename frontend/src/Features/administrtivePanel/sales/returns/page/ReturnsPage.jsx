@@ -7,7 +7,7 @@
  *
  * Responsabilidades principales:
  * - Cargar y mostrar la lista de devoluciones almacenadas
- * - Manejar la búsqueda y filtrado de devoluciones
+ * - Manejar la búsqueda y filtrado de devoluciones (por texto y rango de fechas)
  * - Permitir crear nuevas devoluciones
  * - Permitir editar devoluciones existentes
  * - Permitir ver el detalle completo de una devolución
@@ -32,8 +32,8 @@ import {
   createReturn, 
   updateReturn
 } from '../data/returnsService';
-import { filterReturns, paginateData } from '../utils/returnsHelpers';
-import { exportReturnsToExcel, exportReturnsSummaryToExcel } from '../utils/excelExporter';
+import { filterReturnsByDateAndSearch, paginateData } from '../utils/returnsHelpers';
+import { exportReturnsToExcel } from '../utils/excelExporter';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 
 const RECORDS_PER_PAGE = 13; // Cantidad de registros a mostrar por página en la tabla
@@ -52,6 +52,10 @@ function ReturnsPage() {
   
   // Término de búsqueda ingresado por el usuario en la barra de búsqueda
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Fechas para filtro por rango
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   
   // Página actual que se está visualizando en la tabla (paginación)
   const [currentPage, setCurrentPage] = useState(1);
@@ -102,7 +106,7 @@ function ReturnsPage() {
     }
   };
 
-  // ======================== FUNCIONALIDAD: BÚSQUEDA ========================
+  // ======================== FUNCIONALIDAD: FILTROS ========================
   
   /**
    * Actualiza el término de búsqueda y reinicia la paginación a la página 1
@@ -110,6 +114,33 @@ function ReturnsPage() {
   const handleSearchChange = (term) => {
     setSearchTerm(term);
     setCurrentPage(1);
+  };
+
+  /**
+   * Actualiza la fecha inicial y reinicia la paginación
+   */
+  const handleStartDateChange = (date) => {
+    setStartDate(date);
+    setCurrentPage(1);
+  };
+
+  /**
+   * Actualiza la fecha final y reinicia la paginación
+   */
+  const handleEndDateChange = (date) => {
+    setEndDate(date);
+    setCurrentPage(1);
+  };
+
+  /**
+   * Limpia todos los filtros (búsqueda y fechas)
+   */
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setStartDate('');
+    setEndDate('');
+    setCurrentPage(1);
+    showSuccess('Filtros limpiados', 'Todos los filtros han sido eliminados');
   };
 
   // ======================== FUNCIONALIDAD: CREAR DEVOLUCIÓN ========================
@@ -234,7 +265,7 @@ function ReturnsPage() {
   // ======================== FUNCIONALIDAD: DESCARGAR / EXPORTAR ========================
   
   /**
-   * Exporta todas las devoluciones a un archivo Excel con detalle completo.
+   * Exporta las devoluciones filtradas a un archivo Excel con detalle completo.
    * Genera un archivo con tres hojas:
    * - Resumen Devoluciones
    * - Detalle Productos (cada producto devuelto con todos sus detalles)
@@ -243,7 +274,9 @@ function ReturnsPage() {
   const handleExport = () => {
     try {
       const allReturns = getAllReturns();
-      exportReturnsToExcel(allReturns);
+      // Exportar SOLO las devoluciones que coinciden con los filtros actuales
+      const filteredForExport = filterReturnsByDateAndSearch(allReturns, searchTerm, startDate, endDate);
+      exportReturnsToExcel(filteredForExport);
       showSuccess('Exportación exitosa', 'El archivo Excel se generó correctamente');
     } catch (error) {
       console.error('Error en exportación:', error);
@@ -253,8 +286,8 @@ function ReturnsPage() {
 
   // ======================== APLICAR FILTROS Y PAGINACIÓN ========================
   
-  // Filtrar devoluciones según el término de búsqueda
-  const filteredReturns = filterReturns(returns, searchTerm);
+  // Filtrar devoluciones según término de búsqueda y rango de fechas
+  const filteredReturns = filterReturnsByDateAndSearch(returns, searchTerm, startDate, endDate);
   
   // Obtener datos paginados para la tabla
   const paginatedResult = paginateData(
@@ -264,6 +297,10 @@ function ReturnsPage() {
   );
   
   const currentData = paginatedResult.currentData || [];
+  const startIndex = paginatedResult.startIndex || 0;
+
+  // Verificar si hay filtros activos
+  const hasActiveFilters = searchTerm !== '' || startDate !== '' || endDate !== '';
 
   // ======================== RENDERIZADO: INDICADOR DE CARGA ========================
   
@@ -283,18 +320,49 @@ function ReturnsPage() {
   
   return (
     <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
-      {/* Toolbar: Búsqueda y botones de acción */}
+      {/* Toolbar: Búsqueda, filtros de fecha y botones de acción */}
       <ReturnsToolbar
         search={searchTerm}
         onSearchChange={handleSearchChange}
+        startDate={startDate}
+        onStartDate={handleStartDateChange}
+        endDate={endDate}
+        onEndDate={handleEndDateChange}
+        onClearFilters={handleClearFilters}
         onNew={handleNew}
         onExport={handleExport}
       />
+
+      {/* Resumen de filtros activos */}
+      {hasActiveFilters && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
+          <span className="font-medium">Filtros activos:</span>
+          {searchTerm && (
+            <span className="bg-gray-200 px-2 py-0.5 rounded-full">
+              Búsqueda: {searchTerm}
+            </span>
+          )}
+          {startDate && (
+            <span className="bg-gray-200 px-2 py-0.5 rounded-full">
+              Desde: {new Date(startDate).toLocaleDateString('es-CO')}
+            </span>
+          )}
+          {endDate && (
+            <span className="bg-gray-200 px-2 py-0.5 rounded-full">
+              Hasta: {new Date(endDate).toLocaleDateString('es-CO')}
+            </span>
+          )}
+          <span className="text-gray-400 ml-1">
+            ({filteredReturns.length} resultado{filteredReturns.length !== 1 ? 's' : ''})
+          </span>
+        </div>
+      )}
 
       {/* Tabla de devoluciones */}
       <div className="bg-white rounded-xl shadow-md">
         <ReturnsTable
           data={currentData}
+          startIndex={startIndex}
           searchTerm={searchTerm}
           onInfo={handleInfo}
           onEdit={handleEdit}
