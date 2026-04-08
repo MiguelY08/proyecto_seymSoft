@@ -109,8 +109,6 @@ function ClientsPage() {
       return;
     }
 
-    
-
     // Verificar ventas asociadas desde localStorage
     const ventas = (() => {
       try {
@@ -161,8 +159,8 @@ function ClientsPage() {
     setCurrentPage(1);
   };
 
-  const filteredClients                       = filterClients(clients, searchTerm);
-  const { currentData } = paginateData(
+  const filteredClients = filterClients(clients, searchTerm);
+  const { currentData, startIndex } = paginateData(  // ← EXTRAER startIndex
     filteredClients,
     currentPage,
     RECORDS_PER_PAGE
@@ -191,6 +189,7 @@ function ClientsPage() {
       <div className="bg-white rounded-xl shadow-md">
         <ClientsTable
           clients={currentData}
+          startIndex={startIndex}  // ← PASAR startIndex al componente
           searchTerm={searchTerm}
           onInfo={handleInfo}
           onEdit={handleEdit}
