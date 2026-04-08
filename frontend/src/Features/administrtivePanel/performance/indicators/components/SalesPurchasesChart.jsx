@@ -28,17 +28,14 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 function SalesPurchasesChart() {
   const { isMobile } = useBreakpoint();
-  // Altura más pequeña
-  const chartHeight = isMobile ? 140 : 130;
-  
   return (
-    <div style={{ ...chartCard, padding: "12px" }}>
-      <h3 style={{ ...cardTitle, marginBottom: "8px", fontSize: "14px" }}>Ventas &amp; Compras</h3>
-      <ResponsiveContainer width="100%" height={chartHeight}>
-        <BarChart data={salesPurchasesData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap="30%">
+    <div style={chartCard}>
+      <h3 style={cardTitle}>Ventas &amp; Compras</h3>
+      <ResponsiveContainer width="100%" height={isMobile ? 180 : 160}>
+        <BarChart data={salesPurchasesData} margin={{ top: 4, right: 4, left: -12, bottom: 0 }} barCategoryGap="36%">
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-          <XAxis dataKey="mes" tick={{ ...axTick, fontSize: "9px" }} axisLine={false} tickLine={false} />
-          <YAxis tickFormatter={v => `${v}M`} tick={{ ...axTick, fontSize: "9px" }} axisLine={false} tickLine={false} />
+          <XAxis dataKey="mes" tick={axTick} axisLine={false} tickLine={false} />
+          <YAxis tickFormatter={v => `${v}M`} tick={axTick} axisLine={false} tickLine={false} />
           <Tooltip
             content={<CustomTooltip />}
             cursor={{ fill: "rgba(0,0,0,0.03)" }}
@@ -47,12 +44,12 @@ function SalesPurchasesChart() {
           />
           <Legend
             iconType="circle"
-            iconSize={6}
+            iconSize={8}
             formatter={v => v === "ventas" ? "Ventas" : "Compras"}
-            wrapperStyle={{ fontSize: "10px", paddingTop: "4px" }}
+            wrapperStyle={{ fontSize: "13px", paddingTop: "8px" }}
           />
-          <Bar dataKey="compras" fill="#93c5fd" radius={[4, 4, 0, 0]} barSize={isMobile ? 20 : 25} />
-          <Bar dataKey="ventas"  fill="#1d4ed8" radius={[4, 4, 0, 0]} barSize={isMobile ? 20 : 25} />
+          <Bar dataKey="compras" fill="#93c5fd" radius={[5, 5, 0, 0]} />
+          <Bar dataKey="ventas"  fill="#1d4ed8" radius={[5, 5, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
