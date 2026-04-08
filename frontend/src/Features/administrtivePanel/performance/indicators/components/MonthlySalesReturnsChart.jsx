@@ -34,11 +34,14 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 function MonthlySalesReturnsChart() {
   const { isMobile } = useBreakpoint();
+  // Altura más pequeña
+  const chartHeight = isMobile ? 140 : 130;
+  
   return (
-    <div style={chartCard}>
-      <h3 style={cardTitle}>Ventas &amp; Devoluciones Mensuales</h3>
-      <ResponsiveContainer width="100%" height={isMobile ? 180 : 160}>
-        <AreaChart data={monthlySalesData} margin={{ top: 4, right: 4, left: -12, bottom: 0 }}>
+    <div style={{ ...chartCard, padding: "12px" }}>
+      <h3 style={{ ...cardTitle, marginBottom: "8px", fontSize: "14px" }}>Ventas &amp; Devoluciones Mensuales</h3>
+      <ResponsiveContainer width="100%" height={chartHeight}>
+        <AreaChart data={monthlySalesData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="gradVentas" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%"  stopColor="#2563eb" stopOpacity={0.15} />
@@ -50,8 +53,8 @@ function MonthlySalesReturnsChart() {
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-          <XAxis dataKey="mes" tick={axTick} axisLine={false} tickLine={false} />
-          <YAxis tickFormatter={v => `${v}M`} tick={axTick} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
+          <XAxis dataKey="mes" tick={{ ...axTick, fontSize: "9px" }} axisLine={false} tickLine={false} />
+          <YAxis tickFormatter={v => `${v}M`} tick={{ ...axTick, fontSize: "9px" }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
           <Tooltip
             content={<CustomTooltip />}
             isAnimationActive={false}
@@ -59,12 +62,12 @@ function MonthlySalesReturnsChart() {
           />
           <Legend
             iconType="circle"
-            iconSize={8}
+            iconSize={6}
             formatter={v => v === "ventas" ? "Ventas" : "Devoluciones"}
-            wrapperStyle={{ fontSize: "13px", paddingTop: "8px" }}
+            wrapperStyle={{ fontSize: "10px", paddingTop: "4px" }}
           />
-          <Area type="monotone" dataKey="ventas"       stroke="#2563eb" strokeWidth={2} fill="url(#gradVentas)" dot={false} activeDot={{ r: 4, fill: "#2563eb" }} />
-          <Area type="monotone" dataKey="devoluciones" stroke="#ef4444" strokeWidth={2} fill="url(#gradDev)"    dot={false} activeDot={{ r: 4, fill: "#ef4444" }} strokeDasharray="5 3" />
+          <Area type="monotone" dataKey="ventas"       stroke="#2563eb" strokeWidth={1.5} fill="url(#gradVentas)" dot={false} activeDot={{ r: 3, fill: "#2563eb" }} />
+          <Area type="monotone" dataKey="devoluciones" stroke="#ef4444" strokeWidth={1.5} fill="url(#gradDev)"    dot={false} activeDot={{ r: 3, fill: "#ef4444" }} strokeDasharray="5 3" />
         </AreaChart>
       </ResponsiveContainer>
     </div>

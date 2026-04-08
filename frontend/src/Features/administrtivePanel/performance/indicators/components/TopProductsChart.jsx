@@ -35,24 +35,24 @@ function TopProductsChart() {
     mode === "qty" ? `${p.qty} uds.` : `$${p.revenue.toFixed(2)}M`;
 
   return (
-    <div style={chartCard}>
+    <div style={{ ...chartCard, padding: "12px" }}>
 
-      {/* Header con toggle */}
+      {/* Header más compacto */}
       <div style={{
         display:        "flex",
         alignItems:     isMobile ? "flex-start" : "center",
         flexDirection:  isMobile ? "column" : "row",
         justifyContent: "space-between",
-        gap:            "10px",
-        marginBottom:   "16px",
+        gap:            "8px",
+        marginBottom:   "10px",
       }}>
-        <h3 style={{ ...cardTitle, margin: 0 }}>Top Productos Más Vendidos</h3>
+        <h3 style={{ ...cardTitle, margin: 0, fontSize: "14px" }}>Top Productos Más Vendidos</h3>
 
         <div style={{
           display:      "flex",
           background:   "#f1f5f9",
-          borderRadius: "10px",
-          padding:      "3px",
+          borderRadius: "8px",
+          padding:      "2px",
           gap:          "2px",
           alignSelf:    isMobile ? "flex-start" : "auto",
         }}>
@@ -61,10 +61,10 @@ function TopProductsChart() {
               key={key}
               onClick={() => setMode(key)}
               style={{
-                fontSize:     "12px",
+                fontSize:     "11px",
                 fontWeight:   "600",
-                padding:      "5px 12px",
-                borderRadius: "8px",
+                padding:      "4px 10px",
+                borderRadius: "6px",
                 border:       "none",
                 cursor:       "pointer",
                 transition:   "background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease",
@@ -79,29 +79,29 @@ function TopProductsChart() {
         </div>
       </div>
 
-      {/* Lista */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      {/* Lista más compacta: reducido el gap entre items */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
         {sorted.map((p, i) => (
-          <div key={p.name} style={{ display: "flex", alignItems: "center", gap: isMobile ? "8px" : "14px" }}>
+          <div key={p.name} style={{ display: "flex", alignItems: "center", gap: isMobile ? "6px" : "10px" }}>
 
-            {/* Rank */}
+            {/* Rank más pequeño */}
             <span style={{
-              fontSize:   "12px",
+              fontSize:   "10px",
               fontWeight: "700",
               color:      i < 5 ? PROD_COLORS[i] : PROD_COLORS[6],
-              width:      "18px",
+              width:      "16px",
               flexShrink: 0,
               textAlign:  "right",
             }}>
               {i + 1}
             </span>
 
-            {/* Nombre */}
+            {/* Nombre más pequeño */}
             <span style={{
-              fontSize:     "13px",
+              fontSize:     "11px",
               color:        "#374151",
               fontWeight:   "500",
-              width:        isMobile ? "72px" : "90px",
+              width:        isMobile ? "65px" : "80px",
               flexShrink:   0,
               overflow:     "hidden",
               textOverflow: "ellipsis",
@@ -110,8 +110,8 @@ function TopProductsChart() {
               {p.name}
             </span>
 
-            {/* Barra */}
-            <div style={{ flex: 1, background: "#f1f5f9", borderRadius: "100px", height: "8px", overflow: "hidden" }}>
+            {/* Barra más delgada */}
+            <div style={{ flex: 1, background: "#f1f5f9", borderRadius: "100px", height: "6px", overflow: "hidden" }}>
               <div style={{
                 width:        animated ? `${(p[activeKey] / maxValue) * 100}%` : "0%",
                 height:       "100%",
@@ -121,12 +121,12 @@ function TopProductsChart() {
               }} />
             </div>
 
-            {/* Valor */}
+            {/* Valor más compacto */}
             <span style={{
-              fontSize:   "13px",
+              fontSize:   "10px",
               color:      "#64748b",
               fontWeight: "600",
-              width:      "60px",
+              width:      "50px",
               textAlign:  "right",
               flexShrink: 0,
             }}>

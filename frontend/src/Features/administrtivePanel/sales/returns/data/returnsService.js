@@ -48,10 +48,10 @@ const initializeReturns = () => {
         numeroDevolucion: 'DEV-2024-001',
         numeroFactura: 'FAC-001',
         cliente: 'Carlos Ramírez Gómez',
-        motivo: 'Producto defectuoso',
+        motivo: 'DEFECTUOSO',
         fechaCreacion: today,
         totalValor: 150000,
-        estado: 'Pendiente',
+        estado: 'En Proceso',
         asesor: 'Valentina Ocampo',
         domicilio: true,
         direccion: 'Cra 73 #21-30 (Belén San Bernardo)',
@@ -64,9 +64,9 @@ const initializeReturns = () => {
             nombre: 'Laptop HP',
             cantidad: 1,
             precioUnit: 150000,
-            motivo: 'Producto defectuoso',
+            motivo: 'DEFECTUOSO',
             metodo: 'Reembolso',
-            estado: 'Pendiente'
+            estado: 'Pend. Envío'
           }
         ],
         cantidadProductos: 1,
@@ -77,10 +77,10 @@ const initializeReturns = () => {
         numeroDevolucion: 'DEV-2024-002',
         numeroFactura: 'FAC-002',
         cliente: 'Ana Lucía Torres',
-        motivo: 'Producto equivocado',
+        motivo: 'PRODUCTO_EQUIVOCADO',
         fechaCreacion: today,
         totalValor: 45000,
-        estado: 'Aprobada',
+        estado: 'Procesada',
         asesor: 'Maria Gómez',
         domicilio: false,
         direccion: '',
@@ -93,9 +93,9 @@ const initializeReturns = () => {
             nombre: 'Mouse Inalámbrico',
             cantidad: 1,
             precioUnit: 45000,
-            motivo: 'Producto equivocado',
-            metodo: 'Cambio',
-            estado: 'Aprobada'
+            motivo: 'PRODUCTO_EQUIVOCADO',
+            metodo: 'Reemplazo',
+            estado: 'Entregado'
           }
         ],
         cantidadProductos: 1,
@@ -194,7 +194,9 @@ export const createReturn = (returnData) => {
       motivo: restData.motivo || (restData.productosDevueltos?.[0]?.motivo) || '',
       fechaCreacion: new Date().toISOString(),
       totalValor: restData.totalValor || 0,
-      estado: restData.estadoGral || restData.estado || 'Pendiente',
+      // Estado automático: siempre "En Proceso" al crear
+      estado: 'En Proceso',
+      estadoGral: 'En Proceso',
       asesor: restData.asesor || '',
       domicilio: restData.domicilio || false,
       direccion: restData.direccion || '',
@@ -317,7 +319,7 @@ export const cancelReturn = (id, motivo) => {
   const index = returns.findIndex(r => r.id === id);
   
   if (index !== -1) {
-    returns[index].estado = 'Anulada';
+    returns[index].estado = 'Anulado';
     returns[index].cancelReason = motivo;
     returns[index].cancelledAt = new Date().toISOString();
     returns[index].updatedAt = new Date().toISOString();
