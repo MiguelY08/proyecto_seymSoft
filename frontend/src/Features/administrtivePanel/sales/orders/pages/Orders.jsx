@@ -5,26 +5,13 @@ import DetailOrder from '../modals/DetailOrder';
 import OrderForm from '../modals/OrderForm';
 import CancelOrder from '../modals/CancelOrder';
 import OrdersService from '../services/ordersService';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 
 const RECORDS_PER_PAGE = 13;
 
-// ─── Paginador ─────────────────────────────────────────────
-/**
- * Componente de paginación reutilizable.
- * Muestra páginas visibles con elipsis para listas largas.
- *
- * @param {Object} props
- * @param {number} props.currentPage - Página actual.
- * @param {number} props.totalPages - Total de páginas.
- * @param {Function} props.onPageChange - Callback para cambiar página.
- */
+// ─── Paginador (sin cambios) ─────────────────────────────────────────────
 function Pagination({ currentPage, totalPages, onPageChange }) {
-  /**
-   * Calcula las páginas visibles (con elipsis si es necesario).
-   * @returns {Array<number|string>} Lista de páginas a mostrar.
-   */
   const getVisiblePages = () => {
     if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
     if (currentPage <= 3) return [1, 2, 3, '...', totalPages];
@@ -82,34 +69,25 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
 }
 
 // ─── Página principal ───────────────────────────────────────
-/**
- * Página principal de gestión de órdenes.
- * Incluye búsqueda, paginación, tabla de órdenes y modales para detalle, edición y cancelación.
- * Maneja el estado de las órdenes y sincroniza con OrdersService.
- */
 function Orders() {
   const { showSuccess } = useAlert();
-  const [orders, setOrders]           = useState(() => OrdersService.list());
-  const [search, setSearch]           = useState('');
+  const [orders, setOrders] = useState(() => OrdersService.list());
+  const [search, setSearch] = useState('');
   const [fechaInicial, setFechaInicial] = useState('');
-  const [fechaFinal,   setFechaFinal]   = useState('');
+  const [fechaFinal, setFechaFinal] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [isDetailOpen, setIsDetailOpen]   = useState(false);
-  const [isEditOpen, setIsEditOpen]       = useState(false);
-  const [editingOrder, setEditingOrder]   = useState(null);
-  const [cancelando, setCancelando]       = useState(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [cancelando, setCancelando] = useState(null);
 
-  // ─── Filtrar pedidos ──────────────────────────────────────
-  /**
-   * Filtra las órdenes basado en el término de búsqueda.
-   * Busca en campos como número de pedido, cliente, dirección, fecha, estado y total.
-   */
+  // ─── Filtrar pedidos (búsqueda + fechas) ──────────────────────────────
   const filteredOrders = useMemo(() => {
     const searchLower = search.toLowerCase();
 
     return orders.filter((order) => {
-      // ── Búsqueda de texto ───────────────────────────────────────────────────
+      // Búsqueda de texto
       const matchesSearch = !search.trim() || (() => {
         const searchableFields = [
           order.numerosPedido,
@@ -128,20 +106,16 @@ function Orders() {
         );
       })();
 
-      // ── Filtro de fechas ────────────────────────────────────────────────────
-      // Las fechas de los pedidos están en formato DD/MM/YYYY
-      // Los inputs devuelven YYYY-MM-DD → convertimos para comparar
+      // Filtro de fechas (formato DD/MM/YYYY → YYYY-MM-DD)
       let matchesFecha = true;
       if (fechaInicial || fechaFinal) {
-        // Convertir "DD/MM/YYYY" → "YYYY-MM-DD"
-        const partes    = (order.fecha ?? '').split('/');
+        const partes = (order.fecha ?? '').split('/');
         const fechaOrden = partes.length === 3
           ? `${partes[2]}-${partes[1]}-${partes[0]}`
           : null;
-
         if (fechaOrden) {
           if (fechaInicial && fechaOrden < fechaInicial) matchesFecha = false;
-          if (fechaFinal   && fechaOrden > fechaFinal)   matchesFecha = false;
+          if (fechaFinal && fechaOrden > fechaFinal) matchesFecha = false;
         }
       }
 
@@ -150,53 +124,27 @@ function Orders() {
   }, [orders, search, fechaInicial, fechaFinal]);
 
   // ─── Paginación ───────────────────────────────────────────
-  const totalPages   = Math.ceil(filteredOrders.length / RECORDS_PER_PAGE);
-  const startIndex   = (currentPage - 1) * RECORDS_PER_PAGE;
-  const endIndex     = startIndex + RECORDS_PER_PAGE;
+  const totalPages = Math.ceil(filteredOrders.length / RECORDS_PER_PAGE);
+  const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
+  const endIndex = startIndex + RECORDS_PER_PAGE;
   const currentOrders = filteredOrders.slice(startIndex, endIndex);
 
   // ─── Handlers ─────────────────────────────────────────────
-  /**
-   * Maneja el cambio en el campo de búsqueda y resetea la página a 1.
-   * @param {string} value - Nuevo valor de búsqueda.
-   */
-  const handleSearchChange = (value) => {
-    setSearch(value);
-    setCurrentPage(1);
-  };
-
-  /**
-   * Abre el modal de detalle para una orden específica.
-   * @param {Object} order - Orden a mostrar.
-   */
   const handleViewDetail = (order) => {
     setSelectedOrder(order);
     setIsDetailOpen(true);
   };
 
-  /**
-   * Cierra el modal de detalle.
-   */
   const handleCloseDetail = () => {
     setIsDetailOpen(false);
     setSelectedOrder(null);
   };
 
-  /**
-   * Abre el modal de edición para una orden.
-   * @param {Object} order - Orden a editar.
-   */
   const handleEdit = (order) => {
     setEditingOrder(order);
     setIsEditOpen(true);
   };
 
-  /**
-   * Cambia el estado de una orden usando OrdersService.
-   * Actualiza el estado local y el seleccionado si es necesario.
-   * @param {Object} order - Orden a cambiar.
-   * @param {string} nuevoEstado - Nuevo estado.
-   */
   const handleEstadoChange = (order, nuevoEstado) => {
     const updated = OrdersService.updateEstado(order.id, nuevoEstado);
     if (updated) {
@@ -205,18 +153,11 @@ function Orders() {
     }
   };
 
-  /**
-   * Cierra el modal de edición.
-   */
   const handleCloseEdit = () => {
     setIsEditOpen(false);
     setEditingOrder(null);
   };
 
-  /**
-   * Guarda la orden editada y actualiza el estado local.
-   * @param {Object} updatedOrder - Orden actualizada.
-   */
   const handleSaveEdit = (updatedOrder) => {
     setOrders((prev) =>
       prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
@@ -225,19 +166,10 @@ function Orders() {
     handleCloseEdit();
   };
 
-  /**
-   * Abre el modal de cancelación para una orden.
-   * @param {Object} order - Orden a cancelar.
-   */
   const handleCancelOrder = useCallback((order) => {
     setCancelando(order);
   }, []);
 
-  /**
-   * Confirma la cancelación de la orden con motivo.
-   * Actualiza el estado y cierra modales si es necesario.
-   * @param {string} motivo - Motivo de cancelación.
-   */
   const confirmCancel = useCallback((motivo) => {
     if (!cancelando) return;
     const updated = OrdersService.updateEstado(cancelando.id, 'Cancelado', motivo);
@@ -254,34 +186,17 @@ function Orders() {
     <div className="min-h-screen">
       <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
 
-        {/* ── Barra superior ─────────────────────────────────────────── */}
-        <div className="flex items-center justify-between gap-2 sm:gap-4 shrink-0">
-          <div className="relative flex-1 sm:flex-none sm:w-72 md:w-96">
-            <input
-              type="text"
-              placeholder="Buscar por pedido, cliente, estado..."
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pl-4 pr-10 py-2 text-sm rounded-lg border border-gray-300
-                         focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20
-                         outline-none bg-white text-gray-700 placeholder-gray-400"
-            />
-            <Search
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
-              strokeWidth={2}
-            />
-          </div>
-          <TopBar
-            orders={filteredOrders}
-            search={search}
-            onSearchChange={handleSearchChange}
-            fechaInicial={fechaInicial}
-            setFechaInicial={(val) => { setFechaInicial(val); setCurrentPage(1); }}
-            fechaFinal={fechaFinal}
-            setFechaFinal={(val) => { setFechaFinal(val); setCurrentPage(1); }}
-            setCurrentPage={setCurrentPage}
-          />
-        </div>
+        {/* ── Barra superior: todo incluido en TopBar ──────────────────── */}
+        <TopBar
+          search={search}
+          setSearch={setSearch}
+          fechaInicial={fechaInicial}
+          setFechaInicial={setFechaInicial}
+          fechaFinal={fechaFinal}
+          setFechaFinal={setFechaFinal}
+          setCurrentPage={setCurrentPage}
+          orders={filteredOrders}
+        />
 
         {/* ── Tabla ──────────────────────────────────────────────────── */}
         <div className="bg-white rounded-xl shadow-md">
@@ -331,7 +246,7 @@ function Orders() {
 
       </div>
 
-      {/* Modal — Detalle */}
+      {/* Modales (sin cambios) */}
       <DetailOrder
         order={selectedOrder}
         isOpen={isDetailOpen}
@@ -341,7 +256,6 @@ function Orders() {
         onEstadoChange={handleEstadoChange}
       />
 
-      {/* Modal — Edición */}
       {isEditOpen && editingOrder && (
         <OrderForm
           order={editingOrder}
@@ -351,7 +265,6 @@ function Orders() {
         />
       )}
 
-      {/* Modal — Cancelación */}
       {cancelando && (
         <CancelOrder
           order={cancelando}
@@ -359,7 +272,6 @@ function Orders() {
           onConfirm={confirmCancel}
         />
       )}
-
     </div>
   );
 }

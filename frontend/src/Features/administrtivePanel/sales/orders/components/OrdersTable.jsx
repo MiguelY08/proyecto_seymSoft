@@ -75,7 +75,7 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
 
         <tbody>
           {orders.map((order, index) => {
-            const rowBg              = index % 2 === 0 ? 'bg-white' : 'bg-gray-100';
+            const rowBg              = index % 2 === 0 ? 'bg-gray-100 hover:bg-blue-50' : 'bg-white hover:bg-blue-50';
             const { deshabilitado }  = getPermisos(order.estado);
             const direccionMostrar   = order.direccionEntrega || order.cliente?.direccion || '';
 
