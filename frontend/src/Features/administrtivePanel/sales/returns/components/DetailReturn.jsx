@@ -113,7 +113,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
           <div className="px-7 py-5 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 80px)' }}>
 
             {/* Mensaje de anulación - SOLO si está anulada y tiene motivo registrado */}
-            {devolucion.estado === 'Anulada' && devolucion.cancelReason && (
+            {devolucion.estado === 'Anulado' && devolucion.cancelReason && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
@@ -216,7 +216,20 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
                         return (
                           <tr key={i} className="border-t border-gray-200">
                             <td className="px-3 py-2 text-gray-700">{p.nombre}</td>
-                            <td className="px-3 py-2 text-gray-600">{p.motivo || '-'}</td>
+                            <td className="px-3 py-2 text-gray-600">
+                              {p.motivo === 'OTRO' ? (
+                                <div>
+                                  <div className="font-medium">{p.motivo}</div>
+                                  {p.descripcionMotivo && (
+                                    <div className="text-[10px] text-gray-500 mt-0.5 italic">
+                                      {p.descripcionMotivo}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                p.motivo || '-'
+                              )}
+                            </td>
                             <td className="px-3 py-2 text-gray-600">{p.metodo || '-'}</td>
                             <td className={`px-3 py-2 font-semibold ${pColor}`}>{p.estado || 'Pendiente'}</td>
                             <td className="px-3 py-2 text-center text-gray-700">{cantidad}</td>

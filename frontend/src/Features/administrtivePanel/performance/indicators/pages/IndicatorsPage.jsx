@@ -35,9 +35,14 @@ function IndicatorsPage() {
         display:             "grid",
         gridTemplateColumns: row2Cols,
         gap:                 "12px",
+        alignItems:          "stretch", // 👈 Esto hace que los hijos ocupen toda la altura
       }}>
-        <SalesPurchasesChart />
-        <MonthlySalesReturnsChart />
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <SalesPurchasesChart />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <MonthlySalesReturnsChart />
+        </div>
       </div>
 
       {/* Fila 3 – Top Productos | Categorías */}
@@ -45,9 +50,14 @@ function IndicatorsPage() {
         display:             "grid",
         gridTemplateColumns: row3Cols,
         gap:                 "12px",
+        alignItems:          "stretch", 
       }}>
-        <TopProductsChart />
-        <CategoryDemandChart />
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <TopProductsChart />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <CategoryDemandChart />
+        </div>
       </div>
 
     </div>
