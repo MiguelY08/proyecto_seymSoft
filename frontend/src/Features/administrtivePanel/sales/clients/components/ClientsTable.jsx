@@ -41,15 +41,17 @@ const parseSearchTerm = (term) => {
 function ClientsTable({
   clients,
   searchTerm,
+  startIndex,
   onInfo,
   onEdit,
   onToggleActive,
   onDelete,
 }) {
-  // Header para tabla vacía
+  // Header para tabla vacía - CON COLUMNA #
   const emptyHeader = (
     <thead className="bg-[#004D77] text-white">
       <tr>
+        <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">#</th>
         <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Tipo y Documento</th>
         <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Nombre</th>
         <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Crédito</th>
@@ -67,7 +69,7 @@ function ClientsTable({
           {emptyHeader}
           <tbody>
             <tr>
-              <td colSpan={6} className="py-8 text-center text-sm text-gray-400">
+              <td colSpan={7} className="py-8 text-center text-sm text-gray-400">
                 No se encontraron clientes.
               </td>
             </tr>
@@ -82,6 +84,7 @@ function ClientsTable({
       <table className="min-w-max w-full">
         <thead className="bg-[#004D77] text-white">
           <tr>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">#</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Tipo y Documento</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Nombre</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Crédito</th>
@@ -95,9 +98,15 @@ function ClientsTable({
           {clients.map((client, index) => {
             const rowBg = index % 2 === 0 ? 'bg-white' : 'bg-gray-100';
             const { isCombined, tipoTerm, numTerm } = parseSearchTerm(searchTerm);
+            // Calcula el número de registro según la página actual
+            const recordNumber = (startIndex || 0) + index + 1;
 
             return (
               <tr key={client.id} className={`transition-colors duration-150 ${rowBg}`}>
+                {/* Columna # - Número de registro */}
+                <td className="px-3 py-2 text-center text-xs text-gray-500 font-medium whitespace-nowrap">
+                  {recordNumber}
+                </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                   <span className="font-medium">
                     {highlightText(client.documentType, isCombined ? tipoTerm : searchTerm)}
