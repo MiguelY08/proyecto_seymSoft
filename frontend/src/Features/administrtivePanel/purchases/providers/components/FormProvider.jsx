@@ -55,6 +55,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     nombreContacto: '',
     numeroContacto: '',
     direccion: '',
+    plazoDevoluciones: '',  // ← NUEVO: Plazo devoluciones
     categorias: [],
     rut: '',
     codigoCIU: '',
@@ -103,6 +104,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
         nombreContacto: provider.pContacto || provider.nombreContacto || '',
         numeroContacto: provider.nuContacto || provider.numeroContacto || '',
         direccion: provider.direccion || '',
+        plazoDevoluciones: provider.plazoDevoluciones || '',  // ← NUEVO
         categorias: categoriasArray,
         rut: provider.rut || '',
         codigoCIU: provider.codigoCIU || '',
@@ -464,53 +466,53 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                   </div>
                 </div>
 
-                              {/* Nombres */}
-              <div className="flex flex-col gap-1">
-                <label className="block text-xs font-semibold text-gray-600">
-                  Nombres<span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="nombres"
-                  value={formData.nombres}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  placeholder="Ej: Juan Carlos"
-                  autoComplete="off"
-                  className={isEditing ? disabledInputClass('nombres') : inputClass('nombres')}
-                  disabled={isEditing}
-                />
-                {isEditing && (
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    No se puede modificar en edición
-                  </p>
-                )}
-                {renderError('nombres')}
-              </div>
+                {/* Nombres */}
+                <div className="flex flex-col gap-1">
+                  <label className="block text-xs font-semibold text-gray-600">
+                    Nombres<span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="nombres"
+                    value={formData.nombres}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Ej: Juan Carlos"
+                    autoComplete="off"
+                    className={isEditing ? disabledInputClass('nombres') : inputClass('nombres')}
+                    disabled={isEditing}
+                  />
+                  {isEditing && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      No se puede modificar en edición
+                    </p>
+                  )}
+                  {renderError('nombres')}
+                </div>
 
-              {/* Apellidos */}
-              <div className="flex flex-col gap-1">
-                <label className="block text-xs font-semibold text-gray-600">
-                  Apellidos<span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="apellidos"
-                  value={formData.apellidos}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  placeholder="Ej: Pérez Gómez"
-                  autoComplete="off"
-                  className={isEditing ? disabledInputClass('apellidos') : inputClass('apellidos')}
-                  disabled={isEditing}
-                />
-                {isEditing && (
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    No se puede modificar en edición
-                  </p>
-                )}
-                {renderError('apellidos')}
-              </div>
+                {/* Apellidos */}
+                <div className="flex flex-col gap-1">
+                  <label className="block text-xs font-semibold text-gray-600">
+                    Apellidos<span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="apellidos"
+                    value={formData.apellidos}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Ej: Pérez Gómez"
+                    autoComplete="off"
+                    className={isEditing ? disabledInputClass('apellidos') : inputClass('apellidos')}
+                    disabled={isEditing}
+                  />
+                  {isEditing && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      No se puede modificar en edición
+                    </p>
+                  )}
+                  {renderError('apellidos')}
+                </div>
 
                 {/* Dirección */}
                 <div className="flex flex-col gap-1">
@@ -610,6 +612,25 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     />
                     {renderError('numeroContacto')}
                   </div>
+                </div>
+
+                {/* ← NUEVO: Plazo devoluciones - ARRIBA DE CATEGORÍAS */}
+                <div className="flex flex-col gap-1">
+                  <label className="block text-xs font-semibold text-gray-600">
+                    Plazo devoluciones
+                  </label>
+                  <input
+                    type="text"
+                    name="plazoDevoluciones"
+                    value={formData.plazoDevoluciones}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Ej: 30 días"
+                    autoComplete="off"
+                    className={inputClass('plazoDevoluciones')}
+                  />
+                  {renderError('plazoDevoluciones')}
+                  <p className="text-[10px] text-gray-400 mt-0.5">Días para realizar devoluciones</p>
                 </div>
 
                 {/* Categorías - Dropdown con checkboxes */}
