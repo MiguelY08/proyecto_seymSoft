@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import { X, IdCard, User, Mail, Phone, MapPin, UserCheck, CalendarDays, Building2, Package, FileText, Hash } from 'lucide-react';
+import { X, IdCard, User, Mail, Phone, MapPin, UserCheck, CalendarDays, Building2, Package, FileText, Hash, Clock } from 'lucide-react';
 import { 
   formatPersonType, 
   formatRut, 
@@ -189,6 +189,13 @@ function InfoProvider({ isOpen, onClose, provider }) {
             icon={Phone} 
             label="Tel. contacto" 
             value={provider.nuContacto || provider.numeroContacto || '—'} 
+          />
+
+          {/* ← NUEVO: Plazo devoluciones - DEBAJO DEL TELÉFONO CONTACTO */}
+          <DetailRow 
+            icon={Clock} 
+            label="Plazo devoluciones" 
+            value={provider.plazoDevoluciones || '—'} 
           />
 
           {/* Categorías */}

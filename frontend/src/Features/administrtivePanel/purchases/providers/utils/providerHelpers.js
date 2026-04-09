@@ -175,6 +175,11 @@ export const validateProviderForm = (formData) => {
     errors.direccion = 'Debe tener al menos 5 caracteres';
   }
 
+  // ← NUEVO: Validación para plazo devoluciones (solo números)
+  if (formData.plazoDevoluciones?.trim() && !isOnlyNumbers(formData.plazoDevoluciones)) {
+    errors.plazoDevoluciones = 'Solo números permitidos';
+  }
+
   if (!formData.categorias || formData.categorias.length === 0) {
     errors.categorias = 'Seleccione al menos una categoría';
   }
