@@ -1,13 +1,11 @@
-import { Search, Calendar, Eraser, FileSpreadsheet } from 'lucide-react';
-import * as XLSX from 'xlsx';
+// src/features/orders/components/TopBar.jsx
+import { useNavigate } from 'react-router-dom';
+import { Search, Calendar, Eraser, FileSpreadsheet, Plus } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import ButtonComponent from '../../../../shared/ButtonComponent';
+import { exportOrdersToExcel } from '../helpers/ordersHelpers';
+import { ORIGENES, ESTADOS_PAGO } from '../services/ordersService';
 
-/**
- * TopBar — Barra superior con buscador, filtros de fecha y exportar Excel.
- * Sigue el mismo diseño que ReturnsToolbar: buscador a la izquierda,
- * luego fechas con label, botón limpiar (con label invisible) y exportar a la derecha.
- */
 function TopBar({
   search,
   setSearch,
@@ -15,217 +13,42 @@ function TopBar({
   setFechaInicial,
   fechaFinal,
   setFechaFinal,
+  origenFilter,
+  setOrigenFilter,
+  pagoEstadoFilter,
+  setPagoEstadoFilter,
   setCurrentPage,
   orders,
 }) {
-  const { showWarning } = useAlert();
+  const navigate = useNavigate();
+  const { showWarning, showSuccess } = useAlert();
 
-  const hayFiltrosActivos = search || fechaInicial || fechaFinal;
+  const hayFiltrosActivos = search || fechaInicial || fechaFinal || origenFilter || pagoEstadoFilter;
 
   const handleClearFilters = () => {
     setSearch('');
     setFechaInicial('');
     setFechaFinal('');
+    setOrigenFilter('');
+    setPagoEstadoFilter('');
     setCurrentPage(1);
   };
 
-  // ======================= EXPORTAR EXCEL REDISEÑADO =======================
   const handleDownloadExcel = () => {
     if (orders.length === 0) {
-      showWarning('Sin registros', 'No hay pedidos registrados para exportar.');
+      showWarning('Sin registros', 'No hay pedidos que coincidan con los filtros actuales.');
       return;
     }
 
-    // Helpers de formato
-    const formatCurrency = (value) => {
-      if (value === undefined || value === null) return '0';
-      return new Intl.NumberFormat('es-CO', {
-        style: 'currency',
-        currency: 'COP',
-        minimumFractionDigits: 0,
-      }).format(value);
-    };
-
-    const formatDate = (dateStr) => {
-      if (!dateStr) return '';
-      if (typeof dateStr === 'string' && dateStr.includes('-')) {
-        const [year, month, day] = dateStr.split('-');
-        return `${day}/${month}/${year}`;
-      }
-      return dateStr;
-    };
-
-    const currentDate = new Date();
-    const formattedDate = currentDate.toLocaleDateString('es-CO', {
-      year: 'numeric', month: 'long', day: 'numeric',
-    });
-    const formattedDateTime = currentDate.toLocaleString('es-CO', {
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-    });
-
-    // ======================= HOJA 1: RESUMEN DE PEDIDOS =======================
-    const summaryHeaders = [
-      'N° Pedido', 'Cliente', 'Teléfono', 'Email', 'Dirección', 'Fecha',
-      'Total', 'Estado', 'Motivo cancelación', 'Método Pago', 'Cantidad Productos',
-    ];
-
-    const summaryData = orders.map((order) => [
-      order.numerosPedido || '',
-      order.cliente?.nombre || '',
-      order.cliente?.telefono || '',
-      order.cliente?.email || '',
-      order.cliente?.direccion || '',
-      formatDate(order.fecha),
-      formatCurrency(order.total || 0),
-      order.estado || '',
-      order.motivoCancelacion ?? '',
-      order.metodoPago || '',
-      order.productos?.length || 0,
-    ]);
-
-    // ======================= HOJA 2: DETALLE DE PRODUCTOS =======================
-    const productHeaders = [
-      'N° Pedido', 'Cliente', 'Fecha Pedido', 'Producto',
-      'Cantidad', 'Precio Unitario', 'Total Producto',
-    ];
-
-    const productData = [];
-    orders.forEach((order) => {
-      const productos = order.productos || [];
-      const clienteNombre = order.cliente?.nombre || '';
-
-      if (productos.length === 0) {
-        productData.push([
-          order.numerosPedido || '',
-          clienteNombre,
-          formatDate(order.fecha),
-          'Sin productos registrados',
-          '', '', '',
-        ]);
-      } else {
-        productos.forEach((prod) => {
-          const cantidad = prod.cantidad || 1;
-          const precioUnit = prod.precioUnit || 0;
-          const totalProducto = cantidad * precioUnit;
-          productData.push([
-            order.numerosPedido || '',
-            clienteNombre,
-            formatDate(order.fecha),
-            prod.nombre || 'Producto sin nombre',
-            cantidad,
-            formatCurrency(precioUnit),
-            formatCurrency(totalProducto),
-          ]);
-        });
-      }
-    });
-
-    // ======================= HOJA 3: ESTADÍSTICAS =======================
-    const statsHeaders = ['Métrica', 'Valor'];
-
-    const totalOrders = orders.length;
-    const totalValue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
-    const totalProductLines = orders.reduce((sum, o) => sum + (o.productos?.length || 0), 0);
-    const totalUnits = orders.reduce((sum, o) => {
-      const units = (o.productos || []).reduce((acc, p) => acc + (p.cantidad || 0), 0);
-      return sum + units;
-    }, 0);
-
-    const completedOrders = orders.filter((o) => o.estado === 'Completado').length;
-    const pendingOrders = orders.filter((o) => o.estado === 'Pendiente').length;
-    const cancelledOrders = orders.filter((o) => o.estado === 'Cancelado').length;
-    const avgPerOrder = totalOrders > 0 ? totalValue / totalOrders : 0;
-
-    const statsData = [
-      ['Total Pedidos', totalOrders],
-      ['Total Valor Vendido', formatCurrency(totalValue)],
-      ['Total Líneas de Productos', totalProductLines],
-      ['Total Unidades Vendidas', totalUnits],
-      ['Promedio por Pedido', formatCurrency(avgPerOrder)],
-      [''],
-      ['Pedidos Completados', completedOrders],
-      ['Pedidos Pendientes', pendingOrders],
-      ['Pedidos Cancelados', cancelledOrders],
-      [''],
-      ['Fecha de Exportación', formattedDateTime],
-    ];
-
-    // ======================= CREAR LIBRO Y HOJAS =======================
-    const wb = XLSX.utils.book_new();
-
-    // --- Hoja Resumen ---
-    const summarySheetData = [
-      ['PEDIDOS'],
-      [`Fecha de exportación: ${formattedDate} - ${formattedDateTime}`],
-      [''],
-      ['RESUMEN DE PEDIDOS'],
-      [''],
-      summaryHeaders,
-      ...summaryData,
-    ];
-    const summaryWs = XLSX.utils.aoa_to_sheet(summarySheetData);
-    summaryWs['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: summaryHeaders.length - 1 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: summaryHeaders.length - 1 } },
-      { s: { r: 3, c: 0 }, e: { r: 3, c: summaryHeaders.length - 1 } },
-    ];
-    summaryWs['!cols'] = [
-      { wch: 12 }, { wch: 28 }, { wch: 15 }, { wch: 30 },
-      { wch: 40 }, { wch: 12 }, { wch: 15 }, { wch: 15 },
-      { wch: 35 }, { wch: 15 }, { wch: 12 },
-    ];
-
-    // --- Hoja Detalle de Productos ---
-    const productSheetData = [
-      ['PEDIDOS'],
-      [`Fecha de exportación: ${formattedDate} - ${formattedDateTime}`],
-      [''],
-      ['DETALLE DE PRODUCTOS PEDIDOS'],
-      [''],
-      productHeaders,
-      ...productData,
-    ];
-    const productWs = XLSX.utils.aoa_to_sheet(productSheetData);
-    productWs['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: productHeaders.length - 1 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: productHeaders.length - 1 } },
-      { s: { r: 3, c: 0 }, e: { r: 3, c: productHeaders.length - 1 } },
-    ];
-    productWs['!cols'] = [
-      { wch: 12 }, { wch: 28 }, { wch: 12 }, { wch: 35 },
-      { wch: 12 }, { wch: 16 }, { wch: 16 },
-    ];
-
-    // --- Hoja Estadísticas ---
-    const statsSheetData = [
-      ['PEDIDOS'],
-      [`Fecha de exportación: ${formattedDate} - ${formattedDateTime}`],
-      [''],
-      ['ESTADÍSTICAS'],
-      [''],
-      statsHeaders,
-      ...statsData,
-    ];
-    const statsWs = XLSX.utils.aoa_to_sheet(statsSheetData);
-    statsWs['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 1 } },
-      { s: { r: 3, c: 0 }, e: { r: 3, c: 1 } },
-    ];
-    statsWs['!cols'] = [{ wch: 28 }, { wch: 28 }];
-
-    XLSX.utils.book_append_sheet(wb, summaryWs, 'Resumen Pedidos');
-    XLSX.utils.book_append_sheet(wb, productWs, 'Detalle Productos');
-    XLSX.utils.book_append_sheet(wb, statsWs, 'Estadísticas');
-
-    const fileName = `pedidos_${new Date().toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(wb, fileName);
+    const success = exportOrdersToExcel(orders);
+    if (success) {
+      showSuccess('Exportación exitosa', 'El archivo Excel se ha descargado correctamente.');
+    }
   };
 
   return (
     <div className="flex flex-wrap items-end gap-3 shrink-0">
-      {/* Buscador (sin label) */}
+      {/* Buscador */}
       <div className="relative w-72">
         <input
           type="text"
@@ -242,7 +65,7 @@ function TopBar({
         />
       </div>
 
-      {/* Fecha inicial con label */}
+      {/* Fecha inicial */}
       <div className="flex flex-col gap-0.5">
         <label className="text-xs text-gray-500 font-medium pl-0.5">Fecha Inicial</label>
         <div className="relative">
@@ -262,7 +85,7 @@ function TopBar({
         </div>
       </div>
 
-      {/* Fecha final con label */}
+      {/* Fecha final */}
       <div className="flex flex-col gap-0.5">
         <label className="text-xs text-gray-500 font-medium pl-0.5">Fecha Final</label>
         <div className="relative">
@@ -282,7 +105,39 @@ function TopBar({
         </div>
       </div>
 
-      {/* Botón Limpiar filtros (con label invisible para alinear altura) */}
+      {/* Filtro por Origen */}
+      <div className="flex flex-col gap-0.5">
+        <label className="text-xs text-gray-500 font-medium pl-0.5">Origen</label>
+        <select
+          value={origenFilter}
+          onChange={(e) => { setOrigenFilter(e.target.value); setCurrentPage(1); }}
+          className="px-3 py-2 text-sm rounded-lg border border-gray-300
+                     focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20
+                     outline-none bg-white text-gray-600 w-full sm:w-auto"
+        >
+          <option value="">Todos</option>
+          <option value={ORIGENES.MANUAL}>Manual</option>
+          <option value={ORIGENES.WEB}>Web</option>
+        </select>
+      </div>
+
+      {/* Filtro por Estado de Pago */}
+      <div className="flex flex-col gap-0.5">
+        <label className="text-xs text-gray-500 font-medium pl-0.5">Pago</label>
+        <select
+          value={pagoEstadoFilter}
+          onChange={(e) => { setPagoEstadoFilter(e.target.value); setCurrentPage(1); }}
+          className="px-3 py-2 text-sm rounded-lg border border-gray-300
+                     focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20
+                     outline-none bg-white text-gray-600 w-full sm:w-auto"
+        >
+          <option value="">Todos</option>
+          <option value={ESTADOS_PAGO.PENDIENTE}>Pendiente</option>
+          <option value={ESTADOS_PAGO.PAGADO}>Pagado</option>
+        </select>
+      </div>
+
+      {/* Limpiar filtros */}
       {hayFiltrosActivos && (
         <div className="flex flex-col gap-0.5">
           <label className="text-xs text-gray-500 font-medium pl-0.5 invisible">Limpiar</label>
@@ -299,17 +154,29 @@ function TopBar({
         </div>
       )}
 
-      {/* Espaciador flexible para empujar el botón Exportar a la derecha */}
+      {/* Espaciador flexible */}
       <div className="flex-1" />
 
-      {/* Exportar Excel */}
-      <ButtonComponent
-        className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-2 flex items-center gap-2"
-        onClick={handleDownloadExcel}
-      >
-        <FileSpreadsheet className="w-4 h-4" />
-        Exportar Excel
-      </ButtonComponent>
+      {/* Grupo de botones a la derecha */}
+      <div className="flex items-center gap-2 shrink-0">
+        {/* Exportar Excel */}
+        <ButtonComponent
+          className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-2 flex items-center gap-2"
+          onClick={handleDownloadExcel}
+        >
+          <FileSpreadsheet className="w-4 h-4" />
+          <span className="hidden sm:inline">Exportar Excel</span>
+        </ButtonComponent>
+
+        {/* Nuevo pedido */}
+        <ButtonComponent
+          onClick={() => navigate('new-order')}
+          title="Nuevo pedido"
+        >
+          <span className="hidden sm:inline">Nuevo pedido</span>
+          <Plus className="w-4 h-4" strokeWidth={2} />
+        </ButtonComponent>
+      </div>
     </div>
   );
 }

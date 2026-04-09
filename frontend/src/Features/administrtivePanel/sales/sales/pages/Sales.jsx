@@ -1,10 +1,11 @@
+// src/features/administrtivePanel/sales/pages/Sales.jsx
 import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 
 import TopBar          from '../components/TopBar';
 import SalesTable      from '../components/SalesTable';
 import PaginationAdmin from '../../../../shared/PaginationAdmin';
-import { SalesDB }     from '../services/salesBD';
+import { SalesServices } from '../services/salesServices'; // ✅ importación corregida
 import { filterSales } from '../helpers/salesHelpers';
 
 const RECORDS_PER_PAGE = 13;
@@ -19,13 +20,13 @@ const RECORDS_PER_PAGE = 13;
  */
 function Sales() {
   const location                     = useLocation();
-  const [data,        setData]        = useState(() => SalesDB.list());
+  const [data,        setData]        = useState(() => SalesServices.list());
   const [search,      setSearch]      = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Recargar datos al volver del formulario o otras rutas
+  // Recargar datos al volver del formulario o al cambiar la ruta
   useEffect(() => {
-    setData(SalesDB.list());
+    setData(SalesServices.list());
   }, [location.pathname]);
 
   /**

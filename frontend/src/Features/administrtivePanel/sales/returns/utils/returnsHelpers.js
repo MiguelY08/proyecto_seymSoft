@@ -36,17 +36,16 @@ export const formatDate = (date) => {
  * Retorna el color hexadecimal asociado a un estado de devolución.
  * Utilizado para mostrar indicadores visuales en la UI.
  * 
- * @param {string} estado - Estado de la devolución ('Pendiente', 'Aprobada', 'Rechazada', 'Anulada')
+ * @param {string} estado - Estado de la devolución ('En Proceso', 'Procesada', 'Anulado')
  * @returns {string} Código hexadecimal del color correspondiente
  */
 export const getEstadoColor = (estado) => {
   const colors = {
-    'Pendiente': '#dc2626',
-    'Aprobada': '#16a34a',
-    'Rechazada': '#6b7280',
-    'Anulada': '#6b7280'
+    'En Proceso': '#eab308',
+    'Procesada': '#16a34a',
+    'Anulado': '#dc2626'
   };
-  return colors[estado] || '#dc2626';
+  return colors[estado] || '#eab308';
 };
 
 /**
@@ -58,12 +57,11 @@ export const getEstadoColor = (estado) => {
  */
 export const getStatusStyle = (status) => {
   const styles = {
-    'Pendiente': 'text-red-600 bg-red-100',
-    'Aprobada': 'text-green-600 bg-green-100',
-    'Rechazada': 'text-gray-600 bg-gray-100',
-    'Anulada': 'text-gray-400 bg-gray-100'
+    'En Proceso': 'text-yellow-700 bg-yellow-100',
+    'Procesada': 'text-green-700 bg-green-100',
+    'Anulado': 'text-red-600 bg-red-100'
   };
-  return styles[status] || styles['Pendiente'];
+  return styles[status] || styles['En Proceso'];
 };
 
 /**
@@ -75,6 +73,85 @@ export const getStatusStyle = (status) => {
  */
 export const getStatusText = (status) => {
   return status;
+};
+
+/**
+ * Obtiene los estados válidos de un producto según el método de devolución.
+ * Los estados disponibles varían según si es Reemplazo, Reembolso o Saldo a favor.
+ * 
+ * @param {string} metodo - Método de devolución (Reemplazo, Reembolso, Saldo a favor)
+ * @returns {Array<string>} Array de estados válidos para el método
+ */
+export const getProductStatesForMethod = (metodo) => {
+  const statesMap = {
+    'Reemplazo': [
+      'Pend. Envío',
+      'Pend. Reemplazo',
+      'Entregado'
+    ],
+    'Reembolso': [
+      'Pend. Envío',
+      'Pend. Reembolso',
+      'Entregado'
+    ],
+    'Saldo a favor': [
+      'Pend. Envío',
+      'Entregado'
+    ]
+  };
+  return statesMap[metodo] || [];
+};
+
+/**
+ * Valida si un estado es válido para un método específico.
+ * 
+ * @param {string} estado - Estado a validar
+ * @param {string} metodo - Método de devolución
+ * @returns {boolean} true si el estado es válido para el método
+ */
+export const isValidStateForMethod = (estado, metodo) => {
+  const validStates = getProductStatesForMethod(metodo);
+  return validStates.includes(estado);
+};
+
+/**
+ * Calcula automáticamente el estado general de una devolución basado en los estados
+ * de los productos individuales.
+ * 
+ * Reglas:
+ * - Si está anulada: devuelve 'Anulado'
+ * - Si todos los productos están en 'Entregado': devuelve 'Procesada'
+ * - Si al menos un producto NO está en 'Entregado': devuelve 'En Proceso'
+ * 
+ * @param {Array<Object>} productosDevueltos - Array de productos devueltos con su estado
+ * @param {boolean} isAnulada - Si la devolución está anulada
+ * @returns {string} Estado general calculado
+ */
+export const calculateGeneralStatus = (productosDevueltos = [], isAnulada = false) => {
+  if (isAnulada) return 'Anulado';
+  
+  if (!productosDevueltos || productosDevueltos.length === 0) {
+    return 'En Proceso';
+  }
+  
+  // Obtener todos los estados de los productos
+  const allStates = productosDevueltos.every(prod => 
+    prod.estado === 'Entregado'
+  );
+  
+  return allStates ? 'Procesada' : 'En Proceso';
+};
+
+/**
+ * Obtiene el estado inicial para un producto según el método seleccionado.
+ * Siempre devuelve el primer estado disponible del método.
+ * 
+ * @param {string} metodo - Método de devolución
+ * @returns {string} Primer estado válido para el método
+ */
+export const getInitialStateForMethod = (metodo) => {
+  const states = getProductStatesForMethod(metodo);
+  return states[0] || 'Pend. Envío';
 };
 
 /**

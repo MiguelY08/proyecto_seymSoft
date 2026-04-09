@@ -161,7 +161,7 @@ function ReturnsPage() {
    * @param {Object} returnData - Devolución a editar
    */
   const handleEdit = (returnData) => {
-    if (returnData.estado === 'Anulada') {
+    if (returnData.estado === 'Anulado') {
       showError('Error', 'No se puede editar una devolución anulada');
       return;
     }
@@ -188,7 +188,7 @@ function ReturnsPage() {
    * @param {Object} returnData - Devolución a anular
    */
   const handleCancelClick = (returnData) => {
-    if (returnData.estado === 'Anulada') {
+    if (returnData.estado === 'Anulado') {
       showError('Error', 'La devolución ya está anulada');
       return;
     }
