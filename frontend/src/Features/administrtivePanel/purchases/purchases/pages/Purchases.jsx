@@ -26,34 +26,51 @@ export const Purchases = () => {
   // 🔹 Control para evitar alertas repetidas
   const alertShownRef = useRef(false);
 
-
-
   const navigate = useNavigate();
+
+  // ============================================================
+  // 🔥 NUEVA FUNCIÓN: validar si la compra tiene menos de 2 meses
+  // ============================================================
+  const isWithinReturnPeriod = (compra) => {
+    if (!compra || !compra.fechaCompra) return false;
+    const fechaCompra = new Date(compra.fechaCompra);
+    const hoy = new Date();
+    // Diferencia en milisegundos -> días
+    const diffTime = hoy - fechaCompra;
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    // Permitir devolución solo si han pasado 60 días o menos
+    return diffDays <= 60;
+  };
 
   // 🔥 Abrir formulario de devolución para una compra
   const handleReturn = (compra) => {
+    // Validar período de 2 meses
+    if (!isWithinReturnPeriod(compra)) {
+      showError(
+        "Período de devolución vencido",
+        "Esta compra tiene más de 2 meses. No se puede generar una devolución."
+      );
+      return;
+    }
     navigate("/admin/purchases/returns-p", {
       state: { openReturnForm: true, purchase: compra },
     });
   };
 
   // 🔥 Anular compra
- const handleCancel = (id) => {
+  const handleCancel = (id) => {
+    const compra = products.find((c) => c.id === id);
+    if (!compra) return;
+    if (compra.estado === "Anulada") {
+      showInfo(
+        "Compra ya Anulada",
+        "Esta compra ya se encuentra Anulada."
+      );
+      return;
+    }
+    setCancelPurchase(compra);
+  };
 
-  const compra = products.find((c) => c.id === id);
-
-  if (!compra) return;
-
-  if (compra.estado === "Anulada") {
-    showInfo(
-      "Compra ya Anulada",
-      "Esta compra ya se encuentra Anulada."
-    );
-    return;
-  }
-
-  setCancelPurchase(compra);
-};
   const confirmCancelPurchase = (motivo) => {
     try {
       const updated = PurchasesDB.annul(cancelPurchase.id, motivo);
@@ -67,12 +84,12 @@ export const Purchases = () => {
   };
 
   const handleViewDetail = (purchase) => {
-  setSelectedPurchase(purchase);
+    setSelectedPurchase(purchase);
   };
 
   const handleCloseModal = () => {
-  setSelectedPurchase(null);
-};
+    setSelectedPurchase(null);
+  };
 
   // 🔥 Exportar Excel
   const handleDownloadExcel = () => {
@@ -167,7 +184,7 @@ export const Purchases = () => {
 
   return (
     <>
-    <div className="h-full flex flex-col  gap-0.5 p-3 sm:p-3">
+    <div className="h-full flex flex-col gap-0.5 p-3 sm:p-3">
 
       <div className="flex items-end justify-between">
 
@@ -208,39 +225,38 @@ export const Purchases = () => {
       )}
 
       {filteredProducts.length > 0 && (
-  <div className="flex-1 overflow-auto  min-h-0">
-    <PurchasesTable
-      currentData={currentData}
-      filteredProducts={filteredProducts}
-      currentPage={currentPage}
-      setCurrentPage={setCurrentPage}
-      totalPages={totalPages}
-      startIndex={startIndex}
-      endIndex={endIndex}
-      handleCancel={handleCancel}
-      handleViewDetail={handleViewDetail}
-      handleReturn={handleReturn}
-      search={search}
-    />
-  </div>
-)}
+        <div className="flex-1 overflow-auto min-h-0">
+          <PurchasesTable
+            currentData={currentData}
+            filteredProducts={filteredProducts}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+            totalPages={totalPages}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            handleCancel={handleCancel}
+            handleViewDetail={handleViewDetail}
+            handleReturn={handleReturn}
+            search={search}
+          />
+        </div>
+      )}
     </div>
     {selectedPurchase && (
-  <DetailPurchases
-    purchase={selectedPurchase}
-    onClose={() => setSelectedPurchase(null)}
-  />
-  )}
-  {cancelPurchase && (
-  <Anulatepurchase
-    purchase={cancelPurchase}
-    onClose={() => setCancelPurchase(null)}
-    onConfirm={confirmCancelPurchase}
-  />
-)}
-  </>
+      <DetailPurchases
+        purchase={selectedPurchase}
+        onClose={() => setSelectedPurchase(null)}
+      />
+    )}
+    {cancelPurchase && (
+      <Anulatepurchase
+        purchase={cancelPurchase}
+        onClose={() => setCancelPurchase(null)}
+        onConfirm={confirmCancelPurchase}
+      />
+    )}
+    </>
   );
-  
 };
 
 export default Purchases;

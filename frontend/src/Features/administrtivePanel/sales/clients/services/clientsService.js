@@ -11,6 +11,7 @@ import UsersDB from '../../../users/services/usersDB';
 const STORAGE_KEYS = {
   CREDIT_ACCOUNTS: 'creditAccounts',
   PAYMENTS:        'payments',
+  BALANCE_FAVOR:   'client_balance_favor',  // ← NUEVO: Saldo a favor
 };
 
 // ─── System client ────────────────────────────────────────────────────────────
@@ -39,6 +40,7 @@ const SYSTEM_CLIENT = {
   contactName:  '',
   contactPhone: '',
   clientCredit: '0',
+  saldoFavor:   '0',  // ← Solo para la vista, no se guarda en UsersDB
   rut:          'no',
   ciuCode:      '',
   clientSince:  '01/01/2024',
@@ -63,11 +65,85 @@ const initializeCreditAndPayments = () => {
   if (!localStorage.getItem(STORAGE_KEYS.PAYMENTS)) {
     localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify([]));
   }
+
+  // ← NUEVO: Inicializar saldos a favor
+  if (!localStorage.getItem(STORAGE_KEYS.BALANCE_FAVOR)) {
+    localStorage.setItem(STORAGE_KEYS.BALANCE_FAVOR, JSON.stringify({}));
+  }
 };
 
 // ─── Helper: map User → Client view ──────────────────────────────────────────
 // Adds `fullName` as an alias for `name` for compatibility with ClientsTable.
-const toClientView = (user) => ({ ...user, fullName: user.name });
+const toClientView = (user) => {
+  const saldoFavor = saldoFavorService.getByClientId(user.id);
+  return { 
+    ...user, 
+    fullName: user.name,
+    saldoFavor: String(saldoFavor)
+  };
+};
+
+// ============================================================================
+// Saldo a favor operations (para conectar con otros módulos)
+// ============================================================================
+export const saldoFavorService = {
+  /**
+   * Obtiene el saldo a favor de un cliente
+   * @param {string|number} clientId - ID del cliente
+   * @returns {number} Saldo a favor en número
+   */
+  getByClientId: (clientId) => {
+    const stored = localStorage.getItem(STORAGE_KEYS.BALANCE_FAVOR);
+    const balances = stored ? JSON.parse(stored) : {};
+    return balances[String(clientId)] || 0;
+  },
+
+  /**
+   * Actualiza el saldo a favor de un cliente
+   * @param {string|number} clientId - ID del cliente
+   * @param {number} amount - Nuevo saldo a favor
+   */
+  setBalance: (clientId, amount) => {
+    const stored = localStorage.getItem(STORAGE_KEYS.BALANCE_FAVOR);
+    const balances = stored ? JSON.parse(stored) : {};
+    balances[String(clientId)] = Math.max(0, amount);
+    localStorage.setItem(STORAGE_KEYS.BALANCE_FAVOR, JSON.stringify(balances));
+  },
+
+  /**
+   * Suma un monto al saldo a favor existente
+   * @param {string|number} clientId - ID del cliente
+   * @param {number} amount - Monto a sumar
+   */
+  addBalance: (clientId, amount) => {
+    const current = saldoFavorService.getByClientId(clientId);
+    saldoFavorService.setBalance(clientId, current + amount);
+  },
+
+  /**
+   * Resta un monto del saldo a favor
+   * @param {string|number} clientId - ID del cliente
+   * @param {number} amount - Monto a restar
+   */
+  subtractBalance: (clientId, amount) => {
+    const current = saldoFavorService.getByClientId(clientId);
+    saldoFavorService.setBalance(clientId, current - amount);
+  },
+
+  /**
+   * Reasigna saldos a favor al cliente de sistema cuando se elimina un cliente
+   */
+  reassignToSystem: (clientId) => {
+    const balance = saldoFavorService.getByClientId(clientId);
+    if (balance > 0) {
+      saldoFavorService.addBalance(SYSTEM_CLIENT_ID, balance);
+      const stored = localStorage.getItem(STORAGE_KEYS.BALANCE_FAVOR);
+      const balances = stored ? JSON.parse(stored) : {};
+      delete balances[String(clientId)];
+      localStorage.setItem(STORAGE_KEYS.BALANCE_FAVOR, JSON.stringify(balances));
+    }
+  },
+};
 
 // ============================================================================
 // Client CRUD operations
@@ -82,11 +158,11 @@ export const clientsService = {
     const clients = UsersDB.list()
       .filter(u => u.isClient && !u.isSystem)
       .map(toClientView);
-    return [SYSTEM_CLIENT, ...clients];
+    return [toClientView(SYSTEM_CLIENT), ...clients];
   },
 
   getById: (id) => {
-    if (id === SYSTEM_CLIENT_ID || id === String(SYSTEM_CLIENT_ID)) return SYSTEM_CLIENT;
+    if (id === SYSTEM_CLIENT_ID || id === String(SYSTEM_CLIENT_ID)) return toClientView(SYSTEM_CLIENT);
     const user = UsersDB.findById(Number(id));
     return user && user.isClient ? toClientView(user) : null;
   },
@@ -115,6 +191,7 @@ export const clientsService = {
       contactName:  clientData.contactName  || '',
       contactPhone: clientData.contactPhone || '',
       clientCredit: clientData.clientCredit || '0',
+      // ⚠️ NOTA: saldoFavor NO se guarda en UsersDB, solo en el almacenamiento separado
       rut:          clientData.rut          || 'no',
       ciuCode:      clientData.ciuCode      || '',
       clientSince:  new Date().toLocaleDateString('es-CO'),
@@ -124,6 +201,9 @@ export const clientsService = {
       String(newUser.id),
       parseInt(newUser.clientCredit) || 0
     );
+
+    // ← NUEVO: Inicializar saldo a favor en almacenamiento separado
+    saldoFavorService.setBalance(String(newUser.id), parseInt(clientData.saldoFavor) || 0);
 
     return toClientView(newUser);
   },
@@ -141,6 +221,7 @@ export const clientsService = {
 
     const name = `${clientData.firstName || user.firstName || ''} ${clientData.lastName || user.lastName || ''}`.trim();
 
+    // Actualizar UsersDB - SIN el campo saldoFavor
     UsersDB.update(numId, {
       name,
       firstName:    clientData.firstName    ?? user.firstName,
@@ -155,9 +236,15 @@ export const clientsService = {
       contactName:  clientData.contactName  ?? user.contactName,
       contactPhone: clientData.contactPhone ?? user.contactPhone,
       clientCredit: clientData.clientCredit || user.clientCredit || '0',
+      // ⚠️ saldoFavor NO va aquí
       rut:          clientData.rut          ?? user.rut,
       ciuCode:      clientData.ciuCode      ?? user.ciuCode,
     });
+
+    // ← NUEVO: Actualizar saldo a favor en almacenamiento separado
+    if (clientData.saldoFavor !== undefined) {
+      saldoFavorService.setBalance(String(numId), parseInt(clientData.saldoFavor) || 0);
+    }
 
     const updated = UsersDB.findById(numId);
     return updated ? toClientView(updated) : null;
@@ -178,6 +265,7 @@ export const clientsService = {
     // Reassign financial records to system client before removing the user
     creditAccountService.reassignToSystem(String(numId));
     paymentService.reassignToSystem(String(numId));
+    saldoFavorService.reassignToSystem(String(numId));  // ← NUEVO
 
     UsersDB.delete(numId);
     return true;
