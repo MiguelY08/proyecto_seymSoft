@@ -55,7 +55,6 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     nombreContacto: '',
     numeroContacto: '',
     direccion: '',
-    tipoCliente: '',
     categorias: [],
     rut: '',
     codigoCIU: '',
@@ -104,7 +103,6 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
         nombreContacto: provider.pContacto || provider.nombreContacto || '',
         numeroContacto: provider.nuContacto || provider.numeroContacto || '',
         direccion: provider.direccion || '',
-        tipoCliente: provider.tipoCliente || '',
         categorias: categoriasArray,
         rut: provider.rut || '',
         codigoCIU: provider.codigoCIU || '',
@@ -466,41 +464,53 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                   </div>
                 </div>
 
-                {/* Nombres */}
-                <div className="flex flex-col gap-1">
-                  <label className="block text-xs font-semibold text-gray-600">
-                    Nombres<span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="nombres"
-                    value={formData.nombres}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Ej: Juan Carlos"
-                    autoComplete="off"
-                    className={inputClass('nombres')}
-                  />
-                  {renderError('nombres')}
-                </div>
+                              {/* Nombres */}
+              <div className="flex flex-col gap-1">
+                <label className="block text-xs font-semibold text-gray-600">
+                  Nombres<span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="nombres"
+                  value={formData.nombres}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="Ej: Juan Carlos"
+                  autoComplete="off"
+                  className={isEditing ? disabledInputClass('nombres') : inputClass('nombres')}
+                  disabled={isEditing}
+                />
+                {isEditing && (
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    No se puede modificar en edición
+                  </p>
+                )}
+                {renderError('nombres')}
+              </div>
 
-                {/* Apellidos */}
-                <div className="flex flex-col gap-1">
-                  <label className="block text-xs font-semibold text-gray-600">
-                    Apellidos<span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="apellidos"
-                    value={formData.apellidos}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Ej: Pérez Gómez"
-                    autoComplete="off"
-                    className={inputClass('apellidos')}
-                  />
-                  {renderError('apellidos')}
-                </div>
+              {/* Apellidos */}
+              <div className="flex flex-col gap-1">
+                <label className="block text-xs font-semibold text-gray-600">
+                  Apellidos<span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="apellidos"
+                  value={formData.apellidos}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="Ej: Pérez Gómez"
+                  autoComplete="off"
+                  className={isEditing ? disabledInputClass('apellidos') : inputClass('apellidos')}
+                  disabled={isEditing}
+                />
+                {isEditing && (
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    No se puede modificar en edición
+                  </p>
+                )}
+                {renderError('apellidos')}
+              </div>
 
                 {/* Dirección */}
                 <div className="flex flex-col gap-1">
@@ -600,28 +610,6 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     />
                     {renderError('numeroContacto')}
                   </div>
-                </div>
-
-                {/* Tipo cliente */}
-                <div className="flex flex-col gap-1">
-                  <label className="block text-xs font-semibold text-gray-600">
-                    Tipo de cliente<span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <select
-                      name="tipoCliente"
-                      value={formData.tipoCliente}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      className={selectClass('tipoCliente')}
-                    >
-                      <option value="">Selecciona una opción</option>
-                      <option value="mayorista">Mayorista</option>
-                      <option value="minorista">Minorista</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
-                  </div>
-                  {renderError('tipoCliente')}
                 </div>
 
                 {/* Categorías - Dropdown con checkboxes */}

@@ -1,19 +1,4 @@
-/**
- * Archivo: returnsHelpers.js
- *
- * Colección de funciones de utilidad para el módulo de devoluciones.
- * Proporciona funciones para formateo, validación, filtrado y paginación
- * que son usadas por componentes y servicios en todo el módulo.
- *
- * Responsabilidades principales:
- * - Formatear datos (moneda, fechas, estados)
- * - Obtener estilos y colores según estados
- * - Calcular totales de productos
- * - Filtrar devoluciones por término de búsqueda
- * - Paginar datos para visualización en tabla
- * - Exportar datos a Excel
- * - Generar números de devolución únicos
- */
+// utils/returnsHelpers.js
 
 // ======================= FUNCIONALIDAD: FORMATEO =======================
 
@@ -139,6 +124,54 @@ export const filterReturns = (returns, searchTerm) => {
     r.motivo?.toLowerCase().includes(term) ||
     r.estado?.toLowerCase().includes(term)
   );
+};
+
+/**
+ * Filtra las devoluciones por término de búsqueda y rango de fechas
+ * 
+ * @param {Array} returns - Array de devoluciones
+ * @param {string} searchTerm - Término de búsqueda
+ * @param {string} startDate - Fecha inicial (YYYY-MM-DD)
+ * @param {string} endDate - Fecha final (YYYY-MM-DD)
+ * @returns {Array} Devoluciones filtradas
+ */
+export const filterReturnsByDateAndSearch = (returns, searchTerm, startDate, endDate) => {
+  if (!returns || returns.length === 0) return [];
+  
+  let filtered = [...returns];
+  
+  // Filtrar por rango de fechas
+  if (startDate && endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    
+    filtered = filtered.filter(r => {
+      const returnDate = new Date(r.fechaCreacion);
+      return returnDate >= start && returnDate <= end;
+    });
+  } else if (startDate) {
+    const start = new Date(startDate);
+    filtered = filtered.filter(r => new Date(r.fechaCreacion) >= start);
+  } else if (endDate) {
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    filtered = filtered.filter(r => new Date(r.fechaCreacion) <= end);
+  }
+  
+  // Filtrar por término de búsqueda
+  if (searchTerm && searchTerm.trim() !== '') {
+    const term = searchTerm.toLowerCase().trim();
+    filtered = filtered.filter(r => 
+      r.numeroDevolucion?.toLowerCase().includes(term) ||
+      r.numeroFactura?.toLowerCase().includes(term) ||
+      r.cliente?.toLowerCase().includes(term) ||
+      r.motivo?.toLowerCase().includes(term) ||
+      r.estado?.toLowerCase().includes(term)
+    );
+  }
+  
+  return filtered;
 };
 
 // ======================= FUNCIONALIDAD: PAGINACIÓN =======================

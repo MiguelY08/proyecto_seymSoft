@@ -2,18 +2,12 @@
  * Archivo: FormReturn.jsx
  * 
  * Formulario modal para crear o editar devoluciones de ventas.
- * Integra la selección de productos, captura de datos de cliente,
- * adjunción de evidencias y validación completa del formulario.
  * 
- * Responsabilidades principales:
- * - Formulario modal para crear/editar devoluciones
- * - Selección de productos con múltiples configuraciones
- * - Captura de datos del cliente, asesor e información de entrega
- * - Validación en tiempo real y al enviar
- * - Previsualización de resumen de devolución
- * - Adjunción y gestión de evidencias
- * - Cambio de estado general de la devolución
- * - Soporte para edición y creación de devoluciones
+ * EN MODO EDICIÓN: Solo se puede modificar:
+ * - Estado general de la devolución
+ * - Estado de cada producto individualmente
+ * 
+ * Todos los demás campos están deshabilitados con mensaje informativo.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -23,10 +17,6 @@ import { useAlert } from '../../../../shared/alerts/useAlert';
 
 // ======================= DATOS DE REFERENCIA =======================
 
-/**
- * Lista de productos disponibles para devolución.
- * Contiene estructura base con ID, nombre, cantidad disponible y precio.
- */
 const PRODUCTOS_VENTA = [
   { id: 1, nombre: 'Libreta con lapicero',    cantidad: 1, precioUnit: 5000, imagen: null },
   { id: 2, nombre: 'Pincel #10',              cantidad: 6, precioUnit: 1200, imagen: null },
@@ -34,33 +24,14 @@ const PRODUCTOS_VENTA = [
   { id: 4, nombre: 'Silicona liquida ET131 X', cantidad: 8, precioUnit: 2900, imagen: null },
 ];
 
-// Opciones disponibles para motivos de devolución
 const MOTIVOS    = ['Prod. en mal estado', 'Producto roto', 'Producto equivocado', 'Producto incompleto', 'No era el pedido'];
-// Opciones disponibles para métodos de devolución
 const METODOS    = ['Reembolso', 'Cambio de producto', 'Nota crédito'];
-// Opciones de estados para la devolución general
 const ESTADOS_P  = ['Pendiente', 'Aprobada', 'Anulada'];
 
-// ======================= UTILIDADES =======================
-
-/**
- * Formatea un número como moneda COP (Peso Colombiano).
- * @param {number} v - Valor a formatear
- * @returns {string} Valor formateado en notación local
- */
 const formatCOP = (v) => new Intl.NumberFormat('es-CO').format(v);
 
 // ======================= COMPONENTES AUXILIARES =======================
 
-/**
- * Componente auxiliar para mostrar imagen de producto.
- * Muestra imagen cargada o placeholder genérico.
- * 
- * @param {Object} props - Props
- * @param {string} props.src - URL de la imagen
- * @param {string} props.size - Tamaño ('sm' o 'md')
- * @returns {JSX.Element} Imagen o placeholder
- */
 function ProductoImg({ src, size = 'md' }) {
   const dim = size === 'sm' ? 'w-8 h-8' : 'w-10 h-10';
   if (src) return <img src={src} alt="" className={`${dim} rounded-lg object-cover flex-shrink-0`} />;
@@ -71,15 +42,6 @@ function ProductoImg({ src, size = 'md' }) {
   );
 }
 
-/**
- * Selector visual de estado con badge de color.
- * Muestra dropdown con opciones de estado disponibles.
- * 
- * @param {Object} props - Props
- * @param {string} props.value - Estado actual
- * @param {Function} props.onChange - Callback al cambiar
- * @returns {JSX.Element} Selector con badge
- */
 function EstadoBadgeSelect({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const color = {
@@ -105,42 +67,191 @@ function EstadoBadgeSelect({ value, onChange }) {
   );
 }
 
-// ======================= FUNCIONALIDAD: GENERAR IDS =======================
+function DisabledField({ label, value, required = false }) {
+  return (
+    <div>
+      <label className="block text-xs font-bold text-gray-600 mb-1">
+        {label}
+        {required && <span className="text-red-500 ml-0.5">*</span>}
+      </label>
+      <div className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500">
+        {value || '—'}
+      </div>
+      <p className="text-xs text-gray-400 mt-1">
+        No se puede modificar en edición
+      </p>
+    </div>
+  );
+}
 
-/**
- * Genera un ID temporal único para configuraciones.
- * Se usa mientras están en edición del formulario.
- * @returns {number} ID temporal
- */
+function DisabledTextarea({ label, value }) {
+  return (
+    <div>
+      <label className="block text-xs font-bold text-gray-600 mb-1">{label}</label>
+      <textarea
+        value={value || ''}
+        disabled
+        rows={4}
+        className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-xs bg-gray-50 text-gray-500 resize-none cursor-not-allowed"
+      />
+      <p className="text-xs text-gray-400 mt-1">
+        No se puede modificar en edición
+      </p>
+    </div>
+  );
+}
+
+function DisabledEvidence({ count }) {
+  return (
+    <div>
+      <label className="block text-xs font-bold text-gray-600 mb-1">Evidencias</label>
+      <div className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 flex items-center justify-between">
+        <span>{count === 0 ? 'Sin evidencias' : `${count} archivo(s) adjunto(s)`}</span>
+        <Image className="w-4 h-4 text-gray-400" />
+      </div>
+      <p className="text-xs text-gray-400 mt-1">
+        No se puede modificar en edición
+      </p>
+    </div>
+  );
+}
+
+function DisabledDeliveryToggle({ isDelivery }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-gray-700">Domicilio</span>
+        <div className={`relative w-12 h-6 rounded-full ${isDelivery ? 'bg-green-500' : 'bg-gray-300'} opacity-50`}>
+          <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${isDelivery ? 'left-[26px]' : 'left-0.5'}`} />
+          {isDelivery && <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-white text-[9px] font-bold">✓</span>}
+        </div>
+      </div>
+      <p className="text-xs text-gray-400 mt-1">
+        No se puede modificar en edición
+      </p>
+    </div>
+  );
+}
+
 const generateTempId = () => Date.now() + Math.random();
 
-// ======================= COMPONENTE: PRODUCTO SELECCIONADO =======================
+// ======================= COMPONENTE: PRODUCTO SELECCIONADO (VERSIÓN EDICIÓN) =======================
 
-/**
- * Componente para mostrar un producto seleccionado con múltiples configuraciones.
- * Soporta expansión/colapsación, validación de campos,
- * y gestión de varias configuraciones del mismo producto.
- * 
- * @component
- * @param {Object} props - Props del componente
- * @param {Object} props.producto - Datos del producto
- * @param {Array} props.configs - Array de configuraciones actuales
- * @param {Function} props.onConfigsChange - Callback al cambiar configuraciones
- * @param {Function} props.onRemove - Callback para deseleccionar producto
- * @param {boolean} props.submitted - Indica si fue enviado
- * @returns {JSX.Element} Card del producto
- */
-function ProductoSeleccionado({ producto, configs, onConfigsChange, onRemove, submitted }) {
-  // ======================= ESTADOS =======================
-  
-  // Estado para controlar si el card está expandido
+function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange, submitted }) {
   const [expanded, setExpanded] = useState(true);
-  // Rastrear campos tocados para validación
+  const maxTotalQuantity = producto.cantidad;
+  const totalQuantityUsed = configs.reduce((sum, cfg) => sum + (cfg.cantidad || 0), 0);
+
+  const handleStatusChange = (index, newStatus) => {
+    const newConfigs = [...configs];
+    newConfigs[index] = { ...newConfigs[index], estado: newStatus };
+    onConfigChange(newConfigs);
+  };
+
+  return (
+    <div className="border rounded-xl overflow-hidden transition-colors border-gray-200">
+      {/* Header */}
+      <div className="flex items-center gap-2 px-3 py-2.5 bg-[#f1f1f1]">
+        <button type="button" onClick={() => setExpanded((p) => !p)}
+          className="text-[#004D77] hover:text-[#003d61] transition cursor-pointer flex-shrink-0">
+          <ChevronLeft className="w-4 h-4 transition-transform duration-200"
+            style={{ transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
+        </button>
+        <input type="checkbox" checked readOnly disabled
+          className="accent-[#004D77] w-4 h-4 cursor-not-allowed flex-shrink-0 opacity-50" />
+        <ProductoImg src={producto.imagen} size="sm" />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-bold text-gray-800 truncate">{producto.nombre}</p>
+          <p className="text-[11px] text-gray-500">
+            Usados: {totalQuantityUsed} de {maxTotalQuantity} | {configs.length} config(s)
+          </p>
+        </div>
+        <div className="text-right flex-shrink-0">
+          <p className="text-[10px] text-gray-400">Total</p>
+          <p className="text-xs font-bold text-gray-700">${formatCOP(maxTotalQuantity * producto.precioUnit)}</p>
+        </div>
+      </div>
+
+      {/* Formulario expandido - SOLO ESTADO EDITABLE */}
+      {expanded && (
+        <div className="bg-white px-3 py-3 border-t border-gray-100">
+          {configs.map((config, index) => (
+            <div key={config.id} className={index > 0 ? 'mt-4 pt-4 border-t border-gray-200' : ''}>
+              {configs.length > 1 && (
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-gray-600">Configuración {index + 1} de {configs.length}</span>
+                  <div className="text-gray-400 text-[10px]">
+                    Bloqueado
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                {/* Motivo - solo lectura */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Motivo
+                  </label>
+                  <div className="w-full px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                    {config.motivo || '—'}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    No se puede modificar en edición
+                  </p>
+                </div>
+
+                {/* Estado - EDITABLE (sin candado) */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Estado<span className="text-red-500">*</span>
+                  </label>
+                  <EstadoBadgeSelect 
+                    value={config.estado} 
+                    onChange={(v) => handleStatusChange(index, v)} 
+                  />
+                </div>
+
+                {/* Método - solo lectura */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Metodo devolución
+                  </label>
+                  <div className="w-full px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                    {config.metodo || '—'}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    No se puede modificar en edición
+                  </p>
+                </div>
+
+                {/* Cantidad - solo lectura */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Cantidad
+                  </label>
+                  <div className="w-full px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                    {config.cantidad || 1}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    No se puede modificar en edición
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ======================= COMPONENTE: PRODUCTO SELECCIONADO (VERSIÓN CREACIÓN) =======================
+
+function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, onRemove, submitted }) {
+  const [expanded, setExpanded] = useState(true);
   const [touched, setTouched] = useState({});
-  // Cantidad máxima del producto disponible para devolver
   const maxTotalQuantity = producto.cantidad;
 
-  // Calcular cantidad total usada
   const totalQuantityUsed = configs.reduce((sum, cfg) => sum + (cfg.cantidad || 0), 0);
   const remainingQuantity = maxTotalQuantity - totalQuantityUsed;
 
@@ -162,7 +273,6 @@ function ProductoSeleccionado({ producto, configs, onConfigsChange, onRemove, su
 
   const handleAddConfig = () => {
     if (remainingQuantity <= 0) return;
-    
     const newConfig = {
       id: generateTempId(),
       motivo: '',
@@ -199,12 +309,11 @@ function ProductoSeleccionado({ producto, configs, onConfigsChange, onRemove, su
   };
 
   return (
-    <div className={`border rounded-xl overflow-hidden transition-colors border-gray-300`}>
+    <div className="border rounded-xl overflow-hidden transition-colors border-gray-300">
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2.5 bg-[#f1f1f1]">
         <button type="button" onClick={() => setExpanded((p) => !p)}
-          className="text-[#004D77] hover:text-[#003d61] transition cursor-pointer flex-shrink-0"
-          title={expanded ? 'Colapsar' : 'Expandir'}>
+          className="text-[#004D77] hover:text-[#003d61] transition cursor-pointer flex-shrink-0">
           <ChevronLeft className="w-4 h-4 transition-transform duration-200"
             style={{ transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
         </button>
@@ -224,7 +333,7 @@ function ProductoSeleccionado({ producto, configs, onConfigsChange, onRemove, su
         </div>
       </div>
 
-      {/* Formulario expandido - Múltiples configuraciones */}
+      {/* Formulario expandido */}
       {expanded && (
         <div className="bg-white px-3 py-3 border-t border-gray-100">
           {configs.map((config, index) => (
@@ -333,7 +442,6 @@ function ProductoSeleccionado({ producto, configs, onConfigsChange, onRemove, su
             </div>
           ))}
 
-          {/* Botón para agregar nueva configuración */}
           {remainingQuantity > 0 && (
             <button
               type="button"
@@ -349,55 +457,23 @@ function ProductoSeleccionado({ producto, configs, onConfigsChange, onRemove, su
   );
 }
 
-// ======================= COMPONENTE PRINCIPAL: FORM RETURN =======================
+// ======================= COMPONENTE PRINCIPAL =======================
 
-/**
- * Componente: FormReturn
- * 
- * Modal principal para crear o editar una devolución.
- * Integra selección de productos, datos de cliente, evidencias y validación.
- * 
- * @component
- * @param {Object} props - Props del componente
- * @param {boolean} props.isOpen - Controla visibilidad del modal
- * @param {Function} props.onClose - Función para cerrar
- * @param {Object|null} props.returnData - Datos para edición (null para crear)
- * @param {Function} props.onSave - Callback al guardar la devolución
- * 
- * @returns {JSX.Element|null} Modal del formulario o null si está cerrado
- */
 function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
-  // Determinar si es edición o creación
   const isEdit = Boolean(returnData);
 
-  // ======================= ESTADOS PRINCIPALES =======================
-  
-  // Datos de factura
   const [noFactura,    setNoFactura]    = useState('');
-  // Datos del cliente
   const [cliente,      setCliente]      = useState('');
-  // Nombre del asesor que atiende
   const [asesor,       setAsesor]       = useState('');
-  // Estado general de la devolución
   const [estadoGral,   setEstadoGral]   = useState('Pendiente');
-  // Array de evidencias adjuntas
   const [evidencias,   setEvidencias]   = useState([]);
-  // Controla visibilidad del modal de evidencias
   const [evidenceOpen, setEvidenceOpen] = useState(false);
-  // Si se requiere envío a domicilio
   const [domicilio,    setDomicilio]    = useState(true);
-  // Dirección de entrega
   const [direccion,    setDireccion]    = useState('');
-  // Descripción adicional de la devolución
   const [descripcion,  setDescripcion]  = useState('');
-  // Productos seleccionados con sus configuraciones
   const [seleccionados, setSeleccionados] = useState({});
-  // Indica si el formulario fue enviado
   const [submitted,    setSubmitted]    = useState(false);
 
-  // ======================= ESTADOS DE VALIDACIÓN =======================
-  
-  // Errores por campo
   const [errors, setErrors] = useState({
     noFactura: '',
     cliente: '',
@@ -406,7 +482,6 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     evidencias: '',
     productos: ''
   });
-  // Campos que han sido tocados (para mostrar errores)
   const [touched, setTouched] = useState({
     noFactura: false,
     cliente: false,
@@ -415,13 +490,8 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     evidencias: false
   });
 
-  // Hook para mostrar alertas
   const { showError } = useAlert();
 
-  // ======================= USEEFFECT: CARGAR DATOS =======================
-  
-  // Se ejecuta cuando se abre el modal o hay cambio en returnData
-  // Carga datos si es edición o limpia el formulario si es creación
   useEffect(() => {
     if (returnData) {
       setNoFactura(returnData.numeroFactura ?? returnData.noFactura ?? '');
@@ -433,7 +503,6 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
       setDireccion(returnData.direccion ?? '');
       setEvidencias(returnData.evidencias ?? []);
       
-      // Cargar productos seleccionados si existen
       const seleccionadosIniciales = {};
       if (returnData.productosDevueltos) {
         returnData.productosDevueltos.forEach(p => {
@@ -474,10 +543,6 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     });
   }, [returnData, isOpen]);
 
-  // ======================= USEEFFECT: LIMPIAR ERROR DIRECCIÓN =======================
-  
-  // Se ejecuta cuando cambia el estado de domicilio
-  // Limpia error de dirección si se desactiva el domicilio
   useEffect(() => {
     if (!domicilio) {
       setErrors(prev => ({ ...prev, direccion: '' }));
@@ -485,16 +550,9 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     }
   }, [domicilio]);
 
-  // ======================= FUNCIONALIDAD: VALIDACIÓN =======================
-  
-  /**
-   * Valida un campo individual del formulario.
-   * Aplica reglas específicas según el tipo de campo.
-   * @param {string} name - Nombre del campo a validar
-   * @param {*} value - Valor del campo
-   * @returns {string} Mensaje de error (vacío si es válido)
-   */
   const validateField = (name, value) => {
+    if (isEdit) return '';
+    
     switch (name) {
       case 'noFactura':
         if (!value || !value.trim()) return 'El número de factura es obligatorio';
@@ -521,12 +579,9 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     }
   };
 
-  /**
-   * Valida que los productos seleccionados tengan configuraciones válidas.
-   * Verifica que cada configuración tenga motivo y método.
-   * @returns {string} Mensaje de error o vacío si es válido
-   */
   const validateProductos = () => {
+    if (isEdit) return '';
+    
     const productosConConfigs = Object.entries(seleccionados)
       .filter(([_, configs]) => configs && configs.length > 0)
       .map(([id, configs]) => ({ id: Number(id), configs }));
@@ -551,14 +606,9 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     return '';
   };
 
-  // ======================= FUNCIONALIDAD: MANEJO DE CAMBIOS =======================
-  
-  /**
-   * Maneja cambios en campos con validación en tiempo real.
-   * @param {string} field - Nombre del campo
-   * @param {*} value - Nuevo valor
-   */
   const handleFieldChange = (field, value) => {
+    if (isEdit) return;
+    
     switch (field) {
       case 'noFactura': setNoFactura(value); break;
       case 'cliente': setCliente(value); break;
@@ -574,12 +624,9 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     }
   };
 
-  /**
-   * Maneja evento blur (salida del campo).
-   * Marca el campo como tocado y valida.
-   * @param {string} field - Nombre del campo
-   */
   const handleBlur = (field) => {
+    if (isEdit) return;
+    
     setTouched(prev => ({ ...prev, [field]: true }));
     
     let value;
@@ -595,11 +642,9 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     setErrors(prev => ({ ...prev, [field]: err }));
   };
 
-  /**
-   * Maneja cambios en las evidencias adjuntas.
-   * @param {Array} files - Array de archivos adjuntos
-   */
   const handleEvidenceChange = (files) => {
+    if (isEdit) return;
+    
     setEvidencias(files);
     if (touched.evidencias) {
       const err = validateField('evidencias', files);
@@ -607,14 +652,9 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     }
   };
 
-  // ======================= FUNCIONALIDAD: SELECCIÓN DE PRODUCTOS =======================
-  
-  /**
-   * Alterna selección de un producto individual.
-   * Crea la configuración inicial si no existe.
-   * @param {Object} prod - Producto a alternar
-   */
   const toggleProducto = (prod) => {
+    if (isEdit) return;
+    
     setSeleccionados((prev) => {
       if (prev[prod.id]) {
         const next = { ...prev };
@@ -641,12 +681,9 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     }, 0);
   };
 
-  /**
-   * Actualiza las configuraciones de un producto.
-   * @param {number} id - ID del producto
-   * @param {Array} nuevasConfigs - Nuevo array de configuraciones
-   */
   const updateConfigs = (id, nuevasConfigs) => {
+    if (isEdit) return;
+    
     setSeleccionados((prev) => ({
       ...prev,
       [id]: nuevasConfigs
@@ -658,10 +695,16 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     }, 0);
   };
 
-  /**
-   * Alterna selección de todos los productos.
-   */
+  const updateConfigsEditMode = (id, nuevasConfigs) => {
+    setSeleccionados((prev) => ({
+      ...prev,
+      [id]: nuevasConfigs
+    }));
+  };
+
   const toggleAll = () => {
+    if (isEdit) return;
+    
     if (Object.keys(seleccionados).length === PRODUCTOS_VENTA.length) {
       setSeleccionados({});
     } else {
@@ -686,12 +729,6 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     }, 0);
   };
 
-  // ======================= CÓMPUTO DE TOTALES =======================
-  
-  /**
-   * Calcula productos devueltos con todas sus configuraciones.
-   */
-  // MODIFICADO: Calcular productos devueltos con múltiples configuraciones
   const productosDevueltos = Object.entries(seleccionados)
     .filter(([_, configs]) => configs && configs.length > 0)
     .map(([id, configs]) => ({
@@ -710,33 +747,57 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     return acc + productTotal;
   }, 0);
 
-  /**
-   * Valida todo el formulario.
-   * @returns {Object} Objeto con errores por campo
-   */
   const validateForm = () => {
     const newErrors = {};
     
-    newErrors.noFactura = validateField('noFactura', noFactura);
-    newErrors.cliente = validateField('cliente', cliente);
-    newErrors.asesor = validateField('asesor', asesor);
-    if (domicilio) {
-      newErrors.direccion = validateField('direccion', direccion);
+    if (!isEdit) {
+      newErrors.noFactura = validateField('noFactura', noFactura);
+      newErrors.cliente = validateField('cliente', cliente);
+      newErrors.asesor = validateField('asesor', asesor);
+      if (domicilio) {
+        newErrors.direccion = validateField('direccion', direccion);
+      }
+      newErrors.evidencias = validateField('evidencias', evidencias);
+      newErrors.productos = validateProductos();
     }
-    newErrors.evidencias = validateField('evidencias', evidencias);
-    newErrors.productos = validateProductos();
     
     return newErrors;
   };
 
-  // ======================= FUNCIONALIDAD: ENVIAR =======================
-  
-  /**
-   * Maneja el envío del formulario.
-   * Valida todos los campos y enviar datos o mostrar errores.
-   */
   const handleSubmit = () => {
     setSubmitted(true);
+    
+    if (isEdit) {
+      const productosDevueltosData = [];
+      
+      Object.entries(seleccionados).forEach(([id, configs]) => {
+        const producto = PRODUCTOS_VENTA.find(p => p.id === Number(id));
+        configs.forEach((config, idx) => {
+          productosDevueltosData.push({
+            id: producto.id,
+            configId: config.id,
+            nombre: producto.nombre,
+            cantidad: config.cantidad,
+            precioUnit: producto.precioUnit,
+            motivo: config.motivo,
+            metodo: config.metodo,
+            estado: config.estado
+          });
+        });
+      });
+
+      const updatedData = {
+        ...returnData,
+        estado: estadoGral,
+        estadoGral: estadoGral,
+        productosDevueltos: productosDevueltosData,
+        updatedAt: new Date().toISOString()
+      };
+      
+      onSave?.(updatedData);
+      onClose?.();
+      return;
+    }
     
     setTouched({
       noFactura: true,
@@ -756,7 +817,6 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
       return;
     }
 
-    // MODIFICADO: Construir productos devueltos con todas las configuraciones
     const productosDevueltosData = [];
     
     Object.entries(seleccionados).forEach(([id, configs]) => {
@@ -800,24 +860,13 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
       totalUnidades
     };
 
-    if (isEdit && returnData) {
-      returnDataToSave.id = returnData.id;
-      returnDataToSave.numeroDevolucion = returnData.numeroDevolucion;
-      returnDataToSave.fechaCreacion = returnData.fechaCreacion;
-    }
-
     onSave?.(returnDataToSave);
     onClose?.();
   };
 
-  // ======================= UTILIDADES PARA RENDERIZADO =======================
-  
-  /**
-   * Retorna clases CSS para input según estado de validación.
-   * @param {string} field - Nombre del campo
-   * @returns {string} Clases Tailwind
-   */
   const inputClass = (field) => {
+    if (isEdit) return '';
+    
     const hasError = errors[field] && (touched[field] || submitted);
     return `w-full border rounded-lg px-3 py-2 text-sm text-gray-500 outline-none placeholder-gray-300 transition-colors ${
       hasError
@@ -826,24 +875,17 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     }`;
   };
 
-  /**
-   * Renderiza el mensaje de error de un campo si existe.
-   * @param {string} field - Nombre del campo
-   * @returns {JSX.Element|null} Elemento de error o null
-   */
   const renderError = (field) => {
+    if (isEdit) return null;
+    
     if ((touched[field] || submitted) && errors[field]) {
       return <p className="mt-0.5 text-xs text-red-600">{errors[field]}</p>;
     }
     return null;
   };
 
-  // Validar si el modal debe mostrarse
   if (!isOpen) return null;
   
-  // ======================= CÓMPUTO DE COLORES =======================
-  
-  // Determinar color del estado para visualización
   const estadoColor = { 
     Pendiente: '#dc2626', 
     Aprobada: '#15803d', 
@@ -855,12 +897,15 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
       <div className="bg-white rounded-2xl shadow-2xl w-full flex flex-col overflow-hidden"
         style={{ maxWidth: 1060, maxHeight: '92vh' }}>
 
-        {/* Header del modal */}
         <div className="bg-[#004D77] px-6 py-3.5 flex items-center justify-between flex-shrink-0">
           <h2 className="text-white font-bold text-[15px]">
             {isEdit ? `Editar devolución — ${returnData?.numeroDevolucion || ''}` : 'Nueva devolución'}
           </h2>
-          {/* Botón para cerrar el modal */}
+          {isEdit && (
+            <div className="flex items-center gap-2 bg-white/20 rounded-lg px-3 py-1">
+              <span className="text-white text-[10px] font-medium">Modo edición: solo estados</span>
+            </div>
+          )}
           <button type="button" onClick={onClose}
             className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 text-white transition cursor-pointer">
             <X className="w-4 h-4" />
@@ -871,102 +916,134 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
 
           {/* COL 1 - Datos generales */}
           <div className="w-[300px] flex-shrink-0 flex flex-col gap-3 p-4 overflow-y-auto">
-            <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1">No. Factura<span className="text-red-500">*</span></label>
-              <input
-                value={noFactura}
-                onChange={(e) => handleFieldChange('noFactura', e.target.value)}
-                onBlur={() => handleBlur('noFactura')}
-                placeholder="PMPE14988"
-                className={inputClass('noFactura')}
-              />
-              {renderError('noFactura')}
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">Cliente<span className="text-red-500">*</span></label>
-                <input
-                  value={cliente}
-                  onChange={(e) => handleFieldChange('cliente', e.target.value)}
-                  onBlur={() => handleBlur('cliente')}
-                  placeholder="Fernando Bustamante"
-                  className={inputClass('cliente')}
-                />
-                {renderError('cliente')}
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">Atendió<span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  value={asesor}
-                  onChange={(e) => handleFieldChange('asesor', e.target.value)}
-                  onBlur={() => handleBlur('asesor')}
-                  placeholder="Nombre del asesor"
-                  className={inputClass('asesor')}
-                />
-                {renderError('asesor')}
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1">Estado<span className="text-red-500">*</span></label>
-              <div className="relative">
-                <select value={estadoGral} onChange={(e) => setEstadoGral(e.target.value)}
-                  className="w-full appearance-none border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#004D77] pr-8 cursor-pointer font-semibold"
-                  style={{ color: estadoColor }}>
-                  {ESTADOS_P.map((e) => <option key={e} className="text-gray-800 font-normal">{e}</option>)}
-                </select>
-                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1">Evidencias<span className="text-red-500">*</span></label>
-              <button type="button" onClick={() => setEvidenceOpen(true)}
-                className={`w-full border rounded-lg px-3 py-2 text-sm flex items-center justify-between ${
-                  errors.evidencias && (touched.evidencias || submitted)
-                    ? 'border-red-500'
-                    : 'border-gray-300 border-dashed hover:border-[#004D77]'
-                }`}>
-                <span className="text-xs text-gray-400">
-                  {evidencias.length === 0 ? 'Adjunta evidencias' : `${evidencias.length} archivo(s) adjunto(s)`}
-                </span>
-                <Image className="w-4 h-4 text-gray-400" />
-              </button>
-              {renderError('evidencias')}
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-700">Domicilio</span>
-              <button type="button" onClick={() => setDomicilio((p) => !p)}
-                className={`relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer flex-shrink-0 ${domicilio ? 'bg-green-500' : 'bg-gray-300'}`}>
-                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${domicilio ? 'left-[26px]' : 'left-0.5'}`} />
-                {domicilio && <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-white text-[9px] font-bold">✓</span>}
-              </button>
-            </div>
-            
-            {domicilio && (
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">Dirección<span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  value={direccion}
-                  onChange={(e) => handleFieldChange('direccion', e.target.value)}
-                  onBlur={() => handleBlur('direccion')}
-                  placeholder="Calle, número, barrio"
-                  className={inputClass('direccion')}
-                />
-                {renderError('direccion')}
-              </div>
+            {isEdit ? (
+              <>
+                <DisabledField label="No. Factura" value={noFactura} required />
+                <div className="grid grid-cols-2 gap-2">
+                  <DisabledField label="Cliente" value={cliente} required />
+                  <DisabledField label="Atendió" value={asesor} required />
+                </div>
+                
+                {/* Estado - EDITABLE */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">
+                    Estado<span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <select value={estadoGral} onChange={(e) => setEstadoGral(e.target.value)}
+                      className="w-full appearance-none border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#004D77] pr-8 cursor-pointer font-semibold"
+                      style={{ color: estadoColor }}>
+                      {ESTADOS_P.map((e) => <option key={e} className="text-gray-800 font-normal">{e}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+                
+                <DisabledEvidence count={evidencias.length} />
+                <DisabledDeliveryToggle isDelivery={domicilio} />
+                {domicilio && <DisabledField label="Dirección" value={direccion} required />}
+                <DisabledTextarea label="Descripción" value={descripcion} />
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">No. Factura<span className="text-red-500">*</span></label>
+                  <input
+                    value={noFactura}
+                    onChange={(e) => handleFieldChange('noFactura', e.target.value)}
+                    onBlur={() => handleBlur('noFactura')}
+                    placeholder="PMPE14988"
+                    className={inputClass('noFactura')}
+                  />
+                  {renderError('noFactura')}
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1">Cliente<span className="text-red-500">*</span></label>
+                    <input
+                      value={cliente}
+                      onChange={(e) => handleFieldChange('cliente', e.target.value)}
+                      onBlur={() => handleBlur('cliente')}
+                      placeholder="Fernando Bustamante"
+                      className={inputClass('cliente')}
+                    />
+                    {renderError('cliente')}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1">Atendió<span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      value={asesor}
+                      onChange={(e) => handleFieldChange('asesor', e.target.value)}
+                      onBlur={() => handleBlur('asesor')}
+                      placeholder="Nombre del asesor"
+                      className={inputClass('asesor')}
+                    />
+                    {renderError('asesor')}
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">Estado<span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <select value={estadoGral} onChange={(e) => setEstadoGral(e.target.value)}
+                      className="w-full appearance-none border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#004D77] pr-8 cursor-pointer font-semibold"
+                      style={{ color: estadoColor }}>
+                      {ESTADOS_P.map((e) => <option key={e} className="text-gray-800 font-normal">{e}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">Evidencias<span className="text-red-500">*</span></label>
+                  <button type="button" onClick={() => setEvidenceOpen(true)}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm flex items-center justify-between ${
+                      errors.evidencias && (touched.evidencias || submitted)
+                        ? 'border-red-500'
+                        : 'border-gray-300 border-dashed hover:border-[#004D77]'
+                    }`}>
+                    <span className="text-xs text-gray-400">
+                      {evidencias.length === 0 ? 'Adjunta evidencias' : `${evidencias.length} archivo(s) adjunto(s)`}
+                    </span>
+                    <Image className="w-4 h-4 text-gray-400" />
+                  </button>
+                  {renderError('evidencias')}
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-700">Domicilio</span>
+                  <button type="button" onClick={() => setDomicilio((p) => !p)}
+                    className={`relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer flex-shrink-0 ${domicilio ? 'bg-green-500' : 'bg-gray-300'}`}>
+                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${domicilio ? 'left-[26px]' : 'left-0.5'}`} />
+                    {domicilio && <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-white text-[9px] font-bold">✓</span>}
+                  </button>
+                </div>
+                
+                {domicilio && (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1">Dirección<span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      value={direccion}
+                      onChange={(e) => handleFieldChange('direccion', e.target.value)}
+                      onBlur={() => handleBlur('direccion')}
+                      placeholder="Calle, número, barrio"
+                      className={inputClass('direccion')}
+                    />
+                    {renderError('direccion')}
+                  </div>
+                )}
+                
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">Descripción</label>
+                  <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)}
+                    placeholder="Agrega una descripción" rows={4}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs text-gray-600 outline-none focus:border-[#004D77] resize-none placeholder-gray-300" />
+                </div>
+              </>
             )}
-            
-            <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1">Descripción</label>
-              <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)}
-                placeholder="Agrega una descripción" rows={4}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs text-gray-600 outline-none focus:border-[#004D77] resize-none placeholder-gray-300" />
-            </div>
           </div>
 
           {/* COL 2 - Selección de productos */}
@@ -974,13 +1051,15 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
             <p className="text-sm font-bold text-gray-800 mb-0.5">1. Productos</p>
             <p className="text-xs text-gray-400 mb-3">Seleccione los productos que va a devolver</p>
             
-            <label className="flex items-center gap-2 text-xs text-gray-600 font-medium mb-3 cursor-pointer">
-              <input type="checkbox" checked={Object.keys(seleccionados).length === PRODUCTOS_VENTA.length}
-                onChange={toggleAll} className="accent-[#004D77] w-3.5 h-3.5" />
-              Seleccionar todos
-            </label>
+            {!isEdit && (
+              <label className="flex items-center gap-2 text-xs text-gray-600 font-medium mb-3 cursor-pointer">
+                <input type="checkbox" checked={Object.keys(seleccionados).length === PRODUCTOS_VENTA.length}
+                  onChange={toggleAll} className="accent-[#004D77] w-3.5 h-3.5" />
+                Seleccionar todos
+              </label>
+            )}
             
-            {errors.productos && (submitted) && (
+            {errors.productos && (submitted) && !isEdit && (
               <p className="mb-2 text-xs text-red-600">{errors.productos}</p>
             )}
             
@@ -990,8 +1069,8 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
                 return (
                   <div key={prod.id}>
                     {!isSelected ? (
-                      <div onClick={() => toggleProducto(prod)}
-                        className="flex items-center gap-2.5 border border-gray-200 rounded-xl px-3 py-2.5 cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition">
+                      <div onClick={() => !isEdit && toggleProducto(prod)}
+                        className={`flex items-center gap-2.5 border border-gray-200 rounded-xl px-3 py-2.5 ${!isEdit ? 'cursor-pointer hover:border-gray-300 hover:bg-gray-50' : 'cursor-default bg-gray-50 opacity-70'} transition`}>
                         <input type="checkbox" checked={false} readOnly className="accent-[#004D77] w-4 h-4 cursor-pointer flex-shrink-0" />
                         <ProductoImg src={prod.imagen} size="sm" />
                         <div className="flex-1 min-w-0">
@@ -1002,9 +1081,21 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
                           <p className="text-[10px] text-gray-400">Total</p>
                           <p className="text-xs font-bold text-gray-700">${formatCOP(prod.cantidad * prod.precioUnit)}</p>
                         </div>
+                        {isEdit && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            No se puede modificar en edición
+                          </p>
+                        )}
                       </div>
+                    ) : isEdit ? (
+                      <ProductoSeleccionadoEditMode
+                        producto={prod}
+                        configs={seleccionados[prod.id]}
+                        onConfigChange={(nuevasConfigs) => updateConfigsEditMode(prod.id, nuevasConfigs)}
+                        submitted={submitted}
+                      />
                     ) : (
-                      <ProductoSeleccionado
+                      <ProductoSeleccionadoCreateMode
                         producto={prod}
                         configs={seleccionados[prod.id]}
                         onConfigsChange={(nuevasConfigs) => updateConfigs(prod.id, nuevasConfigs)}
@@ -1106,17 +1197,19 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
         </div>
       </div>
 
-      <Evidence 
-        isOpen={evidenceOpen} 
-        onClose={() => setEvidenceOpen(false)}
-        files={evidencias} 
-        descripcion={descripcion}
-        onSave={({ files, descripcion: desc }) => {
-          setEvidencias(files);
-          setDescripcion(desc);
-          handleEvidenceChange(files);
-        }} 
-      />
+      {!isEdit && (
+        <Evidence 
+          isOpen={evidenceOpen} 
+          onClose={() => setEvidenceOpen(false)}
+          files={evidencias} 
+          descripcion={descripcion}
+          onSave={({ files, descripcion: desc }) => {
+            setEvidencias(files);
+            setDescripcion(desc);
+            handleEvidenceChange(files);
+          }} 
+        />
+      )}
     </div>
   );
 }

@@ -25,6 +25,27 @@ import { formatCurrency, formatDate } from './returnsHelpers';
  * @returns {void} Descarga el archivo automáticamente
  */
 export const exportReturnsToExcel = (returns) => {
+  // Fecha actual para el encabezado
+  const currentDate = new Date();
+  const formattedDate = currentDate.toLocaleDateString('es-CO', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  const formattedDateTime = currentDate.toLocaleString('es-CO', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+
+  // ======================= TÍTULO PRINCIPAL =======================
+  const titleRow = [['DEVOLUCIÓN DE VENTAS']];
+  const dateRow = [[`Fecha de exportación: ${formattedDate} - ${formattedDateTime}`]];
+  const emptyRow = [['']];
+
   // ======================= HOJA 1: RESUMEN DE DEVOLUCIONES =======================
   
   const summaryHeaders = [
@@ -146,15 +167,36 @@ export const exportReturnsToExcel = (returns) => {
     ['Devoluciones Aprobadas', approvedReturns],
     ['Devoluciones Anuladas', cancelledReturns],
     [''],
-    ['Fecha de Exportación', formatDate(new Date())]
+    ['Fecha de Exportación', formattedDateTime]
   ];
   
   // ======================= CREAR LIBRO DE TRABAJO =======================
   
   const wb = XLSX.utils.book_new();
   
-  // Crear hoja de resumen de devoluciones
-  const summaryWs = XLSX.utils.aoa_to_sheet([summaryHeaders, ...summaryData]);
+  // ======================= HOJA 1: RESUMEN =======================
+  const summarySheetData = [
+    ...titleRow,
+    ...dateRow,
+    ...emptyRow,
+    [['RESUMEN DE DEVOLUCIONES']],
+    ...emptyRow,
+    summaryHeaders,
+    ...summaryData
+  ];
+  
+  const summaryWs = XLSX.utils.aoa_to_sheet(summarySheetData);
+  
+  // Combinar celdas para el título
+  if (!summaryWs['!merges']) summaryWs['!merges'] = [];
+  summaryWs['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: summaryHeaders.length - 1 } });
+  summaryWs['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: summaryHeaders.length - 1 } });
+  summaryWs['!merges'].push({ s: { r: 3, c: 0 }, e: { r: 3, c: summaryHeaders.length - 1 } });
+  
+  // Estilos para el título (opcional - usando propiedades)
+  summaryWs['A1'] = { v: 'DEVOLUCIÓN DE VENTAS', t: 's' };
+  summaryWs['A2'] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: 's' };
+  summaryWs['A4'] = { v: 'RESUMEN DE DEVOLUCIONES', t: 's' };
   
   // Ajustar ancho de columnas para resumen
   const summaryColWidths = [
@@ -173,8 +215,28 @@ export const exportReturnsToExcel = (returns) => {
   ];
   summaryWs['!cols'] = summaryColWidths;
   
-  // Crear hoja de detalle de productos
-  const productWs = XLSX.utils.aoa_to_sheet([productHeaders, ...productData]);
+  // ======================= HOJA 2: DETALLE DE PRODUCTOS =======================
+  const productSheetData = [
+    ...titleRow,
+    ...dateRow,
+    ...emptyRow,
+    [['DETALLE DE PRODUCTOS DEVUELTOS']],
+    ...emptyRow,
+    productHeaders,
+    ...productData
+  ];
+  
+  const productWs = XLSX.utils.aoa_to_sheet(productSheetData);
+  
+  // Combinar celdas para el título
+  if (!productWs['!merges']) productWs['!merges'] = [];
+  productWs['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: productHeaders.length - 1 } });
+  productWs['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: productHeaders.length - 1 } });
+  productWs['!merges'].push({ s: { r: 3, c: 0 }, e: { r: 3, c: productHeaders.length - 1 } });
+  
+  productWs['A1'] = { v: 'DEVOLUCIÓN DE VENTAS', t: 's' };
+  productWs['A2'] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: 's' };
+  productWs['A4'] = { v: 'DETALLE DE PRODUCTOS DEVUELTOS', t: 's' };
   
   // Ajustar ancho de columnas para productos
   const productColWidths = [
@@ -192,8 +254,28 @@ export const exportReturnsToExcel = (returns) => {
   ];
   productWs['!cols'] = productColWidths;
   
-  // Crear hoja de estadísticas
-  const statsWs = XLSX.utils.aoa_to_sheet([statsHeaders, ...statsData]);
+  // ======================= HOJA 3: ESTADÍSTICAS =======================
+  const statsSheetData = [
+    ...titleRow,
+    ...dateRow,
+    ...emptyRow,
+    [['ESTADÍSTICAS']],
+    ...emptyRow,
+    statsHeaders,
+    ...statsData
+  ];
+  
+  const statsWs = XLSX.utils.aoa_to_sheet(statsSheetData);
+  
+  // Combinar celdas para el título
+  if (!statsWs['!merges']) statsWs['!merges'] = [];
+  statsWs['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } });
+  statsWs['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 1 } });
+  statsWs['!merges'].push({ s: { r: 3, c: 0 }, e: { r: 3, c: 1 } });
+  
+  statsWs['A1'] = { v: 'DEVOLUCIÓN DE VENTAS', t: 's' };
+  statsWs['A2'] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: 's' };
+  statsWs['A4'] = { v: 'ESTADÍSTICAS', t: 's' };
   
   // Agregar hojas al libro
   XLSX.utils.book_append_sheet(wb, summaryWs, 'Resumen Devoluciones');
@@ -201,7 +283,7 @@ export const exportReturnsToExcel = (returns) => {
   XLSX.utils.book_append_sheet(wb, statsWs, 'Estadísticas');
   
   // Descargar el archivo
-  const fileName = `devoluciones_completas_${new Date().toISOString().split('T')[0]}.xlsx`;
+  const fileName = `devolucion_ventas_${new Date().toISOString().split('T')[0]}.xlsx`;
   XLSX.writeFile(wb, fileName);
 };
 
@@ -215,6 +297,22 @@ export const exportReturnsToExcel = (returns) => {
  * @returns {void} Descarga el archivo automáticamente
  */
 export const exportReturnsSummaryToExcel = (returns) => {
+  // Fecha actual para el encabezado
+  const currentDate = new Date();
+  const formattedDate = currentDate.toLocaleDateString('es-CO', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  const formattedDateTime = currentDate.toLocaleString('es-CO', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+
   const headers = [
     'Número Devolución',
     'Factura',
@@ -237,8 +335,29 @@ export const exportReturnsSummaryToExcel = (returns) => {
     r.asesor || ''
   ]);
   
+  // Crear hoja con título
+  const sheetData = [
+    ['DEVOLUCIÓN DE VENTAS'],
+    [`Fecha de exportación: ${formattedDate} - ${formattedDateTime}`],
+    [''],
+    ['RESUMEN DE DEVOLUCIONES'],
+    [''],
+    headers,
+    ...data
+  ];
+  
   const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+  const ws = XLSX.utils.aoa_to_sheet(sheetData);
+  
+  // Combinar celdas para el título
+  if (!ws['!merges']) ws['!merges'] = [];
+  ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } });
+  ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } });
+  ws['!merges'].push({ s: { r: 3, c: 0 }, e: { r: 3, c: headers.length - 1 } });
+  
+  ws['A1'] = { v: 'DEVOLUCIÓN DE VENTAS', t: 's' };
+  ws['A2'] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: 's' };
+  ws['A4'] = { v: 'RESUMEN DE DEVOLUCIONES', t: 's' };
   
   const colWidths = [
     { wch: 18 }, { wch: 15 }, { wch: 30 }, { wch: 25 },
@@ -247,5 +366,5 @@ export const exportReturnsSummaryToExcel = (returns) => {
   ws['!cols'] = colWidths;
   
   XLSX.utils.book_append_sheet(wb, ws, 'Devoluciones');
-  XLSX.writeFile(wb, `devoluciones_resumen_${new Date().toISOString().split('T')[0]}.xlsx`);
+  XLSX.writeFile(wb, `devolucion_ventas_resumen_${new Date().toISOString().split('T')[0]}.xlsx`);
 };

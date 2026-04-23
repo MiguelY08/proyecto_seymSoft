@@ -263,7 +263,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     <ErrorMsg field="document" />
                   </div>
                 </div>
-
                 {/* Nombres */}
                 <div className="flex flex-col gap-1">
                   <Label required>Nombres</Label>
@@ -275,12 +274,18 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     onBlur={handleBlur} 
                     placeholder="Ej: Juan Carlos" 
                     autoComplete="off" 
-                    className={inputClass('firstName')} 
+                    className={isEditing ? disabledInputClass('firstName') : inputClass('firstName')}
+                    disabled={isEditing}
                   />
+                  {isEditing && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      No se puede modificar en edición
+                    </p>
+                  )}
                   <ErrorMsg field="firstName" />
                 </div>
 
-                {/* Apellidos */}
+            {/* Apellidos */}
                 <div className="flex flex-col gap-1">
                   <Label required>Apellidos</Label>
                   <input 
@@ -291,8 +296,14 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     onBlur={handleBlur} 
                     placeholder="Ej: Pérez Gómez" 
                     autoComplete="off" 
-                    className={inputClass('lastName')} 
+                    className={isEditing ? disabledInputClass('lastName') : inputClass('lastName')}
+                    disabled={isEditing}
                   />
+                  {isEditing && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      No se puede modificar en edición
+                    </p>
+                  )}
                   <ErrorMsg field="lastName" />
                 </div>
 

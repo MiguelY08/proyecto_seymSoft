@@ -9,6 +9,15 @@ import {
 } from "../services/categoriesService";
 import SubcategoriesTable from "../components/SubcategoriesTable";
 
+// ─── Normaliza texto: minúsculas + sin tildes/diacríticos ────────────────────
+const normalizeName = (str = "") =>
+  str
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+// ─── Toggle Activo/Inactivo ───────────────────────────────────────────────────
 function ActiveToggle({ activo, onChange }) {
   return (
     <button
@@ -67,7 +76,7 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
 
     const duplicate = getSubcategories()
       .filter((s) => s.categoriaId === categoryId)
-      .some((s) => s.nombre.toLowerCase() === subForm.nombre.trim().toLowerCase());
+      .some((s) => normalizeName(s.nombre) === normalizeName(subForm.nombre));
 
     if (duplicate) {
       showWarning("Nombre duplicado", "Ya existe una subcategoría con ese nombre.");
@@ -199,7 +208,7 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
     if (!nombreTrim) { setError("El nombre de la categoría es obligatorio."); return; }
     const existe = allCategories.some((c) => {
       if (category && c.id === category.id) return false;
-      return c.nombre.toLowerCase() === nombreTrim.toLowerCase();
+      return normalizeName(c.nombre) === normalizeName(nombreTrim);
     });
     setError(existe ? "Ya existe una categoría con ese nombre." : "");
   }, [form.nombre, allCategories, category]);
@@ -215,7 +224,7 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
       const result = await showConfirm(
         "warning",
         "Desactivar categoría",
-        `Al desactivar "${category.nombre}" también se desactivarán todas sus subcategorías. ¿Deseas continuar?`,
+        `Al desactivar "${category.nombre}" también se desactivarán todas sus subcategorías y los productos asociados a ellas. ¿Deseas continuar?`,
         { confirmButtonText: "Sí, desactivar", cancelButtonText: "Cancelar" }
       );
       if (!result?.isConfirmed) return;
