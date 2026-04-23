@@ -51,7 +51,10 @@ import NonConformingProducts from "../../Features/administrtivePanel/purchases/n
 
 /* SALES */
 import ClientsPage from "../../Features/administrtivePanel/sales/clients/page/ClientsPage.jsx";
-import OrdersA from "../../Features/administrtivePanel/sales/orders/pages/Orders.jsx";
+
+import OrdersLayout from "../../Features/administrtivePanel/sales/orders/pages/OrdersLayout.jsx";
+import OrdersList from "../../Features/administrtivePanel/sales/orders/pages/OrdersList.jsx";
+import OrderForm from "../../Features/administrtivePanel/sales/orders/pages/OrdersForm.jsx"
 
 import Sales from "../../Features/administrtivePanel/sales/sales/pages/Sales.jsx";
 // import SaleForm from "../../Features/administrtivePanel/sales/sales/pages/SaleForm.jsx";
@@ -156,7 +159,13 @@ const AppRouter = () => {
           <Route path="sales/annular-sale" element={<AnnularSale />} />
 
           <Route path="sales/clients" element={<ClientsPage />} />
-          <Route path="sales/orders" element={<OrdersA />} />
+
+          <Route path="sales/orders" element={<OrdersLayout />}>
+            <Route index element={<OrdersList />} />
+            <Route path="new-order" element={<OrderForm />} />
+            <Route path=":id" element={<OrderForm />} />
+          </Route>
+
           <Route path="sales/returns-s" element={<ReturnsPage />} />
 
           {/* PAYMENTS */}

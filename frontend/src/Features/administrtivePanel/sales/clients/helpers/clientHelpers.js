@@ -229,6 +229,11 @@ export const validateClientForm = (formData) => {
     errors.clientCredit = 'Solo números permitidos';
   }
 
+  // ← NUEVO: Validación para saldo a favor (solo números)
+  if (formData.saldoFavor?.trim() && !isOnlyNumbers(formData.saldoFavor)) {
+    errors.saldoFavor = 'Solo números permitidos';
+  }
+
   if (!formData.clientType?.trim()) {
     errors.clientType = 'Seleccione el tipo de cliente';
   }

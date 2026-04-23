@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   X, IdCard, User, Mail, Phone,
   MapPin, UserCheck, CreditCard,
-  CalendarDays, BarChart2, TrendingUp,
+  CalendarDays, BarChart2, TrendingUp, Wallet,
 } from 'lucide-react';
 import GraphClient from '../components/GraphClient';
 import {
@@ -11,6 +11,7 @@ import {
   formatRut,
   formatCurrency,
 } from '../helpers/clientHelpers';
+import { saldoFavorService } from '../services/clientsService';
 
 // ─── Fila de detalle — estilo InfoUser ────────────────────────────────────────
 function DetailRow({ icon: Icon, label, value, fullWidth = false }) {
@@ -35,7 +36,9 @@ function DetailRow({ icon: Icon, label, value, fullWidth = false }) {
 function InfoClient({ isOpen, onClose, client }) {
   const [showGraph, setShowGraph] = useState(false);
   const [montoOcupado, setMontoOcupado] = useState(0);
+  const [saldoFavor, setSaldoFavor] = useState(0);
   const [loadingMonto, setLoadingMonto] = useState(false);
+  const [loadingSaldo, setLoadingSaldo] = useState(false);
 
   // KEY para localStorage - para conectar con módulo de pagos y abonos
   const CREDIT_USAGE_KEY = 'client_credit_usage';
@@ -43,6 +46,7 @@ function InfoClient({ isOpen, onClose, client }) {
   useEffect(() => {
     if (client && isOpen) {
       loadMontoOcupado(client.id);
+      loadSaldoFavor(client.id);
     }
   }, [client, isOpen]);
 
@@ -64,6 +68,20 @@ function InfoClient({ isOpen, onClose, client }) {
       setMontoOcupado(0);
     } finally {
       setLoadingMonto(false);
+    }
+  };
+
+  // Función para cargar el saldo a favor desde localStorage
+  const loadSaldoFavor = (clientId) => {
+    setLoadingSaldo(true);
+    try {
+      const balance = saldoFavorService.getByClientId(clientId);
+      setSaldoFavor(balance);
+    } catch (error) {
+      console.error('Error al cargar saldo a favor:', error);
+      setSaldoFavor(0);
+    } finally {
+      setLoadingSaldo(false);
     }
   };
 
@@ -143,10 +161,11 @@ function InfoClient({ isOpen, onClose, client }) {
             </div>
           </div>
 
-          {/* Card de crédito / Monto Ocupado / RUT / CIU */}
+          {/* Card de crédito - 2 FILAS */}
           <div className="mx-4 mt-3 shrink-0">
             <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-2.5">
-              {/* Primera fila: Crédito y Monto Ocupado */}
+              
+              {/* FILA 1: Crédito, Crédito disponible, Monto ocupado */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-[#004D77]/10 flex items-center justify-center">
@@ -160,7 +179,18 @@ function InfoClient({ isOpen, onClose, client }) {
                   </div>
                 </div>
 
-                {/* Monto Ocupado - nuevo campo */}
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
+                    <CreditCard className="w-3.5 h-3.5 text-blue-600" strokeWidth={1.8} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Crédito disponible</p>
+                    <p className="text-sm font-bold text-blue-600">
+                      {loadingMonto ? '...' : formatCurrency(disponible)}
+                    </p>
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
                     <TrendingUp className="w-3.5 h-3.5 text-amber-600" strokeWidth={1.8} />
@@ -177,23 +207,38 @@ function InfoClient({ isOpen, onClose, client }) {
               {/* Línea separadora */}
               <div className="border-t border-gray-200 my-2" />
 
-              {/* Segunda fila: RUT, CIU y Crédito disponible */}
+              {/* FILA 2: RUT, Código CIU, Saldo a favor */}
               <div className="flex items-center justify-between">
-                <div className="text-center">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">RUT</p>
-                  <p className="text-sm font-bold text-gray-800">{formatRut(client.rut)}</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-gray-500">RUT</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">RUT</p>
+                    <p className="text-sm font-bold text-gray-800">{formatRut(client.rut)}</p>
+                  </div>
                 </div>
-                <div className="h-8 w-px bg-gray-200" />
-                <div className="text-center">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Cód. CIU</p>
-                  <p className="text-sm font-bold text-gray-800">{client.ciuCode || '—'}</p>
+
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-gray-500">CIU</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Cód. CIU</p>
+                    <p className="text-sm font-bold text-gray-800">{client.ciuCode || '—'}</p>
+                  </div>
                 </div>
-                <div className="h-8 w-px bg-gray-200" />
-                <div className="text-center">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Crédito disponible</p>
-                  <p className="text-sm font-bold text-green-600">
-                    {loadingMonto ? '...' : formatCurrency(disponible)}
-                  </p>
+
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center">
+                    <Wallet className="w-3.5 h-3.5 text-green-600" strokeWidth={1.8} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Saldo a favor</p>
+                    <p className="text-sm font-bold text-green-600">
+                      {loadingSaldo ? '...' : (saldoFavor > 0 ? formatCurrency(saldoFavor) : '$ 0')}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

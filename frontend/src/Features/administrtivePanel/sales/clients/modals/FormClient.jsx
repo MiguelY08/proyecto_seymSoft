@@ -3,7 +3,7 @@ import {
   X, ChevronDown, ChevronRight,
   UserCircle, Users, IdCard, MapPin, Phone,
   Mail, UserCheck, CreditCard, ShoppingCart,
-  FileText, Hash, BarChart2,
+  FileText, Hash, BarChart2, TrendingUp,
 } from 'lucide-react';
 import GraphClient        from '../components/GraphClient';
 import { validateClientForm } from '../helpers/clientHelpers';
@@ -23,6 +23,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     contactName:  '',
     contactPhone: '',
     clientCredit: '',
+    saldoFavor:   '',  // ← NUEVO: Saldo a favor
     clientType:   '',
     rut:          '',
     ciuCode:      '',
@@ -46,6 +47,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
         contactName:  client.contactName  || '',
         contactPhone: client.contactPhone || '',
         clientCredit: client.clientCredit || '',
+        saldoFavor:   client.saldoFavor   || '0',  // ← NUEVO
         clientType:   client.clientType   || '',
         rut:          client.rut          || '',
         ciuCode:      client.ciuCode      || '',
@@ -74,10 +76,8 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     
     if (name === 'rut') {
       if (value === 'si') {
-        // Si RUT es "Sí", el código CIU debe ser obligatorio, lo dejamos vacío para que el usuario lo llene
         newFormData.ciuCode = newFormData.ciuCode || '';
       } else if (value === 'no') {
-        // Si RUT es "No", el código CIU se genera automáticamente
         newFormData.ciuCode = 'No aplica';
       }
     }
@@ -263,6 +263,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     <ErrorMsg field="document" />
                   </div>
                 </div>
+
                 {/* Nombres */}
                 <div className="flex flex-col gap-1">
                   <Label required>Nombres</Label>
@@ -285,7 +286,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   <ErrorMsg field="firstName" />
                 </div>
 
-            {/* Apellidos */}
+                {/* Apellidos */}
                 <div className="flex flex-col gap-1">
                   <Label required>Apellidos</Label>
                   <input 
@@ -433,6 +434,25 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     className={inputClass('clientCredit')} 
                   />
                   <ErrorMsg field="clientCredit" />
+                </div>
+
+                {/* ← NUEVO: Saldo a favor */}
+                <div className="flex flex-col gap-1">
+                  <Label>Saldo a favor</Label>
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      name="saldoFavor" 
+                      value={formData.saldoFavor} 
+                      onChange={handleChange} 
+                      onBlur={handleBlur} 
+                      placeholder="0" 
+                      autoComplete="off" 
+                      className={inputClass('saldoFavor')} 
+                    />
+                  </div>
+                  <ErrorMsg field="saldoFavor" />
+                  <p className="text-[10px] text-gray-400 mt-0.5">Saldo que el cliente tiene a favor para futuras compras</p>
                 </div>
 
                 {/* RUT + Código CIU */}
