@@ -204,12 +204,12 @@ function ReturnsTable({
                       <button
                         onClick={() => onEdit(row)}
                         className={`text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer ${
-                          row.estado === "Anulada"
+                          row.estado === "Anulado"
                             ? "opacity-30 cursor-not-allowed"
                             : ""
                         }`}
                         title="Editar"
-                        disabled={row.estado === "Anulada"}
+                        disabled={row.estado === "Anulado"}
                       >
                         <SquarePen className="w-4 h-4" strokeWidth={1.5} />
                       </button>
@@ -219,16 +219,16 @@ function ReturnsTable({
                       <button
                         onClick={() => onCancel(row)}
                         className={`transition cursor-pointer ${
-                          row.estado === "Anulada"
+                          row.estado === "Anulado"
                             ? "text-gray-300 cursor-not-allowed"
                             : "text-gray-400 hover:scale-110 hover:text-red-500"
                         }`}
                         title={
-                          row.estado === "Anulada"
+                          row.estado === "Anulado"
                             ? "Ya está anulada"
                             : "Anular devolución"
                         }
-                        disabled={row.estado === "Anulada"}
+                        disabled={row.estado === "Anulado"}
                       >
                         <XCircle className="w-4 h-4" strokeWidth={1.5} />
                       </button>

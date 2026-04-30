@@ -1,315 +1,382 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+// src/features/administrtivePanel/sales/pages/SaleForm.jsx
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronLeft, Save } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 
-import SaleDetailsForm          from '../components/SaleDetailsForm';
-import OrderForm                from '../components/OrderForm';
-import DataSalePreview          from '../components/DataSalePreview';
-import { SalesDB }              from '../services/salesBD';
-import { generateFactura, validateForm, validatePaymentAmounts, getInitialPaymentAmounts } from '../helpers/salesHelpers';
+// Servicios
+import { SalesServices } from '../services/salesServices';
+import ProductsService from '../../../purchases/products/services/productsServices';
+import { clientsService } from '../../clients/services/clientsService';
+import { useAuth } from '../../../../access/context/AuthContext';
 
-/**
- * Componente para crear o editar una venta.
- * Maneja el formulario de detalles de venta, productos y vista previa.
- * Incluye validación, confirmaciones y navegación.
- *
- * @component
- * @returns {JSX.Element} El formulario de venta.
- */
+// Componentes reutilizados del módulo de pedidos
+import LeftSectionForm from '../../orders/components/LeftSectionForm';
+import RightSectionForm from '../../orders/components/RightSectionForm';
+import PaymentsSection from '../../orders/components/PaymentsSection';
+
+// Helpers
+import { generateFactura, getInitialPaymentAmounts } from '../helpers/salesHelpers';
+import { ESTADOS_LOGISTICOS, ORIGENES } from '../../orders/services/ordersService';
+
 function SaleForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const { showConfirm, showWarning, showSuccess, showError } = useAlert();
+  const { user } = useAuth();
 
-  // Determinar si es edición y obtener datos de la venta
   const saleToEdit = location.state?.sale ?? null;
-  const isEditing  = saleToEdit !== null;
+  const isEditing = saleToEdit !== null;
 
-  // Una venta anulada no puede cambiar su estado
-  const isAnulada  = isEditing && saleToEdit?.estado === 'Anulada';
-
-  // Generar o usar número de factura
-  const [facturaNo] = useState(() =>
-    isEditing ? saleToEdit.factura : generateFactura()
-  );
-
-  // Estado del formulario
-  const [form, setForm] = useState({
-    clienteId:  location.state?.newUserId
-      ?? (saleToEdit ? String(saleToEdit.clienteId ?? '') : ''),
-    vendedorId: saleToEdit ? String(saleToEdit.vendedorId ?? '') : '',
-    metodoPago: saleToEdit?.metodoPago ?? [],
-    estado:     saleToEdit?.estado     ?? '',
-    entrega:    saleToEdit?.entrega    ?? '',
-    direccion:  saleToEdit?.direccion  ?? '',
-  });
-
-  // Estado para montos de pago
-  const [paymentAmounts, setPaymentAmounts] = useState(() => {
-    if (isEditing && saleToEdit?.paymentAmounts) {
-      return { ...getInitialPaymentAmounts(), ...saleToEdit.paymentAmounts };
+  // Redirigir a edición de pedido si se intenta editar una venta existente
+  useEffect(() => {
+    if (isEditing) {
+      if (saleToEdit?.pedidoId) {
+        navigate(`/admin/sales/orders/${saleToEdit.pedidoId}`, { replace: true });
+      } else {
+        showError('Error', 'No se encontró el pedido asociado a esta venta.');
+        navigate('/admin/sales', { replace: true });
+      }
     }
-    return getInitialPaymentAmounts();
+  }, [isEditing, saleToEdit, navigate, showError]);
+
+  // Si es edición, no renderizamos nada (redirige)
+  if (isEditing) {
+    return null;
+  }
+
+  // ─── Estados para nueva venta ─────────────────────────────────────────────
+  const [loading, setLoading] = useState(false);
+  const [facturaNo] = useState(() => generateFactura());
+
+  // Datos del formulario (similar a OrdersForm)
+  const [formData, setFormData] = useState({
+    clienteId: location.state?.newUserId ?? '',
+    asesorId: user?.id || null,
+    tipoEntrega: 'recoge',
+    direccionEntrega: '',
+    productos: [],
+    estadoLogistico: ESTADOS_LOGISTICOS.EN_PROCESO, // permitir que el usuario decida
+    origen: ORIGENES.MANUAL,
+    motivoCancelacion: '',
   });
-
-  // Items originales para edición (para restaurar stock si cambian)
-  const [originalItems] = useState(() =>
-    isEditing && saleToEdit.items ? saleToEdit.items : []
-  );
-
-  // Items actuales del pedido
-  const [items,  setItems]  = useState(() => isEditing && saleToEdit.items ? saleToEdit.items : []);
   const [errors, setErrors] = useState({});
 
-  // Calcular el total de la venta en tiempo real (número, no formateado)
-  const totalAmount = useMemo(() => {
-    if (!items || items.length === 0) return 0;
-    const { total } = SalesDB._calcTotals(items);
-    return total;
-  }, [items]);
+  // Catálogos
+  const [clientes, setClientes] = useState([]);
+  const [productosCatalogo, setProductosCatalogo] = useState([]);
 
-  // Ref para los botones de acción y control de visibilidad del FAB
-  const actionsRef     = useRef(null);
-  const [atBottom, setAtBottom] = useState(false);
+  // Pagos (abonos)
+  const [pagos, setPagos] = useState([]);
+  const [paymentAmounts, setPaymentAmounts] = useState(getInitialPaymentAmounts());
+  const [totalPagado, setTotalPagado] = useState(0);
 
-  // IntersectionObserver — detecta si los botones de acción son visibles
+  // Cálculo de totales
+  const subtotal = formData.productos.reduce((sum, p) => sum + (p.subtotal || 0), 0);
+  const iva = subtotal * 0.19;
+  const total = subtotal + iva;
+  const saldoPendiente = Math.max(0, total - totalPagado);
+
+  // ─── Carga inicial de catálogos ──────────────────────────────────────────
   useEffect(() => {
-    const el = actionsRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setAtBottom(entry.isIntersecting),
-      { threshold: 0.5 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
+    const clients = clientsService.getAll();
+    setClientes(clients);
+
+    const products = ProductsService.list();
+    setProductosCatalogo(products);
   }, []);
 
-  const scrollToActions = () => {
-    actionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // Actualizar asesorId desde contexto
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({ ...prev, asesorId: user.id }));
+    }
+  }, [user]);
+
+  // ─── Manejadores para LeftSectionForm ─────────────────────────────────────
+  const handleClienteChange = (e) => {
+    const clienteId = Number(e.target.value);
+    setFormData(prev => ({ ...prev, clienteId }));
+
+    if (clienteId !== '') {
+      const cliente = clientes.find(c => c.id === clienteId);
+      if (cliente) {
+        const direccionSugerida = cliente.id === 0
+          ? 'El cliente lo recoge'
+          : (cliente.address || cliente.direccion || '');
+        setFormData(prev => ({ ...prev, direccionEntrega: direccionSugerida }));
+      }
+    }
+    if (errors.clienteId) setErrors(prev => ({ ...prev, clienteId: null }));
   };
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const handleTipoEntregaChange = (e) => {
+    const nuevoTipo = e.target.value;
+    setFormData(prev => {
+      const nuevaDireccion = nuevoTipo === 'recoge' ? 'El cliente lo recoge' : prev.direccionEntrega;
+      return { ...prev, tipoEntrega: nuevoTipo, direccionEntrega: nuevaDireccion };
+    });
   };
 
-  /**
-   * Maneja cambios en los campos del formulario.
-   * Actualiza el estado del formulario y limpia errores relacionados.
-   *
-   * @param {string} name - Nombre del campo.
-   * @param {string} value - Nuevo valor del campo.
-   */
-  const handleFormChange = useCallback((name, value) => {
-    setForm((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => ({ ...prev, [name]: '' }));
-  }, []);
+  const handleDireccionManualChange = (e) => {
+    setFormData(prev => ({ ...prev, direccionEntrega: e.target.value }));
+    if (errors.direccionEntrega) setErrors(prev => ({ ...prev, direccionEntrega: null }));
+  };
 
-  /**
-   * Maneja cambios en los montos de pago.
-   * @param {Object} newAmounts - Nuevo objeto con montos por método.
-   */
-  const handlePaymentAmountChange = useCallback((newAmounts) => {
-    setPaymentAmounts(newAmounts);
-    if (errors.paymentAmounts) setErrors((prev) => ({ ...prev, paymentAmounts: '' }));
-  }, [errors.paymentAmounts]);
+  const handleEstadoLogisticoChange = (e) => {
+    const newEstado = e.target.value;
+    setFormData(prev => ({ ...prev, estadoLogistico: newEstado }));
+    if (errors.estadoLogistico) setErrors(prev => ({ ...prev, estadoLogistico: null }));
+  };
 
-  /**
-   * Maneja cambios en la lista de items del pedido.
-   * Actualiza el estado de items y limpia errores si hay items.
-   *
-   * @param {Array} newItems - Nueva lista de items.
-   */
-  const handleItemsChange = useCallback((newItems) => {
-    setItems(newItems);
-    if (newItems.length > 0) setErrors((prev) => ({ ...prev, items: '' }));
-  }, []);
+  const handleMotivoCancelacionChange = () => {}; // No aplica en venta directa
 
-  /**
-   * Maneja la cancelación del formulario.
-   * Muestra una confirmación antes de navegar de vuelta.
-   */
+  // ─── Manejadores para productos (RightSectionForm) ────────────────────────
+  const handleAddProduct = (productoId) => {
+    const producto = productosCatalogo.find(p => p.id === Number(productoId));
+    if (!producto) return;
+
+    const existe = formData.productos.find(p => p.id === producto.id);
+    if (existe) {
+      showWarning('Producto ya agregado', 'Puedes editar la cantidad en la tabla.');
+      return;
+    }
+
+    const precio = producto.precioDetalle || 0;
+    const nuevoProducto = {
+      id: producto.id,
+      nombre: producto.nombre,
+      cantidad: 1,
+      precioUnitario: precio,
+      subtotal: precio,
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      productos: [...prev.productos, nuevoProducto],
+    }));
+  };
+
+  const handleUpdateCantidad = (productoId, nuevaCantidad) => {
+    if (nuevaCantidad < 1) return;
+    setFormData(prev => ({
+      ...prev,
+      productos: prev.productos.map(p =>
+        p.id === productoId
+          ? { ...p, cantidad: nuevaCantidad, subtotal: nuevaCantidad * (p.precioUnitario || 0) }
+          : p
+      ),
+    }));
+  };
+
+  const handleRemoveProduct = (productoId) => {
+    setFormData(prev => ({
+      ...prev,
+      productos: prev.productos.filter(p => p.id !== productoId),
+    }));
+  };
+
+  // ─── Manejador para pagos (PaymentsSection) ───────────────────────────────
+  const handleAddPayment = (paymentData) => {
+    const { metodoPago, monto, comprobante } = paymentData;
+    const tempPago = {
+      id: Date.now(),
+      metodoPago,
+      monto,
+      comprobante,
+      fechaPago: new Date().toISOString(),
+    };
+    setPagos(prev => [...prev, tempPago]);
+    setTotalPagado(prev => prev + monto);
+
+    // Actualizar paymentAmounts (para compatibilidad con validación)
+    setPaymentAmounts(prev => ({
+      ...prev,
+      [metodoPago]: (prev[metodoPago] || 0) + monto,
+    }));
+
+    showSuccess('Abono agregado', `Se ha agregado un abono de $${monto.toLocaleString()}.`);
+  };
+
+  // ─── Validación (corregida para aceptar clienteId = 0) ───────────────────
+  const validate = () => {
+    const newErrors = {};
+    if (formData.clienteId === undefined || formData.clienteId === null || formData.clienteId === '') {
+      newErrors.clienteId = 'Debe seleccionar un cliente.';
+    }
+    if (!formData.asesorId) newErrors.asesorId = 'No se pudo identificar al asesor.';
+    if (!formData.direccionEntrega?.trim()) {
+      newErrors.direccionEntrega = 'La dirección de entrega es obligatoria.';
+    }
+    if (formData.productos.length === 0) {
+      newErrors.productos = 'Debe agregar al menos un producto.';
+    }
+    return newErrors;
+  };
+
+  // ─── Guardar ──────────────────────────────────────────────────────────────
+  const handleSave = async () => {
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      showWarning('Formulario incompleto', 'Revisa los campos marcados en rojo.');
+      return;
+    }
+
+    // Validar que los pagos cubran el total
+    if (totalPagado < total) {
+      showWarning('Pago incompleto', `El total pagado ($${totalPagado.toLocaleString()}) no cubre el total del pedido ($${total.toLocaleString()}).`);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Preparar items en el formato esperado por SalesServices
+      const items = formData.productos.map(p => ({
+        product: {
+          id: p.id,
+          nombre: p.nombre,
+          precioDetalle: p.precioUnitario,
+        },
+        cantidad: p.cantidad,
+        descripcion: '',
+      }));
+
+      // Preparar objeto form (similar a SaleDetailsForm)
+      const form = {
+        clienteId: formData.clienteId,
+        vendedorId: formData.asesorId,
+        metodoPago: [...new Set(pagos.map(p => p.metodoPago))],
+        entrega: formData.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Cliente lo recoge',
+        direccion: formData.direccionEntrega,
+        estado: formData.estadoLogistico === ESTADOS_LOGISTICOS.LISTO ? 'Pagada' : 'Pendiente', // para referencia
+      };
+
+      // Convertir paymentAmounts al formato esperado
+      const paymentAmountsMapped = {
+        Efectivo: paymentAmounts['Efectivo'] || 0,
+        Crédito: paymentAmounts['Crédito'] || 0,
+        Transferencia: paymentAmounts['Transferencia'] || 0,
+      };
+
+      await SalesServices.create(form, items, facturaNo, paymentAmountsMapped);
+
+      showSuccess('Venta creada', 'La venta ha sido registrada exitosamente.');
+      navigate('/admin/sales');
+    } catch (error) {
+      console.error(error);
+      showError('Error', error.message || 'No se pudo guardar la venta.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCancel = () => {
     showConfirm(
       'warning',
-      '¿Deseas cancelar?',
-      'Se perderán todos los cambios realizados en el formulario.',
-      { confirmButtonText: 'Sí, cancelar', cancelButtonText: 'Continuar editando' }
+      '¿Salir sin guardar?',
+      'Los cambios no guardados se perderán.',
+      { confirmButtonText: 'Sí, salir', cancelButtonText: 'Continuar editando' }
     ).then((result) => {
       if (result.isConfirmed) navigate('/admin/sales');
     });
   };
 
-  /**
-   * Maneja el guardado de la venta.
-   * Valida el formulario, los pagos, confirma con el usuario y guarda o actualiza la venta.
-   */
-  const handleSave = async () => {
-    // 1. Validar campos básicos
-    const newErrors = validateForm(form, items);
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      showWarning(
-        'Formulario incompleto',
-        'Por favor completa todos los campos obligatorios y agrega al menos un producto.'
-      );
-      return;
-    }
-
-    // 2. Validar montos de pago (usando la función helper)
-    // 🔁 Se pasa form.clienteId para validar también el cupo de crédito
-    const paymentError = validatePaymentAmounts(paymentAmounts, totalAmount, form.clienteId);
-    if (paymentError) {
-      setErrors(prev => ({ ...prev, paymentAmounts: paymentError }));
-      showWarning('Error en los pagos', paymentError);
-      return;
-    }
-
-    // 3. Validar crédito — solo en creación, método exclusivo "Crédito" y estado "Aprobada"
-    const esCredito = Array.isArray(form.metodoPago)
-      ? form.metodoPago.length === 1 && form.metodoPago[0] === 'Crédito'
-      : form.metodoPago === 'Crédito';
-
-    if (!isEditing && esCredito && form.estado === 'Aprobada') {
-      const creditInfo = SalesDB.getCreditInfo(form.clienteId);
-      if (!creditInfo.tieneCredito) {
-        showError(
-          'Sin crédito asignado',
-          'Este cliente no tiene un límite de crédito asignado. Asígnele un cupo desde el módulo de Clientes antes de registrar ventas a crédito.'
-        );
-        return;
-      }
-      if (totalAmount > creditInfo.cupoDisponible) {
-        const fmt = (v) => new Intl.NumberFormat('es-CO', {
-          style: 'currency', currency: 'COP', minimumFractionDigits: 0,
-        }).format(v);
-        showError(
-          'Cupo insuficiente',
-          `El total de la venta (${fmt(totalAmount)}) supera el cupo disponible del cliente (${fmt(creditInfo.cupoDisponible)}). Reduzca el pedido o cambie el método de pago.`
-        );
-        return;
-      }
-    }
-
-    // 4. Confirmación
-    const result = await showConfirm(
-      'info',
-      '¿Listo para guardar?',
-      'Revisa que todos los datos sean correctos antes de confirmar. Esta acción guardará la venta en el sistema.',
-      { confirmButtonText: 'Enviar', cancelButtonText: 'Revisar' }
-    );
-    if (!result?.isConfirmed) return;
-
-    // 5. Guardar
-    try {
-      if (isEditing) {
-        SalesDB.update(saleToEdit.id, form, items, originalItems, paymentAmounts);
-        showSuccess('Venta actualizada', 'Los datos de la venta han sido actualizados correctamente.');
-      } else {
-        SalesDB.create(form, items, facturaNo, paymentAmounts);
-        showSuccess('Venta creada', 'La venta ha sido registrada exitosamente.');
-      }
-      navigate('/admin/sales');
-    } catch (error) {
-      console.error(error);
-      showError('Error', 'No se pudo guardar la venta. Intente nuevamente.');
-    }
-  };
-
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-5 p-4 sm:p-6 max-w-7xl mx-auto">
-
-      {/* Header con botón volver y título */}
-      <div className="flex flex-col gap-1">
-        <button
-          type="button"
-          onClick={handleCancel}
-          className="flex items-center gap-1 text-sm text-[#004D77] hover:text-[#003a5c] font-medium transition-colors cursor-pointer w-fit"
-        >
-          <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />
-          Volver
-        </button>
-        <h1 className="text-xl font-bold text-[#004D77]">
-          {isEditing ? `Modificando venta no. ${saleToEdit.factura}` : 'Nueva venta'}
-        </h1>
-        {isAnulada && (
-          <p className="text-sm text-red-500 font-medium">
-            Esta venta está anulada. El estado no puede modificarse.
-          </p>
-        )}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Cabecera */}
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={handleCancel}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            title="Volver a ventas"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-600" />
+          </button>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Nueva Venta (Factura No. {facturaNo})
+          </h1>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={handleCancel}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            className="px-4 py-2 text-sm font-medium text-white bg-[#004D77] rounded-lg hover:bg-[#003b5c] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                Guardando...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                Crear Venta
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Grid principal con formularios */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <SaleDetailsForm
-          form={form}
-          onChange={handleFormChange}
+      {/* Contenido en dos columnas */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <LeftSectionForm
+          formData={formData}
           errors={errors}
-          isEditing={isEditing}
-          isAnulada={isAnulada}
-          motivoAnulacion={saleToEdit?.motivoAnulacion ?? ''}
-          fechaAnulacion={saleToEdit?.fechaAnulacion  ?? ''}
-          paymentAmounts={paymentAmounts}
-          onPaymentAmountChange={handlePaymentAmountChange}
-          totalAmount={totalAmount}
+          clientes={clientes}
+          user={user}
+          loading={loading}
+          isEditMode={false}
+          onClienteChange={handleClienteChange}
+          onTipoEntregaChange={handleTipoEntregaChange}
+          onDireccionManualChange={handleDireccionManualChange}
+          onEstadoLogisticoChange={handleEstadoLogisticoChange}
+          onMotivoCancelacionChange={handleMotivoCancelacionChange}
         />
-        <OrderForm
-          items={items}
-          onItemsChange={handleItemsChange}
+
+        <RightSectionForm
+          productos={formData.productos}
+          productosCatalogo={productosCatalogo}
+          errors={errors}
+          loading={loading}
+          disabled={loading}
+          subtotal={subtotal}
+          iva={iva}
+          total={total}
+          onAddProduct={handleAddProduct}
+          onUpdateCantidad={handleUpdateCantidad}
+          onRemoveProduct={handleRemoveProduct}
         />
       </div>
 
-      {/* Error de items si no hay productos */}
-      {errors.items && (
-        <p className="text-sm text-red-600 -mt-2">{errors.items}</p>
-      )}
-
-      {/* Error de pagos (global) */}
-      {errors.paymentAmounts && (
-        <p className="text-sm text-red-600">{errors.paymentAmounts}</p>
-      )}
-
-      {/* Vista previa de la venta */}
-      <DataSalePreview
-        form={form}
-        items={items}
-        facturaNo={facturaNo}
-        isAnulada={isAnulada}
-        motivoAnulacion={saleToEdit?.motivoAnulacion ?? ''}
-        fechaAnulacion={saleToEdit?.fechaAnulacion  ?? ''}
-        paymentAmounts={paymentAmounts}
-      />
-
-      {/* Botones de acción — al final del formulario */}
-      <div ref={actionsRef} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <button
-          type="button"
-          onClick={handleSave}
-          className="w-full py-3 text-sm font-semibold text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors duration-200 cursor-pointer"
-        >
-          {isEditing ? 'Guardar cambios' : 'Crear'}
-        </button>
-        <button
-          type="button"
-          onClick={handleCancel}
-          className="w-full py-3 text-sm font-semibold text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors duration-200 cursor-pointer"
-        >
-          Cancelar
-        </button>
+      {/* Sección de pagos */}
+      <div className="mt-6">
+        <PaymentsSection
+          pedidoId={null}
+          total={total}
+          pagos={pagos}
+          onAddPayment={handleAddPayment}
+          loading={loading}
+          isEditMode={false}
+        />
       </div>
 
-      {/* FAB — sube o baja según posición */}
-      <button
-        type="button"
-        onClick={atBottom ? scrollToTop : scrollToActions}
-        title={atBottom ? 'Ir al inicio' : 'Ir a los botones'}
-        className="fixed bottom-6 right-6 z-40 w-11 h-11 flex items-center justify-center rounded-full bg-[#004D77] text-white shadow-lg hover:bg-[#003a5c] active:scale-95 transition-all duration-200 cursor-pointer"
-      >
-        {atBottom
-          ? <ChevronUp  className="w-5 h-5" strokeWidth={2.5} />
-          : <ChevronDown className="w-5 h-5" strokeWidth={2.5} />
-        }
-      </button>
+      {/* Aviso de pago completado */}
+      {totalPagado >= total && total > 0 && (
+        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-sm text-green-800">
+            <strong>Pago completado:</strong> La venta está lista para ser registrada.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

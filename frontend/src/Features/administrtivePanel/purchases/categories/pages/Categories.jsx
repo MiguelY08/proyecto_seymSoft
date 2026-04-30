@@ -85,7 +85,7 @@ export const Categories = () => {
       isActivating ? "Activar categoría" : "Desactivar categoría",
       isActivating
         ? `¿Deseas activar "${category.nombre}"?`
-        : `Al desactivar "${category.nombre}" también se desactivarán todas sus subcategorías. ¿Deseas continuar?`,
+        : `Al desactivar "${category.nombre}" también se desactivarán todas sus subcategorías y los productos asociados a ellas. ¿Deseas continuar?`,
       {
         confirmButtonText: isActivating ? "Sí, activar" : "Sí, desactivar",
         cancelButtonText: "Cancelar",
@@ -281,11 +281,13 @@ const handleDelete = async (id) => {
               setCategoryToEdit(null);
             }}
             onSave={handleSave}
+            refreshCategories={fetchCategories}
           />
 
         ) : (
 
           <FormCategory
+            allCategories={categories}
             onClose={() => setShowForm(false)}
             onSave={handleSave}
           />

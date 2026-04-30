@@ -179,7 +179,7 @@ function SalesTable({ data = [], search = "", totalData = 0, offset = 0 }) {
 
         <tbody>
           {data.map((row, index) => {
-            const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-100";
+            const rowBg = index % 2 === 0 ? "bg-gray-100 hover:bg-blue-50" : "bg-white hover:bg-blue-50";
             const { puedeDevolver, puedeAnular, deshabilitado } = getPermisos(
               row.estado,
             );

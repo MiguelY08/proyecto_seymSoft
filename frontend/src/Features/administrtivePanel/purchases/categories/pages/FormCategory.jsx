@@ -79,8 +79,16 @@ function StepIndicator({ currentStep }) {
   );
 }
 
+// ─── Normaliza texto: minúsculas + sin tildes/diacríticos ────────────────────
+const normalizeName = (str = "") =>
+  str
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
 // ─── Formulario principal ─────────────────────────────────────────────────────
-function FormCategory({ category, onClose, onSave }) {
+function FormCategory({ category, allCategories = [], onClose, onSave }) {
   const isEditing = !!category;
   const { showWarning } = useAlert();
 
@@ -104,6 +112,12 @@ function FormCategory({ category, onClose, onSave }) {
     if (!form.nombre.trim()) return "El nombre es obligatorio";
     if (/^\d/.test(form.nombre.trim())) return "El nombre no puede iniciar con un número";
     if (form.nombre.trim().length < 3) return "El nombre debe tener al menos 3 caracteres";
+    const existe = allCategories.some(
+      (c) =>
+        (!category || c.id !== category.id) &&
+        normalizeName(c.nombre) === normalizeName(form.nombre)
+    );
+    if (existe) return "Ya existe una categoría con ese nombre";
     return null;
   })();
 
@@ -149,7 +163,7 @@ function FormCategory({ category, onClose, onSave }) {
     if (err) return;
 
     const duplicate = subcategories.some(
-      (s) => s.nombre.toLowerCase() === subForm.nombre.trim().toLowerCase()
+      (s) => normalizeName(s.nombre) === normalizeName(subForm.nombre)
     );
     if (duplicate) {
       showWarning("Nombre duplicado", "Ya agregaste una subcategoría con ese nombre.");

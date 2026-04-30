@@ -14,6 +14,13 @@ import React, { useState, useEffect } from 'react';
 import { X, ChevronDown, ChevronLeft, Minus, Plus, Image } from 'lucide-react';
 import Evidence from './Evidence';
 import { useAlert } from '../../../../shared/alerts/useAlert';
+import {
+  getProductStatesForMethod,
+  getInitialStateForMethod,
+  calculateGeneralStatus,
+  getStatusStyle,
+  isValidStateForMethod
+} from '../utils/returnsHelpers';
 
 // ======================= DATOS DE REFERENCIA =======================
 
@@ -24,9 +31,32 @@ const PRODUCTOS_VENTA = [
   { id: 4, nombre: 'Silicona liquida ET131 X', cantidad: 8, precioUnit: 2900, imagen: null },
 ];
 
-const MOTIVOS    = ['Prod. en mal estado', 'Producto roto', 'Producto equivocado', 'Producto incompleto', 'No era el pedido'];
-const METODOS    = ['Reembolso', 'Cambio de producto', 'Nota crédito'];
-const ESTADOS_P  = ['Pendiente', 'Aprobada', 'Anulada'];
+// Motivos de devolución según especificaciones
+const MOTIVOS = [
+  'DEFECTUOSO',
+  'PRODUCTO_EQUIVOCADO',
+  'PRODUCTO_INCOMPLETO',
+  'MAL_ESTADO',
+  'PRODUCTO_USADO',
+  'OTRO'
+];
+
+// Métodos de devolución según especificaciones
+const METODOS = ['Reemplazo', 'Reembolso', 'Saldo a favor'];
+
+// Estados generales automáticos (no se seleccionan manualmente, se calculan)
+// Se muestran los estados posibles, pero en realidad se calculan basados en productos
+const ESTADOS_P = ['En Proceso', 'Procesada', 'Anulado'];
+
+// Mapa de etiquetas legibles para motivos
+const MOTIVOS_LABELS = {
+  'DEFECTUOSO': 'Producto defectuoso',
+  'PRODUCTO_EQUIVOCADO': 'Producto equivocado',
+  'PRODUCTO_INCOMPLETO': 'Producto incompleto',
+  'MAL_ESTADO': 'Producto en mal estado',
+  'PRODUCTO_USADO': 'Producto usado',
+  'OTRO': 'Otro'
+};
 
 const formatCOP = (v) => new Intl.NumberFormat('es-CO').format(v);
 
@@ -42,13 +72,22 @@ function ProductoImg({ src, size = 'md' }) {
   );
 }
 
-function EstadoBadgeSelect({ value, onChange }) {
+function EstadoBadgeSelect({ value, onChange, metodo }) {
   const [open, setOpen] = useState(false);
-  const color = {
-    Pendiente: 'bg-red-100 text-red-600 border-red-300',
-    Aprobada:  'bg-green-100 text-green-700 border-green-300',
-    Anulada:   'bg-gray-100 text-gray-500 border-gray-300',
-  }[value] ?? 'bg-red-100 text-red-600 border-red-300';
+  
+  // Obtener estados válidos para el método seleccionado
+  const validStates = metodo ? getProductStatesForMethod(metodo) : [];
+  
+  // Mapear colores para los nuevos estados
+  const colorMap = {
+    'Pend. Envío': 'bg-orange-100 text-orange-600 border-orange-300',
+    'Pend. Reemplazo': 'bg-yellow-100 text-yellow-700 border-yellow-300',
+    'Pend. Reembolso': 'bg-yellow-100 text-yellow-700 border-yellow-300',
+    'Entregado': 'bg-green-100 text-green-700 border-green-300',
+  };
+  
+  const color = colorMap[value] ?? 'bg-orange-100 text-orange-600 border-orange-300';
+  
   return (
     <div className="relative">
       <button type="button" onClick={() => setOpen((p) => !p)}
@@ -56,8 +95,8 @@ function EstadoBadgeSelect({ value, onChange }) {
         {value}<ChevronDown className="w-3 h-3" />
       </button>
       {open && (
-        <div className="absolute z-30 mt-1 left-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[120px]">
-          {ESTADOS_P.map((e) => (
+        <div className="absolute z-30 mt-1 left-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[140px]">
+          {validStates.map((e) => (
             <button key={e} type="button" onClick={() => { onChange(e); setOpen(false); }}
               className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 cursor-pointer">{e}</button>
           ))}
@@ -193,7 +232,7 @@ function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange, submi
                     Motivo
                   </label>
                   <div className="w-full px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-lg bg-gray-50 text-gray-500">
-                    {config.motivo || '—'}
+                    {MOTIVOS_LABELS[config.motivo] || config.motivo || '—'}
                   </div>
                   <p className="text-xs text-gray-400 mt-1">
                     No se puede modificar en edición
@@ -207,14 +246,15 @@ function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange, submi
                   </label>
                   <EstadoBadgeSelect 
                     value={config.estado} 
-                    onChange={(v) => handleStatusChange(index, v)} 
+                    onChange={(v) => handleStatusChange(index, v)}
+                    metodo={config.metodo}
                   />
                 </div>
 
                 {/* Método - solo lectura */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Metodo devolución
+                    Método devolución
                   </label>
                   <div className="w-full px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-lg bg-gray-50 text-gray-500">
                     {config.metodo || '—'}
@@ -261,6 +301,18 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
     return '';
   };
 
+  const handleMetodoChange = (index, newMetodo) => {
+    const newConfigs = [...configs];
+    // Cambiar el método y resetear el estado al primero disponible para ese método
+    const newState = getInitialStateForMethod(newMetodo);
+    newConfigs[index] = { 
+      ...newConfigs[index], 
+      metodo: newMetodo,
+      estado: newState
+    };
+    onConfigsChange(newConfigs);
+  };
+
   const handleConfigChange = (index, field, value) => {
     const newConfigs = [...configs];
     newConfigs[index] = { ...newConfigs[index], [field]: value };
@@ -276,7 +328,8 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
     const newConfig = {
       id: generateTempId(),
       motivo: '',
-      estado: 'Pendiente',
+      descripcionMotivo: '',
+      estado: 'Pend. Envío',
       metodo: '',
       cantidad: 1
     };
@@ -364,36 +417,42 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
                     onBlur={() => handleConfigBlur(index, 'motivo')}
                     className={configFieldClass(index, 'motivo', config.motivo)}>
                     <option value="">Selecciona una opción</option>
-                    {MOTIVOS.map((m) => <option key={m} value={m}>{m}</option>)}
+                    {MOTIVOS.map((m) => <option key={m} value={m}>{MOTIVOS_LABELS[m]}</option>)}
                   </select>
                   {renderConfigError(index, 'motivo', config.motivo)}
                 </div>
 
-                {/* Estado */}
+                {/* Método devolución - IMPORTANTE: Cambio automático de estados */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Estado<span className="text-red-500">*</span>
-                  </label>
-                  <EstadoBadgeSelect 
-                    value={config.estado} 
-                    onChange={(v) => handleConfigChange(index, 'estado', v)} 
-                  />
-                </div>
-
-                {/* Método devolución */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Metodo devolución<span className="text-red-500">*</span>
+                    Método devolución<span className="text-red-500">*</span>
                   </label>
                   <select 
                     value={config.metodo}
-                    onChange={(e) => handleConfigChange(index, 'metodo', e.target.value)}
+                    onChange={(e) => handleMetodoChange(index, e.target.value)}
                     onBlur={() => handleConfigBlur(index, 'metodo')}
                     className={configFieldClass(index, 'metodo', config.metodo)}>
                     <option value="">Selecciona una opción</option>
                     {METODOS.map((m) => <option key={m} value={m}>{m}</option>)}
                   </select>
                   {renderConfigError(index, 'metodo', config.metodo)}
+                </div>
+
+                {/* Estado - Dinámico según el método */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Estado<span className="text-red-500">*</span>
+                  </label>
+                  <EstadoBadgeSelect 
+                    value={config.estado} 
+                    onChange={(v) => handleConfigChange(index, 'estado', v)}
+                    metodo={config.metodo}
+                  />
+                  {config.metodo && (
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      Estados para {config.metodo}
+                    </p>
+                  )}
                 </div>
 
                 {/* Cantidad */}
@@ -439,6 +498,22 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
                   </span>
                 </div>
               </div>
+
+              {/* Campo descriptivo - Solo si motivo es OTRO */}
+              {config.motivo === 'OTRO' && (
+                <div className="mt-3 col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Descripción del motivo<span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={config.descripcionMotivo || ''}
+                    onChange={(e) => handleConfigChange(index, 'descripcionMotivo', e.target.value)}
+                    placeholder="Explica brevemente el motivo de la devolución"
+                    rows={3}
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 resize-none"
+                  />
+                </div>
+              )}
             </div>
           ))}
 
@@ -497,7 +572,8 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
       setNoFactura(returnData.numeroFactura ?? returnData.noFactura ?? '');
       setCliente(returnData.cliente ?? '');
       setAsesor(returnData.asesor ?? '');
-      setEstadoGral(returnData.estado ?? 'Pendiente');
+      // Estado general se guarda como viene de la devolución
+      setEstadoGral(returnData.estado ?? 'En Proceso');
       setDescripcion(returnData.descripcion ?? '');
       setDomicilio(returnData.domicilio ?? true);
       setDireccion(returnData.direccion ?? '');
@@ -512,7 +588,8 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
           seleccionadosIniciales[p.id].push({
             id: p.configId || generateTempId(),
             motivo: p.motivo || '',
-            estado: p.estado || 'Pendiente',
+            descripcionMotivo: p.descripcionMotivo || '',
+            estado: p.estado || 'Pend. Envío',
             metodo: p.metodo || '',
             cantidad: p.cantidad || 1
           });
@@ -521,7 +598,8 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
       setSeleccionados(seleccionadosIniciales);
     } else {
       setNoFactura(''); setCliente(''); setAsesor('');
-      setEstadoGral('Pendiente'); setEvidencias([]);
+      setEstadoGral('En Proceso'); // Estado inicial automático para nuevas devoluciones
+      setEvidencias([]);
       setDomicilio(true); setDireccion('');
       setDescripcion(''); setSeleccionados({});
     }
@@ -550,6 +628,31 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     }
   }, [domicilio]);
 
+  // Auto-calcular estado general cuando cambian los estados de productos
+  useEffect(() => {
+    const productosDevueltosData = Object.entries(seleccionados)
+      .flatMap(([id, configs]) => {
+        const producto = PRODUCTOS_VENTA.find(p => p.id === Number(id));
+        if (!producto || !configs) return [];
+
+        return configs.map((config) => ({
+          id: producto.id,
+          configId: config.id,
+          nombre: producto.nombre,
+          cantidad: config.cantidad,
+          precioUnit: producto.precioUnit,
+          motivo: config.motivo,
+          metodo: config.metodo,
+          estado: config.estado
+        }));
+      });
+
+    if (productosDevueltosData.length > 0) {
+      const estadoCalculado = calculateGeneralStatus(productosDevueltosData, false);
+      setEstadoGral(estadoCalculado);
+    }
+  }, [seleccionados]);
+
   const validateField = (name, value) => {
     if (isEdit) return '';
     
@@ -572,7 +675,10 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
         }
         return '';
       case 'evidencias':
-        if (!value || value.length === 0) return 'Debe adjuntar al menos una evidencia';
+        // Las evidencias solo son obligatorias si domicilio es true
+        if (domicilio) {
+          if (!value || value.length === 0) return 'Debe adjuntar al menos una evidencia cuando requiere domicilio';
+        }
         return '';
       default:
         return '';
@@ -780,12 +886,14 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
             cantidad: config.cantidad,
             precioUnit: producto.precioUnit,
             motivo: config.motivo,
+            descripcionMotivo: config.descripcionMotivo || '',
             metodo: config.metodo,
             estado: config.estado
           });
         });
       });
 
+      // En edición, el estado general se usa del selector, pero podría calcularse automáticamente
       const updatedData = {
         ...returnData,
         estado: estadoGral,
@@ -804,7 +912,7 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
       cliente: true,
       asesor: true,
       direccion: domicilio,
-      evidencias: true
+      evidencias: domicilio // Solo validar evidencias si domicilio es true
     });
     
     const validationErrors = validateForm();
@@ -829,6 +937,7 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
           cantidad: config.cantidad,
           precioUnit: producto.precioUnit,
           motivo: config.motivo,
+          descripcionMotivo: config.descripcionMotivo || '',
           metodo: config.metodo,
           estado: config.estado
         });
@@ -840,14 +949,18 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
       return evidenciaSinBase64;
     });
 
+    // Calcular automáticamente el estado general basado en los estados de los productos
+    const estadoGeneralCalculado = calculateGeneralStatus(productosDevueltosData, false);
+
     const returnDataToSave = {
       noFactura,
       numeroFactura: noFactura,
       cliente,
       motivo: productosDevueltosData[0]?.motivo || '',
       totalValor,
-      estadoGral,
-      estado: estadoGral,
+      // Estado general automático - NO se permite edición manual
+      estadoGral: estadoGeneralCalculado,
+      estado: estadoGeneralCalculado,
       asesor,
       domicilio,
       direccion: direccion || '',
@@ -887,10 +1000,10 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
   if (!isOpen) return null;
   
   const estadoColor = { 
-    Pendiente: '#dc2626', 
-    Aprobada: '#15803d', 
-    Anulada: '#6b7280' 
-  }[estadoGral] ?? '#dc2626';
+    'En Proceso': '#b45309',
+    'Procesada': '#15803d', 
+    'Anulado': '#dc2626'
+  }[estadoGral] ?? '#b45309';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -924,19 +1037,25 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
                   <DisabledField label="Atendió" value={asesor} required />
                 </div>
                 
-                {/* Estado - EDITABLE */}
+                {/* Estado - READ ONLY en edición, se calcula automáticamente */}
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">
                     Estado<span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <select value={estadoGral} onChange={(e) => setEstadoGral(e.target.value)}
-                      className="w-full appearance-none border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#004D77] pr-8 cursor-pointer font-semibold"
-                      style={{ color: estadoColor }}>
+                      className="w-full appearance-none border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#004D77] pr-8 font-semibold"
+                      style={{ color: estadoColor }}
+                      disabled={isEdit}>
                       {ESTADOS_P.map((e) => <option key={e} className="text-gray-800 font-normal">{e}</option>)}
                     </select>
                     <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                   </div>
+                  {isEdit && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Estado calculado automáticamente
+                    </p>
+                  )}
                 </div>
                 
                 <DisabledEvidence count={evidencias.length} />
@@ -986,18 +1105,19 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
                 
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">Estado<span className="text-red-500">*</span></label>
-                  <div className="relative">
-                    <select value={estadoGral} onChange={(e) => setEstadoGral(e.target.value)}
-                      className="w-full appearance-none border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#004D77] pr-8 cursor-pointer font-semibold"
-                      style={{ color: estadoColor }}>
-                      {ESTADOS_P.map((e) => <option key={e} className="text-gray-800 font-normal">{e}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <div className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm bg-yellow-50 text-yellow-700 font-semibold">
+                    En Proceso
                   </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Se calcula automáticamente
+                  </p>
                 </div>
                 
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">Evidencias<span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">
+                    Evidencias
+                    {domicilio && <span className="text-red-500 ml-0.5">*</span>}
+                  </label>
                   <button type="button" onClick={() => setEvidenceOpen(true)}
                     className={`w-full border rounded-lg px-3 py-2 text-sm flex items-center justify-between ${
                       errors.evidencias && (touched.evidencias || submitted)
@@ -1010,6 +1130,11 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
                     <Image className="w-4 h-4 text-gray-400" />
                   </button>
                   {renderError('evidencias')}
+                  {!domicilio && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Opcional cuando no requiere domicilio
+                    </p>
+                  )}
                 </div>
                 
                 <div className="flex items-center justify-between">
