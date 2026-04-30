@@ -94,20 +94,49 @@ function DetailProduct({ producto, isOpen, onClose, onEdit }) {
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-gray-700">Stock:</span>
-                  <span className="text-gray-600">{producto.stock} unidades</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-gray-700">Código de barras:</span>
-                  <span className="text-gray-600">{producto.codBarras}</span>
-                </div>
-                {producto.codBarras2 && (
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-gray-700">Código de barras 2:</span>
-                    <span className="text-gray-600">{producto.codBarras2}</span>
+                <div>
+                  <span className="font-semibold text-gray-700 block mb-1.5">
+                    Código{(producto.codsBarrasExtra?.filter(e => e?.cod)?.length > 0) ? 's' : ''} de barras:
+                  </span>
+                  <div className="space-y-1.5">
+                    {/* Principal */}
+                    <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">Principal</span>
+                        <span className="text-xs text-gray-700 font-mono">{producto.codBarras}</span>
+                      </div>
+                      {(producto.stockPrincipal !== undefined && producto.stockPrincipal !== '') && (
+                        <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5">
+                          {producto.stockPrincipal} und.
+                        </span>
+                      )}
+                    </div>
+                    {/* Adicionales */}
+                    {(producto.codsBarrasExtra || []).filter(e => e?.cod).map((item, i) => (
+                      <div key={i} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">#{i + 2}</span>
+                          <span className="text-xs text-gray-700 font-mono">{item.cod}</span>
+                        </div>
+                        {(item.stock !== undefined && item.stock !== '') && (
+                          <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5">
+                            {item.stock} und.
+                          </span>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-gray-700">Stock general:</span>
+                  <span className="font-bold text-gray-900">
+                    {producto.stock ?? (
+                      (Number(producto.stockPrincipal) || 0) +
+                      (producto.codsBarrasExtra || []).reduce((acc, e) => acc + (Number(e?.stock) || 0), 0)
+                    )} unidades
+                  </span>
+                </div>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-gray-700">Referencia:</span>
                   <span className="text-gray-600">{producto.referencia}</span>
