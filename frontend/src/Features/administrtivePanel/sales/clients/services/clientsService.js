@@ -285,6 +285,47 @@ export const clientsService = {
     UsersDB.toggle(numId);
     return toClientView(UsersDB.findById(numId));
   },
+
+  /**
+   * Aplica un saldo a favor al cliente, reduciendo el balance de su cuenta de crédito.
+   * Si el cliente no tiene cuenta de crédito, se crea una con balance cero y luego se aplica.
+   * Registra un pago especial (método 'Saldo a favor') en el historial de pagos del cliente.
+   *
+   * @param {number} clientId - ID del cliente.
+   * @param {number} monto - Monto a favor (positivo).
+   * @param {string} motivo - Descripción del origen del saldo.
+   * @returns {Object} La cuenta de crédito actualizada.
+   */
+  aplicarSaldoFavor: (clientId, monto, motivo = 'Saldo a favor') => {
+    if (monto <= 0) throw new Error('El monto debe ser mayor a cero.');
+
+    const clientIdStr = String(clientId);
+    let account = creditAccountService.getByClientId(clientIdStr);
+
+    // Si no existe cuenta de crédito, crear una con balance 0
+    if (!account) {
+      account = creditAccountService.createForClient(clientIdStr, 0);
+    }
+
+    // Reducir el balance (puede quedar negativo = crédito a favor)
+    const nuevoBalance = account.balance - monto;
+    const accounts = creditAccountService.getAll();
+    const index = accounts.findIndex(acc => acc.clientId === clientIdStr);
+    if (index !== -1) {
+      accounts[index].balance = nuevoBalance;
+      localStorage.setItem(STORAGE_KEYS.CREDIT_ACCOUNTS, JSON.stringify(accounts));
+    }
+
+    // Registrar el pago especial en el historial
+    paymentService.create({
+      clientId: clientIdStr,
+      amount: monto,
+      method: 'Saldo a favor',
+      description: motivo,
+    });
+
+    return creditAccountService.getByClientId(clientIdStr);
+  },
 };
 
 // ============================================================================

@@ -130,44 +130,83 @@ export const formatDate = (dateString) => {
 
 // ─── Mapear usuarios a filas legibles para Excel ─────────────────────────────
 /**
- * Convierte una lista de usuarios a filas para exportación Excel.
+ * Convierte una lista de usuarios a filas (arrays) para exportación Excel con aoa_to_sheet.
  * @param {Array} users - Lista de usuarios.
- * @returns {Array} Filas formateadas para Excel.
+ * @returns {Array} Filas formateadas como arrays para Excel.
  */
 const buildExcelRows = (users) =>
-  users.map((u) => ({
-    'ID':                 u.id,
-    'Tipo Documento':     u.documentType,
-    'Documento':          u.document,
-    'Nombre Completo':    u.name,
-    'Correo Electrónico': u.email,
-    'Teléfono':           u.phone,
-    'Rol':                u.role      ?? 'Nulo',
-    'Tipo de Cliente':    u.clientType ?? 'Detal',
-    'Estado':             u.active ? 'Activo' : 'Inactivo',
-    'Registrado Desde':   formatDate(u.createdAt),
-  }));
+  users.map((u) => [
+    u.id,
+    u.documentType,
+    u.document,
+    u.name,
+    u.email,
+    u.phone,
+    u.role       ?? 'Nulo',
+    u.clientType ?? 'Detal',
+    u.active ? 'Activo' : 'Inactivo',
+    formatDate(u.createdAt),
+  ]);
 
 // ─── Descargar Excel de usuarios ─────────────────────────────────────────────
 /**
  * Genera y descarga un archivo Excel con la lista de usuarios.
- * Incluye anchos de columna predefinidos para legibilidad.
+ * Incluye título, fecha de exportación, encabezados y datos con anchos de columna definidos.
  * @param {Array} users - Lista de usuarios a exportar.
  * @returns {boolean} True si se descargó, false si no hay usuarios.
  */
 export const downloadUsersExcel = (users) => {
   if (!users || users.length === 0) return false;
 
-  const rows      = buildExcelRows(users);
-  const worksheet = XLSX.utils.json_to_sheet(rows);
+  // ── Fechas para encabezado ───────────────────────────────────────────────────
+  const currentDate       = new Date();
+  const formattedDate     = currentDate.toLocaleDateString('es-CO', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
+  const formattedDateTime = currentDate.toLocaleString('es-CO', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  });
+
+  // ── Encabezados de columnas ───────────────────────────────────────────────────
+  const headers = [
+    'ID', 'Tipo Documento', 'Documento', 'Nombre Completo',
+    'Correo Electrónico', 'Teléfono', 'Rol', 'Tipo de Cliente',
+    'Estado', 'Registrado Desde',
+  ];
+
+  // ── Estructura de la hoja ─────────────────────────────────────────────────────
+  const sheetData = [
+    ['USUARIOS'],
+    [`Fecha de exportación: ${formattedDate} - ${formattedDateTime}`],
+    [''],
+    ['LISTA DE USUARIOS'],
+    [''],
+    headers,
+    ...buildExcelRows(users),
+  ];
+
+  const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
   const workbook  = XLSX.utils.book_new();
 
+  // ── Combinar celdas para título, fecha y subtítulo ────────────────────────────
+  if (!worksheet['!merges']) worksheet['!merges'] = [];
+  worksheet['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }); // Título
+  worksheet['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } }); // Fecha
+  worksheet['!merges'].push({ s: { r: 3, c: 0 }, e: { r: 3, c: headers.length - 1 } }); // Subtítulo
+
+  // ── Asignar valores explícitos a celdas combinadas ────────────────────────────
+  worksheet['A1'] = { v: 'USUARIOS',                                                      t: 's' };
+  worksheet['A2'] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: 's' };
+  worksheet['A4'] = { v: 'LISTA DE USUARIOS',                                             t: 's' };
+
+  // ── Anchos de columna ─────────────────────────────────────────────────────────
   worksheet['!cols'] = [
     { wch: 6  }, // ID
     { wch: 16 }, // Tipo Documento
     { wch: 18 }, // Documento
     { wch: 28 }, // Nombre Completo
-    { wch: 30 }, // Correo
+    { wch: 30 }, // Correo Electrónico
     { wch: 14 }, // Teléfono
     { wch: 16 }, // Rol
     { wch: 16 }, // Tipo de Cliente
@@ -177,10 +216,8 @@ export const downloadUsersExcel = (users) => {
 
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Usuarios');
 
-  const fecha = new Date()
-    .toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    .replace(/\//g, '-');
-  XLSX.writeFile(workbook, `usuarios_${fecha}.xlsx`);
+  const fileName = `usuarios_${currentDate.toISOString().split('T')[0]}.xlsx`;
+  XLSX.writeFile(workbook, fileName);
 
   return true;
 };

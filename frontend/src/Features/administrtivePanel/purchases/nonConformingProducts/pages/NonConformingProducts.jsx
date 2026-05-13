@@ -4,7 +4,6 @@ import NonConformingProductsTable from "../components/NonConformingProductsTable
 import FormNonConformingProduct from "./FormNonConformingProduct";
 import { PurchasesFilters } from "../../../../shared/DateFilter";
 import { Plus, FileSpreadsheet } from "lucide-react";
-import { Link } from "react-router-dom";
 import ViewDetailsPN from "./ViewDetailsPN";
 import * as XLSX from "xlsx";
 
@@ -22,7 +21,6 @@ export const NonConformingProducts = () => {
   const { showConfirm, showSuccess, showError, showInfo } = useAlert();
   const alertShownRef = useRef(false);
 
-  // 🔥 Mock con estado
   const mockReports = [
     { id: 1, nombre: "Cuaderno 100 hojas Prisma", codigoBarras: "0124532", categoria: "Útiles Escolares", cantidadAfectada: 7, fechaDeteccion: "21/10/25", motivo: "Hojas dobladas", estado: "Activo" },
     { id: 2, nombre: "Calculadora Casio", codigoBarras: "1023634", categoria: "Útiles Escolares", cantidadAfectada: 3, fechaDeteccion: "21/10/25", motivo: "Partida", estado: "Activo" },
@@ -52,64 +50,114 @@ export const NonConformingProducts = () => {
 
   useEffect(() => { fetchReports(); }, []);
 
-  // 🔥 Exportar Excel
+  // 🔥 Exportar Excel — misma estructura que devoluciones
   const handleDownloadExcel = () => {
     if (filteredReports.length === 0) {
       showInfo("Sin datos", "No hay reportes para exportar.");
       return;
     }
 
-    const rows = filteredReports.map((r) => ({
-      "Nombre":            r.nombre,
-      "Código de Barras":  r.codigoBarras,
-      "Categoría":         r.categoria,
-      "Cantidad Afectada": r.cantidadAfectada,
-      "Fecha Detección":   r.fechaDeteccion,
-      "Motivo":            r.motivo,
-      "Estado":            r.estado,
-    }));
+    try {
+      const currentDate       = new Date();
+      const formattedDate     = currentDate.toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" });
+      const formattedDateTime = currentDate.toLocaleString("es-CO", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    const workbook  = XLSX.utils.book_new();
+      const titleRow = [["PRODUCTOS NO CONFORMES"]];
+      const dateRow  = [[`Fecha de exportación: ${formattedDate} - ${formattedDateTime}`]];
+      const emptyRow = [[""]];
 
-    worksheet["!cols"] = [
-      { wch: 35 }, // Nombre
-      { wch: 18 }, // Código
-      { wch: 20 }, // Categoría
-      { wch: 18 }, // Cantidad
-      { wch: 18 }, // Fecha
-      { wch: 25 }, // Motivo
-      { wch: 12 }, // Estado
-    ];
+      // ── Hoja 1: Resumen ──
+      const summaryHeaders = ["Nombre", "Código de Barras", "Categoría", "Cantidad Afectada", "Fecha Detección", "Motivo", "Estado"];
+      const summaryData    = filteredReports.map((r) => [
+        r.nombre           || "",
+        r.codigoBarras     || "",
+        r.categoria        || "",
+        r.cantidadAfectada || 0,
+        r.fechaDeteccion   || "",
+        r.motivo           || "",
+        r.estado           || "",
+      ]);
 
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Productos No Conformes");
+      const summarySheetData = [...titleRow, ...dateRow, ...emptyRow, [["RESUMEN DE REPORTES"]], ...emptyRow, summaryHeaders, ...summaryData];
+      const summaryWs = XLSX.utils.aoa_to_sheet(summarySheetData);
+      if (!summaryWs["!merges"]) summaryWs["!merges"] = [];
+      summaryWs["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: summaryHeaders.length - 1 } });
+      summaryWs["!merges"].push({ s: { r: 1, c: 0 }, e: { r: 1, c: summaryHeaders.length - 1 } });
+      summaryWs["!merges"].push({ s: { r: 3, c: 0 }, e: { r: 3, c: summaryHeaders.length - 1 } });
+      summaryWs["A1"] = { v: "PRODUCTOS NO CONFORMES", t: "s" };
+      summaryWs["A2"] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: "s" };
+      summaryWs["A4"] = { v: "RESUMEN DE REPORTES", t: "s" };
+      summaryWs["!cols"] = [{ wch: 35 }, { wch: 18 }, { wch: 20 }, { wch: 18 }, { wch: 18 }, { wch: 25 }, { wch: 12 }];
 
-    const fecha = new Date()
-      .toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit", year: "numeric" })
-      .replace(/\//g, "-");
+      // ── Hoja 2: Estadísticas ──
+      const totalReportes  = filteredReports.length;
+      const totalAfectados = filteredReports.reduce((s, r) => s + (Number(r.cantidadAfectada) || 0), 0);
+      const activos        = filteredReports.filter((r) => r.estado === "Activo").length;
+      const anulados       = filteredReports.filter((r) => r.estado === "Anulado").length;
+      const porCategoria   = filteredReports.reduce((acc, r) => {
+        const cat = r.categoria || "Sin categoría";
+        acc[cat] = (acc[cat] || 0) + (Number(r.cantidadAfectada) || 0);
+        return acc;
+      }, {});
 
-    XLSX.writeFile(workbook, `productos_no_conformes_${fecha}.xlsx`);
+      const statsHeaders = ["Métrica", "Valor"];
+      const statsData    = [
+        ["Total Reportes",               totalReportes],
+        ["Total Unidades Afectadas",     totalAfectados],
+        ["Promedio Afectados por Reporte", totalReportes > 0 ? (totalAfectados / totalReportes).toFixed(2) : 0],
+        [""],
+        ["Reportes Activos",             activos],
+        ["Reportes Anulados",            anulados],
+        [""],
+        ["— Unidades afectadas por categoría —", ""],
+        ...Object.entries(porCategoria).map(([cat, total]) => [cat, total]),
+        [""],
+        ["Fecha de Exportación",         formattedDateTime],
+      ];
+
+      const statsSheetData = [...titleRow, ...dateRow, ...emptyRow, [["ESTADÍSTICAS"]], ...emptyRow, statsHeaders, ...statsData];
+      const statsWs = XLSX.utils.aoa_to_sheet(statsSheetData);
+      if (!statsWs["!merges"]) statsWs["!merges"] = [];
+      statsWs["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } });
+      statsWs["!merges"].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 1 } });
+      statsWs["!merges"].push({ s: { r: 3, c: 0 }, e: { r: 3, c: 1 } });
+      statsWs["A1"] = { v: "PRODUCTOS NO CONFORMES", t: "s" };
+      statsWs["A2"] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: "s" };
+      statsWs["A4"] = { v: "ESTADÍSTICAS", t: "s" };
+      statsWs["!cols"] = [{ wch: 35 }, { wch: 20 }];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, summaryWs, "Resumen Reportes");
+      XLSX.utils.book_append_sheet(wb, statsWs,   "Estadísticas");
+      XLSX.writeFile(wb, `productos_no_conformes_${new Date().toISOString().split("T")[0]}.xlsx`);
+
+      showSuccess("Exportación exitosa", "El archivo Excel se generó correctamente");
+    } catch {
+      showError("Error", "No se pudo exportar el archivo");
+    }
   };
 
-  // 🔥 Anular
+  const handleClearFilters = () => {
+    setSearch("");
+    setFechaInicial("");
+    setFechaFinal("");
+    setCurrentPage(1);
+    showSuccess("Filtros limpiados", "Todos los filtros han sido eliminados");
+  };
+
   const handleCancel = async (id) => {
     const report = reports.find((r) => r.id === id);
     if (!report) return;
-
     if (report.estado === "Anulado") {
       showInfo("Ya anulado", "Este reporte ya se encuentra anulado.");
       return;
     }
-
     const result = await showConfirm(
-      "warning",
-      "Anular reporte",
+      "warning", "Anular reporte",
       `¿Deseas anular el reporte de "${report.nombre}"?`,
       { confirmButtonText: "Sí, anular", cancelButtonText: "Cancelar" }
     );
-
     if (!result?.isConfirmed) return;
-
     setReports(reports.map((r) => r.id === id ? { ...r, estado: "Anulado" } : r));
     showSuccess("Anulado", "El reporte fue anulado correctamente.");
   };
@@ -121,7 +169,6 @@ export const NonConformingProducts = () => {
     return new Date(fullYear, month - 1, day);
   };
 
-  // 🔥 Filtro
   const filteredReports = reports.filter((report) => {
     const matchesSearch = Object.values(report).some((value) =>
       String(value).toLowerCase().includes(search.toLowerCase())
@@ -129,13 +176,10 @@ export const NonConformingProducts = () => {
     const reportDate = parseDate(report.fechaDeteccion);
     const startDate  = fechaInicial ? new Date(fechaInicial) : null;
     const endDate    = fechaFinal   ? new Date(fechaFinal)   : null;
-    const matchesFecha =
-      (!startDate || reportDate >= startDate) &&
-      (!endDate   || reportDate <= endDate);
+    const matchesFecha = (!startDate || reportDate >= startDate) && (!endDate || reportDate <= endDate);
     return matchesSearch && matchesFecha;
   });
 
-  // 🔥 Alerta sin resultados
   useEffect(() => {
     const hayFiltroActivo = search !== "";
     if (!loading && !error && filteredReports.length === 0 && hayFiltroActivo && !alertShownRef.current) {
@@ -145,7 +189,6 @@ export const NonConformingProducts = () => {
     if (filteredReports.length > 0) alertShownRef.current = false;
   }, [filteredReports, search, loading, error]);
 
-  // 🔥 Highlight
   const highlightText = (text = "") => {
     if (!search) return text;
     const safeText   = String(text);
@@ -169,9 +212,8 @@ export const NonConformingProducts = () => {
   return (
     <>
       <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
-        <div className="flex items-end justify-between">
 
-          {/* Filtro por fecha */}
+        <div className="flex flex-wrap items-end gap-3">
           <PurchasesFilters
             search={search}
             setSearch={setSearch}
@@ -180,19 +222,18 @@ export const NonConformingProducts = () => {
             fechaFinal={fechaFinal}
             setFechaFinal={setFechaFinal}
             setCurrentPage={setCurrentPage}
+            onClearFilters={handleClearFilters}
           />
-
-          {/* Botones: Exportar Excel + Crear Reporte */}
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex-1" />
+          <div className="flex items-center gap-2">
             <button
               onClick={handleDownloadExcel}
-             className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
-          aria-label="Exportar a Excel"
+              className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
+              aria-label="Exportar a Excel"
             >
               <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
-          <span className="hidden sm:inline">Export Excel</span>
+              <span className="hidden sm:inline">Export Excel</span>
             </button>
-
             <button
               onClick={() => setShowModal(true)}
               className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 whitespace-nowrap"
@@ -220,16 +261,10 @@ export const NonConformingProducts = () => {
         )}
 
         {showModal && (
-          <FormNonConformingProduct
-            onClose={() => { setShowModal(false); fetchReports(); }}
-          />
+          <FormNonConformingProduct onClose={() => { setShowModal(false); fetchReports(); }} />
         )}
-
         {selectedReport && (
-          <ViewDetailsPN
-            report={selectedReport}
-            onClose={() => setSelectedReport(null)}
-          />
+          <ViewDetailsPN report={selectedReport} onClose={() => setSelectedReport(null)} />
         )}
       </div>
     </>

@@ -1,4 +1,4 @@
-import { X, Upload, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Upload, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import ProductsService from '../services/productsServices';
@@ -33,8 +33,10 @@ function PriceCard({ label, fieldMain, fieldPaca, placeholderMain, placeholderPa
 }
 
 const EMPTY = {
-  imagen: null, categorias: [], descripcion: '', nombre: '', codBarras: '', codBarras2: '',
-  referencia: '', stock: '', cantidadXPaca: '',
+  imagen: null, categorias: [], descripcion: '', nombre: '',
+  codBarras: '', stockPrincipal: '',
+  codsBarrasExtra: [],
+  referencia: '', cantidadXPaca: '',
   precioDetalle: '', precioDetallePaca: '', precioMayorista: '', precioMayoristaPaca: '',
   precioColegas: '', precioColegasPaca: '', precioPacas: '', precioPacasPaca: '',
 };
@@ -57,15 +59,21 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
   const numeric = (v) => v.replace(/[^0-9]/g, '');
   const block   = (e) => { if (['e','E','+','-','.'].includes(e.key)) e.preventDefault(); };
 
+  const calcStock = (d) => {
+    const principal = Number(d.stockPrincipal) || 0;
+    const extras    = (d.codsBarrasExtra || []).reduce((acc, e) => acc + (Number(e.stock) || 0), 0);
+    return principal + extras;
+  };
+
   const validate = (d) => {
     const e = {};
     if (!d.imagen && !imagenPreview) e.imagen = 'Debes subir una imagen del producto.';
     if (!d.nombre.trim()) e.nombre = 'El nombre del producto es obligatorio.';
     else if (d.nombre.trim().length < 3) e.nombre = 'El nombre debe tener al menos 3 caracteres.';
     if (!d.codBarras.trim()) e.codBarras = 'El código de barras es obligatorio.';
+    if (d.stockPrincipal === '') e.stockPrincipal = 'El stock es obligatorio.';
+    else if (!Number.isInteger(Number(d.stockPrincipal)) || Number(d.stockPrincipal) < 0) e.stockPrincipal = 'El stock debe ser un número entero mayor o igual a 0.';
     if (!d.referencia.trim()) e.referencia = 'La referencia es obligatoria.';
-    if (d.stock === '') e.stock = 'El stock es obligatorio.';
-    else if (!Number.isInteger(Number(d.stock)) || Number(d.stock) < 1) e.stock = 'El stock debe ser un número entero mayor o igual a 1.';
     if (d.precioDetalle === '') e.precioDetalle = 'El precio detal es obligatorio.';
     else if (Number(d.precioDetalle) <= 0) e.precioDetalle = 'El precio detal debe ser mayor a 0.';
     if (d.precioMayorista === '') e.precioMayorista = 'El precio mayorista es obligatorio.';
@@ -129,6 +137,25 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
     });
   };
 
+  const handleAddCodBarras = () => {
+    setFormData(p => ({ ...p, codsBarrasExtra: [...p.codsBarrasExtra, { cod: '', stock: '' }] }));
+  };
+
+  const handleCodBarrasExtraChange = (index, field, value) => {
+    setFormData(p => {
+      const updated = [...p.codsBarrasExtra];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...p, codsBarrasExtra: updated };
+    });
+  };
+
+  const handleRemoveCodBarras = (index) => {
+    setFormData(p => ({
+      ...p,
+      codsBarrasExtra: p.codsBarrasExtra.filter((_, i) => i !== index),
+    }));
+  };
+
   const handleImagenChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -150,7 +177,7 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
       return;
     }
     try {
-      const saved = ProductsService.create({ ...formData, imagen: imagenPreview });
+      const saved = ProductsService.create({ ...formData, imagen: imagenPreview, stock: calcStock(formData) });
       showSuccess('Producto creado', `"${saved.nombre}" fue agregado al catálogo correctamente.`);
       onCreate?.(saved);
       setFormData(EMPTY); setImagenPreview(null); setErrors({}); setPriceErrors({}); setExpandedCats({});
@@ -251,27 +278,105 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
                   <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} placeholder="Ej: Lapicero Bic Azul" className={inputCls('nombre')} />
                   <ErrMsg field="nombre" />
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Código de barras <span className="text-red-500">*</span></label>
-                  <input type="text" name="codBarras" value={formData.codBarras} onChange={handleChange} placeholder="123456789" className={inputCls('codBarras')} />
-                  <ErrMsg field="codBarras" />
+                <div className="col-span-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-medium text-gray-700">
+                      Código(s) de barras <span className="text-red-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAddCodBarras}
+                      title="Agregar otro código de barras"
+                      className="flex items-center gap-1 text-xs font-medium text-white px-2 py-0.5 rounded-md transition-colors hover:opacity-90 cursor-pointer"
+                      style={{ backgroundColor: '#004D77' }}
+                    >
+                      <Plus className="w-3 h-3" />
+                      Agregar código
+                    </button>
+                  </div>
+
+                  {/* Fila principal: codBarras + stockPrincipal */}
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        name="codBarras"
+                        value={formData.codBarras}
+                        onChange={handleChange}
+                        placeholder="Código de barras principal"
+                        className={inputCls('codBarras')}
+                      />
+                      <ErrMsg field="codBarras" />
+                    </div>
+                    <div className="w-24 flex-shrink-0">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={formData.stockPrincipal}
+                        onChange={(e) => {
+                          const v = numeric(e.target.value);
+                          setFormData(p => ({ ...p, stockPrincipal: v }));
+                          if (errors.stockPrincipal) setErrors(p => ({ ...p, stockPrincipal: undefined }));
+                        }}
+                        onKeyDown={block}
+                        placeholder="Stock"
+                        className={inputCls('stockPrincipal')}
+                      />
+                      <ErrMsg field="stockPrincipal" />
+                    </div>
+                  </div>
+
+                  {/* Filas adicionales dinámicas: cod + stock */}
+                  {formData.codsBarrasExtra.map((item, i) => (
+                    <div key={i} className="flex items-center gap-2 mt-2">
+                      <input
+                        type="text"
+                        value={item.cod}
+                        onChange={(e) => handleCodBarrasExtraChange(i, 'cod', e.target.value)}
+                        placeholder={`Código de barras ${i + 2}`}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      />
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={item.stock}
+                        onChange={(e) => handleCodBarrasExtraChange(i, 'stock', numeric(e.target.value))}
+                        onKeyDown={block}
+                        placeholder="Stock"
+                        className="w-24 flex-shrink-0 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCodBarras(i)}
+                        title="Eliminar este código"
+                        className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-md bg-red-100 text-red-500 hover:bg-red-200 transition-colors cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Código de barras 2 <span className="text-gray-400 font-normal">(opcional)</span></label>
-                  <input type="text" name="codBarras2" value={formData.codBarras2} onChange={handleChange} placeholder="Código alternativo" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
-                </div>
+
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Referencia <span className="text-red-500">*</span></label>
                   <input type="text" name="referencia" value={formData.referencia} onChange={handleChange} placeholder="REF-001" className={inputCls('referencia')} />
                   <ErrMsg field="referencia" />
                 </div>
+
+                {/* Stock general — solo lectura, suma automática */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Stock <span className="text-red-500">*</span></label>
-                  <input type="text" inputMode="numeric" name="stock" value={formData.stock}
-                    onChange={(e) => { const v = numeric(e.target.value); setFormData(p => ({ ...p, stock: v })); if (errors.stock) setErrors(p => ({ ...p, stock: undefined })); }}
-                    onKeyDown={block} placeholder="100" className={inputCls('stock')} />
-                  <ErrMsg field="stock" />
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Stock general
+                    <span className="ml-1 text-[10px] text-gray-400 font-normal">(calculado)</span>
+                  </label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={calcStock(formData)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 text-sm cursor-not-allowed font-semibold"
+                  />
                 </div>
+
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Cantidad x paca</label>
                   <input type="text" inputMode="numeric" name="cantidadXPaca" value={formData.cantidadXPaca}

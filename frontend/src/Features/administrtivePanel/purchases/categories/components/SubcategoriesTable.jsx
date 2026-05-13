@@ -5,6 +5,14 @@ import { useAlert } from "../../../../shared/alerts/useAlert";
 import { getSubcategories, saveSubcategories, deleteSubcategory } from "../services/categoriesService";
 import { subcategoryHasProducts } from "../services/categoryproductsService";
 
+// ─── Normaliza texto: minúsculas + sin tildes/diacríticos ────────────────────
+const normalizeName = (str = "") =>
+  str
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
 function ActiveToggle({ activo, onChange }) {
   return (
     <button
@@ -30,7 +38,7 @@ function ActiveToggle({ activo, onChange }) {
 }
 
 const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
-  const { showConfirm, showSuccess, showWarning } = useAlert();
+  const { showConfirm, showSuccess, showWarning, showError } = useAlert();
   const [subcategories, setSubcategories] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editedName, setEditedName] = useState("");
@@ -80,7 +88,7 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
 
     // ── VALIDACIÓN NOMBRE DUPLICADO ──
     const otherSubs = subcategories.filter((s) => s.id !== editingId);
-    const nombreExistente = otherSubs.some((s) => s.nombre.toLowerCase() === nameTrim.toLowerCase());
+    const nombreExistente = otherSubs.some((s) => normalizeName(s.nombre) === normalizeName(nameTrim));
     if (nombreExistente) {
       showWarning("Error de validación", "Ya existe otra subcategoría con ese nombre en esta categoría.");
       return;
@@ -130,7 +138,18 @@ const handleDelete = async (id) => {
   refreshCategories();
 };
 
-  const handleToggleEstado = (subId, nuevoEstado) => {
+  const handleToggleEstado = async (subId, nuevoEstado) => {
+    // Si se va a desactivar, pedir confirmación advirtiendo sobre productos
+    if (!nuevoEstado) {
+      const result = await showConfirm(
+        "warning",
+        "Desactivar subcategoría",
+        "Al desactivar esta subcategoría también se desactivarán los productos asociados a ella. ¿Deseas continuar?",
+        { confirmButtonText: "Sí, desactivar", cancelButtonText: "Cancelar" }
+      );
+      if (!result?.isConfirmed) return;
+    }
+
     const allSubs = getSubcategories().map((s) =>
       s.id === subId ? { ...s, estado: nuevoEstado ? "Activo" : "Inactivo" } : s
     );

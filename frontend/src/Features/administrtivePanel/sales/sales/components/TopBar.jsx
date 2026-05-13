@@ -1,8 +1,9 @@
+// src/Features/administrtivePanel/sales/components/TopBar.jsx
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, FileSpreadsheet } from 'lucide-react';
-import { useAlert }              from '../../../../shared/alerts/useAlert';
-import { downloadSalesExcel }    from '../helpers/salesHelpers';
-import { SalesDB }               from '../services/salesBD';
+import { useAlert } from '../../../../shared/alerts/useAlert';
+import { downloadSalesExcel } from '../helpers/salesHelpers';
+import { SalesServices } from '../services/salesServices'; // ✅ importación corregida
 import ButtonComponent from '../../../../shared/ButtonComponent';
 
 // ─── TopBar ───────────────────────────────────────────────────────────────────
@@ -19,7 +20,7 @@ function TopBar({ search, onSearchChange }) {
   const { showConfirm, showTimer, showWarning } = useAlert();
 
   const handleDownload = () => {
-    const sales = SalesDB.list();
+    const sales = SalesServices.list(); // ✅ método correcto
 
     if (sales.length === 0) {
       showWarning('Sin registros', 'No hay ventas registradas para descargar.');
@@ -43,7 +44,6 @@ function TopBar({ search, onSearchChange }) {
 
   return (
     <div className="flex items-center justify-between gap-2 sm:gap-4 shrink-0">
-
       {/* Buscador */}
       <div className="relative flex-1 sm:flex-none sm:w-72 md:w-96">
         <input
@@ -58,23 +58,20 @@ function TopBar({ search, onSearchChange }) {
 
       {/* Botones */}
       <div className="flex items-center gap-2 shrink-0">
-        {/*Botón Excel*/}
+        {/* Botón Excel */}
         <ButtonComponent
           className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-2 flex items-center gap-2"
-          onClick={handleDownload}>
-            <FileSpreadsheet className="w-4 h-4" />
-            Exportar Excel
+          onClick={handleDownload}
+        >
+          <FileSpreadsheet className="w-4 h-4" />
+          Exportar Excel
         </ButtonComponent>
 
-        <ButtonComponent
-          onClick={() => navigate('/admin/sales/form-sale')}
-          title="Nueva venta"
-        >
+        <ButtonComponent onClick={() => navigate('/admin/sales/form-sale')} title="Nueva venta">
           <span className="hidden sm:inline">Nueva venta</span>
           <Plus className="w-4 h-4" strokeWidth={2} />
         </ButtonComponent>
       </div>
-
     </div>
   );
 }

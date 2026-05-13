@@ -244,7 +244,7 @@ function ReturnsTable({
 
         <tbody>
           {currentData.map((devolucion, index) => {
-            const rowBg         = index % 2 === 0 ? "bg-white" : "bg-gray-100";
+            const rowBg         = index % 2 === 0 ? "bg-gray-100 hover:bg-blue-50" : "bg-white hover:bg-blue-50";
             const proveedor     = proveedorMap[devolucion.idCompra] ?? "—";
             const totalUnidades = (devolucion.productos ?? []).reduce(
               (sum, p) => sum + (p.cantidadDevolver ?? 0), 0

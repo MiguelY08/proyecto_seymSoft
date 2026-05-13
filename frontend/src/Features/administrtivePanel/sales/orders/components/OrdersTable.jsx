@@ -1,15 +1,14 @@
+// src/features/orders/components/OrdersTable.jsx
 import React from 'react';
 import { Info, SquarePen, XCircle, Package } from 'lucide-react';
-import { highlight, EstadoBadgeTable, getPermisos } from '../helpers/ordersHelpers';
+import {
+  highlight,
+  EstadoLogisticoBadgeTable,
+  EstadoPagoBadgeTable,
+  getPermisos
+} from '../helpers/ordersHelpers';
 
 // ─── Empty State ─────────────────────────────────────────────────────────────
-/**
- * EmptyState — Componente para estado vacío en la tabla.
- * Muestra mensaje diferente si hay búsqueda activa.
- *
- * @param {Object} props
- * @param {boolean} props.isSearching - Si hay una búsqueda activa.
- */
 function EmptyState({ isSearching }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 gap-4">
@@ -36,20 +35,6 @@ function EmptyState({ isSearching }) {
 }
 
 // ─── OrdersTable ─────────────────────────────────────────────────────────────
-/**
- * OrdersTable — Tabla principal de pedidos con acciones.
- * Incluye resaltado de búsqueda, badges de estado y botones de acción.
- * Maneja estado vacío y paginación externa.
- *
- * @param {Object} props
- * @param {Array} props.orders - Pedidos a mostrar en la página actual.
- * @param {Function} props.onViewDetail - Callback para ver detalle.
- * @param {Function} props.onEdit - Callback para editar.
- * @param {Function} props.onCancel - Callback para cancelar.
- * @param {string} props.search - Término de búsqueda actual.
- * @param {number} props.offset - Offset para numeración.
- * @param {number} props.totalOrders - Total de pedidos (para determinar si hay búsqueda).
- */
 function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offset = 0, totalOrders = 0 }) {
   const isSearching = totalOrders > 0 && search.trim().length > 0;
 
@@ -60,7 +45,6 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
   return (
     <div className="flex-1 overflow-x-auto rounded-xl shadow-md min-h-0">
       <table className="min-w-max w-full">
-
         <thead className="bg-[#004D77] text-white">
           <tr>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">N° Pedido</th>
@@ -68,48 +52,54 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Fecha</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Entrega</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Total</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Estado del pedido</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Funciones</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Estado</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Pago</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Acciones</th>
           </tr>
         </thead>
-
         <tbody>
           {orders.map((order, index) => {
-            const rowBg              = index % 2 === 0 ? 'bg-white' : 'bg-gray-100';
-            const { deshabilitado }  = getPermisos(order.estado);
-            const direccionMostrar   = order.direccionEntrega || order.cliente?.direccion || '';
+            const rowBg = index % 2 === 0 ? 'bg-gray-100 hover:bg-blue-50' : 'bg-white hover:bg-blue-50';
+            // Llamada corregida con dos parámetros
+            const { deshabilitado } = getPermisos(order.estadoLogistico, order.pagoEstado);
+            const direccionMostrar = order.direccionEntrega || '';
+            const clienteMostrar = order.clienteNombre || 'Cliente no especificado';
+
+            // Mensaje de tooltip según la razón del deshabilitado
+            let disabledTitle = '';
+            if (order.estadoLogistico === 'cancelado') {
+              disabledTitle = 'No disponible para pedidos cancelados';
+            } else if (order.estadoLogistico === 'listo' && order.pagoEstado === 'pagado') {
+              disabledTitle = 'No disponible para pedidos listos y pagados';
+            } else {
+              disabledTitle = 'No disponible';
+            }
 
             return (
               <tr key={order.id} className={`transition-colors duration-150 ${rowBg}`}>
-
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap font-mono">
-                  {highlight(order.numerosPedido, search)}
+                  {highlight(order.numeroPedido || String(order.id), search)}
                 </td>
-
                 <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">
-                  {highlight(order.cliente.nombre, search)}
+                  {highlight(clienteMostrar, search)}
                 </td>
-
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(order.fecha, search)}
+                  {highlight(order.fechaPedido ? new Date(order.fechaPedido).toLocaleDateString('es-CO') : '', search)}
                 </td>
-
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap max-w-xs truncate">
                   {highlight(direccionMostrar, search)}
                 </td>
-
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(`$${order.total.toLocaleString()}`, search)}
                 </td>
-
                 <td className="px-3 py-1.5 text-center whitespace-nowrap">
-                  <EstadoBadgeTable estado={order.estado} term={search} />
+                  <EstadoLogisticoBadgeTable estado={order.estadoLogistico} term={search} />
                 </td>
-
+                <td className="px-3 py-1.5 text-center whitespace-nowrap">
+                  <EstadoPagoBadgeTable estado={order.pagoEstado} term={search} />
+                </td>
                 <td className="px-3 py-1.5">
                   <div className="flex items-center justify-center gap-1.5">
-
-                    {/* Ver detalle */}
                     <button
                       onClick={() => onViewDetail(order)}
                       className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
@@ -118,12 +108,8 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
                       <Info className="w-4 h-4" strokeWidth={1.5} />
                     </button>
 
-                    {/* Editar */}
                     {deshabilitado ? (
-                      <span
-                        className="text-gray-200 cursor-not-allowed"
-                        title="No disponible para pedidos cancelados"
-                      >
+                      <span className="text-gray-200 cursor-not-allowed" title={disabledTitle}>
                         <SquarePen className="w-4 h-4" strokeWidth={1.5} />
                       </span>
                     ) : (
@@ -136,12 +122,8 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
                       </button>
                     )}
 
-                    {/* Cancelar */}
                     {deshabilitado ? (
-                      <span
-                        className="text-gray-200 cursor-not-allowed"
-                        title="No disponible para pedidos cancelados"
-                      >
+                      <span className="text-gray-200 cursor-not-allowed" title={disabledTitle}>
                         <XCircle className="w-4 h-4" strokeWidth={1.5} />
                       </span>
                     ) : (
@@ -153,7 +135,6 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
                         <XCircle className="w-4 h-4" strokeWidth={1.5} />
                       </button>
                     )}
-
                   </div>
                 </td>
               </tr>

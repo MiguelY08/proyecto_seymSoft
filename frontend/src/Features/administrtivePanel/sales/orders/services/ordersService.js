@@ -1,237 +1,113 @@
 // src/features/orders/services/ordersService.js
-// Servicio de órdenes (CRUD) respaldado en localStorage.
-// Usado en el panel administrativo para simular comportamiento de una API.
+// Servicio para gestión de Pedidos, Pagos y Ventas usando localStorage.
+// Refactorizado según nuevas reglas de negocio:
+// - Pedido tiene dos dimensiones de estado: logístico y de pago.
+// - Pagos parciales permitidos; la Venta se genera al completar el pago.
+// - Cliente y asesor referenciados por ID.
+// - Origen del pedido: 'manual' (asesor) o 'web'.
+// - Edición de productos con validación de estados y manejo de excedentes.
 
 import ProductsService from '../../../purchases/products/services/productsServices';
 
-/**
- * @typedef {Object} OrderProduct
- * @property {number} id
- * @property {string} nombre
- * @property {number} cantidad
- * @property {number} precioUnitario
- * @property {number} subtotal
- */
+// ----------------------------------------------------------------------
+// Tipos de datos (JSDoc)
+// ----------------------------------------------------------------------
 
 /**
- * @typedef {Object} OrderClient
- * @property {string} nombre
- * @property {string} telefono
- * @property {string} email
- * @property {string} direccion
+ * @typedef {Object} OrderProduct
+ * @property {number} id - ID del producto
+ * @property {string} nombre - Nombre descriptivo
+ * @property {number} cantidad - Cantidad solicitada
+ * @property {number} precioUnitario - Precio unitario al momento del pedido
+ * @property {number} subtotal - cantidad * precioUnitario
  */
 
 /**
  * @typedef {Object} Order
- * @property {number} id
- * @property {string} numerosPedido
- * @property {OrderClient} cliente
- * @property {OrderProduct[]} productos
- * @property {string} fecha
- * @property {number} total
- * @property {string} estado
- * @property {string} metodoPago
- * @property {string|null} comprobantePago
- * @property {string} direccionEntrega
- * @property {string|null} motivoCancelacion
+ * @property {number} id - Identificador único del pedido
+ * @property {string} numeroPedido - Número legible (generalmente igual al id)
+ * @property {number} clienteId - ID del cliente (usuario con es_cliente=true)
+ * @property {number} asesorId - ID del usuario que registró el pedido
+ * @property {string} fechaPedido - Fecha de creación (ISO 8601)
+ * @property {string} direccionEntrega - Dirección de entrega
+ * @property {OrderProduct[]} productos - Líneas del pedido
+ * @property {number} subtotal - Suma de subtotales de productos
+ * @property {number} iva - IVA calculado (19%)
+ * @property {number} total - subtotal + iva
+ * @property {'en proceso'|'listo'|'cancelado'} estadoLogistico - Estado de preparación
+ * @property {'pendiente'|'pagado'} pagoEstado - Estado financiero
+ * @property {'manual'|'web'} origen - Cómo se generó el pedido
+ * @property {string|null} motivoCancelacion - Razón de cancelación
  */
 
-// Claves usadas en localStorage
-const ORDERS_KEY   = 'pm_orders';
-const SEED_VERSION = 'orders_v3'; // bump to add motivoCancelacion field
-const VERSION_KEY  = 'pm_orders_version';
+/**
+ * @typedef {Object} Payment
+ * @property {number} id - Identificador único del pago
+ * @property {number} pedidoId - ID del pedido asociado
+ * @property {string} fechaPago - Fecha del pago (ISO 8601)
+ * @property {'Efectivo'|'Transferencia'|'Crédito'} metodoPago - Método usado
+ * @property {number} monto - Monto abonado
+ * @property {string|null} comprobante - Referencia opcional
+ */
 
-// ─── Seed — 16 órdenes alineadas con productsServices (IDs 1–10) ─────────────
-// Este array se inyecta en localStorage para datos de ejemplo / desarrollo.
-// Incluye los nuevos campos: direccionEntrega y motivoCancelacion.
-const SEED_ORDERS = [
-  {
-    id: 1001, numerosPedido: '1001',
-    cliente: { nombre: 'Elizabeth Esparza', telefono: '3001234567', email: 'elizabeth.esparza@email.com', direccion: 'Cra 73 #21-30 (Belén San Bernardo 1er piso)' },
-    productos: [
-      { id: 1,  nombre: 'Libreta con Lapicero',        cantidad: 5, precioUnitario: 5000,  subtotal: 25000 },
-      { id: 5,  nombre: 'Caja de Colores 24 Und',      cantidad: 2, precioUnitario: 12000, subtotal: 24000 },
-      { id: 10, nombre: 'Block Cuadriculado 50 Hojas', cantidad: 3, precioUnitario: 3800,  subtotal: 11400 },
-    ],
-    fecha: '01/11/2025', total: 60400, estado: 'Por aprobar', metodoPago: 'Transferencia', comprobantePago: 'comprobante_1001.pdf',
-    direccionEntrega: 'Cra 73 #21-30 (Belén San Bernardo 1er piso)', motivoCancelacion: null,
-  },
-  {
-    id: 1002, numerosPedido: '1002',
-    cliente: { nombre: 'Andrea Moreno', telefono: '3109876543', email: 'andrea.moreno@email.com', direccion: 'El cliente lo recoge' },
-    productos: [
-      { id: 3, nombre: 'Resma Papel Bond A4 500 Hojas', cantidad: 10, precioUnitario: 18500, subtotal: 185000 },
-    ],
-    fecha: '02/11/2025', total: 185000, estado: 'Aprobado', metodoPago: 'Efectivo', comprobantePago: null,
-    direccionEntrega: 'El cliente lo recoge', motivoCancelacion: null,
-  },
-  {
-    id: 1003, numerosPedido: '1003',
-    cliente: { nombre: 'Lorena Castaño', telefono: '3158765432', email: 'lorena.castano@email.com', direccion: 'El cliente lo recoge' },
-    productos: [
-      { id: 4, nombre: 'Bolígrafo Kilométrico x12', cantidad: 5,  precioUnitario: 8400, subtotal: 42000 },
-      { id: 2, nombre: 'Silicona Líquida ET131',    cantidad: 30, precioUnitario: 2900, subtotal: 87000 },
-    ],
-    fecha: '03/11/2025', total: 129000, estado: 'Aprobado', metodoPago: 'Transferencia', comprobantePago: 'comprobante_1003.pdf',
-    direccionEntrega: 'El cliente lo recoge', motivoCancelacion: null,
-  },
-  {
-    id: 1004, numerosPedido: '1004',
-    cliente: { nombre: 'Andrea Hernandes', telefono: '3201234567', email: 'andrea.hernandes@email.com', direccion: 'Dg 75 #72-1 (Laureles Chacho)' },
-    productos: [
-      { id: 9, nombre: 'Marcadores Borrables x6',  cantidad: 8,  precioUnitario: 11500, subtotal: 92000 },
-      { id: 6, nombre: 'Corrector Líquido Faster', cantidad: 12, precioUnitario: 3500,  subtotal: 42000 },
-      { id: 7, nombre: 'Carpeta Argollada Oficio', cantidad: 6,  precioUnitario: 9800,  subtotal: 58800 },
-    ],
-    fecha: '04/11/2025', total: 192800, estado: 'Por aprobar', metodoPago: 'Transferencia', comprobantePago: 'comprobante_1004.pdf',
-    direccionEntrega: 'Dg 75 #72-1 (Laureles Chacho)', motivoCancelacion: null,
-  },
-  {
-    id: 1005, numerosPedido: '1005',
-    cliente: { nombre: 'Luisa Morales', telefono: '3187654321', email: 'luisa.morales@email.com', direccion: 'El cliente lo recoge' },
-    productos: [{ id: 6, nombre: 'Corrector Líquido Faster', cantidad: 50, precioUnitario: 3500, subtotal: 175000 }],
-    fecha: '05/11/2025', total: 175000, estado: 'Por aprobar', metodoPago: 'Efectivo', comprobantePago: null,
-    direccionEntrega: 'El cliente lo recoge', motivoCancelacion: null,
-  },
-  {
-    id: 1006, numerosPedido: '1006',
-    cliente: { nombre: 'Daniel Gomez', telefono: '3109876543', email: 'daniel@example.com', direccion: 'Cll 30 #89-07 (Belén los almendros)' },
-    productos: [
-      { id: 7, nombre: 'Carpeta Argollada Oficio',  cantidad: 15, precioUnitario: 9800, subtotal: 147000 },
-      { id: 4, nombre: 'Bolígrafo Kilométrico x12', cantidad: 30, precioUnitario: 8400, subtotal: 252000 },
-    ],
-    fecha: '06/11/2025', total: 399000, estado: 'Aprobado', metodoPago: 'Transferencia', comprobantePago: 'comprobante_1006.pdf',
-    direccionEntrega: 'Cll 30 #89-07 (Belén los almendros)', motivoCancelacion: null,
-  },
-  {
-    id: 1007, numerosPedido: '1007',
-    cliente: { nombre: 'Melissa Martin', telefono: '3145678901', email: 'melissa.martin@email.com', direccion: 'El cliente lo recoge' },
-    productos: [{ id: 8, nombre: 'Tijeras Escolar Punta Roma', cantidad: 20, precioUnitario: 4200, subtotal: 84000 }],
-    fecha: '07/11/2025', total: 84000, estado: 'Cancelado', metodoPago: 'Transferencia', comprobantePago: null,
-    direccionEntrega: 'El cliente lo recoge', motivoCancelacion: 'El cliente solicitó la cancelación antes de la entrega.',
-  },
-  {
-    id: 1008, numerosPedido: '1008',
-    cliente: { nombre: 'Marcela Reyes', telefono: '3167890123', email: 'marcela.reyes@email.com', direccion: 'Carrera 26#40S-81 (Belén rincón)' },
-    productos: [
-      { id: 5, nombre: 'Caja de Colores 24 Und',  cantidad: 8,  precioUnitario: 12000, subtotal: 96000  },
-      { id: 9, nombre: 'Marcadores Borrables x6', cantidad: 10, precioUnitario: 11500, subtotal: 115000 },
-    ],
-    fecha: '08/11/2025', total: 211000, estado: 'Por aprobar', metodoPago: 'Transferencia', comprobantePago: 'comprobante_1008.pdf',
-    direccionEntrega: 'Carrera 26#40S-81 (Belén rincón)', motivoCancelacion: null,
-  },
-  {
-    id: 1009, numerosPedido: '1009',
-    cliente: { nombre: 'Danna Mejia', telefono: '3198765432', email: 'danna.mejia@email.com', direccion: 'El cliente lo recoge' },
-    productos: [
-      { id: 1, nombre: 'Libreta con Lapicero',   cantidad: 10, precioUnitario: 5000, subtotal: 50000 },
-      { id: 2, nombre: 'Silicona Líquida ET131', cantidad: 20, precioUnitario: 2900, subtotal: 58000 },
-    ],
-    fecha: '09/11/2025', total: 108000, estado: 'Cancelado', metodoPago: 'Efectivo', comprobantePago: null,
-    direccionEntrega: 'El cliente lo recoge', motivoCancelacion: 'Productos sin stock disponible al momento de procesar.',
-  },
-  {
-    id: 1010, numerosPedido: '1010',
-    cliente: { nombre: 'Luciano Madrid', telefono: '3123456789', email: 'luciano.madrid@email.com', direccion: 'Calle 60#60B-36 (Manantiales oriental)' },
-    productos: [
-      { id: 5, nombre: 'Caja de Colores 24 Und',  cantidad: 5, precioUnitario: 12000, subtotal: 60000 },
-      { id: 9, nombre: 'Marcadores Borrables x6', cantidad: 4, precioUnitario: 11500, subtotal: 46000 },
-    ],
-    fecha: '10/11/2025', total: 106000, estado: 'Aprobado', metodoPago: 'Transferencia', comprobantePago: 'comprobante_1010.pdf',
-    direccionEntrega: 'Calle 60#60B-36 (Manantiales oriental)', motivoCancelacion: null,
-  },
-  {
-    id: 1011, numerosPedido: '1011',
-    cliente: { nombre: 'Sebastian Gallego', telefono: '3134567890', email: 'sebastian.gallego@email.com', direccion: 'El cliente lo recoge' },
-    productos: [{ id: 3, nombre: 'Resma Papel Bond A4 500 Hojas', cantidad: 5, precioUnitario: 18500, subtotal: 92500 }],
-    fecha: '11/11/2025', total: 92500, estado: 'Por aprobar', metodoPago: 'Efectivo', comprobantePago: null,
-    direccionEntrega: 'El cliente lo recoge', motivoCancelacion: null,
-  },
-  {
-    id: 1012, numerosPedido: '1012',
-    cliente: { nombre: 'Miguel Bautista', telefono: '3156789012', email: 'miguel.bautista@email.com', direccion: 'Carrera 107#49A-97 (San Javier)' },
-    productos: [
-      { id: 4, nombre: 'Bolígrafo Kilométrico x12', cantidad: 20, precioUnitario: 8400, subtotal: 168000 },
-      { id: 6, nombre: 'Corrector Líquido Faster',  cantidad: 50, precioUnitario: 3500, subtotal: 175000 },
-    ],
-    fecha: '12/11/2025', total: 343000, estado: 'Aprobado', metodoPago: 'Transferencia', comprobantePago: 'comprobante_1012.pdf',
-    direccionEntrega: 'Carrera 107#49A-97 (San Javier)', motivoCancelacion: null,
-  },
-  {
-    id: 1013, numerosPedido: '1013',
-    cliente: { nombre: 'Andres Iglesias', telefono: '3178901234', email: 'andres.iglesias@email.com', direccion: 'El cliente lo recoge' },
-    productos: [
-      { id: 10, nombre: 'Block Cuadriculado 50 Hojas', cantidad: 15, precioUnitario: 3800,  subtotal: 57000  },
-      { id: 4,  nombre: 'Bolígrafo Kilométrico x12',   cantidad: 25, precioUnitario: 8400,  subtotal: 210000 },
-    ],
-    fecha: '13/11/2025', total: 267000, estado: 'Por aprobar', metodoPago: 'Efectivo', comprobantePago: null,
-    direccionEntrega: 'El cliente lo recoge', motivoCancelacion: null,
-  },
-  {
-    id: 1014, numerosPedido: '1014',
-    cliente: { nombre: 'Antonio Botero', telefono: '3189012345', email: 'antonio.botero@email.com', direccion: 'Transversal 74#RD-5 (Poblado)' },
-    productos: [
-      { id: 7, nombre: 'Carpeta Argollada Oficio', cantidad: 25, precioUnitario: 9800, subtotal: 245000 },
-      { id: 6, nombre: 'Corrector Líquido Faster', cantidad: 30, precioUnitario: 3500, subtotal: 105000 },
-    ],
-    fecha: '14/11/2025', total: 350000, estado: 'Por aprobar', metodoPago: 'Transferencia', comprobantePago: 'comprobante_1014.pdf',
-    direccionEntrega: 'Transversal 74#RD-5 (Poblado)', motivoCancelacion: null,
-  },
-  {
-    id: 1015, numerosPedido: '1015',
-    cliente: { nombre: 'Cristian Monsalve', telefono: '3190123456', email: 'cristian.monsalve@email.com', direccion: 'El cliente lo recoge' },
-    productos: [{ id: 7, nombre: 'Carpeta Argollada Oficio', cantidad: 40, precioUnitario: 9800, subtotal: 392000 }],
-    fecha: '15/11/2025', total: 392000, estado: 'Por aprobar', metodoPago: 'Efectivo', comprobantePago: null,
-    direccionEntrega: 'El cliente lo recoge', motivoCancelacion: null,
-  },
-  {
-    id: 1016, numerosPedido: '1016',
-    cliente: { nombre: 'Nicol Espinoza', telefono: '3112345678', email: 'nicol.espinoza@email.com', direccion: 'Tenerife #54-88 (La candelaria)' },
-    productos: [
-      { id: 9, nombre: 'Marcadores Borrables x6', cantidad: 15, precioUnitario: 11500, subtotal: 172500 },
-      { id: 5, nombre: 'Caja de Colores 24 Und',  cantidad: 5,  precioUnitario: 12000, subtotal: 60000  },
-    ],
-    fecha: '16/11/2025', total: 232500, estado: 'Aprobado', metodoPago: 'Transferencia', comprobantePago: 'comprobante_1016.pdf',
-    direccionEntrega: 'Tenerife #54-88 (La candelaria)', motivoCancelacion: null,
-  },
-];
+/**
+ * @typedef {Object} Sale
+ * @property {number} id - Identificador único de la venta
+ * @property {number} pedidoId - ID del pedido asociado
+ * @property {string} fechaPago - Fecha en que se completó el pago (ISO 8601)
+ * @property {string} metodoPago - Método(s) resumido(s)
+ * @property {string|null} comprobantePago - Referencia consolidada (opcional)
+ * @property {number} montoPagado - Total pagado (igual a total del pedido)
+ */
 
-// ─── Seed: siembra datos de ejemplo solo cuando cambia la versión ────────────
-//
-// El propósito de este seed es proporcionar datos iniciales para desarrollo/demo.
-// Los datos se escriben en localStorage solo si la versión configurada cambia,
-// evitando así sobrescribir los datos del usuario en cada carga.
-const seedOrders = () => {
-  try {
-    if (localStorage.getItem(VERSION_KEY) !== SEED_VERSION) {
-      localStorage.setItem(ORDERS_KEY, JSON.stringify(SEED_ORDERS));
-      localStorage.setItem(VERSION_KEY, SEED_VERSION);
-    }
-  } catch {
-    // En caso de error (p. ej. storage inaccesible), intentamos asegurar que haya datos.
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(SEED_ORDERS));
-    localStorage.setItem(VERSION_KEY, SEED_VERSION);
-  }
+// ----------------------------------------------------------------------
+// Constantes
+// ----------------------------------------------------------------------
+
+const ORDERS_STORAGE_KEY    = 'pm_orders';
+const PAYMENTS_STORAGE_KEY  = 'pm_payments';
+const SALES_STORAGE_KEY     = 'pm_sales';
+const IVA_RATE = 0.19; // 19%
+
+// ID especial para el "Cliente de Caja"
+export const CAJA_CLIENTE_ID = 0; // Coincide con SYSTEM_CLIENT_ID de clientsService
+
+// Estados logísticos
+export const ESTADOS_LOGISTICOS = {
+  EN_PROCESO: 'en proceso',
+  LISTO:      'listo',
+  CANCELADO:  'cancelado',
 };
 
-seedOrders();
+// Estados de pago
+export const ESTADOS_PAGO = {
+  PENDIENTE: 'pendiente',
+  PAGADO:    'pagado',
+};
 
-// ─── Helpers privados de stock ────────────────────────────────────────────────
+// Orígenes
+export const ORIGENES = {
+  MANUAL: 'manual',
+  WEB:    'web',
+};
 
-/**
- * Determina si un estado implica stock comprometido.
- * Solo las órdenes Canceladas no tienen stock reservado.
- */
-const _esActivo = (estado) => estado !== 'Cancelado';
+// Métodos de pago (incluye "Devolución" para manejo de excedentes)
+export const METODOS_PAGO = {
+  EFECTIVO:      'Efectivo',
+  TRANSFERENCIA: 'Transferencia',
+  CREDITO:       'Crédito',
+  DEVOLUCION:    'Devolución',
+};
 
-/**
- * Descuenta del inventario las cantidades de las líneas de la orden.
- * No baja de cero.
- * @param {Array<{id:number, cantidad:number}>} productos
- */
+// ----------------------------------------------------------------------
+// Helpers privados de inventario (ajustados a estadoLogistico)
+// ----------------------------------------------------------------------
+
+const _esPedidoActivo = (estadoLogistico) => estadoLogistico !== ESTADOS_LOGISTICOS.CANCELADO;
+
 const _decrementStock = (productos = []) => {
-  const all     = ProductsService.list();
-  const updated = all.map((p) => {
+  const allProducts = ProductsService.list();
+  const updated = allProducts.map((p) => {
     const linea = productos.find((l) => l.id === p.id);
     if (!linea) return p;
     return { ...p, stock: Math.max(0, p.stock - linea.cantidad) };
@@ -239,13 +115,9 @@ const _decrementStock = (productos = []) => {
   ProductsService._save(updated);
 };
 
-/**
- * Devuelve al inventario las cantidades de las líneas de la orden.
- * @param {Array<{id:number, cantidad:number}>} productos
- */
 const _restoreStock = (productos = []) => {
-  const all     = ProductsService.list();
-  const updated = all.map((p) => {
+  const allProducts = ProductsService.list();
+  const updated = allProducts.map((p) => {
     const linea = productos.find((l) => l.id === p.id);
     if (!linea) return p;
     return { ...p, stock: p.stock + linea.cantidad };
@@ -253,175 +125,377 @@ const _restoreStock = (productos = []) => {
   ProductsService._save(updated);
 };
 
-/**
- * Ajusta el inventario al editar las líneas de una orden activa.
- *
- * Solo mueve la diferencia entre el estado anterior y el nuevo:
- *   diff > 0 → piden más → descuenta la diferencia
- *   diff < 0 → piden menos → devuelve la diferencia
- *   Un producto que desaparece → devuelve todo su stock
- *   Un producto nuevo → descuenta toda su cantidad
- *
- * @param {Array} oldProductos - líneas antes de la edición
- * @param {Array} newProductos - líneas después de la edición
- */
 const _adjustStockDiff = (oldProductos = [], newProductos = []) => {
-  const allIds = [...new Set([...oldProductos.map((l) => l.id), ...newProductos.map((l) => l.id)])];
-  const all     = ProductsService.list();
-  const updated = all.map((p) => {
+  const allIds = [...new Set([...oldProductos.map(l => l.id), ...newProductos.map(l => l.id)])];
+  const allProducts = ProductsService.list();
+  const updated = allProducts.map((p) => {
     if (!allIds.includes(p.id)) return p;
-    const cantAntes = oldProductos.find((l) => l.id === p.id)?.cantidad ?? 0;
-    const cantAhora = newProductos.find((l) => l.id === p.id)?.cantidad ?? 0;
-    const diff      = cantAhora - cantAntes;
+    const cantAntes = oldProductos.find(l => l.id === p.id)?.cantidad ?? 0;
+    const cantAhora = newProductos.find(l => l.id === p.id)?.cantidad ?? 0;
+    const diff = cantAhora - cantAntes;
     if (diff === 0) return p;
     return { ...p, stock: diff > 0 ? Math.max(0, p.stock - diff) : p.stock + Math.abs(diff) };
   });
   ProductsService._save(updated);
 };
 
-// ─── Servicio público ─────────────────────────────────────────────────────────
-/**
- * Servicio de órdenes (CRUD) respaldado en localStorage.
- *
- * Exporta métodos utilitarios para listar, buscar, crear, actualizar y borrar órdenes.
- * La implementación es simple y está pensada para uso local / desarrollo.
- * Gestiona automáticamente el stock de productos al cambiar estados o productos.
- */
-export const OrdersService = {
+// ----------------------------------------------------------------------
+// Persistencia (Orders, Payments, Sales)
+// ----------------------------------------------------------------------
 
-  /**
-   * Devuelve todas las órdenes almacenadas.
-   * @returns {Array<Order>} Lista de órdenes (puede estar vacía).
-   */
+const _getOrders = () => {
+  try { return JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY)) || []; }
+  catch { return []; }
+};
+
+const _saveOrders = (orders) => {
+  localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+};
+
+const _getPayments = () => {
+  try { return JSON.parse(localStorage.getItem(PAYMENTS_STORAGE_KEY)) || []; }
+  catch { return []; }
+};
+
+const _savePayments = (payments) => {
+  localStorage.setItem(PAYMENTS_STORAGE_KEY, JSON.stringify(payments));
+};
+
+const _getSales = () => {
+  try { return JSON.parse(localStorage.getItem(SALES_STORAGE_KEY)) || []; }
+  catch { return []; }
+};
+
+const _saveSales = (sales) => {
+  localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(sales));
+};
+
+// ----------------------------------------------------------------------
+// Servicio de Pagos
+// ----------------------------------------------------------------------
+
+export const PaymentService = {
   list() {
-    try {
-      const stored = localStorage.getItem(ORDERS_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      // Si hay error de parseo o storage inaccesible, devolver lista vacía.
-      return [];
+    return _getPayments();
+  },
+
+  getByPedidoId(pedidoId) {
+    return this.list().filter(p => p.pedidoId === pedidoId);
+  },
+
+  getTotalPagado(pedidoId) {
+    return this.getByPedidoId(pedidoId).reduce((sum, p) => sum + p.monto, 0);
+  },
+
+  add(pedidoId, { metodoPago, monto, comprobante = null }) {
+    const order = OrdersService.findById(pedidoId);
+    if (!order) throw new Error(`Pedido #${pedidoId} no encontrado.`);
+    if (order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) {
+      throw new Error('No se pueden agregar pagos a un pedido cancelado.');
     }
+
+    const totalPagado = this.getTotalPagado(pedidoId);
+    const saldoPendiente = order.total - totalPagado;
+    if (monto <= 0) throw new Error('El monto debe ser mayor a cero.');
+    if (monto > saldoPendiente) {
+      throw new Error(`El monto excede el saldo pendiente ($${saldoPendiente.toLocaleString()}).`);
+    }
+
+    const payments = this.list();
+    const newId = payments.length > 0 ? Math.max(...payments.map(p => p.id)) + 1 : 1;
+
+    const newPayment = {
+      id: newId,
+      pedidoId,
+      fechaPago: new Date().toISOString(),
+      metodoPago,
+      monto,
+      comprobante,
+    };
+
+    _savePayments([...payments, newPayment]);
+
+    const nuevoTotalPagado = totalPagado + monto;
+    const nuevoPagoEstado = (nuevoTotalPagado >= order.total)
+      ? ESTADOS_PAGO.PAGADO
+      : ESTADOS_PAGO.PENDIENTE;
+
+    OrdersService.update({ id: pedidoId, pagoEstado: nuevoPagoEstado });
+
+    if (nuevoPagoEstado === ESTADOS_PAGO.PAGADO) {
+      const existingSale = SalesService.findByPedidoId(pedidoId);
+      if (!existingSale) {
+        const pagos = this.getByPedidoId(pedidoId);
+        const metodos = [...new Set(pagos.map(p => p.metodoPago))];
+        const metodoResumen = metodos.length === 1 ? metodos[0] : 'Mixto';
+        const comprobanteResumen = pagos.length === 1 ? pagos[0].comprobante : null;
+
+        SalesService.create({
+          pedidoId,
+          metodoPago: metodoResumen,
+          comprobantePago: comprobanteResumen,
+          montoPagado: order.total,
+        });
+      }
+    }
+
+    return newPayment;
   },
 
   /**
-   * Busca una orden por su identificador.
-   * @param {number} id - ID de la orden.
-   * @returns {Order|null} Orden encontrada o null.
+   * Registra una devolución (pago negativo) asociada al pedido.
+   * Se usa cuando el excedente se devuelve en efectivo.
+   * @param {number} pedidoId
+   * @param {number} monto - Monto a devolver (positivo)
+   * @returns {Payment} Pago de devolución creado.
    */
+  addDevolucion(pedidoId, monto) {
+    if (monto <= 0) throw new Error('El monto de devolución debe ser positivo.');
+    const order = OrdersService.findById(pedidoId);
+    if (!order) throw new Error(`Pedido #${pedidoId} no encontrado.`);
+
+    const payments = this.list();
+    const newId = payments.length > 0 ? Math.max(...payments.map(p => p.id)) + 1 : 1;
+
+    const devolucion = {
+      id: newId,
+      pedidoId,
+      fechaPago: new Date().toISOString(),
+      metodoPago: METODOS_PAGO.DEVOLUCION,
+      monto: -monto, // negativo para indicar devolución
+      comprobante: null,
+    };
+
+    _savePayments([...payments, devolucion]);
+
+    // Recalcular estado de pago (no debería cambiar si ya estaba pagado)
+    const totalPagado = this.getTotalPagado(pedidoId);
+    const nuevoPagoEstado = (totalPagado >= order.total)
+      ? ESTADOS_PAGO.PAGADO
+      : ESTADOS_PAGO.PENDIENTE;
+    OrdersService.update({ id: pedidoId, pagoEstado: nuevoPagoEstado });
+
+    return devolucion;
+  },
+};
+
+// ----------------------------------------------------------------------
+// Servicio de Pedidos (actualizado)
+// ----------------------------------------------------------------------
+
+export const OrdersService = {
+  list() {
+    return _getOrders();
+  },
+
   findById(id) {
-    return this.list().find((o) => o.id === id) ?? null;
+    return this.list().find(o => o.id === id) ?? null;
   },
 
-  /**
-   * Persiste el listado completo de órdenes en localStorage.
-   * @param {Array<Order>} orders - Array completo de órdenes a guardar.
-   * @private
-   */
-  _save(orders) {
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
-  },
-
-  /**
-   * Crea una nueva orden y la guarda en localStorage.
-   *
-   * El stock se descuenta inmediatamente si la orden nace activa
-   * ("Por aprobar" o "Aprobado"). Las órdenes que nacen "Canceladas"
-   * no tocan el inventario.
-   *
-   * @param {Object} data - Datos de la orden.
-   * @returns {Order} Orden creada con id y numero de pedido asignados.
-   */
   create(data) {
-    const orders  = this.list();
-    const newId   = orders.length > 0 ? Math.max(...orders.map((o) => o.id)) + 1 : 1001;
-    const estado  = data.estado ?? 'Por aprobar';
+    const orders = this.list();
+    const newId = orders.length > 0 ? Math.max(...orders.map(o => o.id)) + 1 : 1001;
+
+    const estadoLogistico = data.estadoLogistico ?? ESTADOS_LOGISTICOS.EN_PROCESO;
+    const origen = data.origen ?? ORIGENES.MANUAL;
+
+    const subtotal = data.productos.reduce((sum, p) => sum + p.subtotal, 0);
+    const iva = subtotal * IVA_RATE;
+    const total = subtotal + iva;
+
     const newOrder = {
       ...data,
-      id:                newId,
-      numerosPedido:     String(newId),
-      estado,
+      id: newId,
+      numeroPedido: String(newId),
+      fechaPedido: data.fechaPedido || new Date().toISOString(),
+      estadoLogistico,
+      pagoEstado: ESTADOS_PAGO.PENDIENTE,
+      origen,
+      subtotal,
+      iva,
+      total,
       motivoCancelacion: null,
-      direccionEntrega:  data.direccionEntrega || data.cliente?.direccion || '',
+      direccionEntrega: data.direccionEntrega || '',
     };
-    if (_esActivo(estado)) _decrementStock(newOrder.productos);
-    this._save([...orders, newOrder]);
+
+    if (_esPedidoActivo(estadoLogistico)) {
+      _decrementStock(newOrder.productos);
+    }
+
+    _saveOrders([...orders, newOrder]);
     return newOrder;
   },
 
-  /**
-   * Actualiza campos generales de la orden (cliente, fecha, metodoPago, etc.)
-   * sin alterar productos ni estado.
-   * Para productos usa updateProductos(); para estado, updateEstado().
-   *
-   * @param {Object} data - Campos a actualizar, debe incluir id.
-   * @returns {Order|null} Orden actualizada.
-   */
   update(data) {
-    const orders  = this.list();
-    const updated = orders.map((o) => (o.id === data.id ? { ...o, ...data } : o));
-    this._save(updated);
-    return updated.find((o) => o.id === data.id) ?? null;
+    const orders = this.list();
+    const updated = orders.map(o => o.id === data.id ? { ...o, ...data } : o);
+    _saveOrders(updated);
+    return updated.find(o => o.id === data.id) ?? null;
+  },
+
+  canEditProductos(order) {
+    if (!order) return false;
+    if (order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) return false;
+    if (order.pagoEstado === ESTADOS_PAGO.PAGADO) return false;
+    return true;
   },
 
   /**
-   * Actualiza solo los productos de la orden, ajustando stock automaticamente.
-   * Usa _adjustStockDiff para mover solo la diferencia.
-   * Recalcula el total basado en los nuevos productos.
-   *
-   * @param {number} orderId - ID de la orden.
-   * @param {OrderProduct[]} newProductos - Nuevos productos.
-   * @returns {Order|null} Orden actualizada.
+   * Actualiza los productos de un pedido.
+   * NO aplica automáticamente saldo a favor; devuelve información del excedente.
+   * @param {number} orderId
+   * @param {OrderProduct[]} newProductos
+   * @returns {Object} { order: Order, excedente: number, oldTotal: number, newTotal: number }
    */
   updateProductos(orderId, newProductos) {
     const order = this.findById(orderId);
-    if (!order) return null;
-    if (_esActivo(order.estado)) _adjustStockDiff(order.productos, newProductos);
-    const newTotal = newProductos.reduce((sum, l) => sum + l.subtotal, 0);
-    return this.update({ id: orderId, productos: newProductos, total: newTotal });
+    if (!order) throw new Error(`Pedido #${orderId} no encontrado.`);
+
+    if (!this.canEditProductos(order)) {
+      throw new Error('No se pueden modificar los productos de este pedido.');
+    }
+
+    const oldTotal = order.total;
+    const totalPagado = PaymentService.getTotalPagado(orderId);
+
+    if (_esPedidoActivo(order.estadoLogistico)) {
+      _adjustStockDiff(order.productos, newProductos);
+    }
+
+    const subtotal = newProductos.reduce((sum, p) => sum + p.subtotal, 0);
+    const iva = subtotal * IVA_RATE;
+    const newTotal = subtotal + iva;
+
+    const updatedOrder = this.update({
+      id: orderId,
+      productos: newProductos,
+      subtotal,
+      iva,
+      total: newTotal,
+    });
+
+    let excedente = 0;
+    if (newTotal < oldTotal && totalPagado > newTotal) {
+      excedente = totalPagado - newTotal;
+    }
+
+    // Recalcular pagoEstado
+    if (updatedOrder) {
+      const nuevoPagoEstado = (totalPagado >= updatedOrder.total)
+        ? ESTADOS_PAGO.PAGADO
+        : ESTADOS_PAGO.PENDIENTE;
+      if (updatedOrder.pagoEstado !== nuevoPagoEstado) {
+        this.update({ id: orderId, pagoEstado: nuevoPagoEstado });
+        if (nuevoPagoEstado === ESTADOS_PAGO.PAGADO) {
+          const existingSale = SalesService.findByPedidoId(orderId);
+          if (!existingSale) {
+            SalesService.createFromPedido(orderId);
+          }
+        }
+      }
+    }
+
+    const finalOrder = this.findById(orderId);
+    return {
+      order: finalOrder,
+      excedente,
+      oldTotal,
+      newTotal,
+    };
   },
 
-  /**
-   * Cambia el estado del pedido, ajustando stock automaticamente.
-   * Si pasa a Cancelado, requiere motivoCancelacion.
-   * Gestiona stock: restaura si se cancela, descuenta si se activa.
-   *
-   * @param {number} orderId - ID de la orden.
-   * @param {string} newEstado - Nuevo estado ('Por aprobar', 'Aprobado', 'Cancelado').
-   * @param {string|null} motivoCancelacion - Requerido si newEstado === 'Cancelado'.
-   * @returns {Order|null} Orden actualizada.
-   */
-  updateEstado(orderId, newEstado, motivoCancelacion = null) {
+  updateEstadoLogistico(orderId, newEstadoLogistico, motivoCancelacion = null) {
     const order = this.findById(orderId);
     if (!order) return null;
-    if (order.estado === newEstado) return order;
+    if (order.estadoLogistico === newEstadoLogistico) return order;
 
-    const estabaActivo = _esActivo(order.estado);
-    const quedaActivo  = _esActivo(newEstado);
+    const estabaActivo = _esPedidoActivo(order.estadoLogistico);
+    const quedaActivo = _esPedidoActivo(newEstadoLogistico);
 
-    if (estabaActivo && !quedaActivo) _restoreStock(order.productos);
-    else if (!estabaActivo && quedaActivo) _decrementStock(order.productos);
+    if (estabaActivo && !quedaActivo) {
+      _restoreStock(order.productos);
+    } else if (!estabaActivo && quedaActivo) {
+      _decrementStock(order.productos);
+    }
 
     return this.update({
-      id:                orderId,
-      estado:            newEstado,
-      motivoCancelacion: newEstado === 'Cancelado' ? motivoCancelacion : null,
+      id: orderId,
+      estadoLogistico: newEstadoLogistico,
+      motivoCancelacion: newEstadoLogistico === ESTADOS_LOGISTICOS.CANCELADO ? motivoCancelacion : null,
     });
   },
 
-  /**
-   * Elimina una orden del almacenamiento.
-   * Si la orden estaba activa, restaura el stock de sus productos.
-   *
-   * @param {number} orderId - ID de la orden a eliminar.
-   * @returns {Array<Order>} Lista actualizada de órdenes.
-   */
   delete(orderId) {
     const order = this.findById(orderId);
     if (!order) return this.list();
-    if (_esActivo(order.estado)) _restoreStock(order.productos);
-    const updated = this.list().filter((o) => o.id !== orderId);
-    this._save(updated);
-    return updated;
+
+    if (_esPedidoActivo(order.estadoLogistico)) {
+      _restoreStock(order.productos);
+    }
+
+    const payments = PaymentService.list().filter(p => p.pedidoId !== orderId);
+    _savePayments(payments);
+    const sales = SalesService.list().filter(s => s.pedidoId !== orderId);
+    _saveSales(sales);
+
+    const updatedOrders = this.list().filter(o => o.id !== orderId);
+    _saveOrders(updatedOrders);
+    return updatedOrders;
+  },
+};
+
+// ----------------------------------------------------------------------
+// Servicio de Ventas (sin cambios)
+// ----------------------------------------------------------------------
+
+export const SalesService = {
+  list() {
+    return _getSales();
+  },
+
+  findById(id) {
+    return this.list().find(s => s.id === id) ?? null;
+  },
+
+  findByPedidoId(pedidoId) {
+    return this.list().find(s => s.pedidoId === pedidoId) ?? null;
+  },
+
+  create(data) {
+    const sales = this.list();
+    const newId = sales.length > 0 ? Math.max(...sales.map(s => s.id)) + 1 : 1;
+
+    const newSale = {
+      id: newId,
+      ...data,
+      fechaPago: new Date().toISOString(),
+    };
+
+    _saveSales([...sales, newSale]);
+    return newSale;
+  },
+
+  createFromPedido(pedidoId) {
+    const order = OrdersService.findById(pedidoId);
+    if (!order) throw new Error(`Pedido #${pedidoId} no encontrado.`);
+
+    const pagos = PaymentService.getByPedidoId(pedidoId);
+    const metodos = [...new Set(pagos.map(p => p.metodoPago))];
+    const metodoResumen = metodos.length === 1 ? metodos[0] : 'Mixto';
+    const comprobanteResumen = pagos.length === 1 ? pagos[0].comprobante : null;
+
+    return this.create({
+      pedidoId,
+      metodoPago: metodoResumen,
+      comprobantePago: comprobanteResumen,
+      montoPagado: order.total,
+    });
+  },
+
+  delete(saleId) {
+    const updatedSales = this.list().filter(s => s.id !== saleId);
+    _saveSales(updatedSales);
+    return updatedSales;
   },
 };
 

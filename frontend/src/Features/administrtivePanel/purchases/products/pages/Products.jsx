@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Outlet } from "react-router-dom";
-import { Search, Plus, Info, SquarePen, Trash2, Download, Filter } from "lucide-react";
+import { Search, Plus, Info, SquarePen, Trash2, Download, Filter, Eraser } from "lucide-react";
 import * as XLSX from 'xlsx';
 
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
@@ -105,6 +105,9 @@ function Products() {
     });
     return Array.from(allSubcategories).sort();
   }, [data, filterCategory]);
+
+  // Verificar si hay filtros activos
+  const hasActiveFilters = filterCategory !== "all" || filterSubcategory !== "all";
 
   // Filtrar productos
   const filteredData = useMemo(() => {
@@ -214,8 +217,23 @@ function Products() {
 
   const handleExportExcel = () => {
     try {
-      // Preparar datos para exportar
-      const exportData = filteredData.map(product => ({
+      const wb = XLSX.utils.book_new();
+      
+      // Crear array de datos con encabezado personalizado
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('es-CO', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      const timeStr = now.toLocaleTimeString('es-CO', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit' 
+      });
+
+      // Preparar datos de productos
+      const productData = filteredData.map(product => ({
         'Nombre': product.nombre,
         'Código de Barras': product.codBarras || '',
         'Referencia': product.referencia || '',
@@ -230,10 +248,28 @@ function Products() {
         'Estado': product.activo ? 'Activo' : 'Inactivo'
       }));
 
-      // Crear libro de Excel
-      const ws = XLSX.utils.json_to_sheet(exportData);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Productos');
+      // Crear hoja de trabajo manualmente para personalizar el encabezado
+      const ws = XLSX.utils.aoa_to_sheet([
+        ['PRODUCTOS'], // Título
+        [`Fecha de exportación: ${dateStr} - ${timeStr}`], // Fecha y hora
+        [], // Fila vacía
+        // Headers de las columnas
+        ['Nombre', 'Código de Barras', 'Referencia', 'Proveedor', 'Categorías', 'Stock', 
+         'Precio Detalle', 'Precio Mayorista', 'Precio Colegas', 'Precio Pacas', 
+         'Cantidad x Paca', 'Estado']
+      ]);
+
+      // Agregar los datos de productos
+      XLSX.utils.sheet_add_json(ws, productData, { 
+        origin: 'A4', // Comenzar desde la fila 4 (después del título, fecha y espacio)
+        skipHeader: true // No agregar headers automáticos porque ya los pusimos
+      });
+
+      // Estilos para el título (merge cells)
+      ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 11 } }, // Merge título en toda la primera fila
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 11 } }  // Merge fecha en toda la segunda fila
+      ];
 
       // Ajustar ancho de columnas
       const colWidths = [
@@ -252,11 +288,14 @@ function Products() {
       ];
       ws['!cols'] = colWidths;
 
+      // Agregar hoja al libro
+      XLSX.utils.book_append_sheet(wb, ws, 'Productos');
+
       // Descargar archivo
-      const fileName = `productos_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const fileName = `productos_${now.toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(wb, fileName);
 
-      showSuccess("Excel exportado", `Se descargaron ${exportData.length} productos exitosamente.`);
+      showSuccess("Excel exportado", `Se descargaron ${productData.length} productos exitosamente.`);
     } catch (error) {
       showError("Error al exportar", "No se pudo generar el archivo Excel. Intenta de nuevo.");
       console.error('Error al exportar:', error);
@@ -276,7 +315,6 @@ function Products() {
   const resetFilters = () => {
     setFilterCategory("all");
     setFilterSubcategory("all");
-    setSearch("");
   };
 
   return (
@@ -341,18 +379,19 @@ function Products() {
               </select>
             )}
 
-            {/* Botón limpiar filtros */}
-            {(filterCategory !== "all" || filterSubcategory !== "all" || search) && (
+            {/* Botón limpiar filtros - Solo se muestra si hay filtros activos */}
+            {hasActiveFilters && (
               <button
                 onClick={resetFilters}
-                className="px-3 py-1.5 text-sm text-gray-600 hover:text-[#004D77] underline"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
               >
+                <Eraser className="w-3.5 h-3.5" />
                 Limpiar filtros
               </button>
             )}
 
             {/* Contador de resultados filtrados */}
-            {(filterCategory !== "all" || filterSubcategory !== "all") && (
+            {hasActiveFilters && (
               <span className="text-sm text-gray-600 ml-auto">
                 {filteredData.length} producto{filteredData.length !== 1 ? 's' : ''} encontrado{filteredData.length !== 1 ? 's' : ''}
               </span>
@@ -373,7 +412,10 @@ function Products() {
               {search ? `No hay productos que coincidan con "${search}".` : 'No hay productos con los filtros seleccionados.'} 
             </p>
             <button
-              onClick={resetFilters}
+              onClick={() => {
+                resetFilters();
+                setSearch("");
+              }}
               className="px-6 py-2.5 text-white rounded-lg hover:opacity-90 transition-all duration-200 font-medium"
               style={{ backgroundColor: "#004D77" }}
             >
@@ -398,7 +440,7 @@ function Products() {
                 </thead>
                 <tbody>
                   {currentData.map((row, index) => {
-                    const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-100";
+                    const rowBg = index % 2 === 0 ? "bg-gray-100 hover:bg-blue-50" : "bg-white hover:bg-blue-50";
                     const subcats = (row.categorias || []).filter(c => c.includes(" > ")).map(c => c.split(" > ")[1]);
                     const subcategoriaDisplay = subcats.length > 0 ? subcats.join(", ") : "N/A";
 
@@ -471,7 +513,7 @@ function Products() {
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
               <p className="text-xs sm:text-sm font-semibold text-gray-700">
-                {search.trim() || filterCategory !== "all" || filterSubcategory !== "all" ? (
+                {search.trim() || hasActiveFilters ? (
                   <>
                     <span className="text-[#004D77]">{filteredData.length}</span>{" "}
                     resultado{filteredData.length !== 1 ? "s" : ""} encontrado{filteredData.length !== 1 ? "s" : ""}
