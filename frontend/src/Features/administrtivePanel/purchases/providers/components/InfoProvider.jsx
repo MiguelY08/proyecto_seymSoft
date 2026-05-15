@@ -21,8 +21,27 @@ import {
   getStatusText
 } from '../utils/providerHelpers';
 
+// ─── Función para formatear categorías ────────────────────────────────────────
+/**
+ * Convierte el array de categorías a un string legible
+ * @param {Array} categorias - Array de objetos de categorías {id, name}
+ * @returns {string} String con nombres de categorías separados por comas
+ */
+const formatCategories = (categorias) => {
+  if (!categorias || !Array.isArray(categorias) || categorias.length === 0) {
+    return '—';
+  }
+  return categorias.map(cat => cat.name).join(', ');
+};
+
 // ─── Fila de detalle — estilo InfoUser/InfoClient ────────────────────────────────
 function DetailRow({ icon: Icon, label, value, fullWidth = false }) {
+  // Asegurar que value sea un string (no un objeto)
+  let displayValue = value;
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    displayValue = JSON.stringify(value);
+  }
+  
   return (
     <div className={`flex items-start gap-3 ${fullWidth ? 'col-span-2' : ''}`}>
       <div className="w-8 h-8 rounded-lg bg-[#004D77]/8 flex items-center justify-center shrink-0 mt-0.5">
@@ -33,7 +52,7 @@ function DetailRow({ icon: Icon, label, value, fullWidth = false }) {
           {label}
         </span>
         <span className="text-sm font-medium text-gray-800 wrap-break-words leading-snug">
-          {value || <span className="text-gray-300 italic">—</span>}
+          {displayValue || <span className="text-gray-300 italic">—</span>}
         </span>
       </div>
     </div>
@@ -64,6 +83,9 @@ function InfoProvider({ isOpen, onClose, provider }) {
   const statusColor = provider.activo
     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
     : 'bg-red-50 text-red-500 border-red-200';
+
+  // Formatear categorías para mostrar
+  const categoriasTexto = formatCategories(provider.categorias);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -191,18 +213,18 @@ function InfoProvider({ isOpen, onClose, provider }) {
             value={provider.nuContacto || provider.numeroContacto || '—'} 
           />
 
-          {/* ← NUEVO: Plazo devoluciones - DEBAJO DEL TELÉFONO CONTACTO */}
+          {/* Plazo devoluciones */}
           <DetailRow 
             icon={Clock} 
             label="Plazo devoluciones" 
             value={provider.plazoDevoluciones || '—'} 
           />
 
-          {/* Categorías */}
+          {/* Categorías - CORREGIDO: usar el string formateado */}
           <DetailRow 
             icon={Package} 
             label="Categorías" 
-            value={provider.categorias || '—'} 
+            value={categoriasTexto} 
           />
 
           {/* RUT */}
