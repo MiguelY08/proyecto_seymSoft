@@ -1,21 +1,37 @@
+// Features/categories/pages/CategoryDetail.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import { X } from "lucide-react";
 import Pagination from "../../../../shared/PaginationLanding";
-import { getSubcategories } from "../services/categoriesService";
+import { getCategoryById } from "../data/categoriesService";
 
 function CategoryDetail({ category, onClose }) {
   const [subcategories, setSubcategories] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false);
   const productsPerPage = 5;
 
   useEffect(() => {
-    const subs = getSubcategories().filter(
-      (s) => s.categoriaId === category.id
-    );
-    setSubcategories(subs);
+    const loadSubcategories = async () => {
+      try {
+        setLoading(true);
+        const categoryDetail = await getCategoryById(category.id);
+        setSubcategories(
+          (categoryDetail.subcategories || []).map(sub => ({
+            id: sub.id,
+            nombre: sub.name,
+            descripcion: sub.description,
+            estado: sub.status === "Active" ? "Activo" : "Inactivo"
+          }))
+        );
+      } catch (error) {
+        console.error("Error loading subcategories:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadSubcategories();
   }, [category]);
 
-  // ── Paginación ──
   const currentData = useMemo(() => {
     const start = (currentPage - 1) * productsPerPage;
     return subcategories.slice(start, start + productsPerPage);
@@ -30,22 +46,16 @@ function CategoryDetail({ category, onClose }) {
         className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* HEADER */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#004D77]">
           <h2 className="text-white font-semibold text-lg">
             {category.nombre} - Detalle
           </h2>
-          <button
-            onClick={onClose}
-            className="text-white hover:bg-white/20 rounded-full p-1"
-          >
+          <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* BODY */}
         <div className="px-6 py-6 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
-          {/* Información de la categoría */}
           <div className="text-sm">
             <p><strong>Nombre:</strong> {category.nombre}</p>
             <p><strong>Estado:</strong> {category.estado}</p>
@@ -54,7 +64,6 @@ function CategoryDetail({ category, onClose }) {
 
           <hr className="my-2" />
 
-          {/* TABLA CON PAGINACIÓN */}
           <div className="bg-white rounded-xl shadow overflow-hidden mb-2">
             <div className="overflow-x-auto">
               <table className="min-w-full w-full text-xs">
@@ -65,34 +74,18 @@ function CategoryDetail({ category, onClose }) {
                     <th className="px-3 py-2 text-center font-semibold">Estado</th>
                   </tr>
                 </thead>
-
                 <tbody>
-                  {currentData.length === 0 ? (
-                    <tr>
-                      <td colSpan="3" className="text-center py-4 text-gray-500">
-                        No hay subcategorías
-                      </td>
-                    </tr>
+                  {loading ? (
+                    <tr><td colSpan="3" className="text-center py-4 text-gray-500">Cargando...</td></tr>
+                  ) : currentData.length === 0 ? (
+                    <tr><td colSpan="3" className="text-center py-4 text-gray-500">No hay subcategorías</td></tr>
                   ) : (
                     currentData.map((sub, index) => (
-                      <tr
-                        key={sub.id}
-                        className={
-                          index % 2 === 0
-                            ? "bg-[#FFFFFF] hover:bg-gray-50"
-                            : "bg-gray-50 hover:bg-gray-100"
-                        }
-                      >
+                      <tr key={sub.id} className={index % 2 === 0 ? "bg-white hover:bg-gray-50" : "bg-gray-50 hover:bg-gray-100"}>
                         <td className="px-3 py-2.5">{sub.nombre}</td>
                         <td className="px-3 py-2.5">{sub.descripcion || "-"}</td>
                         <td className="px-3 py-2.5 text-center">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                              sub.estado === "Activo"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-red-100 text-red-700"
-                            }`}
-                          >
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${sub.estado === "Activo" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                             {sub.estado}
                           </span>
                         </td>
@@ -102,29 +95,22 @@ function CategoryDetail({ category, onClose }) {
                 </tbody>
               </table>
             </div>
-
-            
           </div>
         </div>
 
-        {/* PAGINADOR */}
-            {subcategories.length > productsPerPage && (
-              <div className="px-3 py-2 border-t border-gray-200">
-                <Pagination
-                  totalProducts={subcategories.length}
-                  productsPerPage={productsPerPage}
-                  currentPage={currentPage}
-                  setCurrentPage={setCurrentPage}
-                />
-              </div>
-            )}
+        {subcategories.length > productsPerPage && (
+          <div className="px-3 py-2 border-t border-gray-200">
+            <Pagination
+              totalProducts={subcategories.length}
+              productsPerPage={productsPerPage}
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+            />
+          </div>
+        )}
 
-        {/* FOOTER */}
         <div className="px-6 pb-6 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition"
-          >
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition">
             Cerrar
           </button>
         </div>

@@ -1,41 +1,21 @@
+// Features/categories/components/SubcategoriesTable.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import { Trash2, SquarePen } from "lucide-react";
 import Pagination from "../../../../shared/PaginationLanding";
 import { useAlert } from "../../../../shared/alerts/useAlert";
-import { getSubcategories, saveSubcategories, deleteSubcategory } from "../services/categoriesService";
-import { subcategoryHasProducts } from "../services/categoryproductsService";
+import ActiveToggle from "./ActiveToggle";
+import {
+  getSubcategories,
+  updateSubcategory,
+  deleteSubcategory,
+} from "../data/categoriesService";
 
-// ─── Normaliza texto: minúsculas + sin tildes/diacríticos ────────────────────
 const normalizeName = (str = "") =>
   str
     .trim()
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
-
-function ActiveToggle({ activo, onChange }) {
-  return (
-    <button
-      onClick={() => onChange(!activo)}
-      className={`relative w-11 h-5 rounded-full transition-colors duration-300 cursor-pointer shrink-0 ${
-        activo ? "bg-green-500" : "bg-red-400"
-      }`}
-    >
-      <span
-        className={`absolute top-0 h-full flex items-center justify-center text-white font-bold text-[9px] transition-all duration-300 ${
-          activo ? "left-1.5" : "right-1.5"
-        }`}
-      >
-        {activo ? "A" : "I"}
-      </span>
-      <span
-        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
-          activo ? "left-[1.4rem]" : "left-0.5"
-        }`}
-      />
-    </button>
-  );
-}
 
 const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
   const { showConfirm, showSuccess, showWarning, showError } = useAlert();
@@ -46,18 +26,32 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
   const [editedEstado, setEditedEstado] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 4;
+  const [loading, setLoading] = useState(false);
 
-  const loadSubcategories = () => {
-    const allSubs = getSubcategories().filter((s) => s.categoriaId === categoryId);
-    setSubcategories(allSubs);
+  const loadSubcategories = async () => {
+    try {
+      setLoading(true);
+      const subs = await getSubcategories(categoryId);
+      setSubcategories(subs.map(sub => ({
+        ...sub,
+        nombre: sub.name || sub.nombre,
+        descripcion: sub.description || sub.descripcion,
+        estado: sub.status === "Active" ? "Activo" : (sub.estado || "Inactivo")
+      })));
+    } catch (error) {
+      showError("Error", "No se pudieron cargar las subcategorías.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    loadSubcategories();
+    if (categoryId) {
+      loadSubcategories();
+    }
   }, [categoryId]);
 
-  const handleSaveEdit = () => {
-    // ── VALIDACIONES ──
+  const handleSaveEdit = async () => {
     const nameTrim = editedName.trim();
     const descTrim = editedDesc.trim();
 
@@ -86,7 +80,6 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
       return;
     }
 
-    // ── VALIDACIÓN NOMBRE DUPLICADO ──
     const otherSubs = subcategories.filter((s) => s.id !== editingId);
     const nombreExistente = otherSubs.some((s) => normalizeName(s.nombre) === normalizeName(nameTrim));
     if (nombreExistente) {
@@ -94,52 +87,47 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
       return;
     }
 
-    // ── GUARDAR CAMBIOS ──
-    const allSubs = getSubcategories().map((s) =>
-      s.id === editingId
-        ? { ...s, nombre: nameTrim, descripcion: descTrim, estado: editedEstado ? "Activo" : "Inactivo" }
-        : s
-    );
-    saveSubcategories(allSubs);
+    try {
+      await updateSubcategory(editingId, {
+        nombre: nameTrim,
+        descripcion: descTrim,
+        estado: editedEstado ? "Activo" : "Inactivo"
+      });
 
-    setSubcategories(subcategories.map((s) =>
-      s.id === editingId
-        ? { ...s, nombre: nameTrim, descripcion: descTrim, estado: editedEstado ? "Activo" : "Inactivo" }
-        : s
-    ));
+      setSubcategories(subcategories.map((s) =>
+        s.id === editingId
+          ? { ...s, nombre: nameTrim, descripcion: descTrim, estado: editedEstado ? "Activo" : "Inactivo" }
+          : s
+      ));
 
-    setEditingId(null);
-    showSuccess("Subcategoría actualizada", "Se guardaron los cambios correctamente.");
-    refreshCategories();
+      setEditingId(null);
+      showSuccess("Subcategoría actualizada", "Se guardaron los cambios correctamente.");
+      if (refreshCategories) refreshCategories();
+    } catch (error) {
+      showError("Error", error.message || "No se pudo actualizar la subcategoría.");
+    }
   };
 
-
-const handleDelete = async (id) => {
-  // 🔴 Bloquear si tiene productos
-  if (subcategoryHasProducts(id)) {
-    showWarning(
-      "No se puede eliminar",
-      "Esta subcategoría tiene productos asociados. Reasígnalos antes de eliminarla."
+  const handleDelete = async (id) => {
+    const result = await showConfirm(
+      "warning",
+      "Eliminar subcategoría",
+      "¿Deseas eliminar esta subcategoría?",
+      { confirmButtonText: "Sí, eliminar", cancelButtonText: "Cancelar" }
     );
-    return;
-  }
+    if (!result?.isConfirmed) return;
 
-  const result = await showConfirm(
-    "warning",
-    "Eliminar subcategoría",
-    "¿Deseas eliminar esta subcategoría?",
-    { confirmButtonText: "Sí, eliminar", cancelButtonText: "Cancelar" }
-  );
-  if (!result?.isConfirmed) return;
-
-  deleteSubcategory(id);
-  loadSubcategories();
-  showSuccess("Eliminado", "La subcategoría fue eliminada correctamente.");
-  refreshCategories();
-};
+    try {
+      await deleteSubcategory(id);
+      await loadSubcategories();
+      showSuccess("Eliminado", "La subcategoría fue eliminada correctamente.");
+      if (refreshCategories) refreshCategories();
+    } catch (error) {
+      showError("Error", error.message || "No se pudo eliminar la subcategoría.");
+    }
+  };
 
   const handleToggleEstado = async (subId, nuevoEstado) => {
-    // Si se va a desactivar, pedir confirmación advirtiendo sobre productos
     if (!nuevoEstado) {
       const result = await showConfirm(
         "warning",
@@ -150,15 +138,19 @@ const handleDelete = async (id) => {
       if (!result?.isConfirmed) return;
     }
 
-    const allSubs = getSubcategories().map((s) =>
-      s.id === subId ? { ...s, estado: nuevoEstado ? "Activo" : "Inactivo" } : s
-    );
-    saveSubcategories(allSubs);
-    setSubcategories(subcategories.map((s) =>
-      s.id === subId ? { ...s, estado: nuevoEstado ? "Activo" : "Inactivo" } : s
-    ));
-    showSuccess("Estado actualizado", "Se cambió el estado de la subcategoría.");
-    refreshCategories();
+    try {
+      await updateSubcategory(subId, {
+        estado: nuevoEstado ? "Activo" : "Inactivo"
+      });
+
+      setSubcategories(subcategories.map((s) =>
+        s.id === subId ? { ...s, estado: nuevoEstado ? "Activo" : "Inactivo" } : s
+      ));
+      showSuccess("Estado actualizado", "Se cambió el estado de la subcategoría.");
+      if (refreshCategories) refreshCategories();
+    } catch (error) {
+      showError("Error", error.message || "No se pudo cambiar el estado.");
+    }
   };
 
   const currentData = useMemo(() => {
@@ -166,10 +158,13 @@ const handleDelete = async (id) => {
     return subcategories.slice(start, start + productsPerPage);
   }, [currentPage, subcategories]);
 
+  if (loading) {
+    return <p className="text-gray-500 text-sm">Cargando subcategorías...</p>;
+  }
+
   return (
     <div className="bg-white shadow rounded-xl overflow-hidden mt-0.5">
       <div className="px-6 py-4 overflow-y-auto flex-1">
-
         {subcategories.length === 0 ? (
           <p className="text-gray-500 text-sm">No hay subcategorías registradas.</p>
         ) : (
@@ -196,7 +191,6 @@ const handleDelete = async (id) => {
                           className="w-full px-3 py-2 border border-gray-400 rounded-md"
                         />
                       </td>
-
                       <td className="py-1.5">
                         <input
                           type="text"
@@ -206,11 +200,9 @@ const handleDelete = async (id) => {
                           className="w-full px-3 py-2 border border-gray-400 rounded-md"
                         />
                       </td>
-
                       <td className="py-1.5 text-center">
                         <ActiveToggle activo={editedEstado} onChange={setEditedEstado} />
                       </td>
-
                       <td className="py-1.5 text-center flex justify-center gap-2">
                         <button
                           onClick={handleSaveEdit}
@@ -224,7 +216,7 @@ const handleDelete = async (id) => {
                         >
                           Cancelar
                         </button>
-                      </td>
+                       </td>
                     </>
                   ) : (
                     <>
@@ -235,7 +227,7 @@ const handleDelete = async (id) => {
                           activo={sub.estado === "Activo"}
                           onChange={(nuevo) => handleToggleEstado(sub.id, nuevo)}
                         />
-                      </td>
+                       </td>
                       <td className="py-1.5 text-center flex justify-center gap-2">
                         <button
                           onClick={() => {
@@ -254,10 +246,10 @@ const handleDelete = async (id) => {
                         >
                           <Trash2 size={14} />
                         </button>
-                      </td>
+                       </td>
                     </>
                   )}
-                </tr>
+                 </tr>
               ))}
             </tbody>
           </table>

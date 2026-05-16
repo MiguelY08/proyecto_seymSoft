@@ -38,7 +38,7 @@ import InfoUser from "../../Features/administrtivePanel/users/components/InfoUse
 import IndicatorsPage from "../../Features/administrtivePanel/performance/indicators/pages/IndicatorsPage.jsx";
 
 /* PURCHASES */
-import Categories from "../../Features/administrtivePanel/purchases/categories/pages/Categories.jsx";
+import CategoriesPage from "../../Features/administrtivePanel/purchases/categories/pages/CategoriesPage.jsx"; 
 import Products from "../../Features/administrtivePanel/purchases/products/pages/Products.jsx";
 import ProvidersPage from "../../Features/administrtivePanel/purchases/providers/page/ProvidersPage.jsx";
 import Purchases from "../../Features/administrtivePanel/purchases/purchases/pages/Purchases.jsx";
@@ -125,7 +125,7 @@ const AppRouter = () => {
           <Route path="users/info-user" element={<InfoUser />} />
 
           {/* PURCHASES */}
-          <Route path="purchases/categories" element={<Categories />} />
+          <Route path="purchases/categories" element={<CategoriesPage />} />
           <Route path="purchases/products" element={<Products />} />
           <Route path="purchases/providers" element={<ProvidersPage />} />
           <Route path="purchases" element={<Purchases />} />

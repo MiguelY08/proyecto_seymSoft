@@ -1,15 +1,15 @@
+// Features/categories/pages/EditCategory.jsx
 import React, { useState, useEffect } from "react";
 import { X, Plus, AlertCircle, Layers } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
+import ActiveToggle from "../components/ActiveToggle";
+import SubcategoriesTable from "../components/SubcategoriesTable";
 import {
   getSubcategories,
   createSubcategory,
-  deactivateCategoryWithSubcategories,
-  activateCategoryWithSubcategories,
-} from "../services/categoriesService";
-import SubcategoriesTable from "../components/SubcategoriesTable";
+  updateCategory,
+} from "../data/categoriesService";
 
-// ─── Normaliza texto: minúsculas + sin tildes/diacríticos ────────────────────
 const normalizeName = (str = "") =>
   str
     .trim()
@@ -17,33 +17,6 @@ const normalizeName = (str = "") =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
-// ─── Toggle Activo/Inactivo ───────────────────────────────────────────────────
-function ActiveToggle({ activo, onChange }) {
-  return (
-    <button
-      type="button"
-      onClick={onChange}
-      className={`relative w-11 h-5 rounded-full transition-colors duration-300 cursor-pointer ${
-        activo ? "bg-green-500" : "bg-red-400"
-      }`}
-    >
-      <span
-        className={`absolute top-0 h-full flex items-center text-white font-bold text-[9px] transition-all duration-300 ${
-          activo ? "left-1.5" : "right-1.5"
-        }`}
-      >
-        {activo ? "A" : "I"}
-      </span>
-      <span
-        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
-          activo ? "left-[1.4rem]" : "left-0.5"
-        }`}
-      />
-    </button>
-  );
-}
-
-// ─── Modal nueva subcategoría ─────────────────────────────────────────────────
 function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated }) {
   const { showWarning, showSuccess } = useAlert();
   const [subForm, setSubForm] = useState({ nombre: "", descripcion: "", activo: true });
@@ -64,7 +37,7 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
         : "border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
     }`;
 
-  const handleGuardar = () => {
+  const handleGuardar = async () => {
     setNombreTouched(true);
     const err =
       !subForm.nombre.trim() ? "El nombre es obligatorio"
@@ -74,16 +47,17 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
 
     if (err) return;
 
-    const duplicate = getSubcategories()
-      .filter((s) => s.categoriaId === categoryId)
-      .some((s) => normalizeName(s.nombre) === normalizeName(subForm.nombre));
+    const existingSubs = await getSubcategories(categoryId);
+    const duplicate = existingSubs.some(
+      (s) => normalizeName(s.nombre) === normalizeName(subForm.nombre)
+    );
 
     if (duplicate) {
       showWarning("Nombre duplicado", "Ya existe una subcategoría con ese nombre.");
       return;
     }
 
-    createSubcategory({
+    await createSubcategory({
       nombre: subForm.nombre.trim(),
       descripcion: subForm.descripcion,
       categoriaId: categoryId,
@@ -179,33 +153,34 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
   );
 }
 
-// ─── EditCategory principal ───────────────────────────────────────────────────
 const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategories }) => {
   const { showWarning, showSuccess, showConfirm } = useAlert();
-  const isEditing = !!category;
-
   const [form, setForm] = useState({
     nombre: category?.nombre || "",
-    activo: category?.estado === "Activo" || category?.activo === true,
+    activo: category?.estado === "Activo",
   });
-
   const [error, setError] = useState("");
   const [subCount, setSubCount] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showAddSubModal, setShowAddSubModal] = useState(false);
 
-  const refreshSubCount = () => {
+  const refreshSubCount = async () => {
     if (category) {
-      const count = getSubcategories().filter((s) => s.categoriaId === category.id).length;
-      setSubCount(count);
+      const subs = await getSubcategories(category.id);
+      setSubCount(subs.length);
     }
   };
 
-  useEffect(() => { refreshSubCount(); }, [category, refreshKey]);
+  useEffect(() => {
+    refreshSubCount();
+  }, [category, refreshKey]);
 
   useEffect(() => {
     const nombreTrim = form.nombre.trim();
-    if (!nombreTrim) { setError("El nombre de la categoría es obligatorio."); return; }
+    if (!nombreTrim) {
+      setError("El nombre de la categoría es obligatorio.");
+      return;
+    }
     const existe = allCategories.some((c) => {
       if (category && c.id === category.id) return false;
       return normalizeName(c.nombre) === normalizeName(nombreTrim);
@@ -214,12 +189,14 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
   }, [form.nombre, allCategories, category]);
 
   const handleSubmit = async () => {
-    if (error) { showWarning("Campo inválido", error); return; }
+    if (error) {
+      showWarning("Campo inválido", error);
+      return;
+    }
 
     const wasActive = category?.estado === "Activo";
     const willBeActive = form.activo;
 
-    // ── Desactivar: pedir confirmación y bajar subcategorías ──
     if (wasActive && !willBeActive) {
       const result = await showConfirm(
         "warning",
@@ -228,21 +205,9 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
         { confirmButtonText: "Sí, desactivar", cancelButtonText: "Cancelar" }
       );
       if (!result?.isConfirmed) return;
-
-      deactivateCategoryWithSubcategories(category.id);
-      // Actualizar nombre si cambió
-      onSave({ ...category, nombre: form.nombre.trim(), estado: "Inactivo" }, isEditing);
-
-    // ── Activar: subir categoría y todas sus subcategorías ──
-    } else if (!wasActive && willBeActive) {
-      activateCategoryWithSubcategories(category.id);
-      onSave({ ...category, nombre: form.nombre.trim(), estado: "Activo" }, isEditing);
-
-    // ── Solo cambió el nombre ──
-    } else {
-      onSave({ ...category, nombre: form.nombre.trim(), estado: category.estado }, isEditing);
     }
 
+    onSave({ ...category, nombre: form.nombre.trim(), estado: form.activo ? "Activo" : "Inactivo" }, true);
     if (refreshCategories) refreshCategories();
     showSuccess("Categoría actualizada", "Los cambios se guardaron correctamente.");
     onClose();
@@ -259,32 +224,19 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
         onClick={onClose}
       >
-        {/* 
-          Modal sin scroll:
-          - h fijo usando vh con margen (h-[calc(100vh-2rem)])
-          - flex col con secciones de altura fija excepto la tabla
-          - La tabla vive en un flex-1 min-h-0 para crecer sin reventar el layout
-        */}
         <div
           className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col"
           style={{ height: "calc(100vh - 2rem)", maxHeight: "680px" }}
           onClick={(e) => e.stopPropagation()}
         >
-
-          {/* HEADER — altura fija */}
           <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] rounded-t-2xl shrink-0">
-            <h2 className="text-white font-semibold text-lg">
-              {isEditing ? "Editar Categoría" : "Crear Categoría"}
-            </h2>
+            <h2 className="text-white font-semibold text-lg">Editar Categoría</h2>
             <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1 transition-colors">
               <X className="w-5 h-5" strokeWidth={2} />
             </button>
           </div>
 
-          {/* CAMPOS SUPERIORES — altura fija */}
           <div className="px-6 pt-5 pb-3 flex gap-6 shrink-0 border-b border-gray-100">
-
-            {/* Nombre */}
             <div className="flex-1 flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">Nombre</label>
               <input
@@ -299,7 +251,6 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
               {error && <p className="text-xs text-red-600">{error}</p>}
             </div>
 
-            {/* Estado */}
             <div className="flex flex-col gap-1 justify-center">
               <label className="text-sm font-medium text-gray-700">Estado</label>
               <ActiveToggle
@@ -307,10 +258,8 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
                 onChange={() => setForm({ ...form, activo: !form.activo })}
               />
             </div>
-
           </div>
 
-          {/* HEADER TABLA — altura fija */}
           <div className="flex items-center justify-between px-6 py-3 shrink-0">
             <div className="flex items-center gap-2">
               <Layers className="w-4 h-4 text-[#004D77]" />
@@ -330,7 +279,6 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
             </button>
           </div>
 
-          {/* TABLA — flex-1 + min-h-0 para ocupar el espacio restante sin crecer */}
           <div className="flex-1 min-h-0 px-6 pb-3">
             <SubcategoriesTable
               key={refreshKey}
@@ -342,7 +290,6 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
             />
           </div>
 
-          {/* FOOTER — altura fija */}
           <div className="px-6 py-4 flex gap-4 shrink-0 border-t border-gray-100">
             <button
               onClick={handleSubmit}
@@ -360,7 +307,6 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
               Cancelar
             </button>
           </div>
-
         </div>
       </div>
 
