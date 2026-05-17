@@ -5,6 +5,8 @@
  * consumiendo la API backend.
  */
 
+import axios from 'axios';
+
 // URL base de la API (ajusta según tu entorno)
 const API_BASE_URL = 'http://localhost:3000/api/providers';
 
@@ -13,30 +15,26 @@ const getAuthToken = () => {
   return localStorage.getItem('accessToken') || '';
 };
 
-// Helper para headers comunes
-const getHeaders = () => ({
-  'Content-Type': 'application/json',
-  'Authorization': `Bearer ${getAuthToken()}`
+// Configuración de axios
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: { 'Content-Type': 'application/json' }
 });
 
-// Helper para manejar errores de respuesta
-const handleResponse = async (response) => {
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Error en la petición');
-  }
-  const result = await response.json();
-  return result.data;
-};
+// Interceptor para agregar el token a cada petición
+api.interceptors.request.use((config) => {
+  config.headers.Authorization = `Bearer ${getAuthToken()}`;
+  return config;
+});
 
-// Helper para manejar errores de respuesta en operaciones que no devuelven data
-const handleResponseRaw = async (response) => {
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Error en la petición');
+// Interceptor para manejar errores de respuesta
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const message = error.response?.data?.message || 'Error en la petición';
+    throw new Error(message);
   }
-  return response.json();
-};
+);
 
 export const providersService = {
   getAll: async (params = {}) => {
@@ -49,14 +47,10 @@ export const providersService = {
     if (personType) queryParams.append('personType', personType);
     if (idStatus) queryParams.append('idStatus', idStatus);
     
-    const response = await fetch(`${API_BASE_URL}?${queryParams.toString()}`, {
-      method: 'GET',
-      headers: getHeaders()
-    });
+    const response = await api.get(`?${queryParams.toString()}`);
+    const result = response.data;
     
-    const result = await response.json();
-    
-    if (!response.ok) {
+    if (!response.data.success && result.message) {
       throw new Error(result.message || 'Error al obtener proveedores');
     }
     
@@ -89,14 +83,10 @@ export const providersService = {
   },
 
   getById: async (id) => {
-    const response = await fetch(`${API_BASE_URL}/${id}`, {
-      method: 'GET',
-      headers: getHeaders()
-    });
+    const response = await api.get(`/${id}`);
+    const result = response.data;
     
-    const result = await response.json();
-    
-    if (!response.ok) {
+    if (!response.data.success && result.message) {
       throw new Error(result.message || 'Error al obtener el proveedor');
     }
     
@@ -144,15 +134,10 @@ export const providersService = {
       idStatus: 1
     };
     
-    const response = await fetch(API_BASE_URL, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(payload)
-    });
+    const response = await api.post('', payload);
+    const result = response.data;
     
-    const result = await response.json();
-    
-    if (!response.ok) {
+    if (!response.data.success && result.message) {
       throw new Error(result.message || 'Error al crear el proveedor');
     }
     
@@ -202,15 +187,10 @@ export const providersService = {
     
     console.log(' Update payload:', payload);
     
-    const response = await fetch(`${API_BASE_URL}/${id}`, {
-      method: 'PUT',
-      headers: getHeaders(),
-      body: JSON.stringify(payload)
-    });
+    const response = await api.put(`/${id}`, payload);
+    const result = response.data;
     
-    const result = await response.json();
-    
-    if (!response.ok) {
+    if (!response.data.success && result.message) {
       throw new Error(result.message || 'Error al actualizar el proveedor');
     }
     
@@ -240,24 +220,21 @@ export const providersService = {
   },
 
   delete: async (id) => {
-    const response = await fetch(`${API_BASE_URL}/${id}`, {
-      method: 'DELETE',
-      headers: getHeaders()
-    });
+    const response = await api.delete(`/${id}`);
+    const result = response.data;
     
-    await handleResponseRaw(response);
+    if (!response.data.success && result.message) {
+      throw new Error(result.message || 'Error al eliminar el proveedor');
+    }
+    
     return true;
   },
 
   toggleActive: async (id) => {
-    const response = await fetch(`${API_BASE_URL}/${id}/status`, {
-      method: 'PATCH',
-      headers: getHeaders()
-    });
+    const response = await api.patch(`/${id}/status`);
+    const result = response.data;
     
-    const result = await response.json();
-    
-    if (!response.ok) {
+    if (!response.data.success && result.message) {
       throw new Error(result.message || 'Error al cambiar el estado');
     }
     

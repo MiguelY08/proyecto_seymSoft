@@ -23,7 +23,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     contactName:  '',
     contactPhone: '',
     clientCredit: '',
-    saldoFavor:   '',  // ← NUEVO: Saldo a favor
+    saldoFavor:   '',
     clientType:   '',
     rut:          '',
     ciuCode:      '',
@@ -32,6 +32,104 @@ function FormClient({ isOpen, onClose, client, onSave }) {
   const [formData, setFormData] = useState(initialState);
   const [errors,   setErrors]   = useState({});
   const [touched,  setTouched]  = useState({});
+
+  // ============================================
+  // VALIDACIÓN PARA numeric(10,2) DE POSTGRESQL
+  // ============================================
+const formatNumericValue = (value) => {
+  if (!value && value !== 0) return '';
+  
+  let strValue = String(value).trim();
+  
+  // Permitir solo números, punto, coma y signo menos (solo al inicio)
+  strValue = strValue.replace(/[^0-9.,-]/g, '');
+  
+  // Manejar signo negativo (solo al inicio)
+  let isNegative = false;
+  if (strValue.startsWith('-')) {
+    isNegative = true;
+    strValue = strValue.substring(1);
+  }
+  // No permitir múltiples signos negativos
+  strValue = strValue.replace(/-/g, '');
+  
+  // Reemplazar coma por punto
+  strValue = strValue.replace(/,/g, '.');
+  
+  // Limitar a 2 decimales
+  const parts = strValue.split('.');
+  if (parts.length === 2 && parts[1].length > 2) {
+    strValue = parts[0] + '.' + parts[1].substring(0, 2);
+  }
+  
+  // Limitar a 8 dígitos enteros
+  if (parts[0] && parts[0].length > 8) {
+    parts[0] = parts[0].substring(0, 8);
+    strValue = parts[0] + (parts.length > 1 ? '.' + parts[1] : '');
+  }
+  
+  // Reaplicar signo negativo
+  if (isNegative && strValue !== '') {
+    strValue = '-' + strValue;
+  }
+  
+  return strValue;
+};
+
+  // FormClient.jsx - Reemplaza la función validateNumeric10_2 por esta:
+
+const validateNumeric10_2 = (value, fieldName) => {
+  if (!value || value === '') return '';
+  
+  // Convertir a número
+  let numValue = parseFloat(String(value).replace(/,/g, '.'));
+  
+  if (isNaN(numValue)) {
+    return `${fieldName} debe ser un número válido`;
+  }
+  
+  // Redondear a 2 decimales
+  numValue = Math.round(numValue * 100) / 100;
+  
+  // Verificar límites de numeric(10,2) - PostgreSQL
+  const MAX_VALUE = 99999999.99;
+  const MIN_VALUE = -99999999.99;
+  
+  if (numValue > MAX_VALUE) {
+    return `${fieldName} no puede exceder 99,999,999.99`;
+  }
+  
+  if (numValue < MIN_VALUE) {
+    return `${fieldName} no puede ser menor a -99,999,999.99`;
+  }
+  
+  // Verificar que no tenga más de 8 dígitos enteros
+  const integerPart = Math.floor(Math.abs(numValue)).toString();
+  if (integerPart.length > 8) {
+    return `${fieldName} no puede tener más de 8 dígitos enteros`;
+  }
+  
+  return '';
+};
+
+  // ============================================
+  // VALIDACIÓN PARA CÓDIGO CIU
+  // ============================================
+  const validateCiuCode = (value, rutValue) => {
+    if (rutValue === 'si') {
+      if (!value || value.trim() === '') {
+        return 'El código CIU es obligatorio cuando RUT es Sí';
+      }
+      if (value === 'No aplica' || value === 'No disponible') {
+        return 'Por favor, ingrese un código CIU válido';
+      }
+      // Validar formato básico (ajusta según necesidad)
+      if (value.length < 3) {
+        return 'El código CIU debe tener al menos 3 caracteres';
+      }
+    }
+    return '';
+  };
 
   useEffect(() => {
     if (client) {
@@ -47,7 +145,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
         contactName:  client.contactName  || '',
         contactPhone: client.contactPhone || '',
         clientCredit: client.clientCredit || '',
-        saldoFavor:   client.saldoFavor   || '0',  // ← NUEVO
+        saldoFavor:   client.saldoFavor   || '0',
         clientType:   client.clientType   || '',
         rut:          client.rut          || '',
         ciuCode:      client.ciuCode      || '',
@@ -71,56 +169,124 @@ function FormClient({ isOpen, onClose, client, onSave }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    // Lógica para RUT y código CIU
     let newFormData = { ...formData, [name]: value };
     
+    // ============================================
+    // VALIDACIÓN PARA clientCredit y saldoFavor
+    // ============================================
+    if (name === 'clientCredit' || name === 'saldoFavor') {
+      // Formatear el valor según numeric(10,2)
+      const formattedValue = formatNumericValue(value);
+      newFormData[name] = formattedValue;
+    }
+    
+    // Si elige persona jurídica, forzar NIT
+    if (name === 'personType' && value === 'juridica') {
+      newFormData.documentType = 'NIT';
+    }
+    // Si elige persona natural, volver a CC
+    if (name === 'personType' && value === 'natural') {
+      newFormData.documentType = 'CC';
+    }
+    
+    // ============================================
+    // MANEJO ESPECIAL PARA RUT Y CIU CODE
+    // ============================================
     if (name === 'rut') {
       if (value === 'si') {
-        newFormData.ciuCode = newFormData.ciuCode || '';
+        // Cuando selecciona "Sí", limpiar el campo CIU para que el usuario pueda ingresar
+        newFormData.ciuCode = '';
       } else if (value === 'no') {
+        // Cuando selecciona "No", poner un valor predeterminado
         newFormData.ciuCode = 'No aplica';
       }
     }
     
     setFormData(newFormData);
     
+    // Validaciones en tiempo real
     if (touched[name]) {
-      const validationErrors = validateClientForm({ ...formData, [name]: value });
-      setErrors(prev => ({ ...prev, [name]: validationErrors[name] || '' }));
-    } else if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+      if (name === 'clientCredit' || name === 'saldoFavor') {
+        const numericError = validateNumeric10_2(newFormData[name], name === 'clientCredit' ? 'Crédito cliente' : 'Saldo a favor');
+        setErrors(prev => ({ ...prev, [name]: numericError }));
+      } else if (name === 'ciuCode') {
+        const ciuError = validateCiuCode(newFormData.ciuCode, newFormData.rut);
+        setErrors(prev => ({ ...prev, ciuCode: ciuError }));
+      } else {
+        const validationErrors = validateClientForm({ ...formData, [name]: value });
+        setErrors(prev => ({ ...prev, [name]: validationErrors[name] || '' }));
+      }
     }
   };
 
   const handleBlur = (e) => {
     const { name } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
+    
+    // Validación específica para cada campo
+    if (name === 'clientCredit' || name === 'saldoFavor') {
+      const numericError = validateNumeric10_2(formData[name], name === 'clientCredit' ? 'Crédito cliente' : 'Saldo a favor');
+      setErrors(prev => ({ ...prev, [name]: numericError }));
+      if (numericError) return;
+    }
+    
+    if (name === 'ciuCode') {
+      const ciuError = validateCiuCode(formData.ciuCode, formData.rut);
+      setErrors(prev => ({ ...prev, ciuCode: ciuError }));
+      if (ciuError) return;
+    }
+    
     const validationErrors = validateClientForm(formData);
     setErrors(prev => ({ ...prev, [name]: validationErrors[name] || '' }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    // Validación específica: si RUT es "Sí", código CIU es obligatorio
-    if (formData.rut === 'si' && !formData.ciuCode?.trim()) {
-      setErrors(prev => ({ ...prev, ciuCode: 'El código CIU es obligatorio cuando RUT es Sí' }));
-      setTouched(prev => ({ ...prev, ciuCode: true }));
-      return;
-    }
-    
-    const validationErrors = validateClientForm(formData);
+ const handleSubmit = (e) => {
+  e.preventDefault();
+  
+  // Validar campos numéricos
+  const creditError = validateNumeric10_2(formData.clientCredit, 'Crédito cliente');
+  const saldoError = validateNumeric10_2(formData.saldoFavor, 'Saldo a favor');
+  
+  if (creditError || saldoError) {
+    setErrors({
+      ...errors,
+      clientCredit: creditError || '',
+      saldoFavor: saldoError || ''
+    });
+    setTouched(prev => ({ ...prev, clientCredit: true, saldoFavor: true }));
+    return;
+  }
+  
+  // Validar CIU
+  const ciuError = validateCiuCode(formData.ciuCode, formData.rut);
+  if (ciuError) {
+    setErrors(prev => ({ ...prev, ciuCode: ciuError }));
+    setTouched(prev => ({ ...prev, ciuCode: true }));
+    return;
+  }
+  
+  // Validaciones generales
+  const validationErrors = validateClientForm(formData);
+  if (Object.keys(validationErrors).length > 0) {
     setErrors(validationErrors);
     setTouched(Object.keys(formData).reduce((acc, k) => ({ ...acc, [k]: true }), {}));
-    if (Object.keys(validationErrors).length > 0) return;
-    onSave?.(formData);
-    resetForm();
-    onClose();
+    return;
+  }
+  
+  //  Preparar datos para enviar - EL CAMPO IMPORTANTE: saldoFavor se envía como está
+  const submitData = {
+    ...formData,
+    clientCredit: formData.clientCredit || '0',
+    saldoFavor: formData.saldoFavor || '0',  // ← Este se mapeará a credit_balance en el service
+    ciuCode: formData.rut === 'no' ? 'No aplica' : formData.ciuCode
   };
-
+  
+  onSave?.(submitData);
+  resetForm();
+  onClose();
+};
   if (!isOpen) return null;
 
-  // ─── Helpers de UI ─────────────────────────────────────────────────────────
   const inputClass = (field) =>
     `w-full px-3 py-2 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
       errors[field] && touched[field]
@@ -160,7 +326,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     </label>
   );
 
-  // Determinar si estamos editando un cliente existente
   const isEditing = !!client;
 
   return (
@@ -170,17 +335,14 @@ function FormClient({ isOpen, onClose, client, onSave }) {
         onClick={() => { resetForm(); onClose(); }}
       />
 
-      {/* Modal — se expande con la gráfica */}
       <div className={`relative bg-white rounded-lg shadow-2xl overflow-hidden flex transition-all duration-500 ease-in-out ${
         showGraph ? 'w-[95vw] max-w-325' : 'w-full max-w-2xl'
       }`}>
 
-        {/* ── Sección del formulario ────────────────────────────────────────── */}
         <div
           className="flex flex-col min-w-0"
           style={{ width: showGraph ? '50%' : '100%', transition: 'width 500ms ease-in-out' }}
         >
-          {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
             <h2 className="text-white font-semibold text-lg">
               {isEditing ? 'Editar cliente' : 'Nuevo cliente'}
@@ -193,20 +355,16 @@ function FormClient({ isOpen, onClose, client, onSave }) {
             </button>
           </div>
 
-          {/* Cuerpo */}
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
             <div className="px-5 py-2 grid grid-cols-2 gap-x-4 gap-y-0">
 
-              {/* ── Columna izquierda: Datos personales ────────────────────── */}
               <div className="flex flex-col gap-2.5">
 
-                {/* Separador de sección */}
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Datos personales</span>
                   <div className="flex-1 h-px bg-[#004D77]/15" />
                 </div>
 
-                {/* Tipo de persona */}
                 <div className="flex flex-col gap-1">
                   <Label required>Tipo de persona</Label>
                   <div className="relative">
@@ -215,7 +373,8 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                       value={formData.personType} 
                       onChange={handleChange} 
                       onBlur={handleBlur} 
-                      className={selectClass('personType')}
+                      className={isEditing ? disabledSelectClass('personType') : selectClass('personType')}
+                      disabled={isEditing}
                     >
                       <option value="">Selecciona una opción</option>
                       <option value="natural">Persona Natural</option>
@@ -223,10 +382,10 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
                   </div>
+                  {isEditing && <p className="text-xs text-gray-400 mt-0.5">No se puede modificar en edición</p>}
                   <ErrorMsg field="personType" />
                 </div>
 
-                {/* Tipo + Documento */}
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1">
                     <Label>Tipo<span className="text-red-500">*</span></Label>
@@ -236,12 +395,18 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                         value={formData.documentType} 
                         onChange={handleChange} 
                         onBlur={handleBlur}
-                        className={isEditing ? disabledSelectClass('documentType') : selectClass('documentType')}
-                        disabled={isEditing}
+                        className={(isEditing || formData.personType === 'juridica') ? disabledSelectClass('documentType') : selectClass('documentType')}
+                        disabled={isEditing || formData.personType === 'juridica'}
                       >
-                        <option value="CC">CC</option>
-                        <option value="CE">CE</option>
-                        <option value="NIT">NIT</option>
+                        {formData.personType === 'juridica' ? (
+                          <option value="NIT">NIT</option>
+                        ) : (
+                          <>
+                            <option value="CC">CC</option>
+                            <option value="CE">CE</option>
+                            <option value="NIT">NIT</option>
+                          </>
+                        )}
                       </select>
                       <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
                     </div>
@@ -264,7 +429,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   </div>
                 </div>
 
-                {/* Nombres */}
                 <div className="flex flex-col gap-1">
                   <Label required>Nombres</Label>
                   <input 
@@ -286,7 +450,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   <ErrorMsg field="firstName" />
                 </div>
 
-                {/* Apellidos */}
                 <div className="flex flex-col gap-1">
                   <Label required>Apellidos</Label>
                   <input 
@@ -308,7 +471,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   <ErrorMsg field="lastName" />
                 </div>
 
-                {/* Dirección */}
                 <div className="flex flex-col gap-1">
                   <Label required>Dirección</Label>
                   <input 
@@ -324,7 +486,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   <ErrorMsg field="address" />
                 </div>
 
-                {/* Teléfono + Correo */}
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1 flex-1">
                     <Label required>Teléfono</Label>
@@ -358,7 +519,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
               </div>
 
-              {/* ── Columna derecha: Información adicional ──────────────────── */}
               <div className="flex flex-col gap-2.5">
 
                 <div className="flex items-center gap-2">
@@ -366,7 +526,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   <div className="flex-1 h-px bg-[#004D77]/15" />
                 </div>
 
-                {/* Persona contacto + Tel. contacto */}
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1 flex-1">
                     <Label>Persona contacto</Label>
@@ -398,7 +557,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   </div>
                 </div>
 
-                {/* Tipo cliente */}
                 <div className="flex flex-col gap-1">
                   <Label required>Tipo de cliente</Label>
                   <div className="relative">
@@ -420,7 +578,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   <ErrorMsg field="clientType" />
                 </div>
 
-                {/* Crédito cliente */}
                 <div className="flex flex-col gap-1">
                   <Label>Crédito cliente</Label>
                   <input 
@@ -434,9 +591,9 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     className={inputClass('clientCredit')} 
                   />
                   <ErrorMsg field="clientCredit" />
+                  <p className="text-[10px] text-gray-400 mt-0.5">Máximo: 99,999,999.99 (8 dígitos enteros, 2 decimales)</p>
                 </div>
 
-                {/* ← NUEVO: Saldo a favor */}
                 <div className="flex flex-col gap-1">
                   <Label>Saldo a favor</Label>
                   <div className="relative">
@@ -452,10 +609,11 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     />
                   </div>
                   <ErrorMsg field="saldoFavor" />
-                  <p className="text-[10px] text-gray-400 mt-0.5">Saldo que el cliente tiene a favor para futuras compras</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">
+                    Saldo a favor (máximo: 99,999,999.99)
+                  </p>
                 </div>
 
-                {/* RUT + Código CIU */}
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1 flex-1">
                     <Label required>RUT</Label>
@@ -483,7 +641,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                       value={formData.ciuCode} 
                       onChange={handleChange} 
                       onBlur={handleBlur} 
-                      placeholder={formData.rut === 'si' ? "Obligatorio" : "Se genera automáticamente"}
+                      placeholder={formData.rut === 'si' ? "Ingrese el código CIU" : "No aplica"}
                       autoComplete="off" 
                       className={formData.rut === 'si' ? inputClass('ciuCode') : disabledInputClass('ciuCode')}
                       disabled={formData.rut === 'no'}
@@ -493,7 +651,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                       <p className="text-xs text-gray-400 mt-0.5">Automático: No aplica</p>
                     )}
                     {formData.rut === 'si' && (
-                      <p className="text-xs text-gray-400 mt-0.5">Ingrese el código CIU</p>
+                      <p className="text-xs text-gray-400 mt-0.5"></p>
                     )}
                     <ErrorMsg field="ciuCode" />
                   </div>
@@ -503,9 +661,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
             </div>
 
-            {/* Footer */}
             <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
-              {/* Botón gráfica — solo en modo editar */}
               {isEditing ? (
                 <button
                   type="button"
@@ -538,7 +694,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
           </form>
         </div>
 
-        {/* ── Panel gráfica — animado igual que InfoClient ──────────────────── */}
         <div
           className="overflow-hidden shrink-0 transition-all duration-500 ease-in-out border-l border-gray-100"
           style={{ width: showGraph ? '50%' : '0%', opacity: showGraph ? 1 : 0 }}
