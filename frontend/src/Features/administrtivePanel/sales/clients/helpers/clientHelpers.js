@@ -178,10 +178,12 @@ export const validateClientForm = (formData) => {
     errors.documentType = 'Seleccione el tipo de documento';
   }
 
-  if (!formData.document?.trim()) {
+  if (!formData.document || String(formData.document).trim() === '') {
     errors.document = 'El número es obligatorio';
-  } else if (!isOnlyNumbers(formData.document)) {
+  } else if (!isOnlyNumbers(String(formData.document))) {
     errors.document = 'Solo números permitidos';
+  } else if (String(formData.document).replace(/\D/g, '').length > 19) {
+    errors.document = 'Máximo 19 dígitos permitidos';
   }
 
   if (!formData.firstName?.trim()) {
@@ -224,12 +226,10 @@ export const validateClientForm = (formData) => {
     errors.contactPhone = 'Solo números permitidos';
   }
 
-  // clientCredit is optional — only validate if it has content
   if (formData.clientCredit?.trim() && !isOnlyNumbers(formData.clientCredit)) {
     errors.clientCredit = 'Solo números permitidos';
   }
 
-  // ← NUEVO: Validación para saldo a favor (solo números)
   if (formData.saldoFavor?.trim() && !isOnlyNumbers(formData.saldoFavor)) {
     errors.saldoFavor = 'Solo números permitidos';
   }
