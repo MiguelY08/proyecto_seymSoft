@@ -31,11 +31,23 @@ export const PurchasesTable = ({
   handleReturn,
   search,
 }) => {
+  // ============================================================
+  // 🔥 NUEVA FUNCIÓN: validar si la compra tiene menos de 2 meses
+  // ============================================================
+  const isWithinReturnPeriod = (fechaCompra) => {
+    if (!fechaCompra) return false;
+    const fecha = new Date(fechaCompra);
+    const hoy = new Date();
+    const diffTime = hoy - fecha;
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    return diffDays <= 60;
+  };
+
   return (
     <>
       <div className="bg-white rounded-xl shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
-       <table className="min-w-full w-full text-xs">
+          <table className="min-w-full w-full text-xs">
             <thead className="bg-[#004D77] text-white">
               <tr>
                 <th className="px-3 py-2 text-center font-semibold">#</th>
@@ -59,20 +71,28 @@ export const PurchasesTable = ({
               ) : (
                 currentData.map((compra, index) => {
                   const recordNumber = startIndex + index + 1;
+                  const canReturn = isWithinReturnPeriod(compra.fechaCompra);
+                  const isAnnulled = compra.estado === "Anulada";
+
+                  // Determinar tooltip según el motivo de deshabilitado
+                  let returnTitle = "Registrar devolución";
+                  if (isAnnulled) {
+                    returnTitle = "No se puede devolver una compra anulada";
+                  } else if (!canReturn) {
+                    returnTitle = "La compra tiene más de 2 meses, no se puede generar devolución";
+                  }
 
                   return (
                     <tr
                       key={compra.id}
                       className={`${
-                      index % 2 === 0
-                        ? "bg-white hover:bg-gray-50"
-                        : "bg-gray-50 hover:bg-gray-100"
-                    }`}
+                        index % 2 === 0
+                          ? "bg-white hover:bg-gray-50"
+                          : "bg-gray-50 hover:bg-gray-100"
+                      }`}
                     >
                       {/* # */}
-                      <td className="px-3 py-2.5 text-center">
-                        {recordNumber}
-                      </td>
+                      <td className="px-3 py-2.5 text-center">{recordNumber}</td>
 
                       {/* No. Facturación */}
                       <td className="px-3 py-2.5 text-center">
@@ -80,9 +100,7 @@ export const PurchasesTable = ({
                       </td>
 
                       {/* Fecha */}
-                      <td className="px-3 py-2.5 text-center">
-                        {compra.fechaCompra}
-                      </td>
+                      <td className="px-3 py-2.5 text-center">{compra.fechaCompra}</td>
 
                       {/* Proveedor */}
                       <td className="px-3 py-2.5">
@@ -127,20 +145,17 @@ export const PurchasesTable = ({
 
                           <button
                             onClick={() => {
-                              if (compra.estado !== "Anulada") {
+                              if (!isAnnulled && canReturn) {
                                 handleReturn?.(compra);
                               }
                             }}
-                            title={
-                              compra.estado === "Anulada"
-                                ? "No se puede devolver una compra anulada"
-                                : "Registrar devolución"
-                            }
+                            title={returnTitle}
                             className={`transition-all duration-200 transform hover:scale-125 ${
-                              compra.estado === "Anulada"
+                              isAnnulled || !canReturn
                                 ? "text-gray-200 cursor-not-allowed"
                                 : "text-gray-400 hover:text-yellow-600"
                             }`}
+                            disabled={isAnnulled || !canReturn}
                           >
                             <RefreshCw size={16} />
                           </button>
