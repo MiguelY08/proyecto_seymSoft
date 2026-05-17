@@ -16,34 +16,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronDown } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import { validateProviderForm } from '../utils/providerHelpers';
+import { categoriesService } from '../data/categoriesService';
 
-// Opciones disponibles para el campo de categorías
-const categoriasOptions = [
-  "Útiles escolares",
-  "Oficina",
-  "Papelería",
-  "Arte y manualidades",
-  "Tecnología",
-  "Industrial",
-  "Impresión y copiado",
-  "Etiquetas adhesivas"
-];
-
-/**
- * Componente: FormProvider
- * 
- * Modal que contiene un formulario para crear o editar un proveedor.
- * Incluye validación en tiempo real y manejo de errores.
- * 
- * Props:
- * @param {boolean} isOpen - Controla si el modal está visible
- * @param {Function} onClose - Callback para cerrar el modal
- * @param {Object} provider - Objeto del proveedor a editar (null si es nuevo)
- * @param {Function} onSave - Callback que se ejecuta cuando se guarda el formulario
- */
 function FormProvider({ isOpen, onClose, provider, onSave }) {
 
-  // Estado inicial del formulario con campos vacíos
   const initialState = {
     tipoPersona: '',
     tipo: 'CC',
@@ -55,44 +31,48 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     nombreContacto: '',
     numeroContacto: '',
     direccion: '',
-    plazoDevoluciones: '',  // ← NUEVO: Plazo devoluciones
-    categorias: [],
+    plazoDevoluciones: '',
+    categoryIds: [],
     rut: '',
     codigoCIU: '',
   };
 
-  // Estado que almacena los datos del formulario
   const [formData, setFormData] = useState(initialState);
-  
-  // Estado que almacena los errores de validación por campo
   const [errors, setErrors] = useState({});
-  
-  // Estado que rastrea qué campos han sido tocados por el usuario (para mostrar errores)
   const [touched, setTouched] = useState({});
-  
-  // Estado que controla si el dropdown de categorías está abierto
   const [categoriasOpen, setCategoriasOpen] = useState(false);
-  
-  // Referencia al contenedor del dropdown para detectar clics fuera
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
   const categoriasRef = useRef(null);
-  
-  // Hook para mostrar alertas personalizadas
   const { showError, showSuccess } = useAlert();
-
-  // Determinar si estamos editando un proveedor existente
   const isEditing = !!provider;
+  const [isDocumentTypeDisabled, setIsDocumentTypeDisabled] = useState(false);
+
+  // Cargar categorías desde la API
+  useEffect(() => {
+    const loadCategories = async () => {
+      if (!isOpen) return;
+      setLoadingCategories(true);
+      try {
+        const result = await categoriesService.getAll();
+        setCategoriesList(result.data || []);
+      } catch (error) {
+        console.error('Error al cargar categorías:', error);
+        showError('Error', 'No se pudieron cargar las categorías');
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+    
+    loadCategories();
+  }, [isOpen, showError]);
 
   // Este useEffect se ejecuta cuando el modal abre o cuando cambia el proveedor a editar
-  // Inicializa el formulario con los datos existentes o lo limpia si es nuevo
   useEffect(() => {
     if (provider) {
-      // Convertir string de categorías a array si viene como string
-      const categoriasArray = provider.categorias 
-        ? (Array.isArray(provider.categorias) 
-            ? provider.categorias 
-            : provider.categorias.split(', '))
-        : [];
-
+      // Extraer IDs de categorías del proveedor
+      const categoryIds = provider.categorias?.map(cat => cat.id) || [];
+      
       setFormData({
         tipoPersona: provider.tipoPersona || '',
         tipo: provider.tipo || 'CC',
@@ -101,29 +81,34 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
         apellidos: provider.apellidos || '',
         telefono: provider.telefono || '',
         correo: provider.correo || '',
-        nombreContacto: provider.pContacto || provider.nombreContacto || '',
-        numeroContacto: provider.nuContacto || provider.numeroContacto || '',
+        nombreContacto: provider.nombreContacto || '',
+        numeroContacto: provider.numeroContacto || '',
         direccion: provider.direccion || '',
-        plazoDevoluciones: provider.plazoDevoluciones || '',  // ← NUEVO
-        categorias: categoriasArray,
+        plazoDevoluciones: provider.plazoDevoluciones || '',
+        categoryIds: categoryIds,
         rut: provider.rut || '',
         codigoCIU: provider.codigoCIU || '',
       });
       
-      // Marca todos los campos como tocados para mostrar errores si existen
+      if (provider.tipoPersona === 'juridica') {
+        setIsDocumentTypeDisabled(true);
+      } else {
+        setIsDocumentTypeDisabled(false);
+      }
+      
       setTouched(
         Object.keys(initialState).reduce((acc, key) => ({ ...acc, [key]: true }), {})
       );
     } else {
-      // Nuevo proveedor: reinicia el formulario
       setFormData(initialState);
       setTouched({});
+      setIsDocumentTypeDisabled(false);
     }
 
     setErrors({});
   }, [provider, isOpen]);
 
-  // Este useEffect maneja el cierre del dropdown de categorías cuando se hace clic fuera
+  // Cierre del dropdown de categorías
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (categoriasRef.current && !categoriasRef.current.contains(event.target)) {
@@ -140,52 +125,44 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     };
   }, [categoriasOpen]);
 
-  // ======== FUNCIONALIDAD: Limpiar Formulario ========
-  /**
-   * Reinicia el formulario a su estado inicial, limpiando todos los campos,
-   * errores, campos tocados y cierra el dropdown de categorías.
-   */
   const resetForm = () => {
     setFormData(initialState);
     setErrors({});
     setTouched({});
     setCategoriasOpen(false);
+    setIsDocumentTypeDisabled(false);
   };
 
-  // ======== FUNCIONALIDAD: Cerrar Formulario ========
-  /**
-   * Limpia el formulario y cierra el modal.
-   */
   const handleClose = () => {
     resetForm();
     onClose();
   };
 
-  // ======== FUNCIONALIDAD: Cambiar Campo de Entrada ========
-  /**
-   * Maneja los cambios en los campos de entrada (text, select, etc).
-   * Actualiza el estado del formulario y valida el campo si ha sido tocado.
-   * @param {Event} e - Evento del input
-   */
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    // Lógica para RUT y código CIU
     let newFormData = { ...formData, [name]: value };
+    
+    if (name === 'tipoPersona') {
+      if (value === 'juridica') {
+        newFormData.tipo = 'NIT';
+        setIsDocumentTypeDisabled(true);
+      } else if (value === 'natural') {
+        newFormData.tipo = 'CC';
+        setIsDocumentTypeDisabled(false);
+      }
+    }
     
     if (name === 'rut') {
       if (value === 'si') {
-        // Si RUT es "Sí", el código CIU debe ser obligatorio, lo dejamos vacío para que el usuario lo llene
         newFormData.codigoCIU = newFormData.codigoCIU || '';
       } else if (value === 'no') {
-        // Si RUT es "No", el código CIU se genera automáticamente
         newFormData.codigoCIU = 'No aplica';
       }
     }
     
     setFormData(newFormData);
 
-    // Valida el campo en tiempo real si el usuario ya lo ha tocado
     if (touched[name]) {
       const validationErrors = validateProviderForm({ ...formData, [name]: value });
       setErrors((prev) => ({
@@ -195,44 +172,36 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     }
   };
 
-  // ======== FUNCIONALIDAD: Cambiar Selección de Categoría ========
-  /**
-   * Agrega o quita una categoría del array de categorías seleccionadas.
-   * @param {string} categoria - Nombre de la categoría a agregar/quitar
-   */
-  const handleCategoriaChange = (categoria) => {
-    const isSelected = formData.categorias.includes(categoria);
-    let updatedCategorias;
+  const handleCategoriaChange = (categoryId) => {
+    const isSelected = formData.categoryIds.includes(categoryId);
+    let updatedCategoryIds;
 
     if (isSelected) {
-      // Si ya está seleccionada, la quita
-      updatedCategorias = formData.categorias.filter((cat) => cat !== categoria);
+      updatedCategoryIds = formData.categoryIds.filter((id) => id !== categoryId);
     } else {
-      // Si no está seleccionada, la agrega
-      updatedCategorias = [...formData.categorias, categoria];
+      updatedCategoryIds = [...formData.categoryIds, categoryId];
     }
 
     setFormData((prev) => ({
       ...prev,
-      categorias: updatedCategorias,
+      categoryIds: updatedCategoryIds,
     }));
 
-    // Valida el campo categorías si ya ha sido tocado
-    if (touched.categorias) {
-      const validationErrors = validateProviderForm({ ...formData, categorias: updatedCategorias });
-      setErrors((prev) => ({
-        ...prev,
-        categorias: validationErrors.categorias || '',
-      }));
+    if (touched.categoryIds) {
+      if (updatedCategoryIds.length === 0) {
+        setErrors((prev) => ({
+          ...prev,
+          categoryIds: 'Seleccione al menos una categoría',
+        }));
+      } else {
+        setErrors((prev) => ({
+          ...prev,
+          categoryIds: '',
+        }));
+      }
     }
   };
 
-  // ======== FUNCIONALIDAD: Marcar Campo como Tocado ========
-  /**
-   * Cuando el usuario pierde el foco (blur) en un campo, lo marca como tocado
-   * y valida su contenido.
-   * @param {Event} e - Evento del blur
-   */
   const handleBlur = (e) => {
     const { name } = e.target;
     
@@ -248,31 +217,34 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     }));
   };
 
-  // ======== FUNCIONALIDAD: Marcar Categorías como Tocadas ========
-  /**
-   * Marca el campo de categorías como tocado al perder el foco.
-   */
   const handleCategoriasBlur = () => {
     setTouched((prev) => ({
       ...prev,
-      categorias: true,
+      categoryIds: true,
     }));
 
-    const validationErrors = validateProviderForm(formData);
-    setErrors((prev) => ({
-      ...prev,
-      categorias: validationErrors.categorias || '',
-    }));
+    if (formData.categoryIds.length === 0) {
+      setErrors((prev) => ({
+        ...prev,
+        categoryIds: 'Seleccione al menos una categoría',
+      }));
+    }
   };
 
-  // ======== FUNCIONALIDAD: Enviar Formulario ========
-  /**
-   * Valida todo el formulario. Si no hay errores, guarda los datos.
-   * Convierte el array de categorías a string antes de guardar.
-   * @param {Event} e - Evento del submit
-   */
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validación: Persona jurídica debe usar NIT
+    if (formData.tipoPersona === 'juridica' && formData.tipo !== 'NIT') {
+      showError('Error de validación', 'La persona jurídica debe usar tipo de documento NIT');
+      return;
+    }
+
+    // Validación: Persona natural no puede usar NIT
+    if (formData.tipoPersona === 'natural' && formData.tipo === 'NIT') {
+      showError('Error de validación', 'La persona natural no puede usar tipo de documento NIT');
+      return;
+    }
 
     // Validación específica: si RUT es "Sí", código CIU es obligatorio
     if (formData.rut === 'si' && !formData.codigoCIU?.trim()) {
@@ -282,42 +254,57 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       return;
     }
 
+    // Validación: al menos una categoría seleccionada
+    if (formData.categoryIds.length === 0) {
+      setErrors(prev => ({ ...prev, categoryIds: 'Seleccione al menos una categoría' }));
+      setTouched(prev => ({ ...prev, categoryIds: true }));
+      showError('Errores en el formulario', 'Debe seleccionar al menos una categoría');
+      return;
+    }
+
     const validationErrors = validateProviderForm(formData);
     setErrors(validationErrors);
     setTouched(
       Object.keys(formData).reduce((acc, key) => ({ ...acc, [key]: true }), {})
     );
 
-    // Si hay errores, muestra alerta y no continúa
     if (Object.keys(validationErrors).length > 0) {
       showError('Errores en el formulario', 'Por favor corrija los errores antes de continuar');
       return;
     }
 
-    // Convertir array de categorías a string para guardar
+    // Preparar datos para enviar
     const dataToSave = {
-      ...formData,
-      categorias: formData.categorias.join(', ')
+      personType: formData.tipoPersona,
+      documentType: formData.tipo,
+      documentNumber: formData.numero,
+      nameProvider: formData.nombres,
+      lastname: formData.apellidos,
+      email: formData.correo,
+      phone: formData.telefono,
+      address: formData.direccion,
+      contactPersonName: formData.nombreContacto,
+      contactPersonNumber: formData.numeroContacto ? Number(formData.numeroContacto) : null,
+      rut: formData.rut === 'si',
+      ciuCode: formData.codigoCIU || null,
+      maxReturnPeriod: formData.plazoDevoluciones ? parseInt(formData.plazoDevoluciones) : null,
+      categoryIds: formData.categoryIds,
+      idStatus: 1
     };
 
-    onSave?.(dataToSave);
-    resetForm();
-    onClose();
-    // Muestra mensaje de éxito según si es creación o actualización
-    showSuccess(isEditing ? 'Proveedor actualizado' : 'Proveedor creado', 
-                isEditing ? 'Los datos se actualizaron correctamente' : 'El proveedor se creó exitosamente');
-  };
+    try {
+      // ESPERAR a que onSave complete antes de cerrar
+      await onSave?.(dataToSave);
+      //  El éxito ya se muestra en ProvidersPage, no aquí
+      resetForm();
+      onClose();
+    } catch (error) {
+      // No hacer nada, el error ya se muestra en ProvidersPage
+    }
+};
 
-  // No renderiza nada si el modal no está abierto
   if (!isOpen) return null;
 
-  // ======== FUNCIONALIDAD: Generar Clases de Estilo para Inputs ========
-  /**
-   * Genera las clases CSS dinámicas para un input basado en si tiene errores y
-   * si ha sido tocado por el usuario. Cambia el color del borde según el estado.
-   * @param {string} field - Nombre del campo
-   * @returns {string} String con las clases Tailwind CSS
-   */
   const inputClass = (field) =>
     `w-full px-3 py-1.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors ${
       errors[field] && touched[field]
@@ -325,7 +312,6 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
 
-  // Clase para inputs deshabilitados (edición)
   const disabledInputClass = (field) =>
     `w-full px-3 py-1.5 text-sm border rounded-lg outline-none bg-gray-100 text-gray-500 cursor-not-allowed ${
       errors[field] && touched[field]
@@ -333,7 +319,6 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
         : 'border-gray-300'
     }`;
 
-  // Clase para selects deshabilitados (edición)
   const disabledSelectClass = (field) =>
     `appearance-none w-full px-3 pr-8 py-1.5 text-sm border rounded-lg outline-none bg-gray-100 text-gray-500 cursor-not-allowed ${
       errors[field] && touched[field]
@@ -348,13 +333,6 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
 
-  // ======== FUNCIONALIDAD: Renderizar Error de Validación ========
-  /**
-   * Muestra el mensaje de error de un campo solo si el campo tiene error y
-   * ha sido tocado por el usuario.
-   * @param {string} field - Nombre del campo
-   * @returns {JSX|null} Elemento con el mensaje de error o null
-   */
   const renderError = (field) =>
     errors[field] && touched[field] && (
       <p className="mt-0.5 text-xs text-red-600 flex items-start gap-1">
@@ -362,20 +340,21 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       </p>
     );
 
-  // ======== RENDERIZADO: Modal del Formulario ========
+  const getSelectedCategoryNames = () => {
+    const selectedCategories = categoriesList.filter(cat => formData.categoryIds.includes(cat.id));
+    return selectedCategories.map(cat => cat.name).join(', ');
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       
-      {/* Backdrop: área oscura para cerrar al hacer clic */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={handleClose}
       />
 
-      {/* Modal principal con el formulario - Estilo igual a FormClient */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col">
         
-        {/* Encabezado del modal */}
         <div className="bg-[#004D77] text-white px-6 py-4 flex items-center justify-between shrink-0">
           <h2 className="text-white font-semibold text-lg">
             {isEditing ? 'Editar proveedor' : 'Nuevo proveedor'}
@@ -388,32 +367,28 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
           </button>
         </div>
 
-        {/* Formulario con campos - Estilo de grid 2 columnas como FormClient */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <div className="flex-1 overflow-y-auto p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 max-w-6xl mx-auto">
 
-              {/* ── Columna izquierda: Datos personales ────────────────────── */}
+              {/* COLUMNA IZQUIERDA: DATOS PERSONALES */}
               <div className="flex flex-col gap-2.5">
                 
-                {/* Separador de sección */}
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Datos personales</span>
                   <div className="flex-1 h-px bg-[#004D77]/15" />
                 </div>
 
-                {/* Tipo de persona - SIEMPRE EDITABLE como en clientes */}
                 <div className="flex flex-col gap-1">
-                  <label className="block text-xs font-semibold text-gray-600">
-                    Tipo de persona<span className="text-red-500">*</span>
-                  </label>
+                  <label className="block text-xs font-semibold text-gray-600">Tipo de persona<span className="text-red-500">*</span></label>
                   <div className="relative">
                     <select
                       name="tipoPersona"
                       value={formData.tipoPersona}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      className={selectClass('tipoPersona')}
+                      className={isEditing ? disabledSelectClass('tipoPersona') : selectClass('tipoPersona')}
+                      disabled={isEditing}
                     >
                       <option value="">Selecciona una opción</option>
                       <option value="natural">Persona Natural</option>
@@ -421,35 +396,37 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
                   </div>
+                  {isEditing && <p className="text-xs text-gray-400 mt-0.5">No se puede modificar en edición</p>}
                   {renderError('tipoPersona')}
                 </div>
 
-                {/* Tipo + Documento - DESHABILITADOS EN EDICIÓN */}
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1">
-                    <label className="block text-xs font-semibold text-gray-600">
-                      Tipo<span className="text-red-500">*</span>
-                    </label>
+                    <label className="block text-xs font-semibold text-gray-600">Tipo<span className="text-red-500">*</span></label>
                     <div className="relative">
                       <select
                         name="tipo"
                         value={formData.tipo}
                         onChange={handleChange}
                         onBlur={handleBlur}
-                        className={isEditing ? disabledSelectClass('tipo') : `${selectClass('tipo')} w-20`}
-                        disabled={isEditing}
+                        className={isEditing ? disabledSelectClass('tipo') : selectClass('tipo')}
+                        disabled={isEditing || isDocumentTypeDisabled}
                       >
-                        <option value="CC">CC</option>
-                        <option value="CE">CE</option>
-                        <option value="NIT">NIT</option>
+                        {formData.tipoPersona === 'juridica' ? (
+                          <option value="NIT">NIT</option>
+                        ) : (
+                          <>
+                            <option value="CC">CC</option>
+                            <option value="CE">CE</option>
+                            <option value="PP">PP</option>
+                          </>
+                        )}
                       </select>
                       <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
                     </div>
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
-                    <label className="block text-xs font-semibold text-gray-600">
-                      Número<span className="text-red-500">*</span>
-                    </label>
+                    <label className="block text-xs font-semibold text-gray-600">Número<span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       name="numero"
@@ -466,11 +443,8 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                   </div>
                 </div>
 
-                {/* Nombres */}
                 <div className="flex flex-col gap-1">
-                  <label className="block text-xs font-semibold text-gray-600">
-                    Nombres<span className="text-red-500">*</span>
-                  </label>
+                  <label className="block text-xs font-semibold text-gray-600">Nombres<span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     name="nombres"
@@ -482,19 +456,12 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     className={isEditing ? disabledInputClass('nombres') : inputClass('nombres')}
                     disabled={isEditing}
                   />
-                  {isEditing && (
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      No se puede modificar en edición
-                    </p>
-                  )}
+                  {isEditing && <p className="text-xs text-gray-400 mt-0.5">No se puede modificar en edición</p>}
                   {renderError('nombres')}
                 </div>
 
-                {/* Apellidos */}
                 <div className="flex flex-col gap-1">
-                  <label className="block text-xs font-semibold text-gray-600">
-                    Apellidos<span className="text-red-500">*</span>
-                  </label>
+                  <label className="block text-xs font-semibold text-gray-600">Apellidos<span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     name="apellidos"
@@ -506,19 +473,12 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     className={isEditing ? disabledInputClass('apellidos') : inputClass('apellidos')}
                     disabled={isEditing}
                   />
-                  {isEditing && (
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      No se puede modificar en edición
-                    </p>
-                  )}
+                  {isEditing && <p className="text-xs text-gray-400 mt-0.5">No se puede modificar en edición</p>}
                   {renderError('apellidos')}
                 </div>
 
-                {/* Dirección */}
                 <div className="flex flex-col gap-1">
-                  <label className="block text-xs font-semibold text-gray-600">
-                    Dirección<span className="text-red-500">*</span>
-                  </label>
+                  <label className="block text-xs font-semibold text-gray-600">Dirección<span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     name="direccion"
@@ -532,12 +492,9 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                   {renderError('direccion')}
                 </div>
 
-                {/* Teléfono + Correo */}
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1 flex-1">
-                    <label className="block text-xs font-semibold text-gray-600">
-                      Teléfono<span className="text-red-500">*</span>
-                    </label>
+                    <label className="block text-xs font-semibold text-gray-600">Teléfono<span className="text-red-500">*</span></label>
                     <input
                       type="tel"
                       name="telefono"
@@ -551,9 +508,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     {renderError('telefono')}
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
-                    <label className="block text-xs font-semibold text-gray-600">
-                      Correo<span className="text-red-500">*</span>
-                    </label>
+                    <label className="block text-xs font-semibold text-gray-600">Correo<span className="text-red-500">*</span></label>
                     <input
                       type="email"
                       name="correo"
@@ -570,7 +525,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
 
               </div>
 
-              {/* ── Columna derecha: Información adicional ──────────────────── */}
+              {/* COLUMNA DERECHA: INFORMACIÓN ADICIONAL */}
               <div className="flex flex-col gap-2.5">
 
                 <div className="flex items-center gap-2">
@@ -578,12 +533,9 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                   <div className="flex-1 h-px bg-[#004D77]/15" />
                 </div>
 
-                {/* Persona contacto + Tel. contacto */}
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1 flex-1">
-                    <label className="block text-xs font-semibold text-gray-600">
-                      Persona contacto
-                    </label>
+                    <label className="block text-xs font-semibold text-gray-600">Persona contacto</label>
                     <input
                       type="text"
                       name="nombreContacto"
@@ -597,9 +549,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     {renderError('nombreContacto')}
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
-                    <label className="block text-xs font-semibold text-gray-600">
-                      Tel. contacto
-                    </label>
+                    <label className="block text-xs font-semibold text-gray-600">Tel. contacto</label>
                     <input
                       type="tel"
                       name="numeroContacto"
@@ -614,11 +564,8 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                   </div>
                 </div>
 
-                {/* ← NUEVO: Plazo devoluciones - ARRIBA DE CATEGORÍAS */}
                 <div className="flex flex-col gap-1">
-                  <label className="block text-xs font-semibold text-gray-600">
-                    Plazo devoluciones
-                  </label>
+                  <label className="block text-xs font-semibold text-gray-600">Plazo devoluciones</label>
                   <input
                     type="text"
                     name="plazoDevoluciones"
@@ -633,54 +580,54 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                   <p className="text-[10px] text-gray-400 mt-0.5">Días para realizar devoluciones</p>
                 </div>
 
-                {/* Categorías - Dropdown con checkboxes */}
                 <div ref={categoriasRef} className="flex flex-col gap-1">
-                  <label className="block text-xs font-semibold text-gray-600">
-                    Categorías<span className="text-red-500">*</span>
-                  </label>
+                  <label className="block text-xs font-semibold text-gray-600">Categorías<span className="text-red-500">*</span></label>
                   <div className="relative">
                     <button
                       type="button"
                       onClick={() => setCategoriasOpen(!categoriasOpen)}
                       onBlur={handleCategoriasBlur}
-                      className={`${inputClass('categorias')} flex items-center justify-between cursor-pointer text-left`}
+                      className={`${inputClass('categoryIds')} flex items-center justify-between cursor-pointer text-left`}
                     >
-                      <span className={formData.categorias.length === 0 ? 'text-gray-400' : 'text-gray-700'}>
-                        {formData.categorias.length === 0 
+                      <span className={formData.categoryIds.length === 0 ? 'text-gray-400' : 'text-gray-700'}>
+                        {formData.categoryIds.length === 0 
                           ? 'Selecciona categorías' 
-                          : `${formData.categorias.length} seleccionada${formData.categorias.length > 1 ? 's' : ''}`}
+                          : loadingCategories 
+                            ? 'Cargando...' 
+                            : getSelectedCategoryNames()}
                       </span>
                       <ChevronDown className={`w-4 h-4 transition-transform ${categoriasOpen ? 'rotate-180' : ''}`} />
                     </button>
 
                     {categoriasOpen && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                        {categoriasOptions.map((categoria) => (
-                          <label
-                            key={categoria}
-                            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={formData.categorias.includes(categoria)}
-                              onChange={() => handleCategoriaChange(categoria)}
-                              className="w-4 h-4 text-[#004D77] focus:ring-[#004D77] rounded"
-                            />
-                            <span>{categoria}</span>
-                          </label>
-                        ))}
+                        {loadingCategories ? (
+                          <div className="px-3 py-2 text-sm text-gray-500">Cargando categorías...</div>
+                        ) : (
+                          categoriesList.map((categoria) => (
+                            <label
+                              key={categoria.id}
+                              className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={formData.categoryIds.includes(categoria.id)}
+                                onChange={() => handleCategoriaChange(categoria.id)}
+                                className="w-4 h-4 text-[#004D77] focus:ring-[#004D77] rounded"
+                              />
+                              <span>{categoria.name}</span>
+                            </label>
+                          ))
+                        )}
                       </div>
                     )}
                   </div>
-                  {renderError('categorias')}
+                  {renderError('categoryIds')}
                 </div>
 
-                {/* RUT + Código CIU */}
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1 flex-1">
-                    <label className="block text-xs font-semibold text-gray-600">
-                      RUT<span className="text-red-500">*</span>
-                    </label>
+                    <label className="block text-xs font-semibold text-gray-600">RUT<span className="text-red-500">*</span></label>
                     <div className="relative">
                       <select
                         name="rut"
@@ -698,9 +645,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     {renderError('rut')}
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
-                    <label className="block text-xs font-semibold text-gray-600">
-                      Código CIU {formData.rut === 'si' && <span className="text-red-500">*</span>}
-                    </label>
+                    <label className="block text-xs font-semibold text-gray-600">Código CIU {formData.rut === 'si' && <span className="text-red-500">*</span>}</label>
                     <input
                       type="text"
                       name="codigoCIU"
@@ -728,7 +673,6 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
             </div>
           </div>
 
-          {/* Pie del formulario: botones de acción */}
           <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
             <button
               type="button"
