@@ -5,8 +5,7 @@ import PaginationAdmin   from '../../../../shared/PaginationAdmin';
 import FormClient        from '../modals/FormClient';
 import InfoClient        from '../modals/InfoClient';
 import { useAlert }      from '../../../../shared/alerts/useAlert';
-import { clientsService }            from '../services/clientsService';
-import { filterClients, paginateData } from '../helpers/clientHelpers';
+import { clientsService } from '../services/clientsService';
 
 const RECORDS_PER_PAGE = 13;
 
@@ -14,6 +13,7 @@ function ClientsPage() {
   const [clients,         setClients]         = useState([]);
   const [searchTerm,      setSearchTerm]      = useState('');
   const [currentPage,     setCurrentPage]     = useState(1);
+  const [totalRecords,    setTotalRecords]    = useState(0);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedClient,  setSelectedClient]  = useState(null);
@@ -23,25 +23,27 @@ function ClientsPage() {
 
   useEffect(() => {
     loadClients();
-  }, []);
+  }, [currentPage, searchTerm]);
 
-  const loadClients = () => {
+  const loadClients = async () => {
+    setLoading(true);
     try {
-      setClients(clientsService.getAll());
-    } catch {
-      showError('Error', 'No se pudieron cargar los clientes');
+      const result = await clientsService.getAll({
+        page: currentPage,
+        limit: RECORDS_PER_PAGE,
+        search: searchTerm
+      });
+      setClients(result.data);
+      setTotalRecords(result.pagination.total);
+    } catch (error) {
+      showError('Error', error.message || 'No se pudieron cargar los clientes');
     } finally {
       setLoading(false);
     }
   };
 
-  // Toggles active state with user confirmation
   const handleToggleActive = async (id) => {
-    const client    = clients.find(c => c.id === id);
-    if (client?.isSystem) {
-      showWarning('Acción no permitida', 'El Cliente de Caja no puede modificarse.');
-      return;
-    }
+    const client = clients.find(c => c.id === id);
     const newStatus = client.active ? 'Inactivo' : 'Activo';
 
     const result = await showConfirm(
@@ -53,22 +55,16 @@ function ClientsPage() {
 
     if (result.isConfirmed) {
       try {
-        const updated = clientsService.toggleActive(id);
-        if (updated) {
-          setClients(prev => prev.map(c => c.id === id ? updated : c));
-          showSuccess('Estado cambiado', `El cliente ahora está ${newStatus}`);
-        }
-      } catch {
-        showError('Error', 'No se pudo cambiar el estado del cliente');
+        await clientsService.toggleActive(id);
+        await loadClients();
+        showSuccess('Estado cambiado', `El cliente ahora está ${newStatus}`);
+      } catch (error) {
+        showError('Error', error.message || 'No se pudo cambiar el estado');
       }
     }
   };
 
   const handleEdit = (client) => {
-    if (client?.isSystem) {
-      showWarning('Acción no permitida', 'El Cliente de Caja no puede modificarse.');
-      return;
-    }
     setSelectedClient(client);
     setIsFormModalOpen(true);
   };
@@ -83,73 +79,43 @@ function ClientsPage() {
     setIsFormModalOpen(true);
   };
 
-  const handleSave = (formData) => {
+const handleSave = async (formData) => {
     try {
       if (selectedClient) {
-        const updated = clientsService.update(selectedClient.id, formData);
-        if (updated) {
-          setClients(prev => prev.map(c => c.id === selectedClient.id ? updated : c));
-          showSuccess('Cliente actualizado', 'Los datos del cliente se actualizaron correctamente');
-        }
+        await clientsService.update(selectedClient.id, formData);
+        await loadClients();
+        showSuccess('Cliente actualizado', 'Los datos se actualizaron correctamente');
       } else {
-        const newClient = clientsService.create(formData);
-        setClients(prev => [...prev, newClient]);
+        await clientsService.create(formData);
+        await loadClients();
         showSuccess('Cliente creado', 'El nuevo cliente se creó exitosamente');
       }
-      setIsFormModalOpen(false);
-    } catch {
-      showError('Error', 'No se pudo guardar el cliente');
+    } catch (error) {
+      showError('Error', error.message || 'No se pudo guardar el cliente');
+      throw error;
     }
-  };
+};
 
-  // Deletes client after confirmation and adjusts pagination if needed
   const handleDelete = async (client) => {
-    if (client?.isSystem) {
-      showWarning('Acción no permitida', 'El Cliente de Caja no puede eliminarse.');
-      return;
-    }
-
-    // Verificar ventas asociadas desde localStorage
-    const ventas = (() => {
-      try {
-        const stored = localStorage.getItem('pm_sales');
-        return stored ? JSON.parse(stored) : [];
-      } catch { return []; }
-    })();
-
-    const ventasAsociadas = ventas.filter(
-      v => String(v.clienteId) === String(client.id)
-    );
-
-    const tieneVentas = ventasAsociadas.length > 0;
-
-    // Todos los clientes son isClient: true → siempre se reasigna al Cliente de Caja
-    const clienteNote = ' Sus créditos y pagos quedarán registrados bajo el Cliente de Caja.';
-
-    const subtitulo = tieneVentas
-      ? `Este cliente aparece en ${ventasAsociadas.length} venta(s) registrada(s). Al eliminarlo, esas ventas mostrarán "Usuario eliminado".${clienteNote} Esta acción no se podrá revertir.`
-      : `No se podrá revertir la acción.${clienteNote}`;
-
     const result = await showConfirm(
       'warning',
       `¿Eliminar a "${client.fullName}"?`,
-      subtitulo,
+      'Esta acción no se podrá revertir.',
       { confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar' }
     );
 
     if (result.isConfirmed) {
       try {
-        clientsService.delete(client.id);
-        const remaining     = clients.filter(c => c.id !== client.id);
-        setClients(remaining);
-
-        const filtered      = filterClients(remaining, searchTerm);
-        const newTotalPages = Math.ceil(filtered.length / RECORDS_PER_PAGE);
-        if (currentPage > newTotalPages && newTotalPages > 0) setCurrentPage(newTotalPages);
-
-        showSuccess('Cliente eliminado', 'El cliente ha sido eliminado exitosamente.');
-      } catch {
-        showError('Error', 'No se pudo eliminar el cliente');
+        await clientsService.delete(client.id);
+        const newTotalPages = Math.ceil((totalRecords - 1) / RECORDS_PER_PAGE);
+        if (currentPage > newTotalPages && newTotalPages > 0) {
+          setCurrentPage(newTotalPages);
+        } else {
+          await loadClients();
+        }
+        showSuccess('Cliente eliminado', 'El cliente ha sido eliminado');
+      } catch (error) {
+        showError('Error', error.message || 'No se pudo eliminar el cliente');
       }
     }
   };
@@ -159,14 +125,9 @@ function ClientsPage() {
     setCurrentPage(1);
   };
 
-  const filteredClients = filterClients(clients, searchTerm);
-  const { currentData, startIndex } = paginateData(  // ← EXTRAER startIndex
-    filteredClients,
-    currentPage,
-    RECORDS_PER_PAGE
-  );
+  const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
 
-  if (loading) {
+  if (loading && clients.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -179,7 +140,6 @@ function ClientsPage() {
 
   return (
     <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
-
       <ClientsToolbar
         searchTerm={searchTerm}
         onSearchChange={handleSearchChange}
@@ -188,8 +148,8 @@ function ClientsPage() {
 
       <div className="bg-white rounded-xl shadow-md">
         <ClientsTable
-          clients={currentData}
-          startIndex={startIndex}  // ← PASAR startIndex al componente
+          clients={clients}
+          startIndex={startIndex}
           searchTerm={searchTerm}
           onInfo={handleInfo}
           onEdit={handleEdit}
@@ -198,11 +158,11 @@ function ClientsPage() {
         />
       </div>
 
-      {filteredClients.length > 0 && (
+      {totalRecords > 0 && (
         <PaginationAdmin
           currentPage={currentPage}
           onPageChange={setCurrentPage}
-          totalRecords={filteredClients.length}
+          totalRecords={totalRecords}
           recordsPerPage={RECORDS_PER_PAGE}
         />
       )}
