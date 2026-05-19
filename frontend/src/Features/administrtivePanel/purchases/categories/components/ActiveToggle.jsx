@@ -5,7 +5,7 @@ function ActiveToggle({ activo, onChange }) {
   return (
     <button
       type="button"
-      onClick={onChange}
+      onClick={() => onChange(!activo)}
       className={`relative w-11 h-5 rounded-full transition-colors duration-300 cursor-pointer ${
         activo ? "bg-green-500" : "bg-red-400"
       }`}

@@ -129,7 +129,7 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
             <label className="text-sm font-medium text-gray-700">Estado</label>
             <ActiveToggle
               activo={subForm.activo}
-              onChange={() => setSubForm({ ...subForm, activo: !subForm.activo })}
+              onChange={(nuevo) => setSubForm({ ...subForm, activo: nuevo })}
             />
           </div>
         </div>
@@ -255,7 +255,7 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
               <label className="text-sm font-medium text-gray-700">Estado</label>
               <ActiveToggle
                 activo={form.activo}
-                onChange={() => setForm({ ...form, activo: !form.activo })}
+                onChange={(nuevo) => setForm({ ...form, activo: nuevo })}
               />
             </div>
           </div>

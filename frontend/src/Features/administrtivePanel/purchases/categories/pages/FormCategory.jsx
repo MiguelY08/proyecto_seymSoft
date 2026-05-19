@@ -148,8 +148,9 @@ function FormCategory({ allCategories = [], onClose, onSave }) {
       activo: form.activo,
       subcategoriasIniciales: subcategories,
     };
+    // No llamar onClose aquí: handleSave en CategoriesPage lo controla
+    // después de confirmar y crear exitosamente
     onSave(categoryData, false);
-    onClose();
   };
 
   return (
@@ -198,7 +199,7 @@ function FormCategory({ allCategories = [], onClose, onSave }) {
 
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-gray-700">Estado</label>
-              <ActiveToggle activo={form.activo} onChange={() => setForm({ ...form, activo: !form.activo })} />
+              <ActiveToggle activo={form.activo} onChange={(nuevo) => setForm({ ...form, activo: nuevo })} />
             </div>
 
             <div className="flex flex-col gap-3 pt-1">
@@ -265,7 +266,7 @@ function FormCategory({ allCategories = [], onClose, onSave }) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-500">Estado</span>
-                  <ActiveToggle activo={subForm.activo} onChange={() => setSubForm({ ...subForm, activo: !subForm.activo })} />
+                  <ActiveToggle activo={subForm.activo} onChange={(nuevo) => setSubForm({ ...subForm, activo: nuevo })} />
                 </div>
                 <button
                   onClick={handleAddSubcategory}

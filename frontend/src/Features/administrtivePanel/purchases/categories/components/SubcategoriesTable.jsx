@@ -31,13 +31,25 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
   const loadSubcategories = async () => {
     try {
       setLoading(true);
+      // getSubcategories ya normaliza nombre/descripcion/estado, pero cubrimos
+      // todas las variantes posibles de la API para evitar siempre "Inactivo"
       const subs = await getSubcategories(categoryId);
-      setSubcategories(subs.map(sub => ({
-        ...sub,
-        nombre: sub.name || sub.nombre,
-        descripcion: sub.description || sub.descripcion,
-        estado: sub.status === "Active" ? "Activo" : (sub.estado || "Inactivo")
-      })));
+      const normalized = subs.map(sub => {
+        const rawStatus = sub.status ?? sub.statusName ?? "";
+        const estadoFinal =
+          rawStatus === "Active"   || rawStatus === "Activo"   || rawStatus === 1 ? "Activo"
+        : rawStatus === "Inactive" || rawStatus === "Inactivo" || rawStatus === 2 ? "Inactivo"
+        : sub.estado ?? "Inactivo";
+        return {
+          ...sub,
+          nombre:     sub.nombre     ?? sub.name        ?? "",
+          descripcion: sub.descripcion ?? sub.description ?? "",
+          estado: estadoFinal,
+        };
+      });
+      // Ordenar por id ascendente para reflejar orden de creación
+      normalized.sort((a, b) => a.id - b.id);
+      setSubcategories(normalized);
     } catch (error) {
       showError("Error", "No se pudieron cargar las subcategorías.");
     } finally {
@@ -201,7 +213,7 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
                         />
                       </td>
                       <td className="py-1.5 text-center">
-                        <ActiveToggle activo={editedEstado} onChange={setEditedEstado} />
+                        <ActiveToggle activo={editedEstado} onChange={(nuevo) => setEditedEstado(nuevo)} />
                       </td>
                       <td className="py-1.5 text-center flex justify-center gap-2">
                         <button

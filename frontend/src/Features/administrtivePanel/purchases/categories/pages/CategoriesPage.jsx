@@ -36,16 +36,26 @@ const CategoriesPage = () => {
       const categoriesWithCount = await Promise.all(
         cats.map(async (cat) => {
           const subs = await getSubcategories(cat.id);
+          // La API puede retornar status como "Active"/"Inactive" o "Activo"/"Inactivo"
+          const rawStatus = cat.status ?? cat.statusName ?? cat.estado ?? "";
+          const isActive =
+            rawStatus === "Active" ||
+            rawStatus === "Activo" ||
+            rawStatus === 1 ||
+            rawStatus === "1";
           return {
             id: cat.id,
-            nombre: cat.name,
-            estado: cat.status === "Active" ? "Activo" : "Inactivo",
+            nombre: cat.name ?? cat.nombre,
+            estado: isActive ? "Activo" : "Inactivo",
             subcategorias: subs.length,
           };
         })
       );
 
-      setCategories(categoriesWithCount);
+      // Ordenar por id ascendente para que las más nuevas aparezcan al final
+      // y el orden sea consistente con la creación
+      const sorted = [...categoriesWithCount].sort((a, b) => a.id - b.id);
+      setCategories(sorted);
     } catch (err) {
       setError("Error al cargar categorías");
       showError("Error", err.message || "No se pudieron cargar las categorías.");
