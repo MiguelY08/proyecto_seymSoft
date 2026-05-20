@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle, XCircle, AlertTriangle, Info, HelpCircle } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Info, HelpCircle, X } from 'lucide-react';
 
 const DEFAULT_TIMER = 4000;
 const bgAlert = 'bg-white';
@@ -14,6 +14,7 @@ const variants = {
     icon:     <CheckCircle className="w-6 h-6 text-green-500 shrink-0" strokeWidth={2} />,
     confirm:  'bg-green-500 hover:bg-green-600 text-white',
     cancel:   'bg-white border border-green-300 text-green-600 hover:bg-green-100',
+    close:    'text-green-500 hover:text-green-700 hover:bg-green-50',
   },
   error: {
     bg:       bgAlert,
@@ -24,6 +25,7 @@ const variants = {
     icon:     <XCircle className="w-6 h-6 text-red-500 shrink-0" strokeWidth={2} />,
     confirm:  'bg-red-500 hover:bg-red-600 text-white',
     cancel:   'bg-white border border-red-300 text-red-500 hover:bg-red-100',
+    close:    'text-red-500 hover:text-red-700 hover:bg-red-50',
   },
   warning: {
     bg:       bgAlert,
@@ -34,6 +36,7 @@ const variants = {
     icon:     <AlertTriangle className="w-6 h-6 text-yellow-500 shrink-0" strokeWidth={2} />,
     confirm:  'bg-yellow-500 hover:bg-yellow-600 text-white',
     cancel:   'bg-white border border-yellow-300 text-yellow-600 hover:bg-yellow-100',
+    close:    'text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50',
   },
   info: {
     bg:       bgAlert,
@@ -44,6 +47,7 @@ const variants = {
     icon:     <Info className="w-6 h-6 text-blue-500 shrink-0" strokeWidth={2} />,
     confirm:  'bg-[#004D77] hover:bg-[#003d5e] text-white',
     cancel:   'bg-white border border-blue-300 text-[#004D77] hover:bg-blue-100',
+    close:    'text-blue-500 hover:text-blue-700 hover:bg-blue-50',
   },
   question: {
     bg:       bgAlert,
@@ -54,6 +58,7 @@ const variants = {
     icon:     <HelpCircle className="w-6 h-6 text-blue-500 shrink-0" strokeWidth={2} />,
     confirm:  'bg-[#004D77] hover:bg-[#003d5e] text-white',
     cancel:   'bg-white border border-blue-300 text-[#004D77] hover:bg-blue-100',
+    close:    'text-blue-500 hover:text-blue-700 hover:bg-blue-50',
   },
   plain: {
     bg:       bgAlert,
@@ -64,10 +69,11 @@ const variants = {
     icon:     null,
     confirm:  'bg-[#004D77] hover:bg-[#003d5e] text-white',
     cancel:   'bg-white border border-blue-300 text-[#004D77] hover:bg-blue-100',
+    close:    'text-gray-500 hover:text-gray-700 hover:bg-gray-50',
   },
 };
 
-// ─── Clases de animación según posición ───────────────────────────────────────
+// Animaciones igual que antes
 const motionClass = (position, visible) => {
   if (position === 'right') {
     return visible
@@ -85,31 +91,30 @@ function AlertItem({ alert, onRemove, position = 'center' }) {
 
   const effectiveTimer = isConfirm ? null : (timer ?? DEFAULT_TIMER);
 
-  const [visible,  setVisible]  = useState(false);
+  const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(100);
-  const [seconds,  setSeconds]  = useState(Math.ceil((timer ?? DEFAULT_TIMER) / 1000));
 
+  // Efecto de entrada
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 10);
     return () => clearTimeout(t);
   }, []);
 
+  // Callback didOpen
   useEffect(() => {
     if (visible && didOpen) didOpen();
   }, [visible, didOpen]);
 
+  // Timer (solo barra, sin segundos)
   useEffect(() => {
     if (!effectiveTimer) return;
-    const interval  = 50;
+    const interval = 50;
     const decrement = 100 / (effectiveTimer / interval);
-    let current     = 100;
-    let elapsed     = 0;
+    let current = 100;
 
     const tick = setInterval(() => {
-      elapsed += interval;
       current -= decrement;
       setProgress(Math.max(current, 0));
-      setSeconds(Math.ceil((effectiveTimer - elapsed) / 1000));
       if (current <= 0) {
         clearInterval(tick);
         handleClose();
@@ -119,7 +124,7 @@ function AlertItem({ alert, onRemove, position = 'center' }) {
     return () => clearInterval(tick);
   }, [effectiveTimer]);
 
-  const handleClose = () => {
+  const handleClose = (isFromTimer = false) => {
     setVisible(false);
     setTimeout(() => {
       resolve?.({ isConfirmed: false, isDismissed: true });
@@ -146,50 +151,55 @@ function AlertItem({ alert, onRemove, position = 'center' }) {
   return (
     <div
       className={`pointer-events-auto w-full rounded-2xl border shadow-lg overflow-hidden transition-all duration-300 ${v.bg} ${v.border} ${motionClass(position, visible)}`}
-      onClick={!isConfirm ? handleClose : undefined}
     >
-      {/* ─── Contenido ──────────────────────────────────────────────────── */}
+      {/* Contenido principal con botón de cierre (solo si no es confirmación) */}
       <div className="flex items-start gap-3 px-4 pt-4 pb-3">
         {v.icon && <div className="mt-0.5">{v.icon}</div>}
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-bold uppercase tracking-wide ${v.title}`}>{title}</p>
-          {text && <p className={`text-xs mt-0.5 ${v.text}`}>{text}</p>}
+          <p className={`text-base font-semibold ${v.title}`}>{title}</p>
+          {text && <p className={`text-sm mt-1 ${v.text}`}>{text}</p>}
           {html && (
-            <p className={`text-xs mt-0.5 ${v.text}`} dangerouslySetInnerHTML={{ __html: html }} />
+            <p className={`text-sm mt-1 ${v.text}`} dangerouslySetInnerHTML={{ __html: html }} />
           )}
         </div>
+        {!isConfirm && (
+          <button
+            onClick={handleClose}
+            className={`rounded-full p-1 -mr-1 -mt-1 transition-colors duration-200 cursor-pointer ${v.close}`}
+            aria-label="Cerrar"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
-      {/* ─── Botones de confirmación ─────────────────────────────────────── */}
+      {/* Botones de confirmación (isConfirm) */}
       {isConfirm && (
         <div className="flex items-center gap-2 px-4 pb-4">
           <button
             onClick={handleConfirm}
-            className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${v.confirm}`}
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${v.confirm}`}
           >
             {confirmButtonText}
           </button>
           <button
             onClick={handleCancel}
-            className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${v.cancel}`}
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${v.cancel}`}
           >
             {cancelButtonText}
           </button>
         </div>
       )}
 
-      {/* ─── Barra de timer + segundos ───────────────────────────────────── */}
+      {/* Barra de progreso (sin contador de segundos) */}
       {effectiveTimer && (
-        <div className="px-4 pb-3 flex items-center gap-2">
-          <div className="flex-1 h-1.5 rounded-full bg-black/10 overflow-hidden">
+        <div className="px-4 pb-3">
+          <div className="w-full h-1.5 rounded-full bg-black/10 overflow-hidden">
             <div
               className={`h-full rounded-full transition-none ${v.timerBar}`}
               style={{ width: `${progress}%` }}
             />
           </div>
-          <span className={`text-[10px] font-semibold tabular-nums shrink-0 ${v.text}`}>
-            {Math.max(seconds, 0)}s
-          </span>
         </div>
       )}
     </div>

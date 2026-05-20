@@ -1,6 +1,6 @@
 // src/features/administrtivePanel/sales/helpers/salesHelpers.js
 import * as XLSX from 'xlsx';
-import { UsersDB } from '../../../users/services/usersDB';
+import { UserService } from '../../../users/services/userService';
 import { clientsService, creditAccountService } from '../../clients/services/clientsService';
 import { SalesServices } from '../services/salesServices';
 
@@ -70,8 +70,8 @@ export const today = () =>
 export const generateFactura = () =>
   String(Math.floor(100000000 + Math.random() * 900000000));
 
-// ─── Cargar usuarios desde UsersDB ───────────────────────────────────────────
-export const loadSalesUsers = () => UsersDB.list();
+// ─── Cargar usuarios desde UserService ───────────────────────────────────────────
+export const loadSalesUsers = () => UserService.list();
 
 // ─── Resaltador de texto para la tabla ───────────────────────────────────────
 export function highlight(text, term) {
