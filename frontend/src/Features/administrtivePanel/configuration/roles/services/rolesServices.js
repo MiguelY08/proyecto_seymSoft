@@ -1,4 +1,4 @@
-import UsersDB from "../../../users/services/usersDB";
+import UserService from "../../../users/services/userService";
 
 // ─────────────────────────────────────────────
 // STORAGE KEY
@@ -145,7 +145,7 @@ export const deleteRole = (roleId) => {
 // ─────────────────────────────────────────────
 
 export const roleHasUsers = (roleName) => {
-  const users = UsersDB.list();
+  const users = UserService.list();
 
   return users.some((user) => user.role === roleName);
 };
@@ -155,7 +155,7 @@ export const roleHasUsers = (roleName) => {
 // ─────────────────────────────────────────────
 
 export const countUsersByRole = (roleName) => {
-  const users = UsersDB.list();
+  const users = UserService.list();
 
   return users.filter((user) => user.role === roleName).length;
 };

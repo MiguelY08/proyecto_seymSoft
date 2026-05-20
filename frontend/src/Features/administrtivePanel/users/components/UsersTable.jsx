@@ -1,42 +1,38 @@
 import { useNavigate } from "react-router-dom";
-import { Info, SquarePen, Trash2, Users, Plus, ShoppingBag } from "lucide-react";
+import { Info, SquarePen, Trash2, Users, Plus, ShoppingBag, Loader2 } from "lucide-react";
+import { useState } from "react";
 import { useAlert } from "../../../shared/alerts/useAlert";
-import { highlight, highlightEstado } from "../helpers/usersHelpers";
+import { highlight, highlightEstado, formatDate } from "../helpers/usersHelpers";
 import { usePermissions } from "../../configuration/roles/hooks/usePermissions";
 
-// ─── Toggle activo/inactivo ───────────────────────────────────────────────────
+// ─── Toggle activo/inactivo (sin cambios) ──────────────────────────────────
 function ActiveToggle({ activo, onChange, search }) {
-  const { showConfirm, showSuccess } = useAlert();
+  const { showConfirm, showSuccess, showError } = useAlert();
+  const [isLoading, setIsLoading] = useState(false);
   const estadoResaltado = highlightEstado(activo, search);
 
-  /**
-   * Maneja el clic en el toggle, con confirmación para desactivar.
-   */
-  const handleClick = () => {
-    if (activo) {
-      showConfirm(
-        "warning",
-        "¿Está seguro que desea desactivar este usuario?",
-        "",
-        {
-          confirmButtonText: "Desactivar",
-          cancelButtonText: "Cancelar",
-        },
-      ).then((result) => {
-        if (result.isConfirmed) {
-          onChange();
-          showSuccess(
-            "Usuario desactivado",
-            "El usuario ha sido desactivado exitosamente.",
-          );
-        }
-      });
-    } else {
-      onChange();
+  const handleClick = async () => {
+    if (isLoading) return;
+    const mensajeConfirm = activo
+      ? "¿Está seguro que desea desactivar este usuario?"
+      : "¿Está seguro que desea activar este usuario?";
+    const confirm = await showConfirm("warning", mensajeConfirm, "", {
+      confirmButtonText: activo ? "Desactivar" : "Activar",
+      cancelButtonText: "Cancelar",
+    });
+    if (!confirm?.isConfirmed) return;
+    setIsLoading(true);
+    try {
+      await onChange();
       showSuccess(
-        "Usuario activado",
-        "El usuario ha sido activado exitosamente.",
+        `Usuario ${activo ? "desactivado" : "activado"}`,
+        `El usuario ha sido ${activo ? "desactivado" : "activado"} exitosamente.`
       );
+    } catch (error) {
+      const mensaje = error.response?.data?.message || error.message || "Error al cambiar el estado.";
+      showError("Error", mensaje);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -47,28 +43,35 @@ function ActiveToggle({ activo, onChange, search }) {
       )}
       <button
         onClick={handleClick}
+        disabled={isLoading}
         className={`relative w-11 h-5 rounded-full transition-colors duration-300 cursor-pointer shrink-0 ${
           activo ? "bg-green-500" : "bg-red-400"
-        }`}
+        } ${isLoading ? "opacity-50 cursor-wait" : ""}`}
       >
-        <span
-          className={`absolute top-1/2 -translate-y-1/2 text-white text-[9px] font-bold transition-all duration-300 ${
-            activo ? "left-1.5" : "right-1.5"
-          }`}
-        >
-          {activo ? "A" : "I"}
-        </span>
-        <span
-          className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
-            activo ? "left-5.75" : "left-0.5"
-          }`}
-        />
+        {isLoading ? (
+          <Loader2 className="absolute inset-0 m-auto w-4 h-4 text-white animate-spin" />
+        ) : (
+          <>
+            <span
+              className={`absolute top-1/2 -translate-y-1/2 text-white text-[9px] font-bold transition-all duration-300 ${
+                activo ? "left-1.5" : "right-1.5"
+              }`}
+            >
+              {activo ? "A" : "I"}
+            </span>
+            <span
+              className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
+                activo ? "left-5.75" : "left-0.5"
+              }`}
+            />
+          </>
+        )}
       </button>
     </div>
   );
 }
 
-// ─── Empty State ──────────────────────────────────────────────────────────────
+// ─── Empty State (sin cambios) ────────────────────────────────────────────
 function EmptyState({ isSearching }) {
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
@@ -96,7 +99,6 @@ function EmptyState({ isSearching }) {
             Aún no se han registrado usuarios en el sistema. Crea el primero
             para comenzar.
           </p>
-          {/* hasPermission("usuarios.crear") && ( */}
           <button
             onClick={() => navigate("/admin/users/form-user")}
             className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"
@@ -104,14 +106,13 @@ function EmptyState({ isSearching }) {
             <span>Nuevo usuario</span>
             <Plus className="w-4 h-4" strokeWidth={2} />
           </button>
-          {/* ) */}
         </>
       )}
     </div>
   );
 }
 
-// ─── UsersTable ───────────────────────────────────────────────────────────────
+// ─── UsersTable con columna de fecha de creación ──────────────────────────────────
 function UsersTable({
   data = [],
   onDelete,
@@ -120,132 +121,65 @@ function UsersTable({
   totalData = 0,
 }) {
   const navigate = useNavigate();
-  const { showConfirm, showSuccess, showWarning } = useAlert();
+  const { showConfirm, showSuccess, showWarning, showError } = useAlert();
   const { hasPermission } = usePermissions();
+  const [deletingId, setDeletingId] = useState(null);
 
-  /**
-   * Maneja eliminación de usuario con validaciones y confirmación.
-   * Verifica si está activo y si tiene ventas asociadas.
-   * @param {object} row - Datos del usuario a eliminar.
-   */
-  const handleDelete = (row) => {
+  const handleDelete = async (row) => {
+    if (deletingId === row.id) return;
     if (row.active) {
       showWarning(
         "No es posible eliminar este usuario",
-        "Debes desactivar el usuario antes de poder eliminarlo.",
+        "Debes desactivar el usuario antes de poder eliminarlo."
       );
       return;
     }
-
-    // Verificar ventas asociadas desde localStorage
-    const ventas = (() => {
-      try {
-        const stored = localStorage.getItem("pm_sales");
-        return stored ? JSON.parse(stored) : [];
-      } catch {
-        return [];
-      }
-    })();
-
-    const ventasAsociadas = ventas.filter(
-      (v) =>
-        String(v.clienteId) === String(row.id) ||
-        String(v.vendedorId) === String(row.id),
-    );
-
-    const tieneVentas = ventasAsociadas.length > 0;
-    const roles = ventasAsociadas.reduce((acc, v) => {
-      if (String(v.clienteId) === String(row.id)) acc.add("cliente");
-      if (String(v.vendedorId) === String(row.id)) acc.add("vendedor");
-      return acc;
-    }, new Set());
-
-    const rolesTexto = [...roles].join(" y ");
-    const clienteNote = row.isClient
-      ? ' Además, su perfil de cliente será eliminado y sus créditos y pagos quedarán registrados bajo el Cliente de Caja.'
-      : '';
-
-    const subtitulo = tieneVentas
-      ? `Este usuario aparece como ${rolesTexto} en ${ventasAsociadas.length} venta(s) registrada(s). Al eliminarlo, esas ventas mostrarán "Usuario eliminado".${clienteNote} Esta acción no se podrá revertir.`
-      : `No se podrá revertir la acción.${clienteNote}`;
-
-    showConfirm(
+    const confirm = await showConfirm(
       "warning",
       "¿Está seguro que desea eliminar este usuario?",
-      subtitulo,
-      { confirmButtonText: "Eliminar", cancelButtonText: "Cancelar" },
-    ).then((result) => {
-      if (result.isConfirmed) {
-        onDelete?.(row);
-        showSuccess(
-          "Usuario eliminado",
-          "El usuario ha sido eliminado exitosamente.",
-        );
-      }
-    });
+      "Esta acción no se puede revertir. Si el usuario tiene registros asociados (ventas, créditos, etc.), el sistema lo impedirá.",
+      { confirmButtonText: "Eliminar", cancelButtonText: "Cancelar" }
+    );
+    if (!confirm?.isConfirmed) return;
+    setDeletingId(row.id);
+    try {
+      await onDelete(row);
+      showSuccess("Usuario eliminado", "El usuario ha sido eliminado exitosamente.");
+    } catch (error) {
+      const mensaje = error.response?.data?.message || error.message || "Error al eliminar el usuario.";
+      showError("Error", mensaje);
+    } finally {
+      setDeletingId(null);
+    }
   };
 
-  // Renderizar estado vacío si no hay datos
   if (data.length === 0) {
-    return (
-      <EmptyState isSearching={totalData > 0 && search.trim().length > 0} />
-    );
+    return <EmptyState isSearching={totalData > 0 && search.trim().length > 0} />;
   }
 
   return (
     <div className="flex-1 overflow-x-auto rounded-xl shadow-md min-h-0">
       <table className="min-w-max w-full">
-        {/* Header de la tabla con columnas fijas */}
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
-              Tipo y Documento
-            </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
-              Nombre
-            </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
-              Correo electrónico
-            </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
-              Teléfono
-            </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
-              Rol
-            </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
-              Acciones
-            </th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Nombre</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Correo electrónico</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Teléfono</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Registrado desde</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Rol</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Acciones</th>
           </tr>
         </thead>
-
-        {/* Cuerpo de la tabla con filas de usuarios */}
         <tbody>
           {data.map((row, index) => {
             const rowBg = index % 2 === 0 ? "bg-gray-100 hover:bg-blue-50" : "bg-white hover:bg-blue-50";
+            const isDeleting = deletingId === row.id;
+            const formattedDate = formatDate(row.createdAt);
             return (
-              <tr
-                key={row.id}
-                className={`transition-colors duration-150 ${rowBg}`}
-              >
-                {/* Datos del usuario con resaltado de búsqueda */}
-                <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                  <span className="font-medium">
-                    {highlight(row.documentType, search)}
-                  </span>{" "}
-                  {highlight(row.document, search)}
-                </td>
+              <tr key={row.id} className={`transition-colors duration-150 ${rowBg}`}>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">
                   <div className="flex items-center justify-center gap-1.5">
                     {highlight(row.name, search)}
-                    {row.isClient && (
-                      <span
-                        title="También es cliente"
-                        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#004D77]/10 shrink-0"
-                      >
-                        <ShoppingBag className="w-2.5 h-2.5 text-[#004D77]" strokeWidth={2} />
-                      </span>
-                    )}
                   </div>
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
@@ -255,12 +189,13 @@ function UsersTable({
                   {highlight(row.phone, search)}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                  {highlight(formattedDate, search)}
+                </td>
+                <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(row.role, search)}
                 </td>
-                {/* Acciones: info, editar, toggle activo, eliminar */}
                 <td className="px-3 py-1.5">
                   <div className="flex items-center justify-center gap-1 sm:gap-1.5">
-                    {/* {hasPermission("usuarios.ver") && ( */}
                     <button
                       onClick={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
@@ -277,14 +212,8 @@ function UsersTable({
                       className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                       title="Información"
                     >
-                      <Info
-                        className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                        strokeWidth={1.5}
-                      />
+                      <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                     </button>
-                    {/* )} */}
-
-                    {/* {hasPermission("usuarios.editar") && ( */}
                     <button
                       onClick={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
@@ -301,33 +230,27 @@ function UsersTable({
                       className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                       title="Editar"
                     >
-                      <SquarePen
-                        className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                        strokeWidth={1.5}
-                      />
+                      <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                     </button>
-                    {/* )} */}
-
-                    {/* {hasPermission("usuarios.cambiar_estado") && ( */}
                     <ActiveToggle
                       activo={row.active}
-                      onChange={() => onToggle?.(row.id)}
+                      onChange={() => onToggle(row.id)}
                       search={search}
                     />
-                    {/* )} */}
-
-                    {/* {hasPermission("usuarios.eliminar") && ( */}
                     <button
                       onClick={() => handleDelete(row)}
-                      className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
+                      disabled={isDeleting}
+                      className={`text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer ${
+                        isDeleting ? "opacity-50 cursor-wait" : ""
+                      }`}
                       title="Eliminar"
                     >
-                      <Trash2
-                        className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                        strokeWidth={1.5}
-                      />
+                      {isDeleting ? (
+                        <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                      )}
                     </button>
-                    {/* )} */}
                   </div>
                 </td>
               </tr>
