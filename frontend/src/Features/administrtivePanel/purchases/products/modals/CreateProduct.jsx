@@ -1,5 +1,5 @@
 import { X, Upload, ChevronDown, ChevronUp, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect} from 'react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import ProductsService from '../services/productsServices';
 
@@ -54,7 +54,21 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
   const [imagenPreview, setImagenPreview] = useState(null);
   const [errors, setErrors]               = useState({});
   const [priceErrors, setPriceErrors]     = useState({});
-  const [expandedCats, setExpandedCats]   = useState({});
+  const [categories, setCategories] = useState([]);
+  
+  useEffect(() => {
+  const loadCategories = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/categories');
+      const data = await response.json();
+      setCategories(data.data || []);
+    } catch (error) {
+      console.error('Error al cargar categorías:', error);
+    }
+  };
+  loadCategories();
+}, []);
+
 
   const numeric = (v) => v.replace(/[^0-9]/g, '');
   const block   = (e) => { if (['e','E','+','-','.'].includes(e.key)) e.preventDefault(); };
@@ -113,19 +127,26 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
-  const handleCatChange = (cat) => {
-    setFormData((prev) => {
-      let cats = [...prev.categorias];
-      if (cats.includes(cat)) {
-        cats = cats.filter(c => c !== cat && !(CATS[cat] || []).includes(c.split(' > ')[1]));
-      } else {
-        cats.push(cat);
-        if (CATS[cat]?.length > 0) setExpandedCats(ex => ({ ...ex, [cat]: true }));
-      }
-      return { ...prev, categorias: cats };
-    });
-    if (errors.categorias) setErrors((prev) => ({ ...prev, categorias: undefined }));
-  };
+  const handleCatChange = (catName, catId) => {
+  setFormData((prev) => {
+    let cats = [...prev.categorias];
+    let id_category = prev.id_category;
+    
+    if (cats.includes(catName)) {
+      cats = cats.filter(c => c !== catName);
+    } else {
+      cats.push(catName);
+      id_category = catId;
+    }
+    
+    return { 
+      ...prev, 
+      categorias: cats,
+      id_category: id_category
+    };
+  });
+  if (errors.categorias) setErrors((prev) => ({ ...prev, categorias: undefined }));
+};
 
   const handleSubCatChange = (cat, sub) => {
     setFormData((prev) => {
@@ -166,7 +187,7 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
     r.readAsDataURL(file);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate(formData);
     const pe   = validatePrices(formData);
@@ -176,16 +197,17 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
       showError('Formulario incompleto', 'Revisa los campos marcados en rojo antes de continuar.');
       return;
     }
-    try {
-      const saved = ProductsService.create({ ...formData, imagen: imagenPreview, stock: calcStock(formData) });
-      showSuccess('Producto creado', `"${saved.nombre}" fue agregado al catálogo correctamente.`);
-      onCreate?.(saved);
-      setFormData(EMPTY); setImagenPreview(null); setErrors({}); setPriceErrors({}); setExpandedCats({});
-      onClose();
-    } catch {
-      showError('Error', 'No se pudo guardar el producto. Intenta de nuevo.');
-    }
-  };
+    
+  try {
+  const saved = await ProductsService.create({ ...formData, imagen: imagenPreview, stock: calcStock(formData) });
+  showSuccess('Producto creado', `"${saved.name}" fue agregado al catálogo correctamente.`);
+  onCreate?.(saved);
+  setFormData(EMPTY); setImagenPreview(null); setErrors({}); setPriceErrors({}); setExpandedCats({});
+  onClose();
+} catch (error) {
+  showError('Error', error.message || 'No se pudo guardar el producto. Intenta de nuevo.');
+}
+  }
 
   const inputCls = (f) =>
     `w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm transition-colors ${
@@ -232,35 +254,43 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
                   <ErrMsg field="imagen" />
                 </div>
                 {/* Categorías */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Categorías <span className="text-red-500">*</span></label>
-                  <div className={`border rounded-lg p-2.5 h-[130px] overflow-y-auto ${errors.categorias ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
-                    {Object.keys(CATS).map((cat) => (
-                      <div key={cat} className="mb-1.5 last:mb-0">
-                        <div className="flex items-center gap-1.5">
-                          <input type="checkbox" id={`cat-${cat}`} checked={formData.categorias.includes(cat)} onChange={() => handleCatChange(cat)} className="w-3.5 h-3.5 text-blue-600 rounded" />
-                          <label htmlFor={`cat-${cat}`} className="flex-1 text-xs text-gray-700 font-medium cursor-pointer">{cat}</label>
-                          {CATS[cat].length > 0 && (
-                            <button type="button" onClick={() => setExpandedCats(ex => ({ ...ex, [cat]: !ex[cat] }))} className="text-gray-400 hover:text-gray-600">
-                              {expandedCats[cat] ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                            </button>
-                          )}
-                        </div>
-                        {expandedCats[cat] && CATS[cat].length > 0 && (
-                          <div className="ml-5 mt-1 space-y-1">
-                            {CATS[cat].map(sub => (
-                              <div key={sub} className="flex items-center gap-1.5">
-                                <input type="checkbox" id={`sub-${cat}-${sub}`} checked={formData.categorias.includes(`${cat} > ${sub}`)} onChange={() => handleSubCatChange(cat, sub)} disabled={!formData.categorias.includes(cat)} className="w-3 h-3 text-blue-600 rounded disabled:opacity-50" />
-                                <label htmlFor={`sub-${cat}-${sub}`} className={`text-xs cursor-pointer ${!formData.categorias.includes(cat) ? 'text-gray-400' : 'text-gray-600'}`}>{sub}</label>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <ErrMsg field="categorias" />
-                </div>
+<div>
+  <label className="block text-xs font-medium text-gray-700 mb-1.5">
+    Categorías <span className="text-red-500">*</span>
+  </label>
+  <div className={`border rounded-lg p-2.5 h-[130px] overflow-y-auto ${errors.categorias ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
+    {categories && categories.length > 0 ? (
+      categories.map((cat) => (
+        <div key={cat.id} className="mb-1.5 last:mb-0">
+          <div className="flex items-center gap-1.5">
+            <input 
+              type="checkbox" 
+              id={`cat-${cat.id}`} 
+              checked={formData.categorias.includes(cat.name)} 
+              onChange={() => {
+                const newCats = formData.categorias.includes(cat.name)
+                  ? formData.categorias.filter(c => c !== cat.name)
+                  : [...formData.categorias, cat.name];
+                setFormData(prev => ({
+                  ...prev,
+                  categorias: newCats,
+                  id_category: newCats.length > 0 ? categories.find(c => c.name === newCats[0])?.id : null
+                }));
+              }}
+              className="w-3.5 h-3.5 text-blue-600 rounded" 
+            />
+            <label htmlFor={`cat-${cat.id}`} className="flex-1 text-xs text-gray-700 font-medium cursor-pointer">
+              {cat.name}
+            </label>
+          </div>
+        </div>
+      ))
+    ) : (
+      <p className="text-xs text-gray-400">Sin categorías disponibles</p>
+    )}
+  </div>
+  <ErrMsg field="categorias" />
+</div>
                 {/* Descripción */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1.5">Descripción <span className="text-gray-400 font-normal">(opcional)</span></label>

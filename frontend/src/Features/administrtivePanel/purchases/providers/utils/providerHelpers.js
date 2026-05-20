@@ -15,14 +15,18 @@
 
 // Provider Helper Functions
 
+// Helper para convertir a string de forma segura
+const toStr = (value) => (value !== undefined && value !== null) ? String(value).trim() : '';
+
 // Formatea un número de teléfono a formato legible
 export const formatPhoneNumber = (phone) => {
-  if (!phone) return 'N/A';
-  const cleaned = phone.replace(/\D/g, '');
+  if (!phone && phone !== 0) return 'N/A';
+  const phoneStr = String(phone);
+  const cleaned = phoneStr.replace(/\D/g, '');
   if (cleaned.length === 10) {
     return `(${cleaned.slice(0,3)}) ${cleaned.slice(3,6)} ${cleaned.slice(6)}`;
   }
-  return phone;
+  return phoneStr;
 };
 
 // Valida que el correo tenga formato correcto
@@ -121,6 +125,7 @@ export const paginateData = (data, page, itemsPerPage) => {
 export const validateProviderForm = (formData) => {
   const errors = {};
 
+  // Validaciones básicas
   if (!formData.tipoPersona?.trim()) {
     errors.tipoPersona = 'Seleccione el tipo de persona';
   }
@@ -153,9 +158,11 @@ export const validateProviderForm = (formData) => {
     errors.apellidos = 'Solo se permiten letras';
   }
 
-  if (!formData.telefono?.trim()) {
+  // Convertir teléfono a string antes de validar
+  const telefonoStr = toStr(formData.telefono);
+  if (!telefonoStr) {
     errors.telefono = 'El teléfono es obligatorio';
-  } else if (!isValidPhone(formData.telefono)) {
+  } else if (!isValidPhone(telefonoStr)) {
     errors.telefono = 'Debe tener entre 7 y 10 dígitos';
   }
 
@@ -165,7 +172,9 @@ export const validateProviderForm = (formData) => {
     errors.correo = 'Formato de correo inválido';
   }
 
-  if (formData.numeroContacto?.trim() && !isValidPhone(formData.numeroContacto)) {
+  // Convertir número de contacto a string antes de validar
+  const numeroContactoStr = toStr(formData.numeroContacto);
+  if (numeroContactoStr && !isValidPhone(numeroContactoStr)) {
     errors.numeroContacto = 'Debe tener entre 7 y 10 dígitos';
   }
 
@@ -175,13 +184,15 @@ export const validateProviderForm = (formData) => {
     errors.direccion = 'Debe tener al menos 5 caracteres';
   }
 
-  // ← NUEVO: Validación para plazo devoluciones (solo números)
-  if (formData.plazoDevoluciones?.trim() && !isOnlyNumbers(formData.plazoDevoluciones)) {
+  // Convertir plazoDevoluciones a string antes de validar
+  const plazoDevolucionesStr = toStr(formData.plazoDevoluciones);
+  if (plazoDevolucionesStr && !isOnlyNumbers(plazoDevolucionesStr)) {
     errors.plazoDevoluciones = 'Solo números permitidos';
   }
 
-  if (!formData.categorias || formData.categorias.length === 0) {
-    errors.categorias = 'Seleccione al menos una categoría';
+  //  VALIDACIÓN CORREGIDA: Usar categoryIds en lugar de categorias
+  if (!formData.categoryIds || formData.categoryIds.length === 0) {
+    errors.categoryIds = 'Seleccione al menos una categoría';
   }
 
   if (!formData.rut?.trim()) {

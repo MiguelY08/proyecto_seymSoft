@@ -64,36 +64,44 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
   const [imagenPreview, setImagenPreview] = useState(null);
   const [errors, setErrors]               = useState({});
   const [priceErrors, setPriceErrors]     = useState({});
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+  const loadCategories = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/categories');
+      const data = await response.json();
+      setCategories(data.data || []);
+    } catch (error) {
+      console.error('Error al cargar categorías:', error);
+    }
+  };
+  loadCategories();
+}, []);
+  
 
   // Inicializar formulario cuando cambia el producto
   useEffect(() => {
-    if (!producto) return;
-    setFormData({
-      nombre:               producto.nombre              || '',
-      codBarras:            producto.codBarras           || '',
-      stockPrincipal:       str(producto.stockPrincipal  ?? producto.stock),
-      codsBarrasExtra:      Array.isArray(producto.codsBarrasExtra)
-                              ? producto.codsBarrasExtra.map(e =>
-                                  typeof e === 'object' ? { ...e } : { cod: e, stock: '' }
-                                )
-                              : [],
-      referencia:           producto.referencia          || '',
-      descripcion:          producto.descripcion         || '',
-      cantidadXPaca:        str(producto.cantidadXPaca),
-      categorias:           Array.isArray(producto.categorias) ? [...producto.categorias] : [],
-      precioDetalle:        str(producto.precioDetalle   ?? producto.precioDetal),
-      precioDetallePaca:    str(producto.precioDetallePaca),
-      precioMayorista:      str(producto.precioMayorista),
-      precioMayoristaPaca:  str(producto.precioMayoristaPaca),
-      precioColegas:        str(producto.precioColegas),
-      precioColegasPaca:    str(producto.precioColegasPaca),
-      precioPacas:          str(producto.precioPacas),
-      precioPacasPaca:      str(producto.precioPacasPaca),
-    });
-    setImagenPreview(producto.imagen || null);
-    setErrors({});
-    setPriceErrors({});
-  }, [producto]);
+  if (!producto) return;
+  setFormData({
+    nombre: producto.name || '',
+    codBarras: producto.barcodes?.[0]?.barcode || '',
+    stockPrincipal: String(producto.barcodes?.[0]?.stock || 0),
+    codsBarrasExtra: (producto.barcodes || []).slice(1).map(b => ({ cod: b.barcode, stock: b.stock })),
+    referencia: producto.reference || '',
+    descripcion: producto.description || '',  // ← Agregar descripción
+    cantidadXPaca: String(producto.quantity_per_pack || 0),
+    categorias: producto.category?.name ? [producto.category.name] : [],
+    id_category: producto.category?.id || null,  // ← Guardar el ID
+    precioDetalle: String(producto.retailPrice || 0),
+    precioMayorista: String(producto.wholesalePrice || 0),
+    precioColegas: String(producto.partnerPrice || 0),
+    precioPacas: String(producto.bulkPrice || 0),
+  });
+  setImagenPreview(null);
+  setErrors({});
+  setPriceErrors({});
+}, [producto]);
 
   const numeric = (v) => v.replace(/[^0-9]/g, '');
   const block   = (e) => { if (['e','E','+','-','.'].includes(e.key)) e.preventDefault(); };
@@ -188,26 +196,36 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const errs = validate(formData);
-    const pe   = validatePrices(formData);
-    const all  = { ...errs, ...pe };
-    if (Object.keys(all).length > 0) {
-      setErrors(all);
-      setPriceErrors(pe);
-      showError('Formulario incompleto', 'Revisa los campos marcados en rojo antes de continuar.');
-      return;
-    }
-    try {
-      const saved = ProductsService.update({ ...formData, id: producto.id, imagen: imagenPreview, stock: calcStock(formData) });
-      showSuccess('Producto actualizado', `"${saved.nombre}" fue actualizado correctamente.`);
-      onUpdate?.(saved);
-      onClose();
-    } catch {
-      showError('Error', 'No se pudo actualizar el producto. Intenta de nuevo.');
-    }
-  };
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+  const errs = validate(formData);
+  const pe = validatePrices(formData);
+  const all = { ...errs, ...pe };
+  if (Object.keys(all).length > 0) {
+    setErrors(all);
+    setPriceErrors(pe);
+    showError('Formulario incompleto', 'Revisa los campos marcados en rojo antes de continuar.');
+    return;
+  }
+  try {
+    const saved = await ProductsService.update(producto.id, {
+      nombre: formData.nombre,
+      referencia: formData.referencia,
+      precioDetalle: Number(formData.precioDetalle),
+      precioMayorista: Number(formData.precioMayorista),
+      precioColegas: Number(formData.precioColegas),
+      precioPacas: Number(formData.precioPacas),
+      descripcion: formData.descripcion,
+      cantidadXPaca: Number(formData.cantidadXPaca),
+      id_category: formData.id_category,
+    });
+    showSuccess('Producto actualizado', `"${saved.name}" fue actualizado correctamente.`);
+    onUpdate?.(saved);
+    onClose();
+  } catch (error) {
+    showError('Error', error.message || 'No se pudo actualizar el producto. Intenta de nuevo.');
+  }
+};
 
   const inputCls = (f) =>
     `w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm transition-colors ${
@@ -263,19 +281,44 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
                   </label>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Categorías <span className="text-red-500">*</span></label>
-                  <div className={`border rounded-lg p-2.5 h-[130px] overflow-y-auto ${errors.categorias ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
-                    {CATS_DISPONIBLES.map((cat) => (
-                      <label key={cat} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1.5 rounded">
-                        <input type="checkbox" checked={formData.categorias?.includes(cat) || false}
-                          onChange={() => handleCatChange(cat)} className="w-3.5 h-3.5 text-blue-600 rounded" />
-                        <span className="text-xs text-gray-700">{cat}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <ErrMsg field="categorias" />
-                </div>
+                {/* Categorías */}
+<div>
+  <label className="block text-xs font-medium text-gray-700 mb-1.5">
+    Categorías <span className="text-red-500">*</span>
+  </label>
+  <div className={`border rounded-lg p-2.5 h-[130px] overflow-y-auto ${errors.categorias ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
+    {categories && categories.length > 0 ? (
+      categories.map((cat) => (
+        <div key={cat.id} className="mb-1.5 last:mb-0">
+          <div className="flex items-center gap-1.5">
+            <input 
+              type="checkbox" 
+              id={`cat-${cat.id}`} 
+              checked={formData.categorias.includes(cat.name)} 
+              onChange={() => {
+                const newCats = formData.categorias.includes(cat.name)
+                  ? formData.categorias.filter(c => c !== cat.name)
+                  : [...formData.categorias, cat.name];
+                setFormData(prev => ({
+                  ...prev,
+                  categorias: newCats,
+                  id_category: newCats.length > 0 ? categories.find(c => c.name === newCats[0])?.id : null
+                }));
+              }}
+              className="w-3.5 h-3.5 text-blue-600 rounded" 
+            />
+            <label htmlFor={`cat-${cat.id}`} className="flex-1 text-xs text-gray-700 font-medium cursor-pointer">
+              {cat.name}
+            </label>
+          </div>
+        </div>
+      ))
+    ) : (
+      <p className="text-xs text-gray-400">Sin categorías disponibles</p>
+    )}
+  </div>
+  <ErrMsg field="categorias" />
+</div>
 
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1.5">Descripción <span className="text-gray-400 font-normal">(opcional)</span></label>

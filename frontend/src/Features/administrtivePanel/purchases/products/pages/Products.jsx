@@ -58,17 +58,40 @@ function Products() {
   const canToggle = hasPermission("productos.activar_desactivar");
   const canView   = hasPermission("productos.ver");
 
-  const [data, setData]                       = useState(() => ProductsService.list());
-  const [search, setSearch]                   = useState("");
-  const [filterCategory, setFilterCategory]   = useState("all");
-  const [filterSubcategory, setFilterSubcategory] = useState("all");
-  const [currentPage, setCurrentPage]         = useState(1);
-  const [showModal, setShowModal]             = useState(false);
-  const [showFormModal, setShowFormModal]     = useState(false);
-  const [showEditModal, setShowEditModal]     = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-
-  const refreshData = () => setData(ProductsService.list());
+const [data, setData] = useState([]);
+const [search, setSearch] = useState("");
+const [filterCategory, setFilterCategory] = useState("all");
+const [filterSubcategory, setFilterSubcategory] = useState("all");
+const [currentPage, setCurrentPage] = useState(1);
+const [showModal, setShowModal] = useState(false);
+const [showFormModal, setShowFormModal] = useState(false);
+const [showEditModal, setShowEditModal] = useState(false);
+const [selectedProduct, setSelectedProduct] = useState(null);
+const refreshData = async () => {
+  try {
+    const products = await ProductsService.list();
+    setData(products || []);
+  } catch (error) {
+    console.error('Error al recargar:', error);
+  }
+};
+  // Cargar productos del backend
+useEffect(() => {
+  const loadProducts = async () => {
+    try {
+      const products = await ProductsService.list();
+      console.log('Productos cargados:', products);
+      setData(products || []);
+    } catch (error) {
+      console.error('Error al cargar productos:', error);
+      setData([]);
+    }
+  };
+  loadProducts();
+}, []);
+useEffect(() => {
+  window.__data = data;
+}, [data]);
 
   useEffect(() => { setCurrentPage(1); }, [search, filterCategory, filterSubcategory]);
 
@@ -78,142 +101,125 @@ function Products() {
   }, [filterCategory]);
 
   // Extraer categorías únicas
-  const categories = useMemo(() => {
-    const allCategories = new Set();
-    data.forEach(product => {
-      (product.categorias || []).forEach(cat => {
-        if (!cat.includes(' > ')) {
-          allCategories.add(cat);
-        }
-      });
-    });
-    return Array.from(allCategories).sort();
-  }, [data]);
+const categories = useMemo(() => {
+  if (!Array.isArray(data) || data.length === 0) return [];
+  
+  const allCategories = new Set();
+  data.forEach(product => {
+    if (product.category?.name) {
+      allCategories.add(product.category.name);
+    }
+  });
+  return Array.from(allCategories).sort();
+}, [data]);
 
   // Extraer subcategorías únicas (filtradas por categoría si aplica)
-  const subcategories = useMemo(() => {
-    const allSubcategories = new Set();
-    data.forEach(product => {
-      (product.categorias || []).forEach(cat => {
-        if (cat.includes(' > ')) {
-          const [parent, sub] = cat.split(' > ');
-          if (filterCategory === "all" || parent === filterCategory) {
-            allSubcategories.add(sub);
-          }
-        }
-      });
-    });
-    return Array.from(allSubcategories).sort();
-  }, [data, filterCategory]);
-
+const subcategories = useMemo(() => {
+  if (!Array.isArray(data) || data.length === 0) return [];
+  
+  const allSubcategories = new Set();
+  
+  data.forEach(product => {
+    // Si hay subcategoría y coincide con el filtro de categoría
+    if (product.subcategory?.name) {
+      if (filterCategory === "all" || product.category?.name === filterCategory) {
+        allSubcategories.add(product.subcategory.name);
+      }
+    }
+  });
+  
+  return Array.from(allSubcategories).sort();
+}, [data, filterCategory]);
   // Verificar si hay filtros activos
   const hasActiveFilters = filterCategory !== "all" || filterSubcategory !== "all";
 
-  // Filtrar productos
-  const filteredData = useMemo(() => {
-    return data.filter((row) => {
-      // Filtro de búsqueda
-      const query = search.toLowerCase().trim();
-      let matchesSearch = true;
-      if (query) {
-        const subcatsText = (row.categorias || [])
-          .filter(c => c.includes(" > "))
-          .map(c => c.split(" > ")[1])
-          .join(" ")
-          .toLowerCase();
-        
-        matchesSearch = (
-          row.nombre?.toLowerCase().includes(query) ||
-          row.codBarras?.toLowerCase().includes(query) ||
-          row.referencia?.toLowerCase().includes(query) ||
-          subcatsText.includes(query) ||
-          String(row.precioDetalle).includes(query) ||
-          String(row.stock).includes(query)
-        );
-      }
+const filteredData = useMemo(() => {
+  return data.filter((row) => {
+    // Filtro de búsqueda
+    const query = search.toLowerCase().trim();
+    let matchesSearch = true;
+    if (query) {
+      matchesSearch = (
+        row.name?.toLowerCase().includes(query) ||
+        row.barcodes?.[0]?.barcode?.toLowerCase().includes(query) ||
+        row.reference?.toLowerCase().includes(query) ||
+        row.category?.name?.toLowerCase().includes(query) ||
+        String(row.retailPrice).includes(query) ||
+        String(row.totalStock).includes(query)
+      );
+    }
 
-      // Filtro de categoría
-      let matchesCategory = true;
-      if (filterCategory !== "all") {
-        const hasCategory = (row.categorias || []).some(cat => {
-          if (cat.includes(' > ')) {
-            const [parent] = cat.split(' > ');
-            return parent === filterCategory;
-          }
-          return cat === filterCategory;
-        });
-        matchesCategory = hasCategory;
-      }
+    // Filtro de categoría
+    const matchesCategory = 
+      filterCategory === "all" || 
+      row.category?.name === filterCategory;
 
-      // Filtro de subcategoría
-      let matchesSubcategory = true;
-      if (filterSubcategory !== "all") {
-        const hasSubcategory = (row.categorias || []).some(cat => {
-          if (cat.includes(' > ')) {
-            const [, sub] = cat.split(' > ');
-            return sub === filterSubcategory;
-          }
-          return false;
-        });
-        matchesSubcategory = hasSubcategory;
-      }
+    // Filtro de subcategoría
+    const matchesSubcategory = 
+      filterSubcategory === "all" || 
+      row.subcategory?.name === filterSubcategory;
 
-      return matchesSearch && matchesCategory && matchesSubcategory;
-    });
-  }, [data, search, filterCategory, filterSubcategory]);
+    return matchesSearch && matchesCategory && matchesSubcategory;
+  });
+}, [data, search, filterCategory, filterSubcategory]);
+
+
 
   const totalPages  = Math.max(1, Math.ceil(filteredData.length / RECORDS_PER_PAGE));
   const startIndex  = (currentPage - 1) * RECORDS_PER_PAGE;
   const endIndex    = startIndex + RECORDS_PER_PAGE;
   const currentData = filteredData.slice(startIndex, endIndex);
 
-  const handleToggle = async (id) => {
-    const producto = data.find((row) => row.id === id);
-    if (!producto) return;
+    const handleToggle = async (id) => {
+      try {
+        const producto = data.find((row) => row.id === id);
+        if (!producto) return;
 
-    if (producto.activo) {
-      const result = await showConfirm(
-        "warning",
-        "¿Desactivar este producto?",
-        "El producto dejará de estar disponible para los usuarios, pero podrá activarse nuevamente más adelante.",
-        { confirmButtonText: "Sí, desactivar", cancelButtonText: "Cancelar" }
-      );
-      if (!result.isConfirmed) return;
-      const updated = ProductsService.update({ ...producto, activo: false });
-      refreshData();
-      showSuccess("Producto desactivado", `"${updated.nombre}" fue desactivado exitosamente.`);
-    } else {
-      const updated = ProductsService.update({ ...producto, activo: true });
-      refreshData();
-      showSuccess("Producto activado", `"${updated.nombre}" está disponible nuevamente.`);
-    }
-  };
+        const isActive = producto.status === 'Active';
 
-  const handleDelete = async (producto) => {
-    const result = await showConfirm(
-      "warning",
-      "¿Eliminar este producto?",
-      `¿Estás seguro de eliminar "${producto.nombre}"? Esta acción no se puede deshacer.`,
-      { confirmButtonText: "Sí, eliminar", cancelButtonText: "Cancelar" }
-    );
+        if (isActive) {
+          const result = await showConfirm(
+            "warning",
+            "¿Desactivar este producto?",
+            "El producto dejará de estar disponible para los usuarios, pero podrá activarse nuevamente más adelante.",
+            { confirmButtonText: "Sí, desactivar", cancelButtonText: "Cancelar" }
+          );
+          if (!result.isConfirmed) return;
+        }
 
-    if (!result.isConfirmed) return;
-
-    try {
-      const products = data.filter(p => p.id !== producto.id);
-      ProductsService._save(products);
-      refreshData();
-      showSuccess("Producto eliminado", `"${producto.nombre}" fue eliminado exitosamente.`);
-      
-      // Ajustar página si es necesario
-      const newTotalPages = Math.max(1, Math.ceil((filteredData.length - 1) / RECORDS_PER_PAGE));
-      if (currentPage > newTotalPages) {
-        setCurrentPage(newTotalPages);
+        // Llamar al backend para cambiar estado
+        const updated = await ProductsService.toggleStatus(id);
+        
+        if (updated) {
+          await refreshData();
+          const newStatus = updated.status === 'Activo' ? 'activado' : 'desactivado';
+          showSuccess(
+            `Producto ${newStatus}`,
+            `"${updated.name}" fue ${newStatus} exitosamente.`
+          );
+        }
+      } catch (error) {
+        showError('Error', error.message || 'No se pudo cambiar el estado del producto');
       }
-    } catch (error) {
-      showError("Error", "No se pudo eliminar el producto. Intenta de nuevo.");
-    }
-  };
+    };
+  const handleDelete = async (producto) => {
+  const result = await showConfirm(
+    "warning",
+    "¿Eliminar este producto?",
+    `¿Estás seguro de eliminar "${producto.name}"? Esta acción no se puede deshacer.`,
+    { confirmButtonText: "Sí, eliminar", cancelButtonText: "Cancelar" }
+  );
+
+  if (!result.isConfirmed) return;
+
+  try {
+    await ProductsService.delete(producto.id);
+    await refreshData();
+    showSuccess("Producto eliminado", `"${producto.name}" fue eliminado exitosamente.`);
+  } catch (error) {
+    showError("Error", error.message || "No se pudo eliminar el producto. Intenta de nuevo.");
+  }
+};
 
   const handleExportExcel = () => {
     try {
@@ -233,22 +239,22 @@ function Products() {
       });
 
       // Preparar datos de productos
-      const productData = filteredData.map(product => ({
-        'Nombre': product.nombre,
-        'Código de Barras': product.codBarras || '',
-        'Referencia': product.referencia || '',
-        'Proveedor': product.proveedor || '',
-        'Categorías': (product.categorias || []).join(', '),
-        'Stock': product.stock,
-        'Precio Detalle': product.precioDetalle,
-        'Precio Mayorista': product.precioMayorista,
-        'Precio Colegas': product.precioColegas,
-        'Precio Pacas': product.precioPacas,
-        'Cantidad x Paca': product.cantidadXPaca,
-        'Estado': product.activo ? 'Activo' : 'Inactivo'
-      }));
-
-      // Crear hoja de trabajo manualmente para personalizar el encabezado
+        const productData = filteredData.map(product => ({
+          'Nombre': product.name || 'N/A',
+          'Código de Barras': product.barcodes?.[0]?.barcode || 'N/A',
+          'Referencia': product.reference || 'N/A',
+          'Proveedor': product.provider || 'N/A',
+          'Categorías': product.category?.name || 'N/A',
+          'Stock': product.totalStock ?? 0,
+          'Precio Detalle': product.retailPrice ?? 0,
+          'Precio Mayorista': product.wholesalePrice ?? 0,
+          'Precio Colegas': product.partnerPrice ?? 0,
+          'Precio Pacas': product.bulkPrice ?? 0,
+          'IVA %': product.ivaPercentage ?? 0,
+          'Estado': product.status === 'Activo' ? 'Activo' : 'Inactivo'
+        }));   
+        
+        // Crear hoja de trabajo manualmente para personalizar el encabezado
       const ws = XLSX.utils.aoa_to_sheet([
         ['PRODUCTOS'], // Título
         [`Fecha de exportación: ${dateStr} - ${timeStr}`], // Fecha y hora
@@ -440,73 +446,72 @@ function Products() {
                 </thead>
                 <tbody>
                   {currentData.map((row, index) => {
-                    const rowBg = index % 2 === 0 ? "bg-gray-100 hover:bg-blue-50" : "bg-white hover:bg-blue-50";
-                    const subcats = (row.categorias || []).filter(c => c.includes(" > ")).map(c => c.split(" > ")[1]);
-                    const subcategoriaDisplay = subcats.length > 0 ? subcats.join(", ") : "N/A";
+  const rowBg = index % 2 === 0 ? "bg-gray-100 hover:bg-blue-50" : "bg-white hover:bg-blue-50";
+  const subcategoriaDisplay = row.subcategory?.name || "N/A";
 
-                    return (
-                      <tr key={row.id} className={`transition-colors duration-150 ${rowBg}`}>
-                        <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">
-                          <HighlightText text={row.nombre} highlight={search} />
-                        </td>
-                        <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                          <HighlightText text={row.codBarras || ""} highlight={search} />
-                        </td>
-                        <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                          <HighlightText text={row.referencia || ""} highlight={search} />
-                        </td>
-                        <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                          <HighlightText text={subcategoriaDisplay} highlight={search} />
-                        </td>
-                        <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                          <HighlightText text={String(row.stock)} highlight={search} />
-                        </td>
-                        <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                          <HighlightText
-                            text={Number(row.precioDetalle).toLocaleString("es-CO")}
-                            highlight={search}
-                          />
-                        </td>
-                        <td className="px-3 py-1.5">
-                          <div className="flex items-center justify-center gap-1 sm:gap-1.5">
-                            {canView && (
-                              <button
-                                onClick={() => handleVerDetalles(row)}
-                                className="text-gray-400 hover:text-[#004D77] hover:scale-110 transition cursor-pointer"
-                                title="Ver detalles"
-                              >
-                                <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
-                              </button>
-                            )}
-                            {canEdit && (
-                              <button
-                                onClick={() => handleEditarProducto(row)}
-                                className="text-gray-400 hover:text-[#004D77] hover:scale-110 transition cursor-pointer"
-                                title="Editar"
-                              >
-                                <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
-                              </button>
-                            )}
-                            {canDelete && (
-                              <button
-                                onClick={() => handleDelete(row)}
-                                className="text-gray-400 hover:text-red-600 hover:scale-110 transition cursor-pointer"
-                                title="Eliminar"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
-                              </button>
-                            )}
-                            {canToggle && (
-                              <ActiveToggle
-                                activo={row.activo ?? true}
-                                onChange={() => handleToggle(row.id)}
-                              />
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+  return (
+    <tr key={row.id} className={`transition-colors duration-150 ${rowBg}`}>
+      <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">
+        <HighlightText text={row.name} highlight={search} />
+      </td>
+      <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+        <HighlightText text={row.barcodes?.[0]?.barcode || ""} highlight={search} />
+      </td>
+      <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+        <HighlightText text={row.reference || ""} highlight={search} />
+      </td>
+      <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+        <HighlightText text={subcategoriaDisplay} highlight={search} />
+      </td>
+      <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+        <HighlightText text={String(row.totalStock || 0)} highlight={search} />
+      </td>
+      <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+        <HighlightText
+          text={Number(row.retailPrice || 0).toLocaleString("es-CO")}
+          highlight={search}
+        />
+      </td>
+      <td className="px-3 py-1.5">
+        <div className="flex items-center justify-center gap-1 sm:gap-1.5">
+          {canView && (
+            <button
+              onClick={() => handleVerDetalles(row)}
+              className="text-gray-400 hover:text-[#004D77] hover:scale-110 transition cursor-pointer"
+              title="Ver detalles"
+            >
+              <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+            </button>
+          )}
+          {canEdit && (
+            <button
+              onClick={() => handleEditarProducto(row)}
+              className="text-gray-400 hover:text-[#004D77] hover:scale-110 transition cursor-pointer"
+              title="Editar"
+            >
+              <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={() => handleDelete(row)}
+              className="text-gray-400 hover:text-red-600 hover:scale-110 transition cursor-pointer"
+              title="Eliminar"
+            >
+              <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+            </button>
+          )}
+          {canToggle && (
+            <ActiveToggle
+              activo={row.status === 'Activo' ? true : false}
+              onChange={() => handleToggle(row.id)}
+            />
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+})}
                 </tbody>
               </table>
             </div>
