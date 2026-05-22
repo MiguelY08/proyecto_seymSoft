@@ -12,7 +12,7 @@ import {
   exportOrderToPDF
 } from '../helpers/ordersHelpers';
 import { PaymentService, ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES } from '../services/ordersService';
-import { UsersDB } from '../../../users/services/usersDB';
+import { UserService } from '../../../users/services/userService';
 
 // ─── DetailRow ────────────────────────────────────────────────────────────────
 function DetailRow({ icon: Icon, label, value, placeholder, highlight = false }) {
@@ -91,7 +91,7 @@ function DetailOrder({
       setTotalPagado(PaymentService.getTotalPagado(order.id));
 
       if (order.asesorId) {
-        const asesor = UsersDB.findById(order.asesorId);
+        const asesor = UserService.findById(order.asesorId);
         setAsesorNombre(asesor ? asesor.name : `ID: ${order.asesorId}`);
       } else {
         setAsesorNombre('N/A');

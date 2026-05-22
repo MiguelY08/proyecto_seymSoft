@@ -9,7 +9,7 @@
 import OrdersService, { PaymentService, SalesService, ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES, METODOS_PAGO } from '../../orders/services/ordersService';
 import ProductsService from '../../../purchases/products/services/productsServices';
 import { clientsService } from '../../clients/services/clientsService';
-import { UsersDB } from '../../../users/services/usersDB';
+import { UserService } from '../../../users/services/userService';
 
 // ----------------------------------------------------------------------
 // Helpers de formato y adaptación
@@ -45,7 +45,7 @@ const adaptSale = (sale) => {
   if (!order) return null;
 
   const cliente = clientsService.getById(order.clienteId);
-  const vendedor = order.asesorId ? UsersDB.findById(order.asesorId) : null;
+  const vendedor = order.asesorId ? UserService.findById(order.asesorId) : null;
 
   const pagos = PaymentService.getByPedidoId(order.id);
   const totalPagado = pagos.reduce((sum, p) => sum + p.monto, 0);

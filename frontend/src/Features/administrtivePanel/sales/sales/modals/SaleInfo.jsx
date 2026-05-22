@@ -5,7 +5,7 @@ import DetailOrder from '../../orders/modals/DetailOrder';
 import { SalesServices } from '../services/salesServices';
 import OrdersService from '../../orders/services/ordersService';
 import { clientsService } from '../../clients/services/clientsService';
-import { UsersDB } from '../../../users/services/usersDB';
+import { UserService } from '../../../users/services/userService';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 
 /**
@@ -49,7 +49,7 @@ function SaleInfo() {
       const clienteTelefono = cliente?.phone || '';
       const clienteEmail = cliente?.email || '';
 
-      const asesor = orderData.asesorId ? UsersDB.findById(orderData.asesorId) : null;
+      const asesor = orderData.asesorId ? UserService.findById(orderData.asesorId) : null;
       const asesorNombre = asesor?.name || 'N/A';
 
       const enrichedOrder = {
