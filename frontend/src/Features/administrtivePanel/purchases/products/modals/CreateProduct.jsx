@@ -1,5 +1,5 @@
 import { X, Upload, ChevronDown, ChevronUp, Plus } from 'lucide-react';
-import { useState, useEffect} from 'react';
+import { useState, useEffect, useRef} from 'react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import ProductsService from '../services/productsServices';
 
@@ -51,10 +51,11 @@ const CATS = {
 function CreateProduct({ isOpen, onClose, onCreate }) {
   const { showSuccess, showError } = useAlert();
   const [formData, setFormData]           = useState(EMPTY);
-  const [imagenPreview, setImagenPreview] = useState(null);
+  const [imagenesPreview, setImagenesPreview] = useState([]);
   const [errors, setErrors]               = useState({});
   const [priceErrors, setPriceErrors]     = useState({});
   const [categories, setCategories] = useState([]);
+  const imageInputRef = useRef(null);
   
   useEffect(() => {
   const loadCategories = async () => {
@@ -81,7 +82,9 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
 
   const validate = (d) => {
     const e = {};
-    if (!d.imagen && !imagenPreview) e.imagen = 'Debes subir una imagen del producto.';
+    if (imagenesPreview.length === 0) {
+  errors.imagen = 'Debes agregar al menos una imagen';
+}
     if (!d.nombre.trim()) e.nombre = 'El nombre del producto es obligatorio.';
     else if (d.nombre.trim().length < 3) e.nombre = 'El nombre debe tener al menos 3 caracteres.';
     if (!d.codBarras.trim()) e.codBarras = 'El código de barras es obligatorio.';
@@ -177,37 +180,66 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
     }));
   };
 
-  const handleImagenChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setFormData(p => ({ ...p, imagen: file }));
-    if (errors.imagen) setErrors(p => ({ ...p, imagen: undefined }));
-    const r = new FileReader();
-    r.onloadend = () => setImagenPreview(r.result);
-    r.readAsDataURL(file);
-  };
+  const handleImagenesChange = (e) => {
+  const files = Array.from(e.target.files);
+  setImagenesPreview(files);  // Guardar archivos, no data URLs
+  if (errors.imagen) setErrors(p => ({ ...p, imagen: undefined }));
+};
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    const errs = validate(formData);
-    const pe   = validatePrices(formData);
-    const all  = { ...errs, ...pe };
-    if (Object.keys(all).length > 0) {
-      setErrors(all); setPriceErrors(pe);
-      showError('Formulario incompleto', 'Revisa los campos marcados en rojo antes de continuar.');
-      return;
-    }
-    
-  try {
-  const saved = await ProductsService.create({ ...formData, imagen: imagenPreview, stock: calcStock(formData) });
-  showSuccess('Producto creado', `"${saved.name}" fue agregado al catálogo correctamente.`);
-  onCreate?.(saved);
-  setFormData(EMPTY); setImagenPreview(null); setErrors({}); setPriceErrors({}); setExpandedCats({});
-  onClose();
-} catch (error) {
-  showError('Error', error.message || 'No se pudo guardar el producto. Intenta de nuevo.');
-}
+  e.preventDefault();
+  const errs = validate(formData);
+  const pe = validatePrices(formData);
+  const all = { ...errs, ...pe };
+  
+  if (Object.keys(all).length > 0) {
+    setErrors(all);
+    setPriceErrors(pe);
+    showError('Formulario incompleto', 'Revisa los campos marcados en rojo antes de continuar.');
+    return;
   }
+
+  // Validar barcodes
+  if (!formData.codBarras || formData.codBarras.length < 8) {
+    showError('Código de barras inválido', 'El código de barras debe tener mínimo 8 caracteres');
+    return;
+  }
+
+  try {
+    // Crear FormData para enviar archivos
+    const formDataToSend = new FormData();
+    formDataToSend.append('nombre', formData.nombre);
+    formDataToSend.append('referencia', formData.referencia);
+    formDataToSend.append('precioDetalle', Number(formData.precioDetalle));
+    formDataToSend.append('precioMayorista', Number(formData.precioMayorista));
+    formDataToSend.append('precioColegas', formData.precioColegas ? Number(formData.precioColegas) : null);
+    formDataToSend.append('precioPacas', formData.precioPacas ? Number(formData.precioPacas) : null);
+    formDataToSend.append('ivaPercentage', formData.ivaPercentage || 0);
+    formDataToSend.append('idUnitMeasure', formData.idUnitMeasure || 2);
+    formDataToSend.append('idCategorie', formData.id_category || 1);
+    formDataToSend.append('description', formData.descripcion || null);
+    formDataToSend.append('quantityPerPack', formData.cantidadXPaca ? Number(formData.cantidadXPaca) : 0);
+    formDataToSend.append('codBarras', formData.codBarras);
+    formDataToSend.append('stock', Number(formData.stockPrincipal) || 0);
+
+    // Agregar imágenes
+    imagenesPreview.forEach((file) => {
+      formDataToSend.append('images', file);
+    });
+
+    const saved = await ProductsService.create(formDataToSend);
+    showSuccess('Producto creado', `"${saved.name}" fue agregado al catálogo correctamente.`);
+    onCreate?.(saved);
+    setFormData(EMPTY);
+    setImagenesPreview([]);
+    setErrors({});
+    setPriceErrors({});
+    setExpandedCats({});
+    onClose();
+  } catch (error) {
+    showError('Error', error.message || 'No se pudo guardar el producto. Intenta de nuevo.');
+  }
+};
 
   const inputCls = (f) =>
     `w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm transition-colors ${
@@ -238,17 +270,42 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1.5">Imagen <span className="text-red-500">*</span></label>
                   <label className="block cursor-pointer">
-                    <input type="file" accept="image/*" onChange={handleImagenChange} className="hidden" />
+                    <input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={handleImagenesChange}
+                            className="hidden"
+                            ref={imageInputRef}
+                          />
                     <div className={`border-2 border-dashed rounded-lg p-3 text-center transition-colors min-h-[130px] flex items-center justify-center ${errors.imagen ? 'border-red-400 bg-red-50' : 'border-gray-300 hover:border-[#004D77]'}`}>
-                      {imagenPreview
-                        ? <img src={imagenPreview} alt="Preview" className="max-w-full max-h-28 object-contain rounded-lg" />
-                        : <div className="flex flex-col items-center gap-1.5">
-                            <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${errors.imagen ? 'bg-red-100' : 'bg-gray-100'}`}>
-                              <Upload className={`w-6 h-6 ${errors.imagen ? 'text-red-400' : 'text-gray-400'}`} />
-                            </div>
-                            <p className="text-[10px] text-white px-2 py-1 rounded-full" style={{ backgroundColor: '#004D77' }}>Agregar imagen</p>
-                          </div>
-                      }
+                      <div className="grid grid-cols-3 gap-2">
+  {imagenesPreview.length > 0 ? (
+    imagenesPreview.map((file, idx) => (
+      <div key={idx} className="relative">
+        <img 
+          src={URL.createObjectURL(file)} 
+          alt={`Preview ${idx}`} 
+          className="w-full h-24 object-cover rounded-lg" 
+        />
+        <button
+          type="button"
+          onClick={() => setImagenesPreview(imagenesPreview.filter((_, i) => i !== idx))}
+          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 text-xs"
+        >
+          ✕
+        </button>
+      </div>
+    ))
+  ) : (
+    <div className="flex flex-col items-center gap-1.5 col-span-3">
+      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${errors.imagen ? 'bg-red-100' : 'bg-gray-100'}`}>
+        <Upload className={`w-6 h-6 ${errors.imagen ? 'text-red-400' : 'text-gray-400'}`} />
+      </div>
+      <p className="text-[10px] text-white px-2 py-1 rounded-full" style={{ backgroundColor: '#004D77' }}>Agregar imágenes</p>
+    </div>
+  )}
+</div>
                     </div>
                   </label>
                   <ErrMsg field="imagen" />

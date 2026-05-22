@@ -11,9 +11,7 @@ import {
   formatRut,
   formatCurrency,
 } from '../helpers/clientHelpers';
-import { saldoFavorService } from '../services/clientsService';
 
-// ─── Fila de detalle — estilo InfoUser ────────────────────────────────────────
 function DetailRow({ icon: Icon, label, value, fullWidth = false }) {
   return (
     <div className={`flex items-start gap-3 ${fullWidth ? 'col-span-2' : ''}`}>
@@ -32,37 +30,26 @@ function DetailRow({ icon: Icon, label, value, fullWidth = false }) {
   );
 }
 
-// ─── InfoClient ───────────────────────────────────────────────────────────────
 function InfoClient({ isOpen, onClose, client }) {
   const [showGraph, setShowGraph] = useState(false);
   const [montoOcupado, setMontoOcupado] = useState(0);
-  const [saldoFavor, setSaldoFavor] = useState(0);
   const [loadingMonto, setLoadingMonto] = useState(false);
-  const [loadingSaldo, setLoadingSaldo] = useState(false);
 
-  // KEY para localStorage - para conectar con módulo de pagos y abonos
   const CREDIT_USAGE_KEY = 'client_credit_usage';
 
   useEffect(() => {
     if (client && isOpen) {
       loadMontoOcupado(client.id);
-      loadSaldoFavor(client.id);
     }
   }, [client, isOpen]);
 
-  // Función para cargar el monto ocupado desde localStorage
   const loadMontoOcupado = (clientId) => {
     setLoadingMonto(true);
     try {
       const storedData = localStorage.getItem(CREDIT_USAGE_KEY);
       const usageData = storedData ? JSON.parse(storedData) : {};
       const clientUsage = usageData[clientId];
-      
-      if (clientUsage && clientUsage.occupiedAmount !== undefined) {
-        setMontoOcupado(clientUsage.occupiedAmount);
-      } else {
-        setMontoOcupado(0);
-      }
+      setMontoOcupado(clientUsage?.occupiedAmount || 0);
     } catch (error) {
       console.error('Error al cargar monto ocupado:', error);
       setMontoOcupado(0);
@@ -71,21 +58,6 @@ function InfoClient({ isOpen, onClose, client }) {
     }
   };
 
-  // Función para cargar el saldo a favor desde localStorage
-  const loadSaldoFavor = (clientId) => {
-    setLoadingSaldo(true);
-    try {
-      const balance = saldoFavorService.getByClientId(clientId);
-      setSaldoFavor(balance);
-    } catch (error) {
-      console.error('Error al cargar saldo a favor:', error);
-      setSaldoFavor(0);
-    } finally {
-      setLoadingSaldo(false);
-    }
-  };
-
-  // Calcular crédito disponible
   const getCreditoDisponible = () => {
     const creditoTotal = parseInt(client?.clientCredit) || 0;
     return creditoTotal - montoOcupado;
@@ -93,7 +65,7 @@ function InfoClient({ isOpen, onClose, client }) {
 
   if (!isOpen || !client) return null;
 
-  const initials = (client.fullName || client.name || '')
+  const initials = (client.fullName || '')
     .trim().split(/\s+/).filter(Boolean)
     .slice(0, 2).map(w => w[0].toUpperCase()).join('');
 
@@ -110,21 +82,20 @@ function InfoClient({ isOpen, onClose, client }) {
 
   const creditoTotal = parseInt(client.clientCredit) || 0;
   const disponible = getCreditoDisponible();
+  
+  // ✅ Saldo a favor viene del backend en credit_balance
+  const saldoFavor = parseInt(client.credit_balance) || 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Modal — ancho crece suavemente al mostrar gráfica */}
       <div className={`relative bg-white rounded-2xl shadow-2xl overflow-hidden flex transition-all duration-500 ease-in-out ${
         showGraph ? 'w-[95vw] max-w-350' : 'w-full max-w-xl'
       }`}>
 
-        {/* ── Panel de información ──────────────────────────────────────────── */}
         <div className="flex flex-col w-full min-w-360px shrink-0" style={{ width: showGraph ? '50%' : '100%', transition: 'width 500ms ease-in-out' }}>
 
-          {/* Header */}
           <div className="relative bg-[#004D77] px-6 py-4 shrink-0">
             <button
               onClick={onClose}
@@ -141,7 +112,7 @@ function InfoClient({ isOpen, onClose, client }) {
               </div>
               <div className="min-w-0">
                 <h2 className="text-white font-bold text-base leading-tight truncate">
-                  {client.fullName || client.name || 'Sin nombre'}
+                  {client.fullName || 'Sin nombre'}
                 </h2>
                 <p className="text-white/60 text-[11px] mt-0.5">
                   Cliente desde {client.clientSince || '—'}
@@ -161,11 +132,9 @@ function InfoClient({ isOpen, onClose, client }) {
             </div>
           </div>
 
-          {/* Card de crédito - 2 FILAS */}
           <div className="mx-4 mt-3 shrink-0">
             <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-2.5">
               
-              {/* FILA 1: Crédito, Crédito disponible, Monto ocupado */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-[#004D77]/10 flex items-center justify-center">
@@ -204,10 +173,8 @@ function InfoClient({ isOpen, onClose, client }) {
                 </div>
               </div>
 
-              {/* Línea separadora */}
               <div className="border-t border-gray-200 my-2" />
 
-              {/* FILA 2: RUT, Código CIU, Saldo a favor */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center">
@@ -236,7 +203,7 @@ function InfoClient({ isOpen, onClose, client }) {
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Saldo a favor</p>
                     <p className="text-sm font-bold text-green-600">
-                      {loadingSaldo ? '...' : (saldoFavor > 0 ? formatCurrency(saldoFavor) : '$ 0')}
+                      {saldoFavor > 0 ? formatCurrency(saldoFavor) : '$ 0'}
                     </p>
                   </div>
                 </div>
@@ -244,16 +211,12 @@ function InfoClient({ isOpen, onClose, client }) {
             </div>
           </div>
 
-          {/* Campos de detalle — sin scroll */}
           <div className="px-5 py-4 grid grid-cols-2 gap-x-4 gap-y-3.5 flex-1">
-
-            {/* Separador */}
             <div className="col-span-2 flex items-center gap-2">
               <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Identificación</span>
               <div className="flex-1 h-px bg-[#004D77]/15" />
             </div>
 
-            {/* Tipo y Número unificados */}
             <DetailRow
               icon={IdCard}
               label="Tipo y Número Doc."
@@ -283,7 +246,6 @@ function InfoClient({ isOpen, onClose, client }) {
 
           </div>
 
-          {/* Footer */}
           <div className="border-t border-gray-100 px-5 py-3 flex items-center justify-between shrink-0">
             <button
               onClick={() => setShowGraph(v => !v)}
@@ -301,7 +263,6 @@ function InfoClient({ isOpen, onClose, client }) {
           </div>
         </div>
 
-        {/* ── Panel de gráfica — siempre montado, animado con overflow+width ── */}
         <div
           className="overflow-hidden shrink-0 transition-all duration-500 ease-in-out border-l border-gray-100"
           style={{ width: showGraph ? '50%' : '0%', opacity: showGraph ? 1 : 0 }}

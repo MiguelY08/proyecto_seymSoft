@@ -60,7 +60,21 @@ const block   = (e) => { if (['e', 'E', '+', '-', '.'].includes(e.key)) e.preven
 function EditProduct({ isOpen, onClose, onUpdate, producto }) {
   const { showSuccess, showError } = useAlert();
 
-  const [formData, setFormData]           = useState({});
+  const [formData, setFormData] = useState({
+  nombre: '',
+  codBarras: '',
+  stockPrincipal: '',
+  codsBarrasExtra: [],
+  referencia: '',
+  descripcion: '',
+  cantidadXPaca: '',
+  categorias: [],
+  id_category: null,
+  precioDetalle: '',
+  precioMayorista: '',
+  precioColegas: '',
+  precioPacas: '',
+});
   const [imagenPreview, setImagenPreview] = useState(null);
   const [errors, setErrors]               = useState({});
   const [priceErrors, setPriceErrors]     = useState({});
@@ -89,10 +103,10 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
     stockPrincipal: String(producto.barcodes?.[0]?.stock || 0),
     codsBarrasExtra: (producto.barcodes || []).slice(1).map(b => ({ cod: b.barcode, stock: b.stock })),
     referencia: producto.reference || '',
-    descripcion: producto.description || '',  // ← Agregar descripción
-    cantidadXPaca: String(producto.quantity_per_pack || 0),
+    descripcion: producto.description || '',
+    cantidadXPaca: String(producto.quantityPerPack || 0),
     categorias: producto.category?.name ? [producto.category.name] : [],
-    id_category: producto.category?.id || null,  // ← Guardar el ID
+    id_category: producto.category?.id || null,
     precioDetalle: String(producto.retailPrice || 0),
     precioMayorista: String(producto.wholesalePrice || 0),
     precioColegas: String(producto.partnerPrice || 0),
@@ -207,6 +221,20 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
     showError('Formulario incompleto', 'Revisa los campos marcados en rojo antes de continuar.');
     return;
   }
+
+  // ← AGREGA AQUÍ LA VALIDACIÓN DE BARCODES
+  if (!formData.codBarras || formData.codBarras.length < 8) {
+    showError('Código de barras inválido', 'El código de barras debe tener mínimo 8 caracteres');
+    return;
+  }
+
+  const codigosExtras = (formData.codsBarrasExtra || []).filter(c => c?.cod);
+  for (const codigo of codigosExtras) {
+    if (codigo.cod.length < 8) {
+      showError('Código de barras inválido', `Todos los códigos deben tener mínimo 8 caracteres`);
+      return;
+    }
+  }
   try {
     const saved = await ProductsService.update(producto.id, {
       nombre: formData.nombre,
@@ -218,6 +246,9 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
       descripcion: formData.descripcion,
       cantidadXPaca: Number(formData.cantidadXPaca),
       id_category: formData.id_category,
+      codBarras: formData.codBarras,
+      stock: Number(formData.stockPrincipal) || 0,
+      codsBarrasExtra: formData.codsBarrasExtra || [],
     });
     showSuccess('Producto actualizado', `"${saved.name}" fue actualizado correctamente.`);
     onUpdate?.(saved);

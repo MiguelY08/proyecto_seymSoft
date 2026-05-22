@@ -45,39 +45,47 @@ export const ProductsService = {
    */
   async create(data) {
   try {
-    const payload = {
-      name: data.nombre,
-      reference: data.referencia,
-      retailPrice: Number(data.precioDetalle),
-      wholesalePrice: Number(data.precioMayorista),
-      partnerPrice: data.precioColegas ? Number(data.precioColegas) : null,
-      bulkPrice: data.precioPacas ? Number(data.precioPacas) : null,
-      ivaPercentage: data.ivaPercentage || 0,
-      idUnitMeasure: data.idUnitMeasure || 2,
-      idCategorie: data.id_category || data.idCategorie || 1,
-      description: data.descripcion || data.description || null,  // ← Agrega esto
-      quantityPerPack: data.cantidadXPaca ? Number(data.cantidadXPaca) : 0,
-      barcodes: data.codBarras
-        ? [
-            {
-              barcode: data.codBarras,
-              barcode_type: 'EAN13',
-              stock: Number(data.stock) || 0,
-            },
-            ...(data.codBarras2
-              ? [
-                  {
-                    barcode: data.codBarras2,
-                    barcode_type: 'SKU',
-                    stock: 0,
-                  },
-                ]
-              : []),
-          ]
-        : [],
-    };
+    // Si es FormData (cuando viene desde el frontend con imágenes)
+    if (data instanceof FormData) {
+      const response = await apiClient.post('/', data, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data.data || null;
+    }
 
-    const response = await apiClient.post('/', payload);
+    // Si no es FormData, construir uno
+    const formData = new FormData();
+    formData.append('nombre', data.nombre);
+    formData.append('referencia', data.referencia);
+    formData.append('precioDetalle', Number(data.precioDetalle));
+    formData.append('precioMayorista', Number(data.precioMayorista));
+    formData.append('precioColegas', data.precioColegas ? Number(data.precioColegas) : null);
+    formData.append('precioPacas', data.precioPacas ? Number(data.precioPacas) : null);
+    formData.append('ivaPercentage', data.ivaPercentage || 0);
+    formData.append('idUnitMeasure', data.idUnitMeasure || 2);
+    formData.append('idCategorie', data.id_category || data.idCategorie || 1);
+    formData.append('description', data.descripcion || data.description || null);
+    formData.append('quantityPerPack', data.cantidadXPaca ? Number(data.cantidadXPaca) : 0);
+    formData.append('codBarras', data.codBarras);
+    formData.append('stock', Number(data.stock) || 0);
+
+    // Agregar barcodes adicionales si existen
+    if (data.codsBarrasExtra && data.codsBarrasExtra.length > 0) {
+      data.codsBarrasExtra.forEach((barcode, idx) => {
+        formData.append(`codsBarrasExtra[${idx}]`, barcode.cod);
+      });
+    }
+
+    // Las imágenes ya deben venir en FormData desde el frontend
+    // Sino, agregarlas aquí si existen en data.images
+
+    const response = await apiClient.post('/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data.data || null;
   } catch (error) {
     console.error('Error al crear producto:', error.response?.data || error.message);
@@ -88,32 +96,60 @@ export const ProductsService = {
   /**
    * Actualiza un producto existente en el backend.
    */
+
   async update(id, data) {
-    try {
-      // Mapear solo los campos que vienen en data
-      const payload = {};
-      if (data.nombre !== undefined) payload.name = data.nombre;
-      if (data.referencia !== undefined) payload.reference = data.referencia;
-      if (data.precioDetalle !== undefined) payload.retailPrice = Number(data.precioDetalle);
-      if (data.precioMayorista !== undefined) payload.wholesalePrice = Number(data.precioMayorista);
-      if (data.precioColegas !== undefined) payload.partnerPrice = Number(data.precioColegas);
-      if (data.precioPacas !== undefined) payload.bulkPrice = Number(data.precioPacas);
-      if (data.ivaPercentage !== undefined) payload.ivaPercentage = data.ivaPercentage;
-      if (data.idUnitMeasure !== undefined) payload.idUnitMeasure = data.idUnitMeasure;
-      if (data.idCategorie !== undefined) payload.idCategorie = data.idCategorie;
-      if (data.barcodes !== undefined) payload.barcodes = data.barcodes;
-      if (data.activo !== undefined) {
-        // Mapear activo a idStatus: true = 1, false = 2
-        payload.idStatus = data.activo ? 1 : 2;
+  try {
+    // Mapear solo los campos que vienen en data
+    const payload = {};
+    if (data.nombre !== undefined) payload.name = data.nombre;
+    if (data.referencia !== undefined) payload.reference = data.referencia;
+    if (data.precioDetalle !== undefined) payload.retailPrice = Number(data.precioDetalle);
+    if (data.precioMayorista !== undefined) payload.wholesalePrice = Number(data.precioMayorista);
+    if (data.precioColegas !== undefined) payload.partnerPrice = Number(data.precioColegas);
+    if (data.precioPacas !== undefined) payload.bulkPrice = Number(data.precioPacas);
+    if (data.ivaPercentage !== undefined) payload.ivaPercentage = data.ivaPercentage;
+    if (data.idUnitMeasure !== undefined) payload.idUnitMeasure = data.idUnitMeasure;
+    if (data.idCategorie !== undefined) payload.idCategorie = data.id_category || data.idCategorie;
+    if (data.descripcion !== undefined) payload.description = data.descripcion;
+    if (data.cantidadXPaca !== undefined) payload.quantityPerPack = Number(data.cantidadXPaca);
+    if (data.activo !== undefined) {
+      // Mapear activo a idStatus: true = 1, false = 2
+      payload.idStatus = data.activo ? 1 : 2;
+    }
+
+    // Mapear barcodes
+    if (data.codBarras !== undefined) {
+      payload.barcodes = [];
+      
+      if (data.codBarras) {
+        payload.barcodes.push({
+          barcode: data.codBarras,
+          barcode_type: 'EAN13',
+          stock: Number(data.stock) || 0,
+        });
       }
 
-      const response = await apiClient.put(`/${id}`, payload);
-      return response.data.data || null;
-    } catch (error) {
-      console.error('Error al actualizar producto:', error.response?.data || error.message);
-      throw error;
+      // Agregar barcodes adicionales
+      if (data.codsBarrasExtra && data.codsBarrasExtra.length > 0) {
+        data.codsBarrasExtra.forEach((barcode) => {
+          if (barcode?.cod) {
+            payload.barcodes.push({
+              barcode: barcode.cod,
+              barcode_type: 'SKU',
+              stock: Number(barcode.stock) || 0,
+            });
+          }
+        });
+      }
     }
-  },
+
+    const response = await apiClient.put(`/${id}`, payload);
+    return response.data.data || null;
+  } catch (error) {
+    console.error('Error al actualizar producto:', error.response?.data || error.message);
+    throw error;
+  }
+},
 
   /**
    * Elimina un producto del backend

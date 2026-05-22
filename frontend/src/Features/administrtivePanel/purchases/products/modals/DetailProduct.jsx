@@ -26,12 +26,37 @@ function DetailProduct({ producto, isOpen, onClose, onEdit }) {
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
-            {/* Imagen */}
-            <div className="flex items-center justify-center">
-              <div className="w-64 h-64 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-gray-200">
-                <span className="text-6xl">📦</span>
-              </div>
-            </div>
+            {/* Imagen/Imágenes */}
+<div className="flex items-center justify-center">
+  {producto.images && producto.images.length > 0 ? (
+    <div className="w-full">
+      {/* Imagen principal */}
+      <img
+        src={producto.images[0].url}
+        alt={producto.name}
+        className="w-64 h-64 object-cover rounded-lg border-2 border-gray-200"
+      />
+      
+      {/* Miniaturas de otras imágenes */}
+      {producto.images.length > 1 && (
+        <div className="flex gap-2 mt-3">
+          {producto.images.map((img, idx) => (
+            <img
+              key={img.id}
+              src={img.url}
+              alt={`${producto.name} ${idx + 1}`}
+              className="w-16 h-16 object-cover rounded-lg border border-gray-200 cursor-pointer hover:border-blue-500"
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  ) : (
+    <div className="w-64 h-64 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-gray-200">
+      <span className="text-6xl">📦</span>
+    </div>
+  )}
+</div>
 
             {/* Información */}
             <div className="space-y-4">
@@ -116,10 +141,10 @@ function DetailProduct({ producto, isOpen, onClose, onEdit }) {
           {/* Acciones */}
           <div className="flex gap-3 mt-6 pt-4 border-t">
             <button 
-              onClick={handleEdit}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              //onClick={handleEdit}
+              className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
             >
-              Editar producto
+              Reportar producto no conforme
             </button>
           </div>
         </div>

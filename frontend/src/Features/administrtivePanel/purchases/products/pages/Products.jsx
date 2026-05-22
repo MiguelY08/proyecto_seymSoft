@@ -171,38 +171,51 @@ const filteredData = useMemo(() => {
   const currentData = filteredData.slice(startIndex, endIndex);
 
     const handleToggle = async (id) => {
-      try {
-        const producto = data.find((row) => row.id === id);
-        if (!producto) return;
+  try {
+    const producto = data.find((row) => row.id === id);
+    if (!producto) return;
 
-        const isActive = producto.status === 'Active';
+    // Cambiar 'Active' por 'Activo'
+    const isActive = producto.status === 'Activo';
 
-        if (isActive) {
-          const result = await showConfirm(
-            "warning",
-            "¿Desactivar este producto?",
-            "El producto dejará de estar disponible para los usuarios, pero podrá activarse nuevamente más adelante.",
-            { confirmButtonText: "Sí, desactivar", cancelButtonText: "Cancelar" }
-          );
-          if (!result.isConfirmed) return;
-        }
+    if (isActive) {
+      const result = await showConfirm(
+        "warning",
+        "¿Desactivar este producto?",
+        "El producto dejará de estar disponible para los usuarios, pero podrá activarse nuevamente más adelante.",
+        { confirmButtonText: "Sí, desactivar", cancelButtonText: "Cancelar" }
+      );
+      if (!result.isConfirmed) return;
+    }
 
-        // Llamar al backend para cambiar estado
-        const updated = await ProductsService.toggleStatus(id);
-        
-        if (updated) {
-          await refreshData();
-          const newStatus = updated.status === 'Activo' ? 'activado' : 'desactivado';
-          showSuccess(
-            `Producto ${newStatus}`,
-            `"${updated.name}" fue ${newStatus} exitosamente.`
-          );
-        }
-      } catch (error) {
-        showError('Error', error.message || 'No se pudo cambiar el estado del producto');
-      }
-    };
+    // Llamar al backend para cambiar estado
+    const updated = await ProductsService.toggleStatus(id);
+    
+    if (updated) {
+      // Actualizar estado local SIN hacer refreshData
+      setData(data.map(p => p.id === id ? updated : p));
+      
+      const newStatus = updated.status === 'Activo' ? 'activado' : 'desactivado';
+      showSuccess(
+        `Producto ${newStatus}`,
+        `"${updated.name}" fue ${newStatus} exitosamente.`
+      );
+    }
+  } catch (error) {
+    showError('Error', error.message || 'No se pudo cambiar el estado del producto');
+  }
+};
+
   const handleDelete = async (producto) => {
+  // Validar que esté desactivado
+  if (producto.status === 'Activo') {
+    showError(
+      'No se puede eliminar',
+      'No puedes eliminar un producto que está activo. Desactívalo primero.'
+    );
+    return;
+  }
+
   const result = await showConfirm(
     "warning",
     "¿Eliminar este producto?",
@@ -214,7 +227,7 @@ const filteredData = useMemo(() => {
 
   try {
     await ProductsService.delete(producto.id);
-    await refreshData();
+    setData(data.filter(p => p.id !== producto.id));
     showSuccess("Producto eliminado", `"${producto.name}" fue eliminado exitosamente.`);
   } catch (error) {
     showError("Error", error.message || "No se pudo eliminar el producto. Intenta de nuevo.");
