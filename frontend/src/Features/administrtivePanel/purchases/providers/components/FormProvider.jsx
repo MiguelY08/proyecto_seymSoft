@@ -153,10 +153,15 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       }
     }
     
+    // ============================================
+    // MANEJO ESPECIAL PARA RUT Y CÓDIGO CIU
+    // ============================================
     if (name === 'rut') {
       if (value === 'si') {
-        newFormData.codigoCIU = newFormData.codigoCIU || '';
+        // Cuando selecciona "Sí", limpiar el campo CIU para que el usuario pueda ingresar
+        newFormData.codigoCIU = '';
       } else if (value === 'no') {
+        // Cuando selecciona "No", poner un valor predeterminado
         newFormData.codigoCIU = 'No aplica';
       }
     }
@@ -477,21 +482,6 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                   {renderError('apellidos')}
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <label className="block text-xs font-semibold text-gray-600">Dirección<span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    name="direccion"
-                    value={formData.direccion}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Ej: Calle 10 # 15-25"
-                    autoComplete="off"
-                    className={inputClass('direccion')}
-                  />
-                  {renderError('direccion')}
-                </div>
-
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1 flex-1">
                     <label className="block text-xs font-semibold text-gray-600">Teléfono<span className="text-red-500">*</span></label>
@@ -501,26 +491,41 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       value={formData.telefono}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder="3001234567"
+                      placeholder="Ej: 3001234567"
                       autoComplete="off"
                       className={inputClass('telefono')}
                     />
                     {renderError('telefono')}
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
-                    <label className="block text-xs font-semibold text-gray-600">Correo<span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-semibold text-gray-600">Dirección<span className="text-red-500">*</span></label>
                     <input
-                      type="email"
-                      name="correo"
-                      value={formData.correo}
+                      type="text"
+                      name="direccion"
+                      value={formData.direccion}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder="proveedor@email.com"
+                      placeholder="Ej: Calle 10 # 15-25"
                       autoComplete="off"
-                      className={inputClass('correo')}
+                      className={inputClass('direccion')}
                     />
-                    {renderError('correo')}
+                    {renderError('direccion')}
                   </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="block text-xs font-semibold text-gray-600">Correo<span className="text-red-500">*</span></label>
+                  <input
+                    type="email"
+                    name="correo"
+                    value={formData.correo}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Ej: proveedor@email.com"
+                    autoComplete="off"
+                    className={inputClass('correo')}
+                  />
+                  {renderError('correo')}
                 </div>
 
               </div>
@@ -556,7 +561,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       value={formData.numeroContacto}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder="3009876543"
+                      placeholder="Ej: 3009876543"
                       autoComplete="off"
                       className={inputClass('numeroContacto')}
                     />
@@ -577,7 +582,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     className={inputClass('plazoDevoluciones')}
                   />
                   {renderError('plazoDevoluciones')}
-                  <p className="text-[10px] text-gray-400 mt-0.5">Días para realizar devoluciones</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5"></p>
                 </div>
 
                 <div ref={categoriasRef} className="flex flex-col gap-1">
@@ -652,7 +657,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       value={formData.codigoCIU}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder={formData.rut === 'si' ? "Obligatorio" : "Se genera automáticamente"}
+                      placeholder={formData.rut === 'si' ? "Ej: 1212" : "Se genera automáticamente"}
                       autoComplete="off"
                       className={formData.rut === 'si' ? inputClass('codigoCIU') : disabledInputClass('codigoCIU')}
                       disabled={formData.rut === 'no'}
@@ -662,7 +667,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       <p className="text-xs text-gray-400 mt-0.5">Automático: No aplica</p>
                     )}
                     {formData.rut === 'si' && (
-                      <p className="text-xs text-gray-400 mt-0.5">Ingrese el código CIU</p>
+                      <p className="text-xs text-gray-400 mt-0.5"></p>
                     )}
                     {renderError('codigoCIU')}
                   </div>

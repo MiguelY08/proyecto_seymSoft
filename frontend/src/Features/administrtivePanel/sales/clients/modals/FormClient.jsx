@@ -240,7 +240,7 @@ const validateNumeric10_2 = (value, fieldName) => {
     setErrors(prev => ({ ...prev, [name]: validationErrors[name] || '' }));
   };
 
- const handleSubmit = (e) => {
+const handleSubmit = (e) => {
   e.preventDefault();
   
   // Validar campos numéricos
@@ -273,18 +273,32 @@ const validateNumeric10_2 = (value, fieldName) => {
     return;
   }
   
-  //  Preparar datos para enviar - EL CAMPO IMPORTANTE: saldoFavor se envía como está
+  // Preparar datos para enviar
   const submitData = {
-    ...formData,
+    personType: formData.personType,
+    documentType: formData.documentType,
+    document: formData.document,
+    firstName: formData.firstName,
+    lastName: formData.lastName,
+    address: formData.address,
+    phone: formData.phone,
+    email: formData.email,
+    contactName: formData.contactName,
+    contactPhone: formData.contactPhone,
+    clientType: formData.clientType,
     clientCredit: formData.clientCredit || '0',
-    saldoFavor: formData.saldoFavor || '0',  // ← Este se mapeará a credit_balance en el service
-    ciuCode: formData.rut === 'no' ? 'No aplica' : formData.ciuCode
+    saldoFavor: formData.saldoFavor || '0',
+    rut: formData.rut,
+    ciuCode: formData.rut === 'no' ? '' : (formData.ciuCode || '')
   };
+  
+  console.log('📤 submitData:', JSON.stringify(submitData, null, 2));
   
   onSave?.(submitData);
   resetForm();
   onClose();
 };
+
   if (!isOpen) return null;
 
   const inputClass = (field) =>
@@ -471,21 +485,6 @@ const validateNumeric10_2 = (value, fieldName) => {
                   <ErrorMsg field="lastName" />
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <Label required>Dirección</Label>
-                  <input 
-                    type="text" 
-                    name="address" 
-                    value={formData.address} 
-                    onChange={handleChange} 
-                    onBlur={handleBlur} 
-                    placeholder="Ej: Calle 10 # 15-25" 
-                    autoComplete="off" 
-                    className={inputClass('address')} 
-                  />
-                  <ErrorMsg field="address" />
-                </div>
-
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1 flex-1">
                     <Label required>Teléfono</Label>
@@ -495,26 +494,41 @@ const validateNumeric10_2 = (value, fieldName) => {
                       value={formData.phone} 
                       onChange={handleChange} 
                       onBlur={handleBlur} 
-                      placeholder="3001234567" 
+                      placeholder="Ej: 3001234567" 
                       autoComplete="off" 
                       className={inputClass('phone')} 
                     />
                     <ErrorMsg field="phone" />
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
-                    <Label required>Correo</Label>
+                    <Label required>Dirección</Label>
                     <input 
-                      type="email" 
-                      name="email" 
-                      value={formData.email} 
+                      type="text" 
+                      name="address" 
+                      value={formData.address} 
                       onChange={handleChange} 
                       onBlur={handleBlur} 
-                      placeholder="cliente@email.com" 
+                      placeholder="Ej: Calle 10 # 15-25" 
                       autoComplete="off" 
-                      className={inputClass('email')} 
+                      className={inputClass('address')} 
                     />
-                    <ErrorMsg field="email" />
+                    <ErrorMsg field="address" />
                   </div>
+                </div>
+
+                <div className="flex flex-col gap-1 col-span-2">
+                  <Label required>Correo</Label>
+                  <input 
+                    type="email" 
+                    name="email" 
+                    value={formData.email} 
+                    onChange={handleChange} 
+                    onBlur={handleBlur} 
+                    placeholder="Ej: cliente@email.com" 
+                    autoComplete="off" 
+                    className={inputClass('email')} 
+                  />
+                  <ErrorMsg field="email" />
                 </div>
 
               </div>
@@ -549,7 +563,7 @@ const validateNumeric10_2 = (value, fieldName) => {
                       value={formData.contactPhone} 
                       onChange={handleChange} 
                       onBlur={handleBlur} 
-                      placeholder="3009876543" 
+                      placeholder="Ej: 3009876543" 
                       autoComplete="off" 
                       className={inputClass('contactPhone')} 
                     />
@@ -591,7 +605,7 @@ const validateNumeric10_2 = (value, fieldName) => {
                     className={inputClass('clientCredit')} 
                   />
                   <ErrorMsg field="clientCredit" />
-                  <p className="text-[10px] text-gray-400 mt-0.5">Máximo: 99,999,999.99 (8 dígitos enteros, 2 decimales)</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5"></p>
                 </div>
 
                 <div className="flex flex-col gap-1">
@@ -610,7 +624,7 @@ const validateNumeric10_2 = (value, fieldName) => {
                   </div>
                   <ErrorMsg field="saldoFavor" />
                   <p className="text-[10px] text-gray-400 mt-0.5">
-                    Saldo a favor (máximo: 99,999,999.99)
+                    
                   </p>
                 </div>
 
@@ -641,7 +655,7 @@ const validateNumeric10_2 = (value, fieldName) => {
                       value={formData.ciuCode} 
                       onChange={handleChange} 
                       onBlur={handleBlur} 
-                      placeholder={formData.rut === 'si' ? "Ingrese el código CIU" : "No aplica"}
+                      placeholder={formData.rut === 'si' ? "Ej: 1212" : "No aplica"}
                       autoComplete="off" 
                       className={formData.rut === 'si' ? inputClass('ciuCode') : disabledInputClass('ciuCode')}
                       disabled={formData.rut === 'no'}

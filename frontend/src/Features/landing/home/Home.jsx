@@ -300,6 +300,7 @@ function Home() {
 
           return prevJson === nextJson ? prevSlides : mappedSlides;
         });
+        setSlides(mappedSlides);
       } catch (err) {
         console.error('Error al cargar carrusel:', err);
       }
