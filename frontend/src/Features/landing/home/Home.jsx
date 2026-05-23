@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, ShoppingBag, Briefcase, ClipboardPen, FileTe
 
 import { getActiveBanners } from '../../administrtivePanel/configuration/carousel/services/bannerService.js';
 
-import ProductCard from '../../shared/ProductCard.jsx';
+import ProductCard from '../../shared/productCard/ProductCard.jsx';
 import correctorCinta      from '../../../assets/products/correctorencinta.png';
 import cuadernoPrimavera   from '../../../assets/products/cuadernoprimaverax100h.png';
 import notebookPen         from '../../../assets/products/notebookAndPen.png';
