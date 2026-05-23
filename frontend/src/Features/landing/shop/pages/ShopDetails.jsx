@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import ProductCard from "../../../shared/ProductCard";
+import ProductCard from "../../../shared/productCard/ProductCard";
 import { Minus, Plus, ShoppingCart, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { useCart } from "../../../shared/Context/Cartcontext";
 import { useAlert } from "../../../shared/alerts/useAlert";

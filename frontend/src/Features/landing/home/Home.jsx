@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, ShoppingBag, Briefcase, ClipboardPen, FileTe
 
 import { getActiveBanners } from '../../administrtivePanel/configuration/carousel/services/bannerService.js';
 
-import ProductCard from '../../shared/ProductCard.jsx';
+import ProductCard from '../../shared/productCard/ProductCard.jsx';
 import correctorCinta      from '../../../assets/products/correctorencinta.png';
 import cuadernoPrimavera   from '../../../assets/products/cuadernoprimaverax100h.png';
 import notebookPen         from '../../../assets/products/notebookAndPen.png';
@@ -294,14 +294,25 @@ function Home() {
           alt: `Banner ${banner.id}`,
         }));
 
+        setSlides((prevSlides) => {
+          const prevJson = JSON.stringify(prevSlides);
+          const nextJson = JSON.stringify(mappedSlides);
+
+          return prevJson === nextJson ? prevSlides : mappedSlides;
+        });
         setSlides(mappedSlides);
       } catch (err) {
         console.error('Error al cargar carrusel:', err);
-        setSlides([]);
       }
     };
 
     loadCarousel();
+
+    const intervalId = setInterval(() => {
+      loadCarousel();
+    }, 15000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
