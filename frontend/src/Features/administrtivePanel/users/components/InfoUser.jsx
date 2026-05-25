@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X, SquarePen, IdCard, User, Mail, Phone, ShieldCheck, CalendarDays } from 'lucide-react';
+import { X, SquarePen, User, Mail, Phone, ShieldCheck, CalendarDays } from 'lucide-react';
 import { useModalAnimation } from '../../../shared/useModalAnimation';
 
 /**
@@ -46,13 +46,15 @@ function InfoUser() {
     .map((w) => w[0].toUpperCase())
     .join('');
 
-  // Filas de información (sin "Tipo de cliente")
+  // Valor a mostrar para el rol (si es null o vacío, se muestra "Sin rol" o "Nulo")
+  const roleDisplay = user.role && user.role !== 'Nulo' ? user.role : 'Sin rol';
+
+  // Filas de información (se eliminó el campo de documento)
   const fields = [
-    { icon: IdCard,       label: 'Tipo y No. Documento', value: `${user.documentType} ${user.document}` },
     { icon: User,         label: 'Nombre completo',      value: user.name                               },
     { icon: Mail,         label: 'Correo electrónico',   value: user.email                              },
-    { icon: Phone,        label: 'Teléfono / Celular',   value: user.phone                              },
-    { icon: ShieldCheck,  label: 'Tipo de usuario',      value: user.role ?? 'Nulo'                     },
+    { icon: Phone,        label: 'Teléfono / Celular',   value: user.phone || 'No registrado'           },
+    { icon: ShieldCheck,  label: 'Tipo de usuario',      value: roleDisplay                             },
     { icon: CalendarDays, label: 'Registrado desde',     value: createdAt                               },
   ];
 
@@ -72,7 +74,7 @@ function InfoUser() {
         className={`bg-white rounded-lg shadow-2xl w-full max-w-xs sm:max-w-sm md:max-w-md overflow-hidden flex flex-col
           ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
       >
-        {/* Header del modal — sin cambios */}
+        {/* Header del modal */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
           <h2 className="text-white font-semibold text-lg">Detalles</h2>
           <button
@@ -83,7 +85,7 @@ function InfoUser() {
           </button>
         </div>
 
-        {/* ── Cuerpo ─────────────────────────────────────────────────────── */}
+        {/* Cuerpo */}
         <div className="px-6 pt-6 pb-4 flex flex-col gap-5 overflow-y-auto">
 
           {/* Avatar + nombre + estado */}
@@ -130,7 +132,7 @@ function InfoUser() {
           </div>
         </div>
 
-        {/* Footer — sin cambios */}
+        {/* Footer */}
         <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
           <button
             onClick={handleClose}

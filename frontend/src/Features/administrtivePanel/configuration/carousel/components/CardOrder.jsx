@@ -1,8 +1,15 @@
-import { useRef } from 'react';
 import { GripVertical } from 'lucide-react';
 
 // ─── CardOrder ────────────────────────────────────────────────────────────────
-function CardOrder({ slide, imageUrl, index, onDragStart, onDragOver, onDrop, isDragging }) {
+function CardOrder({
+  slide,
+  index,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  isDragging,
+}) {
+  const imageUrl = slide?.imageUrl;
 
   return (
     <div
@@ -20,7 +27,7 @@ function CardOrder({ slide, imageUrl, index, onDragStart, onDragOver, onDrop, is
         }`}
       style={{ width: '280px', aspectRatio: '16/9' }}
     >
-      {/* ── Imagen ──────────────────────────────────────────────────────── */}
+      {/* Imagen */}
       {imageUrl ? (
         <img
           src={imageUrl}
@@ -34,24 +41,15 @@ function CardOrder({ slide, imageUrl, index, onDragStart, onDragOver, onDrop, is
         </div>
       )}
 
-      {/* ── Número de orden (top-left) ───────────────────────────────────── */}
+      {/* Número de orden */}
       <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-[#004D77] flex items-center justify-center shadow-md">
         <span className="text-white text-[10px] font-bold">{index + 1}</span>
       </div>
 
-      {/* ── Indicador de arrastre (top-right) ───────────────────────────── */}
+      {/* Indicador de arrastre */}
       <div className="absolute top-2 right-2 w-6 h-6 rounded-md bg-black/40 backdrop-blur-sm flex items-center justify-center">
         <GripVertical className="w-3.5 h-3.5 text-white" strokeWidth={2} />
       </div>
-
-      {/* ── Overlay inactiva ────────────────────────────────────────────── */}
-      {!slide?.activo && (
-        <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none">
-          <span className="px-2 py-0.5 bg-black/50 text-white text-[9px] font-semibold rounded-full backdrop-blur-sm">
-            Inactiva
-          </span>
-        </div>
-      )}
     </div>
   );
 }

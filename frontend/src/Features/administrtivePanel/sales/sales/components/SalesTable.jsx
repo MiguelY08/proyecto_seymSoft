@@ -7,7 +7,7 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import { useAlert }          from "../../../../shared/alerts/useAlert";
-import { UsersDB }           from "../../../users/services/usersDB";
+import { UserService }           from "../../../users/services/userService";
 import { clientsService }    from "../../clients/services/clientsService";
 import { highlight }         from "../helpers/salesHelpers";
 
@@ -24,7 +24,7 @@ const resolveClientName = (clientId, storedName) => {
 const resolveVendorName = (vendorId, storedName) => {
   if (!vendorId) return storedName || "Usuario eliminado";
   try {
-    const found = UsersDB.list().find((u) => String(u.id) === String(vendorId));
+    const found = UserService.list().find((u) => String(u.id) === String(vendorId));
     return found ? found.name : (storedName || "Usuario eliminado");
   } catch { return storedName || "Usuario eliminado"; }
 };

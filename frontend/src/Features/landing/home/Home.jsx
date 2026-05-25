@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ShoppingBag, Briefcase, ClipboardPen, FileText, Palette, ArrowRight } from 'lucide-react';
 
-import { getImage, seedDefaultImage } from '../../administrtivePanel/configuration/carousel/services/CarouselBD.js';
+import { getActiveBanners } from '../../administrtivePanel/configuration/carousel/services/bannerService.js';
 
-import ProductCard from '../../shared/ProductCard.jsx';
+import ProductCard from '../../shared/productCard/ProductCard.jsx';
 import correctorCinta      from '../../../assets/products/correctorencinta.png';
 import cuadernoPrimavera   from '../../../assets/products/cuadernoprimaverax100h.png';
 import notebookPen         from '../../../assets/products/notebookAndPen.png';
@@ -263,7 +263,6 @@ function Home() {
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [slides,       setSlides]       = useState([]);
-  const urlsRef = useRef([]);
 
   const categories = [
     { id: 1, name: 'Escolar',          icon: ShoppingBag,  href: '/categoria/escolar'         },
@@ -285,29 +284,35 @@ function Home() {
   ];
 
   useEffect(() => {
-    const load = async () => {
+    const loadCarousel = async () => {
       try {
-        await seedDefaultImage();
-        const stored = localStorage.getItem('pm_carousel');
-        const meta   = stored ? JSON.parse(stored) : [];
-        const activos = meta.filter((s) => s.activo).sort((a, b) => a.orden - b.orden);
-        const loaded = await Promise.all(
-          activos.map(async (s) => {
-            const blob = await getImage(s.id);
-            const url  = blob ? URL.createObjectURL(blob) : null;
-            return { id: s.id, image: url, alt: s.nombre };
-          })
-        );
-        const validos = loaded.filter((s) => s.image !== null);
-        urlsRef.current = validos.map((s) => s.image);
-        setSlides(validos);
+        const activeBanners = await getActiveBanners();
+
+        const mappedSlides = activeBanners.map((banner) => ({
+          id: banner.id,
+          image: banner.imageUrl,
+          alt: `Banner ${banner.id}`,
+        }));
+
+        setSlides((prevSlides) => {
+          const prevJson = JSON.stringify(prevSlides);
+          const nextJson = JSON.stringify(mappedSlides);
+
+          return prevJson === nextJson ? prevSlides : mappedSlides;
+        });
+        setSlides(mappedSlides);
       } catch (err) {
         console.error('Error al cargar carrusel:', err);
-        setSlides([]);
       }
     };
-    load();
-    return () => { urlsRef.current.forEach((url) => URL.revokeObjectURL(url)); };
+
+    loadCarousel();
+
+    const intervalId = setInterval(() => {
+      loadCarousel();
+    }, 15000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   useEffect(() => {

@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import Filters from "../components/FilterLanding";
 import SortDropdown from "../components/SortDropdown";
-import ProductCard from "../../../shared/ProductCard";
+import ProductCard from "../../../shared/productCard/ProductCard";
 import Pagination from "../../../shared/PaginationLanding";
 import ShopHero from "../components/ShopHero";
 

@@ -5,8 +5,11 @@ import AlertItem from './AlertItem';
 const HIGH_IMPORTANCE = (alert) => alert.isConfirm || alert.type === 'warning';
 
 function AlertContainer({ alerts, onRemove }) {
-  const centerAlerts = alerts.filter((a) =>  HIGH_IMPORTANCE(a));
-  const rightAlerts  = alerts.filter((a) => !HIGH_IMPORTANCE(a));
+  // Mostrar solo las 3 alertas más recientes (últimas en insertarse)
+  const visibleAlerts = alerts.slice(-3).reverse();
+
+  const centerAlerts = visibleAlerts.filter((a) => HIGH_IMPORTANCE(a));
+  const rightAlerts  = visibleAlerts.filter((a) => !HIGH_IMPORTANCE(a));
 
   return createPortal(
     <>
