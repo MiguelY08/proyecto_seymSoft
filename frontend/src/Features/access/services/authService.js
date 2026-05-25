@@ -1,117 +1,301 @@
-import { getRoles } from "../../administrtivePanel/configuration/roles/services/rolesServices";
-import { permissionsList } from "../../administrtivePanel/configuration/roles/permissions/permissionsList";
-import { flattenPermissions } from "../../administrtivePanel/configuration/roles/helpers/permissionUtils";
-import { saveSession, getSession } from "../helpers/authStorage";
+import apiClient from "../../../setting/apiClient.js";
+import { saveSession, clearSession, getSession } from "../helpers/authStorage.js";
 
-const USERS_KEY = "users";
+/**
+ * AUTH SERVICES - CORRECTO
+ * 
+ * Endpoints:
+ * - POST /auth/register     → { full_name, email, pass_word, phone }
+ * - POST /auth/login        → { email, pass_word }
+ * - POST /auth/logout       → {}
+ * - GET /auth/me            → {}
+ * - PUT /auth/profile       → { full_name, email, phone, pass_word... }
+ * - POST /auth/forgot-password
+ * - POST /auth/reset-password
+ */
 
-export const getUsers = () => {
+// ═══════════════════════════════════════════════════════════
+// REGISTER - Registrar nuevo usuario
+// ═══════════════════════════════════════════════════════════
+
+export const register = async (userData) => {
   try {
-    const users = localStorage.getItem(USERS_KEY);
-    return users ? JSON.parse(users) : [];
+    // userData: { fullName, email, password, phone }
+    // Convertir a snake_case para el backend
+
+    const response = await apiClient.post("/auth/register", {
+      full_name: userData.fullName,        // ✅ full_name (snake_case)
+      email: userData.email,
+      pass_word: userData.password,        // ✅ pass_word (snake_case)
+      phone: userData.phone,
+    });
+
+    // Backend retorna: { user, accessToken, refreshToken }
+    const { user, accessToken, refreshToken } = response.data.data;
+
+    // Guardar en localStorage
+    saveSession({
+      user,
+      accessToken,
+      refreshToken,
+    });
+
+    return {
+      success: true,
+      user,
+      accessToken,
+      refreshToken,
+    };
+
   } catch (error) {
-    console.error("Error leyendo usuarios:", error);
-    localStorage.removeItem(USERS_KEY);
-    return [];
+    console.error("Error en register:", error);
+
+    const errorMessage = error.response?.data?.message || "Error al registrarse";
+
+    return {
+      success: false,
+      error: errorMessage,
+    };
   }
 };
 
-export const saveUsers = (users) => {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+// ═══════════════════════════════════════════════════════════
+// LOGIN - Iniciar sesión
+// ═══════════════════════════════════════════════════════════
+
+export const login = async (email, password) => {
+  try {
+    const response = await apiClient.post("/auth/login", {
+      email,
+      pass_word: password,               // ✅ pass_word (snake_case)
+    });
+
+    // Backend retorna: { user, role, permissions, accessToken, refreshToken }
+    const { user, role, permissions, accessToken, refreshToken } = response.data.data;
+
+    // Guardar en localStorage
+    saveSession({
+      user,
+      role,
+      accessToken,
+      refreshToken,
+    });
+
+    return {
+      success: true,
+      user,
+      role,
+      permissions,
+      accessToken,
+      refreshToken,
+      redirectTo: role ? "/admin" : "/",
+    };
+
+  } catch (error) {
+    console.error("Error en login:", error);
+
+    const errorMessage = error.response?.data?.message || "Email o contraseña incorrectos";
+
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
 };
 
-const normalizeEmail = (email) => email.trim().toLowerCase();
-const normalizePassword = (password) => password.trim();
+// ═══════════════════════════════════════════════════════════
+// LOGOUT - Cerrar sesión
+// ═══════════════════════════════════════════════════════════
 
-export const emailExists = (email) => {
-  const users = getUsers();
-  return users.some(user => normalizeEmail(user.email) === normalizeEmail(email));
-};
-
-export const documentExists = (document) => {
-  const users = getUsers();
-  return users.some(user => user.document === document);
-};
-
-export const registerUser = (userData) => {
-  const users = getUsers();
-  if (emailExists(userData.email)) throw new Error("El correo ya está registrado");
-  if (documentExists(userData.document)) throw new Error("El documento ya está registrado");
-
-  const newUser = {
-    id:         Date.now(),
-    ...userData,
-    name:       userData.fullName,
-    email:      normalizeEmail(userData.email),
-    password:   normalizePassword(userData.password),
-    clientType: "Detal",
-    role:       null,
-    active:     true,
-    createdAt:  new Date().toISOString(),
-  };
-
-  users.push(newUser);
-  saveUsers(users);
-  return newUser;
-};
-
-export const loginUser = (email, password) => {
-  const users = getUsers();
-
-  const user = users.find(
-    (u) =>
-      normalizeEmail(u.email) === normalizeEmail(email) &&
-      normalizePassword(u.password) === normalizePassword(password)
-  );
-
-  if (!user) throw new Error("Correo o contraseña incorrectos");
-  if (!user.active) throw new Error("Tu cuenta está inactiva. Contacta al administrador.");
-
-  let permissions = [];
-  if (user.role) {
-    try {
-      const roles = getRoles();
-      const role = roles.find((r) => r.name === user.role);
-      const rolePermissions = role?.permisos || [];
-      permissions = flattenPermissions(rolePermissions, permissionsList) || [];
-    } catch (error) {
-      console.error("Error generando permisos:", error);
+export const logout = async () => {
+  try {
+    const session = getSession();
+    
+    // Intentar notificar al backend
+    if (session?.refreshToken) {
+      await apiClient.post("/auth/logout", {
+        refresh_token: session.refreshToken,
+      });
     }
-  }
 
-  return {
-    user:       { ...user, permissions },
-    token:      Date.now(),
-    redirectTo: user.role ? "/admin" : "/",
-  };
+  } catch (error) {
+    console.error("Error en logout:", error);
+    // Aunque falle, limpiamos el frontend
+  } finally {
+    clearSession();
+    return {
+      success: true,
+    };
+  }
 };
 
-// ─── Actualizar perfil ────────────────────────────
-export const updateProfile = (userId, changes) => {
+// ═══════════════════════════════════════════════════════════
+// GET PROFILE - Obtener perfil del usuario logueado
+// ═══════════════════════════════════════════════════════════
 
-  const users = getUsers();
+export const getProfile = async () => {
+  try {
+    const response = await apiClient.get("/auth/me");
 
-  if (changes.email) {
-    const emailTaken = users.some(
-      (u) =>
-        u.email.trim().toLowerCase() === changes.email.trim().toLowerCase() &&
-        u.id !== userId
-    );
-    if (emailTaken) throw new Error("Este correo ya está registrado por otro usuario.");
+    const { user, role, permissions } = response.data.data;
+
+    return {
+      success: true,
+      user,
+      role,
+      permissions,
+    };
+
+  } catch (error) {
+    console.error("Error en getProfile:", error);
+
+    // Si error es 401, la sesión expiró
+    if (error.response?.status === 401) {
+      clearSession();
+    }
+
+    return {
+      success: false,
+      error: "Error al obtener perfil",
+    };
   }
+};
 
-  const updatedUsers = users.map((u) =>
-    u.id === userId ? { ...u, ...changes } : u
-  );
+// ═══════════════════════════════════════════════════════════
+// UPDATE PROFILE - Actualizar datos del usuario
+// ═══════════════════════════════════════════════════════════
 
-  saveUsers(updatedUsers);
+export const updateProfile = async (changes) => {
+  try {
+    // changes: { fullName, email, phone, ... }
+    // Convertir a snake_case para el backend
+    
+    const body = {};
+    
+    if (changes.fullName !== undefined) {
+      body.full_name = changes.fullName;
+    }
+    if (changes.email !== undefined) {
+      body.email = changes.email;
+    }
+    if (changes.phone !== undefined) {
+      body.phone = changes.phone;
+    }
+    if (changes.currentPassword !== undefined) {
+      body.current_password = changes.currentPassword;
+    }
+    if (changes.newPassword !== undefined) {
+      body.pass_word = changes.newPassword;
+    }
+    if (changes.confirmPassword !== undefined) {
+      body.confirm_password = changes.confirmPassword;
+    }
 
-  const session = getSession();
-  if (session) {
-    const updatedUser = updatedUsers.find((u) => u.id === userId);
-    saveSession({ ...session, user: { ...session.user, ...updatedUser } });
+    const response = await apiClient.put("/auth/profile", body);
+
+    const { user, role, permissions } = response.data.data;
+
+    // Actualizar localStorage
+    const currentSession = getSession();
+    saveSession({
+      ...currentSession,
+      user,
+      role,
+      permissions,
+    });
+
+    return {
+      success: true,
+      user,
+      role,
+      permissions,
+    };
+
+  } catch (error) {
+    console.error("Error en updateProfile:", error);
+
+    return {
+      success: false,
+      error: error.response?.data?.message || "Error al actualizar perfil",
+    };
   }
+};
 
-  return updatedUsers.find((u) => u.id === userId);
+// ═══════════════════════════════════════════════════════════
+// FORGOT PASSWORD - Solicitar reset de contraseña
+// ═══════════════════════════════════════════════════════════
 
+export const forgotPassword = async (email) => {
+  try {
+    const response = await apiClient.post("/auth/forgot-password", { email });
+
+    return {
+      success: true,
+      message: response.data.message,
+    };
+
+  } catch (error) {
+    console.error("Error en forgotPassword:", error);
+
+    const errorMessage = error.response?.data?.message || "Error al solicitar reset";
+
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+// RESET PASSWORD - Resetear contraseña con código
+// ═══════════════════════════════════════════════════════════
+
+export const resetPassword = async (token, newPassword) => {
+  try {
+    const response = await apiClient.post("/auth/reset-password", {
+      token,
+      new_password: newPassword,        // ✅ snake_case como espera backend
+      confirm_password: newPassword     // ✅ REQUERIDO por schema
+    });
+
+    return {
+      success: true,
+      message: response.data.message,
+    };
+
+  } catch (error) {
+    console.error("Error en resetPassword:", error);
+
+    const errorMessage = error.response?.data?.message || "Error al resetear contraseña";
+
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+// GOOGLE LOGIN - Manejar Google OAuth callback
+// ═══════════════════════════════════════════════════════════
+
+export const googleLogin = (accessToken, refreshToken) => {
+  try {
+    saveSession({
+      accessToken,
+      refreshToken,
+    });
+
+    return {
+      success: true,
+    };
+
+  } catch (error) {
+    console.error("Error en googleLogin:", error);
+
+    return {
+      success: false,
+      error: "Error al procesar login de Google",
+    };
+  }
 };

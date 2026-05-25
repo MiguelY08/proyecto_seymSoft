@@ -5,25 +5,25 @@ import App from './App.jsx';
 import { BrowserRouter } from 'react-router-dom';
 import { AlertProvider } from './Features/shared/alerts/AlertContext.jsx';
 import { AuthProvider } from './Features/access/context/AuthContext.jsx';
-import { initSystem } from './system/initSystem.js';
+// import { initSystem } from './system/initSystem.js';
 import { FavoritesProvider } from './Features/shared/Context/Favoritescontext.jsx';
 import { CartProvider } from './Features/shared/Context/Cartcontext.jsx';
 
-initSystem()
+// initSystem()
 
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <AlertProvider>
+      <AlertProvider>
+        <AuthProvider>         
           <FavoritesProvider>
             <CartProvider>
               <App />
             </CartProvider>
           </FavoritesProvider>
-        </AlertProvider>
-      </AuthProvider>
+        </AuthProvider>
+      </AlertProvider>
     </BrowserRouter>
   </StrictMode>,
 );

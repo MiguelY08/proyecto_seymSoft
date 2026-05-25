@@ -1,126 +1,113 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { X, Eye, EyeOff } from "lucide-react";
-import { useAuth } from "../../access/context/AuthContext";
-import { useAlert } from "../../shared/alerts/useAlert";
-import { updateProfile } from "../services/authService";
-import { patterns } from "../validators/authValidators";
-import { emailExists } from "../services/authService";
-
-// ── Componentes fuera del componente principal ───────────────────────────────
+import { useAuth } from "../context/AuthContext.jsx";
+import { useAlert } from "../../shared/alerts/useAlert.js";
 
 const ErrorMsg = ({ field, touched, errors }) =>
   touched[field] && errors[field]
     ? <p className="mt-1 text-xs text-red-500">{errors[field]}</p>
     : null;
 
-const ReadOnlyField = ({ label, value }) => (
-  <div className="flex flex-col gap-1.5">
-    <label className="block text-sm font-medium text-gray-700">{label}</label>
-    <div className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed select-none flex items-center gap-2">
-       {value ?? "—"}
-    </div>
-  </div>
-);
-
-const PasswordField = ({ label, name, form, show, onToggle, inputClass, handleChange, errors, touched }) => (
+const PasswordField = ({ label, name, value, onChange, show, onToggle, touched, errors, disabled, required }) => (
   <div className="flex flex-col gap-1.5">
     <label className="block text-sm font-medium text-gray-700">
       {label}
-      {name === "currentPassword" && form.newPassword && (
-        <span className="text-red-500">*</span>
-      )}
-      {name === "newPassword" && (
-        <span className="text-xs text-gray-400 font-normal ml-1">(opcional)</span>
-      )}
-      {name === "confirmPassword" && form.newPassword && (
-        <span className="text-red-500">*</span>
-      )}
+      {required && <span className="text-red-500">*</span>}
+      {!required && <span className="text-xs text-gray-400 font-normal ml-1">(opcional)</span>}
     </label>
     <div className="relative">
       <input
         type={show ? "text" : "password"}
         name={name}
-        value={form[name]}
-        onChange={handleChange}
-        placeholder="xxxxxxxxxxxx"
+        value={value}
+        onChange={onChange}
+        placeholder="••••••••"
+        disabled={disabled}
         autoComplete="new-password"
-        className={`${inputClass(name)} pr-10`}
+        className={`w-full px-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 pr-10
+          ${touched[name] && errors[name]
+            ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+            : "border-gray-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
+          }
+          ${disabled ? "opacity-50 cursor-not-allowed" : ""}
+        `}
       />
       <button
         type="button"
         onClick={onToggle}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+        disabled={disabled}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 disabled:opacity-50"
       >
-        {show ? <EyeOff size={16}/> : <Eye size={16}/>}
+        {show ? <EyeOff size={16} /> : <Eye size={16} />}
       </button>
     </div>
-    {touched[name] && errors[name] && (
-      <p className="mt-1 text-xs text-red-500">{errors[name]}</p>
-    )}
+    <ErrorMsg field={name} touched={touched} errors={errors} />
   </div>
 );
 
-// ── Componente principal ─────────────────────────────────────────────────────
-
 function EditProfileForm({ onClose }) {
-  const { user, setUser, logout }                            = useAuth();
-  const { showSuccess, showWarning, showConfirm, showError } = useAlert();
-  const navigate                                             = useNavigate();
-  const location                                             = useLocation();
-
+  const { user, updateProfile, logout, loading } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const isAdminContext = location.pathname.startsWith("/admin");
+  const { showSuccess, showError, showWarning, showInfo } = useAlert();
 
   const [form, setForm] = useState({
-    email:           user?.email        ?? "",
-    phone:           user?.phone        ?? "",
-    address:         user?.address      ?? "",
+    fullName: user?.fullName ?? "",
+    email: user?.email ?? "",
+    phone: user?.phone ?? "",
     currentPassword: "",
-    newPassword:     "",
+    newPassword: "",
     confirmPassword: "",
   });
 
-  const [errors,         setErrors]         = useState({});
-  const [touched,        setTouched]        = useState({});
-  const [showCurrent,    setShowCurrent]    = useState(false);
-  const [showNew,        setShowNew]        = useState(false);
-  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
-  // ── Validación por campo ─────────────────────────────────────────────────
   const validateField = (name, value, currentForm = form) => {
     const v = value.trim();
 
     switch (name) {
+      case "fullName":
+        if (!v) return "El nombre es obligatorio.";
+        if (v.length < 3) return "El nombre debe tener al menos 3 caracteres.";
+        return "";
+
       case "email":
-        if (!v)                         return "El correo es obligatorio.";
-        if (!patterns.email.test(v))    return "Correo inválido.";
-        if (
-          v.toLowerCase() !== user?.email?.toLowerCase() &&
-          emailExists(v)
-        )                               return "Este correo ya está registrado.";
+        if (!v) return "El correo es obligatorio.";
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return "Correo inválido.";
         return "";
 
       case "phone":
-        if (!v)                         return "El teléfono es obligatorio.";
-        if (!patterns.phone.test(v))    return "Teléfono inválido (10 números).";
-        return "";
-
-      case "address":
-        if (!v)                         return "La dirección es obligatoria.";
+        if (!v) return "El teléfono es obligatorio.";
+        if (!/^\d{10}$/.test(v.replace(/\D/g, ""))) {
+          return "Teléfono inválido (10 dígitos).";
+        }
         return "";
 
       case "currentPassword":
-        if (currentForm.newPassword && !v) return "Ingresa tu contraseña actual para cambiarla.";
-        if (v && v !== user?.password)     return "La contraseña actual no es correcta.";
+        if (currentForm.newPassword && !v) {
+          return "Ingresa tu contraseña actual para cambiarla.";
+        }
         return "";
 
       case "newPassword":
-        if (v && !patterns.password.test(v)) return "Mínimo 8 caracteres.";
+        if (v && v.length < 8) {
+          return "La contraseña debe tener al menos 8 caracteres.";
+        }
         return "";
 
       case "confirmPassword":
-        if (currentForm.newPassword && !v)      return "Confirma tu nueva contraseña.";
-        if (v && v !== currentForm.newPassword) return "Las contraseñas no coinciden.";
+        if (currentForm.newPassword && !v) {
+          return "Confirma tu nueva contraseña.";
+        }
+        if (v && v !== currentForm.newPassword) {
+          return "Las contraseñas no coinciden.";
+        }
         return "";
 
       default:
@@ -128,7 +115,6 @@ function EditProfileForm({ onClose }) {
     }
   };
 
-  // ── handleChange ─────────────────────────────────────────────────────────
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -144,7 +130,7 @@ function EditProfileForm({ onClose }) {
     if (name === "newPassword") {
       setErrors((prev) => ({
         ...prev,
-        [name]:          validateField(name, filtered, updatedForm),
+        [name]: validateField(name, filtered, updatedForm),
         confirmPassword: validateField("confirmPassword", updatedForm.confirmPassword, updatedForm),
         currentPassword: validateField("currentPassword", updatedForm.currentPassword, updatedForm),
       }));
@@ -156,241 +142,319 @@ function EditProfileForm({ onClose }) {
     }
   };
 
-  // ── isDirty ──────────────────────────────────────────────────────────────
   const isDirty =
-    form.email           !== (user?.email   ?? "") ||
-    form.phone           !== (user?.phone   ?? "") ||
-    form.address         !== (user?.address ?? "") ||
+    form.fullName !== (user?.fullName ?? "") ||
+    form.email !== (user?.email ?? "") ||
+    form.phone !== (user?.phone ?? "") ||
     form.newPassword.trim() !== "";
 
-  // ── Cancelar ─────────────────────────────────────────────────────────────
-  const handleCancel = async () => {
+  const handleCancel = () => {
     if (!isDirty) {
       isAdminContext ? onClose?.() : navigate(-1);
       return;
     }
-    const result = await showConfirm(
-      "warning",
-      "¿Salir sin guardar?",
-      "Tienes cambios sin guardar. ¿Deseas salir de todas formas?",
-      { confirmButtonText: "Sí, salir", cancelButtonText: "Seguir editando" }
-    );
-    if (result?.isConfirmed) {
+
+    showWarning("Cambios sin guardar", "Los cambios serán descartados");
+    setTimeout(() => {
       isAdminContext ? onClose?.() : navigate(-1);
-    }
+    }, 1500);
   };
 
-  // ── Guardar ──────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
 
-    const fields = [
-      "email", "phone", "address",
-      "currentPassword", "newPassword", "confirmPassword"
-    ];
+  const requiredFields = [
+    "fullName",
+    "email",
+    "phone",
+  ];
 
-    setTouched(fields.reduce((acc, k) => ({ ...acc, [k]: true }), {}));
+  const allFields = [
+    ...requiredFields,
+    "currentPassword",
+    "newPassword",
+    "confirmPassword",
+  ];
 
-    const newErrors = {};
-    fields.forEach((f) => {
-      const e = validateField(f, form[f], form);
-      if (e) newErrors[f] = e;
-    });
+  setTouched(
+    allFields.reduce(
+      (acc, key) => ({
+        ...acc,
+        [key]: true,
+      }),
+      {}
+    )
+  );
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      showWarning("Formulario incompleto", "Revisa los campos marcados en rojo.");
-      return;
-    }
+  const newErrors = {};
 
-    // ── Alerta de confirmación con resumen de cambios ────────────────────
-    const result = await showConfirm(
-      "info",
-      "¿Guardar cambios?",
-      `Revisa tus datos antes de confirmar:\n\n📧 Correo: ${form.email.trim()}\n📞 Teléfono: ${form.phone.trim()}\n📍 Dirección: ${form.address.trim()}${form.newPassword.trim() ? "\n🔑 Contraseña: será actualizada" : ""}\n\n¿Estás seguro de que deseas guardar estos cambios?`,
-      { confirmButtonText: "Sí, guardar", cancelButtonText: "Revisar de nuevo" }
+  allFields.forEach((field) => {
+    const error = validateField(
+      field,
+      form[field],
+      form
     );
 
-    if (!result?.isConfirmed) return;
+    if (error) {
+      newErrors[field] = error;
+    }
+  });
 
-    const changes = {
-      email:   form.email.trim().toLowerCase(),
-      phone:   form.phone.trim(),
-      address: form.address.trim(),
+  if (
+    Object.keys(newErrors).length > 0
+  ) {
+
+    setErrors(newErrors);
+
+    showWarning(
+      "Campos con error",
+      "Revisa la información"
+    );
+
+    return;
+  }
+
+  try {
+
+    const updateData = {
+      fullName:
+        form.fullName.trim(),
+
+      email:
+        form.email.trim(),
+
+      // mantener string
+      phone:
+        form.phone.trim(),
     };
 
-    const isChangingPassword = form.newPassword.trim() !== "";
-    if (isChangingPassword) {
-      changes.password = form.newPassword.trim();
+    // Si hay cambio de contraseña
+    if (
+      form.newPassword.trim()
+    ) {
+
+      updateData.currentPassword =
+        form.currentPassword.trim();
+
+      updateData.newPassword =
+        form.newPassword.trim();
+
+      updateData.confirmPassword =
+        form.confirmPassword.trim();
     }
 
-    try {
-      const updatedUser = updateProfile(user.id, changes);
+    const result =
+      await updateProfile(
+        updateData
+      );
 
-      if (isChangingPassword) {
-        await showSuccess(
-          "Contraseña actualizada",
-          "Tu contraseña fue cambiada. Por seguridad debes volver a iniciar sesión."
+    if (result.success) {
+
+      if (
+        form.newPassword.trim()
+      ) {
+
+        showInfo(
+          "Cambio de contraseña",
+          "Debes iniciar sesión nuevamente"
         );
-        logout();
-        navigate("/login");
+
+        setTimeout(
+          async () => {
+
+            await logout();
+
+            navigate(
+              "/login"
+            );
+
+          },
+          2000
+        );
+
       } else {
-        setUser((prev) => ({ ...prev, ...updatedUser }));
-        showSuccess("Perfil actualizado", "Tus datos han sido actualizados correctamente.");
-        isAdminContext ? onClose?.() : navigate(-1);
+
+        showSuccess(
+          "Perfil actualizado",
+          "Los cambios se guardaron correctamente"
+        );
+
+        setTimeout(
+          () => {
+
+            isAdminContext
+              ? onClose?.()
+              : navigate(-1);
+
+          },
+          1500
+        );
       }
 
-    } catch (err) {
-      showError("Error al actualizar", err.message);
-      setErrors({ email: err.message });
-    }
-  };
+    } else {
 
-  // ── Helpers de estilo ────────────────────────────────────────────────────
-  const isValid = (field) =>
-    touched[field] && !errors[field] && form[field].toString().trim() !== "";
+      showError(
+        "Error",
+        result.error
+      );
+    }
+
+  } catch (error) {
+
+    console.error(
+      "Error handleSubmit:",
+      error
+    );
+
+    showError(
+      "Error",
+      "Ocurrió un error inesperado"
+    );
+  }
+};
 
   const inputClass = (field) =>
-    `w-full px-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
-      touched[field] && errors[field]
-        ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200"
-        : isValid(field)
-        ? "border-green-500 focus:border-green-500 focus:ring-2 focus:ring-green-200"
-        : "border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
+    `w-full px-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200
+    ${touched[field] && errors[field]
+      ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+      : "border-gray-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
     }`;
 
-  // ── Contenido ────────────────────────────────────────────────────────────
   const formContent = (
     <>
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
+      <div className="flex items-center justify-between px-6 py-4 bg-blue-900 shrink-0">
         <h2 className="text-white font-semibold text-lg">Editar Mi Perfil</h2>
         <button
           onClick={handleCancel}
-          className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
+          disabled={loading}
+          className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer disabled:opacity-50"
         >
           <X className="w-5 h-5" strokeWidth={2} />
         </button>
       </div>
 
-      {/* Body */}
       <div className="px-6 py-5 overflow-y-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-          {/* Campos bloqueados — solo lectura */}
-          <ReadOnlyField label="Tipo Documento" value={user?.documentType} />
-          <ReadOnlyField label="Documento"       value={user?.document}     />
-          <ReadOnlyField label="Nombre Completo" value={user?.name}         />
-          <ReadOnlyField label="Rol"             value={user?.role ?? "Cliente"} />
-
-          {/* Correo */}
           <div className="sm:col-span-2 flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
-              Correo Electrónico<span className="text-red-500">*</span>
+              Nombre Completo <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="fullName"
+              value={form.fullName}
+              onChange={handleChange}
+              placeholder="Juan Pérez García"
+              className={inputClass("fullName")}
+              disabled={loading}
+            />
+            <ErrorMsg field="fullName" touched={touched} errors={errors} />
+          </div>
+
+          <div className="sm:col-span-2 flex flex-col gap-1.5">
+            <label className="block text-sm font-medium text-gray-700">
+              Correo Electrónico <span className="text-red-500">*</span>
             </label>
             <input
               type="email"
               name="email"
               value={form.email}
               onChange={handleChange}
+              placeholder="ejemplo@mail.com"
               className={inputClass("email")}
+              disabled={loading}
+              autoComplete="email"
             />
             <ErrorMsg field="email" touched={touched} errors={errors} />
           </div>
 
-          {/* Teléfono */}
-          <div className="flex flex-col gap-1.5">
+          <div className="sm:col-span-2 flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
-              Teléfono<span className="text-red-500">*</span>
+              Teléfono <span className="text-red-500">*</span>
             </label>
             <input
               type="tel"
               name="phone"
               value={form.phone}
               onChange={handleChange}
+              placeholder="3001234567"
               maxLength={10}
               className={inputClass("phone")}
+              disabled={loading}
             />
             <ErrorMsg field="phone" touched={touched} errors={errors} />
           </div>
 
-          {/* Dirección */}
-          <div className="flex flex-col gap-1.5">
-            <label className="block text-sm font-medium text-gray-700">
-              Dirección<span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="address"
-              value={form.address}
-              onChange={handleChange}
-              placeholder="Tu dirección"
-              className={inputClass("address")}
-            />
-            <ErrorMsg field="address" touched={touched} errors={errors} />
-          </div>
-
-          {/* Separador sección contraseña */}
-          <div className="sm:col-span-2 border-t border-gray-200 pt-2">
+          <div className="sm:col-span-2 border-t border-gray-200 pt-4">
             <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">
               Cambio de contraseña (opcional)
             </p>
           </div>
 
-          {/* Contraseña actual */}
-          <PasswordField
-            label="Contraseña Actual"
-            name="currentPassword"
-            form={form}
-            show={showCurrent}
-            onToggle={() => setShowCurrent((p) => !p)}
-            inputClass={inputClass}
-            handleChange={handleChange}
-            errors={errors}
-            touched={touched}
-          />
+          <div className="sm:col-span-2">
+            <PasswordField
+              label="Contraseña Actual"
+              name="currentPassword"
+              value={form.currentPassword}
+              onChange={handleChange}
+              show={showCurrent}
+              onToggle={() => setShowCurrent(!showCurrent)}
+              touched={touched}
+              errors={errors}
+              disabled={loading}
+              required={!!form.newPassword}
+            />
+          </div>
 
-          {/* Nueva contraseña */}
-          <PasswordField
-            label="Nueva Contraseña"
-            name="newPassword"
-            form={form}
-            show={showNew}
-            onToggle={() => setShowNew((p) => !p)}
-            inputClass={inputClass}
-            handleChange={handleChange}
-            errors={errors}
-            touched={touched}
-          />
+          <div className="sm:col-span-2">
+            <PasswordField
+              label="Nueva Contraseña"
+              name="newPassword"
+              value={form.newPassword}
+              onChange={handleChange}
+              show={showNew}
+              onToggle={() => setShowNew(!showNew)}
+              touched={touched}
+              errors={errors}
+              disabled={loading}
+              required={false}
+            />
+          </div>
 
-          {/* Confirmar contraseña */}
           <div className="sm:col-span-2">
             <PasswordField
               label="Confirmar Contraseña"
               name="confirmPassword"
-              form={form}
-              show={showConfirmPwd}
-              onToggle={() => setShowConfirmPwd((p) => !p)}
-              inputClass={inputClass}
-              handleChange={handleChange}
-              errors={errors}
+              value={form.confirmPassword}
+              onChange={handleChange}
+              show={showConfirm}
+              onToggle={() => setShowConfirm(!showConfirm)}
               touched={touched}
+              errors={errors}
+              disabled={loading}
+              required={!!form.newPassword}
             />
           </div>
 
         </div>
       </div>
 
-      {/* Footer */}
       <div className="border-t border-gray-200 px-6 py-4 flex items-center gap-3 shrink-0">
         <button
           onClick={handleSubmit}
-          className="flex-1 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"
+          disabled={loading}
+          className={`flex-1 py-2.5 text-sm font-medium text-white bg-blue-900 rounded-lg transition-colors cursor-pointer
+            ${loading ? "opacity-70 cursor-not-allowed" : "hover:bg-blue-800"}
+          `}
         >
-          Guardar Cambios
+          {loading ? "Guardando..." : "Guardar Cambios"}
         </button>
         <button
           onClick={handleCancel}
-          className="flex-1 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+          disabled={loading}
+          className={`flex-1 py-2.5 text-sm font-medium text-white bg-gray-500 rounded-lg transition-colors cursor-pointer
+            ${loading ? "opacity-70 cursor-not-allowed" : "hover:bg-gray-600"}
+          `}
         >
           Cancelar
         </button>
@@ -398,7 +462,6 @@ function EditProfileForm({ onClose }) {
     </>
   );
 
-  // ── Render según contexto ────────────────────────────────────────────────
   if (isAdminContext) {
     return (
       <div
@@ -416,7 +479,7 @@ function EditProfileForm({ onClose }) {
   }
 
   return (
-    <div className="max-w-4xl w-full mx-auto bg-white rounded-2xl shadow-xl overflow-hidden my-6">
+    <div className="max-w-2xl w-full mx-auto bg-white rounded-2xl shadow-xl overflow-hidden my-6">
       {formContent}
     </div>
   );

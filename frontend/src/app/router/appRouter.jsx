@@ -8,6 +8,7 @@ import RegisterPage from "../../Features/access/pages/RegisterPage.jsx";
 import ForgotPasswordPage from "../../Features/access/pages/ForgotPasswordPage.jsx";
 import ResetPasswordPage from "../../Features/access/pages/ResetPasswordPage.jsx";
 import EditProfilePage from "../../Features/access/pages/EditProfilePage.jsx";
+import AuthCallback from "../../Features/access/pages/AuthCallback.jsx";
 
 /* ========= LANDING ========= */
 import Landing from "../../Features/landing//pages/Landing.jsx";
@@ -86,6 +87,7 @@ const AppRouter = () => {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgotpassword" element={<ForgotPasswordPage />} />
         <Route path="/resetpassword" element={<ResetPasswordPage />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
       </Route>
 
       {/* ========= LANDING ========= */}
