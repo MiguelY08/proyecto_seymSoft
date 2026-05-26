@@ -1,57 +1,54 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, FileSpreadsheet, Plus } from "lucide-react";
+import { Search, FileSpreadsheet, Plus, Loader2 } from "lucide-react";
 import { useAlert } from "../../../shared/alerts/useAlert";
-import { downloadUsersExcel } from "../helpers/usersHelpers";
 import { usePermissions } from "../../configuration/roles/hooks/usePermissions";
 import ButtonComponent from "../../../shared/ButtonComponent";
 
 /**
  * Componente TopBar.
  * Barra superior con buscador, botón de descarga Excel y botón para crear usuario.
- * Maneja búsqueda en tiempo real y exportación de datos.
- * @param {object} props - Props del componente.
+ * @param {object} props
  * @param {string} props.search - Valor actual del término de búsqueda.
- * @param {function} props.onSearchChange - Función para actualizar el término de búsqueda.
- * @param {Array} props.users - Array completo de usuarios para exportación.
- * @returns {JSX.Element} Barra con controles de búsqueda y acciones.
+ * @param {function} props.onSearchChange - Función para actualizar la búsqueda.
+ * @param {function} props.onExport - Función asíncrona que exporta usuarios (debe manejar la generación y descarga del Excel).
+ * @param {number} props.totalUsers - Cantidad total de usuarios (para mostrar en confirmación).
  */
-function TopBar({ search, onSearchChange, users = [] }) {
+function TopBar({ search, onSearchChange, onExport, totalUsers = 0 }) {
   const navigate = useNavigate();
-  const { showConfirm, showTimer, showWarning } = useAlert();
+  const { showConfirm, showTimer, showWarning, showError } = useAlert();
   const { hasPermission } = usePermissions();
+  const [exporting, setExporting] = useState(false);
 
   /**
    * Maneja la descarga de usuarios en formato Excel.
    * Valida que haya usuarios y confirma la acción antes de exportar.
    */
-  const handleDownload = () => {
-    if (users.length === 0) {
-      showWarning(
-        "Sin registros",
-        "No hay usuarios registrados para descargar.",
-      );
+  const handleDownload = async () => {
+    if (totalUsers === 0) {
+      showWarning("Sin registros", "No hay usuarios registrados para descargar.");
       return;
     }
 
-    showConfirm(
+    const confirmed = await showConfirm(
       "question",
       "¿Desea descargar los usuarios?",
-      `Se exportarán ${users.length} registro${users.length !== 1 ? "s" : ""} en formato Excel.`,
-      { confirmButtonText: "Descargar", cancelButtonText: "Cancelar" },
-    ).then((result) => {
-      if (result.isConfirmed) {
-        const success = downloadUsersExcel(users);
-        if (success) {
-          showTimer(
-            "success",
-            "Descarga completada",
-            "El archivo Excel se ha generado exitosamente.",
-            4000,
-          );
-        }
-      }
-    });
+      `Se exportarán ${totalUsers} registro${totalUsers !== 1 ? "s" : ""} en formato Excel.`,
+      { confirmButtonText: "Descargar", cancelButtonText: "Cancelar" }
+    );
+
+    if (!confirmed?.isConfirmed) return;
+
+    setExporting(true);
+    try {
+      await onExport(); // La función del padre se encarga de obtener los datos y generar el Excel
+      showTimer("success", "Descarga completada", "El archivo Excel se ha generado exitosamente.", 4000);
+    } catch (error) {
+      console.error("Error al exportar:", error);
+      showError("Error", "No se pudo generar el archivo Excel. Intente de nuevo.");
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -76,9 +73,15 @@ function TopBar({ search, onSearchChange, users = [] }) {
         {hasPermission("usuarios.descargar") && (
           <ButtonComponent
             className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-2 flex items-center gap-2"
-            onClick={handleDownload}>
+            onClick={handleDownload}
+            disabled={exporting}
+          >
+            {exporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
               <FileSpreadsheet className="w-4 h-4" />
-              Exportar Excel
+            )}
+            Exportar Excel
           </ButtonComponent>
         )}
 

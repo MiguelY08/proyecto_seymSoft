@@ -1,23 +1,16 @@
 import { useRef } from 'react';
 import { Maximize2, Trash2 } from 'lucide-react';
-import { MAX_FILE_SIZE } from '../helpers/carouselHelpers';
+import { MAX_FILE_SIZE } from '../helpers/bannerHelper';
 
 // ─── CardManagement ───────────────────────────────────────────────────────────
-// Tarjeta dual: muestra una imagen existente con sus controles,
-// o el botón "Agregar imagen" cuando isAddCard es true.
-//
-// Props (tarjeta de imagen):
-//   slide     — Objeto de metadata del slide { id, nombre, orden, activo }
-//   imageUrl  — URL object de la imagen (generada desde IndexedDB)
-//   onDelete  — (id) => void
-//   onToggle  — (id) => void
-//   onExpand  — (id) => void
-//
-// Props (tarjeta de agregar):
-//   isAddCard — true
-//   onAdd     — (file: File) => void
-// ─────────────────────────────────────────────────────────────────────────────
-function CardManagement({ slide, imageUrl, onDelete, onToggle, onExpand, onAdd, isAddCard = false }) {
+function CardManagement({
+  slide,
+  onDelete,
+  onToggle,
+  onExpand,
+  onAdd,
+  isAddCard = false,
+}) {
   const fileInputRef = useRef(null);
 
   // ─── Tarjeta para agregar imagen ─────────────────────────────────────────
@@ -30,11 +23,12 @@ function CardManagement({ slide, imageUrl, onDelete, onToggle, onExpand, onAdd, 
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/jpg,image/png,image/webp"
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (!file) return;
+
             e.target.value = '';
             onAdd?.(file);
           }}
@@ -53,8 +47,8 @@ function CardManagement({ slide, imageUrl, onDelete, onToggle, onExpand, onAdd, 
     );
   }
 
-  // ─── Tarjeta de imagen existente ─────────────────────────────────────────
-  const isActive = slide?.activo ?? true;
+  const imageUrl = slide?.imageUrl;
+  const isActive = slide?.activo ?? false;
 
   return (
     <div
@@ -80,7 +74,7 @@ function CardManagement({ slide, imageUrl, onDelete, onToggle, onExpand, onAdd, 
         </div>
       )}
 
-      {/* Overlay de acciones (top-right) */}
+      {/* Acciones */}
       <div className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 flex items-center gap-1 sm:gap-1.5">
         <button
           type="button"
@@ -101,7 +95,7 @@ function CardManagement({ slide, imageUrl, onDelete, onToggle, onExpand, onAdd, 
         </button>
       </div>
 
-      {/* Toggle activo/inactivo (bottom-right) */}
+      {/* Toggle activo/inactivo */}
       <div className="absolute bottom-1.5 sm:bottom-2 right-1.5 sm:right-2">
         <button
           type="button"
@@ -111,14 +105,19 @@ function CardManagement({ slide, imageUrl, onDelete, onToggle, onExpand, onAdd, 
             isActive ? 'bg-green-500' : 'bg-red-400'
           }`}
         >
-          <span className={`absolute top-1/2 -translate-y-1/2 text-white text-[9px] font-bold transition-all duration-300 ${
-            isActive ? 'left-1.5' : 'right-1.5'
-          }`}>
+          <span
+            className={`absolute top-1/2 -translate-y-1/2 text-white text-[9px] font-bold transition-all duration-300 ${
+              isActive ? 'left-1.5' : 'right-1.5'
+            }`}
+          >
             {isActive ? 'A' : 'I'}
           </span>
-          <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
-            isActive ? 'left-26px' : 'left-0.5'
-          }`} />
+
+          <span
+            className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
+              isActive ? 'left-6.5' : 'left-0.5'
+            }`}
+          />
         </button>
       </div>
 

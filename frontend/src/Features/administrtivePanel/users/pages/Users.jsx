@@ -1,111 +1,158 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 
-// Importaciones de componentes y servicios locales
+// Componentes y servicios
 import TopBar          from '../components/TopBar';
 import UsersTable      from '../components/UsersTable';
 import PaginationAdmin from '../../../shared/PaginationAdmin';
-import { UsersDB }     from '../services/usersDB';
-import { filterUsers } from '../helpers/usersHelpers';
+import { UserService } from '../services/userService';
+import { useAlert }    from '../../../shared/alerts/useAlert';
 
-// Constante para definir el número de registros por página
+// Número de registros por página (debe coincidir con el limit que acepta la API)
 const RECORDS_PER_PAGE = 13;
 
-// ─── Componente principal Users ────────────────────────────────────────────────────────────────────
-/**
- * Componente que gestiona la vista de usuarios en el panel administrativo.
- * Permite listar, buscar, paginar, activar/desactivar y eliminar usuarios.
- */
 function Users() {
-  // Hook para obtener la ubicación actual de la ruta
-  const location                     = useLocation();
+  const location = useLocation();
+  const { showError, showWarning } = useAlert();
 
-  // Estado para almacenar la lista de usuarios
-  const [data,        setData]        = useState(() => UsersDB.list());
-
-  // Estado para el término de búsqueda
-  const [search,      setSearch]      = useState('');
-
-  // Estado para la página actual en la paginación
+  // Estados principales
+  const [users, setUsers] = useState([]);           // Lista de usuarios de la página actual
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: RECORDS_PER_PAGE,
+    total: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
+  const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Efecto para recargar la lista de usuarios al volver de formularios de creación/edición
+  // ─── Función para cargar usuarios desde la API ─────────────────────────────
+  const fetchUsers = useCallback(async (page, searchTerm) => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Si la API soporta búsqueda, se pasa como parámetro. Si no, se puede eliminar.
+      // En caso de que no soporte búsqueda, puedes comentar la línea y hacer filtrado local
+      const result = await UserService.list(page, RECORDS_PER_PAGE, searchTerm);
+      setUsers(result.users);
+      setPagination(result.pagination);
+      // Si la API no devuelve la página actual, se puede forzar
+      setCurrentPage(result.pagination.page || page);
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      setError(err.response?.data?.message || 'No se pudieron cargar los usuarios.');
+      showError('Error de carga', 'No se pudieron cargar los usuarios. Intenta de nuevo.');
+    } finally {
+      setLoading(false);
+    }
+  }, [showError]);
+
+  // ─── Recargar cuando cambia la página, la búsqueda o se vuelve de otra ruta ─
   useEffect(() => {
-    setData(UsersDB.list());
-  }, [location.pathname]);
+    fetchUsers(currentPage, search);
+  }, [currentPage, search, location.pathname, fetchUsers]);
 
-  // ─── Funciones de manejo de acciones ──────────────────────────────────────────────────────────────
+  // ─── Manejadores de acciones ───────────────────────────────────────────────
+  const handleToggle = async (userId) => {
+    // Encontrar el usuario actual para saber su estado activo
+    const currentUser = users.find(u => u.id === userId);
+    if (!currentUser) return;
 
-  /**
-   * Maneja el cambio de estado activo/inactivo de un usuario.
-   * @param {number} id - ID del usuario a alternar.
-   */
-  const handleToggle = (id) => {
-    const updated = UsersDB.toggle(id);
-    setData(updated);
+    try {
+      await UserService.toggle(userId, !currentUser.active);
+      // Recargar la misma página después de cambiar el estado
+      await fetchUsers(currentPage, search);
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Error al cambiar el estado del usuario.';
+      showError('Error', msg);
+    }
   };
 
-  /**
-   * Maneja la eliminación de un usuario.
-   * @param {object} row - Objeto del usuario a eliminar.
-   */
-  const handleDelete = (row) => {
-    const updated = UsersDB.delete(row.id);
-    setData(updated);
+  const handleDelete = async (user) => {
+    try {
+      await UserService.delete(user.id);
+      // Si el usuario eliminado era el único de la página actual y no es la primera,
+      // retroceder una página para evitar una página vacía
+      let newPage = currentPage;
+      if (users.length === 1 && currentPage > 1) {
+        newPage = currentPage - 1;
+        setCurrentPage(newPage);
+      }
+      await fetchUsers(newPage, search);
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Error al eliminar el usuario.';
+      showError('Error', msg);
+    }
   };
 
-  /**
-   * Maneja el cambio en el campo de búsqueda y resetea la página a 1.
-   * @param {string} value - Nuevo valor de búsqueda.
-   */
   const handleSearchChange = (value) => {
     setSearch(value);
-    setCurrentPage(1);
+    setCurrentPage(1); // Reiniciar a la primera página al buscar
   };
 
-  // ─── Filtro y paginación ───────────────────────────────────────────────────
+  // ─── Renderizado condicional mientras carga o hay error ────────────────────
+  if (loading && users.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#004D77] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando usuarios...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Filtrar usuarios según el término de búsqueda
-  const filtered      = filterUsers(data, search);
-
-  // Obtener los datos paginados para la página actual
-  const paginatedData = filtered.slice(
-    (currentPage - 1) * RECORDS_PER_PAGE,
-    currentPage * RECORDS_PER_PAGE
-  );
+  if (error && users.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center text-red-500">
+          <p className="text-lg font-semibold">Error de carga</p>
+          <p>{error}</p>
+          <button
+            onClick={() => fetchUsers(currentPage, search)}
+            className="mt-4 px-4 py-2 bg-[#004D77] text-white rounded-lg"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
-
       {/* Barra superior con búsqueda y acciones */}
       <TopBar
         search={search}
         onSearchChange={handleSearchChange}
-        users={data}
+        users={users} // Se usa para mostrar el total de resultados (puede ajustarse)
       />
 
-      {/* ── Tabla de usuarios ──────────────────────────────────────────────────────── */}
+      {/* Tabla de usuarios */}
       <div className="bg-white rounded-xl shadow-md">
         <UsersTable
-          data={paginatedData}
+          data={users}
           onToggle={handleToggle}
           onDelete={handleDelete}
           search={search}
-          totalData={data.length}
+          totalData={pagination.total} // Total real de usuarios (sin paginar)
         />
       </div>
 
-      {/* ── Componente de paginación ──────────────────────────────────────────────────── */}
-      {filtered.length > 0 && (
+      {/* Paginación - solo si hay más de una página */}
+      {pagination.totalPages > 1 && (
         <PaginationAdmin
           currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          totalRecords={filtered.length}
+          onPageChange={(page) => setCurrentPage(page)}
+          totalRecords={pagination.total}
           recordsPerPage={RECORDS_PER_PAGE}
         />
       )}
 
-      {/* Outlet para renderizar rutas anidadas */}
       <Outlet />
     </div>
   );

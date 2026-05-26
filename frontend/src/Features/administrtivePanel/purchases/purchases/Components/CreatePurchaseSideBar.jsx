@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Plus, Minus, AlertCircle } from "lucide-react";
+import { Search, Plus, Minus, AlertCircle, Barcode, ChevronDown, ChevronUp, Check } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 
@@ -16,7 +16,7 @@ const CreateSidebar = ({
   quantity,
   setQuantity,
   handleQuantityChange,
-  handleAddProduct,
+  handleAddProduct: handleAddProductProp,
   purchaseItems,
   invoiceTouched,
   setInvoiceTouched,
@@ -25,7 +25,11 @@ const CreateSidebar = ({
   providerTouched,
   setProviderTouched,
   openCreateProduct,
-  isFormModalOpen  // 👈 NUEVO
+  isFormModalOpen,
+  // Estado elevado de códigos extra: vive en CreatePurchase para que
+  // handleAddProduct pueda leerlos al construir el item de compra.
+  extraBarcodes = {},
+  onExtraBarcodesChange,
 }) => {
   const navigate = useNavigate();
   const { showConfirm } = useAlert();
@@ -34,6 +38,19 @@ const CreateSidebar = ({
   const [searchProvider, setSearchProvider] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
 
+  // ── Producto seleccionado del buscador (objeto completo) ──
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
+  // ── Estado formulario de código de barras ──
+  const [showBarcodeForm, setShowBarcodeForm] = useState(false);
+  const [barcodeValue, setBarcodeValue] = useState("");
+  const [barcodeSaved, setBarcodeSaved] = useState(false);
+  const [barcodeError, setBarcodeError] = useState("");
+
+  // Índice del código activo para el producto seleccionado (0 = original)
+  const [activeBarcodeIndex, setActiveBarcodeIndex] = useState(0);
+
+  // ── Proveedores ──
   const providers = [
     "Papelería El Punto Escolar",
     "OfiExpress Ltda.",
@@ -41,27 +58,41 @@ const CreateSidebar = ({
     "Útiles Escolares SAS",
   ];
 
-  const filteredProviders = providers.filter((provider) =>
-    provider.toLowerCase().includes(searchProvider.toLowerCase())
+  const filteredProviders = providers.filter((p) =>
+    p.toLowerCase().includes(searchProvider.toLowerCase())
   );
 
   const filteredProducts = productsDB.filter(
-    (product) =>
-      product.producto.toLowerCase().includes(searchProduct.toLowerCase()) ||
-      product.codigoBarras.includes(searchProduct)
+    (p) =>
+      p.producto.toLowerCase().includes(searchProduct.toLowerCase()) ||
+      p.codigoBarras.includes(searchProduct)
   );
 
-  // ================= VALIDACIONES =================
+  // Todos los códigos ya en uso (originales + extras) para evitar duplicados
+  const allUsedBarcodes = [
+    ...productsDB.map((p) => p.codigoBarras),
+    ...Object.values(extraBarcodes).flat(),
+  ];
+
+  // Códigos disponibles para el producto actualmente seleccionado
+  const availableBarcodes = selectedProduct
+    ? [selectedProduct.codigoBarras, ...(extraBarcodes[selectedProduct.codigoBarras] || [])]
+    : [];
+
+  // Código de barras que se usará al agregar
+  const resolvedBarcode =
+    selectedProduct && availableBarcodes[activeBarcodeIndex]
+      ? availableBarcodes[activeBarcodeIndex]
+      : selectedProduct?.codigoBarras;
+
+  // ================= VALIDACIONES PRINCIPALES =================
 
   const providerError = (() => {
     if (!providerTouched) return null;
     if (!selectedProvider) return "El proveedor es obligatorio";
-    if (selectedProvider.length < 3)
-      return "El nombre del proveedor es demasiado corto";
+    if (selectedProvider.length < 3) return "El nombre del proveedor es demasiado corto";
     return null;
   })();
-
-  const providerValid = providerTouched && !providerError && selectedProvider;
 
   const invoiceError = (() => {
     if (!invoiceTouched) return null;
@@ -71,31 +102,21 @@ const CreateSidebar = ({
     return null;
   })();
 
-  const invoiceValid = invoiceTouched && !invoiceError && invoiceNumber.trim();
-
   const dateError = (() => {
     if (!dateTouched) return null;
     if (!purchaseDate) return "La fecha de compra es obligatoria";
-
     const selected = new Date(purchaseDate);
     const today = new Date();
     today.setHours(23, 59, 59, 999);
-
     if (selected > today) return "La fecha no puede ser futura";
-
-    const minDate = new Date("2000-01-01");
-    if (selected < minDate) return "Fecha demasiado antigua";
-
+    if (selected < new Date("2000-01-01")) return "Fecha demasiado antigua";
     return null;
   })();
-
-  const dateValid = dateTouched && !dateError && purchaseDate;
 
   // ================= ESTILO INPUT =================
 
   const inputClass = (error) =>
-    `w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-600 outline-none transition-all
-    ${
+    `w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-600 outline-none transition-all ${
       error
         ? "border-red-400 focus:ring-2 focus:ring-red-300"
         : "border-gray-300 focus:ring-2 focus:ring-[#004D77]"
@@ -105,23 +126,104 @@ const CreateSidebar = ({
 
   const handleBackToPurchases = async (e) => {
     e.preventDefault();
-
     if (purchaseItems.length > 0) {
       const result = await showConfirm(
         "warning",
         "Volver a compras",
         "Si sales ahora se eliminarán los productos agregados. ¿Deseas continuar?",
-        {
-          confirmButtonText: "Sí, salir",
-          cancelButtonText: "Seguir editando",
-        }
+        { confirmButtonText: "Sí, salir", cancelButtonText: "Seguir editando" }
       );
-
       if (!result?.isConfirmed) return;
     }
-
     navigate("/admin/purchases");
   };
+
+  // ================= SELECCIONAR PRODUCTO DEL BUSCADOR =================
+
+  const handleSelectProduct = (product) => {
+    setSearchProduct(product.producto);
+    setSelectedProduct(product);
+    setShowSuggestions(false);
+    // Resetear form de código al cambiar producto
+    setShowBarcodeForm(false);
+    setBarcodeValue("");
+    setBarcodeError("");
+    setBarcodeSaved(false);
+    setActiveBarcodeIndex(0);
+  };
+
+  // Si el usuario edita manualmente el input, limpiar selección
+  const handleSearchChange = (e) => {
+    const val = e.target.value;
+    setSearchProduct(val);
+    setShowSuggestions(true);
+    if (selectedProduct && val !== selectedProduct.producto) {
+      setSelectedProduct(null);
+      setShowBarcodeForm(false);
+      setBarcodeValue("");
+      setBarcodeError("");
+      setBarcodeSaved(false);
+      setActiveBarcodeIndex(0);
+    }
+  };
+
+  // ================= TOGGLE FORMULARIO CÓDIGO DE BARRAS =================
+  // Validación 3: no se puede abrir sin haber seleccionado un producto
+
+  const handleToggleBarcodeForm = () => {
+    if (!selectedProduct) return;
+    if (showBarcodeForm) {
+      setShowBarcodeForm(false);
+      setBarcodeValue("");
+      setBarcodeError("");
+      setBarcodeSaved(false);
+    } else {
+      setShowBarcodeForm(true);
+    }
+  };
+
+  // ================= GUARDAR CÓDIGO DE BARRAS =================
+
+  const handleSaveBarcode = () => {
+    const trimmed = barcodeValue.trim();
+
+    if (!trimmed) {
+      setBarcodeError("El código de barras es obligatorio");
+      return;
+    }
+    if (!/^[0-9]{8,13}$/.test(trimmed)) {
+      setBarcodeError("El código debe tener entre 8 y 13 dígitos numéricos");
+      return;
+    }
+    // Validación 2: no permitir código duplicado
+    if (allUsedBarcodes.includes(trimmed)) {
+      setBarcodeError("Este código de barras ya está registrado");
+      return;
+    }
+
+    const key = selectedProduct.codigoBarras;
+    onExtraBarcodesChange((prev) => ({
+      ...prev,
+      [key]: [...(prev[key] || []), trimmed],
+    }));
+
+    setBarcodeError("");
+    setBarcodeSaved(true);
+    setTimeout(() => {
+      setBarcodeSaved(false);
+      setShowBarcodeForm(false);
+      setBarcodeValue("");
+    }, 1800);
+  };
+
+  // ================= AGREGAR PRODUCTO =================
+  // Validación 4: pasar el código de barras resuelto (original o nuevo seleccionado)
+
+  const handleAddProduct = () => {
+    handleAddProductProp(resolvedBarcode);
+  };
+
+  const barcodeLinkDisabled = !selectedProduct;
 
   return (
     <div className="col-span-3">
@@ -135,19 +237,12 @@ const CreateSidebar = ({
           </label>
 
           <div
-            onClick={() => {
-              setIsOpen(!isOpen);
-              setProviderTouched(true);
-            }}
-            className={`w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-600 cursor-pointer flex justify-between items-center transition-all
-            ${
-              providerError
-                ? "border-red-400"
-                : "border-gray-300 hover:border-[#004D77]"
+            onClick={() => { setIsOpen(!isOpen); setProviderTouched(true); }}
+            className={`w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-600 cursor-pointer flex justify-between items-center transition-all ${
+              providerError ? "border-red-400" : "border-gray-300 hover:border-[#004D77]"
             }`}
           >
             <span>{selectedProvider || "Seleccione el proveedor"}</span>
-
             <div className="flex items-center gap-2">
               {providerTouched && providerError && (
                 <AlertCircle size={16} className="text-red-400" />
@@ -161,7 +256,6 @@ const CreateSidebar = ({
               <h3 className="text-center font-semibold text-gray-800 mb-3">
                 Seleccione un Proveedor
               </h3>
-
               <div className="flex items-center gap-2 mb-3">
                 <div className="flex items-center bg-gray-100 px-3 py-2 rounded-full w-full">
                   <Search size={16} className="text-gray-500 mr-2" />
@@ -173,16 +267,14 @@ const CreateSidebar = ({
                     className="bg-transparent outline-none text-sm w-full"
                   />
                 </div>
-
-                <button  onClick={isFormModalOpen}
-                className="flex items-center gap-1 px-3 py-1 border border-sky-700 text-[#004D77] bg-white hover:bg-sky-50 rounded-lg text-xs font-semibold transition-all">
-                  Crear
-                  <Plus size={14} />
+                <button
+                  onClick={isFormModalOpen}
+                  className="flex items-center gap-1 px-3 py-1 border border-sky-700 text-[#004D77] bg-white hover:bg-sky-50 rounded-lg text-xs font-semibold transition-all"
+                >
+                  Crear <Plus size={14} />
                 </button>
               </div>
-
               <div className="w-full h-[2px] bg-[#004D77] mb-3"></div>
-
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {filteredProviders.map((provider, index) => (
                   <label
@@ -212,8 +304,7 @@ const CreateSidebar = ({
             }`}
           >
             <p className="text-xs text-red-500 flex items-center gap-1">
-              <AlertCircle size={12} />
-              {providerError}
+              <AlertCircle size={12} /> {providerError}
             </p>
           </div>
         </div>
@@ -224,38 +315,30 @@ const CreateSidebar = ({
           <label className="block text-sm font-bold text-gray-800 mb-2">
             No. factura
           </label>
-
           <div className="relative">
             <input
               type="text"
               value={invoiceNumber}
-              onChange={(e) => {
-                setInvoiceNumber(e.target.value);
-                setInvoiceTouched(true);
-              }}
+              onChange={(e) => { setInvoiceNumber(e.target.value); setInvoiceTouched(true); }}
               onBlur={() => setInvoiceTouched(true)}
               placeholder="Ingrese el No de la factura"
               className={inputClass(invoiceError)}
             />
-
             {invoiceTouched && invoiceError && (
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 <AlertCircle size={16} className="text-red-400" />
               </div>
             )}
           </div>
-
           <div
             className={`overflow-hidden transition-all duration-300 ${
               invoiceError ? "max-h-10 mt-1.5 opacity-100" : "max-h-0 opacity-0"
             }`}
           >
             <p className="text-xs text-red-500 flex items-center gap-1">
-              <AlertCircle size={12} />
-              {invoiceError}
+              <AlertCircle size={12} /> {invoiceError}
             </p>
           </div>
-
           {invoiceTouched && !invoiceError && (
             <p className="text-xs text-gray-400 mt-1 text-right">
               {invoiceNumber.trim().length}/20 caracteres
@@ -269,77 +352,82 @@ const CreateSidebar = ({
           <label className="block text-sm font-bold text-gray-800 mb-2">
             Fecha compra
           </label>
-
           <div className="relative">
             <input
               type="date"
               value={purchaseDate}
               max={new Date().toISOString().split("T")[0]}
-              onChange={(e) => {
-                setPurchaseDate(e.target.value);
-                setDateTouched(true);
-              }}
+              onChange={(e) => { setPurchaseDate(e.target.value); setDateTouched(true); }}
               onBlur={() => setDateTouched(true)}
               className={inputClass(dateError)}
             />
-
             {dateTouched && dateError && (
               <div className="absolute right-8 top-1/2 -translate-y-1/2">
                 <AlertCircle size={16} className="text-red-400" />
               </div>
             )}
           </div>
-
           <div
             className={`overflow-hidden transition-all duration-300 ${
               dateError ? "max-h-10 mt-1.5 opacity-100" : "max-h-0 opacity-0"
             }`}
           >
             <p className="text-xs text-red-500 flex items-center gap-1">
-              <AlertCircle size={12} />
-              {dateError}
+              <AlertCircle size={12} /> {dateError}
             </p>
           </div>
         </div>
 
         {/* ================= BUSCAR PRODUCTO ================= */}
 
-        <div className="mb-6 relative">
+        <div className="mb-1 relative">
           <label className="block text-sm font-bold text-gray-800 mb-2">
             Busque el Producto
           </label>
-
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <input
                 type="text"
                 value={searchProduct}
-                onChange={(e) => {
-                  setSearchProduct(e.target.value);
-                  setShowSuggestions(true);
-                }}
+                onChange={handleSearchChange}
                 placeholder="Buscar producto o código"
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-600 focus:ring-2 focus:ring-[#004D77] outline-none"
+                className={`w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-600 focus:ring-2 focus:ring-[#004D77] outline-none transition-all ${
+                  // Validación 1: texto escrito pero no coincide con ningún producto
+                  searchProduct && !selectedProduct && filteredProducts.length === 0
+                    ? "border-red-400"
+                    : "border-gray-300"
+                }`}
               />
             </div>
-
             <button
-            onClick={openCreateProduct}
-            className="flex items-center justify-center px-3 py-2 border border-[#004D77] text-[#004D77] bg-white hover:bg-[#004D77] hover:text-white rounded-lg transition-all"
-          >
-            <Plus size={16} />
-          </button>
+              onClick={openCreateProduct}
+              className="flex items-center justify-center px-3 py-2 border border-[#004D77] text-[#004D77] bg-white hover:bg-[#004D77] hover:text-white rounded-lg transition-all"
+            >
+              <Plus size={16} />
+            </button>
           </div>
 
+          {/* Validación 1: producto no existente */}
+          <div
+            className={`overflow-hidden transition-all duration-300 ${
+              searchProduct && !selectedProduct && filteredProducts.length === 0
+                ? "max-h-10 mt-1.5 opacity-100"
+                : "max-h-0 opacity-0"
+            }`}
+          >
+            <p className="text-xs text-red-500 flex items-center gap-1">
+              <AlertCircle size={12} />
+              Producto no encontrado en el catálogo
+            </p>
+          </div>
+
+          {/* Sugerencias del buscador */}
           {showSuggestions && searchProduct && filteredProducts.length > 0 && (
             <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
               {filteredProducts.slice(0, 6).map((product) => (
                 <div
                   key={product.id}
-                  onClick={() => {
-                    setSearchProduct(product.producto);
-                    setShowSuggestions(false);
-                  }}
+                  onClick={() => handleSelectProduct(product)}
                   className="px-4 py-2 text-sm text-gray-700 hover:bg-[#004D77] hover:text-white cursor-pointer transition-all"
                 >
                   <div className="font-semibold">{product.producto}</div>
@@ -350,6 +438,162 @@ const CreateSidebar = ({
               ))}
             </div>
           )}
+
+          {/* Chip: producto seleccionado con código activo */}
+          {selectedProduct && (
+            <div className="mt-2 flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-lg text-xs text-[#004D77] font-medium">
+                <Check size={11} className="text-green-500" />
+                {selectedProduct.producto}
+              </span>
+              {availableBarcodes.length > 1 && (
+                <span className="text-xs text-gray-400">
+                  Código activo:
+                  <span className="ml-1 font-mono font-semibold text-[#004D77]">
+                    {resolvedBarcode}
+                  </span>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ================= SELECTOR DE CÓDIGO DE BARRAS ACTIVO ================= */}
+        {/* Solo aparece cuando hay más de un código disponible para el producto */}
+
+        {selectedProduct && availableBarcodes.length > 1 && (
+          <div className="mb-2 mt-3">
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+              Selecciona el código a usar al agregar
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {availableBarcodes.map((code, i) => (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => setActiveBarcodeIndex(i)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-mono border transition-all ${
+                    activeBarcodeIndex === i
+                      ? "bg-[#004D77] text-white border-[#004D77] shadow-sm"
+                      : "bg-white text-gray-600 border-gray-300 hover:border-[#004D77]"
+                  }`}
+                >
+                  {i === 0 ? "Original" : `Nuevo ${i}`}: {code}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ================= LINK AGREGAR CÓDIGO DE BARRAS ================= */}
+
+        <div className="mb-4 mt-3">
+          <button
+            type="button"
+            onClick={handleToggleBarcodeForm}
+            title={barcodeLinkDisabled ? "Primero selecciona un producto del buscador" : ""}
+            className={`flex items-center gap-1.5 text-xs font-medium transition-colors group ${
+              barcodeLinkDisabled
+                ? "text-gray-300 cursor-not-allowed"
+                : "text-[#004D77] hover:text-[#003a5c] cursor-pointer"
+            }`}
+          >
+            <Barcode size={13} className="opacity-70" />
+            <span className={barcodeLinkDisabled ? "" : "underline underline-offset-2 decoration-dotted"}>
+              Agregar código de barras
+            </span>
+            {!barcodeLinkDisabled && (
+              showBarcodeForm
+                ? <ChevronUp size={13} className="opacity-60" />
+                : <ChevronDown size={13} className="opacity-60" />
+            )}
+          </button>
+
+          {/* Hint cuando no hay producto seleccionado */}
+          {barcodeLinkDisabled && (
+            <p className="text-xs text-gray-400 mt-0.5 ml-[18px]">
+              Selecciona un producto primero
+            </p>
+          )}
+
+          {/* Formulario desplegable */}
+          <div
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${
+              showBarcodeForm && selectedProduct
+                ? "max-h-80 opacity-100 mt-3"
+                : "max-h-0 opacity-0"
+            }`}
+          >
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
+
+              {/* Nombre del producto — solo lectura (Validación 1 implícita) */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Producto seleccionado
+                </label>
+                <div className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-500 font-medium select-none">
+                  {selectedProduct?.producto}
+                  <span className="ml-2 text-xs text-gray-400 font-normal font-mono">
+                    ({selectedProduct?.codigoBarras})
+                  </span>
+                </div>
+              </div>
+
+              {/* Nuevo código de barras */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Nuevo código de barras
+                </label>
+                <input
+                  type="text"
+                  value={barcodeValue}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 13);
+                    setBarcodeValue(val);
+                    setBarcodeError("");
+                  }}
+                  placeholder="Ej: 7701234000099"
+                  maxLength={13}
+                  className={`w-full px-3 py-2 bg-white border rounded-lg text-sm text-gray-700 outline-none transition-all font-mono tracking-wider ${
+                    barcodeError
+                      ? "border-red-400 focus:ring-2 focus:ring-red-300"
+                      : "border-gray-300 focus:ring-2 focus:ring-[#004D77]"
+                  }`}
+                />
+                <p className="text-right text-xs text-gray-400 mt-1">
+                  {barcodeValue.length}/13 dígitos
+                </p>
+              </div>
+
+              {/* Error */}
+              <div
+                className={`overflow-hidden transition-all duration-200 ${
+                  barcodeError ? "max-h-8 opacity-100" : "max-h-0 opacity-0"
+                }`}
+              >
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle size={12} /> {barcodeError}
+                </p>
+              </div>
+
+              {/* Botón guardar */}
+              <button
+                type="button"
+                onClick={handleSaveBarcode}
+                className={`w-full py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
+                  barcodeSaved
+                    ? "bg-green-500 text-white"
+                    : "bg-[#004D77] text-white hover:bg-[#003a5c]"
+                }`}
+              >
+                {barcodeSaved ? (
+                  <><Check size={15} /> ¡Guardado!</>
+                ) : (
+                  "Guardar código"
+                )}
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* ================= CANTIDAD ================= */}
@@ -358,7 +602,6 @@ const CreateSidebar = ({
           <label className="block text-sm font-bold text-gray-800 mb-2">
             Cantidad
           </label>
-
           <div className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={() => handleQuantityChange(-1)}
@@ -366,7 +609,6 @@ const CreateSidebar = ({
             >
               <Minus size={18} />
             </button>
-
             <input
               type="number"
               value={quantity}
@@ -375,7 +617,6 @@ const CreateSidebar = ({
               }
               className="w-24 sm:w-32 py-2 bg-white border border-gray-300 rounded-lg text-center font-semibold"
             />
-
             <button
               onClick={() => handleQuantityChange(1)}
               className="w-12 h-10 flex items-center justify-center bg-[#004D77] border-2 border-[#004D77] rounded-lg text-white"

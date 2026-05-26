@@ -1,4 +1,4 @@
-import UsersDB from "../../administrtivePanel/users/services/usersDB"
+import UserService from "../../administrtivePanel/users/services/userService"
 import { generateOTP } from "../helpers/generateOTP"
 import { sendRecoveryEmail } from "../api/emailApi"
 
@@ -7,7 +7,7 @@ const RECOVERY_KEY = "pm_password_recovery"
 // ─── Solicitar restablecimiento ──────────────────────────────────────────────
 export const requestPasswordRecovery = async (email) => {
 
-  const users = UsersDB.list()
+  const users = UserService.list()
 
   const user = users.find((u) => u.email === email)  // ← correo → email
 
@@ -63,7 +63,7 @@ export const verifyRecoveryCode = (code) => {
 // ─── Cambiar contraseña ──────────────────────────────────────────────────────
 export const resetPassword = (email, newPassword) => {
 
-  const users = UsersDB.list()
+  const users = UserService.list()
 
   const updatedUsers = users.map((user) => {
     if (user.email === email) {               
