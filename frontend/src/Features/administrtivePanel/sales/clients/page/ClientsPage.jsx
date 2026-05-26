@@ -95,30 +95,32 @@ const handleSave = async (formData) => {
       throw error;
     }
 };
+const handleDelete = async (client) => {
+  const result = await showConfirm(
+    'warning',
+    `¿Eliminar a "${client.fullName}"?`,
+    'Esta acción no se podrá revertir. Los créditos y pedidos se transferirán al cliente de sistema.',
+    { confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar' }
+  );
 
-  const handleDelete = async (client) => {
-    const result = await showConfirm(
-      'warning',
-      `¿Eliminar a "${client.fullName}"?`,
-      'Esta acción no se podrá revertir.',
-      { confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar' }
-    );
-
-    if (result.isConfirmed) {
-      try {
-        await clientsService.delete(client.id);
-        const newTotalPages = Math.ceil((totalRecords - 1) / RECORDS_PER_PAGE);
-        if (currentPage > newTotalPages && newTotalPages > 0) {
-          setCurrentPage(newTotalPages);
-        } else {
-          await loadClients();
-        }
-        showSuccess('Cliente eliminado', 'El cliente ha sido eliminado');
-      } catch (error) {
+  if (result.isConfirmed) {
+    try {
+      await clientsService.delete(client.id);
+      await loadClients();
+      showSuccess('Cliente eliminado', 'El cliente ha sido eliminado');
+    } catch (error) {
+      // 🔥 Mensaje específico según el error
+      if (error.message.includes('registros relacionados')) {
+        showError(
+          'No se puede eliminar', 
+          'Este cliente tiene ventas, créditos o accesos asociados. No se puede eliminar por integridad de datos.'
+        );
+      } else {
         showError('Error', error.message || 'No se pudo eliminar el cliente');
       }
     }
-  };
+  }
+};
 
   const handleSearchChange = (term) => {
     setSearchTerm(term);
