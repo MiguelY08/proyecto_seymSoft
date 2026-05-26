@@ -47,6 +47,46 @@ const EstadoBadge = ({ estado }) => {
   );
 };
 
+/**
+ * Muestra el código de barras original y, si hay codigosExtra,
+ * un badge "+N más" con tooltip igual al de TableCreate.
+ */
+const BarcodeCell = ({ codigoBarras, codigosExtra = [] }) => {
+  const total = codigosExtra.length;
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      <span className="font-mono">{codigoBarras ?? "-"}</span>
+      {total > 0 && (
+        <div className="relative group">
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-[10px] font-semibold text-[#004D77] cursor-default select-none">
+            +{total} más
+          </span>
+          <div className="
+            absolute z-50 bottom-full left-0 mb-1.5
+            hidden group-hover:block
+            bg-white border border-gray-200 rounded-xl shadow-xl
+            px-3 py-2.5 min-w-[180px]
+          ">
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+              Códigos adicionales
+            </p>
+            <ul className="flex flex-col gap-1">
+              {codigosExtra.map((code, i) => (
+                <li key={i} className="flex items-center gap-1.5 text-xs font-mono text-gray-700">
+                  <span className="w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[#004D77] text-white text-[9px] font-bold shrink-0">
+                    {i + 1}
+                  </span>
+                  {code}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const DetailPurchases = ({ purchase, onClose }) => {
   const navigate  = useNavigate();
   // Datos seguros: purchase o mock
