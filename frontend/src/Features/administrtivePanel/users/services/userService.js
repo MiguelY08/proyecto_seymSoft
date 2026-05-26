@@ -45,7 +45,8 @@ const mapUserFromApi = (apiUser) => ({
   ...apiUser,
   active: mapStatusToActive(apiUser.status),
   createdAt: apiUser.creationDate || apiUser.createdAt,
-  role: null, // Se integrará con la API de roles más adelante
+  role: apiUser.role || null,
+  permissions: apiUser.permissions || [],
 });
 
 // ---------------------------------------------------------------------
@@ -58,12 +59,24 @@ export const UserService = {
    * @param {number} limit - Elementos por página (default 10)
    * @returns {Promise<{ users: Array, pagination: Object }>}
    */
-  async list(page = 1, limit = 10) {
+  async list(page = 1, limit = 10, search = '') {
     try {
-      const response = await apiClient.get('/users', { params: { page, limit } });
+      const params = {
+        page,
+        limit,
+      };
+
+      if (search && search.trim() !== '') {
+        params.search = search.trim();
+      }
+
+      const response = await apiClient.get('/users', { params });
+
       const users = (response.data.data || []).map(mapUserFromApi);
       const pagination = response.data.pagination || {};
+
       return { users, pagination };
+
     } catch (error) {
       console.error('Error en list():', error);
       throw error;
@@ -112,9 +125,10 @@ export const UserService = {
     try {
       // Construir payload según lo que espera la API
       const payload = {
-        fullName: userData.name,     // el frontend usa "name", la API espera "fullName"
+        fullName: userData.name,
         email: userData.email,
-        phone: userData.phone ? Number(userData.phone) : null, // convertir a número si es necesario
+        phone: userData.phone ? Number(userData.phone) : null,
+        idRole: userData.roleId ?? null,
       };
       const response = await apiClient.post('/users', payload);
       // La API devuelve: { message, user: { id, name, email, phone, creationDate, status } }
@@ -149,6 +163,9 @@ async update(id, changes) {
     if (changes.name !== undefined) payload.fullName = changes.name;
     if (changes.email !== undefined) payload.email = changes.email;
     if (changes.phone !== undefined) payload.phone = Number(changes.phone); // convertir a número
+    if (changes.roleId !== undefined) {
+      payload.id_role = changes.roleId ?? null;
+    }
 
     const response = await apiClient.put(`/users/${id}`, payload);
     // La API devuelve: { success, message, data: { user, role, permissions } }

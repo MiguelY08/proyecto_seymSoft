@@ -13,7 +13,7 @@ const RECORDS_PER_PAGE = 13;
 
 function Users() {
   const location = useLocation();
-  const { showError, showWarning } = useAlert();
+  const { showError, showWarning, showSuccess } = useAlert();
 
   // Estados principales
   const [users, setUsers] = useState([]);           // Lista de usuarios de la página actual
@@ -75,17 +75,23 @@ function Users() {
   const handleDelete = async (user) => {
     try {
       await UserService.delete(user.id);
-      // Si el usuario eliminado era el único de la página actual y no es la primera,
-      // retroceder una página para evitar una página vacía
       let newPage = currentPage;
+
       if (users.length === 1 && currentPage > 1) {
         newPage = currentPage - 1;
         setCurrentPage(newPage);
       }
       await fetchUsers(newPage, search);
+      showSuccess(
+        "Usuario eliminado",
+        "El usuario ha sido eliminado exitosamente."
+      );
     } catch (err) {
-      const msg = err.response?.data?.message || 'Error al eliminar el usuario.';
+      const msg =
+        err.response?.data?.message ||
+        'Error al eliminar el usuario.';
       showError('Error', msg);
+      throw err;
     }
   };
 
@@ -129,7 +135,7 @@ function Users() {
       <TopBar
         search={search}
         onSearchChange={handleSearchChange}
-        users={users} // Se usa para mostrar el total de resultados (puede ajustarse)
+        users={pagination.total} // Se usa para mostrar el total de resultados (puede ajustarse)
       />
 
       {/* Tabla de usuarios */}

@@ -1,10 +1,10 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { X, ChevronDown, User, Mail, Phone, ShieldCheck, Loader2 } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAlert } from '../../../shared/alerts/useAlert';
 import { useModalAnimation } from '../../../shared/useModalAnimation';
 import { UserService } from '../services/userService';
-import { getRoles } from '../../configuration/roles/services/rolesServices';
+import { listRoles } from '../services/listRoles.service'
 import {
   PHONE_MIN,
   PHONE_MAX,
@@ -61,21 +61,32 @@ function FormUser() {
     nombreCompleto: userToEdit?.name ?? '',
     correo: userToEdit?.email ?? '',
     telefono: userToEdit?.phone ?? '',
-    rol: userToEdit?.role ?? 'Nulo',
+    rol: String(userToEdit?.role?.idRole ?? ''),
   });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const roles = useMemo(() => {
-    const allRoles = ['Nulo'];
-    try {
-      const activeRoles = getRoles().filter((r) => r.active).map((r) => r.name);
-      return [...allRoles, ...activeRoles];
-    } catch {
-      return allRoles;
-    }
-  }, []);
+  const [roles, setRoles] = useState([]);
+  const [loadingRoles, setLoadingRoles] = useState(false);
+
+  useEffect(() => {
+    const fetchRoles = async () => {
+      setLoadingRoles(true);
+
+      try {
+        const rolesFromApi = await listRoles();
+        setRoles(rolesFromApi.filter((role) => role.active));
+      } catch (error) {
+        console.error('Error cargando roles:', error);
+        showWarning('Error', 'No se pudieron cargar los roles.');
+      } finally {
+        setLoadingRoles(false);
+      }
+    };
+
+    fetchRoles();
+  }, [showWarning]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -111,6 +122,7 @@ function FormUser() {
       name: form.nombreCompleto.trim(),
       email: form.correo.trim(),
       phone: form.telefono ? Number(form.telefono) : null,
+      roleId: form.rol ? Number(form.rol) : null,
     };
 
     setIsSubmitting(true);
@@ -120,6 +132,7 @@ function FormUser() {
           name: userData.name,
           email: userData.email,
           phone: userData.phone,
+          roleId: userData.roleId,
         });
         showSuccess('Usuario actualizado', 'Los datos han sido guardados.');
       } else {
@@ -143,7 +156,7 @@ function FormUser() {
         form.nombreCompleto !== (userToEdit?.name ?? '') ||
         form.correo !== (userToEdit?.email ?? '') ||
         form.telefono !== (userToEdit?.phone ?? '') ||
-        form.rol !== (userToEdit?.role ?? 'Nulo')
+        form.rol !== String(userToEdit?.role?.idRole ?? '')
       );
     }
     return (
@@ -291,9 +304,13 @@ function FormUser() {
                 value={form.rol}
                 onChange={handleChange}
                 className={selectClass('rol')}
-                disabled
               >
-                {roles.map((r) => <option key={r} value={r}>{r}</option>)}
+                <option value="">Sin rol - Null</option>
+                {roles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.name}
+                  </option>
+                ))}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
             </div>
