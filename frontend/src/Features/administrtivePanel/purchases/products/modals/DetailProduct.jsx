@@ -1,12 +1,30 @@
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 
 function DetailProduct({ producto, isOpen, onClose, onEdit }) {
+  const [images, setImages] = useState([]);
+
+  // Actualizar images cuando producto cambia
+  useEffect(() => {
+    if (producto?.images) {
+      setImages(producto.images);
+    }
+  }, [producto]);
+
   if (!isOpen || !producto) return null;
 
   const handleEdit = () => {
     onClose();
     onEdit(producto);
   };
+
+  const handleImageReorder = (idx) => {
+    const newImages = [...images];
+    [newImages[0], newImages[idx]] = [newImages[idx], newImages[0]];
+    setImages(newImages);
+  };
+
+  // ... resto del código igual
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -27,48 +45,37 @@ function DetailProduct({ producto, isOpen, onClose, onEdit }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             {/* Imagen/Imágenes */}
-<div className="flex items-center justify-center">
-  {producto.images && producto.images.length > 0 ? (
-    <div className="w-full">
-      {/* Imagen principal */}
-      <img
-        src={producto.images[0].url}
-        alt={producto.name}
-        className="w-64 h-64 object-cover rounded-lg border-2 border-gray-200"
-      />
-      
-      {/* Miniaturas de otras imágenes */}
-{producto.images.length > 1 && (
-  <div className="flex gap-2 mt-3">
-    {producto.images.map((img, idx) => (
-      <img
-        key={img.id}
-        src={img.url}
-        alt={`${producto.name} ${idx + 1}`}
-        onClick={() => {
-          // Intercambiar posiciones
-          const newImages = [...producto.images];
-          [newImages[0], newImages[idx]] = [newImages[idx], newImages[0]];
-          
-          // Actualizar estado local
-          const updatedProduct = { ...producto, images: newImages };
-          // Si necesitas actualizar en el padre, puedes pasar una función
-          // onImageReorder?.(updatedProduct);
-          
-          console.log('Imágenes reordenadas:', newImages);
-        }}
-        className="w-16 h-16 object-cover rounded-lg border border-gray-200 cursor-pointer hover:border-blue-500 transition-colors"
-      />
-    ))}
-  </div>
-)}
-    </div>
-  ) : (
-    <div className="w-64 h-64 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-gray-200">
-      <span className="text-6xl">📦</span>
-    </div>
-  )}
-</div>
+            <div className="flex items-center justify-center">
+              {images && images.length > 0 ? (
+                <div className="w-full">
+                  {/* Imagen principal */}
+                  <img
+                    src={images[0]?.url}
+                    alt={producto.name}
+                    className="w-64 h-64 object-cover rounded-lg border-2 border-gray-200"
+                  />
+                  
+                  {/* Miniaturas de otras imágenes */}
+                  {images.length > 1 && (
+                    <div className="flex gap-2 mt-3">
+                      {images.map((img, idx) => (
+                        <img
+                          key={img.id}
+                          src={img.url}
+                          alt={`${producto.name} ${idx + 1}`}
+                          onClick={() => handleImageReorder(idx)}
+                          className="w-16 h-16 object-cover rounded-lg border border-gray-200 cursor-pointer hover:border-blue-500 transition-colors"
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="w-64 h-64 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-gray-200">
+                  <span className="text-6xl">📦</span>
+                </div>
+              )}
+            </div>
 
             {/* Información */}
             <div className="space-y-4">
