@@ -24,7 +24,7 @@ api.interceptors.response.use(
   }
 );
 
-export const SYSTEM_CLIENT_ID = 0;
+export const SYSTEM_CLIENT_ID = 999999999;
 
 // ============================================
 // VALIDACIÓN PARA numeric(10,2) DE POSTGRESQL
@@ -37,7 +37,6 @@ const validateAndFormatNumber = (value) => {
   
   let num;
   if (typeof value === 'string') {
-    // Limpiar la cadena: reemplazar coma por punto y eliminar caracteres no numéricos excepto punto y menos
     let cleaned = value.replace(/,/g, '.').replace(/[^0-9.-]/g, '');
     num = parseFloat(cleaned);
   } else {
@@ -46,30 +45,30 @@ const validateAndFormatNumber = (value) => {
   
   if (isNaN(num)) return '0';
   
-  // Redondear a 2 decimales
   num = Math.round(num * 100) / 100;
   
-  // Limitar al máximo permitido por numeric(10,2)
   if (num > MAX_NUMERIC_10_2) {
-    console.warn(`⚠️ Valor ${num} excede el máximo, limitando a ${MAX_NUMERIC_10_2}`);
+    console.warn(` Valor ${num} excede el máximo, limitando a ${MAX_NUMERIC_10_2}`);
     return MAX_NUMERIC_10_2.toString();
   }
   
   if (num < MIN_NUMERIC_10_2) {
-    console.warn(`⚠️ Valor ${num} es menor que el mínimo, limitando a ${MIN_NUMERIC_10_2}`);
+    console.warn(` Valor ${num} es menor que el mínimo, limitando a ${MIN_NUMERIC_10_2}`);
     return MIN_NUMERIC_10_2.toString();
   }
   
-  // Validar dígitos enteros (máximo 8)
   const integerPart = Math.floor(Math.abs(num)).toString();
   if (integerPart.length > 8) {
-    console.warn(`⚠️ Valor ${num} tiene ${integerPart.length} dígitos enteros, excede el límite de 8`);
+    console.warn(` Valor ${num} tiene ${integerPart.length} dígitos enteros, excede el límite de 8`);
     return MAX_NUMERIC_10_2.toString();
   }
   
   return num.toString();
 };
 
+// ============================================
+// SERVICIO PRINCIPAL DE CLIENTES
+// ============================================
 export const clientsService = {
   getAll: async (params = {}) => {
     const { page = 1, limit = 13, search = '', personType = '', idStatus = '' } = params;
@@ -105,7 +104,7 @@ export const clientsService = {
       active: client.active,
       personType: client.personType,
       clientSince: client.clientSince,
-      isSystem: false
+      isSystem: client.id === SYSTEM_CLIENT_ID
     }));
     
     return {
@@ -120,36 +119,39 @@ export const clientsService = {
   },
 
   create: async (clientData) => {
-    // Validar y formatear los campos numéricos ANTES de enviar
     const formattedClientCredit = validateAndFormatNumber(clientData.clientCredit);
     const formattedCreditBalance = validateAndFormatNumber(clientData.saldoFavor || clientData.credit_balance);
     
-    console.log('📤 Enviando al backend:', {
-      clientCredit: formattedClientCredit,
-      credit_balance: formattedCreditBalance
-    });
-    
-    const response = await api.post('', {
-      personType: clientData.personType,
-      documentType: clientData.documentType,
-      document: clientData.document,
-      firstName: clientData.firstName,
-      lastName: clientData.lastName,
-      email: clientData.email,
-      phone: clientData.phone,
-      address: clientData.address,
-      contactName: clientData.contactName,
-      contactPhone: clientData.contactPhone,
-      clientType: clientData.clientType,
+    const payload = {
+      personType: clientData.personType || '',
+      documentType: clientData.documentType || 'CC',
+      document: clientData.document || '',
+      firstName: clientData.firstName || '',
+      lastName: clientData.lastName || '',
+      email: clientData.email || '',
+      phone: clientData.phone || '',
+      address: clientData.address || '',
+      contactName: clientData.contactName || null,
+      contactPhone: clientData.contactPhone || null,
+      clientType: clientData.clientType || '',
       clientCredit: formattedClientCredit,
       credit_balance: formattedCreditBalance,
-      rut: clientData.rut,
-      ciuCode: clientData.ciuCode === 'No aplica' ? null : clientData.ciuCode
-    });
+      rut: clientData.rut || 'no',
+      ciuCode: (clientData.ciuCode === 'No aplica' || !clientData.ciuCode) ? null : clientData.ciuCode
+    };
+    
+    if (clientData.userId) {
+      payload.userId = clientData.userId;
+    }
+    
+    const response = await api.post('', payload);
     return response.data.data;
   },
 
   update: async (id, clientData) => {
+    console.log('🔍 EDITANDO CLIENTE ID:', id);
+    console.log('📦 Datos recibidos del formulario:', JSON.stringify(clientData, null, 2));
+    
     const payload = {};
     
     if (clientData.address !== undefined) payload.address = clientData.address;
@@ -158,8 +160,8 @@ export const clientsService = {
     if (clientData.contactName !== undefined) payload.contactName = clientData.contactName;
     if (clientData.contactPhone !== undefined) payload.contactPhone = clientData.contactPhone;
     if (clientData.clientType !== undefined) payload.clientType = clientData.clientType;
+    if (clientData.rut !== undefined) payload.rut = clientData.rut;
     
-    // Validar y formatear campos numéricos
     if (clientData.clientCredit !== undefined) {
       payload.clientCredit = validateAndFormatNumber(clientData.clientCredit);
     }
@@ -170,11 +172,24 @@ export const clientsService = {
       payload.credit_balance = validateAndFormatNumber(clientData.credit_balance);
     }
     
-    if (clientData.rut !== undefined) payload.rut = clientData.rut;
-    if (clientData.ciuCode !== undefined) payload.ciuCode = clientData.ciuCode === 'No aplica' ? '' : clientData.ciuCode;
+    if (clientData.ciuCode !== undefined) {
+      payload.ciuCode = (clientData.ciuCode === 'No aplica' || !clientData.ciuCode) ? null : clientData.ciuCode;
+    }
     
-    const response = await api.put(`/${id}`, payload);
-    return response.data.data;
+    console.log('📤 Payload a enviar al backend:', JSON.stringify(payload, null, 2));
+    
+    try {
+      const response = await api.put(`/${id}`, payload);
+      console.log('✅ Edición exitosa');
+      return response.data.data;
+    } catch (error) {
+      if (error.response) {
+        console.error('❌ ERROR DEL BACKEND:');
+        console.error('Status:', error.response.status);
+        console.error('Data:', error.response.data);
+      }
+      throw error;
+    }
   },
 
   delete: async (id) => {
@@ -189,9 +204,8 @@ export const clientsService = {
 };
 
 // ============================================
-// SERVICIOS COMPATIBLES CON LOCALSTORAGE
+// COMPATIBILIDAD CON OTROS MÓDULOS (NO ELIMINAR)
 // ============================================
-
 const STORAGE_KEYS = {
   CREDIT_ACCOUNTS: 'creditAccounts',
   PAYMENTS: 'payments',
@@ -208,7 +222,6 @@ export const creditAccountService = {
   },
   createForClient: (clientId, initialCredit) => {
     const accounts = creditAccountService.getAll();
-    // Validar el crédito inicial
     const validCredit = parseFloat(validateAndFormatNumber(initialCredit));
     const newAccount = {
       id: Date.now().toString(),
@@ -266,7 +279,6 @@ export const saldoFavorService = {
     const stored = localStorage.getItem('client_balance_favor');
     const balances = stored ? JSON.parse(stored) : {};
     const value = balances[String(clientId)] || 0;
-    // Asegurar que el valor devuelto respete el límite
     const num = parseFloat(value);
     if (num > MAX_NUMERIC_10_2) return MAX_NUMERIC_10_2;
     if (num < MIN_NUMERIC_10_2) return MIN_NUMERIC_10_2;

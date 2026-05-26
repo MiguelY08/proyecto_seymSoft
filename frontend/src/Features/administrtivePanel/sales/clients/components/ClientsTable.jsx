@@ -47,7 +47,14 @@ function ClientsTable({
   onToggleActive,
   onDelete,
 }) {
-  // Header para tabla vacía - CON COLUMNA #
+  // Ordenar clientes: primero el sistema (ID 999999999), luego el resto
+  const sortedClients = [...clients].sort((a, b) => {
+    if (a.id === 999999999) return -1;
+    if (b.id === 999999999) return 1;
+    return 0;
+  });
+
+  // Header para tabla vacía
   const emptyHeader = (
     <thead className="bg-[#004D77] text-white">
       <tr>
@@ -95,11 +102,11 @@ function ClientsTable({
         </thead>
 
         <tbody>
-          {clients.map((client, index) => {
+          {sortedClients.map((client, index) => {
             const rowBg = index % 2 === 0 ? 'bg-white' : 'bg-gray-100';
             const { isCombined, tipoTerm, numTerm } = parseSearchTerm(searchTerm);
-            // Calcula el número de registro según la página actual
             const recordNumber = (startIndex || 0) + index + 1;
+            const isSystemClient = client.id === 999999999;
 
             return (
               <tr key={client.id} className={`transition-colors duration-150 ${rowBg}`}>
@@ -107,26 +114,42 @@ function ClientsTable({
                 <td className="px-3 py-2 text-center text-xs text-gray-500 font-medium whitespace-nowrap">
                   {recordNumber}
                 </td>
+                
+                {/* Columna Tipo y Documento */}
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  <span className="font-medium">
-                    {highlightText(client.documentType, isCombined ? tipoTerm : searchTerm)}
-                  </span>{' '}
-                  {highlightText(client.document, isCombined ? numTerm : searchTerm)}
+                  {isSystemClient ? '—' : (
+                    <>
+                      <span className="font-medium">
+                        {highlightText(client.documentType, isCombined ? tipoTerm : searchTerm)}
+                      </span>{' '}
+                      {highlightText(client.document, isCombined ? numTerm : searchTerm)}
+                    </>
+                  )}
                 </td>
+                
+                {/* Columna Nombre */}
                 <td className="px-3 py-2 text-center text-xs text-gray-800 font-medium whitespace-nowrap">
-                  {highlightText(client.fullName, searchTerm)}
+                  {isSystemClient ? 'Cliente Sistema' : highlightText(client.fullName, searchTerm)}
                 </td>
+                
+                {/* Columna Crédito */}
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlightText(formatCurrency(parseInt(client.clientCredit) || 0), searchTerm)}
+                  {isSystemClient ? '—' : highlightText(formatCurrency(parseInt(client.clientCredit) || 0), searchTerm)}
                 </td>
+                
+                {/* Columna Teléfono */}
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlightText(client.phone, searchTerm)}
+                  {isSystemClient ? '—' : highlightText(client.phone || '—', searchTerm)}
                 </td>
+                
+                {/* Columna Tipo cliente */}
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlightText(formatClientType(client.clientType), searchTerm)}
+                  {isSystemClient ? '—' : highlightText(formatClientType(client.clientType), searchTerm)}
                 </td>
+                
+                {/* Columna Funciones */}
                 <td className="px-3 py-2">
-                  {client.isSystem ? (
+                  {isSystemClient ? (
                     <div className="flex items-center justify-center">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#004D77]/10 text-[#004D77] border border-[#004D77]/20 whitespace-nowrap">
                         Sistema
