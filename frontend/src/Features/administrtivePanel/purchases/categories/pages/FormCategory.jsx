@@ -1,34 +1,16 @@
+// Features/categories/pages/FormCategory.jsx
 import React, { useState } from "react";
 import { X, AlertCircle, Plus, Trash2, ChevronRight, ChevronLeft, Tag, Layers } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
+import ActiveToggle from "../components/ActiveToggle";
 
-// ─── Toggle Activo/Inactivo ───────────────────────────────────────────────────
-function ActiveToggle({ activo, onChange }) {
-  return (
-    <button
-      type="button"
-      onClick={onChange}
-      className={`relative w-11 h-5 rounded-full transition-colors duration-300 cursor-pointer ${
-        activo ? "bg-green-500" : "bg-red-400"
-      }`}
-    >
-      <span
-        className={`absolute top-0 h-full flex items-center text-white font-bold text-[9px] transition-all duration-300 ${
-          activo ? "left-1.5" : "right-1.5"
-        }`}
-      >
-        {activo ? "A" : "I"}
-      </span>
-      <span
-        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
-          activo ? "left-[1.4rem]" : "left-0.5"
-        }`}
-      />
-    </button>
-  );
-}
+const normalizeName = (str = "") =>
+  str
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 
-// ─── Indicador de pasos ────────────────────────────────────────────────────────
 function StepIndicator({ currentStep }) {
   const steps = [
     { label: "Categoría", icon: Tag },
@@ -79,49 +61,30 @@ function StepIndicator({ currentStep }) {
   );
 }
 
-// ─── Normaliza texto: minúsculas + sin tildes/diacríticos ────────────────────
-const normalizeName = (str = "") =>
-  str
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-
-// ─── Formulario principal ─────────────────────────────────────────────────────
-function FormCategory({ category, allCategories = [], onClose, onSave }) {
-  const isEditing = !!category;
+function FormCategory({ allCategories = [], onClose, onSave }) {
   const { showWarning } = useAlert();
-
   const [step, setStep] = useState(1);
-
-  // — Step 1: datos de categoría
   const [form, setForm] = useState({
-    nombre: category?.nombre ?? "",
-    activo: category?.estado === "Activo" || category?.activo === true,
+    nombre: "",
+    activo: true,
   });
   const [nombreTouched, setNombreTouched] = useState(false);
-
-  // — Step 2: subcategorías a crear junto con la categoría
   const [subcategories, setSubcategories] = useState([]);
   const [subForm, setSubForm] = useState({ nombre: "", descripcion: "", activo: true });
   const [subNombreTouched, setSubNombreTouched] = useState(false);
 
-  // ─── Validaciones Step 1 ──────────────────────────────────────────────────
   const nombreError = (() => {
     if (!nombreTouched) return null;
     if (!form.nombre.trim()) return "El nombre es obligatorio";
     if (/^\d/.test(form.nombre.trim())) return "El nombre no puede iniciar con un número";
     if (form.nombre.trim().length < 3) return "El nombre debe tener al menos 3 caracteres";
     const existe = allCategories.some(
-      (c) =>
-        (!category || c.id !== category.id) &&
-        normalizeName(c.nombre) === normalizeName(form.nombre)
+      (c) => normalizeName(c.nombre) === normalizeName(form.nombre)
     );
     if (existe) return "Ya existe una categoría con ese nombre";
     return null;
   })();
 
-  // ─── Validaciones Step 2 (subcategoría en construcción) ──────────────────
   const subNombreError = (() => {
     if (!subNombreTouched) return null;
     if (!subForm.nombre.trim()) return "El nombre es obligatorio";
@@ -137,7 +100,6 @@ function FormCategory({ category, allCategories = [], onClose, onSave }) {
         : "border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
     }`;
 
-  // ─── Step 1 → Step 2 ─────────────────────────────────────────────────────
   const handleNextStep = () => {
     setNombreTouched(true);
     if (nombreError || !form.nombre.trim()) {
@@ -147,7 +109,6 @@ function FormCategory({ category, allCategories = [], onClose, onSave }) {
     setStep(2);
   };
 
-  // ─── Agregar subcategoría a la lista temporal ─────────────────────────────
   const handleAddSubcategory = () => {
     setSubNombreTouched(true);
 
@@ -181,17 +142,15 @@ function FormCategory({ category, allCategories = [], onClose, onSave }) {
   const handleRemoveSubcategory = (id) =>
     setSubcategories(subcategories.filter((s) => s.id !== id));
 
-  // ─── Guardar todo ─────────────────────────────────────────────────────────
   const handleSubmit = () => {
     const categoryData = {
-      ...category,
       nombre: form.nombre.trim(),
       activo: form.activo,
-      estado: form.activo ? "Activo" : "Inactivo",
       subcategoriasIniciales: subcategories,
     };
-    onSave(categoryData, isEditing);
-    onClose();
+    // No llamar onClose aquí: handleSave en CategoriesPage lo controla
+    // después de confirmar y crear exitosamente
+    onSave(categoryData, false);
   };
 
   return (
@@ -203,23 +162,17 @@ function FormCategory({ category, allCategories = [], onClose, onSave }) {
         className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* HEADER */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#004D77]">
-          <h2 className="text-white font-semibold text-lg">
-            {isEditing ? "Editar Categoría" : "Crear Categoría"}
-          </h2>
+          <h2 className="text-white font-semibold text-lg">Crear Categoría</h2>
           <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* STEP INDICATOR */}
         <StepIndicator currentStep={step} />
 
-        {/* ── STEP 1: CATEGORÍA ── */}
         {step === 1 && (
           <div className="px-6 py-6 flex flex-col gap-5">
-            {/* Nombre */}
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">Nombre</label>
               <div className="relative">
@@ -237,20 +190,18 @@ function FormCategory({ category, allCategories = [], onClose, onSave }) {
                   </div>
                 )}
               </div>
-              <div className={`overflow-hidden transition-all duration-300 ${nombreError ? "max-h-10 mt-1 opacity-100" : "max-h-0 opacity-0"}`}>
-                <p className="text-xs text-red-500 flex items-center gap-1">
+              {nombreTouched && nombreError && (
+                <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
                   <AlertCircle size={12} /> {nombreError}
                 </p>
-              </div>
+              )}
             </div>
 
-            {/* Estado */}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-gray-700">Estado</label>
-              <ActiveToggle activo={form.activo} onChange={() => setForm({ ...form, activo: !form.activo })} />
+              <ActiveToggle activo={form.activo} onChange={(nuevo) => setForm({ ...form, activo: nuevo })} />
             </div>
 
-            {/* Botones */}
             <div className="flex flex-col gap-3 pt-1">
               <button
                 onClick={handleNextStep}
@@ -268,11 +219,8 @@ function FormCategory({ category, allCategories = [], onClose, onSave }) {
           </div>
         )}
 
-        {/* ── STEP 2: SUBCATEGORÍAS ── */}
         {step === 2 && (
           <div className="px-6 py-5 flex flex-col gap-4">
-
-            {/* Resumen categoría */}
             <div className="flex items-center gap-2 px-3 py-2 bg-[#004D77]/8 border border-[#004D77]/20 rounded-lg">
               <Tag className="w-4 h-4 text-[#004D77] shrink-0" />
               <span className="text-sm text-[#004D77] font-medium truncate">{form.nombre}</span>
@@ -281,11 +229,9 @@ function FormCategory({ category, allCategories = [], onClose, onSave }) {
               </span>
             </div>
 
-            {/* Mini-formulario nueva subcategoría */}
             <div className="border border-gray-200 rounded-xl p-4 flex flex-col gap-3 bg-gray-50">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nueva subcategoría</p>
 
-              {/* Nombre sub */}
               <div>
                 <div className="relative">
                   <input
@@ -302,14 +248,13 @@ function FormCategory({ category, allCategories = [], onClose, onSave }) {
                     </div>
                   )}
                 </div>
-                <div className={`overflow-hidden transition-all duration-300 ${subNombreError ? "max-h-8 mt-1 opacity-100" : "max-h-0 opacity-0"}`}>
-                  <p className="text-xs text-red-500 flex items-center gap-1">
+                {subNombreTouched && subNombreError && (
+                  <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
                     <AlertCircle size={11} /> {subNombreError}
                   </p>
-                </div>
+                )}
               </div>
 
-              {/* Descripción sub */}
               <textarea
                 rows="2"
                 value={subForm.descripcion}
@@ -318,11 +263,10 @@ function FormCategory({ category, allCategories = [], onClose, onSave }) {
                 className="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg bg-gray-100 resize-none outline-none focus:ring-2 focus:ring-[#004D77]/20"
               />
 
-              {/* Estado + botón agregar */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-500">Estado</span>
-                  <ActiveToggle activo={subForm.activo} onChange={() => setSubForm({ ...subForm, activo: !subForm.activo })} />
+                  <ActiveToggle activo={subForm.activo} onChange={(nuevo) => setSubForm({ ...subForm, activo: nuevo })} />
                 </div>
                 <button
                   onClick={handleAddSubcategory}
@@ -333,7 +277,6 @@ function FormCategory({ category, allCategories = [], onClose, onSave }) {
               </div>
             </div>
 
-            {/* Lista de subcategorías agregadas */}
             {subcategories.length > 0 && (
               <div className="flex flex-col gap-2 max-h-36 overflow-y-auto pr-0.5">
                 {subcategories.map((sub) => (
@@ -357,7 +300,6 @@ function FormCategory({ category, allCategories = [], onClose, onSave }) {
               </p>
             )}
 
-            {/* Botones */}
             <div className="flex gap-3 pt-1">
               <button
                 onClick={() => setStep(1)}
@@ -369,7 +311,7 @@ function FormCategory({ category, allCategories = [], onClose, onSave }) {
                 onClick={handleSubmit}
                 className="flex-1 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors"
               >
-                {isEditing ? "Guardar cambios" : `Crear${subcategories.length > 0 ? ` (${subcategories.length} sub)` : ""}`}
+                Crear {subcategories.length > 0 ? `(${subcategories.length} sub)` : ""}
               </button>
             </div>
           </div>

@@ -1,30 +1,8 @@
+// categories/components/CategoriesTable.jsx
 import React from "react";
 import { Edit, Trash2, Info, Layers } from "lucide-react";
 import Pagination from "../../../../shared/PaginationAdmin";
-
-function ActiveToggle({ activo, onChange }) {
-  return (
-    <button
-      onClick={onChange}
-      className={`relative w-11 h-5 rounded-full transition-colors duration-300 cursor-pointer shrink-0 ${
-        activo ? "bg-green-500" : "bg-red-400"
-      }`}
-    >
-      <span
-        className={`absolute top-0 h-full flex items-center text-white font-bold text-[9px] transition-all duration-300 ${
-          activo ? "left-1.5" : "right-1.5"
-        }`}
-      >
-        {activo ? "A" : "I"}
-      </span>
-      <span
-        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
-          activo ? "left-[1.4rem]" : "left-0.5"
-        }`}
-      />
-    </button>
-  );
-}
+import ActiveToggle from "./ActiveToggle";
 
 function SubcategoriasBadge({ count }) {
   const total = Number(count) || 0;
@@ -65,11 +43,11 @@ export const CategoriesTable = ({
       <div className="overflow-x-auto rounded-xl shadow-md min-h-0 mb-4">
         <table className="w-full" style={{ tableLayout: "fixed" }}>
           <colgroup>
-            <col style={{ width: "6%" }}  /> {/* # */}
-            <col style={{ width: "42%" }} /> {/* Nombre Categoría */}
-            <col style={{ width: "16%" }} /> {/* Subcategorías */}
-            <col style={{ width: "16%" }} /> {/* Estado */}
-            <col style={{ width: "20%" }} /> {/* Acciones */}
+            <col style={{ width: "6%" }} />
+            <col style={{ width: "42%" }} />
+            <col style={{ width: "16%" }} />
+            <col style={{ width: "16%" }} />
+            <col style={{ width: "20%" }} />
           </colgroup>
 
           <thead className="bg-[#004D77] text-white">
@@ -91,34 +69,29 @@ export const CategoriesTable = ({
               </tr>
             ) : (
               currentData.map((category, index) => {
-                const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-100";
                 const recordNumber = startIndex + index + 1;
 
                 return (
                   <tr
-                      key={category.id}
-                      className={`${
+                    key={category.id}
+                    className={`${
                       index % 2 === 0
                         ? "bg-white hover:bg-gray-50"
                         : "bg-gray-50 hover:bg-gray-100"
                     }`}
-                    >
-                    {/* # — misma tipografía que ClientsTable */}
+                  >
                     <td className="px-3 py-2 text-center text-xs text-gray-500 font-medium whitespace-nowrap">
                       {recordNumber}
                     </td>
 
-                    {/* Nombre — misma tipografía que ClientsTable (nombre completo) */}
                     <td className="px-3 py-2 text-center text-xs text-gray-800 font-medium truncate">
                       {highlightText(category.nombre || "")}
                     </td>
 
-                    {/* Subcategorías */}
                     <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                       <SubcategoriasBadge count={category.subcategorias} />
                     </td>
 
-                    {/* Estado */}
                     <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                       <span
                         className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -131,7 +104,6 @@ export const CategoriesTable = ({
                       </span>
                     </td>
 
-                    {/* Acciones */}
                     <td className="px-3 py-2">
                       <div className="flex items-center justify-center gap-1.5">
                         <button
