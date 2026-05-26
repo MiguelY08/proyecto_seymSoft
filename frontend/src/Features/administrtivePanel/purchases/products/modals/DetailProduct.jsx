@@ -38,18 +38,30 @@ function DetailProduct({ producto, isOpen, onClose, onEdit }) {
       />
       
       {/* Miniaturas de otras imágenes */}
-      {producto.images.length > 1 && (
-        <div className="flex gap-2 mt-3">
-          {producto.images.map((img, idx) => (
-            <img
-              key={img.id}
-              src={img.url}
-              alt={`${producto.name} ${idx + 1}`}
-              className="w-16 h-16 object-cover rounded-lg border border-gray-200 cursor-pointer hover:border-blue-500"
-            />
-          ))}
-        </div>
-      )}
+{producto.images.length > 1 && (
+  <div className="flex gap-2 mt-3">
+    {producto.images.map((img, idx) => (
+      <img
+        key={img.id}
+        src={img.url}
+        alt={`${producto.name} ${idx + 1}`}
+        onClick={() => {
+          // Intercambiar posiciones
+          const newImages = [...producto.images];
+          [newImages[0], newImages[idx]] = [newImages[idx], newImages[0]];
+          
+          // Actualizar estado local
+          const updatedProduct = { ...producto, images: newImages };
+          // Si necesitas actualizar en el padre, puedes pasar una función
+          // onImageReorder?.(updatedProduct);
+          
+          console.log('Imágenes reordenadas:', newImages);
+        }}
+        className="w-16 h-16 object-cover rounded-lg border border-gray-200 cursor-pointer hover:border-blue-500 transition-colors"
+      />
+    ))}
+  </div>
+)}
     </div>
   ) : (
     <div className="w-64 h-64 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-gray-200">

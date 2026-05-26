@@ -17,7 +17,7 @@ function PriceCard({ label, fieldMain, fieldPaca, placeholderMain, placeholderPa
           onChange={(e) => onChange({ target: { name: fieldMain, value: numeric(e.target.value) } })}
           onKeyDown={block} placeholder={placeholderMain}
           className={`w-full px-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 transition-colors ${hm ? 'border-red-400 focus:ring-red-200 bg-red-50 text-red-900 placeholder-red-300' : 'border-gray-200 focus:ring-blue-400 bg-gray-50'}`} />
-        {hm && <p className="mt-0.5 text-[10px] text-red-500 flex items-center gap-1"><span>⚠</span>{errMain}</p>}
+        {hm && <p className="mt-0.5 text-[10px] text-red-500 flex items-center gap-1"><span></span>{errMain}</p>}
       </div>
       <div className={`h-px ${hp ? 'bg-red-300' : 'bg-gray-200'}`} />
       <div className={`px-3 pt-1.5 pb-2.5 ${hp ? 'bg-red-50' : 'bg-gray-50'}`}>
@@ -26,7 +26,7 @@ function PriceCard({ label, fieldMain, fieldPaca, placeholderMain, placeholderPa
           onChange={(e) => onChange({ target: { name: fieldPaca, value: numeric(e.target.value) } })}
           onKeyDown={block} placeholder={placeholderPaca}
           className={`w-full px-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 transition-colors ${hp ? 'border-red-400 focus:ring-red-200 bg-white text-red-900 placeholder-red-300' : 'border-gray-200 focus:ring-blue-400 bg-white'}`} />
-        {hp && <p className="mt-0.5 text-[10px] text-red-500 flex items-center gap-1"><span>⚠</span>{errPaca}</p>}
+        {hp && <p className="mt-0.5 text-[10px] text-red-500 flex items-center gap-1"><span>!</span>{errPaca}</p>}
       </div>
     </div>
   );
@@ -246,7 +246,7 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
       errors[f] ? 'border-red-400 focus:ring-red-200 bg-red-50 text-red-900 placeholder-red-300' : 'border-gray-300 focus:ring-blue-500'
     }`;
   const ErrMsg = ({ field }) => errors[field]
-    ? <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><span>⚠</span>{errors[field]}</p> : null;
+    ? <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><span></span>{errors[field]}</p> : null;
 
   if (!isOpen) return null;
 
