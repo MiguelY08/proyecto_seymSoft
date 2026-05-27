@@ -64,11 +64,16 @@ export const AuthProvider = ({ children }) => {
 
       const result = await loginService(email, password);
 
-      if (result.success) {
-        setUser(result.user);
-        setRole(result.role);
-        setPermissions(result.permissions || []);
-        setIsAuthenticated(true);
+if (result.success) {
+
+  console.log("RESULT LOGIN:", result);
+
+  setUser(result.user);
+  setRole(result.role);
+  setPermissions(result.permissions || []);
+
+  setIsAuthenticated(true);
+
 
         showSuccess("¡Bienvenido!", `Hola ${result.user.fullName}`);
 

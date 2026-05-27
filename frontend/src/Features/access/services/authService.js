@@ -1,301 +1,621 @@
 import apiClient from "../../../setting/apiClient.js";
-import { saveSession, clearSession, getSession } from "../helpers/authStorage.js";
+import {
+  saveSession,
+  clearSession,
+  getSession,
+} from "../helpers/authStorage.js";
 
 /**
- * AUTH SERVICES - CORRECTO
- * 
+ * AUTH SERVICES
+ *
  * Endpoints:
- * - POST /auth/register     → { full_name, email, pass_word, phone }
- * - POST /auth/login        → { email, pass_word }
- * - POST /auth/logout       → {}
- * - GET /auth/me            → {}
- * - PUT /auth/profile       → { full_name, email, phone, pass_word... }
+ * - POST /auth/register
+ * - POST /auth/login
+ * - POST /auth/logout
+ * - GET /auth/me
+ * - PUT /auth/profile
  * - POST /auth/forgot-password
  * - POST /auth/reset-password
  */
 
 // ═══════════════════════════════════════════════════════════
-// REGISTER - Registrar nuevo usuario
+// REGISTER
 // ═══════════════════════════════════════════════════════════
 
 export const register = async (userData) => {
   try {
-    // userData: { fullName, email, password, phone }
-    // Convertir a snake_case para el backend
 
-    const response = await apiClient.post("/auth/register", {
-      full_name: userData.fullName,        // ✅ full_name (snake_case)
-      email: userData.email,
-      pass_word: userData.password,        // ✅ pass_word (snake_case)
-      phone: userData.phone,
-    });
+    const response = await apiClient.post(
+      "/auth/register",
+      {
+        full_name: userData.fullName,
+        email: userData.email,
+        pass_word: userData.password,
+        phone: userData.phone,
+      }
+    );
 
-    // Backend retorna: { user, accessToken, refreshToken }
-    const { user, accessToken, refreshToken } = response.data.data;
-
-    // Guardar en localStorage
-    saveSession({
+    const {
       user,
       accessToken,
+      refreshToken
+    } = response.data.data;
+
+    // guardar sesión
+
+    saveSession({
+
+      user,
+
+      permissions: [],
+
+      accessToken,
+
       refreshToken,
+
     });
 
     return {
+
       success: true,
+
       user,
+
+      permissions: [],
+
       accessToken,
+
       refreshToken,
+
     };
 
   } catch (error) {
-    console.error("Error en register:", error);
 
-    const errorMessage = error.response?.data?.message || "Error al registrarse";
+    console.error(
+      "Error en register:",
+      error
+    );
+
+    const errorMessage =
+
+      error.response?.data?.message
+      ||
+      "Error al registrarse";
 
     return {
-      success: false,
-      error: errorMessage,
+
+      success:false,
+
+      error:errorMessage
+
     };
+
   }
+
 };
 
+
 // ═══════════════════════════════════════════════════════════
-// LOGIN - Iniciar sesión
+// LOGIN
 // ═══════════════════════════════════════════════════════════
 
-export const login = async (email, password) => {
+export const login = async (
+  email,
+  password
+) => {
+
   try {
-    const response = await apiClient.post("/auth/login", {
-      email,
-      pass_word: password,               // ✅ pass_word (snake_case)
-    });
 
-    // Backend retorna: { user, role, permissions, accessToken, refreshToken }
-    const { user, role, permissions, accessToken, refreshToken } = response.data.data;
+    const response = await apiClient.post(
 
-    // Guardar en localStorage
-    saveSession({
-      user,
-      role,
-      accessToken,
-      refreshToken,
-    });
+      "/auth/login",
 
-    return {
-      success: true,
-      user,
-      role,
-      permissions,
-      accessToken,
-      refreshToken,
-      redirectTo: role ? "/admin" : "/",
-    };
+      {
 
-  } catch (error) {
-    console.error("Error en login:", error);
+        email,
 
-    const errorMessage = error.response?.data?.message || "Email o contraseña incorrectos";
+        pass_word: password,
 
-    return {
-      success: false,
-      error: errorMessage,
-    };
-  }
+      }
+
+    );
+
+   const {
+  user,
+  role,
+  permissions,
+  accessToken,
+  refreshToken
+} = response.data.data;
+
+console.log("LOGIN RESPONSE:");
+console.log("user:", user);
+console.log("role:", role);
+console.log("permissions:", permissions);
+
+saveSession({
+  user,
+  role,
+  permissions,
+  accessToken,
+  refreshToken,
+});
+
+console.log("SESSION SAVED:", getSession());
+
+return {
+  success:true,
+  user,
+  role,
+  permissions,
+  accessToken,
+  refreshToken,
+  redirectTo: role ? "/admin" : "/"
 };
 
+  } catch(error){
+
+    console.error(
+      "Error en login:",
+      error
+    );
+
+    const errorMessage=
+
+      error.response?.data?.message
+      ||
+      "Email o contraseña incorrectos";
+
+    return{
+
+      success:false,
+
+      error:errorMessage
+
+    };
+
+  }
+
+};
+
+
 // ═══════════════════════════════════════════════════════════
-// LOGOUT - Cerrar sesión
+// LOGOUT
 // ═══════════════════════════════════════════════════════════
 
-export const logout = async () => {
-  try {
-    const session = getSession();
-    
-    // Intentar notificar al backend
-    if (session?.refreshToken) {
-      await apiClient.post("/auth/logout", {
-        refresh_token: session.refreshToken,
-      });
+export const logout = async()=>{
+
+  try{
+
+    const session=
+      getSession();
+
+    if(
+      session?.refreshToken
+    ){
+
+      await apiClient.post(
+
+        "/auth/logout",
+
+        {
+
+          refresh_token:
+          session.refreshToken
+
+        }
+
+      );
+
     }
 
-  } catch (error) {
-    console.error("Error en logout:", error);
-    // Aunque falle, limpiamos el frontend
-  } finally {
+  }
+  catch(error){
+
+    console.error(
+
+      "Error en logout:",
+      error
+
+    );
+
+  }
+
+  finally{
+
     clearSession();
-    return {
-      success: true,
+
+    return{
+
+      success:true
+
     };
+
   }
+
 };
 
+
 // ═══════════════════════════════════════════════════════════
-// GET PROFILE - Obtener perfil del usuario logueado
+// PERFIL
 // ═══════════════════════════════════════════════════════════
 
-export const getProfile = async () => {
-  try {
-    const response = await apiClient.get("/auth/me");
+export const getProfile = async()=>{
 
-    const { user, role, permissions } = response.data.data;
+  try{
 
-    return {
-      success: true,
+    const response=
+
+      await apiClient.get(
+        "/auth/me"
+      );
+
+    const{
+
       user,
       role,
-      permissions,
+      permissions
+
+    }=response.data.data;
+
+    return{
+
+      success:true,
+
+      user,
+
+      role,
+
+      permissions
+
     };
 
-  } catch (error) {
-    console.error("Error en getProfile:", error);
+  }
+  catch(error){
 
-    // Si error es 401, la sesión expiró
-    if (error.response?.status === 401) {
+    console.error(
+      "Error en getProfile:",
+      error
+    );
+
+    if(
+
+      error.response?.status
+      ===401
+
+    ){
+
       clearSession();
+
     }
 
-    return {
-      success: false,
-      error: "Error al obtener perfil",
+    return{
+
+      success:false,
+
+      error:
+      "Error al obtener perfil"
+
     };
+
   }
+
 };
 
+
 // ═══════════════════════════════════════════════════════════
-// UPDATE PROFILE - Actualizar datos del usuario
+// ACTUALIZAR PERFIL
 // ═══════════════════════════════════════════════════════════
 
-export const updateProfile = async (changes) => {
-  try {
-    // changes: { fullName, email, phone, ... }
-    // Convertir a snake_case para el backend
-    
-    const body = {};
-    
-    if (changes.fullName !== undefined) {
-      body.full_name = changes.fullName;
-    }
-    if (changes.email !== undefined) {
-      body.email = changes.email;
-    }
-    if (changes.phone !== undefined) {
-      body.phone = changes.phone;
-    }
-    if (changes.currentPassword !== undefined) {
-      body.current_password = changes.currentPassword;
-    }
-    if (changes.newPassword !== undefined) {
-      body.pass_word = changes.newPassword;
-    }
-    if (changes.confirmPassword !== undefined) {
-      body.confirm_password = changes.confirmPassword;
+export const updateProfile = async(
+  changes
+)=>{
+
+  try{
+
+    const body={};
+
+    if(
+
+      changes.fullName!==undefined
+
+    ){
+
+      body.full_name=
+      changes.fullName;
+
     }
 
-    const response = await apiClient.put("/auth/profile", body);
+    if(
 
-    const { user, role, permissions } = response.data.data;
+      changes.email!==undefined
 
-    // Actualizar localStorage
-    const currentSession = getSession();
+    ){
+
+      body.email=
+      changes.email;
+
+    }
+
+    if(
+
+      changes.phone!==undefined
+
+    ){
+
+      body.phone=
+      changes.phone;
+
+    }
+
+    if(
+
+      changes.currentPassword!==undefined
+
+    ){
+
+      body.current_password=
+      changes.currentPassword;
+
+    }
+
+    if(
+
+      changes.newPassword!==undefined
+
+    ){
+
+      body.pass_word=
+      changes.newPassword;
+
+    }
+
+    if(
+
+      changes.confirmPassword!==undefined
+
+    ){
+
+      body.confirm_password=
+      changes.confirmPassword;
+
+    }
+
+    const response=
+
+      await apiClient.put(
+
+        "/auth/profile",
+
+        body
+
+      );
+
+    const{
+
+      user,
+      role,
+      permissions
+
+    }=response.data.data;
+
+
+    const currentSession=
+      getSession();
+
+
     saveSession({
+
       ...currentSession,
+
       user,
+
       role,
-      permissions,
+
+      permissions
+
     });
 
-    return {
-      success: true,
+
+    return{
+
+      success:true,
+
       user,
+
       role,
-      permissions,
+
+      permissions
+
     };
 
-  } catch (error) {
-    console.error("Error en updateProfile:", error);
-
-    return {
-      success: false,
-      error: error.response?.data?.message || "Error al actualizar perfil",
-    };
   }
+
+  catch(error){
+
+    console.error(
+      "Error updateProfile:",
+      error
+    );
+
+    return{
+
+      success:false,
+
+      error:
+
+      error.response?.data?.message
+
+      ||
+
+      "Error al actualizar perfil"
+
+    };
+
+  }
+
 };
 
+
 // ═══════════════════════════════════════════════════════════
-// FORGOT PASSWORD - Solicitar reset de contraseña
+// FORGOT PASSWORD
 // ═══════════════════════════════════════════════════════════
 
-export const forgotPassword = async (email) => {
-  try {
-    const response = await apiClient.post("/auth/forgot-password", { email });
+export const forgotPassword = async(
+  email
+)=>{
 
-    return {
-      success: true,
-      message: response.data.message,
+  try{
+
+    const response=
+
+      await apiClient.post(
+
+        "/auth/forgot-password",
+
+        {
+
+          email
+
+        }
+
+      );
+
+    return{
+
+      success:true,
+
+      message:
+      response.data.message
+
     };
 
-  } catch (error) {
-    console.error("Error en forgotPassword:", error);
-
-    const errorMessage = error.response?.data?.message || "Error al solicitar reset";
-
-    return {
-      success: false,
-      error: errorMessage,
-    };
   }
+
+  catch(error){
+
+    return{
+
+      success:false,
+
+      error:
+
+      error.response?.data?.message
+
+      ||
+
+      "Error al solicitar reset"
+
+    };
+
+  }
+
 };
 
+
 // ═══════════════════════════════════════════════════════════
-// RESET PASSWORD - Resetear contraseña con código
+// RESET PASSWORD
 // ═══════════════════════════════════════════════════════════
 
-export const resetPassword = async (token, newPassword) => {
-  try {
-    const response = await apiClient.post("/auth/reset-password", {
-      token,
-      new_password: newPassword,        // ✅ snake_case como espera backend
-      confirm_password: newPassword     // ✅ REQUERIDO por schema
-    });
+export const resetPassword = async(
+  token,
+  newPassword
+)=>{
 
-    return {
-      success: true,
-      message: response.data.message,
+  try{
+
+    const response=
+
+      await apiClient.post(
+
+        "/auth/reset-password",
+
+        {
+
+          token,
+
+          new_password:
+          newPassword,
+
+          confirm_password:
+          newPassword
+
+        }
+
+      );
+
+    return{
+
+      success:true,
+
+      message:
+      response.data.message
+
     };
 
-  } catch (error) {
-    console.error("Error en resetPassword:", error);
-
-    const errorMessage = error.response?.data?.message || "Error al resetear contraseña";
-
-    return {
-      success: false,
-      error: errorMessage,
-    };
   }
+
+  catch(error){
+
+    return{
+
+      success:false,
+
+      error:
+
+      error.response?.data?.message
+
+      ||
+
+      "Error al resetear contraseña"
+
+    };
+
+  }
+
 };
 
+
 // ═══════════════════════════════════════════════════════════
-// GOOGLE LOGIN - Manejar Google OAuth callback
+// GOOGLE LOGIN
 // ═══════════════════════════════════════════════════════════
 
-export const googleLogin = (accessToken, refreshToken) => {
-  try {
+export const googleLogin=(
+
+  accessToken,
+  refreshToken
+
+)=>{
+
+  try{
+
     saveSession({
+
       accessToken,
-      refreshToken,
+
+      refreshToken
+
     });
 
-    return {
-      success: true,
+    return{
+
+      success:true
+
     };
 
-  } catch (error) {
-    console.error("Error en googleLogin:", error);
-
-    return {
-      success: false,
-      error: "Error al procesar login de Google",
-    };
   }
+
+  catch(error){
+
+    return{
+
+      success:false,
+
+      error:
+      "Error Google Login"
+
+    };
+
+  }
+
 };
