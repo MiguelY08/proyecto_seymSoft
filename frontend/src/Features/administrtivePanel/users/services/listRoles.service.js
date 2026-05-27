@@ -18,7 +18,12 @@ export const listRoles = async () => {
     active: role.id_status === 1,
     isAdmin: role.is_admin,
     totalPermissions: role.total_permissions,
-  }));
+  }))
+  .filter(
+    (role) => 
+      role.active &&
+      role.totalPermissions > 0
+  );
 };
 
 export default listRoles;

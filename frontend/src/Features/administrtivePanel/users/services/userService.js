@@ -59,12 +59,16 @@ export const UserService = {
    * @param {number} limit - Elementos por página (default 10)
    * @returns {Promise<{ users: Array, pagination: Object }>}
    */
-  async list(page = 1, limit = 10, search = '') {
+  async list(page = 1, limit = 10, search = '', status = '') {
     try {
       const params = {
         page,
         limit,
       };
+
+      if (status) {
+        params.status = status;
+      }
 
       if (search && search.trim() !== '') {
         params.search = search.trim();
@@ -164,7 +168,7 @@ async update(id, changes) {
     if (changes.email !== undefined) payload.email = changes.email;
     if (changes.phone !== undefined) payload.phone = Number(changes.phone); // convertir a número
     if (changes.roleId !== undefined) {
-      payload.id_role = changes.roleId ?? null;
+      payload.idRole = changes.roleId ?? null;
     }
 
     const response = await apiClient.put(`/users/${id}`, payload);

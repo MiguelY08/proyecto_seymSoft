@@ -210,11 +210,18 @@ function UsersTable({
                     {highlight(row.name, search)}
 
                     {row.isClient && (
-                      <ShoppingBag
-                        className="w-3.5 h-3.5 text-[#004D77]"
-                        strokeWidth={1.8}
-                        title="También es cliente"
-                      />
+                      <div className="relative group">
+                        <div className="w-5 h-5 rounded-full bg-[#004D77]/15 flex items-center justify-center hover:bg-[#004D77]/25 transition-all duration-200 cursor-help">
+                          <ShoppingBag
+                            className="w-3 h-3 text-[#004D77] group-hover:scale-110 transition-transform duration-200"
+                            strokeWidth={1.8}
+                          />
+                        </div>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 font-medium">
+                          También es cliente
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-gray-800 rotate-45"></div>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </td>

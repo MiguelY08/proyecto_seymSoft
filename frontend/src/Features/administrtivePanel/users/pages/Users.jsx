@@ -7,6 +7,7 @@ import UsersTable      from '../components/UsersTable';
 import PaginationAdmin from '../../../shared/PaginationAdmin';
 import { UserService } from '../services/userService';
 import { useAlert }    from '../../../shared/alerts/useAlert';
+import { downloadUsersExcel } from '../helpers/usersHelpers';
 
 // Número de registros por página (debe coincidir con el limit que acepta la API)
 const RECORDS_PER_PAGE = 13;
@@ -26,6 +27,8 @@ function Users() {
     hasPrevPage: false,
   });
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -37,7 +40,12 @@ function Users() {
     try {
       // Si la API soporta búsqueda, se pasa como parámetro. Si no, se puede eliminar.
       // En caso de que no soporte búsqueda, puedes comentar la línea y hacer filtrado local
-      const result = await UserService.list(page, RECORDS_PER_PAGE, searchTerm);
+      const result = await UserService.list(
+        page,
+        RECORDS_PER_PAGE,
+        searchTerm,
+        statusFilter
+      );
       setUsers(result.users);
       setPagination(result.pagination);
       // Si la API no devuelve la página actual, se puede forzar
@@ -49,14 +57,33 @@ function Users() {
     } finally {
       setLoading(false);
     }
-  }, [showError]);
+  }, [showError, statusFilter]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 350);
+
+    return () => clearTimeout(timeout);
+  }, [search]);
 
   // ─── Recargar cuando cambia la página, la búsqueda o se vuelve de otra ruta ─
   useEffect(() => {
-    fetchUsers(currentPage, search);
-  }, [currentPage, search, location.pathname, fetchUsers]);
+    fetchUsers(currentPage, debouncedSearch);
+  }, [currentPage, debouncedSearch, statusFilter, location.pathname, fetchUsers]);
 
   // ─── Manejadores de acciones ───────────────────────────────────────────────
+  const handleExportUsers = async () => {
+    const result = await UserService.list(
+      1,
+      pagination.total || RECORDS_PER_PAGE,
+      debouncedSearch,
+      statusFilter
+    );
+
+    return downloadUsersExcel(result.users);
+  };
+
   const handleToggle = async (userId) => {
     // Encontrar el usuario actual para saber su estado activo
     const currentUser = users.find(u => u.id === userId);
@@ -65,7 +92,7 @@ function Users() {
     try {
       await UserService.toggle(userId, !currentUser.active);
       // Recargar la misma página después de cambiar el estado
-      await fetchUsers(currentPage, search);
+      await fetchUsers(currentPage, debouncedSearch);
     } catch (err) {
       const msg = err.response?.data?.message || 'Error al cambiar el estado del usuario.';
       showError('Error', msg);
@@ -81,7 +108,7 @@ function Users() {
         newPage = currentPage - 1;
         setCurrentPage(newPage);
       }
-      await fetchUsers(newPage, search);
+      await fetchUsers(newPage, debouncedSearch);
       showSuccess(
         "Usuario eliminado",
         "El usuario ha sido eliminado exitosamente."
@@ -119,7 +146,7 @@ function Users() {
           <p className="text-lg font-semibold">Error de carga</p>
           <p>{error}</p>
           <button
-            onClick={() => fetchUsers(currentPage, search)}
+            onClick={() => fetchUsers(currentPage, debouncedSearch)}
             className="mt-4 px-4 py-2 bg-[#004D77] text-white rounded-lg"
           >
             Reintentar
@@ -135,7 +162,10 @@ function Users() {
       <TopBar
         search={search}
         onSearchChange={handleSearchChange}
-        users={pagination.total} // Se usa para mostrar el total de resultados (puede ajustarse)
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        onExport={handleExportUsers}
+        totalUsers={pagination.total}
       />
 
       {/* Tabla de usuarios */}

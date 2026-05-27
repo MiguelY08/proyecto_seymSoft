@@ -289,13 +289,10 @@ function FormUser() {
             <ErrorMsg field="telefono" />
           </div>
 
-          {/* Rol (solo visual, no se envía) */}
+          {/* Rol */}
           <div className="flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
               Rol
-              <span className="ml-1.5 text-xs text-gray-400 font-normal">
-                (opcional — se asignará desde el módulo de Roles)
-              </span>
             </label>
             <div className="relative">
               <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" strokeWidth={1.8} />
@@ -314,7 +311,6 @@ function FormUser() {
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
             </div>
-            <p className="text-xs text-gray-400 mt-0.5">El rol se gestiona en el módulo de Roles.</p>
           </div>
         </div>
 
