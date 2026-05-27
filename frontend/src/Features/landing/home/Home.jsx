@@ -273,14 +273,118 @@ function Home() {
   ];
 
   const products = [
-    { id: 1, image: correctorCinta,    name: 'Corrector en Cinta',       category: 'ESCRITURA', price: 4500  },
-    { id: 2, image: cuadernoPrimavera, name: 'Cuaderno Primavera x100h', category: 'ESCOLAR',   price: 8900  },
-    { id: 3, image: notebookPen,       name: 'Notebook con Bolígrafo',   category: 'OFICINA',   price: 15900 },
-    { id: 4, image: setSharpie30,      name: 'Set Sharpie x30 Colores',  category: 'ARTE',      price: 62000 },
-    { id: 5, image: cosedora,          name: 'Cosedora Metálica',        category: 'OFICINA',   price: 18500 },
-    { id: 6, image: tijeraPuntaRoma,   name: 'Tijeras Punta Roma',       category: 'ESCOLAR',   price: 6200  },
-    { id: 7, image: viniloRojo,        name: 'Vinilo Power Color Rojo',  category: 'ARTE',      price: 9800  },
-    { id: 8, image: marcadorEterna,    name: 'Marcadores Eterna x12',    category: 'ESCRITURA', price: 13500 },
+    {
+      id: 1,
+      name: 'Corrector en Cinta',
+      retailPrice: 4500,
+      totalStock: 12,
+      status: 'Activo',
+      category: {
+        id: 3,
+        name: 'ESCRITURA',
+      },
+      images: [
+        { url: correctorCinta },
+      ],
+    },
+    {
+      id: 2,
+      name: 'Cuaderno Primavera x100h',
+      retailPrice: 8900,
+      totalStock: 15,
+      status: 'Activo',
+      category: {
+        id: 1,
+        name: 'ESCOLAR',
+      },
+      images: [
+        { url: cuadernoPrimavera },
+      ],
+    },
+    {
+      id: 3,
+      name: 'Notebook con Bolígrafo',
+      retailPrice: 15900,
+      totalStock: 8,
+      status: 'Activo',
+      category: {
+        id: 2,
+        name: 'OFICINA',
+      },
+      images: [
+        { url: notebookPen },
+      ],
+    },
+    {
+      id: 4,
+      name: 'Set Sharpie x30 Colores',
+      retailPrice: 62000,
+      totalStock: 5,
+      status: 'Activo',
+      category: {
+        id: 4,
+        name: 'ARTE',
+      },
+      images: [
+        { url: setSharpie30 },
+      ],
+    },
+    {
+      id: 5,
+      name: 'Cosedora Metálica',
+      retailPrice: 18500,
+      totalStock: 10,
+      status: 'Activo',
+      category: {
+        id: 2,
+        name: 'OFICINA',
+      },
+      images: [
+        { url: cosedora },
+      ],
+    },
+    {
+      id: 6,
+      name: 'Tijeras Punta Roma',
+      retailPrice: 6200,
+      totalStock: 20,
+      status: 'Activo',
+      category: {
+        id: 1,
+        name: 'ESCOLAR',
+      },
+      images: [
+        { url: tijeraPuntaRoma },
+      ],
+    },
+    {
+      id: 7,
+      name: 'Vinilo Power Color Rojo',
+      retailPrice: 9800,
+      totalStock: 14,
+      status: 'Activo',
+      category: {
+        id: 4,
+        name: 'ARTE',
+      },
+      images: [
+        { url: viniloRojo },
+      ],
+    },
+    {
+      id: 8,
+      name: 'Marcadores Eterna x12',
+      retailPrice: 13500,
+      totalStock: 18,
+      status: 'Activo',
+      category: {
+        id: 3,
+        name: 'ESCRITURA',
+      },
+      images: [
+        { url: marcadorEterna },
+      ],
+    },
   ];
 
   useEffect(() => {
@@ -300,7 +404,6 @@ function Home() {
 
           return prevJson === nextJson ? prevSlides : mappedSlides;
         });
-        setSlides(mappedSlides);
       } catch (err) {
         console.error('Error al cargar carrusel:', err);
       }
@@ -470,15 +573,14 @@ function Home() {
             @media (max-width: 639px)  { .products-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; } }
             @media (min-width: 640px) and (max-width: 1023px) { .products-grid { grid-template-columns: repeat(3, 1fr) !important; } }
           `}</style>
-          {products.map((product) => (
-            <ProductCard
-              key={product.id}
-              image={product.image}
-              name={product.name}
-              category={product.category}
-              price={product.price}
-            />
-          ))}
+          {products
+            .filter((product) => product.status === 'Activo')
+            .map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+              />
+            ))}
         </div>
 
         <div className="section-divider" />

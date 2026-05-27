@@ -67,7 +67,7 @@ const buildExcelRows = (users) =>
     u.email,
     u.phone || '',
     u.active ? 'Activo' : 'Inactivo',
-    u.role ?? 'Sin rol',
+    u.role?.nameRole || 'Sin rol',
     formatDate(u.createdAt),
   ]);
 
