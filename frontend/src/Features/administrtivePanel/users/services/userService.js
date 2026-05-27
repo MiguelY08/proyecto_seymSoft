@@ -17,7 +17,7 @@ import axios from 'axios';
 // Configuración base de Axios
 // ---------------------------------------------------------------------
 // La variable BASE_URL se define en .env (ej: BASE_URL=http://localhost:3000)
-const BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
