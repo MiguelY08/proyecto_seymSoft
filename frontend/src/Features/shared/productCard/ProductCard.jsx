@@ -1,51 +1,90 @@
+// ProductCard.jsx
+
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+
 import { ProductCardImage } from './ProductCardImg';
 import { ProductCardBody } from './ProductCardBody';
 import { ProductCardActions } from './ProductCardActions';
 import { useProductCard } from './hooks/useProductCard';
 
-function ProductCard({ image, name, category, price, productData }) {
-  const navigate = useNavigate();
-  const product = productData || { id: Math.random(), image, name, category, price };
-
+function ProductCard({ product: productData }) {
   const {
+    product,
+
     favorited,
+    available,
+
     heartPopping,
     isHoveringHeart,
     setIsHoveringHeart,
+
+    isHoveringCard,
+    activeImageIndex,
+    hasMultipleImages,
+
+    startImageCarousel,
+    stopImageCarousel,
+    selectImage,
+    nextImage,
+    prevImage,
+
     handleFavorite,
     handleAddToCart,
-  } = useProductCard(product);
-
-  const handleCardClick = () => navigate(`/shop/detail/${product.id}`);
+    goToDetail,
+  } = useProductCard(productData);
 
   return (
-    <div
-      onClick={handleCardClick}
-      className="bg-white rounded-2xl overflow-hidden cursor-pointer shadow-[0_2px_10px_rgba(0,77,119,0.08)] border-[1.5px] border-[#e4eff6] flex flex-col transition-all duration-300 hover:shadow-[0_12px_36px_rgba(0,77,119,0.14)] hover:border-[#afd0e6] hover:-translate-y-1 active:scale-984 active:shadow-[0_3px_12px_rgba(0,77,119,0.1)]"
+    <article
+      onClick={goToDetail}
+      onMouseEnter={startImageCarousel}
+      onMouseLeave={stopImageCarousel}
+      className={`
+        group
+        relative
+        flex
+        h-full
+        cursor-pointer
+        flex-col
+        overflow-hidden
+        rounded-3xl
+        border
+        border-[#dcebf3]
+        bg-white
+        shadow-[0_4px_18px_rgba(0,77,119,0.08)]
+        transition-all
+        duration-300
+        hover:-translate-y-1
+        hover:border-[#a9cde2]
+        hover:shadow-[0_16px_40px_rgba(0,77,119,0.16)]
+        active:scale-[0.985]
+      `}
       role="article"
-      aria-label={`Producto: ${name}`}
+      aria-label={`Producto: ${product.name}`}
     >
-      {/* Sección imagen */}
       <ProductCardImage
-        image={image}
-        name={name}
-        category={category}
+        product={product}
         favorited={favorited}
+        available={available}
         heartPopping={heartPopping}
         isHoveringHeart={isHoveringHeart}
-        onMouseEnter={() => setIsHoveringHeart(true)}
-        onMouseLeave={() => setIsHoveringHeart(false)}
+        setIsHoveringHeart={setIsHoveringHeart}
+        isHoveringCard={isHoveringCard}
+        activeImageIndex={activeImageIndex}
+        hasMultipleImages={hasMultipleImages}
+        selectImage={selectImage}
+        nextImage={nextImage}
+        prevImage={prevImage}
         onFavorite={handleFavorite}
       />
 
-      {/* Sección cuerpo */}
-      <ProductCardBody name={name} price={price} />
+      <ProductCardBody product={product} />
 
-      {/* Sección acciones */}
-      <ProductCardActions onAddToCart={handleAddToCart} />
-    </div>
+      <ProductCardActions
+        product={product}
+        available={available}
+        onAddToCart={handleAddToCart}
+      />
+    </article>
   );
 }
 

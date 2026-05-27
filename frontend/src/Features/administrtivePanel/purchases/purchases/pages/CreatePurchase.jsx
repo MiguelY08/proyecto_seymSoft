@@ -27,6 +27,25 @@ const CreatePurchase = () => {
   const [isFormModalOpen, setIsFormModalOpen]   = useState(false);
   const [selectedProviderData, setSelectedProviderData] = useState(null);
 
+  /**
+   * CÓDIGOS DE BARRAS EXTRA — estado elevado desde el sidebar
+   * ─────────────────────────────────────────────────────────────────
+   * Estructura: { [codigoBarrasOriginal]: string[] }
+   * Ejemplo:    { "444555666": ["111222333", "999888777"] }
+   *
+   * Se pasa al sidebar como `onExtraBarcodesChange` para que lo actualice,
+   * y se usa en handleAddProduct para adjuntar codigosExtra al item.
+   *
+   * TODO (backend): al guardar la compra, incluir codigosExtra en el payload:
+   *   productos: purchaseItems.map(item => ({
+   *     ...item,
+   *     codigosExtra: item.codigosExtra ?? []
+   *   }))
+   * El backend debe persistirlos asociados a la línea de compra o al producto.
+   * ─────────────────────────────────────────────────────────────────
+   */
+  const [extraBarcodes, setExtraBarcodes] = useState({});
+
   const handleCancelPurchase = async () => {
     if (purchaseItems.length > 0) {
       const result = await showConfirm(
@@ -102,7 +121,13 @@ const CreatePurchase = () => {
     setShowCreateProduct(false);
   };
 
-  const handleAddProduct = async () => {
+  /**
+   * handleAddProduct recibe `resolvedBarcode` desde el sidebar:
+   *  - Si el usuario no añadió códigos extra → es el codigoBarras original.
+   *  - Si añadió y seleccionó uno distinto → es el código nuevo elegido.
+   * También adjunta `codigosExtra` al item para que la tabla los muestre.
+   */
+  const handleAddProduct = async (resolvedBarcode) => {
     if (!searchProduct) {
       showWarning("Producto requerido", "Debes escribir un producto o código");
       return;
@@ -119,6 +144,9 @@ const CreatePurchase = () => {
       return;
     }
 
+    // Códigos extra del producto (pueden ser [] si no se añadió ninguno)
+    const codigosExtra = extraBarcodes[foundProduct.codigoBarras] ?? [];
+
     const existingItem = purchaseItems.find(
       (item) => item.codigoBarras === foundProduct.codigoBarras
     );
@@ -130,13 +158,14 @@ const CreatePurchase = () => {
           const subtotal = foundProduct.valorUnit * nuevaCantidad;
           const ivaValor = (subtotal * foundProduct.iva) / 100;
           const total = subtotal + ivaValor;
-
           return {
             ...item,
             cantidad: nuevaCantidad,
             subtotal,
             ivaValor,
             total,
+            // Actualizar codigosExtra si se agregaron nuevos mientras tanto
+            codigosExtra,
           };
         }
         return item;
@@ -152,7 +181,7 @@ const CreatePurchase = () => {
       const newItem = {
         id: Date.now(),
         producto: foundProduct.producto,
-        codigoBarras: foundProduct.codigoBarras,
+        codigoBarras: foundProduct.codigoBarras, // siempre el original
         proveedor: foundProduct.proveedor,
         cantidad: quantity,
         valorUnit: foundProduct.valorUnit,
@@ -160,6 +189,7 @@ const CreatePurchase = () => {
         iva: foundProduct.iva,
         ivaValor,
         total,
+        codigosExtra, // [] si no hay extras, o los que se hayan registrado
       };
 
       setPurchaseItems([...purchaseItems, newItem]);
@@ -252,6 +282,8 @@ const CreatePurchase = () => {
             setProviderTouched={setProviderTouched}
             openCreateProduct={() => setShowCreateProduct(true)}
             isFormModalOpen={() => setIsFormModalOpen(true)}
+            extraBarcodes={extraBarcodes}
+            onExtraBarcodesChange={setExtraBarcodes}
           />
         </div>
 
