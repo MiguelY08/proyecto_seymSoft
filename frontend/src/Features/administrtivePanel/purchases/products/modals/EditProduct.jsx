@@ -24,7 +24,7 @@ function PriceCard({ label, fieldMain, fieldPaca, placeholderMain, placeholderPa
             hm ? 'border-red-400 focus:ring-red-200 bg-red-50 text-red-900 placeholder-red-300'
                : 'border-gray-200 focus:ring-blue-400 bg-gray-50'}`}
         />
-        {hm && <p className="mt-0.5 text-[10px] text-red-500 flex items-center gap-1"><span>⚠</span>{errMain}</p>}
+        {hm && <p className="mt-0.5 text-[10px] text-red-500 flex items-center gap-1"><span></span>{errMain}</p>}
       </div>
       <div className={`h-px ${hp ? 'bg-red-300' : 'bg-gray-200'}`} />
       <div className={`px-3 pt-1.5 pb-2.5 ${hp ? 'bg-red-50' : 'bg-gray-50'}`}>
@@ -39,7 +39,7 @@ function PriceCard({ label, fieldMain, fieldPaca, placeholderMain, placeholderPa
             hp ? 'border-red-400 focus:ring-red-200 bg-white text-red-900 placeholder-red-300'
                : 'border-gray-200 focus:ring-blue-400 bg-white'}`}
         />
-        {hp && <p className="mt-0.5 text-[10px] text-red-500 flex items-center gap-1"><span>⚠</span>{errPaca}</p>}
+        {hp && <p className="mt-0.5 text-[10px] text-red-500 flex items-center gap-1"><span></span>{errPaca}</p>}
       </div>
     </div>
   );
@@ -79,6 +79,7 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
   const [errors, setErrors]               = useState({});
   const [priceErrors, setPriceErrors]     = useState({});
   const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
 
   useEffect(() => {
   const loadCategories = async () => {
@@ -92,30 +93,69 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
   };
   loadCategories();
 }, []);
-  
 
-  // Inicializar formulario cuando cambia el producto
+useEffect(() => {
+  if (formData.id_category) {
+    const loadSubcategories = async () => {
+      try {
+        const response = await fetch(`http://localhost:3000/api/categories/subcategories`);
+        const data = await response.json();
+        
+        // Filtrar subcategorías que pertenecen a la categoría seleccionada
+        const filtered = (data.data || []).filter(sub => sub.categoryId === formData.id_category);
+        setSubcategories(filtered);
+        
+        console.log(`Subcategorías cargadas: ${filtered.length}`);
+      } catch (error) {
+        console.error('Error al cargar subcategorías:', error);
+      }
+    };
+    loadSubcategories();
+  } else {
+    setSubcategories([]);
+  }
+}, [formData.id_category]);
+  
+  
   useEffect(() => {
-  if (!producto) return;
-  setFormData({
-    nombre: producto.name || '',
-    codBarras: producto.barcodes?.[0]?.barcode || '',
-    stockPrincipal: String(producto.barcodes?.[0]?.stock || 0),
-    codsBarrasExtra: (producto.barcodes || []).slice(1).map(b => ({ cod: b.barcode, stock: b.stock })),
-    referencia: producto.reference || '',
-    descripcion: producto.description || '',
-    cantidadXPaca: String(producto.quantityPerPack || 0),
-    categorias: producto.category?.name ? [producto.category.name] : [],
-    id_category: producto.category?.id || null,
-    precioDetalle: String(producto.retailPrice || 0),
-    precioMayorista: String(producto.wholesalePrice || 0),
-    precioColegas: String(producto.partnerPrice || 0),
-    precioPacas: String(producto.bulkPrice || 0),
-  });
-  setImagenPreview(null);
-  setErrors({});
-  setPriceErrors({});
+  if (producto) {
+    setFormData({
+      nombre: producto.name || '',
+      referencia: producto.reference || '',
+      precioDetalle: producto.retailPrice || '',
+      precioMayorista: producto.wholesalePrice || '',
+      precioColegas: producto.partnerPrice || '',
+      precioPacas: producto.bulkPrice || '',
+      descripcion: producto.description || '',
+      cantidadXPaca: String(producto.quantityPerPack || 0),
+      id_category: producto.category?.id || null,
+      codBarras: producto.barcodes?.[0]?.barcode || '',
+      stockPrincipal: producto.barcodes?.[0]?.stock || 0,
+      codsBarrasExtra: producto.barcodes?.slice(1) || [],
+    });
+
+    // ← CAMBIAR ESTO: Marcar solo las categorías asociadas (product_categories)
+    if (producto.categories && producto.categories.length > 0) {
+      setTimeout(() => {
+        producto.categories.forEach(cat => {
+          const checkbox = document.getElementById(`cat-${cat.id}`);
+          if (checkbox) checkbox.checked = true;
+        });
+      }, 100);
+    }
+
+    // Marcar subcategorías seleccionadas
+    if (producto.subcategories && producto.subcategories.length > 0) {
+      setTimeout(() => {
+        producto.subcategories.forEach(sub => {
+          const checkbox = document.getElementById(`sub-${sub.id}`);
+          if (checkbox) checkbox.checked = true;
+        });
+      }, 100);
+    }
+  }
 }, [producto]);
+
 
   const numeric = (v) => v.replace(/[^0-9]/g, '');
   const block   = (e) => { if (['e','E','+','-','.'].includes(e.key)) e.preventDefault(); };
@@ -222,19 +262,20 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
     return;
   }
 
-  // ← AGREGA AQUÍ LA VALIDACIÓN DE BARCODES
-  if (!formData.codBarras || formData.codBarras.length < 8) {
-    showError('Código de barras inválido', 'El código de barras debe tener mínimo 8 caracteres');
+  // ← AGREGAR ESTO: Obtener categorías y subcategorías seleccionadas
+  const selectedCategories = categories
+    .filter(cat => document.getElementById(`cat-${cat.id}`)?.checked)
+    .map(cat => cat.id);
+
+  const selectedSubcategories = subcategories
+    .filter(sub => document.getElementById(`sub-${sub.id}`)?.checked)
+    .map(sub => sub.id);
+
+  if (selectedCategories.length === 0) {
+    showError('Categorías requeridas', 'Debes seleccionar al menos una categoría');
     return;
   }
 
-  const codigosExtras = (formData.codsBarrasExtra || []).filter(c => c?.cod);
-  for (const codigo of codigosExtras) {
-    if (codigo.cod.length < 8) {
-      showError('Código de barras inválido', `Todos los códigos deben tener mínimo 8 caracteres`);
-      return;
-    }
-  }
   try {
     const saved = await ProductsService.update(producto.id, {
       nombre: formData.nombre,
@@ -249,6 +290,8 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
       codBarras: formData.codBarras,
       stock: Number(formData.stockPrincipal) || 0,
       codsBarrasExtra: formData.codsBarrasExtra || [],
+      categories: selectedCategories,
+      subcategories: selectedSubcategories,
     });
     showSuccess('Producto actualizado', `"${saved.name}" fue actualizado correctamente.`);
     onUpdate?.(saved);
@@ -317,40 +360,62 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
   <label className="block text-xs font-medium text-gray-700 mb-1.5">
     Categorías <span className="text-red-500">*</span>
   </label>
-  <div className={`border rounded-lg p-2.5 h-[130px] overflow-y-auto ${errors.categorias ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
+  <div className={`border rounded-lg p-2.5 h-[200px] overflow-y-auto ${errors.categorias ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
     {categories && categories.length > 0 ? (
-      categories.map((cat) => (
-        <div key={cat.id} className="mb-1.5 last:mb-0">
-          <div className="flex items-center gap-1.5">
-            <input 
-              type="checkbox" 
-              id={`cat-${cat.id}`} 
-              checked={formData.categorias.includes(cat.name)} 
-              onChange={() => {
-                const newCats = formData.categorias.includes(cat.name)
-                  ? formData.categorias.filter(c => c !== cat.name)
-                  : [...formData.categorias, cat.name];
-                setFormData(prev => ({
-                  ...prev,
-                  categorias: newCats,
-                  id_category: newCats.length > 0 ? categories.find(c => c.name === newCats[0])?.id : null
-                }));
-              }}
-              className="w-3.5 h-3.5 text-blue-600 rounded" 
-            />
-            <label htmlFor={`cat-${cat.id}`} className="flex-1 text-xs text-gray-700 font-medium cursor-pointer">
-              {cat.name}
-            </label>
-          </div>
+  categories.map((cat) => {
+    const subsCat = subcategories.filter(sub => sub.categoryId === cat.id);
+    
+    return (
+      <div key={cat.id} className="mb-3 last:mb-0">
+        {/* Categoría padre */}
+        <div className="flex items-center gap-1.5">
+          <input 
+            type="checkbox" 
+            id={`cat-${cat.id}`} 
+            className="w-3.5 h-3.5 text-blue-600 rounded"
+            onChange={(e) => {
+              // ← LIMPIAR SUBCATEGORÍAS cuando cambias de categoría
+              if (e.target.checked) {
+                subcategories.forEach(sub => {
+                  const checkbox = document.getElementById(`sub-${sub.id}`);
+                  if (checkbox) checkbox.checked = false;
+                });
+                setFormData(prev => ({...prev, id_category: cat.id}));
+              }
+            }}
+          />
+          <label htmlFor={`cat-${cat.id}`} className="flex-1 text-xs text-gray-700 font-semibold cursor-pointer">
+            {cat.name}
+          </label>
         </div>
-      ))
-    ) : (
-      <p className="text-xs text-gray-400">Sin categorías disponibles</p>
-    )}
+
+        {/* Subcategorías - solo mostrar si esta categoría está seleccionada */}
+        {subsCat.length > 0 && document.getElementById(`cat-${cat.id}`)?.checked && (
+          <div className="ml-5 mt-1.5 space-y-1">
+            {subsCat.map((sub) => (
+              <div key={sub.id} className="flex items-center gap-1.5">
+                <input 
+                  type="checkbox" 
+                  id={`sub-${sub.id}`} 
+                  className="w-3 h-3 text-blue-600 rounded" 
+                />
+                <label htmlFor={`sub-${sub.id}`} className="text-xs text-gray-600 cursor-pointer">
+                  {sub.name}
+                </label>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  })
+) : (
+  <p className="text-xs text-gray-400">Sin categorías disponibles</p>
+)}
+    
   </div>
   <ErrMsg field="categorias" />
 </div>
-
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1.5">Descripción <span className="text-gray-400 font-normal">(opcional)</span></label>
                   <textarea name="descripcion" value={formData.descripcion || ''} onChange={handleChange}

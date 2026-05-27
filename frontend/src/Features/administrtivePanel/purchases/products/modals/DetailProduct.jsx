@@ -87,17 +87,35 @@ function DetailProduct({ producto, isOpen, onClose, onEdit }) {
               </div>
 
               <div className="space-y-3 text-sm">
-                <div>
-                  <span className="font-semibold text-gray-700 block mb-1.5">Categorías:</span>
-                  {producto.category?.name ? (
-                    <div className="inline-flex bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1.5 text-xs">
-                      <span className="font-semibold text-blue-800">{producto.category.name}</span>
-                    </div>
-                  ) : (
-                    <span className="text-gray-400 text-xs">No especificado</span>
-                  )}
-                </div>
+                {/* Categorías */}
+                            <div>
+                              <span className="font-semibold text-gray-700 block mb-1.5">Categorías:</span>
+                              {producto.categories && producto.categories.length > 0 ? (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {producto.categories.map((cat) => (
+                                    <div key={cat.id} className="inline-flex bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1.5 text-xs">
+                                      <span className="font-semibold text-blue-800">{cat.name}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 text-xs">No especificado</span>
+                              )}
+                            </div>
 
+                            {/* Subcategorías */}
+                            {producto.subcategories && producto.subcategories.length > 0 && (
+                              <div>
+                                <span className="font-semibold text-gray-700 block mb-1.5">Subcategorías:</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {producto.subcategories.map((sub) => (
+                                    <div key={sub.id} className="inline-flex bg-purple-50 border border-purple-200 rounded-lg px-2.5 py-1.5 text-xs">
+                                      <span className="font-semibold text-purple-800">{sub.name}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                 <div>
                   <span className="font-semibold text-gray-700 block mb-1.5">Códigos de barras:</span>
                   <div className="space-y-1.5">
@@ -133,6 +151,8 @@ function DetailProduct({ producto, isOpen, onClose, onEdit }) {
               </div>
             </div>
           </div>
+
+          
 
           {/* Precios */}
           <div className="mt-6 pt-6 border-t">
