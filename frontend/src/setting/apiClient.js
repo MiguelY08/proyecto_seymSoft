@@ -13,7 +13,7 @@ import { getSession, saveSession, clearSession } from '../Features/access/helper
 
 // 1. CREAR INSTANCIA DE AXIOS CON CONFIG BASE
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
   timeout: 10000, // 10 segundos
   headers: {
     'Content-Type': 'application/json',
@@ -72,7 +72,7 @@ apiClient.interceptors.response.use(
 
         // Intentar refrescar el token
         const response = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'}/auth/refresh`,
+          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}/auth/refresh`,
           { refreshToken: session.refreshToken }
         );
 
