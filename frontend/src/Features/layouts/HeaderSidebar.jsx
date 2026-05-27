@@ -18,10 +18,10 @@ export default function HeaderSidebar() {
   const [showEditModal, setShowEditModal] = useState(false);
   const dropdownRef = useRef(null);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
+const handleLogout = async () => {
+  await logout();
+  navigate("/login");
+};
 
   const handleGoToStore = async () => {
     setMenuOpen(false);
