@@ -567,11 +567,11 @@ function Home() {
 
         <div
           className="products-grid"
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}
         >
           <style>{`
             @media (max-width: 639px)  { .products-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; } }
-            @media (min-width: 640px) and (max-width: 1023px) { .products-grid { grid-template-columns: repeat(3, 1fr) !important; } }
+            @media (min-width: 640px) and (max-width: 1023px) { .products-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 12px !important; } }
           `}</style>
           {products
             .filter((product) => product.status === 'Activo')

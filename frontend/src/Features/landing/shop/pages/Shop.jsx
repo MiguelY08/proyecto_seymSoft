@@ -70,7 +70,7 @@ const SHOP_STYLES = `
   .products-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+    gap: 14px;
     margin-top: 8px;
     animation: shop-fadeUp 0.4s ease;
   }
@@ -299,11 +299,7 @@ function Shop() {
                   {currentProducts.map(product => (
                     <ProductCard
                       key={product.id}
-                      image={product.image}
-                      name={product.name}
-                      category={product.category}
-                      price={product.price}
-                      productData={product}
+                      product={product}
                     />
                   ))}
                 </div>

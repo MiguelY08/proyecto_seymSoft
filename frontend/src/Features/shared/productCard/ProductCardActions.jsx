@@ -59,7 +59,7 @@ export function ProductCardActions({
   }, []);
 
   return (
-    <div className="px-4 pb-4 pt-1">
+    <div className="px-3.5 pb-3 pt-0.5">
       <button
         type="button"
         onClick={handleClick}
@@ -75,16 +75,16 @@ export function ProductCardActions({
           w-full
           items-center
           justify-center
-          gap-2
+          gap-1.5
           overflow-hidden
-          rounded-2xl
+          rounded-xl
           border-2
-          px-4
-          py-3
-          text-[0.78rem]
+          px-3
+          py-2.5
+          text-[0.68rem]
           font-black
           uppercase
-          tracking-[0.14em]
+          tracking-[0.1em]
           transition-all
           duration-300
           ${
@@ -115,12 +115,12 @@ export function ProductCardActions({
         )}
 
         {/* Contenido dinámico */}
-        <span className="relative z-10 flex items-center justify-center gap-2">
+        <span className="relative z-10 flex items-center justify-center gap-1.5">
           {isAdding ? (
             <>
               <LoaderCircle
-                size={17}
-                strokeWidth={2.8}
+                size={15}
+                strokeWidth={2.6}
                 className="animate-spin"
               />
 
@@ -129,8 +129,8 @@ export function ProductCardActions({
           ) : available ? (
             <>
               <ShoppingCart
-                size={17}
-                strokeWidth={2.8}
+                size={15}
+                strokeWidth={2.6}
               />
 
               <span>Añadir al carrito</span>
@@ -138,8 +138,8 @@ export function ProductCardActions({
           ) : (
             <>
               <PackageX
-                size={17}
-                strokeWidth={2.8}
+                size={15}
+                strokeWidth={2.6}
               />
 
               <span>Producto agotado</span>

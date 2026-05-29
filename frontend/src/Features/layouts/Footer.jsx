@@ -1,5 +1,6 @@
 import React from 'react';
 import logo from '../../assets/PapeleriaMagicLogo.png';
+import horizontalLogo from "../../assets/PMLogo_Horizontal.png";
 import instagramLogo from '../../assets/socialMedia/instagramWhite.png';
 import tiktokLogo from '../../assets/socialMedia/tiktokWhite.png';
 import whatsappLogo from '../../assets/socialMedia/whatsappWhite.png';
@@ -28,7 +29,7 @@ function Footer() {
           <div className="lg:col-span-3 flex flex-col gap-6">
             <div className="flex items-center gap-3">
               <div
-                className="rounded-full overflow-hidden shrink-0"
+                className="rounded-full overflow-hidden shrink-0 md:hidden"
                 style={{
                   width: 64, height: 64,
                   filter: 'drop-shadow(0 0 5px rgba(0,114,255,0.55))',
@@ -46,7 +47,7 @@ function Footer() {
                   }}
                 />
               </div>
-              <div>
+              <div className="md:hidden">
                 <h2
                   style={{
                     fontFamily: "'Playfair Display', Georgia, serif",
@@ -70,6 +71,18 @@ function Footer() {
                   Magic
                 </h2>
               </div>
+              <img
+                src={horizontalLogo}
+                alt="Papelería Magic"
+                className="hidden md:block"
+                style={{
+                  width: 210,
+                  maxWidth: '100%',
+                  height: 'auto',
+                  objectFit: 'contain',
+                  filter: 'drop-shadow(0 0 5px rgba(199, 224, 255, 0.8)',
+                }}
+              />
             </div>
 
             <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.7 }}>
@@ -172,7 +185,7 @@ function Footer() {
               {
                 href: 'https://www.google.com/maps/place/Centro+Comercial+Manhatan+Plaza/@6.2491669,-75.5729839,360m/data=!3m1!1e3!4m6!3m5!1s0x8e4428fff68501a1:0x23df4219000eef2d!8m2!3d6.249001!4d-75.5731081!16s%2Fg%2F1v4k7kjj?entry=ttu&g_ep=EgoyMDI2MDMxOC4xIKXMDSoASAFQAw%3D%3D',
                 icon: <MapPin size={15} />,
-                lines: ['Medellín, Colombia', 'Cra. 55 #46-64 (La Candelaria)', 'CC Manhattan Plaza', '📍Local 112', '📍Ventas 1102'],
+                lines: ['Medellín, Colombia', 'Cra. 55 #46-64 (La Candelaria)', 'CC Manhattan Plaza', '▶ Local 112', '▶ Ventas 1102'],
                 external: true,
               },
               {
@@ -275,7 +288,7 @@ function Footer() {
               }}
             >
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d1567.6753782204416!2d-75.5729839!3d6.2491669!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e4428fff68501a1%3A0x23df4219000eef2d!2sCentro%20Comercial%20Manhatan%20Plaza!5e1!3m2!1ses!2sco!4v1774362316184!5m2!1ses!2sco"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1417.6090066069087!2d-75.57370342476612!3d6.249136463623266!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e4428fff68501a1%3A0x23df4219000eef2d!2sCentro%20Comercial%20Manhatan%20Plaza!5e0!3m2!1ses!2sco!4v1779944639613!5m2!1ses!2sco"
                 width="100%"
                 height="190"
                 style={{ border: 0, display: 'block' }}
