@@ -341,14 +341,14 @@ function injectOrdersStyles() {
 
 // ─── Datos (sin cambios) ───────────────────────────────────────────────
 const P = {
-  libreta:    { nombre: 'LIBRETA CON LAPICERO',     precioUnidad: 5000   },
-  corrector:  { nombre: 'CORRECTOR CINTA',           precioUnidad: 4000   },
-  cuaderno:   { nombre: 'CUADERNO PRIMAVERA X100H',  precioUnidad: 70000  },
-  sharpie:    { nombre: 'SET SHARPIE X30',           precioUnidad: 120000 },
-  sewingMachine: { nombre: 'SEWING MACHINE',         precioUnidad: 5000   },
-  tijeras:    { nombre: 'TIJERAS PUNTA ROMA',        precioUnidad: 3000   },
-  vinilo:     { nombre: 'VINILO PQ POWER COLOR ROJO',precioUnidad: 1500   },
-  correctorEnc:  { nombre: 'CORRECTORCINTA',         precioUnidad: 7000   },
+  libreta:    { productId: 1, nombre: 'LIBRETA CON LAPICERO',      precioUnidad: 5000   },
+  corrector:  { productId: 2, nombre: 'CORRECTOR CINTA',            precioUnidad: 4000   },
+  cuaderno:   { productId: 3, nombre: 'CUADERNO PRIMAVERA X100H',   precioUnidad: 70000  },
+  sharpie:    { productId: 4, nombre: 'SET SHARPIE X30',            precioUnidad: 120000 },
+  sewingMachine: { productId: 5, nombre: 'SEWING MACHINE',          precioUnidad: 5000   },
+  tijeras:    { productId: 6, nombre: 'TIJERAS PUNTA ROMA',         precioUnidad: 3000   },
+  vinilo:     { productId: 7, nombre: 'VINILO PQ POWER COLOR ROJO', precioUnidad: 1500   },
+  correctorEnc:  { productId: 8, nombre: 'CORRECTORCINTA',          precioUnidad: 7000   },
 };
 
 export const pedidos = [
@@ -368,9 +368,9 @@ export const pedidos = [
     abonado: 50000,
     metodoPagoDetalle: { tipo: 'Transferencia', llave: '0900485426' },
     productos: [
-      { id: 1, ...P.cuaderno,  cantidad: 10 },
-      { id: 2, ...P.libreta,   cantidad: 5  },
-      { id: 3, ...P.tijeras,   cantidad: 8  },
+      { lineItemId: 1, ...P.cuaderno,  cantidad: 10 },
+      { lineItemId: 2, ...P.libreta,   cantidad: 5  },
+      { lineItemId: 3, ...P.tijeras,   cantidad: 8  },
     ],
   },
   {
@@ -389,8 +389,8 @@ export const pedidos = [
     abonado: 132000,
     metodoPagoDetalle: { tipo: 'Transferencia', llave: '0900485426' },
     productos: [
-      { id: 1, ...P.sharpie,   cantidad: 1 },
-      { id: 2, ...P.corrector, cantidad: 3 },
+      { lineItemId: 1, ...P.sharpie,   cantidad: 1 },
+      { lineItemId: 2, ...P.corrector, cantidad: 3 },
     ],
   },
   {
@@ -409,10 +409,10 @@ export const pedidos = [
     abonado: 0,
     metodoPagoDetalle: { tipo: 'Efectivo', llave: '' },
     productos: [
-      { id: 1, ...P.vinilo,        cantidad: 20 },
-      { id: 2, ...P.sewingMachine, cantidad: 2  },
-      { id: 3, ...P.correctorEnc,  cantidad: 5  },
-      { id: 4, ...P.tijeras,       cantidad: 10 },
+      { lineItemId: 1, ...P.vinilo,        cantidad: 20 },
+      { lineItemId: 2, ...P.sewingMachine, cantidad: 2  },
+      { lineItemId: 3, ...P.correctorEnc,  cantidad: 5  },
+      { lineItemId: 4, ...P.tijeras,       cantidad: 10 },
     ],
   },
   {
@@ -431,8 +431,8 @@ export const pedidos = [
     abonado: 0,
     metodoPagoDetalle: { tipo: 'Tarjeta de débito', llave: '' },
     productos: [
-      { id: 1, ...P.libreta,   cantidad: 30 },
-      { id: 2, ...P.corrector, cantidad: 15 },
+      { lineItemId: 1, ...P.libreta,   cantidad: 30 },
+      { lineItemId: 2, ...P.corrector, cantidad: 15 },
     ],
   },
 ];
@@ -450,12 +450,13 @@ function Orders() {
       julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11
     };
     const partes = fechaStr.split(' de ');
-    if (partes.length !== 2) return null;
+    if (partes.length < 2) return null;
     const dia = parseInt(partes[0]);
     const mesStr = partes[1].toLowerCase();
+    const anio = partes[2] ? parseInt(partes[2]) : new Date().getFullYear();
     const mes = meses[mesStr];
-    if (isNaN(dia) || mes === undefined) return null;
-    return new Date(new Date().getFullYear(), mes, dia);
+    if (isNaN(dia) || mes === undefined || isNaN(anio)) return null;
+    return new Date(anio, mes, dia);
   };
 
   const pedidosFiltrados = pedidos.filter(pedido => {
@@ -463,7 +464,7 @@ function Orders() {
       return false;
     }
     if (fechaInicial || fechaFinal) {
-      const fechaPedido = parseFechaPedido(pedido.fecha_corta);
+      const fechaPedido = parseFechaPedido(pedido.fecha);
       if (fechaPedido) {
         if (fechaInicial && fechaPedido < new Date(fechaInicial)) return false;
         if (fechaFinal && fechaPedido > new Date(fechaFinal)) return false;
@@ -536,6 +537,7 @@ function Orders() {
         <div className="orders-list">
           {pedidosFiltrados.map((pedido, idx) => {
             const total = pedido.productos.reduce((s, p) => s + p.precioUnidad * p.cantidad, 0);
+            const totalUnidades = pedido.productos.reduce((s, p) => s + p.cantidad, 0);
             const faltante = total - pedido.abonado;
             const pagadoCompleto = faltante <= 0 && pedido.estado !== 'Cancelado';
 
@@ -567,7 +569,7 @@ function Orders() {
                       <strong>Pago:</strong> {pedido.infoPago}
                     </div>
                     <div className="detail-row">
-                      <strong>Productos:</strong> <span className="product-count">{pedido.productos.length} unidades</span>
+                      <strong>Productos:</strong> <span className="product-count">{totalUnidades} unidades</span>
                     </div>
                   </div>
 

@@ -50,16 +50,16 @@ export function ProductCardImage({
       </div>
 
       {/* Gradiente inferior */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/10 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/10 to-transparent" />
 
       {/* Categoría */}
-      <div className="absolute left-3 top-3 z-20 flex items-center gap-2">
-        <span className="rounded-full border border-[rgba(0,77,119,0.12)] bg-white/92 px-3 py-1 text-[0.62rem] font-extrabold uppercase tracking-[0.18em] text-[#004D77] shadow-sm backdrop-blur-md">
+      <div className="absolute left-2.5 top-2.5 z-20 flex items-center gap-1.5">
+        <span className="rounded-full border border-[rgba(0,77,119,0.12)] bg-white/92 px-2.5 py-0.5 text-[0.54rem] font-extrabold uppercase tracking-[0.12em] text-[#004D77] shadow-sm backdrop-blur-md">
           {product.category}
         </span>
 
         {!available && (
-          <span className="rounded-full bg-[#ff4d4f] px-2.5 py-1 text-[0.58rem] font-black uppercase tracking-wider text-white shadow-md">
+          <span className="rounded-full bg-[#ff4d4f] px-2 py-0.5 text-[0.52rem] font-black uppercase tracking-wide text-white shadow-md">
             Agotado
           </span>
         )}
@@ -74,7 +74,7 @@ export function ProductCardImage({
           favorited ? 'Quitar de favoritos' : 'Agregar a favoritos'
         }
         type="button"
-        className={`absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border transition-all duration-300 ${
+        className={`absolute right-2.5 top-2.5 z-30 flex h-8 w-8 items-center justify-center rounded-full border transition-all duration-300 ${
           favorited
             ? 'border-[#004D77] bg-[#004D77]'
             : 'border-[rgba(0,77,119,0.12)] bg-white/92 backdrop-blur-md'
@@ -83,15 +83,15 @@ export function ProductCardImage({
         {favorited ? (
           isHoveringHeart ? (
             <HeartCrack
-              size={18}
-              strokeWidth={2.6}
+              size={16}
+              strokeWidth={2.5}
               color="#ffffff"
               className={heartPopping ? 'animate-heart-pop' : ''}
             />
           ) : (
             <Heart
-              size={18}
-              strokeWidth={2.6}
+              size={16}
+              strokeWidth={2.5}
               color="#ffffff"
               fill="#ffffff"
               className={heartPopping ? 'animate-heart-pop' : ''}
@@ -99,8 +99,8 @@ export function ProductCardImage({
           )
         ) : (
           <Heart
-            size={18}
-            strokeWidth={2.6}
+            size={16}
+            strokeWidth={2.5}
             color="#004D77"
             fill="transparent"
             className={heartPopping ? 'animate-heart-pop' : ''}
@@ -112,7 +112,7 @@ export function ProductCardImage({
       {hasMultipleImages && (
         <>
           {/* Indicadores inferiores */}
-          <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/20 px-2.5 py-1 backdrop-blur-md">
+          <div className="absolute bottom-2.5 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-full bg-black/20 px-2 py-0.5 backdrop-blur-md">
             {product.images.map((_, index) => (
               <button
                 key={index}
@@ -122,10 +122,10 @@ export function ProductCardImage({
                   event.stopPropagation();
                   selectImage(index);
                 }}
-                className={`h-2 rounded-full transition-all duration-300 ${
+                className={`h-1.5 rounded-full transition-all duration-300 ${
                   activeImageIndex === index
-                    ? 'w-5 bg-white'
-                    : 'w-2 bg-white/55 hover:bg-white/80'
+                    ? 'w-4 bg-white'
+                    : 'w-1.5 bg-white/55 hover:bg-white/80'
                 }`}
               />
             ))}
@@ -146,9 +146,9 @@ export function ProductCardImage({
                 event.stopPropagation();
                 prevImage();
               }}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/88 text-[#004D77] shadow-md backdrop-blur-md transition-transform duration-200 hover:scale-[1.08] active:scale-95"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/88 text-[#004D77] shadow-md backdrop-blur-md transition-transform duration-200 hover:scale-[1.08] active:scale-95"
             >
-              <ChevronLeft size={18} strokeWidth={2.5} />
+              <ChevronLeft size={16} strokeWidth={2.4} />
             </button>
           </div>
 
@@ -167,14 +167,14 @@ export function ProductCardImage({
                 event.stopPropagation();
                 nextImage();
               }}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/88 text-[#004D77] shadow-md backdrop-blur-md transition-transform duration-200 hover:scale-[1.08] active:scale-95"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/88 text-[#004D77] shadow-md backdrop-blur-md transition-transform duration-200 hover:scale-[1.08] active:scale-95"
             >
-              <ChevronRight size={18} strokeWidth={2.5} />
+              <ChevronRight size={16} strokeWidth={2.4} />
             </button>
           </div>
 
           {/* Contador */}
-          <div className="absolute bottom-3 right-3 z-30 rounded-full bg-black/22 px-2.5 py-1 text-[0.65rem] font-bold text-white backdrop-blur-md">
+          <div className="absolute bottom-2.5 right-2.5 z-30 rounded-full bg-black/22 px-2 py-0.5 text-[0.58rem] font-bold text-white backdrop-blur-md">
             {activeImageIndex + 1}/{product.images.length}
           </div>
         </>
@@ -185,10 +185,10 @@ export function ProductCardImage({
         className={`pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center pb-8 transition-all duration-500 ${
           isHoveringCard
             ? 'translate-y-0 opacity-100'
-            : 'translate-y-3 opacity-0'
+            : 'translate-y-2 opacity-0'
         }`}
       >
-        <div className="rounded-full border border-white/20 bg-white/16 px-4 py-2 text-[0.68rem] font-bold uppercase tracking-[0.2em] text-[#004D77] backdrop-blur-xl">
+        <div className="rounded-full border border-white/20 bg-white/16 px-3 py-1.5 text-[0.58rem] font-bold uppercase tracking-[0.14em] text-[#004D77] backdrop-blur-xl">
           Ver producto
         </div>
       </div>

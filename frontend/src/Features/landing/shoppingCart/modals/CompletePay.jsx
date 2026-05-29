@@ -37,13 +37,13 @@ const MODAL_STYLES = `
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    padding: 16px;
+    padding: 12px;
     font-family: 'Nunito', sans-serif;
   }
   .pay-modal-container {
     background: #ffffff;
-    border-radius: 28px;
-    max-width: 500px;
+    border-radius: 22px;
+    max-width: 440px;
     width: 100%;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     animation: modalFadeIn 0.3s ease;
@@ -56,12 +56,12 @@ const MODAL_STYLES = `
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px 24px;
+    padding: 16px 20px;
     border-bottom: 1.5px solid #e4eff6;
   }
   .pay-modal-title {
     font-family: 'Playfair Display', serif;
-    font-size: 1.4rem;
+    font-size: 1.12rem;
     font-weight: 700;
     color: #0c2a3a;
     margin: 0;
@@ -70,8 +70,8 @@ const MODAL_STYLES = `
     background: #f1f5f9;
     border: none;
     border-radius: 40px;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -83,17 +83,17 @@ const MODAL_STYLES = `
     transform: scale(1.05);
   }
   .pay-modal-body {
-    padding: 24px;
+    padding: 18px;
   }
   .countdown-badge {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 9px;
     background: #fef9e3;
     border: 1px solid #fde68a;
-    border-radius: 20px;
-    padding: 12px 16px;
-    margin-bottom: 24px;
+    border-radius: 16px;
+    padding: 10px 13px;
+    margin-bottom: 18px;
   }
   .countdown-badge.expired {
     background: #fee2e2;
@@ -102,19 +102,19 @@ const MODAL_STYLES = `
   .countdown-timer {
     font-family: monospace;
     font-weight: 800;
-    font-size: 1.2rem;
-    letter-spacing: 2px;
+    font-size: 1rem;
+    letter-spacing: 1px;
     color: #b45309;
   }
   .info-card {
     background: #f8fafc;
-    border-radius: 20px;
-    padding: 16px;
-    margin-bottom: 24px;
+    border-radius: 16px;
+    padding: 13px;
+    margin-bottom: 18px;
     border: 1px solid #e2edf5;
   }
   .total-amount {
-    font-size: 2rem;
+    font-size: 1.55rem;
     font-weight: 900;
     color: #004D77;
     line-height: 1.2;
@@ -124,18 +124,18 @@ const MODAL_STYLES = `
     align-items: center;
     gap: 6px;
     background: white;
-    padding: 4px 12px;
+    padding: 3px 10px;
     border-radius: 40px;
-    font-size: 0.7rem;
+    font-size: 0.62rem;
     font-weight: 800;
     color: #1e4060;
     border: 1px solid #e2edf5;
   }
   .qr-placeholder {
-    width: 100px;
-    height: 100px;
+    width: 82px;
+    height: 82px;
     background: #1e293b;
-    border-radius: 16px;
+    border-radius: 13px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -144,7 +144,7 @@ const MODAL_STYLES = `
     text-align: center;
   }
   .bank-info {
-    font-size: 0.7rem;
+    font-size: 0.62rem;
     color: #64748b;
     text-align: center;
     margin-top: 8px;
@@ -155,11 +155,11 @@ const MODAL_STYLES = `
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
     border: 2px dashed #cbd5e1;
-    border-radius: 20px;
-    padding: 20px 16px;
+    border-radius: 16px;
+    padding: 16px 13px;
     background: #ffffff;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -179,14 +179,14 @@ const MODAL_STYLES = `
     color: #004D77;
   }
   .upload-filename {
-    font-size: 0.75rem;
+    font-size: 0.68rem;
     font-weight: 600;
     color: #0c2a3a;
     word-break: break-all;
     max-width: 100%;
   }
   .upload-hint {
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     color: #94a3b8;
   }
   /* Botones mejorados */
@@ -194,9 +194,9 @@ const MODAL_STYLES = `
     background: transparent;
     border: 2px solid #e2edf5;
     border-radius: 40px;
-    padding: 12px;
+    padding: 10px;
     font-weight: 800;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     color: #1e4060;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -210,9 +210,9 @@ const MODAL_STYLES = `
     background: #004D77;
     border: none;
     border-radius: 40px;
-    padding: 12px;
+    padding: 10px;
     font-weight: 800;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     color: white;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -263,17 +263,17 @@ function CompletePay({ isOpen, onClose, totalAmount, deliveryMethod, deliveryInf
         <div className="pay-modal-header">
           <h2 className="pay-modal-title">Completar pago</h2>
           <button className="pay-close-btn" onClick={onClose}>
-            <X size={18} strokeWidth={2} />
+            <X size={16} strokeWidth={2} />
           </button>
         </div>
 
         <div className="pay-modal-body">
           {/* Contador */}
           <div className={`countdown-badge ${expired ? 'expired' : ''}`}>
-            <Clock size={18} className={expired ? 'text-red-600' : 'text-amber-600'} />
+            <Clock size={16} className={expired ? 'text-red-600' : 'text-amber-600'} />
             <div>
               {expired ? (
-                <span className="text-red-700 font-bold text-sm">Tiempo expirado · Pedido cancelado</span>
+                <span className="text-red-700 font-bold text-xs">Tiempo expirado · Pedido cancelado</span>
               ) : (
                 <span>
                   Tienes <span className="countdown-timer">{h}h {m}m {s}s</span> para pagar
@@ -299,8 +299,8 @@ function CompletePay({ isOpen, onClose, totalAmount, deliveryMethod, deliveryInf
               <div className="text-center">
                 <p className="text-xs text-gray-500 mb-2">Escanea para pagar</p>
                 <div className="qr-placeholder">
-                  <CreditCard size={28} strokeWidth={1.5} />
-                  <span className="text-[10px] mt-1">QR Demo</span>
+                  <CreditCard size={24} strokeWidth={1.5} />
+                  <span className="text-[9px] mt-1">QR Demo</span>
                 </div>
                 <div className="bank-info mt-2">
                   Cuenta: 1234567890 · Bancolombia · Ahorros
@@ -311,15 +311,15 @@ function CompletePay({ isOpen, onClose, totalAmount, deliveryMethod, deliveryInf
 
           {/* Upload comprobante - corregido */}
           <div>
-            <p className="text-sm font-bold text-gray-700 mb-2">Comprobante de transferencia</p>
+            <p className="text-xs font-bold text-gray-700 mb-2">Comprobante de transferencia</p>
             <label className="upload-area">
               <input type="file" accept="image/png,image/jpeg,image/jpg" onChange={handleFileChange} className="hidden" />
-              <Upload size={28} className="upload-icon" />
+              <Upload size={24} className="upload-icon" />
               {archivo ? (
                 <span className="upload-filename">{archivo.name}</span>
               ) : (
                 <>
-                  <span className="text-sm font-medium text-gray-700">Haz clic para subir el comprobante</span>
+                  <span className="text-xs font-medium text-gray-700">Haz clic para subir el comprobante</span>
                   <span className="upload-hint">PNG, JPG o JPEG (máx. 10MB)</span>
                 </>
               )}
@@ -327,7 +327,7 @@ function CompletePay({ isOpen, onClose, totalAmount, deliveryMethod, deliveryInf
           </div>
 
           {/* Botones */}
-          <div className="grid grid-cols-2 gap-3 mt-6">
+          <div className="grid grid-cols-2 gap-2.5 mt-4">
             <button onClick={onClose} className="btn-cancel">
               Cancelar
             </button>

@@ -76,7 +76,14 @@ const DETAIL_STYLES = `
   }
 
   /* Imagen */
+  .detail-gallery {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
   .detail-image-wrapper {
+    position: relative;
     background: linear-gradient(150deg, #eef6fb 0%, #e0eef7 100%);
     border-radius: 28px;
     padding: 32px;
@@ -85,6 +92,8 @@ const DETAIL_STYLES = `
     justify-content: center;
     border: 1.5px solid #e4eff6;
     transition: all 0.3s ease;
+    min-height: 420px;
+    overflow: hidden;
   }
   .detail-image-wrapper:hover {
     box-shadow: 0 12px 32px rgba(0, 77, 119, 0.12);
@@ -98,6 +107,87 @@ const DETAIL_STYLES = `
   }
   .detail-image-wrapper:hover .detail-image {
     transform: scale(1.03);
+  }
+
+  .detail-image-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 3;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(0, 77, 119, 0.14);
+    background: rgba(255, 255, 255, 0.88);
+    color: #004D77;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(0, 77, 119, 0.12);
+    backdrop-filter: blur(10px);
+    transition: all 0.2s ease;
+  }
+
+  .detail-image-nav:hover {
+    background: #004D77;
+    color: #ffffff;
+    transform: translateY(-50%) scale(1.06);
+  }
+
+  .detail-image-nav:active {
+    transform: translateY(-50%) scale(0.96);
+  }
+
+  .detail-image-nav-left {
+    left: 18px;
+  }
+
+  .detail-image-nav-right {
+    right: 18px;
+  }
+
+  .detail-image-counter {
+    position: absolute;
+    right: 18px;
+    bottom: 18px;
+    z-index: 3;
+    border-radius: 999px;
+    background: rgba(0, 77, 119, 0.82);
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 6px 12px;
+    backdrop-filter: blur(10px);
+  }
+
+  .detail-thumbnails {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(72px, 88px));
+    gap: 10px;
+  }
+
+  .detail-thumbnail {
+    aspect-ratio: 1;
+    border: 1.5px solid #e2edf5;
+    border-radius: 16px;
+    background: #ffffff;
+    padding: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .detail-thumbnail:hover,
+  .detail-thumbnail.active {
+    border-color: #004D77;
+    box-shadow: 0 8px 18px rgba(0, 77, 119, 0.12);
+    transform: translateY(-2px);
+  }
+
+  .detail-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   }
 
   /* Info producto */
@@ -282,7 +372,7 @@ const DETAIL_STYLES = `
     scrollbar-width: none;
     -ms-overflow-style: none;
     display: flex;
-    gap: 20px;
+    gap: 14px;
     padding: 8px 4px;
     flex: 1;
   }
@@ -291,7 +381,8 @@ const DETAIL_STYLES = `
   }
   .carousel-slide {
     flex: 0 0 auto;
-    width: 260px;
+    width: calc((100% - 56px) / 5);
+    min-width: 180px;
     transition: transform 0.3s;
   }
   .carousel-slide:hover {
@@ -335,6 +426,29 @@ function injectDetailStyles() {
   detailStylesInjected = true;
 }
 
+function normalizeDetailImages(product) {
+  const rawImages = product.images ?? product.image ?? [];
+  const imagesArray = Array.isArray(rawImages) ? rawImages : [rawImages];
+
+  return imagesArray
+    .map((image, index) => {
+      if (!image) return null;
+
+      if (typeof image === "string") {
+        return {
+          url: image,
+          alt: `${product.name} ${index + 1}`,
+        };
+      }
+
+      return {
+        url: image.url ?? image.image_url ?? image.img_url ?? image.src ?? image.path,
+        alt: image.alt ?? image.description ?? `${product.name} ${index + 1}`,
+      };
+    })
+    .filter((image) => image?.url);
+}
+
 function ShopDetail() {
   injectDetailStyles();
 
@@ -343,6 +457,7 @@ function ShopDetail() {
   const { showSuccess } = useAlert();
 
   const [quantity, setQuantity] = useState(1);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [selectedSort, setSelectedSort] = useState("default");
   const [sortOpen, setSortOpen] = useState(false);
 
@@ -360,7 +475,17 @@ function ShopDetail() {
     description:
       "Dale un toque de estilo y color a tus ideas. Combina tonos vibrantes que los hacen irresistibles a la vista, mientras su mina HB garantiza una escritura suave, precisa y duradera.",
     image: setsharpie,
+    images: [
+      { url: setsharpie, alt: "Set sharpie x30" },
+      { url: notebookPen, alt: "Libreta con lapicero" },
+      { url: correctorcinta, alt: "Corrector en cinta" },
+      { url: cuadernoprimavera, alt: "Cuaderno primavera x100h" },
+    ],
   };
+
+  const productImages = normalizeDetailImages(product);
+  const activeImage = productImages[selectedImageIndex] ?? productImages[0];
+  const hasMultipleImages = productImages.length > 1;
 
   const relatedProducts = [
     { id: 1, image: notebookPen, name: "Libreta con lapicero", category: "Escolar", price: 5000 },
@@ -382,6 +507,26 @@ function ShopDetail() {
     });
 
   const totalPrice = product.price * quantity;
+
+  useEffect(() => {
+    setSelectedImageIndex(0);
+  }, [product.id]);
+
+  const showPrevImage = () => {
+    if (!hasMultipleImages) return;
+
+    setSelectedImageIndex((currentIndex) =>
+      currentIndex === 0 ? productImages.length - 1 : currentIndex - 1
+    );
+  };
+
+  const showNextImage = () => {
+    if (!hasMultipleImages) return;
+
+    setSelectedImageIndex((currentIndex) =>
+      currentIndex === productImages.length - 1 ? 0 : currentIndex + 1
+    );
+  };
 
   const handleAddToCart = () => {
     addToCart(product, quantity);
@@ -413,8 +558,60 @@ function ShopDetail() {
 
         {/* Producto principal */}
         <div className="detail-grid">
-          <div className="detail-image-wrapper">
-            <img src={product.image} alt={product.name} className="detail-image" />
+          <div className="detail-gallery">
+            <div className="detail-image-wrapper">
+              {hasMultipleImages && (
+                <button
+                  type="button"
+                  className="detail-image-nav detail-image-nav-left"
+                  aria-label="Ver imagen anterior"
+                  onClick={showPrevImage}
+                >
+                  <ChevronLeft size={20} strokeWidth={2.5} />
+                </button>
+              )}
+
+              <img
+                src={activeImage?.url}
+                alt={activeImage?.alt ?? product.name}
+                className="detail-image"
+              />
+
+              {hasMultipleImages && (
+                <button
+                  type="button"
+                  className="detail-image-nav detail-image-nav-right"
+                  aria-label="Ver imagen siguiente"
+                  onClick={showNextImage}
+                >
+                  <ChevronRight size={20} strokeWidth={2.5} />
+                </button>
+              )}
+
+              {hasMultipleImages && (
+                <div className="detail-image-counter">
+                  {selectedImageIndex + 1}/{productImages.length}
+                </div>
+              )}
+            </div>
+
+            {hasMultipleImages && (
+              <div className="detail-thumbnails" aria-label="Imagenes del producto">
+                {productImages.map((image, index) => (
+                  <button
+                    key={`${image.url}-${index}`}
+                    type="button"
+                    className={`detail-thumbnail ${
+                      selectedImageIndex === index ? "active" : ""
+                    }`}
+                    aria-label={`Ver imagen ${index + 1}`}
+                    onClick={() => setSelectedImageIndex(index)}
+                  >
+                    <img src={image.url} alt={image.alt} />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="detail-info">
@@ -479,11 +676,7 @@ function ShopDetail() {
               {sortedRelatedProducts.map((relProduct) => (
                 <div key={relProduct.id} className="carousel-slide">
                   <ProductCard
-                    image={relProduct.image}
-                    name={relProduct.name}
-                    category={relProduct.category}
-                    price={relProduct.price}
-                    productData={relProduct}
+                    product={relProduct}
                   />
                 </div>
               ))}
