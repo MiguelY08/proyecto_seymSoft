@@ -21,7 +21,9 @@ function PriceCard({ label, fieldMain, fieldPaca, placeholderMain, placeholderPa
       </div>
       <div className={`h-px ${hp ? 'bg-red-300' : 'bg-gray-200'}`} />
       <div className={`px-3 pt-1.5 pb-2.5 ${hp ? 'bg-red-50' : 'bg-gray-50'}`}>
-        <label className="block text-[10px] font-medium text-gray-500 mb-1 uppercase tracking-wide">Desc. x paca</label>
+        <label className="block text-[10px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
+              Descuento %
+            </label>
         <input type="text" inputMode="numeric" name={fieldPaca} value={valuePaca}
           onChange={(e) => onChange({ target: { name: fieldPaca, value: numeric(e.target.value) } })}
           onKeyDown={block} placeholder={placeholderPaca}
@@ -39,6 +41,13 @@ const EMPTY = {
   referencia: '', cantidadXPaca: '',
   precioDetalle: '', precioDetallePaca: '', precioMayorista: '', precioMayoristaPaca: '',
   precioColegas: '', precioColegasPaca: '', precioPacas: '', precioPacasPaca: '',
+  idUnitMeasure: 2,
+  ivaPercentage: 0,
+
+  retailDiscountPct: 0,
+  wholesaleDiscountPct: 0,
+  partnerDiscountPct: 0,
+  bulkDiscountPct: 0,
 };
 
 const CATS = {
@@ -50,7 +59,7 @@ const CATS = {
 
 function CreateProduct({ isOpen, onClose, onCreate }) {
   const { showSuccess, showError } = useAlert();
-  const [formData, setFormData]           = useState(EMPTY);
+  const [formData, setFormData]= useState(EMPTY);
   const [imagenesPreview, setImagenesPreview] = useState([]);
   const [errors, setErrors]               = useState({});
   const [priceErrors, setPriceErrors]     = useState({});
@@ -256,6 +265,25 @@ useEffect(() => {
     formDataToSend.append('precioColegas', formData.precioColegas ? Number(formData.precioColegas) : null);
     formDataToSend.append('precioPacas', formData.precioPacas ? Number(formData.precioPacas) : null);
     formDataToSend.append('ivaPercentage', formData.ivaPercentage || 0);
+    formDataToSend.append(
+    'retailDiscountPct',
+        formData.retailDiscountPct || 0
+      );
+
+      formDataToSend.append(
+        'wholesaleDiscountPct',
+        formData.wholesaleDiscountPct || 0
+      );
+
+      formDataToSend.append(
+        'partnerDiscountPct',
+        formData.partnerDiscountPct || 0
+      );
+
+      formDataToSend.append(
+        'bulkDiscountPct',
+        formData.bulkDiscountPct || 0
+      );
     formDataToSend.append('idUnitMeasure', formData.idUnitMeasure || 2);
     formDataToSend.append('idCategorie', formData.id_category || 1);
     formDataToSend.append('description', formData.descripcion || null);
@@ -535,6 +563,41 @@ useEffect(() => {
                     onChange={(e) => setFormData(p => ({ ...p, cantidadXPaca: numeric(e.target.value) }))}
                     onKeyDown={block} placeholder="12" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
                 </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Unidad de medida
+                  </label>
+
+                  <select
+                          name="idUnitMeasure"
+                          value={formData.idUnitMeasure}
+                          onChange={handleChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        >
+                          <option value={2}>Unidad</option>
+                          <option value={3}>Docena</option>
+                          <option value={4}>Caja</option>
+                          <option value={5}>Paca</option>
+                        </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    IVA %
+                  </label>
+
+                  <input
+                    type="number"
+                    name="ivaPercentage"
+                    value={formData.ivaPercentage}
+                    onChange={handleChange}
+                    min="0"
+                    max="100"
+                    placeholder="19"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -543,10 +606,10 @@ useEffect(() => {
           <div>
             <h4 className="text-sm font-bold text-gray-800 mb-3 pb-1.5 border-b-2 border-[#004D77]">3. Configuración de Precios</h4>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <PriceCard label="Precio Detal"     fieldMain="precioDetalle"   fieldPaca="precioDetallePaca"   valueMain={formData.precioDetalle}   valuePaca={formData.precioDetallePaca}   placeholderMain="5000" placeholderPaca="4500" onChange={handleChange} errMain={errors.precioDetalle    || priceErrors.precioDetalle}    errPaca={errors.precioDetallePaca  || priceErrors.precioDetallePaca} />
-              <PriceCard label="Precio Mayorista" fieldMain="precioMayorista" fieldPaca="precioMayoristaPaca" valueMain={formData.precioMayorista} valuePaca={formData.precioMayoristaPaca} placeholderMain="4000" placeholderPaca="3500" onChange={handleChange} errMain={errors.precioMayorista   || priceErrors.precioMayorista}   errPaca={errors.precioMayoristaPaca || priceErrors.precioMayoristaPaca} />
-              <PriceCard label="Precio Colegas"   fieldMain="precioColegas"   fieldPaca="precioColegasPaca"   valueMain={formData.precioColegas}   valuePaca={formData.precioColegasPaca}   placeholderMain="3500" placeholderPaca="3000" onChange={handleChange} errMain={errors.precioColegas    || priceErrors.precioColegas}    errPaca={errors.precioColegasPaca  || priceErrors.precioColegasPaca} />
-              <PriceCard label="Precio X Pacas"   fieldMain="precioPacas"     fieldPaca="precioPacasPaca"     valueMain={formData.precioPacas}     valuePaca={formData.precioPacasPaca}     placeholderMain="3000" placeholderPaca="2500" onChange={handleChange} errMain={errors.precioPacas      || priceErrors.precioPacas}      errPaca={errors.precioPacasPaca    || priceErrors.precioPacasPaca} />
+              <PriceCard label="Precio Detal"     fieldMain="precioDetalle"   fieldPaca="retailDiscountPct"   valueMain={formData.precioDetalle}   valuePaca={formData.retailDiscountPct}   placeholderMain="5000" placeholderPaca="4500" onChange={handleChange} errMain={errors.precioDetalle    || priceErrors.precioDetalle}    errPaca={errors.precioDetallePaca  || priceErrors.precioDetallePaca} />
+              <PriceCard label="Precio Mayorista" fieldMain="precioMayorista" fieldPaca="wholesaleDiscountPct" valueMain={formData.precioMayorista} valuePaca={formData.wholesaleDiscountPct} placeholderMain="4000" placeholderPaca="3500" onChange={handleChange} errMain={errors.precioMayorista   || priceErrors.precioMayorista}   errPaca={errors.precioMayoristaPaca || priceErrors.precioMayoristaPaca} />
+              <PriceCard label="Precio Colegas"   fieldMain="precioColegas"   fieldPaca="partnerDiscountPct"   valueMain={formData.precioColegas}   valuePaca={formData.partnerDiscountPct}   placeholderMain="3500" placeholderPaca="3000" onChange={handleChange} errMain={errors.precioColegas    || priceErrors.precioColegas}    errPaca={errors.precioColegasPaca  || priceErrors.precioColegasPaca} />
+              <PriceCard label="Precio X Pacas"   fieldMain="precioPacas"     fieldPaca="bulkDiscountPct"     valueMain={formData.precioPacas}     valuePaca={formData.bulkDiscountPct}     placeholderMain="3000" placeholderPaca="2500" onChange={handleChange} errMain={errors.precioPacas      || priceErrors.precioPacas}      errPaca={errors.precioPacasPaca    || priceErrors.precioPacasPaca} />
             </div>
           </div>
 

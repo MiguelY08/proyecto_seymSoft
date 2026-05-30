@@ -88,21 +88,20 @@ function DetailProduct({ producto, isOpen, onClose, onEdit }) {
 
               <div className="space-y-3 text-sm">
                 {/* Categorías */}
-                            <div>
-                              <span className="font-semibold text-gray-700 block mb-1.5">Categorías:</span>
-                              {producto.categories && producto.categories.length > 0 ? (
-                                <div className="flex flex-wrap gap-1.5">
-                                  {producto.categories.map((cat) => (
-                                    <div key={cat.id} className="inline-flex bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1.5 text-xs">
-                                      <span className="font-semibold text-blue-800">{cat.name}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="text-gray-400 text-xs">No especificado</span>
-                              )}
-                            </div>
-
+<div>
+  <span className="font-semibold text-gray-700 block mb-1.5">Categorías:</span>
+  {producto.categories && producto.categories.length > 0 ? (
+    <div className="flex flex-wrap gap-1.5">
+      {producto.categories.map((cat) => (
+        <div key={cat.id} className="inline-flex bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1.5 text-xs">
+          <span className="font-semibold text-blue-800">{cat.name}</span>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <span className="text-gray-400 text-xs">No especificado</span>
+  )}
+</div>
                             {/* Subcategorías */}
                             {producto.subcategories && producto.subcategories.length > 0 && (
                               <div>

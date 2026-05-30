@@ -9,7 +9,7 @@ import axios from "axios";
  * - Consumir directamente el backend real
  */
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const bannerApi = axios.create({
   baseURL: `${API_URL}/banners`,

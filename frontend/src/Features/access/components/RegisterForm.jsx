@@ -1,299 +1,290 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
-import { registerUser } from "../services/authService";
-import { validateRegister, sanitizeInput } from "../validators/authValidators";
-import { useAlert } from "../../shared/alerts/useAlert";
+import { validateRegister, sanitizeInput } from "../validators/authValidators.js";
+import { useAuth } from "../context/AuthContext.jsx";
+import { useAlert } from "../../shared/alerts/useAlert.js";
 
 export default function RegisterForm() {
 
-  // ─── Navegación ───────────────────────────────────────────────────────────
+  const { register, loading } = useAuth();
   const navigate = useNavigate();
+  const { showSuccess, showError, showWarning } = useAlert();
 
-  // ─── Sistema de alertas ───────────────────────────────────────────────────
-  const { showSuccess, showError, showWarning, showConfirm } = useAlert();
-
-  // ─── Mostrar / ocultar contraseñas ────────────────────────────────────────
-  const [showPassword,        setShowPassword]        = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // ─── Estado del formulario ────────────────────────────────────────────────
   const [formData, setFormData] = useState({
-    documentType:    "",
-    document:        "",
-    fullName:        "",
-    email:           "",
-    phone:           "",
-    address:         "",
-    password:        "",
+    fullName: "",
+    email: "",
+    phone: "",
+    password: "",
     confirmPassword: "",
-    terms:           false,
+    terms: false,
   });
 
-  // ─── Errores de validación ────────────────────────────────────────────────
   const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
 
-
-  /* ==========================================================================
-     handleChange
-  ========================================================================== */
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-
     let newValue = type === "checkbox" ? checked : value;
     newValue = sanitizeInput(name, newValue);
-
+    
     const updatedForm = { ...formData, [name]: newValue };
     setFormData(updatedForm);
+    setTouched((prev) => ({ ...prev, [name]: true }));
 
+    // Validar en tiempo real
     const validationErrors = validateRegister(updatedForm);
     setErrors((prev) => ({ ...prev, [name]: validationErrors[name] }));
   };
 
-
-  /* ==========================================================================
-     handleSubmit
-  ========================================================================== */
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Marcar todos como tocados
+    const allFields = ["fullName", "email", "phone", "password", "confirmPassword", "terms"];
+    setTouched(allFields.reduce((acc, f) => ({ ...acc, [f]: true }), {}));
+
+    // Validar formulario completo
     const validationErrors = validateRegister(formData);
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      showWarning(
-        "Campos incompletos",
-        "Por favor revisa los campos obligatorios"
-      );
+      showWarning("Campos incompletos", "Por favor revisa los campos marcados");
       return;
     }
 
-    // ── Alerta de confirmación con resumen de datos ───────────────────────
-    const result = await showConfirm(
-      "info",
-      "¿Confirmar registro?",
-      `Revisa tus datos antes de continuar:\n\n👤 Nombre: ${formData.fullName}\n🪪 Documento: ${formData.documentType} - ${formData.document}\n📧 Correo: ${formData.email}\n📞 Teléfono: ${formData.phone}\n📍 Dirección: ${formData.address}\n\n¿Estás seguro de que deseas crear tu cuenta con estos datos?`,
-      { confirmButtonText: "Sí, registrarme", cancelButtonText: "Revisar de nuevo" }
-    );
-
-    if (!result?.isConfirmed) return;
-
     try {
-      const { confirmPassword, terms, ...userData } = formData;
-      registerUser(userData);
-      showSuccess("Registro exitoso", "Tu cuenta fue creada correctamente");
-      navigate("/login");
+      // Llamar register con objeto correcto
+      const result = await register({
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+        phone: parseInt(formData.phone.replace(/\D/g, ""), 10)
+      });
+
+      if (result.success) {
+        // showSuccess ya se mostró en AuthContext
+        navigate(result.redirectTo);
+      } else {
+        setErrors({ general: result.error });
+        showError("Error en registro", result.error);
+      }
+
     } catch (error) {
-      showError("Error en el registro", error.message);
+      console.error("Error en handleSubmit:", error);
+      showError("Error inesperado", "No pudimos procesar tu registro. Intenta de nuevo.");
+      setErrors({ general: "Error inesperado" });
     }
   };
 
-
-  /* ==========================================================================
-     Label reutilizable
-  ========================================================================== */
-  const Label = ({ text }) => (
-    <label className="flex items-center gap-1 mb-1 text-sm font-medium text-gray-700">
+  const Label = ({ text, htmlFor }) => (
+    <label htmlFor={htmlFor} className="flex items-center gap-1 mb-1 text-sm font-medium text-gray-700">
       {text}
       <span className="text-red-500">*</span>
     </label>
   );
 
-
-  /* ==========================================================================
-     inputStyle
-  ========================================================================== */
   const inputStyle = (field) =>
-    `w-full border rounded-lg px-3 py-2 text-sm outline-none
-    ${errors[field]
-      ? "border-red-500 focus:ring-red-500"
-      : "focus:ring-2 focus:ring-blue-600"
+    `w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors
+    ${touched[field] && errors[field]
+      ? "border-red-500 focus:ring-2 focus:ring-red-200"
+      : "border-gray-300 focus:ring-2 focus:ring-blue-600"
     }`;
 
-
   return (
-    <div className="max-w-6xl w-full mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
+    <div className="max-w-2xl w-full mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
 
-      {/* ─── Header ─────────────────────────────────────────────────────── */}
-      <div className="bg-[#004D77] py-4">
+      <div className="bg-blue-900 py-4">
         <h2 className="font-lexend text-xl md:text-2xl font-semibold text-white text-center">
           Crear Cuenta
         </h2>
       </div>
 
-      <div className="p-5 md:p-5">
-        <form
-          onSubmit={handleSubmit}
-          className="grid grid-cols-1 md:grid-cols-2 gap-5"
-        >
+      <div className="p-5 md:p-8">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
 
-          {/* Tipo Documento */}
+          {/* Nombre Completo */}
           <div>
-            <Label text="Tipo de Documento" />
-            <select
-              name="documentType"
-              value={formData.documentType}
-              onChange={handleChange}
-              className={inputStyle("documentType")}
-            >
-              <option value="">Seleccione</option>
-              <option value="CC">CC</option>
-              <option value="TI">TI</option>
-              <option value="CE">CE</option>
-            </select>
-            {errors.documentType &&
-              <p className="text-red-500 text-xs mt-1">{errors.documentType}</p>}
-          </div>
-
-          {/* Documento */}
-          <div>
-            <Label text="Documento" />
+            <Label text="Nombre Completo" htmlFor="fullName" />
             <input
-              type="text"
-              name="document"
-              inputMode="numeric"
-              value={formData.document}
-              onChange={handleChange}
-              className={inputStyle("document")}
-            />
-            {errors.document &&
-              <p className="text-red-500 text-xs mt-1">{errors.document}</p>}
-          </div>
-
-          {/* Nombre */}
-          <div>
-            <Label text="Nombre Completo" />
-            <input
+              id="fullName"
               type="text"
               name="fullName"
               value={formData.fullName}
               onChange={handleChange}
+              placeholder="Juan Pérez García"
               className={inputStyle("fullName")}
+              disabled={loading}
+              autoComplete="name"
             />
-            {errors.fullName &&
-              <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>}
+            {touched.fullName && errors.fullName && (
+              <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>
+            )}
           </div>
 
           {/* Email */}
           <div>
-            <Label text="Correo Electrónico" />
+            <Label text="Correo Electrónico" htmlFor="email" />
             <input
+              id="email"
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
+              placeholder="ejemplo@mail.com"
               className={inputStyle("email")}
+              disabled={loading}
+              autoComplete="email"
             />
-            {errors.email &&
-              <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-          </div>
-
-          {/* Dirección */}
-          <div>
-            <Label text="Dirección" />
-            <input
-              type="text"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              className={inputStyle("address")}
-            />
-            {errors.address &&
-              <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
+            {touched.email && errors.email && (
+              <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+            )}
           </div>
 
           {/* Teléfono */}
           <div>
-            <Label text="Teléfono" />
+            <Label text="Teléfono" htmlFor="phone" />
             <input
-              type="text"
+              id="phone"
+              type="tel"
               name="phone"
-              inputMode="numeric"
               value={formData.phone}
               onChange={handleChange}
+              placeholder="3001234567"
+              maxLength={10}
               className={inputStyle("phone")}
+              disabled={loading}
+              autoComplete="tel"
             />
-            {errors.phone &&
-              <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+            {touched.phone && errors.phone && (
+              <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+            )}
           </div>
 
           {/* Contraseña */}
           <div className="relative">
-            <Label text="Contraseña" />
+            <Label text="Contraseña" htmlFor="password" />
             <input
+              id="password"
               type={showPassword ? "text" : "password"}
               name="password"
               value={formData.password}
               onChange={handleChange}
+              placeholder="••••••••"
               className={inputStyle("password")}
+              disabled={loading}
+              autoComplete="new-password"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-[34px] text-gray-500"
+              className="absolute right-3 top-[34px] text-gray-500 hover:text-gray-700 disabled:opacity-50"
+              disabled={loading}
+              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
-            {errors.password &&
-              <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+            {touched.password && errors.password && (
+              <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+            )}
           </div>
 
-          {/* Confirmar contraseña */}
+          {/* Confirmar Contraseña */}
           <div className="relative">
-            <Label text="Confirmar Contraseña" />
+            <Label text="Confirmar Contraseña" htmlFor="confirmPassword" />
             <input
+              id="confirmPassword"
               type={showConfirmPassword ? "text" : "password"}
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
+              placeholder="••••••••"
               className={inputStyle("confirmPassword")}
+              disabled={loading}
+              autoComplete="new-password"
             />
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-[34px] text-gray-500"
+              className="absolute right-3 top-[34px] text-gray-500 hover:text-gray-700 disabled:opacity-50"
+              disabled={loading}
+              aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
             >
               {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
-            {errors.confirmPassword &&
-              <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
+            {touched.confirmPassword && errors.confirmPassword && (
+              <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>
+            )}
           </div>
 
           {/* Términos */}
-          <div className="col-span-full flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2">
             <input
+              id="terms"
               type="checkbox"
               name="terms"
               checked={formData.terms}
               onChange={handleChange}
+              disabled={loading}
             />
-            <label className="text-sm">
+            <label htmlFor="terms" className="text-sm text-gray-700 cursor-pointer">
               Aceptar términos y condiciones
             </label>
           </div>
 
-          {errors.terms && (
-            <div className="col-span-full">
-              <p className="text-red-500 text-xs">{errors.terms}</p>
-            </div>
+          {touched.terms && errors.terms && (
+            <p className="text-red-500 text-xs">{errors.terms}</p>
+          )}
+
+          {errors.general && (
+            <p className="text-red-500 text-xs text-center bg-red-50 p-2 rounded">
+              {errors.general}
+            </p>
           )}
 
           {/* Botones */}
-          <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div className="flex flex-col gap-3 mt-4">
             <button
               type="submit"
-              className="w-full bg-[#004D77] text-white py-2.5 rounded-lg text-sm hover:bg-[#005D8A] transition cursor-pointer"
+              disabled={loading}
+              className={`w-full bg-blue-900 text-white py-2.5 rounded-lg text-sm font-medium transition cursor-pointer
+                ${loading 
+                  ? "opacity-70 cursor-not-allowed" 
+                  : "hover:bg-blue-800"
+                }
+              `}
             >
-              Registrar
+              {loading ? "Registrando..." : "Registrar"}
             </button>
+
             <button
               type="button"
               onClick={() => navigate("/login")}
-              className="w-full bg-gray-500 text-white py-2.5 rounded-lg text-sm hover:bg-gray-600 transition cursor-pointer"
+              disabled={loading}
+              className={`w-full bg-gray-500 text-white py-2.5 rounded-lg text-sm font-medium transition cursor-pointer
+                ${loading 
+                  ? "opacity-70 cursor-not-allowed" 
+                  : "hover:bg-gray-600"
+                }
+              `}
             >
               Cancelar
             </button>
+          </div>
+
+          <div className="text-center text-xs mt-3">
+            ¿Ya tienes cuenta?{" "}
+            <Link
+              to="/login"
+              className="text-blue-700 font-medium hover:underline"
+              onClick={(e) => loading && e.preventDefault()}
+            >
+              Inicia sesión
+            </Link>
           </div>
 
         </form>
