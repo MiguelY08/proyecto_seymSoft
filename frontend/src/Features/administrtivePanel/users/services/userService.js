@@ -3,6 +3,7 @@
 //
 // Endpoints reales (base URL desde .env):
 //   GET    /users?page=1&limit=10       → Lista paginada
+//   GET    /users/metrics               → Métricas generales
 //   GET    /users/:id                   → Detalle completo
 //   POST   /users                       → Crear usuario
 //   PUT    /users/:id                   → Actualizar (soporta modificación parcial)
@@ -67,6 +68,22 @@ export const UserService = {
   },
 
   /**
+   * Obtiene las métricas generales del módulo de usuarios.
+   * La API devuelve: { success, message, data: { totalUsers, activeUsers, inactiveUsers } }
+   * @returns {Promise<{ totalUsers: number, activeUsers: number, inactiveUsers: number }>}
+   */
+  async getMetrics() {
+    try {
+      const response = await apiClient.get('/users/metrics');
+
+      return response.data.data;
+    } catch (error) {
+      console.error('Error en getMetrics():', error);
+      throw error;
+    }
+  },
+
+  /**
    * Obtiene un usuario por ID (detalle completo).
    * La API devuelve: { success, message, data: { user: { idUser, fullName, email, phone, creationDate, idStatus }, role, permissions } }
    * @param {number|string} id
@@ -100,31 +117,36 @@ export const UserService = {
 
   /**
    * Crea un nuevo usuario.
-   * La API espera: { fullName, email, phone }
-   * @param {Object} userData - Datos del usuario (name, email, phone)
+   * La API espera: { fullName, email, phone, idRole }
+   * @param {Object} userData - Datos del usuario (name, email, phone, roleId)
    * @returns {Promise<Object>} Usuario creado y normalizado
    */
   async create(userData) {
     try {
-      // Construir payload según lo que espera la API
       const payload = {
         fullName: userData.name,
         email: userData.email,
         phone: userData.phone ? Number(userData.phone) : null,
         idRole: userData.roleId ?? null,
       };
+
       const response = await apiClient.post('/users', payload);
-      // La API devuelve: { message, user: { id, name, email, phone, creationDate, status } }
-      const newUser = response.data.user;
-      // Normalizar al formato interno del frontend (similar a mapUserFromApi)
+
+      const createdData = response.data.user;
+      const createdUser = createdData?.user ?? createdData;
+
       return {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        phone: newUser.phone,
-        active: newUser.status?.name === 'Activo',
-        createdAt: newUser.creationDate,
-        role: null, // pendiente de integración con API de roles
+        id: createdUser.idUser ?? createdUser.id,
+        name: createdUser.fullName ?? createdUser.name,
+        email: createdUser.email,
+        phone: createdUser.phone ?? null,
+        active:
+          createdUser.idStatus === 1 ||
+          createdUser.status?.id === 1 ||
+          createdUser.status?.name === 'Activo',
+        createdAt: createdUser.creationDate ?? createdUser.createdAt,
+        role: createdData?.role ?? null,
+        permissions: createdData?.permissions || [],
       };
     } catch (error) {
       console.error('Error en create():', error);
