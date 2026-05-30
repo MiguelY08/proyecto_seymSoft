@@ -46,16 +46,16 @@ function ProductCard({ product: productData }) {
         cursor-pointer
         flex-col
         overflow-hidden
-        rounded-3xl
+        rounded-2xl
         border
         border-[#dcebf3]
         bg-white
-        shadow-[0_4px_18px_rgba(0,77,119,0.08)]
+        shadow-[0_3px_14px_rgba(0,77,119,0.07)]
         transition-all
         duration-300
         hover:-translate-y-1
         hover:border-[#a9cde2]
-        hover:shadow-[0_16px_40px_rgba(0,77,119,0.16)]
+        hover:shadow-[0_12px_30px_rgba(0,77,119,0.13)]
         active:scale-[0.985]
       `}
       role="article"
@@ -77,7 +77,10 @@ function ProductCard({ product: productData }) {
         onFavorite={handleFavorite}
       />
 
-      <ProductCardBody product={product} />
+      <ProductCardBody
+        product={product}
+        available={available}
+      />
 
       <ProductCardActions
         product={product}

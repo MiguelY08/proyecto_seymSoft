@@ -11,28 +11,7 @@
 //
 // Los roles provienen de otra API (pendiente de integración).
 
-import axios from 'axios';
-
-// ---------------------------------------------------------------------
-// Configuración base de Axios
-// ---------------------------------------------------------------------
-// La variable BASE_URL se define en .env (ej: BASE_URL=http://localhost:3000)
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
-
-const apiClient = axios.create({
-  baseURL: BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
-  timeout: 10000,
-});
-
-// Interceptor para manejo global de errores (logging)
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.error('API Error:', error.response?.data || error.message);
-    return Promise.reject(error);
-  }
-);
+import apiClient from '../../../../setting/apiClient.js';
 
 // ---------------------------------------------------------------------
 // Funciones auxiliares de transformación

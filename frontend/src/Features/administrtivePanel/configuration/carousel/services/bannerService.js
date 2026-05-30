@@ -1,4 +1,4 @@
-import axios from "axios";
+import apiClient from "../../../../../setting/apiClient.js";
 
 /**
  * Servicio HTTP del módulo Banner
@@ -9,18 +9,12 @@ import axios from "axios";
  * - Consumir directamente el backend real
  */
 
-const API_URL = import.meta.env.VITE_API_BASE_URL;
-
-const bannerApi = axios.create({
-  baseURL: `${API_URL}/banners`,
-});
-
 /**
  * Obtener todos los banners
  * GET /api/banners
  */
 export const getAllBanners = async () => {
-  const { data } = await bannerApi.get("/");
+  const { data } = await apiClient.get("/banners");
   return data.data;
 };
 
@@ -29,7 +23,7 @@ export const getAllBanners = async () => {
  * GET /api/banners/active
  */
 export const getActiveBanners = async () => {
-  const { data } = await bannerApi.get("/active");
+  const { data } = await apiClient.get("/banners/active");
   return data.data;
 };
 
@@ -38,7 +32,7 @@ export const getActiveBanners = async () => {
  * GET /api/banners/:id
  */
 export const getBannerById = async (id) => {
-  const { data } = await bannerApi.get(`/${id}`);
+  const { data } = await apiClient.get(`/banners/${id}`);
   return data.data;
 };
 
@@ -53,7 +47,7 @@ export const createBanner = async (file) => {
   const formData = new FormData();
   formData.append("image", file);
 
-  const { data } = await bannerApi.post("/", formData, {
+  const { data } = await apiClient.post("/banners", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
@@ -71,7 +65,7 @@ export const createBanner = async (file) => {
  * 2 -> Inactivo
  */
 export const toggleBannerStatus = async (id, statusId) => {
-  const { data } = await bannerApi.patch(`/${id}/status`, {
+  const { data } = await apiClient.patch(`/banners/${id}/status`, {
     statusId,
   });
 
@@ -89,7 +83,7 @@ export const toggleBannerStatus = async (id, statusId) => {
  * ]
  */
 export const reorderActiveBanners = async (banners) => {
-  const { data } = await bannerApi.patch("/active/reorder", banners);
+  const { data } = await apiClient.patch("/banners/active/reorder", banners);
   return data.data;
 };
 
@@ -101,6 +95,6 @@ export const reorderActiveBanners = async (banners) => {
  * El backend solo permite eliminar banners inactivos.
  */
 export const deleteBanner = async (id) => {
-  const { data } = await bannerApi.delete(`/${id}`);
+  const { data } = await apiClient.delete(`/banners/${id}`);
   return data.data;
 };
