@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 
 import ButtonComponent from "../../../../shared/ButtonComponent";
@@ -8,350 +9,386 @@ import Permission from "../components/Permission";
 import PaginationAdmin from "../../../../shared/PaginationAdmin";
 
 import {
+  getRoles,
+  createRole,
+  updateRole,
+  toggleRoleStatus,
+  getRoleById
+} from "../services/rolesServices";
 
-getRoles,
-createRole,
-updateRole,
-toggleRoleStatus
+export default function RolesPage() {
 
-}
+  const [search, setSearch] =
+    useState("");
 
-from "../services/rolesServices";
+  const [roles, setRoles] =
+    useState([]);
 
-export default function RolesPage(){
+  const [currentPage, setCurrentPage] =
+    useState(1);
 
-const [search,setSearch]=
-useState("");
+  const [isModalOpen, setIsModalOpen] =
+    useState(false);
 
-const [roles,setRoles]=
-useState([]);
+  const [modalMode, setModalMode] =
+    useState("create");
 
-const [currentPage,setCurrentPage]=
-useState(1);
+  const [selectedRole, setSelectedRole] =
+    useState(null);
 
-const [isModalOpen,setIsModalOpen]=
-useState(false);
+  const RECORDS_PER_PAGE = 13;
 
-const [modalMode,setModalMode]=
-useState("create");
+  // ─────────────────────────────
+  // CARGAR ROLES
+  // ─────────────────────────────
 
-const [selectedRole,setSelectedRole]=
-useState(null);
+  const loadRoles = async () => {
 
-const RECORDS_PER_PAGE=13;
+    try {
+
+      const response =
+        await getRoles();
+
+      const rolesData =
+
+        Array.isArray(response)
+          ? response
+          : response?.data || [];
+
+      setRoles(rolesData);
+
+    } catch (error) {
+
+      console.error(
+        "Error cargando roles:",
+        error
+      );
+
+      setRoles([]);
+
+    }
+
+  };
+
+  useEffect(() => {
+
+    loadRoles();
+
+  }, []);
+
+  useEffect(() => {
+
+    setCurrentPage(1);
+
+  }, [search]);
+
+  // ─────────────────────────────
+  // FILTROS
+  // ─────────────────────────────
+
+  const filteredRoles = roles.filter((role) => {
+
+    const searchLower =
+      search.toLowerCase();
+
+    const date =
+      new Date(
+        role.createdAt
+      );
+
+    const formattedDate =
+
+      isNaN(date)
+
+        ? ""
+
+        : `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+
+    return (
+
+      role.name
+        ?.toLowerCase()
+        .includes(searchLower)
+
+      ||
+
+      role.description
+        ?.toLowerCase()
+        .includes(searchLower)
+
+      ||
+
+      formattedDate.includes(
+        searchLower
+      )
+
+    );
+
+  });
+
+  // ─────────────────────────────
+  // PAGINACIÓN
+  // ─────────────────────────────
+
+  const startIndex =
+
+    (currentPage - 1)
+    *
+    RECORDS_PER_PAGE;
+
+  const paginatedRoles =
+
+    filteredRoles.slice(
+
+      startIndex,
+
+      startIndex +
+      RECORDS_PER_PAGE
+
+    );
+
+  // ─────────────────────────────
+  // MODALES
+  // ─────────────────────────────
+
+  const handleCreate = () => {
+
+    setModalMode(
+      "create"
+    );
+
+    setSelectedRole(
+      null
+    );
+
+    setIsModalOpen(
+      true
+    );
+
+  };
 
 
-// ─────────────────────────────
-// CARGAR ROLES
-// ─────────────────────────────
+const handleEdit = async (
+  role
+) => {
 
-const loadRoles=
-async()=>{
+  try {
 
-try{
+    const fullRole =
+      await getRoleById(
+        role.id
+      );
 
-const data=
-await getRoles();
+    setModalMode(
+      "edit"
+    );
 
-setRoles(data);
+    setSelectedRole(
+      fullRole
+    );
 
-}catch(error){
+    setIsModalOpen(
+      true
+    );
 
-console.error(
-"Error cargando roles:",
-error
-);
+  } catch (error) {
 
-}
+    console.error(
+      "Error obteniendo rol:",
+      error
+    );
+
+  }
 
 };
 
 
-useEffect(()=>{
-
-loadRoles();
-
-},[]);
 
 
-useEffect(()=>{
+const handleView = async (
+  role
+) => {
 
-setCurrentPage(1);
+  try {
 
-},[search]);
+    const fullRole =
+      await getRoleById(
+        role.id
+      );
 
+    setModalMode(
+      "view"
+    );
 
-// ─────────────────────────────
-// FILTROS
-// ─────────────────────────────
+    setSelectedRole(
+      fullRole
+    );
 
-const filteredRoles=
+    setIsModalOpen(
+      true
+    );
 
-roles.filter((role)=>{
+  } catch (error) {
 
-const searchLower=
+    console.error(
+      "Error obteniendo rol:",
+      error
+    );
 
-search.toLowerCase();
-
-const date=
-
-new Date(
-role.createdAt
-);
-
-const formattedDate=
-
-isNaN(date)
-
-?
-
-""
-
-:
-
-`${date.getDate()}/${
-date.getMonth()+1
-}/${
-date.getFullYear()
-}`;
-
-return(
-
-role.name
-?.toLowerCase()
-.includes(searchLower)
-
-||
-
-role.description
-?.toLowerCase()
-.includes(searchLower)
-
-||
-
-formattedDate
-.includes(searchLower)
-
-);
-
-});
-
-
-// ─────────────────────────────
-// PAGINACIÓN
-// ─────────────────────────────
-
-const startIndex=
-
-(currentPage-1)
-
-*
-
-RECORDS_PER_PAGE;
-
-
-const paginatedRoles=
-
-filteredRoles.slice(
-
-startIndex,
-
-startIndex+
-RECORDS_PER_PAGE
-
-);
-
-
-// ─────────────────────────────
-// MODALES
-// ─────────────────────────────
-
-const handleCreate=()=>{
-
-setModalMode(
-"create"
-);
-
-setSelectedRole(
-null
-);
-
-setIsModalOpen(
-true
-);
+  }
 
 };
 
 
-const handleEdit=
-(role)=>{
+  // ─────────────────────────────
+  // GUARDAR
+  // ─────────────────────────────
 
-setModalMode(
-"edit"
-);
+  const handleSave = async (
+    roleData
+  ) => {
 
-setSelectedRole(
-role
-);
+    try {
 
-setIsModalOpen(
-true
-);
+      // ✅ CREAR
+      if (
+        modalMode === "create"
+      ) {
 
-};
+        await createRole(
+          roleData
+        );
 
+      }
 
-const handleView=
-(role)=>{
+      // ✅ EDITAR
+      if (
+        modalMode === "edit"
+      ) {
 
-setModalMode(
-"view"
-);
+        await updateRole({
 
-setSelectedRole(
-role
-);
+          id:
+            selectedRole.id,
 
-setIsModalOpen(
-true
-);
+          ...roleData
 
-};
+        });
 
+      }
 
-// ─────────────────────────────
-// GUARDAR
-// ─────────────────────────────
+      // ✅ RECARGAR TABLA
+      await loadRoles();
 
-const handleSave=
-async(roleData)=>{
+      return {
 
-try{
+        success: true
 
-if(
-modalMode==="create"
-){
+      };
 
-await createRole(
-roleData
-);
+    } catch (error) {
 
-}
+      console.error(
+        "Error guardando rol:",
+        error
+      );
 
-if(
-modalMode==="edit"
-){
+      throw error;
 
-await updateRole(
-roleData
-);
+    }
 
-}
+  };
 
-await loadRoles();
+  // ─────────────────────────────
+  // ACTIVAR / DESACTIVAR
+  // ─────────────────────────────
 
-}catch(error){
+  const handleToggleActive = async (
+    id,
+    currentStatus
+  ) => {
 
-console.error(
-"Error guardando rol:",
-error
-);
+    try {
 
-}
+      await toggleRoleStatus(
+        id,
+        currentStatus
+      );
 
-};
+      await loadRoles();
 
+    } catch (error) {
 
-// ─────────────────────────────
-// ACTIVAR / DESACTIVAR
-// ─────────────────────────────
+      console.error(
+        "Error actualizando estado:",
+        error
+      );
 
-const handleToggleActive=
-async(id)=>{
+    }
 
-try{
+  };
 
-await toggleRoleStatus(
-id,
-currentStatus
-);
+  return (
 
-await loadRoles();
+    <div className="p-6 font-lexend">
 
-}catch(error){
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
 
-console.error(
-"Error actualizando estado:",
-error
-);
+        <div className="-mb-4">
 
-}
+          <TableFilters
+            search={search}
+            setSearch={setSearch}
+            setCurrentPage={setCurrentPage}
+            showDateFilters={false}
+            searchWidth="w-[380px]"
+          />
 
-};
+        </div>
 
+        <Permission permission="roles.crear">
 
-return(
+          <ButtonComponent
+            onClick={handleCreate}
+          >
 
-<div className="p-6 font-lexend">
+            Crear nuevo Rol +
 
-<div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+          </ButtonComponent>
 
-<div className="-mb-4">
+        </Permission>
 
-<TableFilters
-search={search}
-setSearch={setSearch}
-setCurrentPage={setCurrentPage}
-showDateFilters={false}
-searchWidth="w-[380px]"
-/>
+      </div>
 
-</div>
+      <RolesTable
+        roles={paginatedRoles}
+        onEdit={handleEdit}
+        onView={handleView}
+        onToggleActive={handleToggleActive}
+        search={search}
+        reloadRoles={loadRoles}
+      />
 
-<Permission permission="roles.crear">
+      <PaginationAdmin
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        totalRecords={filteredRoles.length}
+        recordsPerPage={RECORDS_PER_PAGE}
+      />
 
-<ButtonComponent
-onClick={handleCreate}
->
+      <RoleModal
+        isOpen={isModalOpen}
+        mode={modalMode}
+        roleData={selectedRole}
+        onSave={handleSave}
+        onClose={() =>
+          setIsModalOpen(false)
+        }
+      />
 
-Crear nuevo Rol +
+    </div>
 
-</ButtonComponent>
-
-</Permission>
-
-</div>
-
-
-<RolesTable
-roles={paginatedRoles}
-onEdit={handleEdit}
-onView={handleView}
-onToggleActive={handleToggleActive}
-search={search}
-/>
-
-
-<PaginationAdmin
-currentPage={currentPage}
-onPageChange={setCurrentPage}
-totalRecords={filteredRoles.length}
-recordsPerPage={RECORDS_PER_PAGE}
-/>
-
-
-<RoleModal
-isOpen={isModalOpen}
-mode={modalMode}
-roleData={selectedRole}
-onSave={handleSave}
-onClose={()=>
-setIsModalOpen(false)
-}
-/>
-
-</div>
-
-);
+  );
 
 }
+

@@ -1,80 +1,201 @@
 // ─────────────────────────────────────────────
-// PRIVILEGIOS BACKEND → FRONT
+// REGLAS DE PRIVILEGIOS POR MÓDULO
 // ─────────────────────────────────────────────
 
-const privilegeKeyMap = {
+const MODULE_RULES = {
 
-  CREATE: "crear",
+  usuarios: [
+    "CREATE",
+    "READ",
+    "READ_DETAIL",
+    "UPDATE",
+    "DELETE",
+    "ACTIVATE_DEACTIVATE"
+  ],
 
-  READ: "ver",
+  roles: [
+    "CREATE",
+    "READ",
+    "READ_DETAIL",
+    "UPDATE",
+    "DELETE",
+    "ACTIVATE_DEACTIVATE"
+  ],
 
-  READ_DETAIL: "ver_informacion",
+  clientes: [
+    "CREATE",
+    "READ",
+    "READ_DETAIL",
+    "UPDATE",
+    "DELETE",
+    "ACTIVATE_DEACTIVATE"
+  ],
 
-  UPDATE: "editar",
+  productos: [
+    "CREATE",
+    "READ",
+    "READ_DETAIL",
+    "UPDATE",
+    "DELETE",
+    "ACTIVATE_DEACTIVATE",
+    "EXPORT"
+  ],
 
-  DELETE: "eliminar",
+  categorias: [
+    "CREATE",
+    "READ",
+    "READ_DETAIL",
+    "UPDATE",
+    "DELETE",
+    "ACTIVATE_DEACTIVATE"
+  ],
 
-  ACTIVATE_DEACTIVATE:
-    "activar_desactivar",
+  proveedores: [
+    "CREATE",
+    "READ",
+    "READ_DETAIL",
+    "UPDATE",
+    "DELETE",
+    "ACTIVATE_DEACTIVATE"
+  ],
 
-  EXPORT: "exportar",
+  compras: [
+    "CREATE",
+    "READ",
+    "READ_DETAIL",
+    "UPDATE",
+    "ANULAR",
+    "DEVOLVER",
+    "EXPORT",
+    "CREAR_DEVOLUCION"
+  ],
 
-  ABONAR: "abonar",
+  producto_no_conforme: [
+    "CREATE",
+    "READ",
+    "READ_DETAIL",
+    "UPDATE",
+    "DELETE",
+    "EXPORT",
+    "ANULAR"
+  ],
 
-  CONTACTAR: "contactar",
+  pedidos: [
+    "CREATE",
+    "READ",
+    "READ_DETAIL",
+    "UPDATE",
+    "ANULAR",
+    "EXPORT"
+  ],
 
-  GENERAR_INTERES:
-    "generar_interes",
+  ventas: [
+    "CREATE",
+    "READ",
+    "READ_DETAIL",
+    "UPDATE",
+    "ANULAR",
+    "EXPORT",
+    "CREAR_DEVOLUCION"
+  ],
 
-  ANULAR: "anular",
+  devoluciones_en_ventas: [
+    "CREATE",
+    "READ",
+    "READ_DETAIL",
+    "UPDATE",
+    "ANULAR",
+    "EXPORT"
+  ],
 
-  DEVOLVER: "devolver",
+  pagos_y_abonos: [
+    "READ",
+    "READ_DETAIL",
+    "ABONAR",
+    "GENERAR_INTERES",
+    "CONTACTAR",
+    "EXPORT",
+    "DESCARGAR",
+    "ANULAR"
+  ],
 
-  CREAR_DEVOLUCION:
-    "crear_devolucion",
+  banners: [
+    "READ",
+    "READ_DETAIL",
+    "UPDATE",
+    "DELETE",
+    "ORDENAR",
+    "SUBIR_IMAGEN",
+    "ACTIVATE_DEACTIVATE"
+  ],
 
-  ORDENAR: "ordenar",
+  devoluciones_en_compras: [
+    "READ",
+    "READ_DETAIL",
+    "UPDATE",
+    "ANULAR",
+    "EXPORT"
+  ],
 
-  SUBIR_IMAGEN:
-    "subir_imagen"
+  dashboard: [
+    "READ"
+  ]
 
 };
 
 // ─────────────────────────────────────────────
-// PRIVILEGIOS FRONT → BACKEND
+// LABELS EN ESPAÑOL
 // ─────────────────────────────────────────────
 
-const privilegeIdMap = {
+const PRIVILEGE_LABELS = {
 
-  crear: 1,
+  CREATE:
+    "Crear",
 
-  ver: 2,
+  READ:
+    "Ver listado",
 
-  ver_informacion: 3,
+  READ_DETAIL:
+    "Ver detalle",
 
-  editar: 4,
+  UPDATE:
+    "Editar",
 
-  eliminar: 5,
+  DELETE:
+    "Eliminar",
 
-  activar_desactivar: 6,
+  ACTIVATE_DEACTIVATE:
+    "Activar / Desactivar",
 
-  exportar: 7,
+  EXPORT:
+    "Exportar",
 
-  abonar: 8,
+  CONTACTAR:
+    "Contactar",
 
-  contactar: 9,
+  ANULAR:
+    "Anular",
 
-  generar_interes: 10,
+  DEVOLVER:
+    "Devolver",
 
-  anular: 11,
+  CREAR_DEVOLUCION:
+    "Crear devolución",
 
-  devolver: 12,
+  ABONAR:
+    "Registrar abono",
 
-  crear_devolucion: 13,
+  GENERAR_INTERES:
+    "Generar interés",
 
-  ordenar: 14,
+  ORDENAR:
+    "Ordenar",
 
-  subir_imagen: 15
+  SUBIR_IMAGEN:
+    "Subir imagen",
+
+  DESCARGAR:
+    "Descargar"
 
 };
 
@@ -82,45 +203,9 @@ const privilegeIdMap = {
 // MAPEAR ROL API → FRONT
 // ─────────────────────────────────────────────
 
-export const mapRoleFromApi = (role) => {
-
-  // convertir permisos backend
-  // a estructura visual frontend
-
-  const groupedPermissions = {};
-
-  (role.permissions || []).forEach(
-
-    (permission) => {
-
-      const moduleId =
-        permission.id_module;
-
-      const privilegeKey =
-        privilegeKeyMap[
-          permission.privilege
-        ];
-
-      if (!privilegeKey) return;
-
-      if (!groupedPermissions[moduleId]) {
-
-        groupedPermissions[moduleId] = {
-
-          id: moduleId,
-
-          acciones: {}
-
-        };
-
-      }
-
-      groupedPermissions[moduleId]
-        .acciones[privilegeKey] = true;
-
-    }
-
-  );
+export const mapRoleFromApi = (
+  role
+) => {
 
   return {
 
@@ -145,22 +230,32 @@ export const mapRoleFromApi = (role) => {
     totalPermissions:
       role.total_permissions,
 
+    // ✅ MAPEAR PERMISOS
     permisos:
-      Object.values(
-        groupedPermissions
-      )
+
+      (role.assigned_permissions || [])
+        .map((permiso) => ({
+
+          id_module:
+            permiso.id_module,
+
+          id_privilege:
+            permiso.id_privilege
+
+        }))
 
   };
 
 };
 
+
+
+
 // ─────────────────────────────────────────────
-// MAPEAR LISTA API → FRONT
+// MAPEAR LISTA DE ROLES
 // ─────────────────────────────────────────────
 
-export const mapRolesFromApi = (
-  roles = []
-) => {
+export const mapRolesFromApi = (roles = []) => {
 
   return roles.map(
     mapRoleFromApi
@@ -172,59 +267,79 @@ export const mapRolesFromApi = (
 // MAPEAR PERMISOS API → FRONT
 // ─────────────────────────────────────────────
 
-export const mapPermissionsFromApi = (
-  data
-) => {
+export const mapPermissionsFromApi = (data) => {
 
   const modules =
     data.modules || [];
 
-  const privileges =
-    data.privileges || [];
+  return modules.map((module) => {
 
-  return modules.map((module) => ({
-
-    id:
-      module.id_module,
-
-    modulo:
+    const moduleName =
       module.name_module
-        .toLowerCase(),
+        .toLowerCase();
 
-    descripcion:
-      module.description,
+    const allowedPrivileges =
+      MODULE_RULES[moduleName] ||
 
-    acciones:
-      privileges.map((privilege) => ({
+      (module.actions || []).map(
+        (a) => a.name_privilege
+      );
 
-        key:
+    const acciones =
+      (module.actions || [])
 
-          privilegeKeyMap[
-            privilege.name_privilege
-          ] ||
+        .filter((action) =>
 
-          privilege.name_privilege
-            .toLowerCase(),
+          allowedPrivileges.includes(
+            action.name_privilege
+          )
 
-        backend:
-          privilege.name_privilege,
+        )
 
-        id_privilege:
-          privilege.id_privilege,
+        .map((action) => ({
 
-        label:
-          privilege.name_privilege
-            .replaceAll("_", " ")
+          key:
+            action.name_privilege
+              .toLowerCase(),
 
-      }))
+          backend:
+            action.name_privilege,
 
-  }));
+          id_privilege:
+            action.id_privilege,
+
+          label:
+
+            PRIVILEGE_LABELS[
+              action.name_privilege
+            ] ||
+
+            action.name_privilege
+              .replaceAll("_", " ")
+
+        }));
+
+    return {
+
+      id:
+        module.id_module,
+
+      modulo:
+        moduleName,
+
+      descripcion:
+        module.description,
+
+      acciones
+
+    };
+
+  });
 
 };
 
 // ─────────────────────────────────────────────
 // MAPEAR FRONT → API
-// CREAR / EDITAR ROL
 // ─────────────────────────────────────────────
 
 export const mapRoleToApi = (
@@ -234,23 +349,31 @@ export const mapRoleToApi = (
   const permissions = [];
 
   role.permisos.forEach(
-
     (modulo) => {
 
       Object.entries(
-        modulo.acciones
+
+        modulo.selectedActions || {}
+
       ).forEach(
 
         ([accionKey, activo]) => {
 
-          if (!activo) return;
+          if (!activo)
+            return;
 
-          const privilegeId =
-            privilegeIdMap[
-              accionKey
-            ];
+          const actionData =
 
-          if (!privilegeId)
+            modulo.acciones.find(
+
+              (accion) =>
+
+                accion.key ===
+                accionKey
+
+            );
+
+          if (!actionData)
             return;
 
           permissions.push({
@@ -259,7 +382,7 @@ export const mapRoleToApi = (
               modulo.id,
 
             id_privilege:
-              privilegeId
+              actionData.id_privilege
 
           });
 
