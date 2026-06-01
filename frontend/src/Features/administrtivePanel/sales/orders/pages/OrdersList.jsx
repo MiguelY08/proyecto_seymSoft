@@ -90,24 +90,36 @@ function OrdersList() {
 
   // Carga inicial de pedidos y clientes
   useEffect(() => {
-    const loadOrders = () => {
-      const rawOrders = OrdersService.list();
+  const loadOrders = async () => {
+    try {
+      // Cargar pedidos
+      const rawOrders = await OrdersService.list();
       setOrders(rawOrders);
 
-      const clients = clientsService.getAll();
+      // Cargar clientes
+      const response = await clientsService.getAll();
+      
+      // Extraer el array dependiendo de la estructura
+      const clients = response.data || response || [];
+      
       const map = {};
-      clients.forEach(c => {
-        map[c.id] = {
-          nombre: c.name || c.fullName || 'Sin nombre',
-          telefono: c.phone || '',
-          email: c.email || '',
-        };
-      });
+      if (Array.isArray(clients)) {
+        clients.forEach(c => {
+          map[c.id] = {
+            nombre: c.name || c.fullName || 'Sin nombre',
+            telefono: c.phone || '',
+            email: c.email || '',
+          };
+        });
+      }
       setClientMap(map);
-    };
+    } catch (error) {
+      console.error('Error al cargar pedidos y clientes:', error);
+    }
+  };
 
-    loadOrders();
-  }, []);
+  loadOrders();
+}, []);
 
   // Enriquecer pedidos con datos completos del cliente y estado de pago real
   const enrichedOrders = useMemo(() => {
