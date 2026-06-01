@@ -44,7 +44,7 @@ import ProvidersPage from "../../Features/administrtivePanel/purchases/providers
 import Purchases from "../../Features/administrtivePanel/purchases/purchases/pages/Purchases.jsx";
 // import CreatePurchase from "../../Features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx";
 import CreatePurchase from "../../Features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx";
-import ReturnsP from "../../Features/administrtivePanel/purchases/returns/pages/Returns.jsx";
+// import ReturnsP from "../../Features/administrtivePanel/purchases/returns/pages/Returns.jsx";
 // import ReturnForm from "../../Features/administrtivePanel/purchases/returns/modals/ReturnForm.jsx";
 // import ReturnInfo from "../../Features/administrtivePanel/purchases/returns/modals/ReturnInfo.jsx";
 import NonConformingProducts from "../../Features/administrtivePanel/purchases/nonConformingProducts/pages/NonConformingProducts.jsx";
@@ -130,7 +130,7 @@ const AppRouter = () => {
           <Route path="purchases/providers" element={<ProvidersPage />} />
           <Route path="purchases" element={<Purchases />} />
           <Route path="purchases/create" element={<CreatePurchase />} />
-          <Route path="purchases/returns-p" element={<ReturnsP />} />
+          {/* <Route path="purchases/returns-p" element={<ReturnsP />} /> */}
           {/* <Route
             path="purchases/return-form"
             element={

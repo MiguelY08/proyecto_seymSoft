@@ -1,0 +1,193 @@
+// Features/administrtivePanel/purchases/purchases/data/purchasesService.js
+import api from './api';
+
+// ==========================================
+// CONVERSIÓN DE ESTADOS
+// ==========================================
+
+const mapStatusFromBackend = (statusId, statusName) => {
+  if (statusName) {
+    if (statusName === "Completada") return "Completada";
+    if (statusName === "Proc. devolución") return "Proc. devolución";
+    if (statusName === "Anulada") return "Anulada";
+    return statusName;
+  }
+  if (statusId === 1) return "Completada";
+  if (statusId === 2) return "Proc. devolución";
+  if (statusId === 3) return "Anulada";
+  return "Completada";
+};
+
+// Mapear compra para la lista (usando totalQuantity del backend)
+export const mapPurchaseToList = (purchase) => {
+  if (!purchase) return null;
+  
+  return {
+    id: purchase.id,
+    numeroFacturacion: purchase.invoiceNumber,
+    fechaCompra: purchase.purchaseDate?.split('T')[0] || purchase.purchaseDate,
+    proveedor: purchase.providerName,
+    cantidadProductos: purchase.totalQuantity || 0,
+    precioTotal: purchase.totalAmount || 0,
+    estado: mapStatusFromBackend(purchase.statusId, purchase.status),
+  };
+};
+
+// Mapear compra para el detalle (con productos)
+export const mapPurchaseToFrontend = (purchase) => {
+  if (!purchase) return null;
+  
+  const details = purchase.details || [];
+  const cantidadProductos = details.reduce((sum, d) => sum + (d.quantity || 0), 0);
+  
+  const productos = details.map(detail => ({
+    id: detail.id,
+    nombre: detail.productName || 'Producto sin nombre',
+    codigoBarras: detail.barcode || '',
+    cantidad: detail.quantity || 0,
+    valorUnit: detail.netUnitPrice || detail.grossUnitPrice || 0,
+    iva: detail.taxPercentage || 0,
+    ivaValor: detail.ivaSubtotal || 0,
+    subtotal: detail.netSubtotal || detail.grossSubtotal || 0,
+    total: detail.netSubtotal || detail.grossSubtotal || 0,
+    codigosExtra: detail.extraBarcodes || [],
+  }));
+  
+  return {
+    id: purchase.id,
+    numeroFacturacion: purchase.invoiceNumber,
+    fechaCompra: purchase.purchaseDate?.split('T')[0] || purchase.purchaseDate,
+    proveedor: purchase.providerName,
+    cantidadProductos: cantidadProductos,
+    precioTotal: purchase.totalAmount || 0,
+    estado: mapStatusFromBackend(purchase.statusId, purchase.status),
+    ivaTotal: details.reduce((sum, d) => sum + (d.ivaSubtotal || 0), 0),
+    motivoAnulacion: purchase.cancellationReason || details.find(d => d.cancellationReason)?.cancellationReason,
+    productos: productos,
+  };
+};
+
+// ==========================================
+// COMPRAS
+// ==========================================
+
+export const getAllPurchases = async ({ page = 1, limit = 13, search = '', startDate = '', endDate = '' }) => {
+  try {
+    const params = {
+      page,
+      limit,
+      ...(search && { search }),
+      ...(startDate && { startDate }),
+      ...(endDate && { endDate }),
+    };
+    
+    console.log('📡 Fetching purchases with params:', params);
+    
+    const response = await api.getAllPurchases(params);
+    console.log('📦 API Response:', response.data);
+    
+    const { data, pagination } = response.data;
+    
+    const mappedData = (data || []).map(mapPurchaseToList);
+    console.log('✅ Mapped purchases:', mappedData);
+    
+    return {
+      data: mappedData,
+      pagination: {
+        page: pagination.page,
+        limit: pagination.limit,
+        total: pagination.total,
+        totalPages: pagination.totalPages,
+      },
+    };
+  } catch (error) {
+    console.error('❌ Error in getAllPurchases:', error);
+    throw error;
+  }
+};
+
+export const getPurchaseById = async (id) => {
+  try {
+    const response = await api.getPurchaseById(id);
+    return mapPurchaseToFrontend(response.data.data);
+  } catch (error) {
+    console.error(`Error in getPurchaseById(${id}):`, error);
+    throw error;
+  }
+};
+
+export const createPurchase = async (purchaseData) => {
+  try {
+    const payload = {
+      invoiceNumber: purchaseData.numeroFacturacion,
+      purchaseDate: purchaseData.fechaCompra,
+      idProvider: purchaseData.idProvider,
+      details: purchaseData.productos.map(product => ({
+        idProduct: product.idProduct,
+        quantity: product.cantidad,
+        extraBarcodes: product.codigosExtra || [],
+      })),
+    };
+    
+    const response = await api.createPurchase(payload);
+    return mapPurchaseToFrontend(response.data.data);
+  } catch (error) {
+    console.error('Error in createPurchase:', error);
+    throw error;
+  }
+};
+
+export const annulPurchase = async (id, motivo) => {
+  try {
+    const response = await api.annulPurchase(id, { cancellationReason: motivo });
+    return mapPurchaseToFrontend(response.data.data);
+  } catch (error) {
+    console.error(`Error in annulPurchase(${id}):`, error);
+    throw error;
+  }
+};
+
+// ==========================================
+// PRODUCTOS (para el formulario)
+// ==========================================
+
+export const getProducts = async (searchTerm = '') => {
+  try {
+    const response = await api.getProducts({ search: searchTerm, limit: 100 });
+    const products = response.data.data || [];
+    return products.map(p => ({
+      id: p.id,
+      nombre: p.name,
+      codigoBarras: p.barcodes?.[0]?.barcode || '',
+      proveedor: p.providerName || '',
+      valorUnit: p.wholesalePrice || 0,
+      iva: p.ivaPercentage || 19,
+    }));
+  } catch (error) {
+    console.error('Error al cargar productos:', error);
+    return [];
+  }
+};
+
+export const searchProducts = async (searchTerm) => {
+  return getProducts(searchTerm);
+};
+
+// ==========================================
+// PROVEEDORES (para el formulario)
+// ==========================================
+
+export const getProviders = async () => {
+  try {
+    const response = await api.getProviders({ limit: 100 });
+    const providers = response.data.data || [];
+    return providers.map(p => ({
+      id: p.id,
+      nombre: p.fullName || `${p.nameProvider} ${p.lastname || ''}`.trim(),
+      documento: p.documentNumber,
+    }));
+  } catch (error) {
+    console.error('Error al cargar proveedores:', error);
+    return [];
+  }
+};
