@@ -1,69 +1,79 @@
 import { getRoles } from "../services/rolesServices";
 
-export const validateRole = (
-  data
-) => {
+// ─────────────────────────────────────────────
+// VALIDAR ROL
+// ─────────────────────────────────────────────
+
+export const validateRole = (data) => {
 
   const errors = {};
 
   const nameRegex =
-  /^[A-Za-zÁÉÍÓÚáéíóúñÑ][A-Za-zÁÉÍÓÚáéíóúñÑ_\s]*$/;
+    /^[A-Za-zÁÉÍÓÚáéíóúñÑ][A-Za-zÁÉÍÓÚáéíóúñÑ_\s]*$/;
+
+  // ─────────────────────────────
+  // NOMBRE
+  // ─────────────────────────────
 
   if (
-    !data.name
-    ||
+    !data.name ||
     data.name.trim().length < 5
   ) {
 
     errors.name =
-    "El nombre del rol debe tener mínimo 5 letras";
+      "El nombre del rol debe tener mínimo 5 letras";
 
   }
 
   else if (
-
     !nameRegex.test(
       data.name.trim()
     )
-
   ) {
 
     errors.name =
-    "El nombre no puede iniciar con números";
+      "El nombre no puede iniciar con números";
 
   }
 
+  // ─────────────────────────────
+  // DESCRIPCIÓN
+  // ─────────────────────────────
+
   if (
-
-    !data.description
-    ||
+    !data.description ||
     data.description.trim().length < 10
-
   ) {
 
     errors.description =
-    "La descripción debe tener mínimo 10 caracteres";
+      "La descripción debe tener mínimo 10 caracteres";
 
   }
 
+  // ─────────────────────────────
+  // PERMISOS
+  // ─────────────────────────────
+
+  // ✅ CAMBIO: Buscar en selectedActions (no acciones)
   const hasPermission =
 
-    data.permissions?.some(
+    data.permissions?.some((mod) => {
 
-      (mod)=>
+      // ✅ Buscar en selectedActions
+      if (!mod?.selectedActions) {
+        return false;
+      }
 
-      Object
-      .values(
-        mod.acciones
-      )
-      .some(Boolean)
+      return Object
+        .values(mod.selectedActions)
+        .some(Boolean);
 
-    );
+    });
 
   if (!hasPermission) {
 
     errors.permissions =
-    "Debe seleccionar al menos un permiso";
+      "Debe seleccionar al menos un permiso";
 
   }
 
@@ -77,74 +87,65 @@ VALIDAR DUPLICADOS DE PERMISOS
 ====================================================== */
 
 export const rolePermissionsAlreadyExist = (
-
   permissions
-
-)=>{
+) => {
 
   const roles =
-  getRoles();
+    getRoles();
 
   const normalize = (
-    perms
+    perms = []
   ) =>
 
     JSON.stringify(
 
       perms
 
-      .map((p)=>({
+        .map((p) => ({
 
-        id:p.id,
+          id: p.id,
 
-        acciones:
+          // ✅ CAMBIO: Usar selectedActions
+          acciones:
 
-        Object.keys(
-          p.acciones
+            p.selectedActions
+              ? Object.keys(
+                  p.selectedActions
+                )
+                  .filter(
+                    (a) => p.selectedActions[a]
+                  )
+                  .sort()
+              : []
+
+        }))
+
+        .sort(
+          (a, b) =>
+            a.id - b.id
         )
-
-        .filter(
-
-          (a)=>
-          p.acciones[a]
-
-        )
-
-        .sort()
-
-      }))
-
-      .sort(
-
-        (a,b)=>
-
-        a.id-b.id
-
-      )
 
     );
 
   const newPermissions =
-  normalize(
-    permissions
-  );
+    normalize(
+      permissions
+    );
 
   return roles.some(
-
-    (role)=>{
+    (role) => {
 
       const existing =
-      normalize(
-        role.permisos
-      );
+        normalize(
+          role.permisos
+        );
 
       return (
-        existing===
+        existing ===
         newPermissions
       );
 
     }
-
   );
 
 };

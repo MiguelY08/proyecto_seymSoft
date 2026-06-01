@@ -1,3 +1,5 @@
+
+
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 
@@ -8,10 +10,7 @@ import { validateRole } from "../validators/rolesValidators";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 
 import {
-
-  getRoles,
   getPermissions
-
 } from "../services/rolesServices";
 
 export default function RoleModal({
@@ -20,24 +19,22 @@ export default function RoleModal({
   onClose,
   onSave,
   roleData,
-  mode = "create",
+  mode = "create"
 
 }) {
 
   const {
 
     showSuccess,
-    showWarning,
-    showError
+    showWarning
 
   } = useAlert();
 
   const isView =
     mode === "view";
 
-  // ─────────────────────────────
-  // STATES
-  // ─────────────────────────────
+  const today =
+    new Date().toLocaleDateString();
 
   const [nombre,setNombre] =
     useState("");
@@ -45,10 +42,10 @@ export default function RoleModal({
   const [descripcion,setDescripcion] =
     useState("");
 
-  const [permisosRol,setPermisosRol] =
+  const [permisosSistema,setPermisosSistema] =
     useState([]);
 
-  const [permissionsSystem,setPermissionsSystem] =
+  const [permisosRol,setPermisosRol] =
     useState([]);
 
   const [errors,setErrors] =
@@ -58,7 +55,7 @@ export default function RoleModal({
     useState(false);
 
   // ─────────────────────────────
-  // CARGAR PERMISOS DEL SISTEMA
+  // CARGAR MÓDULOS Y PRIVILEGIOS
   // ─────────────────────────────
 
   useEffect(()=>{
@@ -68,15 +65,15 @@ export default function RoleModal({
 
       try{
 
-        setLoadingPermissions(
-          true
-        );
+        setLoadingPermissions(true);
 
         const data =
           await getPermissions();
 
-        setPermissionsSystem(
-          data
+        setPermisosSistema(
+          Array.isArray(data)
+          ? data
+          : []
         );
 
       }catch(error){
@@ -86,16 +83,11 @@ export default function RoleModal({
           error
         );
 
-        showError(
-          "Error",
-          "No se pudieron cargar los permisos"
-        );
+        setPermisosSistema([]);
 
       }finally{
 
-        setLoadingPermissions(
-          false
-        );
+        setLoadingPermissions(false);
 
       }
 
@@ -107,77 +99,187 @@ export default function RoleModal({
 
     }
 
-  },[
-    isOpen
-  ]);
+  },[isOpen]);
 
-  // ─────────────────────────────
-  // CARGAR DATA DEL MODAL
-  // ─────────────────────────────
 
-  useEffect(()=>{
 
-    if(!isOpen)
+// ─────────────────────────────
+// INICIALIZAR FORMULARIO
+// ─────────────────────────────
+
+useEffect(() => {
+
+  if (!isOpen) return;
+
+  if (!permisosSistema.length) return;
+
+  // ✅ LIMPIAR SIEMPRE PRIMERO
+  setNombre("");
+  setDescripcion("");
+  setPermisosRol([]);
+  setErrors({});
+
+  // ─────────────────────────
+  // CREAR
+  // ─────────────────────────
+
+  if (mode === "create") {
+
+    const permisosIniciales =
+
+      permisosSistema.map((modulo) => {
+
+        const accionesIniciales = {};
+
+        modulo.acciones.forEach((accion) => {
+
+          accionesIniciales[
+            accion.key
+          ] = false;
+
+        });
+
+        return {
+
+          id:
+            modulo.id,
+
+          selectedActions:
+            accionesIniciales
+
+        };
+
+      });
+
+    setPermisosRol(
+      permisosIniciales
+    );
+
     return;
 
-    // EDITAR / VER
+  }
 
-    if(
+  // ─────────────────────────
+  // EDITAR / VER
+  // ─────────────────────────
 
-      (mode==="edit" || mode==="view")
-      &&
-      roleData
+  if (
+    (mode === "edit" || mode === "view")
+    &&
+    roleData
+  ) {
 
-    ){
+    setNombre(
+      roleData.name || ""
+    );
 
-      setNombre(
-        roleData.name || ""
-      );
+    setDescripcion(
+      roleData.description || ""
+    );
 
-      setDescripcion(
-        roleData.description || ""
-      );
+    const permisosMapeados =
 
-      setPermisosRol(
-        roleData.permisos || []
-      );
+      permisosSistema.map((modulo) => {
 
-    }
+        // ✅ INICIALIZAR TODO FALSE
+        const accionesIniciales = {};
 
-    // CREAR
+        modulo.acciones.forEach((accion) => {
 
-    if(mode==="create"){
+          accionesIniciales[
+            accion.key
+          ] = false;
 
-      setNombre("");
+        });
 
-      setDescripcion("");
+        // ✅ MARCAR SOLO LOS DEL ROL
+        (
+          roleData.permisos || []
 
-      setPermisosRol([]);
+        ).forEach((permiso) => {
 
-    }
+          if (
 
-    setErrors({});
+            permiso.id_module ===
+            modulo.id
 
-  },[
-    roleData,
-    mode,
-    isOpen
-  ]);
+          ) {
+
+            const accionEncontrada =
+
+              modulo.acciones.find(
+
+                (acc) =>
+
+                  acc.id_privilege ===
+                  permiso.id_privilege
+
+              );
+
+            if (accionEncontrada) {
+
+              accionesIniciales[
+                accionEncontrada.key
+              ] = true;
+
+            }
+
+          }
+
+        });
+
+        return {
+
+          id:
+            modulo.id,
+
+          selectedActions:
+            accionesIniciales
+
+        };
+
+      });
+
+    setPermisosRol(
+      permisosMapeados
+    );
+
+  }
+
+}, [
+
+  isOpen,
+  mode,
+  roleData,
+  permisosSistema
+
+]);
+
+
+
+  if(!isOpen)
+  return null;
 
   // ─────────────────────────────
-  // VALIDACIONES
+  // INPUTS
   // ─────────────────────────────
 
-  const handleNombreChange=(value)=>{
+  const handleNombreChange =
+  (value)=>{
 
     setNombre(value);
 
     const validation =
       validateRole({
 
-        name:value,
-        description:descripcion,
-        permissions:permisosRol
+        name:
+          value,
+
+        description:
+          descripcion,
+
+        permissions:
+          permisosRol
 
       });
 
@@ -192,16 +294,22 @@ export default function RoleModal({
 
   };
 
-  const handleDescripcionChange=(value)=>{
+  const handleDescripcionChange =
+  (value)=>{
 
     setDescripcion(value);
 
     const validation =
       validateRole({
 
-        name:nombre,
-        description:value,
-        permissions:permisosRol
+        name:
+          nombre,
+
+        description:
+          value,
+
+        permissions:
+          permisosRol
 
       });
 
@@ -216,7 +324,8 @@ export default function RoleModal({
 
   };
 
-  const handlePermissionsChange=(permisos)=>{
+  const handlePermissionsChange =
+  (permisos)=>{
 
     setPermisosRol(
       permisos
@@ -225,9 +334,14 @@ export default function RoleModal({
     const validation =
       validateRole({
 
-        name:nombre,
-        description:descripcion,
-        permissions:permisos
+        name:
+          nombre,
+
+        description:
+          descripcion,
+
+        permissions:
+          permisos
 
       });
 
@@ -243,118 +357,35 @@ export default function RoleModal({
   };
 
   // ─────────────────────────────
-  // NORMALIZAR PERMISOS
-  // ─────────────────────────────
-
-  const normalizePermissions=(perms)=>{
-
-    return JSON.stringify(
-
-      perms
-      .map((p)=>({
-
-        id:p.id,
-
-        acciones:
-
-          Object.keys(
-            p.acciones
-          )
-
-          .filter(
-            (a)=>p.acciones[a]
-          )
-
-          .sort()
-
-      }))
-
-      .sort(
-        (a,b)=>a.id-b.id
-      )
-
-    );
-
-  };
-
-  // ─────────────────────────────
-  // VALIDAR DUPLICADOS
-  // ─────────────────────────────
-
-  const rolePermissionsAlreadyExist =
-  async()=>{
-
-    try{
-
-      const roles =
-        await getRoles();
-
-      const newPermissions =
-        normalizePermissions(
-          permisosRol
-        );
-
-      return roles.find((role)=>{
-
-        if(
-          role.id===roleData?.id
-        ){
-
-          return false;
-
-        }
-
-        const existingPermissions =
-          normalizePermissions(
-            role.permisos || []
-          );
-
-        return (
-
-          existingPermissions
-          ===
-          newPermissions
-
-        );
-
-      });
-
-    }catch(error){
-
-      console.error(error);
-
-      return false;
-
-    }
-
-  };
-
-  // ─────────────────────────────
   // SUBMIT
   // ─────────────────────────────
 
-  const handleSubmit =
-  async()=>{
+  const handleSubmit = async () => {
 
-    if(isView)
-    return;
+    if (isView)
+      return;
 
     const validationErrors =
       validateRole({
 
-        name:nombre,
-        description:descripcion,
-        permissions:permisosRol
+        name:
+          nombre,
+
+        description:
+          descripcion,
+
+        permissions:
+          permisosRol
 
       });
 
-    if(
+    if (
 
       Object.keys(
         validationErrors
       ).length > 0
 
-    ){
+    ) {
 
       setErrors(
         validationErrors
@@ -372,26 +403,7 @@ export default function RoleModal({
 
     }
 
-    // validar duplicados
-
-    const duplicateRole =
-      await rolePermissionsAlreadyExist();
-
-    if(duplicateRole){
-
-      showWarning(
-
-        "Rol duplicado",
-
-        `Este conjunto de permisos ya pertenece al rol "${duplicateRole.name}"`
-
-      );
-
-      return;
-
-    }
-
-    const payload={
+    const payload = {
 
       id:
         roleData?.id,
@@ -406,55 +418,70 @@ export default function RoleModal({
         roleData?.active ?? true,
 
       createdAt:
-        roleData?.createdAt,
+        roleData?.createdAt || today,
 
       permisos:
         permisosRol
 
     };
 
-    try{
+    try {
 
-      await onSave(
-        payload
+      const response =
+        await onSave(
+          payload
+        );
+
+      if(response?.success){
+
+        if(mode === "create"){
+
+          showSuccess(
+
+            "Rol creado",
+
+            "El rol fue registrado correctamente"
+
+          );
+
+        }
+
+        if(mode === "edit"){
+
+          showSuccess(
+
+            "Rol actualizado",
+
+            "Los cambios del rol fueron guardados"
+
+          );
+
+        }
+
+        // ✅ LIMPIAR
+        setNombre("");
+        setDescripcion("");
+        setPermisosRol([]);
+        setErrors({});
+
+        onClose();
+
+      }
+
+    } catch (error) {
+
+      console.error(
+        "Error guardando rol:",
+        error
       );
 
-      if(mode==="create"){
-
-        showSuccess(
-
-          "Rol creado",
-
-          "El rol fue registrado correctamente"
-
-        );
-
-      }
-
-      if(mode==="edit"){
-
-        showSuccess(
-
-          "Rol actualizado",
-
-          "Los cambios del rol fueron guardados"
-
-        );
-
-      }
-
-      onClose();
-
-    }catch(error){
-
-      console.error(error);
-
-      showError(
+      showWarning(
 
         "Error",
 
-        error.message ||
-        "No se pudo guardar el rol"
+        error?.response?.data?.message ||
+
+        "Hubo un problema al guardar el rol"
 
       );
 
@@ -462,241 +489,200 @@ export default function RoleModal({
 
   };
 
-  // ─────────────────────────────
-  // RENDER
-  // ─────────────────────────────
-
-  if(!isOpen)
-  return null;
-
   return(
 
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
 
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
+<div
+className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+onClick={onClose}
+/>
 
-      <div className="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-xl shadow-2xl flex flex-col font-lexend z-10">
+<div className="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-xl shadow-2xl flex flex-col font-lexend z-10">
 
-        {/* HEADER */}
+<div className="bg-[#0E5676] text-white px-6 py-4 flex justify-between items-center rounded-t-xl">
 
-        <div className="bg-[#0E5676] text-white px-6 py-4 flex justify-between items-center rounded-t-xl">
+<h2 className="text-lg font-semibold">
 
-          <h2 className="text-lg font-semibold">
+{mode==="create" && "Crear Rol"}
+{mode==="edit" && "Editar Rol"}
+{mode==="view" && "Ver Rol"}
 
-            {mode==="create" && "Crear Rol"}
-            {mode==="edit" && "Editar Rol"}
-            {mode==="view" && "Ver Rol"}
+</h2>
 
-          </h2>
+<button onClick={onClose}>
 
-          <button onClick={onClose}>
+<X size={22} />
 
-            <X size={22} />
+</button>
 
-          </button>
+</div>
 
-        </div>
+<div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
 
-        {/* BODY */}
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
+<div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+<label className="text-sm font-medium">
 
-            {/* NOMBRE */}
+Nombre del Rol
 
-            <div>
+</label>
 
-              <label className="text-sm font-medium">
+<input
+value={nombre}
+disabled={isView}
+onChange={(e)=>
+handleNombreChange(
+e.target.value
+)
+}
+className="w-full mt-2 border border-gray-400 rounded-lg px-4 py-2 text-sm focus:outline-blue-600"
+/>
 
-                Nombre del Rol
+{errors.name && (
 
-              </label>
+<p className="text-red-500 text-xs mt-1">
 
-              <input
-                value={nombre}
-                disabled={isView}
-                onChange={(e)=>
-                  handleNombreChange(
-                    e.target.value
-                  )
-                }
-                className="w-full mt-2 border border-gray-400 rounded-lg px-4 py-2 text-sm focus:outline-blue-600"
-              />
+{errors.name}
 
-              {errors.name && (
+</p>
 
-                <p className="text-red-500 text-xs mt-1">
+)}
 
-                  {errors.name}
+</div>
 
-                </p>
+<div>
 
-              )}
+<label className="text-sm font-medium">
 
-            </div>
+Fecha de Creación
 
-            {/* FECHA */}
+</label>
 
-            <div>
+<input
+value={roleData?.createdAt || today}
+disabled
+className="w-full mt-2 bg-gray-200 rounded-lg px-4 py-2 text-sm"
+/>
 
-              <label className="text-sm font-medium">
+</div>
 
-                Fecha de Creación
+<div className="md:col-span-2">
 
-              </label>
+<label className="text-sm font-medium">
 
-              <input
-                value={
-                  roleData?.createdAt
-                  ?
-                  new Date(roleData.createdAt)
-                  .toLocaleDateString("es-ES")
-                  :
-                  new Date()
-                  .toLocaleDateString("es-ES")
-                }
-                disabled
-                className="w-full mt-2 bg-gray-200 rounded-lg px-4 py-2 text-sm"
-              />
+Descripción
 
-            </div>
+</label>
 
-            {/* DESCRIPCIÓN */}
+<textarea
+rows="4"
+value={descripcion}
+disabled={isView}
+onChange={(e)=>
+handleDescripcionChange(
+e.target.value
+)
+}
+className="w-full mt-2 border border-gray-400 rounded-lg px-4 py-2 text-sm focus:outline-blue-600"
+/>
 
-            <div className="md:col-span-2">
+{errors.description && (
 
-              <label className="text-sm font-medium">
+<p className="text-red-500 text-xs mt-1">
 
-                Descripción
+{errors.description}
 
-              </label>
+</p>
 
-              <textarea
-                rows="4"
-                value={descripcion}
-                disabled={isView}
-                onChange={(e)=>
-                  handleDescripcionChange(
-                    e.target.value
-                  )
-                }
-                className="w-full mt-2 border border-gray-400 rounded-lg px-4 py-2 text-sm focus:outline-blue-600"
-              />
+)}
 
-              {errors.description && (
+</div>
 
-                <p className="text-red-500 text-xs mt-1">
+</div>
 
-                  {errors.description}
+<div>
 
-                </p>
+<h3 className="text-sm font-semibold mb-4">
 
-              )}
+Permisos y Privilegios
 
-            </div>
+</h3>
 
-          </div>
+{
 
-          {/* PERMISOS */}
+loadingPermissions
 
-          <div>
+?
 
-            <h3 className="text-sm font-semibold mb-4">
+<div className="text-sm text-gray-500">
 
-              Permisos y Privilegios
+Cargando permisos...
 
-            </h3>
+</div>
 
-            {
+:
 
-              loadingPermissions
+<PermissionsGrid
 
-              ?
+permisosSistema={permisosSistema}
 
-              <p className="text-sm text-gray-500">
+permisosRol={permisosRol}
 
-                Cargando permisos...
+onChange={handlePermissionsChange}
 
-              </p>
+readOnly={isView}
 
-              :
+/>
 
-              <PermissionsGrid
+}
 
-                permisosSistema={
-                  permissionsSystem
-                }
+{errors.permissions && (
 
-                permisosRol={
-                  permisosRol
-                }
+<p className="text-red-500 text-xs mt-2">
 
-                onChange={
-                  handlePermissionsChange
-                }
+{errors.permissions}
 
-                readOnly={
-                  isView
-                }
+</p>
 
-              />
+)}
 
-            }
+</div>
 
-            {errors.permissions && (
+</div>
 
-              <p className="text-red-500 text-xs mt-2">
+{mode !== "view" && (
 
-                {errors.permissions}
+<div className="px-6 py-4 flex justify-between gap-4">
 
-              </p>
+<button
+onClick={onClose}
+className="w-1/3 bg-gray-400 text-white py-2 rounded-lg hover:bg-gray-500 transition"
+>
 
-            )}
+Cancelar
 
-          </div>
+</button>
 
-        </div>
+<button
+onClick={handleSubmit}
+className="w-1/3 bg-[#004D77] text-white py-2 rounded-lg hover:bg-[#003b5c] transition"
+>
 
-        {/* FOOTER */}
+Guardar
 
-        {
+</button>
 
-          mode!=="view"
+</div>
 
-          &&
+)}
 
-          <div className="px-6 py-4 flex justify-between gap-4">
+</div>
 
-            <button
-              onClick={onClose}
-              className="w-1/3 bg-gray-400 text-white py-2 rounded-lg hover:bg-gray-500 transition"
-            >
+</div>
 
-              Cancelar
-
-            </button>
-
-            <button
-              onClick={handleSubmit}
-              className="w-1/3 bg-[#004D77] text-white py-2 rounded-lg hover:bg-[#003b5c] transition"
-            >
-
-              Guardar
-
-            </button>
-
-          </div>
-
-        }
-
-      </div>
-
-    </div>
-
-  );
+);
 
 }

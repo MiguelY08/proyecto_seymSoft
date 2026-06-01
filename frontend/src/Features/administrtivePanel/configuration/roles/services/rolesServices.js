@@ -1,277 +1,371 @@
+
 import apiClient from "../../../../../setting/apiClient.js";
-import { mapRolesFromApi, mapRoleFromApi } from "../helpers/roleMapper.js";
 
-/**
- * ROLES SERVICES - Consumir endpoints de roles
- * 
- * Endpoints:
- * - GET /api/roles/listar              - Listar todos
- * - GET /api/roles/:id                 - Obtener uno
- * - POST /api/roles/crear              - Crear
- * - PUT /api/roles/:id                 - Actualizar
- * - PATCH /api/roles/:id/status        - Cambiar status
- * - DELETE /api/roles/:id              - Eliminar
- */
+import {
 
-// ═══════════════════════════════════════════════════════════
-// LISTAR ROLES
-// ═══════════════════════════════════════════════════════════
+  mapRolesFromApi,
+  mapRoleFromApi,
+  mapPermissionsFromApi
+
+} from "../helpers/roleMapper.js";
+
+// ─────────────────────────────────────────────
+// OBTENER ROLES
+// ─────────────────────────────────────────────
 
 export const getRoles = async () => {
+
   try {
-    const response = await apiClient.get("/roles/listar");
 
-    const mapped = mapRolesFromApi(response.data.data || []);
+    const response =
+      await apiClient.get(
+        "/roles/listar"
+      );
 
-    return {
-      success: true,
-      data: mapped,
-    };
+    const roles =
+      response.data?.data || [];
+
+    return mapRolesFromApi(
+      roles
+    );
 
   } catch (error) {
-    console.error("Error en getRoles:", error);
 
-    const errorMessage = error.response?.data?.message || "Error al obtener roles";
+    console.error(
+      "Error en getRoles:",
+      error
+    );
 
-    return {
-      success: false,
-      error: errorMessage,
-    };
+    return [];
+
   }
+
 };
 
-// ═══════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────
 // OBTENER ROL POR ID
-// ═══════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────
 
-export const getRoleById = async (roleId) => {
+export const getRoleById = async (
+  id
+) => {
+
   try {
-    if (!roleId) {
-      return {
-        success: false,
-        error: "ID de rol requerido",
-      };
-    }
 
-    const response = await apiClient.get(`/roles/${roleId}`);
+    const response =
+      await apiClient.get(
+        `/roles/${id}`
+      );
 
-    const mapped = mapRoleFromApi(response.data.data);
-
-    return {
-      success: true,
-      data: mapped,
-    };
+    return mapRoleFromApi(
+      response.data.data
+    );
 
   } catch (error) {
-    console.error("Error en getRoleById:", error);
 
-    const errorMessage = error.response?.data?.message || "Error al obtener el rol";
+    console.error(
+      "Error en getRoleById:",
+      error
+    );
 
-    return {
-      success: false,
-      error: errorMessage,
-    };
+    throw error;
+
   }
+
 };
 
-// ═══════════════════════════════════════════════════════════
-// CREAR ROL
-// ═══════════════════════════════════════════════════════════
-
-export const createRole = async (roleData) => {
-  try {
-    if (!roleData || !roleData.name_role || !roleData.description) {
-      return {
-        success: false,
-        error: "Nombre y descripción del rol son requeridos",
-      };
-    }
-
-    const response = await apiClient.post("/roles/crear", {
-      name_role: roleData.name_role,
-      description: roleData.description,
-      id_status: roleData.id_status || 1,
-      permissions: roleData.permissions || [],
-    });
-
-    const mapped = mapRoleFromApi(response.data.data);
-
-    return {
-      success: true,
-      data: mapped,
-      message: response.data.message,
-    };
-
-  } catch (error) {
-    console.error("Error en createRole:", error);
-
-    const errorMessage = error.response?.data?.message || "Error al crear rol";
-
-    return {
-      success: false,
-      error: errorMessage,
-    };
-  }
-};
-
-// ═══════════════════════════════════════════════════════════
-// ACTUALIZAR ROL
-// ═══════════════════════════════════════════════════════════
-
-export const updateRole = async (roleId, roleData) => {
-  try {
-    if (!roleId) {
-      return {
-        success: false,
-        error: "ID de rol requerido",
-      };
-    }
-
-    const response = await apiClient.put(`/roles/${roleId}`, {
-      name_role: roleData.name_role,
-      description: roleData.description,
-      id_status: roleData.id_status,
-      permissions: roleData.permissions || [],
-    });
-
-    const mapped = mapRoleFromApi(response.data.data);
-
-    return {
-      success: true,
-      data: mapped,
-      message: response.data.message,
-    };
-
-  } catch (error) {
-    console.error("Error en updateRole:", error);
-
-    const errorMessage = error.response?.data?.message || "Error al actualizar rol";
-
-    return {
-      success: false,
-      error: errorMessage,
-    };
-  }
-};
-
-// ═══════════════════════════════════════════════════════════
-// ACTUALIZAR STATUS DEL ROL
-// ═══════════════════════════════════════════════════════════
-
-export const updateRoleStatus = async (roleId, idStatus) => {
-  try {
-    if (!roleId || idStatus === undefined) {
-      return {
-        success: false,
-        error: "ID de rol y status son requeridos",
-      };
-    }
-
-    const response = await apiClient.patch(`/roles/${roleId}/status`, {
-      id_status: idStatus,
-    });
-
-    const mapped = mapRoleFromApi(response.data.data);
-
-    return {
-      success: true,
-      data: mapped,
-      message: response.data.message,
-    };
-
-  } catch (error) {
-    console.error("Error en updateRoleStatus:", error);
-
-    const errorMessage = error.response?.data?.message || "Error al actualizar status";
-
-    return {
-      success: false,
-      error: errorMessage,
-    };
-  }
-};
-
-// ═══════════════════════════════════════════════════════════
-// ELIMINAR ROL
-// ═══════════════════════════════════════════════════════════
-
-export const deleteRole = async (roleId) => {
-  try {
-    if (!roleId) {
-      return {
-        success: false,
-        error: "ID de rol requerido",
-      };
-    }
-
-    const response = await apiClient.delete(`/roles/${roleId}`);
-
-    return {
-      success: true,
-      message: response.data.message,
-    };
-
-  } catch (error) {
-    console.error("Error en deleteRole:", error);
-
-    const errorMessage = error.response?.data?.message || "Error al eliminar rol";
-
-    return {
-      success: false,
-      error: errorMessage,
-    };
-  }
-};
-
-// ═══════════════════════════════════════════════════════════
-// OBTENER PERMISOS DEL SISTEMA
-// ═══════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────
+// OBTENER MÓDULOS Y PRIVILEGIOS
+// ─────────────────────────────────────────────
 
 export const getPermissions = async () => {
+
   try {
-    const response = await apiClient.get("/roles/permissions");
 
-    const modules = response.data.data?.modules || [];
-    const privileges = response.data.data?.privileges || [];
+    const response =
+      await apiClient.get(
+        "/roles/available-permissions"
+      );
 
-    const mapped = modules.map((module) => ({
-      id: module.id_module,
-      modulo: module.name_module,
-      descripcion: module.description,
-      acciones: privileges.map((privilege) => ({
-        key: privilege.name_privilege.toLowerCase(),
-        backend: privilege.name_privilege,
-        label: privilege.name_privilege.replaceAll("_", " "),
-      })),
-    }));
-
-    return {
-      success: true,
-      data: mapped,
-    };
+    return mapPermissionsFromApi(
+      response.data.data
+    );
 
   } catch (error) {
-    console.error("Error en getPermissions:", error);
 
-    const errorMessage = error.response?.data?.message || "Error al obtener permisos";
+    console.error(
+      "Error en getPermissions:",
+      error
+    );
 
-    return {
-      success: false,
-      error: errorMessage,
-    };
+    return [];
+
   }
+
 };
 
-export const toggleRoleStatus = async (roleId, currentStatus) => {
+// ─────────────────────────────────────────────
+// MAPEAR PERMISOS → API
+// ─────────────────────────────────────────────
 
-  const newStatus =
-    currentStatus === 1
-      ? 2
-      : 1;
+const mapearPermisosParaApi = (
+  roleData,
+  permisosSistema = []
+) => {
 
-  return await updateRoleStatus(
-    roleId,
-    newStatus
+  const permissions = [];
+
+  roleData.permisos.forEach(
+    (moduloRol) => {
+
+      const moduloSistema =
+        permisosSistema.find(
+
+          (mod) =>
+            mod.id === moduloRol.id
+
+        );
+
+      if (!moduloSistema)
+        return;
+
+      Object.entries(
+
+        moduloRol.selectedActions || {}
+
+      ).forEach(
+
+        ([accionKey, activo]) => {
+
+          if (!activo)
+            return;
+
+          const accionSistema =
+
+            moduloSistema.acciones.find(
+
+              (accion) =>
+
+                accion.key ===
+                accionKey
+
+            );
+
+          if (!accionSistema)
+            return;
+
+          permissions.push({
+
+            id_module:
+              moduloSistema.id,
+
+            id_privilege:
+              accionSistema.id_privilege
+
+          });
+
+        }
+
+      );
+
+    }
+
   );
+
+  const payload = {
+
+    name_role:
+      roleData.name,
+
+    description:
+      roleData.description,
+
+    permissions
+
+  };
+
+  console.log(
+    "📤 PAYLOAD FINAL:",
+    payload
+  );
+
+  return payload;
+
+};
+
+// ─────────────────────────────────────────────
+// CREAR ROL
+// ─────────────────────────────────────────────
+
+export const createRole = async (
+  roleData
+) => {
+
+  try {
+
+    const permisosSistema =
+      await getPermissions();
+
+    const payload =
+      mapearPermisosParaApi(
+        roleData,
+        permisosSistema
+      );
+
+    const response =
+      await apiClient.post(
+        "/roles/crear",
+        payload
+      );
+
+    return response.data;
+
+  } catch (error) {
+
+    console.error(
+      "❌ ERROR COMPLETO:",
+      error.response?.data ||
+      error.message
+    );
+
+    throw error;
+
+  }
+
+};
+
+// ─────────────────────────────────────────────
+// ACTUALIZAR ROL
+// ─────────────────────────────────────────────
+
+export const updateRole = async (
+  roleData
+) => {
+
+  try {
+
+    const permisosSistema =
+      await getPermissions();
+
+    const payload =
+      mapearPermisosParaApi(
+        roleData,
+        permisosSistema
+      );
+
+    const response =
+      await apiClient.put(
+
+        `/roles/${roleData.id}`,
+
+        payload
+
+      );
+
+    return response.data;
+
+  } catch (error) {
+
+    console.error(
+      "Error en updateRole:",
+      error
+    );
+
+    throw error;
+
+  }
+
+};
+
+
+// ─────────────────────────────────────────────
+// ACTIVAR / DESACTIVAR ROL
+// PATCH /roles/:id/status
+// ─────────────────────────────────────────────
+
+export const toggleRoleStatus = async (
+
+  id,
+  currentStatus
+
+) => {
+
+  try {
+
+    // ✅ CALCULAR ESTADO REAL
+    const nextStatus =
+
+      currentStatus
+        ? 2
+        : 1;
+
+    const payload = {
+
+      id_status:
+        nextStatus
+
+    };
+
+    console.log(
+      "📤 STATUS PAYLOAD:",
+      payload
+    );
+
+    const response =
+      await apiClient.patch(
+
+        `/roles/${id}/status`,
+
+        payload
+
+      );
+
+    return response.data;
+
+  } catch (error) {
+
+    console.error(
+
+      "Error en toggleRoleStatus:",
+
+      error.response?.data ||
+      error
+
+    );
+
+    throw error;
+
+  }
+
+};
+
+
+// ─────────────────────────────────────────────
+// ELIMINAR ROL
+// ─────────────────────────────────────────────
+
+export const deleteRole = async (
+  id
+) => {
+
+  try {
+
+    const response =
+      await apiClient.delete(
+        `/roles/${id}`
+      );
+
+    return response.data;
+
+  } catch (error) {
+
+    console.error(
+      "Error en deleteRole:",
+      error
+    );
+
+    throw error;
+
+  }
 
 };

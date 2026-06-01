@@ -9,6 +9,7 @@ import React from "react";
 import { Info, SquarePen, Trash2 } from "lucide-react";
 import ActiveToggle from "./ActiveToggle";
 import { formatPhoneNumber } from "../utils/providerHelpers";
+import Permission from "../../../configuration/roles/components/Permission";
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 
 const highlightText = (text, search) => {
@@ -129,23 +130,27 @@ function ProvidersTable({
                 <td className="px-3 py-2">
                   <div className="flex items-center justify-center gap-1.5">
                     {canView && (
-                      <button
-                        onClick={() => onInfo(provider)}
-                        className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
-                        title="Información del proveedor"
-                      >
-                        <Info className="w-4 h-4" strokeWidth={1.5} />
-                      </button>
+                      <Permission permission ="proveedores.ver_informacion" >
+                        <button
+                          onClick={() => onInfo(provider)}
+                          className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                          title="Información del proveedor"
+                        >
+                          <Info className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
+                      </Permission>
                     )}
 
                     {canEdit && (
-                      <button
-                        onClick={() => onEdit(provider)}
-                        className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
-                        title="Editar proveedor"
-                      >
-                        <SquarePen className="w-4 h-4" strokeWidth={1.5} />
-                      </button>
+                      <Permission permission ="proveedores.editar" >
+                        <button
+                          onClick={() => onEdit(provider)}
+                          className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                          title="Editar proveedor"
+                        >
+                          <SquarePen className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
+                      </Permission>
                     )}
 
                     {canToggle && (
@@ -156,6 +161,7 @@ function ProvidersTable({
                     )}
 
                     {canDelete && (
+                    <Permission permission ="proveedores.eliminar" >
                       <button
                         onClick={() => onDelete(provider)}
                         className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
@@ -163,6 +169,7 @@ function ProvidersTable({
                       >
                         <Trash2 className="w-4 h-4" strokeWidth={1.5} />
                       </button>
+                    </Permission>
                     )}
                   </div>
                 </td>

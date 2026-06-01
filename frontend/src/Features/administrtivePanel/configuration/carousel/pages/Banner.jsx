@@ -17,6 +17,7 @@ import {
   getNextStatusId,
   MAX_FILE_SIZE,
 } from '../helpers/bannerHelper';
+import Permission from '../../roles/components/Permission';
 
 // ─── Banner ───────────────────────────────────────────────────────────────────
 function Banner() {
@@ -127,32 +128,34 @@ function Banner() {
   const slidesOrdenados = [...slides].sort((a, b) => a.orden - b.orden);
 
   return (
-    <div className="flex flex-col gap-6 sm:gap-8 p-3 sm:p-4 lg:p-6 max-w-7xl mx-auto w-full">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-lg sm:text-xl font-bold text-[#004D77]">
-          Gestión del carrusel
-        </h1>
+    <Permission permission="banners.ver">
+      <div className="flex flex-col gap-6 sm:gap-8 p-3 sm:p-4 lg:p-6 max-w-7xl mx-auto w-full">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-lg sm:text-xl font-bold text-[#004D77]">
+            Gestión del carrusel
+          </h1>
 
-        <p className="text-xs sm:text-sm text-gray-500">
-          Administre las imágenes que verá el cliente en la tienda. Agrega nuevas
-          imágenes, ordénalas y mucho más.
-        </p>
+          <p className="text-xs sm:text-sm text-gray-500">
+            Administre las imágenes que verá el cliente en la tienda. Agrega nuevas
+            imágenes, ordénalas y mucho más.
+          </p>
+        </div>
+
+        <OrderSection
+          slides={slidesOrdenados}
+          onReorder={handleReorder}
+          loading={loading}
+        />
+
+        <ManagementSection
+          slides={slidesOrdenados}
+          onAdd={handleAddImage}
+          onDelete={handleDeleteImage}
+          onToggle={handleToggleActive}
+          loading={loading}
+        />
       </div>
-
-      <OrderSection
-        slides={slidesOrdenados}
-        onReorder={handleReorder}
-        loading={loading}
-      />
-
-      <ManagementSection
-        slides={slidesOrdenados}
-        onAdd={handleAddImage}
-        onDelete={handleDeleteImage}
-        onToggle={handleToggleActive}
-        loading={loading}
-      />
-    </div>
+    </Permission>
   );
 }
 

@@ -1,442 +1,358 @@
-import { useEffect } from "react";
+
+import React from "react";
 
 export default function PermissionsGrid({
 
-  permisosSistema=[],
-  permisosRol=[],
-  onChange=()=>{},
-  readOnly=false
+  permisosSistema = [],
+  permisosRol = [],
+  onChange = () => {},
+  readOnly = false
 
 }) {
 
+  // ─────────────────────────────
+  // TOGGLE ACCIÓN
+  // ─────────────────────────────
 
-// ─────────────────────────────
-// CREAR ESTRUCTURA INICIAL
-// ─────────────────────────────
+  const toggleAccion = (
 
-useEffect(()=>{
+    moduloId,
+    accionKey
 
-if(!permisosSistema.length)
-return;
+  ) => {
 
-if(permisosRol.length>0)
-return;
+    if (readOnly) return;
 
-const permisosIniciales=
+    const updated = permisosRol.map((modulo) => {
 
-permisosSistema.map(
+      if (modulo.id !== moduloId) {
+        return modulo;
+      }
 
-(modulo)=>({
+      return {
 
-id:
-modulo.id,
+        ...modulo,
 
-acciones:
+        // ✅ NUEVO OBJETO
+        selectedActions: {
 
-modulo.acciones.reduce(
+          ...modulo.selectedActions,
 
-(acc,accion)=>{
+          [accionKey]:
 
-acc[
-accion.key
-]=false;
+            !modulo.selectedActions?.[
+              accionKey
+            ]
 
-return acc;
+        }
 
-},
+      };
 
-{}
+    });
 
-)
+    onChange(
+      structuredClone(updated)
+    );
 
-})
+  };
 
-);
+  // ─────────────────────────────
+  // TOGGLE MÓDULO
+  // ─────────────────────────────
 
-onChange(
-permisosIniciales
-);
+  const toggleModuloCompleto = (
+    moduloId
+  ) => {
 
-},[
-permisosSistema
-]);
+    if (readOnly) return;
 
+    const updated = permisosRol.map((modulo) => {
 
-// ─────────────────────────────
-// TOGGLE ACCIÓN
-// ─────────────────────────────
+      if (modulo.id !== moduloId) {
+        return modulo;
+      }
 
-const toggleAccion=(
+      const allSelected =
 
-moduloId,
-accionKey
+        Object.values(
 
-)=>{
+          modulo.selectedActions || {}
 
-if(readOnly)
-return;
+        ).every(Boolean);
 
-const updated=
+      const nuevasAcciones =
 
-permisosRol.map(
+        Object.keys(
 
-(modulo)=>
+          modulo.selectedActions || {}
 
-modulo.id===moduloId
+        ).reduce((acc, key) => {
 
-?{
+          acc[key] = !allSelected;
 
-...modulo,
+          return acc;
 
-acciones:{
+        }, {});
 
-...modulo.acciones,
+      return {
 
-[accionKey]:
+        ...modulo,
 
-!modulo.acciones[
-accionKey
-]
+        selectedActions:
+          nuevasAcciones
+
+      };
+
+    });
+
+    onChange(
+      structuredClone(updated)
+    );
+
+  };
+
+  // ─────────────────────────────
+  // TOGGLE TODOS
+  // ─────────────────────────────
+
+  const toggleAllModules = () => {
+
+    if (readOnly) return;
+
+    const allSelected = permisosRol.every(
+
+      (modulo) =>
+
+        Object.values(
+
+          modulo.selectedActions || {}
+
+        ).every(Boolean)
+
+    );
+
+    const updated = permisosRol.map((modulo) => {
+
+      const nuevasAcciones =
+
+        Object.keys(
+
+          modulo.selectedActions || {}
+
+        ).reduce((acc, key) => {
+
+          acc[key] = !allSelected;
+
+          return acc;
+
+        }, {});
+
+      return {
+
+        ...modulo,
+
+        selectedActions:
+          nuevasAcciones
+
+      };
+
+    });
+
+    onChange(
+      structuredClone(updated)
+    );
+
+  };
+
+  // ─────────────────────────────
+  // UI
+  // ─────────────────────────────
+
+  return (
+
+    <div>
+
+      {
+
+        !readOnly && (
+
+          <div className="flex justify-end mb-3">
+
+            <button
+              onClick={toggleAllModules}
+              className="text-xs bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition"
+            >
+
+              Seleccionar todos
+
+            </button>
+
+          </div>
+
+        )
+
+      }
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        {
+
+          permisosSistema.map((modulo) => {
+
+            const rolModulo = permisosRol.find(
+
+              (p) => p.id === modulo.id
+
+            );
+
+            const hasPermission =
+
+              rolModulo &&
+
+              Object.values(
+
+                rolModulo.selectedActions || {}
+
+              ).some(Boolean);
+
+            const allChecked =
+
+              rolModulo &&
+
+              Object.values(
+
+                rolModulo.selectedActions || {}
+
+              ).every(Boolean);
+
+            return (
+
+              <div
+                key={modulo.id}
+                className={`border rounded-xl p-4 shadow-sm bg-white transition
+
+                ${
+
+                  hasPermission
+
+                    ?
+
+                    "border-blue-500 ring-2 ring-blue-400"
+
+                    :
+
+                    "border-gray-400"
+
+                }
+
+                `}
+              >
+
+                <div className="flex justify-between items-center mb-3">
+
+                  <h4 className="font-semibold text-sm">
+
+                    {modulo.modulo}
+
+                  </h4>
+
+                  <input
+                    type="checkbox"
+                    checked={allChecked || false}
+                    disabled={readOnly}
+                    onChange={() =>
+                      toggleModuloCompleto(
+                        modulo.id
+                      )
+                    }
+                    className={`accent-blue-600 ${
+
+                      readOnly
+
+                        ?
+
+                        "opacity-100 cursor-default"
+
+                        :
+
+                        "cursor-pointer"
+
+                    }`}
+                  />
+
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-sm">
+
+                  {
+
+                    modulo.acciones.map((accion) => (
+
+                      <label
+                        key={accion.key}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+
+                        <input
+                          type="checkbox"
+
+                          checked={
+
+                            rolModulo?.selectedActions?.[
+                              accion.key
+                            ] || false
+
+                          }
+
+                          onChange={() =>
+
+                            toggleAccion(
+
+                              modulo.id,
+                              accion.key
+
+                            )
+
+                          }
+
+                          className={`accent-blue-600 ${
+
+                            readOnly
+
+                              ?
+
+                              "pointer-events-none"
+
+                              :
+
+                              "cursor-pointer"
+
+                          }`}
+                        />
+
+                        {accion.label}
+
+                      </label>
+
+                    ))
+
+                  }
+
+                </div>
+
+              </div>
+
+            );
+
+          })
+
+        }
+
+      </div>
+
+    </div>
+
+  );
 
 }
 
-}
-
-:
-
-modulo
-
-);
-
-onChange(
-updated
-);
-
-};
-
-
-// ─────────────────────────────
-// TOGGLE MÓDULO
-// ─────────────────────────────
-
-const toggleModuloCompleto=(
-
-moduloId
-
-)=>{
-
-if(readOnly)
-return;
-
-const updated=
-
-permisosRol.map(
-
-(modulo)=>{
-
-if(
-modulo.id!==moduloId
-){
-
-return modulo;
-
-}
-
-const allSelected=
-
-Object.values(
-modulo.acciones
-).every(Boolean);
-
-const nuevasAcciones=
-
-Object.keys(
-modulo.acciones
-).reduce(
-
-(acc,key)=>{
-
-acc[key]=
-!allSelected;
-
-return acc;
-
-},
-
-{}
-
-);
-
-return{
-
-...modulo,
-
-acciones:
-nuevasAcciones
-
-};
-
-}
-
-);
-
-onChange(
-updated
-);
-
-};
-
-
-// ─────────────────────────────
-// TOGGLE TODOS
-// ─────────────────────────────
-
-const toggleAllModules=()=>{
-
-if(readOnly)
-return;
-
-const allSelected=
-
-permisosRol.every(
-
-(modulo)=>
-
-Object.values(
-modulo.acciones
-).every(Boolean)
-
-);
-
-const updated=
-
-permisosRol.map(
-
-(modulo)=>{
-
-const nuevasAcciones=
-
-Object.keys(
-modulo.acciones
-).reduce(
-
-(acc,key)=>{
-
-acc[key]=
-!allSelected;
-
-return acc;
-
-},
-
-{}
-
-);
-
-return{
-
-...modulo,
-
-acciones:
-nuevasAcciones
-
-};
-
-}
-
-);
-
-onChange(
-updated
-);
-
-};
-
-
-// ─────────────────────────────
-// UI
-// ─────────────────────────────
-
-return(
-
-<div>
-
-{!readOnly&&(
-
-<div className="flex justify-end mb-3">
-
-<button
-onClick={toggleAllModules}
-className="text-xs bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition"
->
-
-Seleccionar todos
-
-</button>
-
-</div>
-
-)}
-
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-{
-
-permisosSistema.map(
-
-(modulo)=>{
-
-const rolModulo=
-
-permisosRol.find(
-
-(p)=>
-
-p.id===modulo.id
-
-);
-
-const hasPermission=
-
-rolModulo&&
-
-Object.values(
-
-rolModulo.acciones
-
-).some(Boolean);
-
-const allChecked=
-
-rolModulo&&
-
-Object.values(
-
-rolModulo.acciones
-
-).every(Boolean);
-
-return(
-
-<div
-key={modulo.id}
-className={`border rounded-xl p-4 shadow-sm bg-white transition
-
-${
-
-hasPermission
-
-?
-
-"border-blue-500 ring-2 ring-blue-400"
-
-:
-
-"border-gray-400"
-
-}
-
-`}
->
-
-<div className="flex justify-between items-center mb-3">
-
-<h4 className="font-semibold text-sm">
-
-{modulo.modulo}
-
-</h4>
-
-<input
-type="checkbox"
-checked={allChecked||false}
-disabled={readOnly}
-onChange={()=>toggleModuloCompleto(modulo.id)}
-className={`accent-blue-600 ${
-readOnly
-?
-"opacity-100 cursor-default"
-:
-"cursor-pointer"
-}`}
-/>
-
-</div>
-
-
-<div className="grid grid-cols-2 gap-3 text-sm">
-
-{
-
-modulo.acciones.map(
-
-(accion)=>(
-
-<label
-key={accion.key}
-className="flex items-center gap-2 cursor-pointer"
->
-
-<input
-type="checkbox"
-checked={
-rolModulo?.acciones?.[
-accion.key
-]
-||
-false
-}
-onChange={()=>
-
-toggleAccion(
-
-modulo.id,
-accion.key
-
-)
-
-}
-className={`accent-blue-600 ${
-
-readOnly
-
-?
-
-"pointer-events-none"
-
-:
-
-"cursor-pointer"
-
-}`}
-/>
-
-{accion.label}
-
-</label>
-
-)
-
-)
-
-}
-
-</div>
-
-</div>
-
-);
-
-}
-
-)
-
-}
-
-</div>
-
-</div>
-
-);
-
-}

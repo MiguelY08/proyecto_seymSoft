@@ -11,6 +11,7 @@
  * @param {Function} onNewClick Acción al pulsar el botón "Nuevo cliente"
  */
 import { Search, Plus } from 'lucide-react';
+import Permission from '../../../configuration/roles/components/Permission';
 
 function ClientsToolbar({ searchTerm, onSearchChange, onNewClick }) {
   return (
@@ -33,6 +34,7 @@ function ClientsToolbar({ searchTerm, onSearchChange, onNewClick }) {
 
       {/* Botón para agregar un cliente. Oculta texto en pantallas pequeñas */}
       <div className="flex items-center gap-2 shrink-0">
+      <Permission permission="clientes.crear">
         <button
           onClick={onNewClick}
           className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-sky-700 rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
@@ -41,6 +43,7 @@ function ClientsToolbar({ searchTerm, onSearchChange, onNewClick }) {
           <span className="hidden sm:inline">Nuevo cliente</span>
           <Plus className="w-4 h-4" strokeWidth={2} />
         </button>
+      </Permission>
       </div>
 
     </div>
