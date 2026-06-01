@@ -330,63 +330,66 @@ const handleView = async (
 
   return (
 
-    <div className="p-6 font-lexend">
+    <Permission permission="roles.ver">
+      <div className="p-6 font-lexend">
 
-      <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+        <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
 
-        <div className="-mb-4">
+          <div className="-mb-4">
 
-          <TableFilters
-            search={search}
-            setSearch={setSearch}
-            setCurrentPage={setCurrentPage}
-            showDateFilters={false}
-            searchWidth="w-[380px]"
-          />
+            <TableFilters
+              search={search}
+              setSearch={setSearch}
+              setCurrentPage={setCurrentPage}
+              showDateFilters={false}
+              searchWidth="w-[380px]"
+            />
+
+          </div>
+
+          <Permission permission="roles.crear">
+
+            <ButtonComponent
+              onClick={handleCreate}
+            >
+
+              Crear nuevo Rol +
+
+            </ButtonComponent>
+
+          </Permission>
 
         </div>
 
-        <Permission permission="roles.crear">
+        <RolesTable
+          roles={paginatedRoles}
+          onEdit={handleEdit}
+          onView={handleView}
+          onToggleActive={handleToggleActive}
+          search={search}
+          reloadRoles={loadRoles}
+        />
 
-          <ButtonComponent
-            onClick={handleCreate}
-          >
+        <PaginationAdmin
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          totalRecords={filteredRoles.length}
+          recordsPerPage={RECORDS_PER_PAGE}
+        />
 
-            Crear nuevo Rol +
-
-          </ButtonComponent>
-
-        </Permission>
+        <RoleModal
+          isOpen={isModalOpen}
+          mode={modalMode}
+          roleData={selectedRole}
+          onSave={handleSave}
+          onClose={() =>
+            setIsModalOpen(false)
+          }
+        />
 
       </div>
 
-      <RolesTable
-        roles={paginatedRoles}
-        onEdit={handleEdit}
-        onView={handleView}
-        onToggleActive={handleToggleActive}
-        search={search}
-        reloadRoles={loadRoles}
-      />
-
-      <PaginationAdmin
-        currentPage={currentPage}
-        onPageChange={setCurrentPage}
-        totalRecords={filteredRoles.length}
-        recordsPerPage={RECORDS_PER_PAGE}
-      />
-
-      <RoleModal
-        isOpen={isModalOpen}
-        mode={modalMode}
-        roleData={selectedRole}
-        onSave={handleSave}
-        onClose={() =>
-          setIsModalOpen(false)
-        }
-      />
-
-    </div>
+    </Permission>
 
   );
 

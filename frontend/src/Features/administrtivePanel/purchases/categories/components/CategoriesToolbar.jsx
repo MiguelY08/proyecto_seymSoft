@@ -2,6 +2,7 @@
 import React from "react";
 import { Plus } from "lucide-react";
 import SearchInput from "./SearchInput";
+import  Permission  from "../../../configuration/roles/components/Permission";
 
 const CategoriesToolbar = ({ search, setSearch, onOpenForm }) => {
   return (
@@ -12,13 +13,15 @@ const CategoriesToolbar = ({ search, setSearch, onOpenForm }) => {
         placeholder="Buscar categoría..."
       />
       <div className="flex gap-2">
-        <button
-          onClick={onOpenForm}
-          className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 transition"
-        >
-          Crear Categoría
-          <Plus className="w-4 h-4" />
-        </button>
+        <Permission permission ="categorias.crear" >
+          <button
+            onClick={onOpenForm}
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 transition"
+          >
+            Crear Categoría
+            <Plus className="w-4 h-4" />
+          </button>
+        </Permission>
       </div>
     </div>
   );
