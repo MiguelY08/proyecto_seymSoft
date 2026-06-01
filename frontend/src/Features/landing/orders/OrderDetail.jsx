@@ -28,16 +28,16 @@ const ORDER_DETAIL_STYLES = `
   .order-detail-container {
     max-width: 1280px;
     margin: 0 auto;
-    padding: clamp(24px, 4vw, 40px) 20px;
+    padding: clamp(18px, 3vw, 30px) 18px;
   }
 
   .breadcrumb {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 0.85rem;
+    gap: 6px;
+    font-size: 0.76rem;
     color: #64748b;
-    margin-bottom: 24px;
+    margin-bottom: 18px;
   }
   .breadcrumb a {
     color: #004D77;
@@ -51,7 +51,7 @@ const ORDER_DETAIL_STYLES = `
   .detail-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 24px;
+    gap: 18px;
   }
 
   @media (min-width: 1024px) {
@@ -64,9 +64,9 @@ const ORDER_DETAIL_STYLES = `
   .info-card {
     background: #ffffff;
     border: 1.5px solid #e4eff6;
-    border-radius: 24px;
-    padding: 24px;
-    margin-bottom: 24px;
+    border-radius: 18px;
+    padding: 18px;
+    margin-bottom: 18px;
     box-shadow: 0 2px 12px rgba(0, 77, 119, 0.05);
     transition: box-shadow 0.2s;
   }
@@ -75,19 +75,19 @@ const ORDER_DETAIL_STYLES = `
   }
   .card-title {
     font-family: 'Playfair Display', serif;
-    font-size: 1.3rem;
+    font-size: 1.08rem;
     font-weight: 700;
     color: #0c2a3a;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
   .status-badge {
     display: inline-block;
-    padding: 4px 12px;
+    padding: 3px 10px;
     border-radius: 40px;
-    font-size: 0.7rem;
+    font-size: 0.62rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -95,9 +95,9 @@ const ORDER_DETAIL_STYLES = `
   .info-row {
     display: flex;
     justify-content: space-between;
-    padding: 8px 0;
+    padding: 6px 0;
     border-bottom: 1px solid #eef2f6;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
   }
   .info-row:last-child {
     border-bottom: none;
@@ -114,32 +114,32 @@ const ORDER_DETAIL_STYLES = `
   .payment-section {
     background: #ffffff;
     border: 1.5px solid #e4eff6;
-    border-radius: 24px;
-    padding: 24px;
-    margin-top: 24px;
+    border-radius: 18px;
+    padding: 18px;
+    margin-top: 18px;
   }
   .amount-large {
-    font-size: 2.5rem;
+    font-size: 2rem;
     font-weight: 900;
     color: #e53e3e;
     text-align: center;
-    margin: 16px 0;
+    margin: 12px 0;
   }
   .qr-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    margin: 20px 0;
+    gap: 18px;
+    margin: 16px 0;
   }
   .qr-box {
     text-align: center;
   }
   .qr-image {
-    width: 160px;
-    height: 160px;
-    border-radius: 20px;
+    width: 132px;
+    height: 132px;
+    border-radius: 16px;
     object-fit: cover;
-    margin: 0 auto 12px;
+    margin: 0 auto 10px;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -152,7 +152,7 @@ const ORDER_DETAIL_STYLES = `
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 0.7rem;
+    font-size: 0.64rem;
     color: #9abcce;
     cursor: pointer;
     margin-top: 4px;
@@ -176,8 +176,8 @@ const ORDER_DETAIL_STYLES = `
     max-width: 90vw;
     max-height: 90vh;
     background: #ffffff;
-    border-radius: 28px;
-    padding: 20px;
+    border-radius: 22px;
+    padding: 16px;
     box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
   }
   .qr-modal-close {
@@ -187,8 +187,8 @@ const ORDER_DETAIL_STYLES = `
     background: #f1f5f9;
     border: none;
     border-radius: 50%;
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -204,7 +204,7 @@ const ORDER_DETAIL_STYLES = `
     max-width: 80vw;
     max-height: 80vh;
     object-fit: contain;
-    border-radius: 20px;
+    border-radius: 16px;
   }
 
   /* Área de subida corregida */
@@ -216,8 +216,8 @@ const ORDER_DETAIL_STYLES = `
     align-items: center;
     justify-content: center;
     border: 2px dashed #cbd5e1;
-    border-radius: 20px;
-    padding: 20px;
+    border-radius: 16px;
+    padding: 16px;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s;
@@ -232,15 +232,15 @@ const ORDER_DETAIL_STYLES = `
     background: #004D77;
     border: none;
     border-radius: 40px;
-    padding: 12px;
+    padding: 10px;
     font-weight: 800;
-    font-size: 0.85rem;
+    font-size: 0.74rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: white;
     cursor: pointer;
     transition: all 0.2s;
-    margin-top: 20px;
+    margin-top: 14px;
   }
   .btn-primary-full:hover {
     background: #0c5c88;
@@ -249,16 +249,16 @@ const ORDER_DETAIL_STYLES = `
 
   /* Lista de productos */
   .product-list {
-    margin-top: 16px;
+    margin-top: 12px;
   }
   .product-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px;
+    gap: 10px;
+    padding: 9px;
     border: 1px solid #eef2f6;
-    border-radius: 16px;
-    margin-bottom: 8px;
+    border-radius: 12px;
+    margin-bottom: 7px;
     transition: all 0.2s;
     cursor: pointer;
   }
@@ -268,10 +268,10 @@ const ORDER_DETAIL_STYLES = `
     transform: translateX(4px);
   }
   .product-icon {
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    height: 40px;
     background: linear-gradient(150deg, #eef6fb, #e0eef7);
-    border-radius: 12px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -281,15 +281,16 @@ const ORDER_DETAIL_STYLES = `
   }
   .product-name {
     font-weight: 800;
-    font-size: 0.9rem;
+    font-size: 0.78rem;
     color: #0c2a3a;
   }
   .product-meta {
-    font-size: 0.7rem;
+    font-size: 0.64rem;
     color: #9abcce;
   }
   .product-price {
     font-weight: 900;
+    font-size: 0.78rem;
     color: #004D77;
   }
 
@@ -297,30 +298,30 @@ const ORDER_DETAIL_STYLES = `
   .summary-row {
     display: flex;
     justify-content: space-between;
-    padding: 8px 0;
-    font-size: 0.9rem;
+    padding: 6px 0;
+    font-size: 0.78rem;
   }
   .total-row {
     border-top: 1px solid #e2edf5;
-    margin-top: 8px;
-    padding-top: 12px;
+    margin-top: 6px;
+    padding-top: 10px;
     font-weight: 900;
-    font-size: 1.1rem;
+    font-size: 0.95rem;
   }
 
   /* Margen para separar secciones */
   .mt-6 {
-    margin-top: 24px;
+    margin-top: 18px;
   }
 
   @media (max-width: 768px) {
     .qr-grid {
       grid-template-columns: 1fr;
-      gap: 20px;
+      gap: 16px;
     }
     .qr-image {
-      width: 120px;
-      height: 120px;
+      width: 112px;
+      height: 112px;
     }
   }
 `;
@@ -347,11 +348,11 @@ function OrderDetail() {
     return (
       <div className="order-detail-page">
         <div className="order-detail-container text-center py-20">
-          <p className="text-xl font-semibold text-gray-700 mb-4">Pedido no encontrado</p>
+          <p className="text-lg font-semibold text-gray-700 mb-3">Pedido no encontrado</p>
           <button
             onClick={() => navigate('/orders-l')}
             className="btn-primary-full"
-            style={{ width: 'auto', padding: '10px 24px' }}
+            style={{ width: 'auto', padding: '8px 20px' }}
           >
             Volver a pedidos
           </button>
@@ -402,7 +403,7 @@ function OrderDetail() {
         {/* Breadcrumb */}
         <div className="breadcrumb">
           <a href="/orders-l">Pedidos</a>
-          <ChevronRight size={14} />
+          <ChevronRight size={12} />
           <span>Detalles del pedido</span>
         </div>
 
@@ -412,11 +413,11 @@ function OrderDetail() {
             {/* Información del pedido */}
             <div className="info-card">
               <div className="card-title">
-                <Package size={20} color="#004D77" />
+                <Package size={18} color="#004D77" />
                 Información del pedido
               </div>
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="text-lg font-bold text-gray-900">{pedido.titulo}</h4>
+              <div className="flex justify-between items-center mb-3">
+                <h4 className="text-base font-bold text-gray-900">{pedido.titulo}</h4>
                 <span className={`status-badge ${pedido.estadoColor}`}>
                   {pedido.estado}
                 </span>
@@ -443,7 +444,7 @@ function OrderDetail() {
             {faltante > 0 && (
               <div className="payment-section">
                 <div className="card-title">
-                  <CreditCard size={20} color="#004D77" />
+                  <CreditCard size={18} color="#004D77" />
                   Abonar - Pagar
                 </div>
                 <div className="amount-large">
@@ -452,7 +453,7 @@ function OrderDetail() {
 
                 <div className="qr-grid">
                   <div className="qr-box">
-                    <p className="text-sm font-medium text-gray-700 mb-3">
+                    <p className="text-xs font-medium text-gray-700 mb-2">
                       Escanea el código QR para pagar
                     </p>
                     <img
@@ -462,17 +463,17 @@ function OrderDetail() {
                       onClick={() => setQrModalOpen(true)}
                     />
                     <div className="zoom-hint" onClick={() => setQrModalOpen(true)}>
-                      <ZoomIn size={14} /> Haz clic para ampliar
+                      <ZoomIn size={12} /> Haz clic para ampliar
                     </div>
                     {pedido.metodoPagoDetalle.llave && (
-                      <p className="text-xs text-gray-500 mt-2">
+                      <p className="text-[0.68rem] text-gray-500 mt-2">
                         Llave: {pedido.metodoPagoDetalle.llave}
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <p className="text-sm font-medium text-gray-700 mb-3">
+                    <p className="text-xs font-medium text-gray-700 mb-2">
                       Comprobante de transferencia
                     </p>
                     <label className="upload-area">
@@ -482,11 +483,11 @@ function OrderDetail() {
                         onChange={handleFileChange}
                         className="hidden"
                       />
-                      <Upload size={28} className="text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600">
+                      <Upload size={24} className="text-gray-400 mx-auto mb-2" />
+                      <p className="text-xs text-gray-600">
                         {archivoComprobante ? archivoComprobante.name : 'Haz clic para subir el comprobante'}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-[0.68rem] text-gray-400 mt-1">
                         PNG, JPG o JPEG (máx. 10MB)
                       </p>
                     </label>
@@ -504,7 +505,7 @@ function OrderDetail() {
               <div className="card-title">Ayuda con el pedido</div>
               <button
                 onClick={() => navigate(`/registerReturn/${pedido.id}`)}
-                className="text-[#004D77] font-semibold text-sm hover:underline"
+                className="text-[#004D77] font-semibold text-xs hover:underline"
               >
                 Tengo un problema con el pedido
               </button>
@@ -515,7 +516,7 @@ function OrderDetail() {
           <div>
             <div className="info-card sticky top-24">
               <div className="card-title">
-                <Package size={20} color="#004D77" />
+                <Package size={18} color="#004D77" />
                 {pedido.productos.length} productos en tu pedido
               </div>
 
@@ -524,12 +525,12 @@ function OrderDetail() {
                   const linea = producto.precioUnidad * producto.cantidad;
                   return (
                     <div
-                      key={producto.id}
+                      key={producto.lineItemId}
                       className="product-item"
-                      onClick={() => navigate('/shop/detail')}
+                      onClick={() => navigate(`/shop/detail/${producto.productId}`)}
                     >
                       <div className="product-icon">
-                        <span className="text-xl">📦</span>
+                        <span className="text-lg">📦</span>
                       </div>
                       <div className="product-details">
                         <div className="product-name">{producto.nombre}</div>
@@ -544,13 +545,13 @@ function OrderDetail() {
               </div>
 
               <div className="mt-6 pt-4 border-t">
-                <h3 className="font-bold text-gray-900 mb-3">Detalle de la venta</h3>
-                <p className="text-xs text-gray-500 mb-4">
+                <h3 className="text-sm font-bold text-gray-900 mb-2">Detalle de la venta</h3>
+                <p className="text-[0.68rem] text-gray-500 mb-3">
                   {pedido.fecha_corta} | {pedido.numeroOrden}
                 </p>
 
                 {pedido.productos.map((producto) => (
-                  <div key={producto.id} className="summary-row">
+                  <div key={producto.lineItemId} className="summary-row">
                     <span className="truncate pr-2">{producto.nombre}</span>
                     <span className="font-medium whitespace-nowrap">
                       $ {(producto.precioUnidad * producto.cantidad).toLocaleString()}
@@ -588,7 +589,7 @@ function OrderDetail() {
         <div className="qr-modal-overlay" onClick={() => setQrModalOpen(false)}>
           <div className="qr-modal-content" onClick={(e) => e.stopPropagation()}>
             <button className="qr-modal-close" onClick={() => setQrModalOpen(false)}>
-              <X size={20} />
+              <X size={18} />
             </button>
             <img src={qr} alt="QR ampliado" className="qr-modal-image" />
           </div>

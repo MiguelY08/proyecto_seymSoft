@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ArrowLeftRight } from 'lucide-react';
 import CardOrder from '../components/CardOrder';
+import Permission from '../../roles/components/Permission';
 
 // ─── OrderSection ─────────────────────────────────────────────────────────────
 function OrderSection({ slides, onReorder, loading }) {
@@ -100,79 +101,81 @@ function OrderSection({ slides, onReorder, loading }) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 bg-gray-50">
-        <div className="w-8 h-8 rounded-md bg-[#004D77] flex items-center justify-center shrink-0">
-          <ArrowLeftRight className="w-4 h-4 text-white" strokeWidth={2} />
-        </div>
-
-        <div>
-          <p className="text-sm font-semibold text-gray-800">Orden</p>
-          <p className="text-xs text-gray-400">
-            Gestione el orden en el que se mostrarán las imágenes. Arrastre para reordenar.
-          </p>
-        </div>
-      </div>
-
-      <div
-        ref={containerRef}
-        className="px-5 py-5 overflow-x-auto"
-        onDragOver={handleContainerDragOver}
-        onDrop={stopAutoScroll}
-        onDragEnd={handleDragEnd}
-      >
-        {loading ? (
-          <div className="flex gap-4">
-            {[...Array(3)].map((_, index) => (
-              <div
-                key={index}
-                className="rounded-xl bg-gray-100 animate-pulse shrink-0"
-                style={{ width: '280px', aspectRatio: '16/9' }}
-              />
-            ))}
+    <Permission permission="banners.ordenar">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 bg-gray-50">
+          <div className="w-8 h-8 rounded-md bg-[#004D77] flex items-center justify-center shrink-0">
+            <ArrowLeftRight className="w-4 h-4 text-white" strokeWidth={2} />
           </div>
-        ) : slidesVisibles.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 gap-2 text-gray-400">
-            <ArrowLeftRight className="w-8 h-8 opacity-30" strokeWidth={1.5} />
-            <p className="text-sm">No hay imágenes activas para ordenar.</p>
-            <p className="text-xs">
-              Activa al menos una imagen en la sección de administración.
+
+          <div>
+            <p className="text-sm font-semibold text-gray-800">Orden</p>
+            <p className="text-xs text-gray-400">
+              Gestione el orden en el que se mostrarán las imágenes. Arrastre para reordenar.
             </p>
           </div>
-        ) : (
-          <div
-            className="flex gap-4"
-            onDragLeave={(e) => {
-              if (!e.currentTarget.contains(e.relatedTarget)) {
-                setOverId(null);
-                stopAutoScroll();
-              }
-            }}
-          >
-            {slidesVisibles.map((slide, index) => (
-              <div
-                key={slide.id}
-                className={`transition-all duration-200 rounded-xl ${
-                  overId === slide.id && draggingId !== slide.id
-                    ? 'ring-2 ring-[#004D77] ring-offset-2 scale-[1.02]'
-                    : ''
-                }`}
-              >
-                <CardOrder
-                  slide={slide}
-                  index={index}
-                  isDragging={draggingId === slide.id}
-                  onDragStart={handleDragStart}
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                  onDragEnd={handleDragEnd}
+        </div>
+
+        <div
+          ref={containerRef}
+          className="px-5 py-5 overflow-x-auto"
+          onDragOver={handleContainerDragOver}
+          onDrop={stopAutoScroll}
+          onDragEnd={handleDragEnd}
+        >
+          {loading ? (
+            <div className="flex gap-4">
+              {[...Array(3)].map((_, index) => (
+                <div
+                  key={index}
+                  className="rounded-xl bg-gray-100 animate-pulse shrink-0"
+                  style={{ width: '280px', aspectRatio: '16/9' }}
                 />
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          ) : slidesVisibles.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 gap-2 text-gray-400">
+              <ArrowLeftRight className="w-8 h-8 opacity-30" strokeWidth={1.5} />
+              <p className="text-sm">No hay imágenes activas para ordenar.</p>
+              <p className="text-xs">
+                Activa al menos una imagen en la sección de administración.
+              </p>
+            </div>
+          ) : (
+            <div
+              className="flex gap-4"
+              onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget)) {
+                  setOverId(null);
+                  stopAutoScroll();
+                }
+              }}
+            >
+              {slidesVisibles.map((slide, index) => (
+                <div
+                  key={slide.id}
+                  className={`transition-all duration-200 rounded-xl ${
+                    overId === slide.id && draggingId !== slide.id
+                      ? 'ring-2 ring-[#004D77] ring-offset-2 scale-[1.02]'
+                      : ''
+                  }`}
+                >
+                  <CardOrder
+                    slide={slide}
+                    index={index}
+                    isDragging={draggingId === slide.id}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    onDragEnd={handleDragEnd}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </Permission>
   );
 }
 

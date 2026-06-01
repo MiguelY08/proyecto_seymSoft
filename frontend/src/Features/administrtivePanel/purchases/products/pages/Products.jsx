@@ -451,7 +451,7 @@ const filteredData = useMemo(() => {
                     <th className="px-3 py-2.5 text-center text-xs font-semibold">Nombre del producto</th>
                     <th className="px-3 py-2.5 text-center text-xs font-semibold">Cod Barras</th>
                     <th className="px-3 py-2.5 text-center text-xs font-semibold">Referencia</th>
-                    <th className="px-3 py-2.5 text-center text-xs font-semibold">Subcategoría</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold">Categoría/Sub</th>          
                     <th className="px-3 py-2.5 text-center text-xs font-semibold">Stock</th>
                     <th className="px-3 py-2.5 text-center text-xs font-semibold">Precio detal</th>
                     <th className="px-3 py-2.5 text-center text-xs font-semibold">Funciones</th>
@@ -460,8 +460,12 @@ const filteredData = useMemo(() => {
                 <tbody>
                   {currentData.map((row, index) => {
   const rowBg = index % 2 === 0 ? "bg-gray-100 hover:bg-blue-50" : "bg-white hover:bg-blue-50";
-  const subcategoriaDisplay = row.subcategory?.name || "N/A";
-
+const subcategoriaDisplay =
+  row.subcategories?.length > 0
+    ? row.subcategories.map(sub => sub.name).join(', ')
+    : row.categories?.length > 0
+      ? row.categories.map(cat => cat.name).join(', ')
+      : '';
   return (
     <tr key={row.id} className={`transition-colors duration-150 ${rowBg}`}>
       <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">

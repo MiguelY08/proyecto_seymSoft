@@ -10,7 +10,8 @@ const MODULE_RULES = {
     "READ_DETAIL",
     "UPDATE",
     "DELETE",
-    "ACTIVATE_DEACTIVATE"
+    "ACTIVATE_DEACTIVATE",
+    "EXPORT"
   ],
 
   roles: [
@@ -121,12 +122,11 @@ const MODULE_RULES = {
 
   banners: [
     "READ",
-    "READ_DETAIL",
-    "UPDATE",
     "DELETE",
     "ORDENAR",
     "SUBIR_IMAGEN",
-    "ACTIVATE_DEACTIVATE"
+    "ACTIVATE_DEACTIVATE",
+    "AMPLIAR_IMAGEN"
   ],
 
   devoluciones_en_compras: [
@@ -195,7 +195,10 @@ const PRIVILEGE_LABELS = {
     "Subir imagen",
 
   DESCARGAR:
-    "Descargar"
+    "Descargar",
+  
+  AMPLIAR_IMAGEN:
+    "Ampliar imagen"
 
 };
 

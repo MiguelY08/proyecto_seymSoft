@@ -3,11 +3,13 @@ import { Outlet, useLocation } from 'react-router-dom';
 
 // Componentes y servicios
 import TopBar          from '../components/TopBar';
+import UserMetricsCards from '../components/UserMetricsCards';
 import UsersTable      from '../components/UsersTable';
 import PaginationAdmin from '../../../shared/PaginationAdmin';
 import { UserService } from '../services/userService';
 import { useAlert }    from '../../../shared/alerts/useAlert';
-import { downloadUsersExcel } from '../helpers/usersHelpers';
+import { downloadUsersExcel } from '../helpers/excelHelper';
+import Permission from "../../configuration/roles/components/Permission";
 
 // Número de registros por página (debe coincidir con el limit que acepta la API)
 const RECORDS_PER_PAGE = 13;
@@ -32,6 +34,11 @@ function Users() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [metrics, setMetrics] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    inactiveUsers: 0,
+  });
 
   // ─── Función para cargar usuarios desde la API ─────────────────────────────
   const fetchUsers = useCallback(async (page, searchTerm) => {
@@ -59,6 +66,21 @@ function Users() {
     }
   }, [showError, statusFilter]);
 
+  // ─── Función para cargar métricas ─────────────────────────────
+  const fetchMetrics = useCallback(async () => {
+    try {
+      const result = await UserService.getMetrics();
+
+      setMetrics({
+        totalUsers: result.totalUsers ?? 0,
+        activeUsers: result.activeUsers ?? 0,
+        inactiveUsers: result.inactiveUsers ?? 0,
+      });
+    } catch (err) {
+      console.error("Error fetching metrics:", err);
+    }
+  }, []);
+
   useEffect(() => {
     const timeout = setTimeout(() => {
       setDebouncedSearch(search);
@@ -71,6 +93,11 @@ function Users() {
   useEffect(() => {
     fetchUsers(currentPage, debouncedSearch);
   }, [currentPage, debouncedSearch, statusFilter, location.pathname, fetchUsers]);
+
+  // ─── Cargar siempre las métricas ─
+  useEffect(() => {
+    fetchMetrics();
+  }, [fetchMetrics, location.pathname]);
 
   // ─── Manejadores de acciones ───────────────────────────────────────────────
   const handleExportUsers = async () => {
@@ -93,6 +120,8 @@ function Users() {
       await UserService.toggle(userId, !currentUser.active);
       // Recargar la misma página después de cambiar el estado
       await fetchUsers(currentPage, debouncedSearch);
+      // Recargar métricas
+      await fetchMetrics();
     } catch (err) {
       const msg = err.response?.data?.message || 'Error al cambiar el estado del usuario.';
       showError('Error', msg);
@@ -109,6 +138,7 @@ function Users() {
         setCurrentPage(newPage);
       }
       await fetchUsers(newPage, debouncedSearch);
+      await fetchMetrics();
       showSuccess(
         "Usuario eliminado",
         "El usuario ha sido eliminado exitosamente."
@@ -168,16 +198,21 @@ function Users() {
         totalUsers={pagination.total}
       />
 
+      <UserMetricsCards metrics={metrics} />
+
       {/* Tabla de usuarios */}
-      <div className="bg-white rounded-xl shadow-md">
-        <UsersTable
-          data={users}
-          onToggle={handleToggle}
-          onDelete={handleDelete}
-          search={search}
-          totalData={pagination.total} // Total real de usuarios (sin paginar)
-        />
-      </div>
+
+      <Permission permission="usuarios.ver">
+        <div className="bg-white rounded-xl shadow-md">
+          <UsersTable
+            data={users}
+            onToggle={handleToggle}
+            onDelete={handleDelete}
+            search={search}
+            totalData={pagination.total} // Total real de usuarios (sin paginar)
+          />
+        </div>
+      </Permission>
 
       {/* Paginación - solo si hay más de una página */}
       {pagination.totalPages > 1 && (

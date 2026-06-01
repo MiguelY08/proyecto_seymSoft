@@ -42,29 +42,29 @@ const STYLES = `
   .cart-container {
     max-width: 1280px;
     margin: 0 auto;
-    padding: clamp(24px, 4vw, 40px) 20px;
+    padding: clamp(18px, 3vw, 30px) 18px;
   }
 
   /* Header */
   .cart-header {
     display: flex;
     align-items: center;
-    gap: 14px;
-    margin-bottom: 32px;
+    gap: 10px;
+    margin-bottom: 22px;
     flex-wrap: wrap;
   }
   .cart-icon-circle {
-    width: 52px;
-    height: 52px;
+    width: 42px;
+    height: 42px;
     background: linear-gradient(140deg, #e8f4fd 0%, #d4ebf8 100%);
-    border-radius: 18px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
   }
   .cart-title {
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: clamp(1.8rem, 4vw, 2.4rem);
+    font-size: clamp(1.45rem, 3vw, 1.9rem);
     font-weight: 700;
     color: #0c2a3a;
     margin: 0;
@@ -73,18 +73,18 @@ const STYLES = `
   /* Botones acción */
   .cart-action-buttons {
     display: flex;
-    gap: 12px;
-    margin-bottom: 32px;
+    gap: 10px;
+    margin-bottom: 22px;
     flex-wrap: wrap;
   }
   .btn-secondary {
     background: #ffffff;
     border: 1.5px solid #e2edf5;
     border-radius: 40px;
-    padding: 8px 20px;
+    padding: 7px 16px;
     font-family: 'Nunito', sans-serif;
     font-weight: 800;
-    font-size: 0.75rem;
+    font-size: 0.68rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: #1e4060;
@@ -100,10 +100,10 @@ const STYLES = `
     background: #004D77;
     border: 2px solid #004D77;
     border-radius: 40px;
-    padding: 8px 24px;
+    padding: 7px 18px;
     font-family: 'Nunito', sans-serif;
     font-weight: 800;
-    font-size: 0.75rem;
+    font-size: 0.68rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: #ffffff;
@@ -120,9 +120,9 @@ const STYLES = `
   .cart-item-card {
     background: #ffffff;
     border: 1.5px solid #e4eff6;
-    border-radius: 20px;
-    padding: 16px;
-    margin-bottom: 12px;
+    border-radius: 16px;
+    padding: 12px;
+    margin-bottom: 10px;
     transition: box-shadow 0.25s ease, transform 0.25s ease;
     animation: cart-fadeUp 0.4s ease both;
   }
@@ -133,15 +133,15 @@ const STYLES = `
   }
   .cart-item-inner {
     display: flex;
-    gap: 16px;
+    gap: 12px;
     flex-wrap: wrap;
     align-items: center;
   }
   .cart-item-img {
-    width: 80px;
-    height: 80px;
+    width: 66px;
+    height: 66px;
     background: linear-gradient(150deg, #eef6fb 0%, #e0eef7 100%);
-    border-radius: 14px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -159,7 +159,7 @@ const STYLES = `
   }
   .cart-item-name {
     font-weight: 800;
-    font-size: 1rem;
+    font-size: 0.86rem;
     color: #0c2a3a;
     cursor: pointer;
     margin-bottom: 4px;
@@ -168,15 +168,15 @@ const STYLES = `
     color: #004D77;
   }
   .cart-item-category {
-    font-size: 0.7rem;
+    font-size: 0.62rem;
     font-weight: 700;
     text-transform: uppercase;
     color: #9abcce;
     letter-spacing: 0.05em;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
   .cart-item-price {
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: 900;
     color: #004D77;
   }
@@ -184,21 +184,21 @@ const STYLES = `
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 8px;
+    gap: 6px;
     flex-shrink: 0;
   }
   .quantity-control {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     background: #f8fafc;
-    padding: 4px 8px;
+    padding: 3px 7px;
     border-radius: 40px;
     border: 1px solid #e2edf5;
   }
   .qty-btn {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -214,12 +214,13 @@ const STYLES = `
   }
   .qty-number {
     font-weight: 800;
-    min-width: 28px;
+    min-width: 24px;
+    font-size: 0.78rem;
     text-align: center;
   }
   .item-total {
     font-weight: 900;
-    font-size: 1.1rem;
+    font-size: 0.92rem;
     color: #0c2a3a;
   }
   .delete-btn {
@@ -227,7 +228,7 @@ const STYLES = `
     border: none;
     color: #9abcce;
     cursor: pointer;
-    font-size: 0.7rem;
+    font-size: 0.64rem;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -241,34 +242,34 @@ const STYLES = `
   .summary-card, .delivery-form-card {
     background: #ffffff;
     border: 1.5px solid #e4eff6;
-    border-radius: 24px;
-    padding: 24px;
+    border-radius: 18px;
+    padding: 18px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
   }
   .summary-title, .form-title {
     font-family: 'Playfair Display', serif;
-    font-size: 1.4rem;
+    font-size: 1.12rem;
     font-weight: 700;
     color: #0c2a3a;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
   .delivery-method-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 24px;
+    gap: 10px;
+    margin-bottom: 18px;
   }
   .method-option {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
-    padding: 16px 12px;
+    gap: 6px;
+    padding: 12px 10px;
     border: 2px solid #e2edf5;
-    border-radius: 18px;
+    border-radius: 14px;
     background: white;
     cursor: pointer;
     transition: all 0.2s;
@@ -278,8 +279,8 @@ const STYLES = `
     background: #f0f8ff;
   }
   .method-icon {
-    width: 32px;
-    height: 32px;
+    width: 26px;
+    height: 26px;
     color: #9abcce;
   }
   .method-option.active .method-icon {
@@ -287,31 +288,31 @@ const STYLES = `
   }
   .method-label {
     font-weight: 800;
-    font-size: 0.8rem;
+    font-size: 0.68rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
 
   /* Formulario */
   .form-group {
-    margin-bottom: 18px;
+    margin-bottom: 13px;
   }
   .form-label {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.75rem;
+    font-size: 0.68rem;
     font-weight: 800;
     color: #1e4060;
     margin-bottom: 6px;
   }
   .form-input {
     width: 100%;
-    padding: 10px 14px;
+    padding: 8px 12px;
     border: 1.5px solid #e2edf5;
-    border-radius: 14px;
+    border-radius: 11px;
     font-family: 'Nunito', sans-serif;
-    font-size: 0.85rem;
+    font-size: 0.76rem;
     transition: all 0.2s;
     background: #ffffff;
   }
@@ -327,7 +328,7 @@ const STYLES = `
     border-color: #48bb78;
   }
   .error-message {
-    font-size: 0.7rem;
+    font-size: 0.64rem;
     color: #f56565;
     margin-top: 4px;
     display: flex;
@@ -337,15 +338,15 @@ const STYLES = `
   .price-row {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 12px;
-    font-size: 0.9rem;
+    margin-bottom: 9px;
+    font-size: 0.78rem;
   }
   .total-row {
     border-top: 1px solid #e2edf5;
-    margin-top: 16px;
-    padding-top: 16px;
+    margin-top: 12px;
+    padding-top: 12px;
     font-weight: 900;
-    font-size: 1.2rem;
+    font-size: 1rem;
   }
   .btn-checkout {
     width: 100%;
@@ -353,17 +354,17 @@ const STYLES = `
     color: white;
     border: none;
     border-radius: 40px;
-    padding: 14px;
+    padding: 11px;
     font-weight: 800;
     letter-spacing: 0.05em;
-    font-size: 0.85rem;
+    font-size: 0.74rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     cursor: pointer;
     transition: all 0.2s;
-    margin-top: 16px;
+    margin-top: 12px;
   }
   .btn-checkout:hover {
     background: #0c5c88;
@@ -377,12 +378,12 @@ const STYLES = `
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 16px;
     animation: cart-fadeUp 0.5s ease;
   }
   .cart-empty-icon {
-    width: 80px;
-    height: 80px;
+    width: 66px;
+    height: 66px;
     border-radius: 50%;
     background: linear-gradient(150deg, #eef6fb, #e0eef7);
     border: 1.5px solid #e2edf5;
@@ -393,13 +394,13 @@ const STYLES = `
   }
   .cart-empty-title {
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: clamp(1.4rem, 3vw, 1.9rem);
+    font-size: clamp(1.2rem, 2.5vw, 1.55rem);
     font-weight: 700;
     color: #0c2a3a;
     margin: 0;
   }
   .cart-empty-sub {
-    font-size: 0.88rem;
+    font-size: 0.78rem;
     color: #64748b;
     max-width: 320px;
     line-height: 1.6;
@@ -409,11 +410,11 @@ const STYLES = `
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 10px 24px;
+    padding: 8px 20px;
     border: 2px solid #004D77;
     color: #004D77;
     font-family: 'Nunito', sans-serif;
-    font-size: 0.78rem;
+    font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -660,14 +661,14 @@ function ShoppingCart() {
         <div className="cart-container">
           <div className="cart-empty">
             <div className="cart-empty-icon">
-              <CartIcon size={32} color="#004D77" strokeWidth={1.5} />
+              <CartIcon size={26} color="#004D77" strokeWidth={1.5} />
             </div>
             <h3 className="cart-empty-title">Tu carrito está vacío</h3>
             <p className="cart-empty-sub">
               Agrega los productos que deseas y continúa tu compra de forma fácil y rápida.
             </p>
             <button onClick={() => navigate('/shop')} className="btn-outline">
-              Ir a la tienda <ArrowRight size={13} strokeWidth={3} />
+              Ir a la tienda <ArrowRight size={12} strokeWidth={3} />
             </button>
           </div>
         </div>
@@ -680,7 +681,7 @@ function ShoppingCart() {
       <div className="cart-container">
         <div className="cart-header">
           <div className="cart-icon-circle">
-            <CartIcon size={26} color="#004D77" strokeWidth={1.8} />
+            <CartIcon size={22} color="#004D77" strokeWidth={1.8} />
           </div>
           <h1 className="cart-title">Carrito de compras</h1>
         </div>
@@ -694,8 +695,8 @@ function ShoppingCart() {
           </button>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-3">
+        <div className="grid lg:grid-cols-3 gap-5">
+          <div className="lg:col-span-2 space-y-2.5">
             {cartItems.map((item, idx) => (
               <div
                 key={item.id}
@@ -728,18 +729,18 @@ function ShoppingCart() {
                         onClick={() => decreaseQuantity(item.id)}
                         disabled={item.quantity <= 1}
                       >
-                        <Minus size={14} />
+                        <Minus size={12} />
                       </button>
                       <span className="qty-number">{item.quantity}</span>
                       <button className="qty-btn" onClick={() => increaseQuantity(item.id)}>
-                        <Plus size={14} />
+                        <Plus size={12} />
                       </button>
                     </div>
                     <div className="item-total">
                       ${(item.price * item.quantity).toLocaleString()} COP
                     </div>
                     <button className="delete-btn" onClick={() => handleRemoveItem(item)}>
-                      <Trash2 size={14} /> Eliminar
+                      <Trash2 size={12} /> Eliminar
                     </button>
                   </div>
                 </div>
@@ -751,7 +752,7 @@ function ShoppingCart() {
             {deliveryMethod === 'domicilio' ? (
               <div className="delivery-form-card">
                 <div className="form-title">
-                  <MapPin size={22} color="#004D77" /> Información de envío
+                  <MapPin size={18} color="#004D77" /> Información de envío
                 </div>
 
                 <div className="delivery-method-grid">
@@ -778,7 +779,7 @@ function ShoppingCart() {
                 ].map((field) => (
                   <div className="form-group" key={field.name}>
                     <label className="form-label">
-                      <field.icon size={14} /> {field.label} <span className="text-red-500">*</span>
+                      <field.icon size={12} /> {field.label} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type={field.type}
@@ -797,7 +798,7 @@ function ShoppingCart() {
                     />
                     {errors[field.name] && touched[field.name] && (
                       <div className="error-message">
-                        <AlertCircle size={12} /> {errors[field.name]}
+                        <AlertCircle size={11} /> {errors[field.name]}
                       </div>
                     )}
                   </div>
@@ -806,7 +807,7 @@ function ShoppingCart() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="form-group">
                     <label className="form-label">
-                      <MapPin size={14} /> Ciudad <span className="text-red-500">*</span>
+                      <MapPin size={12} /> Ciudad <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -819,11 +820,11 @@ function ShoppingCart() {
                         errors.ciudad && touched.ciudad ? 'error' : formData.ciudad && !errors.ciudad && touched.ciudad ? 'success' : ''
                       }`}
                     />
-                    {errors.ciudad && touched.ciudad && <div className="error-message"><AlertCircle size={12} /> {errors.ciudad}</div>}
+                    {errors.ciudad && touched.ciudad && <div className="error-message"><AlertCircle size={11} /> {errors.ciudad}</div>}
                   </div>
                   <div className="form-group">
                     <label className="form-label">
-                      <HomeIcon size={14} /> Barrio <span className="text-red-500">*</span>
+                      <HomeIcon size={12} /> Barrio <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -836,13 +837,13 @@ function ShoppingCart() {
                         errors.barrio && touched.barrio ? 'error' : formData.barrio && !errors.barrio && touched.barrio ? 'success' : ''
                       }`}
                     />
-                    {errors.barrio && touched.barrio && <div className="error-message"><AlertCircle size={12} /> {errors.barrio}</div>}
+                    {errors.barrio && touched.barrio && <div className="error-message"><AlertCircle size={11} /> {errors.barrio}</div>}
                   </div>
                 </div>
 
                 <div className="form-group">
                   <label className="form-label">
-                    <MapPin size={14} /> Dirección <span className="text-red-500">*</span>
+                    <MapPin size={12} /> Dirección <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -855,12 +856,12 @@ function ShoppingCart() {
                       errors.direccion && touched.direccion ? 'error' : formData.direccion && !errors.direccion && touched.direccion ? 'success' : ''
                     }`}
                   />
-                  {errors.direccion && touched.direccion && <div className="error-message"><AlertCircle size={12} /> {errors.direccion}</div>}
+                  {errors.direccion && touched.direccion && <div className="error-message"><AlertCircle size={11} /> {errors.direccion}</div>}
                 </div>
 
                 <div className="form-group">
                   <label className="form-label">
-                    <MessageSquare size={14} /> Notas adicionales (opcional)
+                    <MessageSquare size={12} /> Notas adicionales (opcional)
                   </label>
                   <textarea
                     name="notas"
@@ -872,7 +873,7 @@ function ShoppingCart() {
                   />
                 </div>
 
-                <div className="summary-card" style={{ marginTop: 24 }}>
+                <div className="summary-card" style={{ marginTop: 18 }}>
                   <div className="summary-title">Resumen del pedido</div>
                   <div className="price-row">
                     <span>Subtotal</span>
@@ -884,17 +885,17 @@ function ShoppingCart() {
                   </div>
                   <div className="price-row total-row">
                     <span>Total</span>
-                    <span className="text-[#004D77] text-xl">${subtotal.toLocaleString()} COP</span>
+                    <span className="text-[#004D77] text-lg">${subtotal.toLocaleString()} COP</span>
                   </div>
                   <button className="btn-checkout" onClick={handleProcederPago}>
-                    <CreditCard size={18} /> Proceder al pago
+                    <CreditCard size={16} /> Proceder al pago
                   </button>
                 </div>
               </div>
             ) : (
               <div className="summary-card">
                 <div className="summary-title">
-                  <Store size={22} color="#004D77" /> Resumen del pedido
+                  <Store size={18} color="#004D77" /> Resumen del pedido
                 </div>
 
                 <div className="delivery-method-grid">
@@ -924,10 +925,10 @@ function ShoppingCart() {
                 </div>
                 <div className="price-row total-row">
                   <span>Total</span>
-                  <span className="text-[#004D77] text-xl">${subtotal.toLocaleString()} COP</span>
+                  <span className="text-[#004D77] text-lg">${subtotal.toLocaleString()} COP</span>
                 </div>
                 <button className="btn-checkout" onClick={handleProcederPago}>
-                  <CreditCard size={18} /> Finalizar compra
+                  <CreditCard size={16} /> Finalizar compra
                 </button>
               </div>
             )}
