@@ -1,161 +1,277 @@
-import UserService from "../../../users/services/userService";
+import apiClient from "../../../../../setting/apiClient.js";
+import { mapRolesFromApi, mapRoleFromApi } from "../helpers/roleMapper.js";
 
-// ─────────────────────────────────────────────
-// STORAGE KEY
-// ─────────────────────────────────────────────
+/**
+ * ROLES SERVICES - Consumir endpoints de roles
+ * 
+ * Endpoints:
+ * - GET /api/roles/listar              - Listar todos
+ * - GET /api/roles/:id                 - Obtener uno
+ * - POST /api/roles/crear              - Crear
+ * - PUT /api/roles/:id                 - Actualizar
+ * - PATCH /api/roles/:id/status        - Cambiar status
+ * - DELETE /api/roles/:id              - Eliminar
+ */
 
-const STORAGE_KEY = "roles";
+// ═══════════════════════════════════════════════════════════
+// LISTAR ROLES
+// ═══════════════════════════════════════════════════════════
 
-// ─────────────────────────────────────────────
-// OBTENER ROLES
-// ─────────────────────────────────────────────
-
-export const getRoles = () => {
+export const getRoles = async () => {
   try {
-    const roles = localStorage.getItem(STORAGE_KEY);
+    const response = await apiClient.get("/roles/listar");
 
-    if (!roles) return [];
+    const mapped = mapRolesFromApi(response.data.data || []);
 
-    return JSON.parse(roles);
+    return {
+      success: true,
+      data: mapped,
+    };
+
   } catch (error) {
-    console.error("Error leyendo roles:", error);
+    console.error("Error en getRoles:", error);
 
-    localStorage.removeItem(STORAGE_KEY);
+    const errorMessage = error.response?.data?.message || "Error al obtener roles";
 
-    return [];
+    return {
+      success: false,
+      error: errorMessage,
+    };
   }
 };
 
-// ─────────────────────────────────────────────
-// GUARDAR ROLES
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// OBTENER ROL POR ID
+// ═══════════════════════════════════════════════════════════
 
-export const saveRoles = (roles) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(roles));
+export const getRoleById = async (roleId) => {
+  try {
+    if (!roleId) {
+      return {
+        success: false,
+        error: "ID de rol requerido",
+      };
+    }
+
+    const response = await apiClient.get(`/roles/${roleId}`);
+
+    const mapped = mapRoleFromApi(response.data.data);
+
+    return {
+      success: true,
+      data: mapped,
+    };
+
+  } catch (error) {
+    console.error("Error en getRoleById:", error);
+
+    const errorMessage = error.response?.data?.message || "Error al obtener el rol";
+
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
 };
 
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
 // CREAR ROL
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
 
-export const createRole = (role) => {
-  const roles = getRoles();
+export const createRole = async (roleData) => {
+  try {
+    if (!roleData || !roleData.name_role || !roleData.description) {
+      return {
+        success: false,
+        error: "Nombre y descripción del rol son requeridos",
+      };
+    }
 
-  // validar duplicados
-  const exists = roles.some(
-    (r) => r.name.toLowerCase() === role.name.toLowerCase(),
-  );
+    const response = await apiClient.post("/roles/crear", {
+      name_role: roleData.name_role,
+      description: roleData.description,
+      id_status: roleData.id_status || 1,
+      permissions: roleData.permissions || [],
+    });
 
-  if (exists) {
-    throw new Error("El rol ya existe");
+    const mapped = mapRoleFromApi(response.data.data);
+
+    return {
+      success: true,
+      data: mapped,
+      message: response.data.message,
+    };
+
+  } catch (error) {
+    console.error("Error en createRole:", error);
+
+    const errorMessage = error.response?.data?.message || "Error al crear rol";
+
+    return {
+      success: false,
+      error: errorMessage,
+    };
   }
-
-  const newRole = {
-    ...role,
-
-    id: Date.now(),
-
-    active: true,
-
-    createdAt: new Date().toISOString(),
-  };
-
-  const updatedRoles = [...roles, newRole];
-
-  saveRoles(updatedRoles);
-
-  return newRole;
 };
 
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
 // ACTUALIZAR ROL
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
 
-export const updateRole = (updatedRole) => {
-  const roles = getRoles();
+export const updateRole = async (roleId, roleData) => {
+  try {
+    if (!roleId) {
+      return {
+        success: false,
+        error: "ID de rol requerido",
+      };
+    }
 
-  const updatedRoles = roles.map((role) =>
-    role.id === updatedRole.id ? { ...role, ...updatedRole } : role,
-  );
+    const response = await apiClient.put(`/roles/${roleId}`, {
+      name_role: roleData.name_role,
+      description: roleData.description,
+      id_status: roleData.id_status,
+      permissions: roleData.permissions || [],
+    });
 
-  saveRoles(updatedRoles);
+    const mapped = mapRoleFromApi(response.data.data);
 
-  return updatedRole;
+    return {
+      success: true,
+      data: mapped,
+      message: response.data.message,
+    };
+
+  } catch (error) {
+    console.error("Error en updateRole:", error);
+
+    const errorMessage = error.response?.data?.message || "Error al actualizar rol";
+
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
 };
 
-// ─────────────────────────────────────────────
-// ACTIVAR / DESACTIVAR ROL
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// ACTUALIZAR STATUS DEL ROL
+// ═══════════════════════════════════════════════════════════
 
-export const toggleRoleStatus = (id) => {
-  const roles = getRoles();
+export const updateRoleStatus = async (roleId, idStatus) => {
+  try {
+    if (!roleId || idStatus === undefined) {
+      return {
+        success: false,
+        error: "ID de rol y status son requeridos",
+      };
+    }
 
-  const updatedRoles = roles.map((role) =>
-    role.id === id ? { ...role, active: !role.active } : role,
-  );
+    const response = await apiClient.patch(`/roles/${roleId}/status`, {
+      id_status: idStatus,
+    });
 
-  saveRoles(updatedRoles);
+    const mapped = mapRoleFromApi(response.data.data);
 
-  return updatedRoles;
+    return {
+      success: true,
+      data: mapped,
+      message: response.data.message,
+    };
+
+  } catch (error) {
+    console.error("Error en updateRoleStatus:", error);
+
+    const errorMessage = error.response?.data?.message || "Error al actualizar status";
+
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
 };
 
-// ─────────────────────────────────────────────
-// DESACTIVAR ROL
-// ─────────────────────────────────────────────
-
-export const deactivateRole = (roleId) => {
-  const roles = getRoles();
-
-  const updatedRoles = roles.map((role) =>
-    role.id === roleId ? { ...role, active: false } : role,
-  );
-
-  saveRoles(updatedRoles);
-
-  return updatedRoles;
-};
-
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
 // ELIMINAR ROL
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
 
-export const deleteRole = (roleId) => {
-  const roles = getRoles();
+export const deleteRole = async (roleId) => {
+  try {
+    if (!roleId) {
+      return {
+        success: false,
+        error: "ID de rol requerido",
+      };
+    }
 
-  const role = roles.find((r) => r.id === roleId);
+    const response = await apiClient.delete(`/roles/${roleId}`);
 
-  if (!role) {
-    throw new Error("Rol no encontrado");
+    return {
+      success: true,
+      message: response.data.message,
+    };
+
+  } catch (error) {
+    console.error("Error en deleteRole:", error);
+
+    const errorMessage = error.response?.data?.message || "Error al eliminar rol";
+
+    return {
+      success: false,
+      error: errorMessage,
+    };
   }
-
-  // validar si el rol tiene usuarios
-  if (roleHasUsers(role.name)) {
-    throw new Error("No se puede eliminar un rol con usuarios asignados");
-  }
-
-  const updatedRoles = roles.filter((role) => role.id !== roleId);
-
-  saveRoles(updatedRoles);
-
-  return updatedRoles;
 };
 
-// ─────────────────────────────────────────────
-// VALIDAR SI UN ROL TIENE USUARIOS
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// OBTENER PERMISOS DEL SISTEMA
+// ═══════════════════════════════════════════════════════════
 
-export const roleHasUsers = (roleName) => {
-  const users = UserService.list();
+export const getPermissions = async () => {
+  try {
+    const response = await apiClient.get("/roles/permissions");
 
-  return users.some((user) => user.role === roleName);
+    const modules = response.data.data?.modules || [];
+    const privileges = response.data.data?.privileges || [];
+
+    const mapped = modules.map((module) => ({
+      id: module.id_module,
+      modulo: module.name_module,
+      descripcion: module.description,
+      acciones: privileges.map((privilege) => ({
+        key: privilege.name_privilege.toLowerCase(),
+        backend: privilege.name_privilege,
+        label: privilege.name_privilege.replaceAll("_", " "),
+      })),
+    }));
+
+    return {
+      success: true,
+      data: mapped,
+    };
+
+  } catch (error) {
+    console.error("Error en getPermissions:", error);
+
+    const errorMessage = error.response?.data?.message || "Error al obtener permisos";
+
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
 };
 
-// ─────────────────────────────────────────────
-// CONTAR USUARIOS POR ROL
-// ─────────────────────────────────────────────
+export const toggleRoleStatus = async (roleId, currentStatus) => {
 
-export const countUsersByRole = (roleName) => {
-  const users = UserService.list();
+  const newStatus =
+    currentStatus === 1
+      ? 2
+      : 1;
 
-  return users.filter((user) => user.role === roleName).length;
+  return await updateRoleStatus(
+    roleId,
+    newStatus
+  );
+
 };

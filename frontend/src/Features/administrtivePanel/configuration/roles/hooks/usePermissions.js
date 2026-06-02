@@ -1,43 +1,169 @@
 import { useMemo } from "react";
 import { useAuth } from "../../../../access/context/AuthContext";
 
-/**
- * Hook para trabajar con permisos (strings) del usuario actual.
- *
- * Se apoya en el contexto de Auth (que expone `user.permissions`).
- *
- * Ejemplo:
- *   const { hasPermission } = usePermissions();
- *   if (!hasPermission("roles.ver")) return null;
- */
 export function usePermissions() {
-  const { user } = useAuth();
 
-  const permissions = useMemo(
-    () => (user?.permissions ? [...user.permissions] : []),
-    [user?.permissions],
-  );
+  const { permissions } = useAuth();
 
-  // NOTE: Por ahora no se están aplicando restricciones a nivel de acciones/botones.
-  // Esto evita que botones desaparezcan mientras no se implemente la lógica de privilegios.
-  const hasPermission = (_perm) => {
-    return true;
+  // ─────────────────────────────────────
+  // NORMALIZAR PERMISOS DEL BACKEND
+  // Backend:
+  // { module: "Usuarios", privilege: "CREATE" }
+  //
+  // Front:
+  // "usuarios.crear"
+  // ─────────────────────────────────────
+
+  const normalizedPermissions = useMemo(() => {
+
+    if (
+      !permissions ||
+      !Array.isArray(permissions)
+    ) {
+
+      return [];
+
+    }
+
+    return permissions.map((permission) => {
+
+      const moduleName =
+        permission.module
+          ?.toLowerCase()
+          ?.trim()
+          ?.replaceAll(" ", "_");
+
+      const privilegeName =
+        permission.privilege
+          ?.toLowerCase()
+          ?.trim();
+
+      // Mapeo backend → frontend
+      const privilegeMap = {
+
+        read: "ver",
+
+        read_detail:
+          "ver_informacion",
+
+        create: "crear",
+
+        update: "editar",
+
+        delete: "eliminar",
+
+        activate_deactivate:
+          "activar_desactivar",
+
+        export: "exportar",
+
+        descargar: "descargar",
+
+        abonar: "abonar",
+
+        contactar: "contactar",
+
+        generar_interes:
+          "generar_interes",
+
+        anular: "anular",
+
+        devolver: "devolver",
+
+        crear_devolucion:
+          "crear_devolucion",
+
+        ordenar: "ordenar",
+
+        subir_imagen:
+          "subir_imagen",
+
+      };
+
+      const frontendPrivilege =
+        privilegeMap[privilegeName];
+
+      return `${moduleName}.${frontendPrivilege}`;
+
+    });
+
+  }, [permissions]);
+
+  // ─────────────────────────────────────
+  // VALIDAR PERMISO
+  // ─────────────────────────────────────
+
+  const hasPermission = (permission) => {
+
+    if (!permission) {
+      return false;
+    }
+
+    return normalizedPermissions.includes(
+      permission
+    );
+
   };
 
-  const hasAnyPermission = (perms = []) => {
-    if (!Array.isArray(perms) || perms.length === 0) return false;
-    return perms.some((perm) => hasPermission(perm));
+  // ─────────────────────────────────────
+  // VALIDAR ALGUNO
+  // ─────────────────────────────────────
+
+  const hasAnyPermission = (
+    permissions = []
+  ) => {
+
+    if (
+      !Array.isArray(permissions)
+      ||
+      permissions.length === 0
+    ) {
+
+      return false;
+
+    }
+
+    return permissions.some((permission) =>
+      hasPermission(permission)
+    );
+
   };
 
-  const hasAllPermissions = (perms = []) => {
-    if (!Array.isArray(perms) || perms.length === 0) return false;
-    return perms.every((perm) => hasPermission(perm));
+  // ─────────────────────────────────────
+  // VALIDAR TODOS
+  // ─────────────────────────────────────
+
+  const hasAllPermissions = (
+    permissions = []
+  ) => {
+
+    if (
+      !Array.isArray(permissions)
+      ||
+      permissions.length === 0
+    ) {
+
+      return false;
+
+    }
+
+    return permissions.every((permission) =>
+      hasPermission(permission)
+    );
+
   };
 
   return {
-    permissions,
+
+    permissions:
+      normalizedPermissions,
+
     hasPermission,
+
     hasAnyPermission,
+
     hasAllPermissions,
+
   };
+
 }

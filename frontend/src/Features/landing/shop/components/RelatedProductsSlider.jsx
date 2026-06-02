@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import ProductCard from "../../../shared/ProductCard";
+import ProductCard from "../../../shared/productCard/ProductCard";
 
 /* ── Estilos inyectados (coherentes con Home/Favorites) ── */
 const SLIDER_STYLES = `
@@ -13,7 +13,7 @@ const SLIDER_STYLES = `
 
   .slider-track {
     display: flex;
-    gap: 24px;
+    gap: 14px;
     overflow-x: auto;
     scroll-behavior: smooth;
     scrollbar-width: thin;
@@ -42,7 +42,7 @@ const SLIDER_STYLES = `
 
   .slider-item {
     flex: 0 0 auto;
-    width: 260px;
+    width: 210px;
     transition: transform 0.3s ease;
   }
 
@@ -177,11 +177,7 @@ function RelatedProductsSlider({ products }) {
         {products.map((item) => (
           <div key={item.id} className="slider-item">
             <ProductCard
-              image={item.image}
-              name={item.name}
-              category={item.category}
-              price={item.price}
-              productData={item}
+              product={item}
             />
           </div>
         ))}

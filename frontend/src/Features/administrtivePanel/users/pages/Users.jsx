@@ -3,17 +3,19 @@ import { Outlet, useLocation } from 'react-router-dom';
 
 // Componentes y servicios
 import TopBar          from '../components/TopBar';
+import UserMetricsCards from '../components/UserMetricsCards';
 import UsersTable      from '../components/UsersTable';
 import PaginationAdmin from '../../../shared/PaginationAdmin';
 import { UserService } from '../services/userService';
 import { useAlert }    from '../../../shared/alerts/useAlert';
+import { downloadUsersExcel } from '../helpers/excelHelper';
 
 // Número de registros por página (debe coincidir con el limit que acepta la API)
 const RECORDS_PER_PAGE = 13;
 
 function Users() {
   const location = useLocation();
-  const { showError, showWarning } = useAlert();
+  const { showError, showWarning, showSuccess } = useAlert();
 
   // Estados principales
   const [users, setUsers] = useState([]);           // Lista de usuarios de la página actual
@@ -26,9 +28,16 @@ function Users() {
     hasPrevPage: false,
   });
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [metrics, setMetrics] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    inactiveUsers: 0,
+  });
 
   // ─── Función para cargar usuarios desde la API ─────────────────────────────
   const fetchUsers = useCallback(async (page, searchTerm) => {
@@ -37,7 +46,12 @@ function Users() {
     try {
       // Si la API soporta búsqueda, se pasa como parámetro. Si no, se puede eliminar.
       // En caso de que no soporte búsqueda, puedes comentar la línea y hacer filtrado local
-      const result = await UserService.list(page, RECORDS_PER_PAGE, searchTerm);
+      const result = await UserService.list(
+        page,
+        RECORDS_PER_PAGE,
+        searchTerm,
+        statusFilter
+      );
       setUsers(result.users);
       setPagination(result.pagination);
       // Si la API no devuelve la página actual, se puede forzar
@@ -49,14 +63,53 @@ function Users() {
     } finally {
       setLoading(false);
     }
-  }, [showError]);
+  }, [showError, statusFilter]);
+
+  // ─── Función para cargar métricas ─────────────────────────────
+  const fetchMetrics = useCallback(async () => {
+    try {
+      const result = await UserService.getMetrics();
+
+      setMetrics({
+        totalUsers: result.totalUsers ?? 0,
+        activeUsers: result.activeUsers ?? 0,
+        inactiveUsers: result.inactiveUsers ?? 0,
+      });
+    } catch (err) {
+      console.error("Error fetching metrics:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 350);
+
+    return () => clearTimeout(timeout);
+  }, [search]);
 
   // ─── Recargar cuando cambia la página, la búsqueda o se vuelve de otra ruta ─
   useEffect(() => {
-    fetchUsers(currentPage, search);
-  }, [currentPage, search, location.pathname, fetchUsers]);
+    fetchUsers(currentPage, debouncedSearch);
+  }, [currentPage, debouncedSearch, statusFilter, location.pathname, fetchUsers]);
+
+  // ─── Cargar siempre las métricas ─
+  useEffect(() => {
+    fetchMetrics();
+  }, [fetchMetrics, location.pathname]);
 
   // ─── Manejadores de acciones ───────────────────────────────────────────────
+  const handleExportUsers = async () => {
+    const result = await UserService.list(
+      1,
+      pagination.total || RECORDS_PER_PAGE,
+      debouncedSearch,
+      statusFilter
+    );
+
+    return downloadUsersExcel(result.users);
+  };
+
   const handleToggle = async (userId) => {
     // Encontrar el usuario actual para saber su estado activo
     const currentUser = users.find(u => u.id === userId);
@@ -65,7 +118,9 @@ function Users() {
     try {
       await UserService.toggle(userId, !currentUser.active);
       // Recargar la misma página después de cambiar el estado
-      await fetchUsers(currentPage, search);
+      await fetchUsers(currentPage, debouncedSearch);
+      // Recargar métricas
+      await fetchMetrics();
     } catch (err) {
       const msg = err.response?.data?.message || 'Error al cambiar el estado del usuario.';
       showError('Error', msg);
@@ -75,17 +130,24 @@ function Users() {
   const handleDelete = async (user) => {
     try {
       await UserService.delete(user.id);
-      // Si el usuario eliminado era el único de la página actual y no es la primera,
-      // retroceder una página para evitar una página vacía
       let newPage = currentPage;
+
       if (users.length === 1 && currentPage > 1) {
         newPage = currentPage - 1;
         setCurrentPage(newPage);
       }
-      await fetchUsers(newPage, search);
+      await fetchUsers(newPage, debouncedSearch);
+      await fetchMetrics();
+      showSuccess(
+        "Usuario eliminado",
+        "El usuario ha sido eliminado exitosamente."
+      );
     } catch (err) {
-      const msg = err.response?.data?.message || 'Error al eliminar el usuario.';
+      const msg =
+        err.response?.data?.message ||
+        'Error al eliminar el usuario.';
       showError('Error', msg);
+      throw err;
     }
   };
 
@@ -113,7 +175,7 @@ function Users() {
           <p className="text-lg font-semibold">Error de carga</p>
           <p>{error}</p>
           <button
-            onClick={() => fetchUsers(currentPage, search)}
+            onClick={() => fetchUsers(currentPage, debouncedSearch)}
             className="mt-4 px-4 py-2 bg-[#004D77] text-white rounded-lg"
           >
             Reintentar
@@ -129,8 +191,13 @@ function Users() {
       <TopBar
         search={search}
         onSearchChange={handleSearchChange}
-        users={users} // Se usa para mostrar el total de resultados (puede ajustarse)
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        onExport={handleExportUsers}
+        totalUsers={pagination.total}
       />
+
+      <UserMetricsCards metrics={metrics} />
 
       {/* Tabla de usuarios */}
       <div className="bg-white rounded-xl shadow-md">

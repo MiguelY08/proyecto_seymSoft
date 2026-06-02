@@ -3,6 +3,7 @@
 //
 // Endpoints reales (base URL desde .env):
 //   GET    /users?page=1&limit=10       → Lista paginada
+//   GET    /users/metrics               → Métricas generales
 //   GET    /users/:id                   → Detalle completo
 //   POST   /users                       → Crear usuario
 //   PUT    /users/:id                   → Actualizar (soporta modificación parcial)
@@ -11,28 +12,7 @@
 //
 // Los roles provienen de otra API (pendiente de integración).
 
-import axios from 'axios';
-
-// ---------------------------------------------------------------------
-// Configuración base de Axios
-// ---------------------------------------------------------------------
-// La variable BASE_URL se define en .env (ej: BASE_URL=http://localhost:3000)
-const BASE_URL = import.meta.env.VITE_API_URL || '/api';
-
-const apiClient = axios.create({
-  baseURL: BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
-  timeout: 10000,
-});
-
-// Interceptor para manejo global de errores (logging)
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.error('API Error:', error.response?.data || error.message);
-    return Promise.reject(error);
-  }
-);
+import apiClient from '../../../../setting/apiClient.js';
 
 // ---------------------------------------------------------------------
 // Funciones auxiliares de transformación
@@ -45,7 +25,8 @@ const mapUserFromApi = (apiUser) => ({
   ...apiUser,
   active: mapStatusToActive(apiUser.status),
   createdAt: apiUser.creationDate || apiUser.createdAt,
-  role: null, // Se integrará con la API de roles más adelante
+  role: apiUser.role || null,
+  permissions: apiUser.permissions || [],
 });
 
 // ---------------------------------------------------------------------
@@ -58,14 +39,46 @@ export const UserService = {
    * @param {number} limit - Elementos por página (default 10)
    * @returns {Promise<{ users: Array, pagination: Object }>}
    */
-  async list(page = 1, limit = 10) {
+  async list(page = 1, limit = 10, search = '', status = '') {
     try {
-      const response = await apiClient.get('/users', { params: { page, limit } });
+      const params = {
+        page,
+        limit,
+      };
+
+      if (status) {
+        params.status = status;
+      }
+
+      if (search && search.trim() !== '') {
+        params.search = search.trim();
+      }
+
+      const response = await apiClient.get('/users', { params });
+
       const users = (response.data.data || []).map(mapUserFromApi);
       const pagination = response.data.pagination || {};
+
       return { users, pagination };
+
     } catch (error) {
       console.error('Error en list():', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtiene las métricas generales del módulo de usuarios.
+   * La API devuelve: { success, message, data: { totalUsers, activeUsers, inactiveUsers } }
+   * @returns {Promise<{ totalUsers: number, activeUsers: number, inactiveUsers: number }>}
+   */
+  async getMetrics() {
+    try {
+      const response = await apiClient.get('/users/metrics');
+
+      return response.data.data;
+    } catch (error) {
+      console.error('Error en getMetrics():', error);
       throw error;
     }
   },
@@ -104,30 +117,36 @@ export const UserService = {
 
   /**
    * Crea un nuevo usuario.
-   * La API espera: { fullName, email, phone }
-   * @param {Object} userData - Datos del usuario (name, email, phone)
+   * La API espera: { fullName, email, phone, idRole }
+   * @param {Object} userData - Datos del usuario (name, email, phone, roleId)
    * @returns {Promise<Object>} Usuario creado y normalizado
    */
   async create(userData) {
     try {
-      // Construir payload según lo que espera la API
       const payload = {
-        fullName: userData.name,     // el frontend usa "name", la API espera "fullName"
+        fullName: userData.name,
         email: userData.email,
-        phone: userData.phone ? Number(userData.phone) : null, // convertir a número si es necesario
+        phone: userData.phone ? Number(userData.phone) : null,
+        idRole: userData.roleId ?? null,
       };
+
       const response = await apiClient.post('/users', payload);
-      // La API devuelve: { message, user: { id, name, email, phone, creationDate, status } }
-      const newUser = response.data.user;
-      // Normalizar al formato interno del frontend (similar a mapUserFromApi)
+
+      const createdData = response.data.user;
+      const createdUser = createdData?.user ?? createdData;
+
       return {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        phone: newUser.phone,
-        active: newUser.status?.name === 'Activo',
-        createdAt: newUser.creationDate,
-        role: null, // pendiente de integración con API de roles
+        id: createdUser.idUser ?? createdUser.id,
+        name: createdUser.fullName ?? createdUser.name,
+        email: createdUser.email,
+        phone: createdUser.phone ?? null,
+        active:
+          createdUser.idStatus === 1 ||
+          createdUser.status?.id === 1 ||
+          createdUser.status?.name === 'Activo',
+        createdAt: createdUser.creationDate ?? createdUser.createdAt,
+        role: createdData?.role ?? null,
+        permissions: createdData?.permissions || [],
       };
     } catch (error) {
       console.error('Error en create():', error);
@@ -149,6 +168,9 @@ async update(id, changes) {
     if (changes.name !== undefined) payload.fullName = changes.name;
     if (changes.email !== undefined) payload.email = changes.email;
     if (changes.phone !== undefined) payload.phone = Number(changes.phone); // convertir a número
+    if (changes.roleId !== undefined) {
+      payload.idRole = changes.roleId ?? null;
+    }
 
     const response = await apiClient.put(`/users/${id}`, payload);
     // La API devuelve: { success, message, data: { user, role, permissions } }

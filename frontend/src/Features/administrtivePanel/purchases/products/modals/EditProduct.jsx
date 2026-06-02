@@ -24,12 +24,12 @@ function PriceCard({ label, fieldMain, fieldPaca, placeholderMain, placeholderPa
             hm ? 'border-red-400 focus:ring-red-200 bg-red-50 text-red-900 placeholder-red-300'
                : 'border-gray-200 focus:ring-blue-400 bg-gray-50'}`}
         />
-        {hm && <p className="mt-0.5 text-[10px] text-red-500 flex items-center gap-1"><span>⚠</span>{errMain}</p>}
+        {hm && <p className="mt-0.5 text-[10px] text-red-500 flex items-center gap-1"><span></span>{errMain}</p>}
       </div>
       <div className={`h-px ${hp ? 'bg-red-300' : 'bg-gray-200'}`} />
       <div className={`px-3 pt-1.5 pb-2.5 ${hp ? 'bg-red-50' : 'bg-gray-50'}`}>
         <label className="block text-[10px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
-          Desc. x paca
+          Descuento %
         </label>
         <input
           type="text" inputMode="numeric" name={fieldPaca} value={valuePaca}
@@ -39,7 +39,7 @@ function PriceCard({ label, fieldMain, fieldPaca, placeholderMain, placeholderPa
             hp ? 'border-red-400 focus:ring-red-200 bg-white text-red-900 placeholder-red-300'
                : 'border-gray-200 focus:ring-blue-400 bg-white'}`}
         />
-        {hp && <p className="mt-0.5 text-[10px] text-red-500 flex items-center gap-1"><span>⚠</span>{errPaca}</p>}
+        {hp && <p className="mt-0.5 text-[10px] text-red-500 flex items-center gap-1"><span></span>{errPaca}</p>}
       </div>
     </div>
   );
@@ -66,19 +66,28 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
   stockPrincipal: '',
   codsBarrasExtra: [],
   referencia: '',
-  descripcion: '',
-  cantidadXPaca: '',
-  categorias: [],
-  id_category: null,
   precioDetalle: '',
   precioMayorista: '',
   precioColegas: '',
   precioPacas: '',
+  descripcion: '',
+  cantidadXPaca: '',
+  categorias: [],
+  id_category: null,
+  idUnitMeasure: 2,
+  ivaPercentage: 0,
+  retailDiscountPct: 0,
+  wholesaleDiscountPct: 0,
+  partnerDiscountPct: 0,
+  bulkDiscountPct: 0,
 });
   const [imagenPreview, setImagenPreview] = useState(null);
+  const [imagenesActuales, setImagenesActuales] = useState([]);
+  const [imagenesNuevas, setImagenesNuevas] = useState([]);
   const [errors, setErrors]               = useState({});
   const [priceErrors, setPriceErrors]     = useState({});
   const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
 
   useEffect(() => {
   const loadCategories = async () => {
@@ -92,30 +101,96 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
   };
   loadCategories();
 }, []);
-  
 
-  // Inicializar formulario cuando cambia el producto
+useEffect(() => {
+    if (producto && categories.length > 0) {
+      setTimeout(() => {
+        if (producto.categories && producto.categories.length > 0) {
+          producto.categories.forEach(cat => {
+            const checkbox = document.getElementById(`cat-${cat.id}`);
+            if (checkbox) {
+              checkbox.checked = true;
+              setFormData(prev => ({...prev, id_category: cat.id}));
+            }
+          });
+        }
+
+        if (producto.subcategories && producto.subcategories.length > 0) {
+          producto.subcategories.forEach(sub => {
+            const checkbox = document.getElementById(`sub-${sub.id}`);
+            if (checkbox) checkbox.checked = true;
+          });
+        }
+      }, 100);
+    }
+  }, [producto, categories]);
+
+useEffect(() => {
+  if (!isOpen) return;
+
+  const loadSubcategories = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/categories/subcategories');
+      const data = await response.json();
+
+      setSubcategories(data.data || []);
+    } catch (error) {
+      console.error('Error al cargar subcategorías:', error);
+    }
+  };
+
+  loadSubcategories();
+}, [isOpen]);
+  
   useEffect(() => {
-  if (!producto) return;
-  setFormData({
-    nombre: producto.name || '',
-    codBarras: producto.barcodes?.[0]?.barcode || '',
-    stockPrincipal: String(producto.barcodes?.[0]?.stock || 0),
-    codsBarrasExtra: (producto.barcodes || []).slice(1).map(b => ({ cod: b.barcode, stock: b.stock })),
-    referencia: producto.reference || '',
-    descripcion: producto.description || '',
-    cantidadXPaca: String(producto.quantityPerPack || 0),
-    categorias: producto.category?.name ? [producto.category.name] : [],
-    id_category: producto.category?.id || null,
-    precioDetalle: String(producto.retailPrice || 0),
-    precioMayorista: String(producto.wholesalePrice || 0),
-    precioColegas: String(producto.partnerPrice || 0),
-    precioPacas: String(producto.bulkPrice || 0),
-  });
-  setImagenPreview(null);
-  setErrors({});
-  setPriceErrors({});
+  if (producto) {
+    setImagenesActuales(producto.images || []);
+    setFormData({
+      nombre: producto.name || '',
+      referencia: producto.reference || '',
+      precioDetalle: producto.retailPrice || '',
+      precioMayorista: producto.wholesalePrice || '',
+      precioColegas: producto.partnerPrice || '',
+      precioPacas: producto.bulkPrice || '',
+      idUnitMeasure: producto.unitMeasure?.id || 2,
+      ivaPercentage: producto.ivaPercentage || 0,
+      retailDiscountPct: producto.retailDiscountPct || 0,
+      wholesaleDiscountPct: producto.wholesaleDiscountPct || 0,
+      partnerDiscountPct: producto.partnerDiscountPct || 0,
+      bulkDiscountPct: producto.bulkDiscountPct || 0,
+      descripcion: producto.description || '',
+      cantidadXPaca: String(producto.quantityPerPack || 0),
+      id_category: producto.category?.id || null,
+      codBarras: producto.barcodes?.[0]?.barcode || '',
+      stockPrincipal: producto.barcodes?.[0]?.stock || 0,
+      codsBarrasExtra: producto.barcodes?.slice(1).map((b) => ({
+      cod: b.barcode,
+      stock: b.stock,
+})) || [],
+    });
+
+    // ← CAMBIAR ESTO: Marcar solo las categorías asociadas (product_categories)
+    if (producto.categories && producto.categories.length > 0) {
+      setTimeout(() => {
+        producto.categories.forEach(cat => {
+          const checkbox = document.getElementById(`cat-${cat.id}`);
+          if (checkbox) checkbox.checked = true;
+        });
+      }, 100);
+    }
+
+    // Marcar subcategorías seleccionadas
+    if (producto.subcategories && producto.subcategories.length > 0) {
+      setTimeout(() => {
+        producto.subcategories.forEach(sub => {
+          const checkbox = document.getElementById(`sub-${sub.id}`);
+          if (checkbox) checkbox.checked = true;
+        });
+      }, 100);
+    }
+  }
 }, [producto]);
+
 
   const numeric = (v) => v.replace(/[^0-9]/g, '');
   const block   = (e) => { if (['e','E','+','-','.'].includes(e.key)) e.preventDefault(); };
@@ -142,8 +217,7 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
     else if (Number(d.precioColegas) <= 0) e.precioColegas = 'El precio colegas debe ser mayor a 0.';
     if (d.precioPacas === '') e.precioPacas = 'El precio por pacas es obligatorio.';
     else if (Number(d.precioPacas) <= 0) e.precioPacas = 'El precio por pacas debe ser mayor a 0.';
-    if (!d.categorias?.length) e.categorias = 'Debes seleccionar al menos una categoría.';
-    return e;
+    
   };
 
   const validatePrices = (d) => {
@@ -184,12 +258,19 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
   };
 
   const handleImagenChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const r = new FileReader();
-    r.onloadend = () => setImagenPreview(r.result);
-    r.readAsDataURL(file);
-  };
+  const files = Array.from(e.target.files || []);
+
+  if (files.length === 0) return;
+
+  setImagenesNuevas(files);
+
+  const previews = files.map((file) => ({
+    file,
+    url: URL.createObjectURL(file),
+  }));
+
+  setImagenPreview(previews);
+};
 
   const handleAddCodBarras = () => {
     setFormData(p => ({ ...p, codsBarrasExtra: [...(p.codsBarrasExtra || []), { cod: '', stock: '' }] }));
@@ -222,33 +303,43 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
     return;
   }
 
-  // ← AGREGA AQUÍ LA VALIDACIÓN DE BARCODES
-  if (!formData.codBarras || formData.codBarras.length < 8) {
-    showError('Código de barras inválido', 'El código de barras debe tener mínimo 8 caracteres');
+  // ← AGREGAR ESTO: Obtener categorías y subcategorías seleccionadas
+  const selectedCategories = categories
+    .filter(cat => document.getElementById(`cat-${cat.id}`)?.checked)
+    .map(cat => cat.id);
+
+  const selectedSubcategories = subcategories
+    .filter(sub => document.getElementById(`sub-${sub.id}`)?.checked)
+    .map(sub => sub.id);
+
+  console.log('✅ selectedCategories:', selectedCategories);
+  console.log('✅ selectedSubcategories:', selectedSubcategories);
+
+
+  if (selectedCategories.length === 0) {
+    showError('Categorías requeridas', 'Debes seleccionar al menos una categoría');
     return;
   }
 
-  const codigosExtras = (formData.codsBarrasExtra || []).filter(c => c?.cod);
-  for (const codigo of codigosExtras) {
-    if (codigo.cod.length < 8) {
-      showError('Código de barras inválido', `Todos los códigos deben tener mínimo 8 caracteres`);
-      return;
-    }
-  }
   try {
     const saved = await ProductsService.update(producto.id, {
-      nombre: formData.nombre,
-      referencia: formData.referencia,
-      precioDetalle: Number(formData.precioDetalle),
-      precioMayorista: Number(formData.precioMayorista),
-      precioColegas: Number(formData.precioColegas),
-      precioPacas: Number(formData.precioPacas),
-      descripcion: formData.descripcion,
-      cantidadXPaca: Number(formData.cantidadXPaca),
-      id_category: formData.id_category,
-      codBarras: formData.codBarras,
-      stock: Number(formData.stockPrincipal) || 0,
-      codsBarrasExtra: formData.codsBarrasExtra || [],
+    nombre: formData.nombre,
+    referencia: formData.referencia,
+    idUnitMeasure: formData.idUnitMeasure,
+    ivaPercentage: formData.ivaPercentage,
+    retailDiscountPct: formData.retailDiscountPct,
+    wholesaleDiscountPct: formData.wholesaleDiscountPct,
+    partnerDiscountPct: formData.partnerDiscountPct,
+    bulkDiscountPct: formData.bulkDiscountPct,
+    descripcion: formData.descripcion,
+    cantidadXPaca: Number(formData.cantidadXPaca),
+    id_category: formData.id_category,
+    codBarras: formData.codBarras,
+    stock: Number(formData.stockPrincipal) || 0,
+    codsBarrasExtra: formData.codsBarrasExtra || [],
+    categories: selectedCategories,  // ← Así
+    subcategories: selectedSubcategories,  // ← Así
+    images: imagenesNuevas,
     });
     showSuccess('Producto actualizado', `"${saved.name}" fue actualizado correctamente.`);
     onUpdate?.(saved);
@@ -292,22 +383,50 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1.5">Imagen <span className="text-red-500">*</span></label>
                   <label className="block cursor-pointer">
-                    <input type="file" accept="image/*" onChange={handleImagenChange} className="hidden" />
+                    <input
+  type="file"
+  accept="image/*"
+  multiple onChange={handleImagenChange} className="hidden" />
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center hover:border-[#004D77] transition-colors min-h-[130px] flex items-center justify-center">
-                      {imagenPreview
-                        ? <div className="relative inline-block">
-                            <img src={imagenPreview} alt="Preview" className="max-w-full max-h-28 object-contain rounded-lg" />
-                            <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                              <p className="text-[10px] text-white px-2 py-1 rounded-full" style={{ backgroundColor: '#004D77' }}>Cambiar</p>
-                            </div>
-                          </div>
-                        : <div className="flex flex-col items-center gap-1.5">
-                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                              <Upload className="w-6 h-6 text-gray-400" />
-                            </div>
-                            <p className="text-[10px] text-white px-2 py-1 rounded-full" style={{ backgroundColor: '#004D77' }}>Agregar imagen</p>
-                          </div>
-                      }
+                      <div className="flex flex-wrap gap-2 justify-center">
+  
+  {/* Imágenes actuales */}
+  {imagenesActuales.map((img) => (
+    <img
+      key={img.id}
+      src={img.url}
+      alt="Producto"
+      className="w-20 h-20 object-cover rounded-lg border"
+    />
+  ))}
+
+  {/* Nuevas previews */}
+  {imagenPreview && imagenPreview.map((img, idx) => (
+    <img
+      key={idx}
+      src={img.url}
+      alt="Preview"
+      className="w-20 h-20 object-cover rounded-lg border"
+    />
+  ))}
+
+  {/* Placeholder */}
+  {imagenesActuales.length === 0 &&
+    (!imagenPreview || imagenPreview.length === 0) && (
+      <div className="flex flex-col items-center gap-1.5">
+        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+          <Upload className="w-6 h-6 text-gray-400" />
+        </div>
+
+        <p
+          className="text-[10px] text-white px-2 py-1 rounded-full"
+          style={{ backgroundColor: '#004D77' }}
+        >
+          Agregar imágenes
+        </p>
+      </div>
+  )}
+</div>
                     </div>
                   </label>
                 </div>
@@ -317,40 +436,52 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
   <label className="block text-xs font-medium text-gray-700 mb-1.5">
     Categorías <span className="text-red-500">*</span>
   </label>
-  <div className={`border rounded-lg p-2.5 h-[130px] overflow-y-auto ${errors.categorias ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
+  <div className={`border rounded-lg p-2.5 h-[200px] overflow-y-auto ${errors.categorias ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
     {categories && categories.length > 0 ? (
-      categories.map((cat) => (
-        <div key={cat.id} className="mb-1.5 last:mb-0">
-          <div className="flex items-center gap-1.5">
-            <input 
-              type="checkbox" 
-              id={`cat-${cat.id}`} 
-              checked={formData.categorias.includes(cat.name)} 
-              onChange={() => {
-                const newCats = formData.categorias.includes(cat.name)
-                  ? formData.categorias.filter(c => c !== cat.name)
-                  : [...formData.categorias, cat.name];
-                setFormData(prev => ({
-                  ...prev,
-                  categorias: newCats,
-                  id_category: newCats.length > 0 ? categories.find(c => c.name === newCats[0])?.id : null
-                }));
-              }}
-              className="w-3.5 h-3.5 text-blue-600 rounded" 
-            />
-            <label htmlFor={`cat-${cat.id}`} className="flex-1 text-xs text-gray-700 font-medium cursor-pointer">
-              {cat.name}
-            </label>
-          </div>
+  categories.map((cat) => {
+    const subsCat = subcategories.filter(sub => sub.categoryId === cat.id);
+    
+    return (
+      <div key={cat.id} className="mb-3 last:mb-0">
+        {/* Categoría padre */}
+        <div className="flex items-center gap-1.5">
+          <input 
+  type="checkbox" 
+  id={`cat-${cat.id}`} 
+  className="w-3.5 h-3.5 text-blue-600 rounded"
+/>
+          <label htmlFor={`cat-${cat.id}`} className="flex-1 text-xs text-gray-700 font-semibold cursor-pointer">
+            {cat.name}
+          </label>
         </div>
-      ))
-    ) : (
-      <p className="text-xs text-gray-400">Sin categorías disponibles</p>
-    )}
+
+        {/* Subcategorías - solo mostrar si esta categoría está seleccionada */}
+        {subsCat.length > 0 && (
+          <div className="ml-5 mt-1.5 space-y-1">
+            {subsCat.map((sub) => (
+              <div key={sub.id} className="flex items-center gap-1.5">
+                <input 
+                  type="checkbox" 
+                  id={`sub-${sub.id}`} 
+                  className="w-3 h-3 text-blue-600 rounded" 
+                />
+                <label htmlFor={`sub-${sub.id}`} className="text-xs text-gray-600 cursor-pointer">
+                  {sub.name}
+                </label>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  })
+) : (
+  <p className="text-xs text-gray-400">Sin categorías disponibles</p>
+)}
+    
   </div>
   <ErrMsg field="categorias" />
 </div>
-
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1.5">Descripción <span className="text-gray-400 font-normal">(opcional)</span></label>
                   <textarea name="descripcion" value={formData.descripcion || ''} onChange={handleChange}
@@ -477,6 +608,41 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
                     onKeyDown={block} placeholder="12"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
                 </div>
+
+                <div>
+  <label className="block text-xs font-medium text-gray-700 mb-1">
+    Unidad de medida
+  </label>
+
+  <select
+    name="idUnitMeasure"
+    value={formData.idUnitMeasure}
+    onChange={handleChange}
+    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+  >
+    <option value={2}>Unidad</option>
+    <option value={3}>Docena</option>
+    <option value={4}>Caja</option>
+    <option value={5}>Paca</option>
+  </select>
+</div>
+
+<div>
+  <label className="block text-xs font-medium text-gray-700 mb-1">
+    IVA %
+  </label>
+
+  <input
+    type="number"
+    name="ivaPercentage"
+    value={formData.ivaPercentage}
+    onChange={handleChange}
+    min="0"
+    max="100"
+    placeholder="19"
+    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+  />
+</div>
               </div>
             </div>
           </div>
@@ -485,34 +651,49 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
           <div>
             <h4 className="text-sm font-bold text-gray-800 mb-3 pb-1.5 border-b-2 border-[#004D77]">3. Configuración de Precios</h4>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <PriceCard label="Precio Detal"
-                fieldMain="precioDetalle"    fieldPaca="precioDetallePaca"
-                valueMain={formData.precioDetalle || ''}    valuePaca={formData.precioDetallePaca || ''}
-                placeholderMain="5000"       placeholderPaca="4500"
-                onChange={handleChange}
-                errMain={errors.precioDetalle     || priceErrors.precioDetalle}
-                errPaca={errors.precioDetallePaca  || priceErrors.precioDetallePaca} />
-              <PriceCard label="Precio Mayorista"
-                fieldMain="precioMayorista"  fieldPaca="precioMayoristaPaca"
-                valueMain={formData.precioMayorista || ''}  valuePaca={formData.precioMayoristaPaca || ''}
-                placeholderMain="4000"       placeholderPaca="3500"
-                onChange={handleChange}
-                errMain={errors.precioMayorista    || priceErrors.precioMayorista}
-                errPaca={errors.precioMayoristaPaca || priceErrors.precioMayoristaPaca} />
-              <PriceCard label="Precio Colegas"
-                fieldMain="precioColegas"    fieldPaca="precioColegasPaca"
-                valueMain={formData.precioColegas || ''}    valuePaca={formData.precioColegasPaca || ''}
-                placeholderMain="3500"       placeholderPaca="3000"
-                onChange={handleChange}
-                errMain={errors.precioColegas     || priceErrors.precioColegas}
-                errPaca={errors.precioColegasPaca  || priceErrors.precioColegasPaca} />
-              <PriceCard label="Precio X Pacas"
-                fieldMain="precioPacas"      fieldPaca="precioPacasPaca"
-                valueMain={formData.precioPacas || ''}      valuePaca={formData.precioPacasPaca || ''}
-                placeholderMain="3000"       placeholderPaca="2500"
-                onChange={handleChange}
-                errMain={errors.precioPacas     || priceErrors.precioPacas}
-                errPaca={errors.precioPacasPaca  || priceErrors.precioPacasPaca} />
+              <PriceCard
+                    label="Precio Detal"
+                    fieldMain="precioDetalle"
+                    fieldPaca="retailDiscountPct"
+                    valueMain={formData.precioDetalle || ''}
+                    valuePaca={formData.retailDiscountPct || ''}
+                    placeholderMain="5000"
+                    placeholderPaca="0"
+                    onChange={handleChange}
+                  />
+
+                  <PriceCard
+                    label="Precio Mayorista"
+                    fieldMain="precioMayorista"
+                    fieldPaca="wholesaleDiscountPct"
+                    valueMain={formData.precioMayorista || ''}
+                    valuePaca={formData.wholesaleDiscountPct || ''}
+                    placeholderMain="4000"
+                    placeholderPaca="0"
+                    onChange={handleChange}
+                  />
+
+                  <PriceCard
+                    label="Precio Colegas"
+                    fieldMain="precioColegas"
+                    fieldPaca="partnerDiscountPct"
+                    valueMain={formData.precioColegas || ''}
+                    valuePaca={formData.partnerDiscountPct || ''}
+                    placeholderMain="3500"
+                    placeholderPaca="0"
+                    onChange={handleChange}
+                  />
+
+                  <PriceCard
+                    label="Precio X Pacas"
+                    fieldMain="precioPacas"
+                    fieldPaca="bulkDiscountPct"
+                    valueMain={formData.precioPacas || ''}
+                    valuePaca={formData.bulkDiscountPct || ''}
+                    placeholderMain="3000"
+                    placeholderPaca="0"
+                    onChange={handleChange}
+                  />
             </div>
           </div>
 

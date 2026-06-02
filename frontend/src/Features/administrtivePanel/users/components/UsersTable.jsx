@@ -5,9 +5,12 @@ import { useAlert } from "../../../shared/alerts/useAlert";
 import { highlight, highlightEstado, formatDate } from "../helpers/usersHelpers";
 import { usePermissions } from "../../configuration/roles/hooks/usePermissions";
 
+// Usuario - Cliente del sistema
+const SYSTEM_ID_USER = 999999999;
+
 // ─── Toggle activo/inactivo (sin cambios) ──────────────────────────────────
 function ActiveToggle({ activo, onChange, search }) {
-  const { showConfirm, showSuccess, showError } = useAlert();
+  const { showConfirm, showSuccess, showWarning, showError } = useAlert();
   const [isLoading, setIsLoading] = useState(false);
   const estadoResaltado = highlightEstado(activo, search);
 
@@ -74,7 +77,6 @@ function ActiveToggle({ activo, onChange, search }) {
 // ─── Empty State (sin cambios) ────────────────────────────────────────────
 function EmptyState({ isSearching }) {
   const navigate = useNavigate();
-  const { hasPermission } = usePermissions();
 
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 gap-4">
@@ -121,12 +123,12 @@ function UsersTable({
   totalData = 0,
 }) {
   const navigate = useNavigate();
-  const { showConfirm, showSuccess, showWarning, showError } = useAlert();
-  const { hasPermission } = usePermissions();
+  const { showConfirm, showWarning, showError } = useAlert();
   const [deletingId, setDeletingId] = useState(null);
 
   const handleDelete = async (row) => {
     if (deletingId === row.id) return;
+
     if (row.active) {
       showWarning(
         "No es posible eliminar este usuario",
@@ -134,19 +136,37 @@ function UsersTable({
       );
       return;
     }
+
+    if (row.role) {
+      showWarning(
+        "No es posible eliminar este usuario",
+        "Este usuario tiene un rol asignado. Primero debes quitarle el rol para poder eliminarlo."
+      );
+      return;
+    }
+
     const confirm = await showConfirm(
       "warning",
       "¿Está seguro que desea eliminar este usuario?",
       "Esta acción no se puede revertir. Si el usuario tiene registros asociados (ventas, créditos, etc.), el sistema lo impedirá.",
-      { confirmButtonText: "Eliminar", cancelButtonText: "Cancelar" }
+      {
+        confirmButtonText: "Eliminar",
+        cancelButtonText: "Cancelar",
+      }
     );
+
     if (!confirm?.isConfirmed) return;
+
     setDeletingId(row.id);
+
     try {
       await onDelete(row);
-      showSuccess("Usuario eliminado", "El usuario ha sido eliminado exitosamente.");
     } catch (error) {
-      const mensaje = error.response?.data?.message || error.message || "Error al eliminar el usuario.";
+      const mensaje =
+        error.response?.data?.message ||
+        error.message ||
+        "Error al eliminar el usuario.";
+
       showError("Error", mensaje);
     } finally {
       setDeletingId(null);
@@ -156,6 +176,13 @@ function UsersTable({
   if (data.length === 0) {
     return <EmptyState isSearching={totalData > 0 && search.trim().length > 0} />;
   }
+
+  // Imprimir usuario del sistema primero
+  const sortedData = [...data].sort((a, b) => {
+    if (a.id === SYSTEM_ID_USER) return -1;
+    if (b.id === SYSTEM_ID_USER) return 1;
+    return 0;
+  });
 
   return (
     <div className="flex-1 overflow-x-auto rounded-xl shadow-md min-h-0">
@@ -171,15 +198,31 @@ function UsersTable({
           </tr>
         </thead>
         <tbody>
-          {data.map((row, index) => {
+          {sortedData.map((row, index) => {
             const rowBg = index % 2 === 0 ? "bg-gray-100 hover:bg-blue-50" : "bg-white hover:bg-blue-50";
             const isDeleting = deletingId === row.id;
+            const isSystemUser = row.id === SYSTEM_ID_USER;
             const formattedDate = formatDate(row.createdAt);
             return (
               <tr key={row.id} className={`transition-colors duration-150 ${rowBg}`}>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">
                   <div className="flex items-center justify-center gap-1.5">
                     {highlight(row.name, search)}
+
+                    {row.isClient && (
+                      <div className="relative group">
+                        <div className="w-5 h-5 rounded-full bg-[#004D77]/15 flex items-center justify-center hover:bg-[#004D77]/25 transition-all duration-200 cursor-help">
+                          <ShoppingBag
+                            className="w-3 h-3 text-[#004D77] group-hover:scale-110 transition-transform duration-200"
+                            strokeWidth={1.8}
+                          />
+                        </div>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 font-medium">
+                          También es cliente
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-gray-800 rotate-45"></div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
@@ -192,66 +235,74 @@ function UsersTable({
                   {highlight(formattedDate, search)}
                 </td>
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(row.role, search)}
+                  {highlight(row.role?.nameRole || "Sin rol (Null)", search)}
                 </td>
                 <td className="px-3 py-1.5">
-                  <div className="flex items-center justify-center gap-1 sm:gap-1.5">
-                    <button
-                      onClick={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        navigate("/admin/users/info-user", {
-                          state: {
-                            user: row,
-                            origin: {
-                              x: rect.left + rect.width / 2,
-                              y: rect.top + rect.height / 2,
+                  {isSystemUser ? (
+                    <div className="flex items-center justify-center">
+                      <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-blue-100 text-[#004D77] border border-blue-200">
+                        Sistema
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center gap-1 sm:gap-1.5">
+                      <button
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          navigate("/admin/users/info-user", {
+                            state: {
+                              user: row,
+                              origin: {
+                                x: rect.left + rect.width / 2,
+                                y: rect.top + rect.height / 2,
+                              },
                             },
-                          },
-                        });
-                      }}
-                      className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
-                      title="Información"
-                    >
-                      <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        navigate("/admin/users/form-user", {
-                          state: {
-                            user: row,
-                            origin: {
-                              x: rect.left + rect.width / 2,
-                              y: rect.top + rect.height / 2,
+                          });
+                        }}
+                        className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                        title="Información"
+                      >
+                        <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          navigate("/admin/users/form-user", {
+                            state: {
+                              user: row,
+                              origin: {
+                                x: rect.left + rect.width / 2,
+                                y: rect.top + rect.height / 2,
+                              },
                             },
-                          },
-                        });
-                      }}
-                      className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
-                      title="Editar"
-                    >
-                      <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
-                    </button>
-                    <ActiveToggle
-                      activo={row.active}
-                      onChange={() => onToggle(row.id)}
-                      search={search}
-                    />
-                    <button
-                      onClick={() => handleDelete(row)}
-                      disabled={isDeleting}
-                      className={`text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer ${
-                        isDeleting ? "opacity-50 cursor-wait" : ""
-                      }`}
-                      title="Eliminar"
-                    >
-                      {isDeleting ? (
-                        <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
-                      )}
-                    </button>
-                  </div>
+                          });
+                        }}
+                        className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                        title="Editar"
+                      >
+                        <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                      </button>
+                      <ActiveToggle
+                        activo={row.active}
+                        onChange={() => onToggle(row.id)}
+                        search={search}
+                      />
+                      <button
+                        onClick={() => handleDelete(row)}
+                        disabled={isDeleting}
+                        className={`text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer ${
+                          isDeleting ? "opacity-50 cursor-wait" : ""
+                        }`}
+                        title="Eliminar"
+                      >
+                        {isDeleting ? (
+                          <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </td>
               </tr>
             );

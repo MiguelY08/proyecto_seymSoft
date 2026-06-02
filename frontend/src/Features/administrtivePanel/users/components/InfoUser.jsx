@@ -16,6 +16,8 @@ function InfoUser() {
   const origin   = location.state?.origin ?? null;
 
   const navigate = useNavigate();
+  const SYSTEM_ID_USER = 999999999;
+  const isSystemUser = user?.id === SYSTEM_ID_USER;
   const { visible, handleClose } = useModalAnimation('/admin/users');
 
   /**
@@ -47,7 +49,7 @@ function InfoUser() {
     .join('');
 
   // Valor a mostrar para el rol (si es null o vacío, se muestra "Sin rol" o "Nulo")
-  const roleDisplay = user.role && user.role !== 'Nulo' ? user.role : 'Sin rol';
+  const roleDisplay = user.role?.nameRole || 'Sin rol - Null';
 
   // Filas de información (se eliminó el campo de documento)
   const fields = [
@@ -140,13 +142,15 @@ function InfoUser() {
           >
             Cerrar
           </button>
-          <button
-            onClick={handleEdit}
-            className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"
-          >
-            <SquarePen className="w-4 h-4" strokeWidth={1.8} />
-            Editar usuario
-          </button>
+          {!isSystemUser && (
+            <button
+              onClick={handleEdit}
+              className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"
+            >
+              <SquarePen className="w-4 h-4" strokeWidth={1.8} />
+              Editar usuario
+            </button>
+          )}
         </div>
       </div>
     </div>

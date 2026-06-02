@@ -1,233 +1,187 @@
 export const permissionsList = [
 
-  // ==============================
-  // USUARIOS
-  // ==============================
   {
-    id: 1,
-    modulo: "usuarios",
-    acciones: [
-      "ver",
-      "ver_informacion",
-      "crear",
-      "editar",
-      "eliminar",
-      "activar_desactivar",
-      "descargar"
+    id:1,
+    modulo:"usuarios",
+    acciones:[
+      {key:"ver", backend:"READ", label:"Ver"},
+      {key:"ver_informacion", backend:"READ_DETAIL", label:"Ver información"},
+      {key:"crear", backend:"CREATE", label:"Crear"},
+      {key:"editar", backend:"UPDATE", label:"Editar"},
+      {key:"eliminar", backend:"DELETE", label:"Eliminar"},
+      {key:"activar_desactivar", backend:"ACTIVATE_DEACTIVATE", label:"Activar / Desactivar"},
+      {key:"descargar", backend:"DESCARGAR", label:"Descargar"}
     ]
   },
 
-  // ==============================
-  // ROLES
-  // ==============================
   {
-    id: 2,
-    modulo: "roles",
-    acciones: [
-      "ver",
-      "ver_informacion",
-      "crear",
-      "editar",
-      "eliminar",
-      "activar_desactivar",
-
+    id:2,
+    modulo:"roles",
+    acciones:[
+      {key:"ver", backend:"READ", label:"Ver"},
+      {key:"ver_informacion", backend:"READ_DETAIL", label:"Ver información"},
+      {key:"crear", backend:"CREATE", label:"Crear"},
+      {key:"editar", backend:"UPDATE", label:"Editar"},
+      {key:"eliminar", backend:"DELETE", label:"Eliminar"},
+      {key:"activar_desactivar", backend:"ACTIVATE_DEACTIVATE", label:"Activar / Desactivar"}
     ]
   },
 
-  // ==============================
-  // CLIENTES
-  // ==============================
   {
-    id: 3,
-    modulo: "clientes",
-    acciones: [
-      "ver",
-      "ver_informacion",
-      "crear",
-      "editar",
-      "eliminar"
+    id:3,
+    modulo:"clientes",
+    acciones:[
+      {key:"ver", backend:"READ", label:"Ver"},
+      {key:"ver_informacion", backend:"READ_DETAIL", label:"Ver información"},
+      {key:"crear", backend:"CREATE", label:"Crear"},
+      {key:"editar", backend:"UPDATE", label:"Editar"},
+      {key:"eliminar", backend:"DELETE", label:"Eliminar"}
     ]
   },
 
-  // ==============================
-  // PRODUCTOS
-  // ==============================
   {
-    id: 4,
-    modulo: "productos",
-    acciones: [
-      "ver",
-      "ver_informacion",
-      "crear",
-      "editar",
-      "activar_desactivar"
+    id:4,
+    modulo:"productos",
+    acciones:[
+      {key:"ver", backend:"READ", label:"Ver"},
+      {key:"ver_informacion", backend:"READ_DETAIL", label:"Ver información"},
+      {key:"crear", backend:"CREATE", label:"Crear"},
+      {key:"editar", backend:"UPDATE", label:"Editar"},
+      {key:"activar_desactivar", backend:"ACTIVATE_DEACTIVATE", label:"Activar / Desactivar"}
     ]
   },
 
-  // ==============================
-  // CATEGORIAS
-  // ==============================
   {
-    id: 5,
-    modulo: "categorias",
-    acciones: [
-      "ver",
-      "ver_informacion",
-      "crear_categotia",
-      "crear_subcategoria",
-      "editar",
-      "eliminar",
-      "activar_desactivar"
+    id:5,
+    modulo:"categorias",
+    acciones:[
+      {key:"ver", backend:"READ", label:"Ver"},
+      {key:"ver_informacion", backend:"READ_DETAIL", label:"Ver información"},
+      {key:"crear_categoria", backend:"CREATE", label:"Crear categoría"},
+      {key:"crear_subcategoria", backend:"CREATE", label:"Crear subcategoría"},
+      {key:"editar", backend:"UPDATE", label:"Editar"},
+      {key:"eliminar", backend:"DELETE", label:"Eliminar"},
+      {key:"activar_desactivar", backend:"ACTIVATE_DEACTIVATE", label:"Activar / Desactivar"}
     ]
   },
 
-  // ==============================
-  // PROVEEDORES
-  // ==============================
   {
-    id: 6,
-    modulo: "proveedores",
-    acciones: [
-      "ver",
-      "ver_informacion",
-      "crear",
-      "editar",
-      "activar_desactivar",
-      "eliminar"
+    id:6,
+    modulo:"proveedores",
+    acciones:[
+      {key:"ver", backend:"READ", label:"Ver"},
+      {key:"ver_informacion", backend:"READ_DETAIL", label:"Ver información"},
+      {key:"crear", backend:"CREATE", label:"Crear"},
+      {key:"editar", backend:"UPDATE", label:"Editar"},
+      {key:"activar_desactivar", backend:"ACTIVATE_DEACTIVATE", label:"Activar / Desactivar"},
+      {key:"eliminar", backend:"DELETE", label:"Eliminar"}
     ]
   },
 
-  // ==============================
-  // COMPRAS
-  // ==============================
   {
-    id: 7,
-    modulo: "compras",
-    acciones: [
-      "ver",
-      "crear",
-      "anular",
-      "devolver",
-      "ver_informacion"
+    id:7,
+    modulo:"compras",
+    acciones:[
+      {key:"ver", backend:"READ", label:"Ver"},
+      {key:"crear", backend:"CREATE", label:"Crear"},
+      {key:"anular", backend:"ANULAR", label:"Anular"},
+      {key:"devolver", backend:"DEVOLVER", label:"Devolver"},
+      {key:"ver_informacion", backend:"READ_DETAIL", label:"Ver información"}
     ]
   },
 
-  // ==============================
-  // PRODUCTO NO CONFORME
-  // ==============================
   {
-    id: 8,
-    modulo: "producto_no_conforme",
-    acciones: [
-      "ver",
-      "crear",
-      "exportar",
-      "ver_informacion",
-      "anular"
+    id:8,
+    modulo:"producto_no_conforme",
+    acciones:[
+      {key:"ver", backend:"READ", label:"Ver"},
+      {key:"crear", backend:"CREATE", label:"Crear"},
+      {key:"exportar", backend:"EXPORT", label:"Exportar"},
+      {key:"ver_informacion", backend:"READ_DETAIL", label:"Ver información"},
+      {key:"anular", backend:"ANULAR", label:"Anular"}
     ]
   },
 
-  // ==============================
-  // PEDIDOS
-  // ==============================
   {
-    id: 9,
-    modulo: "pedidos",
-    acciones: [
-      "ver",
-      "ver_informacion",
-      "editar",
-      "anular",
-      "exportar"
+    id:9,
+    modulo:"pedidos",
+    acciones:[
+      {key:"ver", backend:"READ", label:"Ver"},
+      {key:"ver_informacion", backend:"READ_DETAIL", label:"Ver información"},
+      {key:"editar", backend:"UPDATE", label:"Editar"},
+      {key:"anular", backend:"ANULAR", label:"Anular"},
+      {key:"exportar", backend:"EXPORT", label:"Exportar"}
     ]
   },
 
-  // ==============================
-  // VENTAS
-  // ==============================
   {
-    id: 10,
-    modulo: "ventas",
-    acciones: [
-      "ver",
-      "crear",
-      "editar",
-      "eliminar",
-      "descargar",
-      "generar_devolucion",
-      "anular"
+    id:10,
+    modulo:"ventas",
+    acciones:[
+      {key:"ver", backend:"READ", label:"Ver"},
+      {key:"crear", backend:"CREATE", label:"Crear"},
+      {key:"editar", backend:"UPDATE", label:"Editar"},
+      {key:"eliminar", backend:"DELETE", label:"Eliminar"},
+      {key:"descargar", backend:"DESCARGAR", label:"Descargar"},
+      {key:"crear_devolucion", backend:"CREAR_DEVOLUCION", label:"Crear devolución"},
+      {key:"anular", backend:"ANULAR", label:"Anular"}
     ]
   },
 
-  // ==============================
-  // DEVOLUCIONES EN VENTAS
-  // ==============================
   {
-    id: 11,
-    modulo: "devoluciones_en_ventas",
-    acciones: [
-      "ver",
-      "crear",
-      "editar",
-      "anular"
+    id:11,
+    modulo:"devoluciones_en_ventas",
+    acciones:[
+      {key:"ver", backend:"READ", label:"Ver"},
+      {key:"crear", backend:"CREATE", label:"Crear"},
+      {key:"editar", backend:"UPDATE", label:"Editar"},
+      {key:"anular", backend:"ANULAR", label:"Anular"}
     ]
   },
 
-  // ==============================
-  // PAGOS Y ABONOS
-  // ==============================
   {
-    id: 12,
-    modulo: "pagos_y_abonos",
-    acciones: [
-      "ver",
-      "ver_informacion",
-      "abonar",
-      "anular",
-      "descargar",
-      "exportar",
-      "contactar",
-      "generar_interes"
+    id:12,
+    modulo:"pagos_y_abonos",
+    acciones:[
+      {key:"ver", backend:"READ", label:"Ver"},
+      {key:"ver_informacion", backend:"READ_DETAIL", label:"Ver información"},
+      {key:"abonar", backend:"ABONAR", label:"Abonar"},
+      {key:"anular", backend:"ANULAR", label:"Anular"},
+      {key:"descargar", backend:"DESCARGAR", label:"Descargar"},
+      {key:"exportar", backend:"EXPORT", label:"Exportar"},
+      {key:"contactar", backend:"CONTACTAR", label:"Contactar"},
+      {key:"generar_interes", backend:"GENERAR_INTERES", label:"Generar interés"}
     ]
   },
 
-  // ==============================
-  // BANNERS
-  // ==============================
   {
-    id: 13,
-    modulo: "banners",
-    acciones: [
-      "ver",
-      "subir_imagen",
-      "eliminar",
-      "activar_desactivar",
-      "ordenar"
+    id:13,
+    modulo:"banners",
+    acciones:[
+      {key:"ver", backend:"READ", label:"Ver"},
+      {key:"subir_imagen", backend:"SUBIR_IMAGEN", label:"Subir imagen"},
+      {key:"eliminar", backend:"DELETE", label:"Eliminar"},
+      {key:"activar_desactivar", backend:"ACTIVATE_DEACTIVATE", label:"Activar / Desactivar"},
+      {key:"ordenar", backend:"ORDENAR", label:"Ordenar"}
     ]
   },
 
-  // ==============================
-  // DEVOLUCIONES EN COMPRAS
-  // ==============================
   {
-    id: 14,
-    modulo: "devoluciones_en_compras",
-    acciones: [
-      "ver",
-      "ver_informacion",
-      "editar",
-      "anular"
+    id:14,
+    modulo:"devoluciones_en_compras",
+    acciones:[
+      {key:"ver", backend:"READ", label:"Ver"},
+      {key:"ver_informacion", backend:"READ_DETAIL", label:"Ver información"},
+      {key:"editar", backend:"UPDATE", label:"Editar"},
+      {key:"anular", backend:"ANULAR", label:"Anular"}
     ]
   },
 
-  // ==============================
-  // DASHBOARD
-  // ==============================
   {
-    id: 15,
-    modulo: "dashboard",
-    acciones: [
-      "ver"
+    id:15,
+    modulo:"dashboard",
+    acciones:[
+      {key:"ver", backend:"READ", label:"Ver"}
     ]
   }
 
