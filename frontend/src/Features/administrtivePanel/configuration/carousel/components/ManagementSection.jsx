@@ -3,6 +3,7 @@ import { Images } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import CardManagement from '../components/CardManagement';
 import Lightbox from '../components/Lightbox';
+import Permission from '../../roles/components/Permission';
 
 // ─── ManagementSection ────────────────────────────────────────────────────────
 function ManagementSection({ slides, onAdd, onDelete, onToggle, loading }) {
@@ -114,8 +115,9 @@ function ManagementSection({ slides, onAdd, onDelete, onToggle, loading }) {
                   onExpand={(id) => setExpandedId(id)}
                 />
               ))}
-
-              <CardManagement isAddCard onAdd={handleAdd} />
+              <Permission permission="banners.subir_imagen">
+                <CardManagement isAddCard onAdd={handleAdd} />
+              </Permission>
             </div>
           )}
         </div>

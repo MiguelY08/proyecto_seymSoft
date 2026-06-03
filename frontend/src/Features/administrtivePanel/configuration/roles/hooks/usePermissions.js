@@ -78,6 +78,9 @@ export function usePermissions() {
         subir_imagen:
           "subir_imagen",
 
+        ampliar_imagen:
+          "ampliar_imagen"
+
       };
 
       const frontendPrivilege =

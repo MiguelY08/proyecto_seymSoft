@@ -6,6 +6,8 @@ import FormClient        from '../modals/FormClient';
 import InfoClient        from '../modals/InfoClient';
 import { useAlert }      from '../../../../shared/alerts/useAlert';
 import { clientsService } from '../services/clientsService';
+import Permission from "../../../configuration/roles/components/Permission";
+
 
 const RECORDS_PER_PAGE = 13;
 
@@ -141,47 +143,49 @@ const handleDelete = async (client) => {
   }
 
   return (
-    <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
-      <ClientsToolbar
-        searchTerm={searchTerm}
-        onSearchChange={handleSearchChange}
-        onNewClick={handleNewClient}
-      />
-
-      <div className="bg-white rounded-xl shadow-md">
-        <ClientsTable
-          clients={clients}
-          startIndex={startIndex}
+    <Permission permission="clientes.ver">
+      <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
+        <ClientsToolbar
           searchTerm={searchTerm}
-          onInfo={handleInfo}
-          onEdit={handleEdit}
-          onToggleActive={handleToggleActive}
-          onDelete={handleDelete}
+          onSearchChange={handleSearchChange}
+          onNewClick={handleNewClient}
+        />
+
+        <div className="bg-white rounded-xl shadow-md">
+          <ClientsTable
+            clients={clients}
+            startIndex={startIndex}
+            searchTerm={searchTerm}
+            onInfo={handleInfo}
+            onEdit={handleEdit}
+            onToggleActive={handleToggleActive}
+            onDelete={handleDelete}
+          />
+        </div>
+
+        {totalRecords > 0 && (
+          <PaginationAdmin
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            totalRecords={totalRecords}
+            recordsPerPage={RECORDS_PER_PAGE}
+          />
+        )}
+
+        <FormClient
+          isOpen={isFormModalOpen}
+          onClose={() => setIsFormModalOpen(false)}
+          client={selectedClient}
+          onSave={handleSave}
+        />
+
+        <InfoClient
+          isOpen={isInfoModalOpen}
+          onClose={() => setIsInfoModalOpen(false)}
+          client={selectedClient}
         />
       </div>
-
-      {totalRecords > 0 && (
-        <PaginationAdmin
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          totalRecords={totalRecords}
-          recordsPerPage={RECORDS_PER_PAGE}
-        />
-      )}
-
-      <FormClient
-        isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
-        client={selectedClient}
-        onSave={handleSave}
-      />
-
-      <InfoClient
-        isOpen={isInfoModalOpen}
-        onClose={() => setIsInfoModalOpen(false)}
-        client={selectedClient}
-      />
-    </div>
+    </Permission>
   );
 }
 

@@ -3,6 +3,7 @@ import React from "react";
 import { Edit, Trash2, Info, Layers } from "lucide-react";
 import Pagination from "../../../../shared/PaginationAdmin";
 import ActiveToggle from "./ActiveToggle";
+import  Permission  from "../../../configuration/roles/components/Permission";
 
 function SubcategoriasBadge({ count }) {
   const total = Number(count) || 0;
@@ -106,31 +107,39 @@ export const CategoriesTable = ({
 
                     <td className="px-3 py-2">
                       <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => handleViewDetail(category)}
-                          className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
-                          title="Ver detalle"
-                        >
-                          <Info className="w-4 h-4" strokeWidth={1.5} />
-                        </button>
-                        <button
-                          onClick={() => handleEdit(category)}
-                          className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
-                          title="Editar categoría"
-                        >
-                          <Edit className="w-4 h-4" strokeWidth={1.5} />
-                        </button>
-                        <ActiveToggle
-                          activo={category.estado === "Activo"}
-                          onChange={() => handleToggleStatus(category.id)}
-                        />
-                        <button
-                          onClick={() => handleDelete(category.id)}
-                          className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
-                          title="Eliminar categoría"
-                        >
-                          <Trash2 className="w-4 h-4" strokeWidth={1.5} />
-                        </button>
+                        <Permission permission ="categorias.ver_informacion" >
+                          <button
+                            onClick={() => handleViewDetail(category)}
+                            className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                            title="Ver detalle"
+                          >
+                            <Info className="w-4 h-4" strokeWidth={1.5} />
+                          </button>
+                        </Permission>
+                        <Permission permission ="categorias.editar" >
+                          <button
+                            onClick={() => handleEdit(category)}
+                            className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                            title="Editar categoría"
+                          >
+                            <Edit className="w-4 h-4" strokeWidth={1.5} />
+                          </button>
+                        </Permission>
+                        <Permission permission ="categorias.activar_desactivar" >
+                          <ActiveToggle
+                            activo={category.estado === "Activo"}
+                            onChange={() => handleToggleStatus(category.id)}
+                          />
+                        </Permission>
+                        <Permission permission ="categorias.eliminar" >
+                          <button
+                            onClick={() => handleDelete(category.id)}
+                            className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
+                            title="Eliminar categoría"
+                          >
+                            <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                          </button>
+                        </Permission>
                       </div>
                     </td>
                   </tr>

@@ -1,4 +1,4 @@
-import loginPapeleria from "../../../assets/loginPapeleria.jpg";
+import loginPapeleria from "../../../assets/loginBg.png";
 
 export default function LoginImgForm() {
   return (

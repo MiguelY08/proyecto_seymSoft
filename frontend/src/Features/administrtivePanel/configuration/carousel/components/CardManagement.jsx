@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { Maximize2, Trash2 } from 'lucide-react';
 import { MAX_FILE_SIZE } from '../helpers/bannerHelper';
+import Permission from '../../../configuration/roles/components/Permission';
 
 // ─── CardManagement ───────────────────────────────────────────────────────────
 function CardManagement({
@@ -76,49 +77,55 @@ function CardManagement({
 
       {/* Acciones */}
       <div className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 flex items-center gap-1 sm:gap-1.5">
-        <button
-          type="button"
-          onClick={() => onExpand?.(slide?.id)}
-          title="Ampliar imagen"
-          className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-black/40 hover:bg-black/60 text-white backdrop-blur-sm transition-all duration-200 cursor-pointer"
-        >
-          <Maximize2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" strokeWidth={2} />
-        </button>
+        <Permission permission="banners.ampliar_imagen">
+          <button
+            type="button"
+            onClick={() => onExpand?.(slide?.id)}
+            title="Ampliar imagen"
+            className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-black/40 hover:bg-black/60 text-white backdrop-blur-sm transition-all duration-200 cursor-pointer"
+          >
+            <Maximize2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" strokeWidth={2} />
+          </button>
+        </Permission>
 
-        <button
-          type="button"
-          onClick={() => onDelete?.(slide?.id)}
-          title="Eliminar imagen"
-          className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-black/40 hover:bg-red-500/80 text-white backdrop-blur-sm transition-all duration-200 cursor-pointer"
-        >
-          <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" strokeWidth={2} />
-        </button>
+        <Permission permission="banners.eliminar">
+          <button
+            type="button"
+            onClick={() => onDelete?.(slide?.id)}
+            title="Eliminar imagen"
+            className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-black/40 hover:bg-red-500/80 text-white backdrop-blur-sm transition-all duration-200 cursor-pointer"
+          >
+            <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" strokeWidth={2} />
+          </button>
+        </Permission>
       </div>
 
       {/* Toggle activo/inactivo */}
       <div className="absolute bottom-1.5 sm:bottom-2 right-1.5 sm:right-2">
-        <button
-          type="button"
-          onClick={() => onToggle?.(slide?.id)}
-          title={isActive ? 'Desactivar imagen' : 'Activar imagen'}
-          className={`relative w-11 h-5 rounded-full transition-colors duration-300 cursor-pointer shadow-md ${
-            isActive ? 'bg-green-500' : 'bg-red-400'
-          }`}
-        >
-          <span
-            className={`absolute top-1/2 -translate-y-1/2 text-white text-[9px] font-bold transition-all duration-300 ${
-              isActive ? 'left-1.5' : 'right-1.5'
+        <Permission permission="banners.activar_desactivar">
+          <button
+            type="button"
+            onClick={() => onToggle?.(slide?.id)}
+            title={isActive ? 'Desactivar imagen' : 'Activar imagen'}
+            className={`relative w-11 h-5 rounded-full transition-colors duration-300 cursor-pointer shadow-md ${
+              isActive ? 'bg-green-500' : 'bg-red-400'
             }`}
           >
-            {isActive ? 'A' : 'I'}
-          </span>
+            <span
+              className={`absolute top-1/2 -translate-y-1/2 text-white text-[9px] font-bold transition-all duration-300 ${
+                isActive ? 'left-1.5' : 'right-1.5'
+              }`}
+            >
+              {isActive ? 'A' : 'I'}
+            </span>
 
-          <span
-            className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
-              isActive ? 'left-6.5' : 'left-0.5'
-            }`}
-          />
-        </button>
+            <span
+              className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
+                isActive ? 'left-6.5' : 'left-0.5'
+              }`}
+            />
+          </button>
+        </Permission>
       </div>
 
       {/* Overlay inactivo */}

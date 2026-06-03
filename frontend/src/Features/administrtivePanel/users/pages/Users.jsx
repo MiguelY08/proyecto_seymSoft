@@ -9,6 +9,7 @@ import PaginationAdmin from '../../../shared/PaginationAdmin';
 import { UserService } from '../services/userService';
 import { useAlert }    from '../../../shared/alerts/useAlert';
 import { downloadUsersExcel } from '../helpers/excelHelper';
+import Permission from "../../configuration/roles/components/Permission";
 
 // Número de registros por página (debe coincidir con el limit que acepta la API)
 const RECORDS_PER_PAGE = 13;
@@ -200,15 +201,18 @@ function Users() {
       <UserMetricsCards metrics={metrics} />
 
       {/* Tabla de usuarios */}
-      <div className="bg-white rounded-xl shadow-md">
-        <UsersTable
-          data={users}
-          onToggle={handleToggle}
-          onDelete={handleDelete}
-          search={search}
-          totalData={pagination.total} // Total real de usuarios (sin paginar)
-        />
-      </div>
+
+      <Permission permission="usuarios.ver">
+        <div className="bg-white rounded-xl shadow-md">
+          <UsersTable
+            data={users}
+            onToggle={handleToggle}
+            onDelete={handleDelete}
+            search={search}
+            totalData={pagination.total} // Total real de usuarios (sin paginar)
+          />
+        </div>
+      </Permission>
 
       {/* Paginación - solo si hay más de una página */}
       {pagination.totalPages > 1 && (

@@ -1,3 +1,5 @@
+
+
 import React from "react";
 import { Info, SquarePen, Trash2 } from "lucide-react";
 
@@ -58,7 +60,10 @@ export default function RolesTable({
   roles = [],
   onEdit,
   onView,
+
+  // ✅ NUEVO
   reloadRoles,
+
   search = ""
 
 }) {
@@ -111,9 +116,14 @@ export default function RolesTable({
 
           "warning",
 
-          `${action === "desactivar"
-            ? "Desactivar"
-            : "Activar"
+          `${
+
+            action === "desactivar"
+
+              ? "Desactivar"
+
+              : "Activar"
+
           } rol`,
 
           `¿Deseas ${action} el rol "${role.name}"?`
@@ -124,10 +134,16 @@ export default function RolesTable({
         return;
       }
 
+      // ✅ FIX REAL
       await toggleRoleStatus(
-        role.id
+
+        role.id,
+
+        Boolean(role.active)
+
       );
 
+      // ✅ RECARGAR TABLA
       await reloadRoles();
 
       showSuccess(
@@ -135,9 +151,13 @@ export default function RolesTable({
         "Estado actualizado",
 
         `El rol fue ${
+
           action === "desactivar"
+
             ? "desactivado"
+
             : "activado"
+
         } correctamente`
 
       );
@@ -147,8 +167,11 @@ export default function RolesTable({
       console.error(error);
 
       showError(
+
         "Error",
+
         "No fue posible actualizar el estado del rol"
+
       );
 
     }
@@ -208,11 +231,15 @@ export default function RolesTable({
         role.id
       );
 
+      // ✅ RECARGAR
       await reloadRoles();
 
       showSuccess(
+
         "Rol eliminado",
+
         "El rol fue eliminado correctamente"
+
       );
 
     } catch (error) {
@@ -471,3 +498,4 @@ export default function RolesTable({
   );
 
 }
+
