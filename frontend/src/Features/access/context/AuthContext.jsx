@@ -258,6 +258,9 @@ const logout = async () => {
     logout,
     updateProfile,
     setUser,
+    setRole,
+    setPermissions,
+    setIsAuthenticated
   };
 
   return (

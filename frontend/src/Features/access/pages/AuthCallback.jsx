@@ -8,7 +8,7 @@ import { useAlert } from "../../shared/alerts/useAlert.js";
 const AuthCallback = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { setUser } = useAuth();
+  const { setUser, setRole, setPermissions, setIsAuthenticated, } = useAuth();
   const { showSuccess, showError } = useAlert();
 
   useEffect(() => {
@@ -29,6 +29,7 @@ const AuthCallback = () => {
         );
 
         const profileResult = await getProfile();
+        console.log( "PROFILE RESULT:", profileResult );
 
         if (!profileResult.success) {
           throw new Error("No se pudo obtener perfil");
@@ -43,12 +44,32 @@ const AuthCallback = () => {
         });
 
         setUser(profileResult.user);
+        setRole( profileResult.role || null );
+        setPermissions( profileResult.permissions || [] ); 
+        setIsAuthenticated(true);
 
         showSuccess("Bienvenido", profileResult.user.fullName);
 
-        //  Redirigir según rol (igual que el login normal)
-        const redirectTo = profileResult.role ? "/admin" : "/";
-        navigate(redirectTo);
+          // ✅ Redirigir según rol
+          const hasRole =
+
+            profileResult.role
+            &&
+            (
+              profileResult.role.idRole
+              ||
+              profileResult.role.id_role
+            );
+
+          const redirectTo =
+
+            hasRole
+
+              ? "/admin"
+
+              : "/";
+
+          navigate(redirectTo);
 
       } catch (error) {
         console.error("Error en AuthCallback:", error);
