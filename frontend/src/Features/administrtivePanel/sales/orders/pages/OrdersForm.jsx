@@ -72,14 +72,21 @@ function OrdersForm() {
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        const clientsList = clientsService.getAll();
-        setClientes(clientsList);
+        const clientsResponse = await clientsService.getAll();
+        setClientes(clientsResponse.data || clientsResponse || []);
 
-        const productsList = ProductsService.list();
-        setProductosCatalogo(productsList);
+        const productsList = await ProductsService.list();
+        setProductosCatalogo(productsList.map(product => ({
+          ...product,
+          id: product.id,
+          nombre: product.nombre || product.name || 'Producto sin nombre',
+          codBarras: product.codBarras || product.barcode || product.mainBarcode || '',
+          precioDetalle: product.precioDetalle ?? product.retailPrice ?? product.price ?? 0,
+          stock: product.stock ?? product.quantity ?? 0,
+        })));
 
         if (isEditMode) {
-          const order = OrdersService.findById(Number(id));
+          const order = await OrdersService.findById(Number(id));
           if (!order) {
             showError('Pedido no encontrado', `El pedido #${id} no existe.`);
             navigate('/admin/sales/orders');
@@ -87,9 +94,9 @@ function OrdersForm() {
           }
 
           // Cargar pagos existentes
-          const existingPayments = PaymentService.getByPedidoId(order.id);
+          const existingPayments = await PaymentService.getByPedidoId(order.id);
           setPagos(existingPayments);
-          setTotalPagado(PaymentService.getTotalPagado(order.id));
+          setTotalPagado(await PaymentService.getTotalPagado(order.id));
 
           const productosNormalizados = (order.productos || []).map(p => ({
             ...p,
@@ -195,6 +202,7 @@ function OrdersForm() {
     const nuevoProducto = {
       id: producto.id,
       nombre: producto.nombre,
+      codBarras: producto.codBarras || producto.barcode || '',
       cantidad: 1,
       precioUnitario: precio,
       subtotal: precio,
@@ -232,8 +240,8 @@ function OrdersForm() {
     try {
       if (isEditMode) {
         await PaymentService.add(Number(id), paymentData);
-        setPagos(PaymentService.getByPedidoId(Number(id)));
-        setTotalPagado(PaymentService.getTotalPagado(Number(id)));
+        setPagos(await PaymentService.getByPedidoId(Number(id)));
+        setTotalPagado(await PaymentService.getTotalPagado(Number(id)));
         showSuccess('Abono registrado', `Se ha agregado un abono de $${paymentData.monto.toLocaleString()}.`);
       } else {
         const tempPago = {
@@ -287,6 +295,7 @@ function OrdersForm() {
       const payload = {
         clienteId: formData.clienteId,
         asesorId: formData.asesorId,
+        tipoEntrega: formData.tipoEntrega,
         direccionEntrega: formData.direccionEntrega.trim(),
         productos: formData.productos,
         estadoLogistico: formData.estadoLogistico,
@@ -296,11 +305,11 @@ function OrdersForm() {
       let orderResult;
       if (isEditMode) {
         const orderId = Number(id);
-        const currentOrder = OrdersService.findById(orderId);
+        const currentOrder = await OrdersService.findById(orderId);
 
         // Actualizar productos si cambiaron
         if (JSON.stringify(currentOrder.productos) !== JSON.stringify(payload.productos)) {
-          const updateResult = OrdersService.updateProductos(orderId, payload.productos);
+          const updateResult = await OrdersService.updateProductos(orderId, payload.productos);
           orderResult = updateResult.order;
           const { excedente, oldTotal, newTotal } = updateResult;
 
@@ -351,18 +360,19 @@ function OrdersForm() {
         }
 
         // Actualizar campos generales
-        OrdersService.update({
+        await OrdersService.update({
           id: orderId,
           clienteId: payload.clienteId,
+          tipoEntrega: payload.tipoEntrega,
           direccionEntrega: payload.direccionEntrega,
           estadoLogistico: payload.estadoLogistico,
           motivoCancelacion: formData.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO ? formData.motivoCancelacion : null,
         });
 
-        orderResult = OrdersService.findById(orderId);
+        orderResult = await OrdersService.findById(orderId);
         showSuccess('Pedido actualizado', `Pedido #${orderResult.numeroPedido} actualizado correctamente.`);
       } else {
-        orderResult = OrdersService.create(payload);
+        orderResult = await OrdersService.create(payload);
 
         for (const pago of pagos) {
           await PaymentService.add(orderResult.id, {

@@ -42,7 +42,7 @@ function CancelOrder({
   onConfirm,
   contexto = 'pedido' // 'pedido' o 'venta'
 }) {
-  const { showSuccess } = useAlert();
+  const { showSuccess, showError } = useAlert();
   const { visible, handleClose } = useModalAnimation(
     contexto === 'pedido' ? '/admin/sales/orders' : '/admin/sales'
   );
@@ -119,7 +119,7 @@ function CancelOrder({
     try {
       if (contexto === 'pedido') {
         // Llamar al callback onConfirm proporcionado (que a su vez llama a OrdersService)
-        onConfirm(motivo.trim());
+        await onConfirm(motivo.trim());
       } else {
         // Anular venta a través de SalesServices
         await SalesServices.anular(sale.id, motivo.trim());
