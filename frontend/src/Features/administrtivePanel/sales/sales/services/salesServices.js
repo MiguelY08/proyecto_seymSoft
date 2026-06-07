@@ -179,8 +179,34 @@ const mapSalesResponse = (payload) => ({
 const getCreatedSaleFromPayload = (payload) =>
   payload?.data?.sale ?? payload?.data ?? null;
 
-const getErrorMessage = (error, fallback) =>
-  error?.response?.data?.message || error?.message || fallback;
+const formatErrorDetail = (detail) => {
+  if (!detail) return '';
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => item?.message ?? item?.msg ?? item)
+      .filter(Boolean)
+      .join(' ');
+  }
+  if (typeof detail === 'object') {
+    return Object.values(detail)
+      .flat()
+      .map((item) => item?.message ?? item?.msg ?? item)
+      .filter(Boolean)
+      .join(' ');
+  }
+  return '';
+};
+
+const getErrorMessage = (error, fallback) => {
+  const responseData = error?.response?.data;
+  const detail =
+    formatErrorDetail(responseData?.errors) ||
+    formatErrorDetail(responseData?.details) ||
+    formatErrorDetail(responseData?.data);
+
+  return [responseData?.message, detail].filter(Boolean).join(' ') || error?.message || fallback;
+};
 
 export const SalesServices = {
   async getMetrics() {
@@ -254,6 +280,7 @@ export const SalesServices = {
       return sale ? mapSaleFromApi(sale) : null;
     } catch (error) {
       console.error(`Error en create(${vendingType}):`, error);
+      console.error('Detalle create vending:', error?.response?.data);
       throw new Error(getErrorMessage(error, 'No se pudo crear la venta.'));
     }
   },

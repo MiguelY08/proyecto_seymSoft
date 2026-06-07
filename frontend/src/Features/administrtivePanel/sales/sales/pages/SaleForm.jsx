@@ -45,19 +45,41 @@ const getCreditDueDate = () => {
 
 const normalizeClientList = (response) => response?.data ?? response ?? [];
 
-const normalizeProduct = (product) => ({
-  ...product,
-  id: product.id ?? product.idProduct,
-  nombre: product.nombre ?? product.name,
-  precioDetalle: product.precioDetalle ?? product.retailPrice ?? 0,
-  barcode:
+const getProductStock = (product) => {
+  const barcodeStock = product.barcodes?.reduce(
+    (sum, item) => sum + Number(item.stock ?? 0),
+    0
+  );
+
+  return Number(
+    product.stock ??
+    product.totalStock ??
+    product.availableStock ??
+    barcodeStock ??
+    0
+  );
+};
+
+const normalizeProduct = (product) => {
+  const barcode =
     product.barcode ??
     product.codBarras ??
     product.barcodes?.[0]?.barcode ??
     product.productBarcodes?.[0]?.barcode ??
     product.reference ??
-    '',
-});
+    '';
+
+  return {
+    ...product,
+    id: product.id ?? product.idProduct,
+    nombre: product.nombre ?? product.name,
+    precioDetalle: Number(product.precioDetalle ?? product.retailPrice ?? 0),
+    stock: getProductStock(product),
+    barcode,
+    codBarras: barcode,
+    categorias: product.categorias ?? product.categories?.map((category) => category.name) ?? [],
+  };
+};
 
 function SaleForm() {
   const navigate = useNavigate();
@@ -179,6 +201,11 @@ function SaleForm() {
     const producto = productosCatalogo.find(p => p.id === Number(productoId));
     if (!producto) return;
 
+    if (producto.stock <= 0) {
+      showWarning('Sin stock', 'Este producto no tiene unidades disponibles.');
+      return;
+    }
+
     const existe = formData.productos.find(p => p.id === producto.id);
     if (existe) {
       showWarning('Producto ya agregado', 'Puedes editar la cantidad en la tabla.');
@@ -193,6 +220,7 @@ function SaleForm() {
       cantidad: 1,
       precioUnitario: precio,
       subtotal: precio,
+      stock: producto.stock,
     };
 
     setFormData(prev => ({
@@ -203,11 +231,19 @@ function SaleForm() {
 
   const handleUpdateCantidad = (productoId, nuevaCantidad) => {
     if (nuevaCantidad < 1) return;
+    const producto = formData.productos.find(p => p.id === productoId);
+    const stockDisponible = producto?.stock ?? nuevaCantidad;
+    const cantidad = Math.min(nuevaCantidad, stockDisponible);
+
+    if (cantidad < nuevaCantidad) {
+      showWarning('Stock insuficiente', `Solo hay ${stockDisponible} unidades disponibles.`);
+    }
+
     setFormData(prev => ({
       ...prev,
       productos: prev.productos.map(p =>
         p.id === productoId
-          ? { ...p, cantidad: nuevaCantidad, subtotal: nuevaCantidad * (p.precioUnitario || 0) }
+          ? { ...p, cantidad, subtotal: cantidad * (p.precioUnitario || 0) }
           : p
       ),
     }));
@@ -294,7 +330,7 @@ function SaleForm() {
       );
 
       const payload = {
-        idUser: getSessionUserId(user),
+        idEmployee: getSessionUserId(user),
         idSaleStatus: 1,
         order: {
           idClient: formData.clienteId,
