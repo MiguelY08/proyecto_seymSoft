@@ -365,7 +365,7 @@ function LeftSectionForm({
         {user && (
           <div className="mt-2 p-3 bg-gray-100 rounded-lg border border-gray-200">
             <p className="text-sm text-gray-600">
-              <span className="font-medium">Asesor asignado:</span> {user.name}
+              <span className="font-medium">Asesor asignado:</span> {user.fullName || user.name || user.email}
             </p>
           </div>
         )}

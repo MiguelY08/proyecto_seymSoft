@@ -124,8 +124,21 @@ export const validateForm = (form, items) => {
 };
 
 // ─── Exportar ventas a Excel (actualizado para usar SalesServices) ────────────
-export const downloadSalesExcel = () => {
-  const sales = SalesServices.list();
+const getSalesForExcel = async () => {
+  const firstPage = await SalesServices.getAll({ page: 1, limit: 100 });
+  const allSales = [...(firstPage.sales ?? [])];
+  const totalPages = firstPage.pagination?.totalPages ?? 1;
+
+  for (let page = 2; page <= totalPages; page += 1) {
+    const response = await SalesServices.getAll({ page, limit: 100 });
+    allSales.push(...(response.sales ?? []));
+  }
+
+  return allSales;
+};
+
+export const downloadSalesExcel = async (salesToExport) => {
+  const sales = salesToExport ?? await getSalesForExcel();
   if (sales.length === 0) return false;
 
   const formatCurrency = (value) => {
@@ -220,8 +233,8 @@ export const downloadSalesExcel = () => {
     const units = (s.items || []).reduce((acc, item) => acc + (item.cantidad || 0), 0);
     return sum + units;
   }, 0);
-  const pagadaSales = sales.filter((s) => s.estado === 'Pagada').length;
-  const canceladaSales = sales.filter((s) => s.estado === 'Cancelada').length;
+  const approvedSales = sales.filter((s) => s.estado === 'Aprobada').length;
+  const annulledSales = sales.filter((s) => s.estado === 'Anulada').length;
   const avgPerSale = totalSales > 0 ? totalValue / totalSales : 0;
 
   const statsData = [
@@ -231,8 +244,8 @@ export const downloadSalesExcel = () => {
     ['Total Unidades Vendidas', totalUnits],
     ['Promedio por Venta', formatCurrency(avgPerSale)],
     [''],
-    ['Ventas Pagadas', pagadaSales],
-    ['Ventas Canceladas', canceladaSales],
+    ['Ventas Aprobadas', approvedSales],
+    ['Ventas Anuladas', annulledSales],
     [''],
     ['Fecha de Exportación', formattedDateTime],
   ];

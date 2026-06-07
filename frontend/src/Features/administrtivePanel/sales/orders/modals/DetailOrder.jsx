@@ -86,6 +86,14 @@ function DetailOrder({
 
   useEffect(() => {
     if (isOpen && order) {
+      if (modo === 'venta') {
+        const pagosVenta = order.pagos ?? [];
+        setPagos(pagosVenta);
+        setTotalPagado(order.totalPagado ?? pagosVenta.reduce((sum, pago) => sum + (Number(pago.monto) || 0), 0));
+        setAsesorNombre(order.asesorNombre || 'N/A');
+        return;
+      }
+
       const pagosPedido = PaymentService.getByPedidoId(order.id);
       setPagos(pagosPedido);
       setTotalPagado(PaymentService.getTotalPagado(order.id));
@@ -97,7 +105,7 @@ function DetailOrder({
         setAsesorNombre('N/A');
       }
     }
-  }, [isOpen, order]);
+  }, [isOpen, order, modo]);
 
   if (!isOpen || !order) return null;
 

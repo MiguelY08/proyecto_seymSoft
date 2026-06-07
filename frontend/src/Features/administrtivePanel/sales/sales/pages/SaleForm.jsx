@@ -19,6 +19,46 @@ import PaymentsSection from '../../orders/components/PaymentsSection';
 import { generateFactura, getInitialPaymentAmounts } from '../helpers/salesHelpers';
 import { ESTADOS_LOGISTICOS, ORIGENES } from '../../orders/services/ordersService';
 
+const PAYMENT_METHOD_IDS = {
+  transferencia: 1,
+  efectivo: 2,
+  credito: 3,
+};
+
+const normalizeText = (value) =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+const getPaymentMethodId = (methodName) =>
+  PAYMENT_METHOD_IDS[normalizeText(methodName)] ?? null;
+
+const getSessionUserId = (user) =>
+  user?.idUser ?? user?.id ?? null;
+
+const getCreditDueDate = () => {
+  const date = new Date();
+  date.setMonth(date.getMonth() + 1);
+  return date.toISOString().split('T')[0];
+};
+
+const normalizeClientList = (response) => response?.data ?? response ?? [];
+
+const normalizeProduct = (product) => ({
+  ...product,
+  id: product.id ?? product.idProduct,
+  nombre: product.nombre ?? product.name,
+  precioDetalle: product.precioDetalle ?? product.retailPrice ?? 0,
+  barcode:
+    product.barcode ??
+    product.codBarras ??
+    product.barcodes?.[0]?.barcode ??
+    product.productBarcodes?.[0]?.barcode ??
+    product.reference ??
+    '',
+});
+
 function SaleForm() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -27,6 +67,8 @@ function SaleForm() {
 
   const saleToEdit = location.state?.sale ?? null;
   const isEditing = saleToEdit !== null;
+  const vendingType = location.state?.vendingType ?? 'direct';
+  const vendingTypeLabel = vendingType === 'manual' ? 'Manual' : 'Directa';
 
   // Redirigir a edición de pedido si se intenta editar una venta existente
   useEffect(() => {
@@ -52,7 +94,6 @@ function SaleForm() {
   // Datos del formulario (similar a OrdersForm)
   const [formData, setFormData] = useState({
     clienteId: location.state?.newUserId ?? '',
-    asesorId: user?.id || null,
     tipoEntrega: 'recoge',
     direccionEntrega: '',
     productos: [],
@@ -79,19 +120,21 @@ function SaleForm() {
 
   // ─── Carga inicial de catálogos ──────────────────────────────────────────
   useEffect(() => {
-    const clients = clientsService.getAll();
-    setClientes(clients);
+    const loadCatalogs = async () => {
+      try {
+        const clients = await clientsService.getAll();
+        setClientes(normalizeClientList(clients));
 
-    const products = ProductsService.list();
-    setProductosCatalogo(products);
-  }, []);
+        const products = await ProductsService.list();
+        setProductosCatalogo((products ?? []).map(normalizeProduct));
+      } catch (error) {
+        console.error(error);
+        showError('Error', 'No se pudieron cargar clientes o productos.');
+      }
+    };
 
-  // Actualizar asesorId desde contexto
-  useEffect(() => {
-    if (user) {
-      setFormData(prev => ({ ...prev, asesorId: user.id }));
-    }
-  }, [user]);
+    loadCatalogs();
+  }, [showError]);
 
   // ─── Manejadores para LeftSectionForm ─────────────────────────────────────
   const handleClienteChange = (e) => {
@@ -146,6 +189,7 @@ function SaleForm() {
     const nuevoProducto = {
       id: producto.id,
       nombre: producto.nombre,
+      barcode: producto.barcode,
       cantidad: 1,
       precioUnitario: precio,
       subtotal: precio,
@@ -204,7 +248,7 @@ function SaleForm() {
     if (formData.clienteId === undefined || formData.clienteId === null || formData.clienteId === '') {
       newErrors.clienteId = 'Debe seleccionar un cliente.';
     }
-    if (!formData.asesorId) newErrors.asesorId = 'No se pudo identificar al asesor.';
+    if (!getSessionUserId(user)) newErrors.idUser = 'No se pudo identificar al usuario en sesion.';
     if (!formData.direccionEntrega?.trim()) {
       newErrors.direccionEntrega = 'La dirección de entrega es obligatoria.';
     }
@@ -219,7 +263,11 @@ function SaleForm() {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      showWarning('Formulario incompleto', 'Revisa los campos marcados en rojo.');
+      if (validationErrors.idUser) {
+        showError('Sesion no valida', validationErrors.idUser);
+      } else {
+        showWarning('Formulario incompleto', 'Revisa los campos marcados en rojo.');
+      }
       return;
     }
 
@@ -231,35 +279,44 @@ function SaleForm() {
 
     setLoading(true);
     try {
-      // Preparar items en el formato esperado por SalesServices
-      const items = formData.productos.map(p => ({
-        product: {
-          id: p.id,
-          nombre: p.nombre,
-          precioDetalle: p.precioUnitario,
+      const paymentMethods = pagos.map((pago) => ({
+        idPaymentMethod: getPaymentMethodId(pago.metodoPago),
+        amount: pago.monto,
+      })).filter((payment) => payment.idPaymentMethod !== null);
+
+      if (paymentMethods.length !== pagos.length) {
+        showWarning('Metodo de pago no valido', 'Hay pagos con un metodo no reconocido.');
+        return;
+      }
+
+      const hasCreditPayment = paymentMethods.some(
+        (payment) => payment.idPaymentMethod === PAYMENT_METHOD_IDS.credito
+      );
+
+      const payload = {
+        idUser: getSessionUserId(user),
+        idSaleStatus: 1,
+        order: {
+          idClient: formData.clienteId,
+          deliveryType: formData.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Recoge',
+          deliveryAddress: formData.direccionEntrega,
+          items: formData.productos.map((producto) => ({
+            idProduct: producto.id,
+            barcode: producto.barcode,
+            quantity: producto.cantidad,
+          })),
         },
-        cantidad: p.cantidad,
-        descripcion: '',
-      }));
-
-      // Preparar objeto form (similar a SaleDetailsForm)
-      const form = {
-        clienteId: formData.clienteId,
-        vendedorId: formData.asesorId,
-        metodoPago: [...new Set(pagos.map(p => p.metodoPago))],
-        entrega: formData.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Cliente lo recoge',
-        direccion: formData.direccionEntrega,
-        estado: formData.estadoLogistico === ESTADOS_LOGISTICOS.LISTO ? 'Pagada' : 'Pendiente', // para referencia
+        paymentMethods,
       };
 
-      // Convertir paymentAmounts al formato esperado
-      const paymentAmountsMapped = {
-        Efectivo: paymentAmounts['Efectivo'] || 0,
-        Crédito: paymentAmounts['Crédito'] || 0,
-        Transferencia: paymentAmounts['Transferencia'] || 0,
-      };
+      if (hasCreditPayment) {
+        payload.credit = {
+          dueDate: getCreditDueDate(),
+          idCreditStatus: 1,
+        };
+      }
 
-      await SalesServices.create(form, items, facturaNo, paymentAmountsMapped);
+      await SalesServices.create(vendingType, payload);
 
       showSuccess('Venta creada', 'La venta ha sido registrada exitosamente.');
       navigate('/admin/sales');
@@ -296,7 +353,7 @@ function SaleForm() {
             <ChevronLeft className="w-5 h-5 text-gray-600" />
           </button>
           <h1 className="text-2xl font-bold text-gray-900">
-            Nueva Venta (Factura No. {facturaNo})
+            Nueva Venta {vendingTypeLabel} (Factura No. {facturaNo})
           </h1>
         </div>
         <div className="flex gap-3">

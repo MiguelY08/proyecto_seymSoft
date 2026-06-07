@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import { useModalAnimation } from '../../../../shared/useModalAnimation';
-import OrdersService, { ESTADOS_LOGISTICOS } from '../services/ordersService';
 import { SalesServices } from '../../sales/services/salesServices';
 
 const MOTIVO_MAX = 500;
@@ -38,11 +37,10 @@ function DetailRow({ icon: Icon, label, value }) {
 function CancelOrder({ 
   order,        // para pedidos
   sale,         // para ventas
-  onClose, 
   onConfirm,
   contexto = 'pedido' // 'pedido' o 'venta'
 }) {
-  const { showSuccess } = useAlert();
+  const { showSuccess, showError } = useAlert();
   const { visible, handleClose } = useModalAnimation(
     contexto === 'pedido' ? '/admin/sales/orders' : '/admin/sales'
   );
@@ -56,7 +54,6 @@ function CancelOrder({
 
   // Determinar la entidad según el contexto
   const entidad = contexto === 'pedido' ? order : sale;
-  const id = entidad?.id;
   const numero = contexto === 'pedido' 
     ? (order?.numeroPedido || order?.id)
     : (sale?.factura || sale?.id);
@@ -84,17 +81,21 @@ function CancelOrder({
     : sale?.direccion;
   const items = contexto === 'pedido'
     ? (order?.productos ?? [])
-    : (sale?.items?.map(item => ({
-        id: item.product.id,
-        nombre: item.product.nombre,
-        cantidad: item.cantidad,
-        precioUnitario: item.product.precioDetalle,
+    : (sale?.items?.map((item, index) => ({
+        id: item.product?.id ?? item.id ?? index,
+        nombre: item.product?.nombre ?? item.nombre ?? 'Producto sin nombre',
+        cantidad: Number(item.cantidad ?? item.quantity ?? 0),
+        precioUnitario: Number(item.product?.precioDetalle ?? item.precioUnitario ?? 0),
       })) ?? []);
 
   // Calcular totales
   const subtotal = useMemo(() => items.reduce((acc, i) => acc + (i.precioUnitario * i.cantidad), 0), [items]);
-  const iva = Math.round(subtotal * 0.19);
-  const total = subtotal + iva;
+  const totalVenta = Number(sale?.totalNumerico ?? 0);
+  const totalPedido = subtotal + Math.round(subtotal * 0.19);
+  const total = contexto === 'venta' && totalVenta > 0 ? totalVenta : totalPedido;
+  const iva = contexto === 'venta'
+    ? Math.max(total - subtotal, 0)
+    : Math.round(subtotal * 0.19);
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('es-CO', {
@@ -118,8 +119,8 @@ function CancelOrder({
 
     try {
       if (contexto === 'pedido') {
-        // Llamar al callback onConfirm proporcionado (que a su vez llama a OrdersService)
-        onConfirm(motivo.trim());
+        // Delegar la cancelacion al flujo que abrio el modal.
+        await onConfirm?.(motivo.trim());
       } else {
         // Anular venta a través de SalesServices
         await SalesServices.anular(sale.id, motivo.trim());
