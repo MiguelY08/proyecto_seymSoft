@@ -85,27 +85,22 @@ function DetailOrder({
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && order) {
-      if (modo === 'venta') {
-        const pagosVenta = order.pagos ?? [];
-        setPagos(pagosVenta);
-        setTotalPagado(order.totalPagado ?? pagosVenta.reduce((sum, pago) => sum + (Number(pago.monto) || 0), 0));
-        setAsesorNombre(order.asesorNombre || 'N/A');
-        return;
-      }
-
-      const pagosPedido = PaymentService.getByPedidoId(order.id);
+    const loadPayments = async () => {
+      if (!isOpen || !order) return;
+      const pagosPedido = await PaymentService.getByPedidoId(order.id);
       setPagos(pagosPedido);
-      setTotalPagado(PaymentService.getTotalPagado(order.id));
+      setTotalPagado(await PaymentService.getTotalPagado(order.id));
 
       if (order.asesorId) {
-        const asesor = UserService.findById(order.asesorId);
+        const asesor = await UserService.findById(order.asesorId);
         setAsesorNombre(asesor ? asesor.name : `ID: ${order.asesorId}`);
       } else {
         setAsesorNombre('N/A');
       }
-    }
-  }, [isOpen, order, modo]);
+    };
+
+    loadPayments();
+  }, [isOpen, order]);
 
   if (!isOpen || !order) return null;
 

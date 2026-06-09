@@ -231,7 +231,7 @@ function RightSectionForm({
             <span className="font-medium text-gray-800">${subtotal.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-sm mb-1">
-            <span className="text-gray-600">IVA (19%):</span>
+            <span className="text-gray-600">IVA incluido:</span>
             <span className="font-medium text-gray-800">${iva.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-gray-200">

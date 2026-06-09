@@ -119,8 +119,8 @@ function CancelOrder({
 
     try {
       if (contexto === 'pedido') {
-        // Delegar la cancelacion al flujo que abrio el modal.
-        await onConfirm?.(motivo.trim());
+        // Llamar al callback onConfirm proporcionado (que a su vez llama a OrdersService)
+        await onConfirm(motivo.trim());
       } else {
         // Anular venta a través de SalesServices
         await SalesServices.anular(sale.id, motivo.trim());

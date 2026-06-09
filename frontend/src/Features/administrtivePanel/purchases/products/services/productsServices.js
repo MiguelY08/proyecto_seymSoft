@@ -1,15 +1,9 @@
-import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:3000/api/products';
-
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-});
+import apiClient from '../../../../../setting/apiClient';
 
 export const ProductsService = {
   async list(filters = {}) {
     try {
-      const response = await apiClient.get('/', { params: filters });
+      const response = await apiClient.get('/products', { params: filters });
       return response.data.data || [];
     } catch (error) {
       console.error('Error al listar productos:', error.response?.data || error.message);
@@ -19,7 +13,7 @@ export const ProductsService = {
 
   async findById(id) {
     try {
-      const response = await apiClient.get(`/${id}`);
+      const response = await apiClient.get(`/products/${id}`);
       return response.data.data || null;
     } catch (error) {
       console.error('Error al obtener producto:', error.response?.data || error.message);
@@ -30,7 +24,7 @@ export const ProductsService = {
   async create(data) {
     try {
       if (data instanceof FormData) {
-        const response = await apiClient.post('/', data, {
+        const response = await apiClient.post('/products', data, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
         return response.data.data || null;
@@ -73,7 +67,7 @@ export const ProductsService = {
         });
       }
 
-      const response = await apiClient.post('/', formData, {
+      const response = await apiClient.post('/products', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
@@ -95,26 +89,35 @@ export const ProductsService = {
       if (data.precioColegas !== undefined) formData.append('partnerPrice', Number(data.precioColegas));
       if (data.precioPacas !== undefined) formData.append('bulkPrice', Number(data.precioPacas));
       if (data.ivaPercentage !== undefined) formData.append('ivaPercentage', data.ivaPercentage);
+
       if (data.retailDiscountPct !== undefined) {
         formData.append('retailDiscountPct', data.retailDiscountPct);
       }
+
       if (data.wholesaleDiscountPct !== undefined) {
         formData.append('wholesaleDiscountPct', data.wholesaleDiscountPct);
       }
+
       if (data.partnerDiscountPct !== undefined) {
         formData.append('partnerDiscountPct', data.partnerDiscountPct);
       }
+
       if (data.bulkDiscountPct !== undefined) {
         formData.append('bulkDiscountPct', data.bulkDiscountPct);
       }
+
       if (data.idUnitMeasure !== undefined) formData.append('idUnitMeasure', data.idUnitMeasure);
+
       if (data.idCategorie !== undefined || data.id_category !== undefined) {
         formData.append('idCategorie', data.id_category || data.idCategorie);
       }
+
       if (data.descripcion !== undefined) formData.append('description', data.descripcion);
+
       if (data.cantidadXPaca !== undefined) {
         formData.append('quantityPerPack', Number(data.cantidadXPaca));
       }
+
       if (data.activo !== undefined) {
         formData.append('idStatus', data.activo ? 1 : 2);
       }
@@ -157,7 +160,7 @@ export const ProductsService = {
         });
       }
 
-      const response = await apiClient.put(`/${id}`, formData, {
+      const response = await apiClient.put(`/products/${id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
@@ -170,7 +173,7 @@ export const ProductsService = {
 
   async delete(id) {
     try {
-      const response = await apiClient.delete(`/${id}`);
+      const response = await apiClient.delete(`/products/${id}`);
       return response.data.success || false;
     } catch (error) {
       console.error('Error al eliminar producto:', error.response?.data || error.message);
@@ -180,7 +183,7 @@ export const ProductsService = {
 
   async toggleStatus(id) {
     try {
-      const response = await apiClient.patch(`/${id}/toggle`);
+      const response = await apiClient.patch(`/products/${id}/toggle`);
       return response.data.data || null;
     } catch (error) {
       console.error('Error al cambiar estado del producto:', error.response?.data || error.message);

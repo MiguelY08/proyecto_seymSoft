@@ -1,336 +1,233 @@
 // src/features/orders/services/ordersService.js
-// Servicio para gestión de Pedidos, Pagos y Ventas usando localStorage.
-// Refactorizado según nuevas reglas de negocio:
-// - Pedido tiene dos dimensiones de estado: logístico y de pago.
-// - Pagos parciales permitidos; la Venta se genera al completar el pago.
-// - Cliente y asesor referenciados por ID.
-// - Origen del pedido: 'manual' (asesor) o 'web'.
-// - Edición de productos con validación de estados y manejo de excedentes.
+// Servicio de pedidos conectado al API mediante apiClient.
 
-import ProductsService from '../../../purchases/products/services/productsServices';
+import apiClient from '../../../../../setting/apiClient';
 
-// ----------------------------------------------------------------------
-// Tipos de datos (JSDoc)
-// ----------------------------------------------------------------------
+const IVA_RATE = 0.19;
 
-/**
- * @typedef {Object} OrderProduct
- * @property {number} id - ID del producto
- * @property {string} nombre - Nombre descriptivo
- * @property {number} cantidad - Cantidad solicitada
- * @property {number} precioUnitario - Precio unitario al momento del pedido
- * @property {number} subtotal - cantidad * precioUnitario
- */
+export const CAJA_CLIENTE_ID = 0;
 
-/**
- * @typedef {Object} Order
- * @property {number} id - Identificador único del pedido
- * @property {string} numeroPedido - Número legible (generalmente igual al id)
- * @property {number} clienteId - ID del cliente (usuario con es_cliente=true)
- * @property {number} asesorId - ID del usuario que registró el pedido
- * @property {string} fechaPedido - Fecha de creación (ISO 8601)
- * @property {string} direccionEntrega - Dirección de entrega
- * @property {OrderProduct[]} productos - Líneas del pedido
- * @property {number} subtotal - Suma de subtotales de productos
- * @property {number} iva - IVA calculado (19%)
- * @property {number} total - subtotal + iva
- * @property {'en proceso'|'listo'|'cancelado'} estadoLogistico - Estado de preparación
- * @property {'pendiente'|'pagado'} pagoEstado - Estado financiero
- * @property {'manual'|'web'} origen - Cómo se generó el pedido
- * @property {string|null} motivoCancelacion - Razón de cancelación
- */
-
-/**
- * @typedef {Object} Payment
- * @property {number} id - Identificador único del pago
- * @property {number} pedidoId - ID del pedido asociado
- * @property {string} fechaPago - Fecha del pago (ISO 8601)
- * @property {'Efectivo'|'Transferencia'|'Crédito'} metodoPago - Método usado
- * @property {number} monto - Monto abonado
- * @property {string|null} comprobante - Referencia opcional
- */
-
-/**
- * @typedef {Object} Sale
- * @property {number} id - Identificador único de la venta
- * @property {number} pedidoId - ID del pedido asociado
- * @property {string} fechaPago - Fecha en que se completó el pago (ISO 8601)
- * @property {string} metodoPago - Método(s) resumido(s)
- * @property {string|null} comprobantePago - Referencia consolidada (opcional)
- * @property {number} montoPagado - Total pagado (igual a total del pedido)
- */
-
-// ----------------------------------------------------------------------
-// Constantes
-// ----------------------------------------------------------------------
-
-const ORDERS_STORAGE_KEY    = 'pm_orders';
-const PAYMENTS_STORAGE_KEY  = 'pm_payments';
-const SALES_STORAGE_KEY     = 'pm_sales';
-const IVA_RATE = 0.19; // 19%
-
-// ID especial para el "Cliente de Caja"
-export const CAJA_CLIENTE_ID = 0; // Coincide con SYSTEM_CLIENT_ID de clientsService
-
-// Estados logísticos
 export const ESTADOS_LOGISTICOS = {
   EN_PROCESO: 'en proceso',
-  LISTO:      'listo',
-  CANCELADO:  'cancelado',
+  LISTO: 'listo',
+  CANCELADO: 'cancelado',
 };
 
-// Estados de pago
 export const ESTADOS_PAGO = {
   PENDIENTE: 'pendiente',
-  PAGADO:    'pagado',
+  PAGADO: 'pagado',
 };
 
-// Orígenes
 export const ORIGENES = {
   MANUAL: 'manual',
-  WEB:    'web',
+  WEB: 'web',
 };
 
-// Métodos de pago (incluye "Devolución" para manejo de excedentes)
 export const METODOS_PAGO = {
-  EFECTIVO:      'Efectivo',
+  EFECTIVO: 'Efectivo',
   TRANSFERENCIA: 'Transferencia',
-  CREDITO:       'Crédito',
-  DEVOLUCION:    'Devolución',
+  CREDITO: 'Crédito',
+  DEVOLUCION: 'Devolución',
 };
 
-// ----------------------------------------------------------------------
-// Helpers privados de inventario (ajustados a estadoLogistico)
-// ----------------------------------------------------------------------
-
-const _esPedidoActivo = (estadoLogistico) => estadoLogistico !== ESTADOS_LOGISTICOS.CANCELADO;
-
-const _decrementStock = (productos = []) => {
-  const allProducts = ProductsService.list();
-  const updated = allProducts.map((p) => {
-    const linea = productos.find((l) => l.id === p.id);
-    if (!linea) return p;
-    return { ...p, stock: Math.max(0, p.stock - linea.cantidad) };
-  });
-  ProductsService._save(updated);
+const unwrap = (response) => {
+  const payload = response?.data ?? response;
+  return payload?.data ?? payload?.order ?? payload?.pedido ?? payload;
 };
 
-const _restoreStock = (productos = []) => {
-  const allProducts = ProductsService.list();
-  const updated = allProducts.map((p) => {
-    const linea = productos.find((l) => l.id === p.id);
-    if (!linea) return p;
-    return { ...p, stock: p.stock + linea.cantidad };
-  });
-  ProductsService._save(updated);
+const toNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const _adjustStockDiff = (oldProductos = [], newProductos = []) => {
-  const allIds = [...new Set([...oldProductos.map(l => l.id), ...newProductos.map(l => l.id)])];
-  const allProducts = ProductsService.list();
-  const updated = allProducts.map((p) => {
-    if (!allIds.includes(p.id)) return p;
-    const cantAntes = oldProductos.find(l => l.id === p.id)?.cantidad ?? 0;
-    const cantAhora = newProductos.find(l => l.id === p.id)?.cantidad ?? 0;
-    const diff = cantAhora - cantAntes;
-    if (diff === 0) return p;
-    return { ...p, stock: diff > 0 ? Math.max(0, p.stock - diff) : p.stock + Math.abs(diff) };
-  });
-  ProductsService._save(updated);
+const normalizeEstadoLogistico = (value) => {
+  const raw = String((value?.name ?? value) || ESTADOS_LOGISTICOS.EN_PROCESO).toLowerCase();
+  if (raw.includes('cancel')) return ESTADOS_LOGISTICOS.CANCELADO;
+  if (raw.includes('list')) return ESTADOS_LOGISTICOS.LISTO;
+  return ESTADOS_LOGISTICOS.EN_PROCESO;
 };
 
-// ----------------------------------------------------------------------
-// Persistencia (Orders, Payments, Sales)
-// ----------------------------------------------------------------------
-
-const _getOrders = () => {
-  try { return JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY)) || []; }
-  catch { return []; }
+const normalizePagoEstado = (value, totalPagado = 0, total = 0) => {
+  const raw = String((value?.name ?? value) || '').toLowerCase();
+  if (raw.includes('pagad') || raw.includes('paid')) return ESTADOS_PAGO.PAGADO;
+  if (raw.includes('pend') || raw.includes('pending')) return ESTADOS_PAGO.PENDIENTE;
+  return total > 0 && totalPagado >= total ? ESTADOS_PAGO.PAGADO : ESTADOS_PAGO.PENDIENTE;
 };
 
-const _saveOrders = (orders) => {
-  localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+const normalizeTipoEntrega = (order = {}) => {
+  const deliveryType = String(order.deliveryType ?? '').toLowerCase();
+  const deliveryAddress = String(order.deliveryAddress ?? order.direccionEntrega ?? '').toLowerCase();
+  if (deliveryType.includes('recoge') || deliveryAddress.includes('cliente lo recoge')) return 'recoge';
+  return 'domicilio';
 };
 
-const _getPayments = () => {
-  try { return JSON.parse(localStorage.getItem(PAYMENTS_STORAGE_KEY)) || []; }
-  catch { return []; }
+const normalizePayment = (payment = {}, pedidoId = null) => ({
+  id: payment.id ?? payment.paymentId ?? payment.idPayment ?? Date.now(),
+  pedidoId: toNumber(payment.pedidoId ?? payment.orderId ?? payment.idOrder ?? pedidoId, pedidoId),
+  fechaPago: payment.fechaPago ?? payment.paymentDate ?? payment.createdAt ?? payment.date ?? new Date().toISOString(),
+  metodoPago: payment.metodoPago ?? payment.paymentMethod?.name ?? payment.paymentMethod ?? payment.method ?? payment.metodo ?? METODOS_PAGO.EFECTIVO,
+  monto: toNumber(payment.monto ?? payment.amount ?? payment.value),
+  comprobante: payment.comprobante ?? payment.receipt ?? payment.reference ?? payment.voucher ?? null,
+  observaciones: payment.observations ?? payment.observaciones ?? '',
+});
+
+const normalizeProduct = (product = {}) => {
+  const productData = product.product ?? product;
+  const cantidad = toNumber(product.cantidad ?? product.quantity ?? product.qty, 1);
+  const precioUnitario = toNumber(
+    product.precioUnitario ?? product.unitPrice ?? product.price ?? productData.precioDetalle ?? productData.retailPrice
+  );
+
+  return {
+    id: toNumber(product.productId ?? product.idProduct ?? productData.productId ?? productData.id ?? product.id),
+    detalleId: product.id ?? product.detailId ?? null,
+    nombre: product.nombre ?? product.productName ?? product.name ?? productData.nombre ?? productData.name ?? 'Producto sin nombre',
+    codBarras: product.codBarras ?? product.barcode ?? productData.codBarras ?? productData.barcode ?? '',
+    cantidad,
+    precioUnitario,
+    subtotal: toNumber(product.subtotal ?? product.total ?? cantidad * precioUnitario),
+    iva: toNumber(product.iva ?? product.ivaAmount ?? product.tax),
+  };
 };
 
-const _savePayments = (payments) => {
-  localStorage.setItem(PAYMENTS_STORAGE_KEY, JSON.stringify(payments));
+const getPaymentsFromOrder = (order = {}) => (
+  order.pagos ?? order.payments ?? order.orderPayments ?? []
+).map((payment) => normalizePayment(payment, order.id));
+
+const normalizeOrder = (order = {}) => {
+  const productos = (order.productos ?? order.products ?? order.items ?? order.details ?? []).map(normalizeProduct);
+  const subtotal = toNumber(
+    order.subtotal,
+    productos.reduce((sum, product) => sum + product.subtotal, 0)
+  );
+  const iva = toNumber(order.iva ?? order.tax, subtotal * IVA_RATE);
+  const total = toNumber(order.total ?? order.totalAmount, subtotal + iva);
+  const pagos = getPaymentsFromOrder(order);
+  const totalPagado = toNumber(
+    order.paidAmount ?? order.totalPagado,
+    pagos.reduce((sum, payment) => sum + payment.monto, 0)
+  );
+  const id = toNumber(order.id ?? order.orderId ?? order.idOrder);
+
+  return {
+    ...order,
+    id,
+    numeroPedido: String(order.numeroPedido ?? order.orderNumber ?? order.number ?? id),
+    clienteId: toNumber(order.clienteId ?? order.clientId ?? order.idClient ?? order.customerId),
+    asesorId: toNumber(order.asesorId ?? order.advisorId ?? order.sellerId ?? order.userId, null),
+    fechaPedido: order.fechaPedido ?? order.orderDate ?? order.createdAt ?? order.date,
+    direccionEntrega: order.direccionEntrega ?? order.deliveryAddress ?? order.address ?? '',
+    tipoEntrega: normalizeTipoEntrega(order),
+    clienteNombre: order.customer?.name ?? order.clienteNombre ?? order.customerName ?? '',
+    clienteTelefono: order.customer?.phone ?? order.clienteTelefono ?? order.customerPhone ?? '',
+    clienteEmail: order.customer?.email ?? order.clienteEmail ?? order.customerEmail ?? '',
+    clienteDireccion: order.customer?.address ?? '',
+    productos,
+    pagos,
+    subtotal,
+    iva: toNumber(order.iva ?? order.ivaAmount ?? order.tax, iva),
+    total,
+    totalPagado,
+    saldoPendiente: toNumber(order.pendingAmount, Math.max(0, total - totalPagado)),
+    tieneVenta: Boolean(order.hasSale),
+    venta: order.sale ?? null,
+    fechaLimitePago: order.paymentDeadline ?? null,
+    estadoLogistico: normalizeEstadoLogistico(order.estadoLogistico ?? order.logisticStatus ?? order.status),
+    pagoEstado: normalizePagoEstado(order.pagoEstado ?? order.paymentStatus, totalPagado, total),
+    origen: order.origen ?? order.origin ?? ORIGENES.MANUAL,
+    motivoCancelacion: order.motivoCancelacion ?? order.cancelReason ?? order.cancellationReason ?? null,
+  };
 };
 
-const _getSales = () => {
-  try { return JSON.parse(localStorage.getItem(SALES_STORAGE_KEY)) || []; }
-  catch { return []; }
+const buildOrderPayload = (data = {}) => ({
+  clienteId: data.clienteId,
+  asesorId: data.asesorId,
+  direccionEntrega: data.direccionEntrega,
+  productos: data.productos,
+  estadoLogistico: data.estadoLogistico,
+  origen: data.origen ?? ORIGENES.MANUAL,
+  motivoCancelacion: data.motivoCancelacion ?? null,
+});
+
+const buildCreateOrderPayload = (data = {}) => {
+  const isRecoge = data.tipoEntrega === 'recoge' || data.direccionEntrega === 'El cliente lo recoge';
+
+  return {
+    idClient: data.clienteId,
+    deliveryType: isRecoge ? 'Recibe' : 'Domicilio',
+    deliveryAddress: isRecoge ? null : data.direccionEntrega,
+    items: (data.productos || []).map((product) => ({
+      idProduct: product.id,
+      barcode: product.codBarras || product.barcode || '',
+      quantity: product.cantidad,
+    })),
+  };
 };
 
-const _saveSales = (sales) => {
-  localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(sales));
+const ORDER_STATUS_IDS = {
+  [ESTADOS_LOGISTICOS.EN_PROCESO]: 1,
+  [ESTADOS_LOGISTICOS.LISTO]: 2,
+  entregado: 3,
+  [ESTADOS_LOGISTICOS.CANCELADO]: 4,
 };
 
-// ----------------------------------------------------------------------
-// Servicio de Pagos
-// ----------------------------------------------------------------------
-
-export const PaymentService = {
-  list() {
-    return _getPayments();
-  },
-
-  getByPedidoId(pedidoId) {
-    return this.list().filter(p => p.pedidoId === pedidoId);
-  },
-
-  getTotalPagado(pedidoId) {
-    return this.getByPedidoId(pedidoId).reduce((sum, p) => sum + p.monto, 0);
-  },
-
-  add(pedidoId, { metodoPago, monto, comprobante = null }) {
-    const order = OrdersService.findById(pedidoId);
-    if (!order) throw new Error(`Pedido #${pedidoId} no encontrado.`);
-    if (order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) {
-      throw new Error('No se pueden agregar pagos a un pedido cancelado.');
-    }
-
-    const totalPagado = this.getTotalPagado(pedidoId);
-    const saldoPendiente = order.total - totalPagado;
-    if (monto <= 0) throw new Error('El monto debe ser mayor a cero.');
-    if (monto > saldoPendiente) {
-      throw new Error(`El monto excede el saldo pendiente ($${saldoPendiente.toLocaleString()}).`);
-    }
-
-    const payments = this.list();
-    const newId = payments.length > 0 ? Math.max(...payments.map(p => p.id)) + 1 : 1;
-
-    const newPayment = {
-      id: newId,
-      pedidoId,
-      fechaPago: new Date().toISOString(),
-      metodoPago,
-      monto,
-      comprobante,
-    };
-
-    _savePayments([...payments, newPayment]);
-
-    const nuevoTotalPagado = totalPagado + monto;
-    const nuevoPagoEstado = (nuevoTotalPagado >= order.total)
-      ? ESTADOS_PAGO.PAGADO
-      : ESTADOS_PAGO.PENDIENTE;
-
-    OrdersService.update({ id: pedidoId, pagoEstado: nuevoPagoEstado });
-
-    if (nuevoPagoEstado === ESTADOS_PAGO.PAGADO) {
-      const existingSale = SalesService.findByPedidoId(pedidoId);
-      if (!existingSale) {
-        const pagos = this.getByPedidoId(pedidoId);
-        const metodos = [...new Set(pagos.map(p => p.metodoPago))];
-        const metodoResumen = metodos.length === 1 ? metodos[0] : 'Mixto';
-        const comprobanteResumen = pagos.length === 1 ? pagos[0].comprobante : null;
-
-        SalesService.create({
-          pedidoId,
-          metodoPago: metodoResumen,
-          comprobantePago: comprobanteResumen,
-          montoPagado: order.total,
-        });
-      }
-    }
-
-    return newPayment;
-  },
-
-  /**
-   * Registra una devolución (pago negativo) asociada al pedido.
-   * Se usa cuando el excedente se devuelve en efectivo.
-   * @param {number} pedidoId
-   * @param {number} monto - Monto a devolver (positivo)
-   * @returns {Payment} Pago de devolución creado.
-   */
-  addDevolucion(pedidoId, monto) {
-    if (monto <= 0) throw new Error('El monto de devolución debe ser positivo.');
-    const order = OrdersService.findById(pedidoId);
-    if (!order) throw new Error(`Pedido #${pedidoId} no encontrado.`);
-
-    const payments = this.list();
-    const newId = payments.length > 0 ? Math.max(...payments.map(p => p.id)) + 1 : 1;
-
-    const devolucion = {
-      id: newId,
-      pedidoId,
-      fechaPago: new Date().toISOString(),
-      metodoPago: METODOS_PAGO.DEVOLUCION,
-      monto: -monto, // negativo para indicar devolución
-      comprobante: null,
-    };
-
-    _savePayments([...payments, devolucion]);
-
-    // Recalcular estado de pago (no debería cambiar si ya estaba pagado)
-    const totalPagado = this.getTotalPagado(pedidoId);
-    const nuevoPagoEstado = (totalPagado >= order.total)
-      ? ESTADOS_PAGO.PAGADO
-      : ESTADOS_PAGO.PENDIENTE;
-    OrdersService.update({ id: pedidoId, pagoEstado: nuevoPagoEstado });
-
-    return devolucion;
-  },
+const PAYMENT_METHOD_IDS = {
+  [METODOS_PAGO.TRANSFERENCIA]: 1,
+  [METODOS_PAGO.EFECTIVO]: 2,
+  [METODOS_PAGO.CREDITO]: 3,
 };
 
-// ----------------------------------------------------------------------
-// Servicio de Pedidos (actualizado)
-// ----------------------------------------------------------------------
+const buildUpdateOrderPayload = (data = {}) => {
+  const payload = {};
+  const isRecoge = data.tipoEntrega === 'recoge' || data.direccionEntrega === 'El cliente lo recoge';
+
+  if (data.clienteId !== undefined) {
+    payload.idClient = data.clienteId;
+  }
+
+  if (data.tipoEntrega !== undefined || data.direccionEntrega !== undefined) {
+    payload.deliveryType = isRecoge ? 'Recibe' : 'Domicilio';
+    payload.deliveryAddress = isRecoge ? null : data.direccionEntrega;
+  }
+
+  if (data.estadoLogistico !== undefined) {
+    payload.idOrderStatus = ORDER_STATUS_IDS[data.estadoLogistico] ?? data.estadoLogistico;
+  }
+
+  if (data.productos !== undefined) {
+    payload.items = (data.productos || []).map((product) => ({
+      idProduct: product.id,
+      barcode: product.codBarras || product.barcode || '',
+      quantity: product.cantidad,
+    }));
+  }
+
+  return payload;
+};
 
 export const OrdersService = {
-  list() {
-    return _getOrders();
+  async list(params = {}) {
+    const response = await apiClient.get('/orders', { params });
+    const payload = unwrap(response);
+    const orders = Array.isArray(payload) ? payload : payload?.orders ?? payload?.pedidos ?? [];
+    return orders.map(normalizeOrder);
   },
 
-  findById(id) {
-    return this.list().find(o => o.id === id) ?? null;
+  async findById(id) {
+    const response = await apiClient.get(`/orders/${id}`);
+    const order = unwrap(response);
+    return order ? normalizeOrder(order) : null;
   },
 
-  create(data) {
-    const orders = this.list();
-    const newId = orders.length > 0 ? Math.max(...orders.map(o => o.id)) + 1 : 1001;
-
-    const estadoLogistico = data.estadoLogistico ?? ESTADOS_LOGISTICOS.EN_PROCESO;
-    const origen = data.origen ?? ORIGENES.MANUAL;
-
-    const subtotal = data.productos.reduce((sum, p) => sum + p.subtotal, 0);
-    const iva = subtotal * IVA_RATE;
-    const total = subtotal + iva;
-
-    const newOrder = {
-      ...data,
-      id: newId,
-      numeroPedido: String(newId),
-      fechaPedido: data.fechaPedido || new Date().toISOString(),
-      estadoLogistico,
-      pagoEstado: ESTADOS_PAGO.PENDIENTE,
-      origen,
-      subtotal,
-      iva,
-      total,
-      motivoCancelacion: null,
-      direccionEntrega: data.direccionEntrega || '',
-    };
-
-    if (_esPedidoActivo(estadoLogistico)) {
-      _decrementStock(newOrder.productos);
-    }
-
-    _saveOrders([...orders, newOrder]);
-    return newOrder;
+  async create(data) {
+    const response = await apiClient.post('/orders', buildCreateOrderPayload(data));
+    return normalizeOrder(unwrap(response));
   },
 
-  update(data) {
-    const orders = this.list();
-    const updated = orders.map(o => o.id === data.id ? { ...o, ...data } : o);
-    _saveOrders(updated);
-    return updated.find(o => o.id === data.id) ?? null;
+  async update(data) {
+    const { id, ...rest } = data;
+    const response = await apiClient.put(`/orders/${id}`, buildUpdateOrderPayload(rest));
+    return normalizeOrder(unwrap(response));
   },
 
   canEditProductos(order) {
@@ -340,33 +237,21 @@ export const OrdersService = {
     return true;
   },
 
-  /**
-   * Actualiza los productos de un pedido.
-   * NO aplica automáticamente saldo a favor; devuelve información del excedente.
-   * @param {number} orderId
-   * @param {OrderProduct[]} newProductos
-   * @returns {Object} { order: Order, excedente: number, oldTotal: number, newTotal: number }
-   */
-  updateProductos(orderId, newProductos) {
-    const order = this.findById(orderId);
+  async updateProductos(orderId, newProductos) {
+    const order = await this.findById(orderId);
     if (!order) throw new Error(`Pedido #${orderId} no encontrado.`);
-
     if (!this.canEditProductos(order)) {
       throw new Error('No se pueden modificar los productos de este pedido.');
     }
 
     const oldTotal = order.total;
-    const totalPagado = PaymentService.getTotalPagado(orderId);
-
-    if (_esPedidoActivo(order.estadoLogistico)) {
-      _adjustStockDiff(order.productos, newProductos);
-    }
-
-    const subtotal = newProductos.reduce((sum, p) => sum + p.subtotal, 0);
+    const totalPagado = await PaymentService.getTotalPagado(orderId);
+    const subtotal = newProductos.reduce((sum, p) => sum + (p.subtotal || 0), 0);
     const iva = subtotal * IVA_RATE;
     const newTotal = subtotal + iva;
 
-    const updatedOrder = this.update({
+    const updatedOrder = await this.update({
+      ...order,
       id: orderId,
       productos: newProductos,
       subtotal,
@@ -374,128 +259,106 @@ export const OrdersService = {
       total: newTotal,
     });
 
-    let excedente = 0;
-    if (newTotal < oldTotal && totalPagado > newTotal) {
-      excedente = totalPagado - newTotal;
-    }
-
-    // Recalcular pagoEstado
-    if (updatedOrder) {
-      const nuevoPagoEstado = (totalPagado >= updatedOrder.total)
-        ? ESTADOS_PAGO.PAGADO
-        : ESTADOS_PAGO.PENDIENTE;
-      if (updatedOrder.pagoEstado !== nuevoPagoEstado) {
-        this.update({ id: orderId, pagoEstado: nuevoPagoEstado });
-        if (nuevoPagoEstado === ESTADOS_PAGO.PAGADO) {
-          const existingSale = SalesService.findByPedidoId(orderId);
-          if (!existingSale) {
-            SalesService.createFromPedido(orderId);
-          }
-        }
-      }
-    }
-
-    const finalOrder = this.findById(orderId);
     return {
-      order: finalOrder,
-      excedente,
+      order: updatedOrder,
+      excedente: newTotal < oldTotal && totalPagado > newTotal ? totalPagado - newTotal : 0,
       oldTotal,
       newTotal,
     };
   },
 
-  updateEstadoLogistico(orderId, newEstadoLogistico, motivoCancelacion = null) {
-    const order = this.findById(orderId);
-    if (!order) return null;
-    if (order.estadoLogistico === newEstadoLogistico) return order;
-
-    const estabaActivo = _esPedidoActivo(order.estadoLogistico);
-    const quedaActivo = _esPedidoActivo(newEstadoLogistico);
-
-    if (estabaActivo && !quedaActivo) {
-      _restoreStock(order.productos);
-    } else if (!estabaActivo && quedaActivo) {
-      _decrementStock(order.productos);
+  async updateEstadoLogistico(orderId, newEstadoLogistico, motivoCancelacion = null) {
+    if (newEstadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) {
+      return this.cancel(orderId, motivoCancelacion);
     }
 
+    const current = await this.findById(orderId);
+    if (!current) return null;
+
     return this.update({
+      ...current,
       id: orderId,
       estadoLogistico: newEstadoLogistico,
-      motivoCancelacion: newEstadoLogistico === ESTADOS_LOGISTICOS.CANCELADO ? motivoCancelacion : null,
+      motivoCancelacion: null,
     });
   },
 
-  delete(orderId) {
-    const order = this.findById(orderId);
-    if (!order) return this.list();
-
-    if (_esPedidoActivo(order.estadoLogistico)) {
-      _restoreStock(order.productos);
-    }
-
-    const payments = PaymentService.list().filter(p => p.pedidoId !== orderId);
-    _savePayments(payments);
-    const sales = SalesService.list().filter(s => s.pedidoId !== orderId);
-    _saveSales(sales);
-
-    const updatedOrders = this.list().filter(o => o.id !== orderId);
-    _saveOrders(updatedOrders);
-    return updatedOrders;
+  async cancel(orderId) {
+    const response = await apiClient.patch(`/orders/${orderId}/cancel`);
+    return normalizeOrder(unwrap(response));
   },
 };
 
-// ----------------------------------------------------------------------
-// Servicio de Ventas (sin cambios)
-// ----------------------------------------------------------------------
-
-export const SalesService = {
-  list() {
-    return _getSales();
+export const PaymentService = {
+  async list() {
+    const orders = await OrdersService.list();
+    return orders.flatMap((order) => order.pagos || []);
   },
 
-  findById(id) {
-    return this.list().find(s => s.id === id) ?? null;
+  async getByPedidoId(pedidoId) {
+    const order = await OrdersService.findById(pedidoId);
+    return order?.pagos || [];
   },
 
-  findByPedidoId(pedidoId) {
-    return this.list().find(s => s.pedidoId === pedidoId) ?? null;
+  async getTotalPagado(pedidoId) {
+    const order = await OrdersService.findById(pedidoId);
+    if (!order) return 0;
+    if (Number.isFinite(Number(order.totalPagado))) return Number(order.totalPagado);
+    return (order.pagos || []).reduce((sum, p) => sum + p.monto, 0);
   },
 
-  create(data) {
-    const sales = this.list();
-    const newId = sales.length > 0 ? Math.max(...sales.map(s => s.id)) + 1 : 1;
-
-    const newSale = {
-      id: newId,
-      ...data,
-      fechaPago: new Date().toISOString(),
-    };
-
-    _saveSales([...sales, newSale]);
-    return newSale;
+  async add(pedidoId, { metodoPago, monto, comprobante = null, observations = null }) {
+    const order = await OrdersService.findById(pedidoId);
+    const paymentNumber = (order?.pagos?.length || 0) + 1;
+    const pendingAfter = (order?.saldoPendiente ?? order?.total ?? 0) - monto;
+    const response = await apiClient.post(`/orders/${pedidoId}/payments`, {
+      idPaymentMethod: PAYMENT_METHOD_IDS[metodoPago] ?? metodoPago,
+      amount: monto,
+      reference: comprobante || `P${pedidoId}-${String(paymentNumber).padStart(3, '0')}`,
+      observations: observations || `Abono ${paymentNumber} - ${pendingAfter <= 0 ? 'Pago completo' : 'Pago parcial'}`,
+    });
+    const result = unwrap(response);
+    const updatedOrder = normalizeOrder(result?.order ?? result);
+    const payments = updatedOrder.pagos || [];
+    return payments[payments.length - 1] || null;
   },
 
-  createFromPedido(pedidoId) {
-    const order = OrdersService.findById(pedidoId);
-    if (!order) throw new Error(`Pedido #${pedidoId} no encontrado.`);
-
-    const pagos = PaymentService.getByPedidoId(pedidoId);
-    const metodos = [...new Set(pagos.map(p => p.metodoPago))];
-    const metodoResumen = metodos.length === 1 ? metodos[0] : 'Mixto';
-    const comprobanteResumen = pagos.length === 1 ? pagos[0].comprobante : null;
-
-    return this.create({
-      pedidoId,
-      metodoPago: metodoResumen,
-      comprobantePago: comprobanteResumen,
-      montoPagado: order.total,
+  async addDevolucion(pedidoId, monto) {
+    return this.add(pedidoId, {
+      metodoPago: METODOS_PAGO.DEVOLUCION,
+      monto: -Math.abs(monto),
+      comprobante: null,
     });
   },
+};
 
-  delete(saleId) {
-    const updatedSales = this.list().filter(s => s.id !== saleId);
-    _saveSales(updatedSales);
-    return updatedSales;
+export const SalesService = {
+  async list() {
+    const orders = await OrdersService.list();
+    return orders
+      .filter((order) => order.pagoEstado === ESTADOS_PAGO.PAGADO)
+      .map((order) => ({
+        id: order.id,
+        pedidoId: order.id,
+        fechaPago: order.fechaPedido,
+        metodoPago: 'Mixto',
+        comprobantePago: null,
+        montoPagado: order.total,
+      }));
+  },
+
+  async findById(id) {
+    const sales = await this.list();
+    return sales.find((sale) => sale.id === id) ?? null;
+  },
+
+  async findByPedidoId(pedidoId) {
+    const sales = await this.list();
+    return sales.find((sale) => sale.pedidoId === pedidoId) ?? null;
+  },
+
+  async createFromPedido(pedidoId) {
+    return this.findByPedidoId(pedidoId);
   },
 };
 

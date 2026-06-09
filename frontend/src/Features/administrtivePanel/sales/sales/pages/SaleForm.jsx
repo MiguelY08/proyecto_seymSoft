@@ -34,6 +34,21 @@ const normalizeText = (value) =>
 const getPaymentMethodId = (methodName) =>
   PAYMENT_METHOD_IDS[normalizeText(methodName)] ?? null;
 
+const roundMoney = (value) =>
+  Math.round((Number(value) || 0) * 100) / 100;
+
+const getIncludedIvaAmount = (totalWithIva, ivaPercentage) => {
+  const rate = Number(ivaPercentage || 0) / 100;
+  if (rate <= 0) return 0;
+
+  return roundMoney(Number(totalWithIva || 0) - (Number(totalWithIva || 0) / (1 + rate)));
+};
+
+const hasDuplicatePaymentMethods = (paymentMethods) => {
+  const ids = paymentMethods.map((payment) => payment.idPaymentMethod);
+  return new Set(ids).size !== ids.length;
+};
+
 const getSessionUserId = (user) =>
   user?.idUser ?? user?.id ?? null;
 
@@ -74,6 +89,7 @@ const normalizeProduct = (product) => {
     id: product.id ?? product.idProduct,
     nombre: product.nombre ?? product.name,
     precioDetalle: Number(product.precioDetalle ?? product.retailPrice ?? 0),
+    ivaPercentage: Number(product.ivaPercentage ?? product.iva ?? 0),
     stock: getProductStock(product),
     barcode,
     codBarras: barcode,
@@ -135,9 +151,9 @@ function SaleForm() {
   const [totalPagado, setTotalPagado] = useState(0);
 
   // Cálculo de totales
-  const subtotal = formData.productos.reduce((sum, p) => sum + (p.subtotal || 0), 0);
-  const iva = subtotal * 0.19;
-  const total = subtotal + iva;
+  const total = roundMoney(formData.productos.reduce((sum, p) => sum + (p.subtotal || 0), 0));
+  const iva = formData.productos.reduce((sum, p) => sum + (p.ivaAmount || 0), 0);
+  const subtotal = roundMoney(total - iva);
   const saldoPendiente = Math.max(0, total - totalPagado);
 
   // ─── Carga inicial de catálogos ──────────────────────────────────────────
@@ -213,6 +229,8 @@ function SaleForm() {
     }
 
     const precio = producto.precioDetalle || 0;
+    const ivaPercentage = Number(producto.ivaPercentage ?? 0);
+    const ivaAmount = getIncludedIvaAmount(precio, ivaPercentage);
     const nuevoProducto = {
       id: producto.id,
       nombre: producto.nombre,
@@ -220,6 +238,8 @@ function SaleForm() {
       cantidad: 1,
       precioUnitario: precio,
       subtotal: precio,
+      ivaPercentage,
+      ivaAmount,
       stock: producto.stock,
     };
 
@@ -243,7 +263,15 @@ function SaleForm() {
       ...prev,
       productos: prev.productos.map(p =>
         p.id === productoId
-          ? { ...p, cantidad, subtotal: cantidad * (p.precioUnitario || 0) }
+          ? {
+              ...p,
+              cantidad,
+              subtotal: cantidad * (p.precioUnitario || 0),
+              ivaAmount: getIncludedIvaAmount(
+                cantidad * (p.precioUnitario || 0),
+                p.ivaPercentage
+              ),
+            }
           : p
       ),
     }));
@@ -259,23 +287,29 @@ function SaleForm() {
   // ─── Manejador para pagos (PaymentsSection) ───────────────────────────────
   const handleAddPayment = (paymentData) => {
     const { metodoPago, monto, comprobante } = paymentData;
+
+    if (pagos.some((pago) => normalizeText(pago.metodoPago) === normalizeText(metodoPago))) {
+      showWarning('Metodo repetido', 'No se puede repetir un metodo de pago en la misma venta.');
+      return;
+    }
+
     const tempPago = {
       id: Date.now(),
       metodoPago,
-      monto,
+      monto: roundMoney(monto),
       comprobante,
       fechaPago: new Date().toISOString(),
     };
     setPagos(prev => [...prev, tempPago]);
-    setTotalPagado(prev => prev + monto);
+    setTotalPagado(prev => roundMoney(prev + roundMoney(monto)));
 
     // Actualizar paymentAmounts (para compatibilidad con validación)
     setPaymentAmounts(prev => ({
       ...prev,
-      [metodoPago]: (prev[metodoPago] || 0) + monto,
+      [metodoPago]: (prev[metodoPago] || 0) + roundMoney(monto),
     }));
 
-    showSuccess('Abono agregado', `Se ha agregado un abono de $${monto.toLocaleString()}.`);
+    showSuccess('Abono agregado', `Se ha agregado un abono de $${roundMoney(monto).toLocaleString()}.`);
   };
 
   // ─── Validación (corregida para aceptar clienteId = 0) ───────────────────
@@ -307,9 +341,13 @@ function SaleForm() {
       return;
     }
 
-    // Validar que los pagos cubran el total
-    if (totalPagado < total) {
-      showWarning('Pago incompleto', `El total pagado ($${totalPagado.toLocaleString()}) no cubre el total del pedido ($${total.toLocaleString()}).`);
+    const paymentTotal = roundMoney(totalPagado);
+
+    if (paymentTotal !== total) {
+      showWarning(
+        'Pago invalido',
+        `La suma de los metodos de pago debe ser igual al total de la venta. Total: $${total.toLocaleString()}, pagado: $${paymentTotal.toLocaleString()}.`
+      );
       return;
     }
 
@@ -317,11 +355,16 @@ function SaleForm() {
     try {
       const paymentMethods = pagos.map((pago) => ({
         idPaymentMethod: getPaymentMethodId(pago.metodoPago),
-        amount: pago.monto,
+        amount: roundMoney(pago.monto),
       })).filter((payment) => payment.idPaymentMethod !== null);
 
       if (paymentMethods.length !== pagos.length) {
         showWarning('Metodo de pago no valido', 'Hay pagos con un metodo no reconocido.');
+        return;
+      }
+
+      if (hasDuplicatePaymentMethods(paymentMethods)) {
+        showWarning('Metodo repetido', 'No se puede repetir un metodo de pago en la misma venta.');
         return;
       }
 
@@ -459,6 +502,8 @@ function SaleForm() {
           onAddPayment={handleAddPayment}
           loading={loading}
           isEditMode={false}
+          disallowDuplicateMethods
+          allowCredit
         />
       </div>
 

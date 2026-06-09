@@ -22,6 +22,8 @@ function PaymentsSection({
   onAddPayment,
   loading = false,
   isEditMode = false,
+  disallowDuplicateMethods = false,
+  allowCredit = false,
 }) {
   const [showForm, setShowForm] = useState(false);
   const [newPayment, setNewPayment] = useState({
@@ -34,6 +36,10 @@ function PaymentsSection({
   const totalPagado = pagos.reduce((sum, p) => sum + p.monto, 0);
   const saldoPendiente = Math.max(0, total - totalPagado);
   const estaCompletado = totalPagado >= total && total > 0;
+  const paymentMethodOptions = [
+    { value: METODOS_PAGO.EFECTIVO, label: 'Efectivo' },
+    { value: METODOS_PAGO.TRANSFERENCIA, label: 'Transferencia' },
+  ];
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('es-CO', {
@@ -65,6 +71,17 @@ function PaymentsSection({
     }
     if (monto > saldoPendiente) {
       setFormError(`El monto excede el saldo pendiente (${formatCurrency(saldoPendiente)}).`);
+      return;
+    }
+    if (!allowCredit && newPayment.metodoPago === METODOS_PAGO.CREDITO) {
+      setFormError('El pago por credito no esta disponible para pedidos.');
+      return;
+    }
+    if (
+      disallowDuplicateMethods &&
+      pagos.some((pago) => pago.metodoPago === newPayment.metodoPago)
+    ) {
+      setFormError('No se puede repetir un metodo de pago en la misma venta.');
       return;
     }
 
@@ -149,9 +166,14 @@ function PaymentsSection({
                     className={selectClass}
                     disabled={loading}
                   >
-                    <option value={METODOS_PAGO.EFECTIVO}>Efectivo</option>
-                    <option value={METODOS_PAGO.TRANSFERENCIA}>Transferencia</option>
+                    {paymentMethodOptions.map((method) => (
+                      <option key={method.value} value={method.value}>
+                        {method.label}
+                      </option>
+                    ))}
+                    {allowCredit && (
                     <option value={METODOS_PAGO.CREDITO}>Crédito</option>
+                    )}
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
                 </div>

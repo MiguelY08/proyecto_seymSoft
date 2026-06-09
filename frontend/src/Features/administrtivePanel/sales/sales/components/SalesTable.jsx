@@ -13,7 +13,7 @@ const estadoVariants = {
   Aprobada: "bg-green-100 text-green-700 border-green-300",
   "Esp. aprobacion": "bg-yellow-100 text-yellow-700 border-yellow-300",
   Anulada: "bg-red-100 text-red-400 border-red-200",
-  Desaprobada: "bg-red-100 text-red-600 border-red-300",
+  Denegada: "bg-red-100 text-red-600 border-red-300",
   Cancelada: "bg-orange-100 text-orange-600 border-orange-300",
 };
 

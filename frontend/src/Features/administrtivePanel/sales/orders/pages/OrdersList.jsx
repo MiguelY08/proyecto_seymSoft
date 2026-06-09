@@ -5,7 +5,7 @@ import TopBar from '../components/TopBar';
 import OrdersTable from '../components/OrdersTable';
 import DetailOrder from '../modals/DetailOrder';
 import CancelOrder from '../modals/CancelOrder';
-import OrdersService, { PaymentService, ESTADOS_LOGISTICOS } from '../services/ordersService';
+import OrdersService, { ESTADOS_LOGISTICOS } from '../services/ordersService';
 import { clientsService } from '../../clients/services/clientsService';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
@@ -125,21 +125,16 @@ function OrdersList() {
   const enrichedOrders = useMemo(() => {
     return orders.map(order => {
       const clienteInfo = clientMap[order.clienteId] || {
-        nombre: `Cliente ID ${order.clienteId}`,
-        telefono: '',
-        email: '',
+        nombre: order.clienteNombre || `Cliente ID ${order.clienteId}`,
+        telefono: order.clienteTelefono || '',
+        email: order.clienteEmail || '',
       };
-
-      // Calcular pagoEstado real desde los pagos
-      const totalPagado = PaymentService.getTotalPagado(order.id);
-      const pagoEstadoCalculado = totalPagado >= order.total ? 'pagado' : 'pendiente';
 
       return {
         ...order,
         clienteNombre: clienteInfo.nombre,
         clienteTelefono: clienteInfo.telefono,
         clienteEmail: clienteInfo.email,
-        pagoEstado: pagoEstadoCalculado,
       };
     });
   }, [orders, clientMap]);
@@ -216,8 +211,8 @@ function OrdersList() {
     navigate(`/admin/sales/orders/${order.id}`);
   };
 
-  const handleEstadoLogisticoChange = (orderId, nuevoEstado, motivo = null) => {
-    const updated = OrdersService.updateEstadoLogistico(orderId, nuevoEstado, motivo);
+  const handleEstadoLogisticoChange = async (orderId, nuevoEstado, motivo = null) => {
+    const updated = await OrdersService.updateEstadoLogistico(orderId, nuevoEstado, motivo);
     if (updated) {
       setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
       if (selectedOrder?.id === updated.id) setSelectedOrder(updated);
@@ -229,9 +224,9 @@ function OrdersList() {
     setCancelando(order);
   }, []);
 
-  const confirmCancel = useCallback((motivo) => {
+  const confirmCancel = useCallback(async (motivo) => {
     if (!cancelando) return;
-    const updated = OrdersService.updateEstadoLogistico(cancelando.id, ESTADOS_LOGISTICOS.CANCELADO, motivo);
+    const updated = await OrdersService.updateEstadoLogistico(cancelando.id, ESTADOS_LOGISTICOS.CANCELADO, motivo);
     if (updated) {
       setOrders(prev => prev.map(o => (o.id === updated.id ? updated : o)));
       if (selectedOrder?.id === updated.id) setSelectedOrder(updated);
