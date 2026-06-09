@@ -1,4 +1,4 @@
-// src/features/orders/pages/OrdersForm.jsx
+﻿// src/features/orders/pages/OrdersForm.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -9,13 +9,46 @@ import ProductsService from '../../../purchases/products/services/productsServic
 import { clientsService } from '../../clients/services/clientsService';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 
-// Contexto de autenticación
+// Contexto de autenticaciÃ³n
 import { useAuth } from '../../../../access/context/AuthContext';
 
-// Componentes de sección
+// Componentes de secciÃ³n
 import LeftSectionForm from '../components/LeftSectionForm';
 import RightSectionForm from '../components/RightSectionForm';
 import PaymentsSection from '../components/PaymentsSection';
+
+const toNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const getPrimaryBarcode = (product = {}) => (
+  product.codBarras ||
+  product.barcode ||
+  product.mainBarcode ||
+  product.barcodes?.[0]?.barcode ||
+  ''
+);
+
+const getTotalStock = (product = {}) => {
+  if (product.stock !== undefined || product.quantity !== undefined) {
+    return toNumber(product.stock ?? product.quantity);
+  }
+  if (Array.isArray(product.barcodes)) {
+    return product.barcodes.reduce((sum, barcode) => sum + toNumber(barcode.stock), 0);
+  }
+  return 0;
+};
+
+const getRetailPrice = (product = {}) => toNumber(
+  product.precioDetalle ?? product.retailPrice ?? product.price
+);
+
+const calculateLineSubtotal = (cantidad, precioUnitario) =>
+  toNumber(cantidad) * toNumber(precioUnitario);
+
+const calculateLineIva = (subtotal, ivaPercentage = 19) =>
+  subtotal * (toNumber(ivaPercentage, 19) / 100);
 
 function OrdersForm() {
   const { id } = useParams();
@@ -44,31 +77,31 @@ function OrdersForm() {
   const [clientes, setClientes] = useState([]);
   const [productosCatalogo, setProductosCatalogo] = useState([]);
 
-  // Pagos existentes (solo en edición)
+  // Pagos existentes (solo en ediciÃ³n)
   const [pagos, setPagos] = useState([]);
   const [totalPagado, setTotalPagado] = useState(0);
 
-  const subtotal = formData.productos.reduce((sum, p) => sum + (p.subtotal || 0), 0);
-  const iva = subtotal * 0.19;
-  const total = subtotal + iva;
+  const subtotal = formData.productos.reduce((sum, p) => sum + toNumber(p.subtotal), 0);
+  const iva = formData.productos.reduce((sum, p) => sum + toNumber(p.iva), 0);
+  const total = subtotal;
   const saldoPendiente = Math.max(0, total - totalPagado);
 
   // Determinar si los productos son editables
   const productosEditables = useMemo(() => {
-    if (!isEditMode) return true; // en creación siempre editables
+    if (!isEditMode) return true; // en creaciÃ³n siempre editables
     if (formData.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) return false;
     if (formData.pagoEstado === ESTADOS_PAGO.PAGADO) return false;
     return true;
   }, [isEditMode, formData.estadoLogistico, formData.pagoEstado]);
 
-  // Actualizar asesorId cuando el usuario esté disponible
+  // Actualizar asesorId cuando el usuario estÃ© disponible
   useEffect(() => {
     if (user) {
       setFormData(prev => ({ ...prev, asesorId: user.id }));
     }
   }, [user]);
 
-  // Carga inicial de datos maestros, pedido y pagos (si edición)
+  // Carga inicial de datos maestros, pedido y pagos (si ediciÃ³n)
   useEffect(() => {
     const loadInitialData = async () => {
       try {
@@ -80,9 +113,10 @@ function OrdersForm() {
           ...product,
           id: product.id,
           nombre: product.nombre || product.name || 'Producto sin nombre',
-          codBarras: product.codBarras || product.barcode || product.mainBarcode || '',
-          precioDetalle: product.precioDetalle ?? product.retailPrice ?? product.price ?? 0,
-          stock: product.stock ?? product.quantity ?? 0,
+          codBarras: getPrimaryBarcode(product),
+          precioDetalle: getRetailPrice(product),
+          stock: getTotalStock(product),
+          ivaPercentage: toNumber(product.ivaPercentage, 19),
         })));
 
         if (isEditMode) {
@@ -100,11 +134,12 @@ function OrdersForm() {
 
           const productosNormalizados = (order.productos || []).map(p => ({
             ...p,
-            precioUnitario: p.precioUnitario ?? 0,
-            subtotal: p.subtotal ?? (p.cantidad * (p.precioUnitario || 0)),
+            precioUnitario: toNumber(p.precioUnitario),
+            subtotal: toNumber(p.subtotal, calculateLineSubtotal(p.cantidad, p.precioUnitario)),
+            iva: toNumber(p.iva),
           }));
 
-          // Determinar tipoEntrega basado en la dirección guardada
+          // Determinar tipoEntrega basado en la direcciÃ³n guardada
           const direccion = order.direccionEntrega || '';
           const tipoEntrega = direccion === 'El cliente lo recoge' ? 'recoge' : 'domicilio';
 
@@ -172,8 +207,8 @@ function OrdersForm() {
       const result = await showConfirm(
         'warning',
         'Cancelar pedido',
-        'Al cancelar el pedido se liberará el stock reservado. Esta acción no se puede deshacer fácilmente.',
-        { confirmButtonText: 'Sí, cancelar', cancelButtonText: 'Mantener estado' }
+        'Al cancelar el pedido se liberarÃ¡ el stock reservado. Esta acciÃ³n no se puede deshacer fÃ¡cilmente.',
+        { confirmButtonText: 'SÃ­, cancelar', cancelButtonText: 'Mantener estado' }
       );
       if (!result?.isConfirmed) return;
     }
@@ -198,14 +233,17 @@ function OrdersForm() {
       return;
     }
 
-    const precio = producto.precioDetalle || 0;
+    const precio = getRetailPrice(producto);
+    const subtotalLinea = calculateLineSubtotal(1, precio);
     const nuevoProducto = {
       id: producto.id,
       nombre: producto.nombre,
-      codBarras: producto.codBarras || producto.barcode || '',
+      codBarras: getPrimaryBarcode(producto),
       cantidad: 1,
       precioUnitario: precio,
-      subtotal: precio,
+      ivaPercentage: toNumber(producto.ivaPercentage),
+      iva: calculateLineIva(subtotalLinea, producto.ivaPercentage),
+      subtotal: subtotalLinea,
     };
 
     setFormData(prev => ({
@@ -221,7 +259,15 @@ function OrdersForm() {
       ...prev,
       productos: prev.productos.map(p =>
         p.id === productoId
-          ? { ...p, cantidad: nuevaCantidad, subtotal: nuevaCantidad * (p.precioUnitario || 0) }
+          ? {
+              ...p,
+              cantidad: nuevaCantidad,
+              subtotal: calculateLineSubtotal(nuevaCantidad, p.precioUnitario),
+              iva: calculateLineIva(
+                calculateLineSubtotal(nuevaCantidad, p.precioUnitario),
+                p.ivaPercentage
+              ),
+            }
           : p
       ),
     }));
@@ -242,6 +288,10 @@ function OrdersForm() {
         await PaymentService.add(Number(id), paymentData);
         setPagos(await PaymentService.getByPedidoId(Number(id)));
         setTotalPagado(await PaymentService.getTotalPagado(Number(id)));
+        const updatedOrder = await OrdersService.findById(Number(id));
+        if (updatedOrder) {
+          setFormData(prev => ({ ...prev, pagoEstado: updatedOrder.pagoEstado }));
+        }
         showSuccess('Abono registrado', `Se ha agregado un abono de $${paymentData.monto.toLocaleString()}.`);
       } else {
         const tempPago = {
@@ -251,29 +301,33 @@ function OrdersForm() {
         };
         setPagos(prev => [...prev, tempPago]);
         setTotalPagado(prev => prev + paymentData.monto);
-        showSuccess('Abono agregado', 'El abono se registrará al crear el pedido.');
+        showSuccess('Abono agregado', 'El abono se registrarÃ¡ al crear el pedido.');
       }
     } catch (error) {
-      showError('Error al agregar pago', error.message);
+      showError(
+        'Error al agregar pago',
+        error.response?.data?.message || error.response?.data?.error || error.message
+      );
     }
   };
 
-  // --- Validación ---
+  // --- ValidaciÃ³n ---
   const validate = () => {
     const newErrors = {};
     if (formData.clienteId === '' || formData.clienteId === undefined) {
       newErrors.clienteId = 'Debe seleccionar un cliente.';
     }
-    if (!formData.asesorId) newErrors.asesorId = 'No se pudo identificar al asesor.';
     if (!formData.direccionEntrega?.trim()) {
-      newErrors.direccionEntrega = 'La dirección de entrega es obligatoria.';
+      newErrors.direccionEntrega = 'La direcciÃ³n de entrega es obligatoria.';
     }
     if (formData.productos.length === 0) {
       newErrors.productos = 'Debe agregar al menos un producto.';
+    } else if (formData.productos.some(product => !product.codBarras && !product.barcode)) {
+      newErrors.productos = 'Todos los productos deben tener cÃ³digo de barras.';
     }
     if (formData.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) {
       if (!formData.motivoCancelacion?.trim()) {
-        newErrors.motivoCancelacion = 'Debe indicar el motivo de cancelación.';
+        newErrors.motivoCancelacion = 'Debe indicar el motivo de cancelaciÃ³n.';
       } else if (formData.motivoCancelacion.trim().length < 10) {
         newErrors.motivoCancelacion = 'El motivo debe tener al menos 10 caracteres.';
       }
@@ -281,7 +335,7 @@ function OrdersForm() {
     return newErrors;
   };
 
-  // --- Envío del formulario ---
+  // --- EnvÃ­o del formulario ---
   const handleSubmit = async () => {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
@@ -307,69 +361,61 @@ function OrdersForm() {
         const orderId = Number(id);
         const currentOrder = await OrdersService.findById(orderId);
 
-        // Actualizar productos si cambiaron
-        if (JSON.stringify(currentOrder.productos) !== JSON.stringify(payload.productos)) {
-          const updateResult = await OrdersService.updateProductos(orderId, payload.productos);
-          orderResult = updateResult.order;
-          const { excedente, oldTotal, newTotal } = updateResult;
-
-          // Si hay excedente, preguntar cómo manejarlo
-          if (excedente > 0) {
-            const diferencia = oldTotal - newTotal;
-            const result = await showConfirm(
-              'warning',
-              'Excedente detectado',
-              `El total del pedido ha disminuido de $${oldTotal.toLocaleString()} a $${newTotal.toLocaleString()}. ` +
-              `El cliente ha pagado $${(totalPagado).toLocaleString()}, por lo que hay un excedente de $${excedente.toLocaleString()}. ` +
-              `¿Qué deseas hacer con este excedente?`,
-              {
-                confirmButtonText: 'Saldo a favor',
-                cancelButtonText: 'Devolver en efectivo',
-                showCancelButton: true,
-              }
-            );
-
-            if (result.isConfirmed) {
-              // Opción: Saldo a favor
-              try {
-                await clientsService.aplicarSaldoFavor(
-                  orderResult.clienteId,
-                  excedente,
-                  `Excedente por modificación de pedido #${orderResult.numeroPedido}`
-                );
-                showSuccess(
-                  'Saldo a favor aplicado',
-                  `Se ha registrado un saldo a favor de $${excedente.toLocaleString()} para el cliente.`
-                );
-              } catch (error) {
-                showError('Error', 'No se pudo aplicar el saldo a favor. ' + error.message);
-              }
-            } else if (result.isDismissed) {
-              // Opción: Devolver en efectivo
-              try {
-                await PaymentService.addDevolucion(orderId, excedente);
-                showSuccess(
-                  'Devolución registrada',
-                  `Se ha registrado una devolución en efectivo de $${excedente.toLocaleString()}.`
-                );
-              } catch (error) {
-                showError('Error', 'No se pudo registrar la devolución. ' + error.message);
-              }
-            }
-          }
-        }
-
-        // Actualizar campos generales
-        await OrdersService.update({
+        orderResult = await OrdersService.update({
           id: orderId,
           clienteId: payload.clienteId,
           tipoEntrega: payload.tipoEntrega,
           direccionEntrega: payload.direccionEntrega,
+          productos: payload.productos,
           estadoLogistico: payload.estadoLogistico,
           motivoCancelacion: formData.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO ? formData.motivoCancelacion : null,
         });
 
-        orderResult = await OrdersService.findById(orderId);
+        const oldTotal = currentOrder?.total || 0;
+        const newTotal = orderResult?.total || total;
+        const excedente = newTotal < oldTotal && totalPagado > newTotal ? totalPagado - newTotal : 0;
+
+        if (excedente > 0) {
+          const result = await showConfirm(
+            'warning',
+            'Excedente detectado',
+            `El total del pedido ha disminuido de $${oldTotal.toLocaleString()} a $${newTotal.toLocaleString()}. ` +
+            `El cliente ha pagado $${totalPagado.toLocaleString()}, por lo que hay un excedente de $${excedente.toLocaleString()}. ` +
+            `¿Qué deseas hacer con este excedente?`,
+            {
+              confirmButtonText: 'Saldo a favor',
+              cancelButtonText: 'Devolver en efectivo',
+              showCancelButton: true,
+            }
+          );
+
+          if (result.isConfirmed) {
+            try {
+              await clientsService.aplicarSaldoFavor(
+                orderResult.clienteId,
+                excedente,
+                `Excedente por modificación de pedido #${orderResult.numeroPedido}`
+              );
+              showSuccess(
+                'Saldo a favor aplicado',
+                `Se ha registrado un saldo a favor de $${excedente.toLocaleString()} para el cliente.`
+              );
+            } catch (error) {
+              showError('Error', 'No se pudo aplicar el saldo a favor. ' + error.message);
+            }
+          } else if (result.isDismissed) {
+            try {
+              await PaymentService.addDevolucion(orderId, excedente);
+              showSuccess(
+                'Devolución registrada',
+                `Se ha registrado una devolución en efectivo de $${excedente.toLocaleString()}.`
+              );
+            } catch (error) {
+              showError('Error', 'No se pudo registrar la devolución. ' + error.message);
+            }
+          }
+        }
+
         showSuccess('Pedido actualizado', `Pedido #${orderResult.numeroPedido} actualizado correctamente.`);
       } else {
         orderResult = await OrdersService.create(payload);
@@ -382,13 +428,13 @@ function OrdersForm() {
           });
         }
 
-        showSuccess('Pedido creado', `Pedido #${orderResult.numeroPedido} registrado con éxito.`);
+        showSuccess('Pedido creado', `Pedido #${orderResult.numeroPedido} registrado con Ã©xito.`);
       }
 
       navigate('/admin/sales/orders');
     } catch (error) {
       console.error(error);
-      showError('Error', error.message || 'Ocurrió un error al guardar el pedido.');
+      showError('Error', error.response?.data?.message || error.response?.data?.error || error.message || 'Ocurrió un error al guardar el pedido.');
     } finally {
       setLoading(false);
     }
@@ -397,9 +443,9 @@ function OrdersForm() {
   const handleCancel = async () => {
     const result = await showConfirm(
       'warning',
-      '¿Salir sin guardar?',
-      'Los cambios no guardados se perderán.',
-      { confirmButtonText: 'Sí, salir', cancelButtonText: 'Continuar editando' }
+      'Â¿Salir sin guardar?',
+      'Los cambios no guardados se perderÃ¡n.',
+      { confirmButtonText: 'SÃ­, salir', cancelButtonText: 'Continuar editando' }
     );
     if (result?.isConfirmed) {
       navigate('/admin/sales/orders');
@@ -417,7 +463,7 @@ function OrdersForm() {
   }
 
   return (
-    // ✅ Cambio principal: se reemplaza max-w-7xl mx-auto por w-full
+    // âœ… Cambio principal: se reemplaza max-w-7xl mx-auto por w-full
     <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
       {/* Cabecera */}
       <div className="mb-5 flex items-center justify-between">
@@ -491,7 +537,7 @@ function OrdersForm() {
         />
       </div>
 
-      {/* Sección de pagos */}
+      {/* SecciÃ³n de pagos */}
       <div className="mt-5">
         <PaymentsSection
           pedidoId={id ? Number(id) : null}
@@ -508,7 +554,7 @@ function OrdersForm() {
         <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
           <p className="text-sm text-green-800">
             <strong>Pago completado:</strong> El pedido ha sido pagado en su totalidad.
-            {formData.estadoLogistico === ESTADOS_LOGISTICOS.LISTO && ' El pedido está listo para entrega.'}
+            {formData.estadoLogistico === ESTADOS_LOGISTICOS.LISTO && ' El pedido estÃ¡ listo para entrega.'}
           </p>
         </div>
       )}
@@ -526,3 +572,5 @@ function OrdersForm() {
 }
 
 export default OrdersForm;
+
+

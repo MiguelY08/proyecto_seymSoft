@@ -73,7 +73,7 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
 // ─── Componente principal de lista de pedidos ─────────────────────────────────
 function OrdersList() {
   const navigate = useNavigate();
-  const { showSuccess } = useAlert();
+  const { showSuccess, showError } = useAlert();
 
   // Estados
   const [orders, setOrders] = useState([]);
@@ -197,9 +197,19 @@ function OrdersList() {
   }, [search, fechaInicial, fechaFinal, origenFilter, pagoEstadoFilter]);
 
   // Handlers
-  const handleViewDetail = (order) => {
-    setSelectedOrder(order);
-    setIsDetailOpen(true);
+  const handleViewDetail = async (order) => {
+    try {
+      const freshOrder = await OrdersService.findById(order.id);
+      if (freshOrder) {
+        setOrders(prev => prev.map(item => item.id === freshOrder.id ? freshOrder : item));
+      }
+      setSelectedOrder(freshOrder || order);
+      setIsDetailOpen(true);
+    } catch (error) {
+      showError('Error', error.response?.data?.message || error.message || 'No se pudo cargar el pedido.');
+      setSelectedOrder(order);
+      setIsDetailOpen(true);
+    }
   };
 
   const handleCloseDetail = () => {

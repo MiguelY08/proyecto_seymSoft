@@ -48,10 +48,11 @@ const normalizeEstadoLogistico = (value) => {
 };
 
 const normalizePagoEstado = (value, totalPagado = 0, total = 0) => {
+  if (total > 0 && totalPagado >= total) return ESTADOS_PAGO.PAGADO;
   const raw = String((value?.name ?? value) || '').toLowerCase();
   if (raw.includes('pagad') || raw.includes('paid')) return ESTADOS_PAGO.PAGADO;
   if (raw.includes('pend') || raw.includes('pending')) return ESTADOS_PAGO.PENDIENTE;
-  return total > 0 && totalPagado >= total ? ESTADOS_PAGO.PAGADO : ESTADOS_PAGO.PENDIENTE;
+  return ESTADOS_PAGO.PENDIENTE;
 };
 
 const normalizeTipoEntrega = (order = {}) => {
@@ -100,8 +101,9 @@ const normalizeOrder = (order = {}) => {
     order.subtotal,
     productos.reduce((sum, product) => sum + product.subtotal, 0)
   );
-  const iva = toNumber(order.iva ?? order.tax, subtotal * IVA_RATE);
-  const total = toNumber(order.total ?? order.totalAmount, subtotal + iva);
+  const iva = toNumber(order.iva ?? order.ivaAmount ?? order.tax, subtotal * IVA_RATE);
+  const totalApi = toNumber(order.total ?? order.totalAmount, subtotal);
+  const total = subtotal;
   const pagos = getPaymentsFromOrder(order);
   const totalPagado = toNumber(
     order.paidAmount ?? order.totalPagado,
@@ -125,10 +127,11 @@ const normalizeOrder = (order = {}) => {
     productos,
     pagos,
     subtotal,
-    iva: toNumber(order.iva ?? order.ivaAmount ?? order.tax, iva),
+    iva,
     total,
+    totalApi,
     totalPagado,
-    saldoPendiente: toNumber(order.pendingAmount, Math.max(0, total - totalPagado)),
+    saldoPendiente: Math.max(0, total - totalPagado),
     tieneVenta: Boolean(order.hasSale),
     venta: order.sale ?? null,
     fechaLimitePago: order.paymentDeadline ?? null,
@@ -247,8 +250,8 @@ export const OrdersService = {
     const oldTotal = order.total;
     const totalPagado = await PaymentService.getTotalPagado(orderId);
     const subtotal = newProductos.reduce((sum, p) => sum + (p.subtotal || 0), 0);
-    const iva = subtotal * IVA_RATE;
-    const newTotal = subtotal + iva;
+    const iva = newProductos.reduce((sum, p) => sum + toNumber(p.iva), 0);
+    const newTotal = subtotal;
 
     const updatedOrder = await this.update({
       ...order,
@@ -309,11 +312,12 @@ export const PaymentService = {
 
   async add(pedidoId, { metodoPago, monto, comprobante = null, observations = null }) {
     const order = await OrdersService.findById(pedidoId);
+    const amount = toNumber(monto);
     const paymentNumber = (order?.pagos?.length || 0) + 1;
-    const pendingAfter = (order?.saldoPendiente ?? order?.total ?? 0) - monto;
+    const pendingAfter = (order?.saldoPendiente ?? order?.total ?? 0) - amount;
     const response = await apiClient.post(`/orders/${pedidoId}/payments`, {
       idPaymentMethod: PAYMENT_METHOD_IDS[metodoPago] ?? metodoPago,
-      amount: monto,
+      amount,
       reference: comprobante || `P${pedidoId}-${String(paymentNumber).padStart(3, '0')}`,
       observations: observations || `Abono ${paymentNumber} - ${pendingAfter <= 0 ? 'Pago completo' : 'Pago parcial'}`,
     });

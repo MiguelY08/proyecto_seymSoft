@@ -20,6 +20,11 @@ function RightSectionForm({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const wrapperRef = useRef(null);
 
+  const formatCurrency = (value) => {
+    const parsed = Number(value);
+    return `$${(Number.isFinite(parsed) ? parsed : 0).toLocaleString('es-CO')}`;
+  };
+
   // Cerrar dropdown al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -140,8 +145,8 @@ function RightSectionForm({
                               {prod.nombre}
                             </div>
                             <div className="text-xs text-gray-500 flex flex-wrap gap-x-3 gap-y-1 mt-0.5">
-                              <span>Stock: {prod.stock}</span>
-                              <span>${(prod.precioDetalle || 0).toLocaleString()}</span>
+                              <span>Stock: {Number(prod.stock || 0).toLocaleString('es-CO')}</span>
+                              <span>{formatCurrency(prod.precioDetalle)}</span>
                               {prod.codBarras && <span>Cód: {prod.codBarras}</span>}
                             </div>
                           </div>
@@ -193,10 +198,10 @@ function RightSectionForm({
                       />
                     </td>
                     <td className="px-3 py-2 text-sm text-gray-700">
-                      ${prod.precioUnitario?.toLocaleString() ?? '0'}
+                      {formatCurrency(prod.precioUnitario)}
                     </td>
                     <td className="px-3 py-2 text-sm font-medium text-gray-900">
-                      ${prod.subtotal?.toLocaleString() ?? '0'}
+                      {formatCurrency(prod.subtotal)}
                     </td>
                     <td className="px-3 py-2 text-right">
                       <button
@@ -224,15 +229,15 @@ function RightSectionForm({
         <div className="border-t border-gray-200 pt-4 mt-2">
           <div className="flex justify-between text-sm mb-1">
             <span className="text-gray-600">Subtotal:</span>
-            <span className="font-medium text-gray-800">${subtotal.toLocaleString()}</span>
+            <span className="font-medium text-gray-800">{formatCurrency(subtotal)}</span>
           </div>
           <div className="flex justify-between text-sm mb-1">
             <span className="text-gray-600">IVA (19%):</span>
-            <span className="font-medium text-gray-800">${iva.toLocaleString()}</span>
+            <span className="font-medium text-gray-800">{formatCurrency(iva)}</span>
           </div>
           <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-gray-200">
             <span className="text-gray-900">Total:</span>
-            <span className="text-gray-900">${total.toLocaleString()}</span>
+            <span className="text-gray-900">{formatCurrency(total)}</span>
           </div>
         </div>
       </div>
