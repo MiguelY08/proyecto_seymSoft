@@ -107,6 +107,12 @@ export const CategoriesTable = ({
 
                     <td className="px-3 py-2">
                       <div className="flex items-center justify-center gap-1.5">
+                        <Permission permission ="categorias.activar_desactivar" >
+                          <ActiveToggle
+                            activo={category.estado === "Activo"}
+                            onChange={() => handleToggleStatus(category.id)}
+                          />
+                        </Permission>
                         <Permission permission ="categorias.ver_informacion" >
                           <button
                             onClick={() => handleViewDetail(category)}
@@ -124,12 +130,6 @@ export const CategoriesTable = ({
                           >
                             <Edit className="w-4 h-4" strokeWidth={1.5} />
                           </button>
-                        </Permission>
-                        <Permission permission ="categorias.activar_desactivar" >
-                          <ActiveToggle
-                            activo={category.estado === "Activo"}
-                            onChange={() => handleToggleStatus(category.id)}
-                          />
                         </Permission>
                         <Permission permission ="categorias.eliminar" >
                           <button

@@ -1,5 +1,24 @@
-// Features/categories/data/categoriesService.js
-import api from './api';  // ← Importar el api local
+// Features/categories/data/categoriesApi.js
+import apiClient from '../../../../../setting/apiClient.js';
+
+// ==========================================
+// ENDPOINTS
+// ==========================================
+
+const api = {
+  // Categorías
+  getCategories: () => apiClient.get('/categories'),
+  getCategoryById: (id) => apiClient.get(`/categories/${id}`),
+  createCategory: (data) => apiClient.post('/categories', data),
+  updateCategory: (id, data) => apiClient.patch(`/categories/${id}`, data),
+  toggleCategoryStatus: (id) => apiClient.patch(`/categories/${id}/toggle-status`),
+  deleteCategory: (id) => apiClient.delete(`/categories/${id}`),
+
+  // Subcategorías
+  createSubcategory: (data) => apiClient.post('/categories/subcategories', data),
+  updateSubcategory: (id, data) => apiClient.patch(`/categories/subcategories/${id}`, data),
+  deleteSubcategory: (id) => apiClient.delete(`/categories/subcategories/${id}`),
+};
 
 // ==========================================
 // CATEGORÍAS
@@ -22,8 +41,8 @@ export const createCategory = async (newCategory) => {
     subcategories: (newCategory.subcategoriasIniciales || []).map(sub => ({
       name: sub.nombre,
       description: sub.descripcion || "",
-      idStatus: sub.activo ? 1 : 2
-    }))
+      idStatus: sub.activo ? 1 : 2,
+    })),
   });
   return response.data.data;
 };
@@ -33,7 +52,7 @@ export const updateCategory = async (categoryId, data) => {
   if (data.nombre !== undefined) updateData.categoryName = data.nombre;
   if (data.estado !== undefined) updateData.idStatus = data.estado === "Activo" ? 1 : 2;
   if (Object.keys(updateData).length === 0) return;
-  
+
   const response = await api.updateCategory(categoryId, updateData);
   return response.data.data;
 };
@@ -61,10 +80,10 @@ export const getSubcategories = async (categoryId = null) => {
       nombre: sub.name,
       descripcion: sub.description,
       estado: sub.status === "Active" ? "Activo" : "Inactivo",
-      categoriaId: categoryId
+      categoriaId: categoryId,
     }));
   }
-  
+
   // Si no se especifica categoría, traer todas
   const categories = await getCategories();
   const allSubs = await Promise.all(
@@ -76,7 +95,7 @@ export const getSubcategories = async (categoryId = null) => {
         nombre: sub.name,
         descripcion: sub.description,
         estado: sub.status === "Active" ? "Activo" : "Inactivo",
-        categoriaId: cat.id
+        categoriaId: cat.id,
       }));
     })
   );
@@ -88,7 +107,7 @@ export const createSubcategory = async (data) => {
     name: data.nombre,
     description: data.descripcion || "",
     idCategory: Number(data.categoriaId),
-    idStatus: data.activo ? 1 : 2
+    idStatus: data.activo ? 1 : 2,
   });
   return response.data.data;
 };
@@ -99,7 +118,7 @@ export const updateSubcategory = async (id, data) => {
   if (data.descripcion !== undefined) updateData.description = data.descripcion;
   if (data.estado !== undefined) updateData.idStatus = data.estado === "Activo" ? 1 : 2;
   if (Object.keys(updateData).length === 0) return;
-  
+
   const response = await api.updateSubcategory(id, updateData);
   return response.data.data;
 };

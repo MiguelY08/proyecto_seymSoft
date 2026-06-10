@@ -1,3 +1,4 @@
+// Features/administrtivePanel/purchases/purchases/components/CreatePurchaseSideBar.jsx
 import { useState } from "react";
 import { Search, Plus, Minus, AlertCircle, Barcode, ChevronDown, ChevronUp, Check } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -5,8 +6,11 @@ import { useAlert } from "../../../../shared/alerts/useAlert";
 
 const CreateSidebar = ({
   productsDB,
+  providersList = [],
   selectedProvider,
   setSelectedProvider,
+  selectedProviderId,
+  setSelectedProviderId,
   invoiceNumber,
   setInvoiceNumber,
   purchaseDate,
@@ -26,8 +30,6 @@ const CreateSidebar = ({
   setProviderTouched,
   openCreateProduct,
   isFormModalOpen,
-  // Estado elevado de códigos extra: vive en CreatePurchase para que
-  // handleAddProduct pueda leerlos al construir el item de compra.
   extraBarcodes = {},
   onExtraBarcodesChange,
 }) => {
@@ -38,54 +40,37 @@ const CreateSidebar = ({
   const [searchProvider, setSearchProvider] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // ── Producto seleccionado del buscador (objeto completo) ──
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-  // ── Estado formulario de código de barras ──
   const [showBarcodeForm, setShowBarcodeForm] = useState(false);
   const [barcodeValue, setBarcodeValue] = useState("");
   const [barcodeSaved, setBarcodeSaved] = useState(false);
   const [barcodeError, setBarcodeError] = useState("");
-
-  // Índice del código activo para el producto seleccionado (0 = original)
   const [activeBarcodeIndex, setActiveBarcodeIndex] = useState(0);
 
-  // ── Proveedores ──
-  const providers = [
-    "Papelería El Punto Escolar",
-    "OfiExpress Ltda.",
-    "ArteColor Supplies",
-    "Útiles Escolares SAS",
-  ];
-
-  const filteredProviders = providers.filter((p) =>
-    p.toLowerCase().includes(searchProvider.toLowerCase())
+  const filteredProviders = providersList.filter((p) =>
+    p.nombre?.toLowerCase().includes(searchProvider.toLowerCase())
   );
 
   const filteredProducts = productsDB.filter(
     (p) =>
-      p.producto.toLowerCase().includes(searchProduct.toLowerCase()) ||
+      p.nombre.toLowerCase().includes(searchProduct.toLowerCase()) ||
       p.codigoBarras.includes(searchProduct)
   );
 
-  // Todos los códigos ya en uso (originales + extras) para evitar duplicados
   const allUsedBarcodes = [
     ...productsDB.map((p) => p.codigoBarras),
     ...Object.values(extraBarcodes).flat(),
   ];
 
-  // Códigos disponibles para el producto actualmente seleccionado
   const availableBarcodes = selectedProduct
     ? [selectedProduct.codigoBarras, ...(extraBarcodes[selectedProduct.codigoBarras] || [])]
     : [];
 
-  // Código de barras que se usará al agregar
   const resolvedBarcode =
     selectedProduct && availableBarcodes[activeBarcodeIndex]
       ? availableBarcodes[activeBarcodeIndex]
       : selectedProduct?.codigoBarras;
-
-  // ================= VALIDACIONES PRINCIPALES =================
 
   const providerError = (() => {
     if (!providerTouched) return null;
@@ -113,16 +98,12 @@ const CreateSidebar = ({
     return null;
   })();
 
-  // ================= ESTILO INPUT =================
-
   const inputClass = (error) =>
     `w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-600 outline-none transition-all ${
       error
         ? "border-red-400 focus:ring-2 focus:ring-red-300"
         : "border-gray-300 focus:ring-2 focus:ring-[#004D77]"
     }`;
-
-  // ================= CONFIRMAR SALIDA =================
 
   const handleBackToPurchases = async (e) => {
     e.preventDefault();
@@ -138,13 +119,10 @@ const CreateSidebar = ({
     navigate("/admin/purchases");
   };
 
-  // ================= SELECCIONAR PRODUCTO DEL BUSCADOR =================
-
   const handleSelectProduct = (product) => {
-    setSearchProduct(product.producto);
+    setSearchProduct(product.nombre);
     setSelectedProduct(product);
     setShowSuggestions(false);
-    // Resetear form de código al cambiar producto
     setShowBarcodeForm(false);
     setBarcodeValue("");
     setBarcodeError("");
@@ -152,12 +130,11 @@ const CreateSidebar = ({
     setActiveBarcodeIndex(0);
   };
 
-  // Si el usuario edita manualmente el input, limpiar selección
   const handleSearchChange = (e) => {
     const val = e.target.value;
     setSearchProduct(val);
     setShowSuggestions(true);
-    if (selectedProduct && val !== selectedProduct.producto) {
+    if (selectedProduct && val !== selectedProduct.nombre) {
       setSelectedProduct(null);
       setShowBarcodeForm(false);
       setBarcodeValue("");
@@ -166,9 +143,6 @@ const CreateSidebar = ({
       setActiveBarcodeIndex(0);
     }
   };
-
-  // ================= TOGGLE FORMULARIO CÓDIGO DE BARRAS =================
-  // Validación 3: no se puede abrir sin haber seleccionado un producto
 
   const handleToggleBarcodeForm = () => {
     if (!selectedProduct) return;
@@ -182,8 +156,6 @@ const CreateSidebar = ({
     }
   };
 
-  // ================= GUARDAR CÓDIGO DE BARRAS =================
-
   const handleSaveBarcode = () => {
     const trimmed = barcodeValue.trim();
 
@@ -195,7 +167,6 @@ const CreateSidebar = ({
       setBarcodeError("El código debe tener entre 8 y 13 dígitos numéricos");
       return;
     }
-    // Validación 2: no permitir código duplicado
     if (allUsedBarcodes.includes(trimmed)) {
       setBarcodeError("Este código de barras ya está registrado");
       return;
@@ -216,9 +187,6 @@ const CreateSidebar = ({
     }, 1800);
   };
 
-  // ================= AGREGAR PRODUCTO =================
-  // Validación 4: pasar el código de barras resuelto (original o nuevo seleccionado)
-
   const handleAddProduct = () => {
     handleAddProductProp(resolvedBarcode);
   };
@@ -230,7 +198,6 @@ const CreateSidebar = ({
       <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-6">
 
         {/* ================= PROVEEDOR ================= */}
-
         <div className="mb-6 relative">
           <label className="block text-sm font-bold text-gray-800 mb-2">
             Proveedores
@@ -268,7 +235,7 @@ const CreateSidebar = ({
                   />
                 </div>
                 <button
-                  onClick={isFormModalOpen}
+                  onClick={openCreateProduct}
                   className="flex items-center gap-1 px-3 py-1 border border-sky-700 text-[#004D77] bg-white hover:bg-sky-50 rounded-lg text-xs font-semibold transition-all"
                 >
                   Crear <Plus size={14} />
@@ -278,20 +245,21 @@ const CreateSidebar = ({
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {filteredProviders.map((provider, index) => (
                   <label
-                    key={index}
+                    key={provider.id || index}
                     className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-2 rounded-lg"
                   >
                     <input
                       type="checkbox"
-                      checked={selectedProvider === provider}
+                      checked={selectedProvider === provider.nombre}
                       onChange={() => {
-                        setSelectedProvider(provider);
+                        setSelectedProvider(provider.nombre);
+                        setSelectedProviderId(provider.id);
                         setProviderTouched(true);
                         setIsOpen(false);
                       }}
                       className="accent-[#004D77]"
                     />
-                    {provider}
+                    {provider.nombre}
                   </label>
                 ))}
               </div>
@@ -310,7 +278,6 @@ const CreateSidebar = ({
         </div>
 
         {/* ================= FACTURA ================= */}
-
         <div className="mb-6">
           <label className="block text-sm font-bold text-gray-800 mb-2">
             No. factura
@@ -347,7 +314,6 @@ const CreateSidebar = ({
         </div>
 
         {/* ================= FECHA ================= */}
-
         <div className="mb-6">
           <label className="block text-sm font-bold text-gray-800 mb-2">
             Fecha compra
@@ -379,7 +345,6 @@ const CreateSidebar = ({
         </div>
 
         {/* ================= BUSCAR PRODUCTO ================= */}
-
         <div className="mb-1 relative">
           <label className="block text-sm font-bold text-gray-800 mb-2">
             Busque el Producto
@@ -392,7 +357,6 @@ const CreateSidebar = ({
                 onChange={handleSearchChange}
                 placeholder="Buscar producto o código"
                 className={`w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-600 focus:ring-2 focus:ring-[#004D77] outline-none transition-all ${
-                  // Validación 1: texto escrito pero no coincide con ningún producto
                   searchProduct && !selectedProduct && filteredProducts.length === 0
                     ? "border-red-400"
                     : "border-gray-300"
@@ -407,7 +371,6 @@ const CreateSidebar = ({
             </button>
           </div>
 
-          {/* Validación 1: producto no existente */}
           <div
             className={`overflow-hidden transition-all duration-300 ${
               searchProduct && !selectedProduct && filteredProducts.length === 0
@@ -421,7 +384,6 @@ const CreateSidebar = ({
             </p>
           </div>
 
-          {/* Sugerencias del buscador */}
           {showSuggestions && searchProduct && filteredProducts.length > 0 && (
             <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
               {filteredProducts.slice(0, 6).map((product) => (
@@ -430,7 +392,7 @@ const CreateSidebar = ({
                   onClick={() => handleSelectProduct(product)}
                   className="px-4 py-2 text-sm text-gray-700 hover:bg-[#004D77] hover:text-white cursor-pointer transition-all"
                 >
-                  <div className="font-semibold">{product.producto}</div>
+                  <div className="font-semibold">{product.nombre}</div>
                   <div className="text-xs opacity-70">
                     Código: {product.codigoBarras}
                   </div>
@@ -439,12 +401,11 @@ const CreateSidebar = ({
             </div>
           )}
 
-          {/* Chip: producto seleccionado con código activo */}
           {selectedProduct && (
             <div className="mt-2 flex items-center gap-2 flex-wrap">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-lg text-xs text-[#004D77] font-medium">
                 <Check size={11} className="text-green-500" />
-                {selectedProduct.producto}
+                {selectedProduct.nombre}
               </span>
               {availableBarcodes.length > 1 && (
                 <span className="text-xs text-gray-400">
@@ -459,8 +420,6 @@ const CreateSidebar = ({
         </div>
 
         {/* ================= SELECTOR DE CÓDIGO DE BARRAS ACTIVO ================= */}
-        {/* Solo aparece cuando hay más de un código disponible para el producto */}
-
         {selectedProduct && availableBarcodes.length > 1 && (
           <div className="mb-2 mt-3">
             <label className="block text-xs font-semibold text-gray-600 mb-1.5">
@@ -486,7 +445,6 @@ const CreateSidebar = ({
         )}
 
         {/* ================= LINK AGREGAR CÓDIGO DE BARRAS ================= */}
-
         <div className="mb-4 mt-3">
           <button
             type="button"
@@ -509,14 +467,12 @@ const CreateSidebar = ({
             )}
           </button>
 
-          {/* Hint cuando no hay producto seleccionado */}
           {barcodeLinkDisabled && (
             <p className="text-xs text-gray-400 mt-0.5 ml-[18px]">
               Selecciona un producto primero
             </p>
           )}
 
-          {/* Formulario desplegable */}
           <div
             className={`overflow-hidden transition-all duration-300 ease-in-out ${
               showBarcodeForm && selectedProduct
@@ -525,21 +481,18 @@ const CreateSidebar = ({
             }`}
           >
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
-
-              {/* Nombre del producto — solo lectura (Validación 1 implícita) */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                   Producto seleccionado
                 </label>
                 <div className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-500 font-medium select-none">
-                  {selectedProduct?.producto}
+                  {selectedProduct?.nombre}
                   <span className="ml-2 text-xs text-gray-400 font-normal font-mono">
                     ({selectedProduct?.codigoBarras})
                   </span>
                 </div>
               </div>
 
-              {/* Nuevo código de barras */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                   Nuevo código de barras
@@ -565,7 +518,6 @@ const CreateSidebar = ({
                 </p>
               </div>
 
-              {/* Error */}
               <div
                 className={`overflow-hidden transition-all duration-200 ${
                   barcodeError ? "max-h-8 opacity-100" : "max-h-0 opacity-0"
@@ -576,7 +528,6 @@ const CreateSidebar = ({
                 </p>
               </div>
 
-              {/* Botón guardar */}
               <button
                 type="button"
                 onClick={handleSaveBarcode}
@@ -597,7 +548,6 @@ const CreateSidebar = ({
         </div>
 
         {/* ================= CANTIDAD ================= */}
-
         <div className="mb-6">
           <label className="block text-sm font-bold text-gray-800 mb-2">
             Cantidad
@@ -627,7 +577,6 @@ const CreateSidebar = ({
         </div>
 
         {/* ================= BOTONES ================= */}
-
         <button
           onClick={handleAddProduct}
           className="w-full py-3 bg-[#004D77] text-white font-semibold rounded-lg hover:bg-[#003a5c] transition-all shadow-lg"

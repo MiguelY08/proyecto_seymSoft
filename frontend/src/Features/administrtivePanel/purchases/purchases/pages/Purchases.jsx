@@ -1,26 +1,54 @@
-import React, { useState, useEffect, useRef } from "react";
+// Features/administrtivePanel/purchases/purchases/pages/Purchases.jsx
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PurchasesFilters } from "../../../../shared/DateFilter";
-import PurchasesTable from "../Components/TablePurchases";
+import PurchasesTable from "../components/TablePurchases";
 import { useAlert } from "../../../../shared/alerts/useAlert";
-import DetailPurchases from "./DetailPurchases";
-import Anulatepurchase from "./Anulatepurchase";
+import DetailPurchases from "../pages/DetailPurchases";
+import Anulatepurchase from "../pages/Anulatepurchase";
 import { Plus, FileSpreadsheet } from "lucide-react";
-import { PurchasesDB } from "../services/Purchases.service";
+import { getAllPurchases, annulPurchase, getPurchaseById } from "../data/purchasesService";
 import * as XLSX from "xlsx";
 
 export const Purchases = () => {
-
-  const [products, setProducts] = useState(() => PurchasesDB.list());
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [fechaInicial, setFechaInicial] = useState("");
   const [fechaFinal, setFechaFinal] = useState("");
   const [cancelPurchase, setCancelPurchase] = useState(null);
   const [selectedPurchase, setSelectedPurchase] = useState(null);
+  const [selectedPurchaseDetail, setSelectedPurchaseDetail] = useState(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const { showSuccess, showError, showInfo } = useAlert();
-  const alertShownRef = useRef(false);
   const navigate = useNavigate();
+
+  const fetchPurchases = useCallback(async () => {
+    try {
+      setLoading(true);
+      const result = await getAllPurchases({
+        page: currentPage,
+        limit: 13,
+        search,
+        startDate: fechaInicial,
+        endDate: fechaFinal,
+      });
+      
+      console.log('📊 Purchases loaded:', result.data);
+      setProducts(result.data);
+      setPagination(result.pagination);
+    } catch (err) {
+      showError("Error", err.message || "No se pudieron cargar las compras.");
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, search, fechaInicial, fechaFinal, showError]);
+
+  useEffect(() => {
+    fetchPurchases();
+  }, [fetchPurchases]);
 
   const handleReturn = (compra) => {
     navigate("/admin/purchases/returns-p", {
@@ -28,29 +56,43 @@ export const Purchases = () => {
     });
   };
 
-  const handleCancel = (id) => {
-    const compra = products.find((c) => c.id === id);
-    if (!compra) return;
-    if (compra.estado === "Anulada") {
+  const handleCancel = (purchase) => {
+    if (purchase.estado === "Anulada") {
       showInfo("Compra ya Anulada", "Esta compra ya se encuentra Anulada.");
       return;
     }
-    setCancelPurchase(compra);
+    setCancelPurchase(purchase);
   };
 
-  const confirmCancelPurchase = (motivo) => {
+  const confirmCancelPurchase = async (motivo) => {
     try {
-      const updated = PurchasesDB.annul(cancelPurchase.id, motivo);
-      setProducts(updated);
+      await annulPurchase(cancelPurchase.id, motivo);
+      await fetchPurchases();
       showSuccess("Compra Anulada", "La compra fue anulada correctamente.");
-    } catch {
-      showError("Error", "No se pudo anular la compra.");
+    } catch (err) {
+      showError("Error", err.message || "No se pudo anular la compra.");
     } finally {
       setCancelPurchase(null);
     }
   };
 
-  const handleViewDetail = (purchase) => setSelectedPurchase(purchase);
+  const handleViewDetail = async (purchase) => {
+    try {
+      setLoadingDetail(true);
+      const detail = await getPurchaseById(purchase.id);
+      setSelectedPurchaseDetail(detail);
+      setSelectedPurchase(purchase);
+    } catch (err) {
+      showError("Error", err.message || "No se pudo cargar el detalle de la compra.");
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  const handleCloseDetail = () => {
+    setSelectedPurchase(null);
+    setSelectedPurchaseDetail(null);
+  };
 
   const handleClearFilters = () => {
     setSearch("");
@@ -60,31 +102,29 @@ export const Purchases = () => {
     showSuccess("Filtros limpiados", "Todos los filtros han sido eliminados");
   };
 
-  // 🔥 Exportar Excel — misma estructura que devoluciones
   const handleDownloadExcel = () => {
-    if (filteredProducts.length === 0) {
+    if (products.length === 0) {
       showInfo("Sin datos", "No hay compras para exportar.");
       return;
     }
 
     try {
-      const currentDate     = new Date();
-      const formattedDate   = currentDate.toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" });
+      const currentDate = new Date();
+      const formattedDate = currentDate.toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" });
       const formattedDateTime = currentDate.toLocaleString("es-CO", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
       const titleRow = [["COMPRAS"]];
-      const dateRow  = [[`Fecha de exportación: ${formattedDate} - ${formattedDateTime}`]];
+      const dateRow = [[`Fecha de exportación: ${formattedDate} - ${formattedDateTime}`]];
       const emptyRow = [[""]];
 
-      // ── Hoja 1: Resumen ──
       const summaryHeaders = ["No. Facturación", "Fecha Compra", "Proveedor", "Cantidad Productos", "Precio Total", "Estado"];
-      const summaryData    = filteredProducts.map((c) => [
+      const summaryData = products.map((c) => [
         c.numeroFacturacion || "",
-        c.fechaCompra       || "",
-        c.proveedor         || "",
+        c.fechaCompra || "",
+        c.proveedor || "",
         c.cantidadProductos || 0,
-        c.precioTotal       || 0,
-        c.estado            || "",
+        c.precioTotal || 0,
+        c.estado || "",
       ]);
 
       const summarySheetData = [...titleRow, ...dateRow, ...emptyRow, [["RESUMEN DE COMPRAS"]], ...emptyRow, summaryHeaders, ...summaryData];
@@ -98,20 +138,10 @@ export const Purchases = () => {
       summaryWs["A4"] = { v: "RESUMEN DE COMPRAS", t: "s" };
       summaryWs["!cols"] = [{ wch: 20 }, { wch: 15 }, { wch: 30 }, { wch: 18 }, { wch: 16 }, { wch: 14 }];
 
-      // ── Hoja 2: Detalle de productos ──
       const productHeaders = ["No. Facturación", "Fecha Compra", "Proveedor", "Producto", "Cantidad", "Precio Unitario", "Total Producto", "Estado"];
-      const productData    = [];
-      filteredProducts.forEach((c) => {
-        const productos = c.productos || [];
-        if (productos.length === 0) {
-          productData.push([c.numeroFacturacion || "", c.fechaCompra || "", c.proveedor || "", "Sin productos registrados", "", "", "", c.estado || ""]);
-        } else {
-          productos.forEach((p) => {
-            const cantidad   = p.cantidad   || 1;
-            const precioUnit = p.precioUnit || 0;
-            productData.push([c.numeroFacturacion || "", c.fechaCompra || "", c.proveedor || "", p.nombre || "Producto sin nombre", cantidad, precioUnit, cantidad * precioUnit, c.estado || ""]);
-          });
-        }
+      const productData = [];
+      products.forEach((c) => {
+        productData.push([c.numeroFacturacion || "", c.fechaCompra || "", c.proveedor || "", "Ver detalle para productos", c.cantidadProductos || 0, "", "", c.estado || ""]);
       });
 
       const productSheetData = [...titleRow, ...dateRow, ...emptyRow, [["DETALLE DE PRODUCTOS"]], ...emptyRow, productHeaders, ...productData];
@@ -125,26 +155,25 @@ export const Purchases = () => {
       productWs["A4"] = { v: "DETALLE DE PRODUCTOS", t: "s" };
       productWs["!cols"] = [{ wch: 20 }, { wch: 15 }, { wch: 30 }, { wch: 35 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 14 }];
 
-      // ── Hoja 3: Estadísticas ──
-      const totalCompras   = filteredProducts.length;
-      const totalValor     = filteredProducts.reduce((s, c) => s + (Number(c.precioTotal) || 0), 0);
-      const totalProductos = filteredProducts.reduce((s, c) => s + (Number(c.cantidadProductos) || 0), 0);
-      const completadas    = filteredProducts.filter((c) => c.estado === "Completada").length;
-      const anuladas       = filteredProducts.filter((c) => c.estado === "Anulada").length;
-      const enProceso      = filteredProducts.filter((c) => c.estado !== "Completada" && c.estado !== "Anulada").length;
+      const totalCompras = products.length;
+      const totalValor = products.reduce((s, c) => s + (Number(c.precioTotal) || 0), 0);
+      const totalProductos = products.reduce((s, c) => s + (Number(c.cantidadProductos) || 0), 0);
+      const completadas = products.filter((c) => c.estado === "Completada").length;
+      const anuladas = products.filter((c) => c.estado === "Anulada").length;
+      const enProceso = products.filter((c) => c.estado !== "Completada" && c.estado !== "Anulada").length;
 
       const statsHeaders = ["Métrica", "Valor"];
-      const statsData    = [
-        ["Total Compras",             totalCompras],
-        ["Total Valor Compras",       totalValor],
+      const statsData = [
+        ["Total Compras", totalCompras],
+        ["Total Valor Compras", totalValor],
         ["Total Productos Comprados", totalProductos],
-        ["Promedio por Compra",       totalCompras > 0 ? (totalValor / totalCompras).toFixed(2) : 0],
+        ["Promedio por Compra", totalCompras > 0 ? (totalValor / totalCompras).toFixed(2) : 0],
         [""],
-        ["Compras Completadas",       completadas],
-        ["Compras Anuladas",          anuladas],
-        ["Compras en Proceso",        enProceso],
+        ["Compras Completadas", completadas],
+        ["Compras Anuladas", anuladas],
+        ["Compras en Proceso", enProceso],
         [""],
-        ["Fecha de Exportación",      formattedDateTime],
+        ["Fecha de Exportación", formattedDateTime],
       ];
 
       const statsSheetData = [...titleRow, ...dateRow, ...emptyRow, [["ESTADÍSTICAS"]], ...emptyRow, statsHeaders, ...statsData];
@@ -161,7 +190,7 @@ export const Purchases = () => {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, summaryWs, "Resumen Compras");
       XLSX.utils.book_append_sheet(wb, productWs, "Detalle Productos");
-      XLSX.utils.book_append_sheet(wb, statsWs,   "Estadísticas");
+      XLSX.utils.book_append_sheet(wb, statsWs, "Estadísticas");
       XLSX.writeFile(wb, `compras_${new Date().toISOString().split("T")[0]}.xlsx`);
 
       showSuccess("Exportación exitosa", "El archivo Excel se generó correctamente");
@@ -170,42 +199,22 @@ export const Purchases = () => {
     }
   };
 
-  const RECORDS_PER_PAGE = 13;
+  const totalPages = pagination.totalPages || 1;
+  const startIndex = (currentPage - 1) * 13;
+  const endIndex = startIndex + 13;
+  const currentData = products;
 
-  const filteredProducts = products.filter((compra) => {
-    const textoBusqueda = search.toLowerCase();
-    const coincideBusqueda =
-      compra.numeroFacturacion?.toLowerCase().includes(textoBusqueda) ||
-      compra.proveedor?.toLowerCase().includes(textoBusqueda) ||
-      compra.estado?.toLowerCase().includes(textoBusqueda) ||
-      compra.cantidadProductos?.toString().includes(textoBusqueda) ||
-      compra.precioTotal?.toString().includes(textoBusqueda);
-    const fechaCompra       = new Date(compra.fechaCompra);
-    const fechaInicioValida = fechaInicial ? fechaCompra >= new Date(fechaInicial) : true;
-    const fechaFinValida    = fechaFinal   ? fechaCompra <= new Date(fechaFinal)   : true;
-    return coincideBusqueda && fechaInicioValida && fechaFinValida;
-  });
-
-  useEffect(() => {
-    const hayFiltros = search !== "" || fechaInicial !== "" || fechaFinal !== "";
-    if (filteredProducts.length === 0 && hayFiltros && !alertShownRef.current) {
-      showInfo("Sin resultados", "No se encontraron compras con los filtros aplicados.");
-      alertShownRef.current = true;
-    }
-    if (filteredProducts.length > 0) alertShownRef.current = false;
-  }, [filteredProducts, search, fechaInicial, fechaFinal]);
-
-  useEffect(() => { setCurrentPage(1); }, [search, fechaInicial, fechaFinal]);
-
-  const totalPages  = Math.ceil(filteredProducts.length / RECORDS_PER_PAGE);
-  const startIndex  = (currentPage - 1) * RECORDS_PER_PAGE;
-  const endIndex    = startIndex + RECORDS_PER_PAGE;
-  const currentData = filteredProducts.slice(startIndex, endIndex);
+  if (loading && products.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-gray-500">Cargando compras...</div>
+      </div>
+    );
+  }
 
   return (
     <>
       <div className="h-full flex flex-col gap-0.5 p-3 sm:p-3">
-
         <div className="flex flex-wrap items-end gap-3 mb-3">
           <PurchasesFilters
             search={search}
@@ -222,7 +231,6 @@ export const Purchases = () => {
             <button
               onClick={handleDownloadExcel}
               className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
-              aria-label="Exportar a Excel"
             >
               <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
               <span className="hidden sm:inline">Export Excel</span>
@@ -237,15 +245,15 @@ export const Purchases = () => {
           </div>
         </div>
 
-        {filteredProducts.length === 0 && (
+        {products.length === 0 && !loading && (
           <p className="text-gray-500">No hay compras registradas aún.</p>
         )}
 
-        {filteredProducts.length > 0 && (
+        {products.length > 0 && (
           <div className="flex-1 overflow-auto min-h-0">
             <PurchasesTable
               currentData={currentData}
-              filteredProducts={filteredProducts}
+              filteredProducts={products}
               currentPage={currentPage}
               setCurrentPage={setCurrentPage}
               totalPages={totalPages}
@@ -260,8 +268,12 @@ export const Purchases = () => {
         )}
       </div>
 
-      {selectedPurchase && (
-        <DetailPurchases purchase={selectedPurchase} onClose={() => setSelectedPurchase(null)} />
+      {selectedPurchaseDetail && (
+        <DetailPurchases 
+          purchase={selectedPurchaseDetail} 
+          onClose={handleCloseDetail}
+          loading={loadingDetail}
+        />
       )}
       {cancelPurchase && (
         <Anulatepurchase
