@@ -579,7 +579,7 @@ function Products() {
                       Precio detal
                     </th>
                     <th className="px-3 py-2.5 text-center text-xs font-semibold">
-                      Funciones
+                      Acciones
                     </th>
                   </tr>
                 </thead>
@@ -637,49 +637,52 @@ function Products() {
                         </td>
                         <td className="px-3 py-1.5">
                           <div className="flex items-center justify-center gap-1 sm:gap-1.5">
-                            {canViewInfo && (
-                              <button
-                                onClick={() => handleVerDetalles(row)}
-                                className="text-gray-400 hover:text-[#004D77] hover:scale-110 transition cursor-pointer"
-                                title="Ver detalles"
-                              >
-                                <Info
-                                  className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                                  strokeWidth={1.5}
-                                />
-                              </button>
-                            )}
-                            {canEdit && (
-                              <button
-                                onClick={() => handleEditarProducto(row)}
-                                className="text-gray-400 hover:text-[#004D77] hover:scale-110 transition cursor-pointer"
-                                title="Editar"
-                              >
-                                <SquarePen
-                                  className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                                  strokeWidth={1.5}
-                                />
-                              </button>
-                            )}
-                            {canDelete && (
-                              <button
-                                onClick={() => handleDelete(row)}
-                                className="text-gray-400 hover:text-red-600 hover:scale-110 transition cursor-pointer"
-                                title="Eliminar"
-                              >
-                                <Trash2
-                                  className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                                  strokeWidth={1.5}
-                                />
-                              </button>
-                            )}
-                            {canToggle && (
-                              <ActiveToggle
-                                activo={row.status === "Activo" ? true : false}
-                                onChange={() => handleToggle(row.id)}
-                              />
-                            )}
-                          </div>
+  {canToggle && (
+    <ActiveToggle
+      activo={row.status === "Activo" ? true : false}
+      onChange={() => handleToggle(row.id)}
+    />
+  )}
+
+  {canViewInfo && (
+    <button
+      onClick={() => handleVerDetalles(row)}
+      className="text-gray-400 hover:text-[#004D77] hover:scale-110 transition cursor-pointer"
+      title="Ver detalles"
+    >
+      <Info
+        className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+        strokeWidth={1.5}
+      />
+    </button>
+  )}
+
+  {canEdit && (
+    <button
+      onClick={() => handleEditarProducto(row)}
+      className="text-gray-400 hover:text-[#004D77] hover:scale-110 transition cursor-pointer"
+      title="Editar"
+    >
+      <SquarePen
+        className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+        strokeWidth={1.5}
+      />
+    </button>
+  )}
+
+  {canDelete && (
+    <button
+      onClick={() => handleDelete(row)}
+      className="text-gray-400 hover:text-red-600 hover:scale-110 transition cursor-pointer"
+      title="Eliminar"
+    >
+      <Trash2
+        className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+        strokeWidth={1.5}
+      />
+    </button>
+  )}
+</div>
                         </td>
                       </tr>
                     );
@@ -731,7 +734,7 @@ function Products() {
 
       {canViewInfo && (
         <DetailProduct
-          producto={selectedProduct}
+          producto={selectedProduct} 
           isOpen={showModal}
           onClose={handleCloseModal}
           onEdit={handleEditFromDetail}
