@@ -1,5 +1,24 @@
-// Features/administrtivePanel/purchases/purchases/data/purchasesService.js
-import api from './api';
+// Features/administrtivePanel/purchases/purchases/data/purchasesApi.js
+import apiClient from '../../../../../setting/apiClient.js';
+
+// ==========================================
+// ENDPOINTS
+// ==========================================
+
+const api = {
+  // Supplier Purchases (Compras a proveedores)
+  getAllPurchases: (params) => apiClient.get('/supplier-purchases', { params }),
+  getPurchaseById: (id) => apiClient.get(`/supplier-purchases/${id}`),
+  createPurchase: (data) => apiClient.post('/supplier-purchases', data),
+  annulPurchase: (id, data) => apiClient.patch(`/supplier-purchases/${id}/annul`, data),
+
+  // Productos (para el formulario de creación)
+  getProducts: (params) => apiClient.get('/products', { params }),
+  getProductByBarcode: (barcode) => apiClient.get(`/products/barcode/${barcode}`),
+
+  // Proveedores (para el formulario de creación)
+  getProviders: (params) => apiClient.get('/providers', { params }),
+};
 
 // ==========================================
 // CONVERSIÓN DE ESTADOS
@@ -21,7 +40,7 @@ const mapStatusFromBackend = (statusId, statusName) => {
 // Mapear compra para la lista (usando totalQuantity del backend)
 export const mapPurchaseToList = (purchase) => {
   if (!purchase) return null;
-  
+
   return {
     id: purchase.id,
     numeroFacturacion: purchase.invoiceNumber,
@@ -36,10 +55,10 @@ export const mapPurchaseToList = (purchase) => {
 // Mapear compra para el detalle (con productos)
 export const mapPurchaseToFrontend = (purchase) => {
   if (!purchase) return null;
-  
+
   const details = purchase.details || [];
   const cantidadProductos = details.reduce((sum, d) => sum + (d.quantity || 0), 0);
-  
+
   const productos = details.map(detail => ({
     id: detail.id,
     nombre: detail.productName || 'Producto sin nombre',
@@ -52,18 +71,18 @@ export const mapPurchaseToFrontend = (purchase) => {
     total: detail.netSubtotal || detail.grossSubtotal || 0,
     codigosExtra: detail.extraBarcodes || [],
   }));
-  
+
   return {
     id: purchase.id,
     numeroFacturacion: purchase.invoiceNumber,
     fechaCompra: purchase.purchaseDate?.split('T')[0] || purchase.purchaseDate,
     proveedor: purchase.providerName,
-    cantidadProductos: cantidadProductos,
+    cantidadProductos,
     precioTotal: purchase.totalAmount || 0,
     estado: mapStatusFromBackend(purchase.statusId, purchase.status),
     ivaTotal: details.reduce((sum, d) => sum + (d.ivaSubtotal || 0), 0),
     motivoAnulacion: purchase.cancellationReason || details.find(d => d.cancellationReason)?.cancellationReason,
-    productos: productos,
+    productos,
   };
 };
 
@@ -80,17 +99,16 @@ export const getAllPurchases = async ({ page = 1, limit = 13, search = '', start
       ...(startDate && { startDate }),
       ...(endDate && { endDate }),
     };
-    
+
     console.log('📡 Fetching purchases with params:', params);
-    
+
     const response = await api.getAllPurchases(params);
     console.log('📦 API Response:', response.data);
-    
+
     const { data, pagination } = response.data;
-    
     const mappedData = (data || []).map(mapPurchaseToList);
     console.log('✅ Mapped purchases:', mappedData);
-    
+
     return {
       data: mappedData,
       pagination: {
@@ -128,7 +146,7 @@ export const createPurchase = async (purchaseData) => {
         extraBarcodes: product.codigosExtra || [],
       })),
     };
-    
+
     const response = await api.createPurchase(payload);
     return mapPurchaseToFrontend(response.data.data);
   } catch (error) {
