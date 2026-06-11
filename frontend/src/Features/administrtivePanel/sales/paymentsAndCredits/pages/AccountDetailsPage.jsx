@@ -1,207 +1,253 @@
-import { useParams, useLocation } from "react-router-dom"
-import { useState, useEffect, useRef } from "react"
-import jsPDF from "jspdf"
-import html2canvas from "html2canvas"
-import { ChevronDown, ChevronUp, PlusCircle } from "lucide-react"
-import { useAlert } from "../../../../shared/alerts/useAlert"
+import { useParams } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import { ChevronDown, ChevronUp, PlusCircle } from "lucide-react";
+import { useAlert } from "../../../../shared/alerts/useAlert";
 
-import BackHeader           from "../../../../shared/BackHeader"
-import AccountHeader        from "../components/AccountHeader"
-import PaymentHistoryTable  from "../components/PaymentsHistoryTable"
-import PaymentsPaginator    from "../components/PaymentsPaginator"
-import GeneratePaymentModal from "../components/GeneratePaymentModal"
-import CancelPaymentModal   from "../components/CancelPaymentModal"
-import AccountReceipt       from "../components/AccountReceipt"
-import StatusBadge          from "../components/StatusBadge"
-import ButtonComponent      from "../../../../shared/ButtonComponent"
+import BackHeader from "../../../../shared/BackHeader";
+import AccountHeader from "../components/AccountHeader";
+import PaymentHistoryTable from "../components/PaymentsHistoryTable";
+import PaymentsPaginator from "../components/PaymentsPaginator";
+import GeneratePaymentModal from "../components/GeneratePaymentModal";
+import CancelPaymentModal from "../components/CancelPaymentModal";
+import AccountReceipt from "../components/AccountReceipt";
+import StatusBadge from "../components/StatusBadge";
+import ButtonComponent from "../../../../shared/ButtonComponent";
 
-import { getAccountById, addPayment } from "../data/paymentsServices"
 import {
-  calculateSaldoFactura,
-  calculateSaldoCapital,
-  calculateSaldoInteres,
-  calculateSaldoCliente,
-  calculateCupoOcupado,
-  getTotalAbonadoCapital,
-  getTotalInteresCliente,
-  getPaymentStatus,
-  getClienteStatus
-} from "../utils/paymentHelpers"
+  createInstallment,
+  getCreditCustomers,
+} from "../services/paymentsServices";
+import usePaymentsDetails from "../hooks/usePaymentsDetails";
+import { getTotalAbonadoFactura } from "../utils/paymentHelpers";
 
-/*
-  Vista de detalle de un cliente. Funciona en dos modos:
-    "view"    → solo lectura + botón descargar PDF
-    "payment" → permite registrar y anular abonos por factura
-
-  Tabla de facturas — columnas:
-    Nro Factura | Valor Crédito | Interés | Total a Pagar |
-    Fecha Crédito | Total Abonado | Saldo | Estado
-*/
 export default function AccountDetailsPage({ mode }) {
+  const { id } = useParams();
+  const { showConfirm, showSuccess, showError } = useAlert();
 
-  const { id }      = useParams()
-  const location   = useLocation()
-  const { showConfirm, showSuccess, showError } = useAlert()
+  const [account, setAccount] = useState({
+    id: null,
+    nombre: "",
+    documento: "",
+    telefono: "",
+    creditoAsignado: 0,
+    saldo: 0,
+    cupoDisponible: 0,
+    deudaTotal: 0,
+    estado: "al_dia",
+  });
 
-  const [account,          setAccount]         = useState(null)
-  const [facturaExpandida, setFacturaExpandida] = useState(null)
-  const [facturaAbono,     setFacturaAbono]     = useState(null)
-  const [showPaymentModal, setShowPaymentModal] = useState(false)
-  const [showCancelModal,  setShowCancelModal]  = useState(false)
-  const [selectedAbono,    setSelectedAbono]    = useState(null)
-  const [selectedFactura,  setSelectedFactura]  = useState(null)
-  const [isGeneratingPDF,  setIsGeneratingPDF]  = useState(false)
-  const [pages,            setPages]            = useState({})
-  const [reloadKey,        setReloadKey]         = useState(0)
+  const { invoices, loading, loadInvoices } = usePaymentsDetails();
+  const [facturaExpandida, setFacturaExpandida] = useState(null);
+  const [facturaAbono, setFacturaAbono] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedAbono, setSelectedAbono] = useState(null);
+  const [selectedFactura, setSelectedFactura] = useState(null);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [pages, setPages] = useState({});
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const pdfRef       = useRef(null)
-  const itemsPerPage = 4
+  const pdfRef = useRef(null);
+  const itemsPerPage = 4;
+  const showInterestSummaryInExpandedPanel = false;
 
-  // Recargar cada vez que cambia la ruta o el id
-  useEffect(() => { loadAccount() }, [id, location])
-
-  // Escuchar cambios en los datos para mantener el estado sincronizado
   useEffect(() => {
-    const handlePaymentsUpdate = () => {
-      loadAccount()
-    }
-    window.addEventListener("paymentsUpdated", handlePaymentsUpdate)
-    return () => window.removeEventListener("paymentsUpdated", handlePaymentsUpdate)
-  }, [id]) // Depend on id to ensure correct account is loaded
+    if (!id) return;
 
-  const loadAccount = () => {
-    const data = getAccountById(id)
-    setAccount(data)
-    setReloadKey(k => k + 1)   // fuerza re-render de subcomponentes
+    const loadCustomerData = async () => {
+      try {
+        const customers = await getCreditCustomers();
+        const customer = customers.find(
+          (current) => Number(current.idClient) === Number(id),
+        );
+
+        if (!customer) return;
+
+        setAccount({
+          id: customer.idClient,
+          nombre: customer.fullName,
+          documento: "",
+          telefono: customer.phone,
+          creditoAsignado: Number(customer.assignedCredit ?? 0),
+          saldo: Number(customer.usedCredit ?? 0),
+          cupoDisponible: Number(customer.availableCredit ?? 0),
+          deudaTotal: Number(customer.totalDebt ?? 0),
+          estado: customer.status?.toLowerCase() ?? "al_dia",
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    loadInvoices(id);
+    loadCustomerData();
+  }, [id, loadInvoices, reloadKey]);
+
+  if (loading && (invoices?.length ?? 0) === 0) {
+    return <div className="p-6 font-lexend">Cargando...</div>;
   }
 
-  if (!account) return <div className="p-6 font-lexend">Cargando...</div>
+  const facturas = invoices ?? [];
 
-  const facturas      = account.facturas ?? []
-  const saldoTotal    = calculateSaldoCliente(account)
-  const cupoOcupado   = calculateCupoOcupado(account)     // solo capital
-  const interesTotal  = getTotalInteresCliente(account)   // intereses pendientes
-  const estadoGeneral = getClienteStatus(account)
+  const cupoOcupado = Number(account.saldo ?? 0);
 
-  const formatCOP = (v) =>
+  const interesTotal = facturas.reduce(
+    (total, factura) => total + Number(factura.interes ?? 0),
+    0,
+  );
+
+  const estadoGeneral = account.estado ?? "al_dia";
+
+  const getFacturaDebtTotal = (factura) => {
+    const backendDebt = Number(factura.deudaTotal ?? 0);
+    if (backendDebt > 0) return backendDebt;
+
+    return (
+      Number(factura.saldo ?? factura.remainingBalance ?? 0) +
+      Number(factura.interes ?? 0)
+    );
+  };
+
+  const totalDebt =
+    facturas.reduce((total, factura) => total + getFacturaDebtTotal(factura), 0) ||
+    Number(account.deudaTotal ?? 0);
+
+  const formatCOP = (value) =>
     new Intl.NumberFormat("es-CO", {
-      style: "currency", currency: "COP", minimumFractionDigits: 0
-    }).format(v)
+      style: "currency",
+      currency: "COP",
+      minimumFractionDigits: 0,
+    }).format(value ?? 0);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const toggleFactura = (facturaId) =>
-    setFacturaExpandida(prev => prev === facturaId ? null : facturaId)
+    setFacturaExpandida((prev) => (prev === facturaId ? null : facturaId));
 
   const handleOpenPaymentModal = (factura) => {
-    setFacturaAbono(factura)
-    setShowPaymentModal(true)
-  }
+    setFacturaAbono(factura);
+    setShowPaymentModal(true);
+  };
 
-  const handleSavePayment = (data) => {
+  const handleSavePayment = async (data) => {
     try {
-      addPayment(account.id, facturaAbono.id, data)
-      loadAccount()
-      setShowPaymentModal(false)
-      setFacturaExpandida(facturaAbono.id)
-      showSuccess("Abono registrado", "El pago fue guardado correctamente.")
+      await createInstallment({
+        id_credit: facturaAbono.idCredit,
+        id_payment_method: data.idPaymentMethod,
+        installment_amount: data.monto,
+        observations: data.observacion,
+      });
+
+      setReloadKey((prev) => prev + 1);
+      setShowPaymentModal(false);
+      setFacturaExpandida(facturaAbono.id);
+
+      showSuccess("Abono registrado", "El pago fue guardado correctamente.");
     } catch (error) {
-      showError("Error", error.message || "No se pudo guardar el abono.")
+      showError("Error", error.message || "No se pudo guardar el abono.");
     }
-  }
+  };
 
   const handleOpenCancelModal = (factura, abono) => {
-    setSelectedFactura(factura)
-    setSelectedAbono(abono)
-    setShowCancelModal(true)
-  }
+    setSelectedFactura(factura);
+    setSelectedAbono(abono);
+    setShowCancelModal(true);
+  };
 
   const handleDownloadPDF = async () => {
-    if (!account || !pdfRef.current || isGeneratingPDF) return
+    if (!account || !pdfRef.current || isGeneratingPDF) return;
 
     const confirm = await showConfirm(
       "question",
       "¿Descargar comprobante?",
       "Se generará el PDF del estado de cuenta completo.",
-      { confirmButtonText: "Sí, descargar", cancelButtonText: "Cancelar" }
-    )
-    if (!confirm.isConfirmed) return
+      { confirmButtonText: "Sí, descargar", cancelButtonText: "Cancelar" },
+    );
+    if (!confirm.isConfirmed) return;
 
     try {
-      setIsGeneratingPDF(true)
+      setIsGeneratingPDF(true);
       const canvas = await html2canvas(pdfRef.current, {
-        scale: 3, useCORS: true, backgroundColor: "#ffffff", allowTaint: false
-      })
-      const imgData    = canvas.toDataURL("image/png")
-      const pdf        = new jsPDF("p", "mm", "a4")
-      const pageWidth  = 210
-      const pageHeight = 297
-      const margin     = 10
-      const imgWidth   = pageWidth - 2 * margin
-      const imgHeight  = (canvas.height * imgWidth) / canvas.width
+        scale: 3,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        allowTaint: false,
+      });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const margin = 10;
+      const imgWidth = pageWidth - 2 * margin;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
       if (imgHeight <= pageHeight - 2 * margin) {
-        pdf.addImage(imgData, "PNG", margin, margin, imgWidth, imgHeight)
+        pdf.addImage(imgData, "PNG", margin, margin, imgWidth, imgHeight);
       } else {
-        let heightLeft = imgHeight
-        let position   = margin
-        pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight)
-        heightLeft -= (pageHeight - 2 * margin)
+        let heightLeft = imgHeight;
+        let position = margin;
+        pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight - 2 * margin;
         while (heightLeft > 0) {
-          position = (pageHeight - 2 * margin) - imgHeight + margin
-          pdf.addPage()
-          pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight)
-          heightLeft -= (pageHeight - 2 * margin)
+          position = pageHeight - 2 * margin - imgHeight + margin;
+          pdf.addPage();
+          pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight - 2 * margin;
         }
       }
-      pdf.save(`Comprobante_${account.nombre}.pdf`)
-      showSuccess("Descarga completada", "El PDF fue generado correctamente.")
+      pdf.save(`Comprobante_${account.nombre}.pdf`);
+      showSuccess("Descarga completada", "El PDF fue generado correctamente.");
     } catch {
-      showError("Error", "Ocurrió un problema al generar el PDF.")
+      showError("Error", "Ocurrió un problema al generar el PDF.");
     } finally {
-      setIsGeneratingPDF(false)
+      setIsGeneratingPDF(false);
     }
-  }
+  };
 
   // ── Paginación ────────────────────────────────────────────────────────────
-  const getPage = (facturaId) => pages[facturaId] ?? 1
+  const getPage = (facturaId) => pages[facturaId] ?? 1;
   const setPage = (facturaId, page) =>
-    setPages(prev => ({ ...prev, [facturaId]: page }))
+    setPages((prev) => ({ ...prev, [facturaId]: page }));
 
   const getPaginatedAbonos = (factura) => {
-    const page  = getPage(factura.id)
-    const start = (page - 1) * itemsPerPage
-    return (factura.abonos ?? []).slice(start, start + itemsPerPage)
-  }
+    const page = getPage(factura.id);
+    const start = (page - 1) * itemsPerPage;
+    return (factura.abonos ?? []).slice(start, start + itemsPerPage);
+  };
 
   return (
     <>
       <BackHeader title="Volver" />
 
       <div className="p-4 sm:p-6 space-y-6 font-lexend">
-
         {/* ── HEADER DEL CLIENTE ── */}
         <AccountHeader
           nombre={account.nombre}
           documento={account.documento}
           telefono={account.telefono}
-          estadoGeneral={estadoGeneral}
           creditoAsignado={account.creditoAsignado}
           saldoTotal={cupoOcupado}
+          cupoDisponible={account.cupoDisponible}
           interesTotal={interesTotal}
+          deudaTotal={totalDebt}
+          estadoGeneral={estadoGeneral}
           mode={mode}
           isGeneratingPDF={isGeneratingPDF}
           onDownloadPDF={handleDownloadPDF}
         />
 
         {/* ── TABLA DE FACTURAS ── */}
-        <div key={reloadKey} className="bg-white rounded-2xl shadow-md overflow-hidden">
-
+        <div
+          key={reloadKey}
+          className="bg-white rounded-2xl shadow-md overflow-hidden"
+        >
           {/* Cabecera — 8 columnas */}
           <div className="grid grid-cols-8 bg-[#004D77] text-white text-xs font-medium px-4 py-3">
             <span>Nro Factura</span>
             <span className="text-center">Valor Crédito</span>
             <span className="text-center">Interés</span>
-            <span className="text-center">Total a Pagar</span>
+            <span className="text-center">Valor Capital</span>
             <span className="text-center">Fecha Crédito</span>
             <span className="text-center">Total Abonado</span>
             <span className="text-center">Saldo</span>
@@ -215,19 +261,24 @@ export default function AccountDetailsPage({ mode }) {
           )}
 
           {facturas.map((factura) => {
-
-            const interes      = factura.interes ?? 0
-            const totalAPagar  = factura.valorCredito + interes
-            const saldoFac     = calculateSaldoFactura(factura)   // capital + interés
-            const saldoInt     = calculateSaldoInteres(factura)
-            const estadoFac    = getPaymentStatus(saldoFac, factura.fechaCredito)
-            const isExpanded   = facturaExpandida === factura.id
-            const abonos       = factura.abonos ?? []
-            const totalAbonado = getTotalAbonadoCapital(factura)
+            const interes = factura.interes ?? 0;
+            const saldoCapital = Number(
+              factura.saldo ?? factura.remainingBalance ?? 0,
+            );
+            const saldoInt = factura.interes ?? 0;
+            const totalAPagar = saldoCapital;
+            const saldoFac = getFacturaDebtTotal(factura);
+            const estadoFac = factura.estado ?? "al_dia";
+            const isExpanded = facturaExpandida === factura.id;
+            const abonos = factura.abonos ?? [];
+            const totalAbonado =
+              factura.totalAbonado ?? getTotalAbonadoFactura(factura);
 
             return (
-              <div key={factura.id} className="border-b border-gray-100 last:border-0">
-
+              <div
+                key={factura.id}
+                className="border-b border-gray-100 last:border-0"
+              >
                 {/* Fila clickeable */}
                 <div
                   className="grid grid-cols-8 items-center px-4 py-3 text-sm cursor-pointer hover:bg-gray-50 transition"
@@ -235,10 +286,11 @@ export default function AccountDetailsPage({ mode }) {
                 >
                   {/* Nro Factura */}
                   <div className="flex items-center gap-2 font-medium text-[#004D77]">
-                    {isExpanded
-                      ? <ChevronUp   size={15} className="text-gray-400" />
-                      : <ChevronDown size={15} className="text-gray-400" />
-                    }
+                    {isExpanded ? (
+                      <ChevronUp size={15} className="text-gray-400" />
+                    ) : (
+                      <ChevronDown size={15} className="text-gray-400" />
+                    )}
                     {factura.nroFactura}
                   </div>
 
@@ -248,18 +300,24 @@ export default function AccountDetailsPage({ mode }) {
                   </span>
 
                   {/* Interés — destacado en naranja si tiene mora */}
-                  <span className={`text-center font-semibold ${
-                    interes > 0 ? "text-orange-500" : "text-gray-400"
-                  }`}>
-                    {interes > 0
-                      ? <span className="flex items-center justify-center gap-1">
-                          <span>⚠</span>{formatCOP(interes)}
-                          {saldoInt <= 0 && (
-                            <span className="text-[10px] text-green-600 font-normal ml-1">✓ pagado</span>
-                          )}
-                        </span>
-                      : formatCOP(0)
-                    }
+                  <span
+                    className={`text-center font-semibold ${
+                      interes > 0 ? "text-orange-500" : "text-gray-400"
+                    }`}
+                  >
+                    {interes > 0 ? (
+                      <span className="flex items-center justify-center gap-1">
+                        <span>⚠</span>
+                        {formatCOP(interes)}
+                        {saldoInt <= 0 && (
+                          <span className="text-[10px] text-green-600 font-normal ml-1">
+                            ✓ pagado
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      formatCOP(0)
+                    )}
                   </span>
 
                   {/* Total a Pagar */}
@@ -278,9 +336,11 @@ export default function AccountDetailsPage({ mode }) {
                   </span>
 
                   {/* Saldo total (capital + interés pendiente) */}
-                  <span className={`text-center font-semibold ${
-                    saldoFac > 0 ? "text-red-600" : "text-green-600"
-                  }`}>
+                  <span
+                    className={`text-center font-semibold ${
+                      saldoFac > 0 ? "text-red-600" : "text-green-600"
+                    }`}
+                  >
                     {formatCOP(saldoFac)}
                   </span>
 
@@ -293,20 +353,28 @@ export default function AccountDetailsPage({ mode }) {
                 {/* Panel expandido — abonos */}
                 {isExpanded && (
                   <div className="bg-gray-50 px-4 pb-4 pt-2 space-y-3">
-
                     {/* Resumen capital vs interés dentro del panel */}
-                    {interes > 0 && (
+                    {showInterestSummaryInExpandedPanel && interes > 0 && (
                       <div className="flex gap-4 text-xs text-gray-500 border-b border-gray-200 pb-2">
                         <span>
                           Saldo capital:{" "}
-                          <span className={`font-semibold ${calculateSaldoCapital(factura) > 0 ? "text-red-500" : "text-green-600"}`}>
-                            {formatCOP(calculateSaldoCapital(factura))}
+                          <span
+                            className={`font-semibold ${Math.max(0, (factura.saldo ?? 0) - (factura.interes ?? 0)) > 0 ? "text-red-500" : "text-green-600"}`}
+                          >
+                            {formatCOP(
+                              Math.max(
+                                0,
+                                (factura.saldo ?? 0) - (factura.interes ?? 0),
+                              ),
+                            )}
                           </span>
                         </span>
                         <span>•</span>
                         <span>
                           Saldo interés:{" "}
-                          <span className={`font-semibold ${saldoInt > 0 ? "text-orange-500" : "text-green-600"}`}>
+                          <span
+                            className={`font-semibold ${saldoInt > 0 ? "text-orange-500" : "text-green-600"}`}
+                          >
                             {formatCOP(saldoInt)}
                           </span>
                         </span>
@@ -318,8 +386,8 @@ export default function AccountDetailsPage({ mode }) {
                       <div className="flex justify-end">
                         <ButtonComponent
                           onClick={(e) => {
-                            e.stopPropagation()
-                            handleOpenPaymentModal(factura)
+                            e.stopPropagation();
+                            handleOpenPaymentModal(factura);
                           }}
                           className="flex items-center gap-2 bg-[#004D77] text-[#004D77] border-[#004D77] hover:bg-[#003D5e]"
                         >
@@ -335,7 +403,9 @@ export default function AccountDetailsPage({ mode }) {
                     <PaymentHistoryTable
                       abonos={getPaginatedAbonos(factura)}
                       mode={mode}
-                      onDelete={(abono) => handleOpenCancelModal(factura, abono)}
+                      onDelete={(abono) =>
+                        handleOpenCancelModal(factura, abono)
+                      }
                     />
 
                     {/* Paginador */}
@@ -345,15 +415,12 @@ export default function AccountDetailsPage({ mode }) {
                       currentPage={getPage(factura.id)}
                       onPageChange={(page) => setPage(factura.id, page)}
                     />
-
                   </div>
                 )}
-
               </div>
-            )
+            );
           })}
         </div>
-
       </div>
 
       {/* ── MODAL ABONAR ── */}
@@ -371,27 +438,30 @@ export default function AccountDetailsPage({ mode }) {
         <CancelPaymentModal
           isOpen={showCancelModal}
           onClose={() => setShowCancelModal(false)}
-          clienteId={account.id}
-          facturaId={selectedFactura.id}
           account={account}
           payment={selectedAbono}
-          onSuccess={() => {
-            loadAccount()
-            setShowCancelModal(false)
+          onSuccess={async () => {
+            setReloadKey((prev) => prev + 1);
+            setShowCancelModal(false);
           }}
         />
       )}
 
       {/* ── RECEIPT OCULTO PARA PDF ── */}
-      <div style={{
-        position: "absolute", top: 0, left: "-9999px",
-        width: "210mm", backgroundColor: "#ffffff", zIndex: -1
-      }}>
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: "-9999px",
+          width: "210mm",
+          backgroundColor: "#ffffff",
+          zIndex: -1,
+        }}
+      >
         <div ref={pdfRef}>
           <AccountReceipt account={account} />
         </div>
       </div>
-
     </>
-  )
+  );
 }

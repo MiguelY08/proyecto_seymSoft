@@ -1,9 +1,10 @@
 
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 import ButtonComponent from "../../../../shared/ButtonComponent";
 import TableFilters from "../../../../shared/TableFilters";
 import RolesTable from "../components/RolesTable";
+import RoleMetricsCards from "../components/RoleMetricsCards";
 import RoleModal from "../components/RoleModal";
 import Permission from "../components/Permission";
 import PaginationAdmin from "../../../../shared/PaginationAdmin";
@@ -81,6 +82,17 @@ export default function RolesPage() {
     setCurrentPage(1);
 
   }, [search]);
+
+  const metrics = useMemo(() => {
+    const totalRoles = roles.length;
+    const activeRoles = roles.filter((role) => role.active).length;
+
+    return {
+      totalRoles,
+      activeRoles,
+      inactiveRoles: totalRoles - activeRoles,
+    };
+  }, [roles]);
 
   // ─────────────────────────────
   // FILTROS
@@ -359,6 +371,10 @@ const handleView = async (
 
           </Permission>
 
+        </div>
+
+        <div className="mb-4">
+          <RoleMetricsCards metrics={metrics} />
         </div>
 
         <RolesTable

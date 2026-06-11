@@ -14,14 +14,14 @@ function AlertContainer({ alerts, onRemove }) {
   return createPortal(
     <>
       {/* ── Centro superior ───────────────────────────────────────────────── */}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-9999 flex flex-col items-center gap-3 w-full max-w-sm sm:max-w-md px-4 pointer-events-none">
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-3 w-full max-w-sm sm:max-w-md px-4 pointer-events-none">
         {centerAlerts.map((alert) => (
           <AlertItem key={alert.id} alert={alert} onRemove={onRemove} position="center" />
         ))}
       </div>
 
       {/* ── Derecha superior ──────────────────────────────────────────────── */}
-      <div className="fixed top-4 right-4 z-9999 flex flex-col items-end gap-3 w-full max-w-xs pointer-events-none">
+      <div className="fixed top-4 right-4 z-[9999] flex flex-col items-end gap-3 w-full max-w-xs pointer-events-none">
         {rightAlerts.map((alert) => (
           <AlertItem key={alert.id} alert={alert} onRemove={onRemove} position="right" />
         ))}

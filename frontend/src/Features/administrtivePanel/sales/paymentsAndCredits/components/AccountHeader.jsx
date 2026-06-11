@@ -22,7 +22,9 @@ export default function AccountHeader({
   estadoGeneral,
   creditoAsignado,
   saldoTotal,
+  cupoDisponible,
   interesTotal,
+  deudaTotal,
   mode,
   isGeneratingPDF,
   onDownloadPDF,
@@ -36,9 +38,9 @@ export default function AccountHeader({
 
   const cupoOcupado = saldoTotal ?? 0;
   const interes = interesTotal ?? 0;
+  const totalAPagar = Number(deudaTotal ?? 0);
   const credAsignado = creditoAsignado ?? 0;
-  const cupoDisponible = Math.max(0, credAsignado - cupoOcupado);
-  const totalAPagar = cupoOcupado + interes;
+  const cupoDisponibleValue = cupoDisponible ?? 0;
 
   const pctOcupado =
     credAsignado > 0
@@ -110,9 +112,9 @@ export default function AccountHeader({
           <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-center min-w-[130px]">
             <p className="text-xs text-gray-400">Cupo Disponible</p>
             <p
-              className={`text-base font-bold ${cupoDisponible > 0 ? "text-green-600" : "text-gray-400"}`}
+              className={`text-base font-bold ${cupoDisponibleValue > 0 ? "text-green-600" : "text-gray-400"}`}
             >
-              {formatCOP(cupoDisponible)}
+              {formatCOP(cupoDisponibleValue)}
             </p>
           </div>
 
@@ -129,15 +131,15 @@ export default function AccountHeader({
             </div>
           )}
 
-          {/* Total a Pagar — solo si tiene interés activo */}
-          {interes > 0 && (
+          {/* Total a Pagar — deuda real del cliente */}
+          {totalAPagar > 0 && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2 text-center min-w-[130px]">
               <p className="text-xs text-red-400">Total a Pagar</p>
               <p className="text-base font-bold text-red-600">
                 {formatCOP(totalAPagar)}
               </p>
               <p className="text-[10px] text-red-300 mt-0.5">
-                Capital + interés
+                Capital + Intereses
               </p>
             </div>
           )}
