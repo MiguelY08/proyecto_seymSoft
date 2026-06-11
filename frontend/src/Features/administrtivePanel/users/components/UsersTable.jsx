@@ -10,9 +10,10 @@ import {
   Loader2
 } from "lucide-react";
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { useAlert } from "../../../shared/alerts/useAlert";
+import Spinner from "../../../shared/spinner";
 
 import {
   highlight,
@@ -24,6 +25,80 @@ import Permission from "../../configuration/roles/components/Permission";
 
 // Usuario - Cliente del sistema
 const SYSTEM_ID_USER = 999999999;
+
+function useTooltipPos() {
+  const [pos, setPos] = useState(null);
+  const ref = useRef(null);
+
+  const show = useCallback(() => {
+    if (!ref.current) return;
+
+    const rect = ref.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const openUp = spaceBelow < 120 && spaceAbove > spaceBelow;
+
+    setPos({
+      left: Math.min(rect.left + rect.width / 2 - 80, window.innerWidth - 176),
+      top: openUp ? rect.top - 8 : rect.bottom + 8,
+      openUp,
+    });
+  }, []);
+
+  const hide = useCallback(() => setPos(null), []);
+
+  return { ref, pos, show, hide };
+}
+
+function FloatingTooltip({ pos, children }) {
+  if (!pos) return null;
+
+  return (
+    <div
+      className="fixed z-[9999] min-w-[160px] rounded-xl shadow-2xl p-3 pointer-events-none"
+      style={{
+        background: "#1e293b",
+        left: pos.left,
+        top: pos.openUp ? undefined : pos.top,
+        bottom: pos.openUp ? window.innerHeight - pos.top : undefined,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function ClientUserBadge() {
+  const { ref, pos, show, hide } = useTooltipPos();
+
+  return (
+    <>
+      <div
+        ref={ref}
+        className="w-5 h-5 rounded-full bg-[#004D77]/15 flex items-center justify-center"
+        onMouseEnter={show}
+        onMouseLeave={hide}
+      >
+        <ShoppingBag
+          className="w-3 h-3 text-[#004D77]"
+          strokeWidth={1.8}
+        />
+      </div>
+
+      <FloatingTooltip pos={pos}>
+        <p
+          className="text-xs font-semibold uppercase tracking-wide mb-1"
+          style={{ color: "#94a3b8" }}
+        >
+          Usuario
+        </p>
+        <p className="text-xs whitespace-nowrap" style={{ color: "#f1f5f9" }}>
+          También es cliente
+        </p>
+      </FloatingTooltip>
+    </>
+  );
+}
 
 // ─── Toggle activo/inactivo ──────────────────────────────────
 
@@ -335,6 +410,25 @@ function UsersTable({
 
   const [deletingId,setDeletingId] =
     useState(null);
+  const [loadingMessage,setLoadingMessage] =
+    useState("");
+
+  const navigateWithSpinner = (
+    message,
+    to,
+    options
+  ) => {
+
+    setLoadingMessage(message);
+
+    window.setTimeout(() => {
+      navigate(
+        to,
+        options
+      );
+    }, 80);
+
+  };
 
   const handleDelete = async (
     row
@@ -458,6 +552,23 @@ function UsersTable({
 
     <div className="flex-1 overflow-x-auto rounded-xl shadow-md min-h-0">
 
+      {
+
+        loadingMessage && (
+
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+
+            <Spinner
+              message={loadingMessage}
+              className="min-h-0"
+            />
+
+          </div>
+
+        )
+
+      }
+
       <table className="min-w-max w-full">
 
         <thead className="bg-[#004D77] text-white">
@@ -541,18 +652,7 @@ function UsersTable({
 
                         row.isClient && (
 
-                          <div className="relative group">
-
-                            <div className="w-5 h-5 rounded-full bg-[#004D77]/15 flex items-center justify-center">
-
-                              <ShoppingBag
-                                className="w-3 h-3 text-[#004D77]"
-                                strokeWidth={1.8}
-                              />
-
-                            </div>
-
-                          </div>
+                          <ClientUserBadge />
 
                         )
 
@@ -606,7 +706,7 @@ function UsersTable({
                     {
 
                       highlight(
-                        row.role?.nameRole || "Sin rol (Null)",
+                        row.role?.nameRole || row.role?.name || "Sin rol",
                         search
                       )
 
@@ -636,6 +736,20 @@ function UsersTable({
 
                         <div className="flex items-center justify-center gap-1 sm:gap-1.5">
 
+                          {/* ACTIVO */}
+
+                          <Permission permission="usuarios.activar_desactivar">
+
+                            <ActiveToggle
+                              activo={row.active}
+                              onChange={() =>
+                                onToggle(row.id)
+                              }
+                              search={search}
+                            />
+
+                          </Permission>
+
                           {/* VER */}
 
                           <Permission permission="usuarios.ver_informacion">
@@ -646,7 +760,9 @@ function UsersTable({
                                 const rect =
                                   e.currentTarget.getBoundingClientRect();
 
-                                navigate(
+                                navigateWithSpinner(
+
+                                  "Cargando detalles del usuario...",
 
                                   "/admin/users/info-user",
 
@@ -699,7 +815,9 @@ function UsersTable({
                                 const rect =
                                   e.currentTarget.getBoundingClientRect();
 
-                                navigate(
+                                navigateWithSpinner(
+
+                                  "Cargando edicion del usuario...",
 
                                   "/admin/users/form-user",
 
@@ -739,20 +857,6 @@ function UsersTable({
                               />
 
                             </button>
-
-                          </Permission>
-
-                          {/* ACTIVO */}
-
-                          <Permission permission="usuarios.activar_desactivar">
-
-                            <ActiveToggle
-                              activo={row.active}
-                              onChange={() =>
-                                onToggle(row.id)
-                              }
-                              search={search}
-                            />
 
                           </Permission>
 

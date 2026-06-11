@@ -20,12 +20,27 @@ import apiClient from '../../../../setting/apiClient.js';
 // Convierte status { id, name } → booleano active
 const mapStatusToActive = (status) => status?.name === 'Activo';
 
+const normalizeRole = (role) => {
+  if (!role) return null;
+
+  const idRole = role.idRole ?? role.id_role ?? role.id ?? null;
+  const nameRole = role.nameRole ?? role.name_role ?? role.name ?? null;
+
+  return {
+    ...role,
+    id: idRole,
+    idRole,
+    name: nameRole,
+    nameRole,
+  };
+};
+
 // Normaliza un usuario proveniente de la API al formato interno del frontend
 const mapUserFromApi = (apiUser) => ({
   ...apiUser,
   active: mapStatusToActive(apiUser.status),
   createdAt: apiUser.creationDate || apiUser.createdAt,
-  role: apiUser.role || null,
+  role: normalizeRole(apiUser.role),
   permissions: apiUser.permissions || [],
 });
 
@@ -106,7 +121,7 @@ export const UserService = {
         phone: user.phone,
         active: isActive,
         createdAt: user.creationDate,
-        role: apiData.role,        // null o el rol proveniente de otra API
+        role: normalizeRole(apiData.role),        // null o el rol proveniente de otra API
         permissions: apiData.permissions || [],
       };
     } catch (error) {
@@ -132,7 +147,7 @@ export const UserService = {
 
       const response = await apiClient.post('/users', payload);
 
-      const createdData = response.data.user;
+      const createdData = response.data.data ?? response.data.user ?? response.data;
       const createdUser = createdData?.user ?? createdData;
 
       return {
@@ -145,7 +160,7 @@ export const UserService = {
           createdUser.status?.id === 1 ||
           createdUser.status?.name === 'Activo',
         createdAt: createdUser.creationDate ?? createdUser.createdAt,
-        role: createdData?.role ?? null,
+        role: normalizeRole(createdData?.role ?? createdUser.role),
         permissions: createdData?.permissions || [],
       };
     } catch (error) {
@@ -183,7 +198,7 @@ async update(id, changes) {
       phone: user.phone,
       active: user.idStatus === 1, // 1 = Activo
       createdAt: user.creationDate,
-      role: role,        // null o rol desde otra API
+      role: normalizeRole(role),        // null o rol desde otra API
       permissions: permissions || [],
     };
   } catch (error) {
@@ -207,12 +222,15 @@ async toggle(id, active) {
     // La API devuelve: { message, data: { id, name, email, phone, creationDate, status } }
     const updatedData = response.data.data;
     return {
-      id: updatedData.id,
-      name: updatedData.name,
+      id: updatedData.id ?? updatedData.idUser,
+      name: updatedData.name ?? updatedData.fullName,
       email: updatedData.email,
       phone: updatedData.phone,
-      active: updatedData.status.id === 1, // true si el nuevo estado es Activo
-      createdAt: updatedData.creationDate,
+      active:
+        updatedData.status?.id === 1 ||
+        updatedData.status?.name === 'Activo' ||
+        updatedData.idStatus === 1,
+      createdAt: updatedData.creationDate ?? updatedData.createdAt,
       role: null,      // pendiente de integración con API de roles
       permissions: [], // este endpoint no devuelve permisos
     };

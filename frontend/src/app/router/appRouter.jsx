@@ -58,10 +58,8 @@ import OrdersList from "../../Features/administrtivePanel/sales/orders/pages/Ord
 import OrderForm from "../../Features/administrtivePanel/sales/orders/pages/OrdersForm.jsx"
 
 import Sales from "../../Features/administrtivePanel/sales/sales/pages/Sales.jsx";
-// import SaleForm from "../../Features/administrtivePanel/sales/sales/pages/SaleForm.jsx";
 import SaleForm from "../../Features/administrtivePanel/sales/sales/pages/SaleForm.jsx";
-// import SaleInfo from "../../Features/administrtivePanel/sales/sales/modals/SaleInfo.jsx";
-// import AnnularSale from "../../Features/administrtivePanel/sales/sales/modals/AnnularSale.jsx";
+import SaleEditForm from "../../features/administrtivePanel/sales/sales/pages/SaleEditForm.jsx";
 import SaleInfo from "../../Features/administrtivePanel/sales/sales/modals/SaleInfo.jsx";
 import AnnularSale from "../../Features/administrtivePanel/sales/sales/modals/AnnularSale.jsx";
 
@@ -158,6 +156,7 @@ const AppRouter = () => {
           {/* SALES */}
           <Route path="sales" element={<Sales />} />
           <Route path="sales/form-sale" element={<SaleForm />} />
+          <Route path="sales/edit-sale" element={<SaleEditForm />} />
           <Route path="sales/info-sale" element={<SaleInfo />} />
           <Route path="sales/annular-sale" element={<AnnularSale />} />
 

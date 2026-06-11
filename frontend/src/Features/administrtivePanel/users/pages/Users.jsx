@@ -6,6 +6,7 @@ import TopBar          from '../components/TopBar';
 import UserMetricsCards from '../components/UserMetricsCards';
 import UsersTable      from '../components/UsersTable';
 import PaginationAdmin from '../../../shared/PaginationAdmin';
+import Spinner from '../../../shared/spinner';
 import { UserService } from '../services/userService';
 import { useAlert }    from '../../../shared/alerts/useAlert';
 import { downloadUsersExcel } from '../helpers/excelHelper';
@@ -16,7 +17,7 @@ const RECORDS_PER_PAGE = 13;
 
 function Users() {
   const location = useLocation();
-  const { showError, showWarning, showSuccess } = useAlert();
+  const { showError, showSuccess } = useAlert();
 
   // Estados principales
   const [users, setUsers] = useState([]);           // Lista de usuarios de la página actual
@@ -160,12 +161,7 @@ function Users() {
   // ─── Renderizado condicional mientras carga o hay error ────────────────────
   if (loading && users.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#004D77] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando usuarios...</p>
-        </div>
-      </div>
+      <Spinner message="Cargando usuarios..." />
     );
   }
 

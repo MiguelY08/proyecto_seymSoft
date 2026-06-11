@@ -6,16 +6,19 @@
 // - Exportación a Excel (client‑side, basada en datos completos)
 
 // ─── Normalizar texto (quitar tildes, minúsculas) ─────────────────────────────
-export const normalizar = (str) =>
-  str.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+export const normalizar = (str = '') =>
+  String(str).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+const escapeRegExp = (value) =>
+  String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // ─── Resaltador de texto ──────────────────────────────────────────────────────
 export const highlight = (text, term) => {
   if (!term || !term.trim()) return text;
-  const regex = new RegExp(`(${term.trim()})`, 'gi');
+  const regex = new RegExp(`(${escapeRegExp(term.trim())})`, 'gi');
   const parts = String(text).split(regex);
   return parts.map((part, i) =>
-    regex.test(part)
+    part.toLowerCase() === term.trim().toLowerCase()
       ? <mark key={i} className="bg-[#004d7726] text-[#004D77] rounded px-0.5">{part}</mark>
       : part
   );
