@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import DetailOrder from '../../orders/modals/DetailOrder';
 import { SalesServices } from '../services/salesServices';
 import { useAlert } from '../../../../shared/alerts/useAlert';
+import Spinner from '../../../../shared/spinner';
 
 const mapSaleToOrderDetail = (sale) => {
   const order = sale.order ?? {};
@@ -35,7 +36,11 @@ const mapSaleToOrderDetail = (sale) => {
     clienteTelefono: customerUser.phone ?? '',
     clienteEmail: customerUser.email ?? '',
     asesorId: sale.vendedorId,
-    asesorNombre: sale.vendedor,
+    asesorNombre:
+      sale.vendedor ??
+      sale.employee?.user?.fullName ??
+      sale.employee?.user?.name ??
+      '',
     direccionEntrega: order.deliveryAddress ?? order.deliveryAdress ?? sale.direccion,
     total: sale.totalNumerico ?? order.total ?? 0,
     productos,
@@ -97,10 +102,10 @@ function SaleInfo() {
   if (loading || !order) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-        <div className="bg-white rounded-lg p-6">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#004D77] mx-auto"></div>
-          <p className="text-sm text-gray-600 mt-3">Cargando informacion...</p>
-        </div>
+        <Spinner
+          message="Cargando informacion..."
+          className="min-h-0 text-white"
+        />
       </div>
     );
   }

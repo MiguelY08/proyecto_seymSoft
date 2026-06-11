@@ -1,15 +1,14 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X, ChevronDown, User, Mail, Phone, ShieldCheck, Loader2 } from 'lucide-react';
+import { X, User, Mail, Phone, ShieldCheck, Loader2 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { useAlert } from '../../../shared/alerts/useAlert';
 import { useModalAnimation } from '../../../shared/useModalAnimation';
+import FormSelect from '../../../shared/FormSelect';
 import { UserService } from '../services/userService';
 import { listRoles } from '../services/listRoles.service'
 import {
   PHONE_MIN,
   PHONE_MAX,
-  validateField as baseValidateField,
-  validateUserForm as baseValidateUserForm,
 } from '../validators/usersValidators';
 
 // Funciones de validación (sin cambios)
@@ -17,7 +16,7 @@ const validateField = (name, value, form, context) => {
   if (name === 'nombreCompleto') {
     if (!value.trim()) return 'El nombre completo es obligatorio.';
     if (value.trim().length < 3) return 'Mínimo 3 caracteres.';
-    if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(value)) return 'Solo letras y espacios.';
+    if (!/^[\p{L}\s]+$/u.test(value)) return 'Solo letras y espacios.';
     return null;
   }
   if (name === 'correo') {
@@ -61,7 +60,7 @@ function FormUser() {
     nombreCompleto: userToEdit?.name ?? '',
     correo: userToEdit?.email ?? '',
     telefono: userToEdit?.phone ?? '',
-    rol: String(userToEdit?.role?.idRole ?? ''),
+    rol: String(userToEdit?.role?.idRole ?? userToEdit?.role?.id ?? ''),
   });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
@@ -69,6 +68,13 @@ function FormUser() {
 
   const [roles, setRoles] = useState([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
+  const roleOptions = useMemo(() => [
+    { value: '', label: 'Sin rol - Null' },
+    ...roles.map((role) => ({
+      value: String(role.idRole ?? role.id),
+      label: role.nameRole ?? role.name,
+    })),
+  ], [roles]);
 
   useEffect(() => {
     const fetchRoles = async () => {
@@ -76,7 +82,7 @@ function FormUser() {
 
       try {
         const rolesFromApi = await listRoles();
-        setRoles(rolesFromApi.filter((role) => role.active));
+        setRoles(rolesFromApi);
       } catch (error) {
         console.error('Error cargando roles:', error);
         showWarning('Error', 'No se pudieron cargar los roles.');
@@ -94,7 +100,7 @@ function FormUser() {
     if (name === 'telefono') {
       filtered = value.replace(/\D/g, '');
     } else if (name === 'nombreCompleto') {
-      filtered = value.replace(/[^a-zA-ZÀ-ÿ\s]/g, '');
+      filtered = value.replace(/[^\p{L}\s]/gu, '');
     }
     const updatedForm = { ...form, [name]: filtered };
     setForm(updatedForm);
@@ -156,7 +162,7 @@ function FormUser() {
         form.nombreCompleto !== (userToEdit?.name ?? '') ||
         form.correo !== (userToEdit?.email ?? '') ||
         form.telefono !== (userToEdit?.phone ?? '') ||
-        form.rol !== String(userToEdit?.role?.idRole ?? '')
+        form.rol !== String(userToEdit?.role?.idRole ?? userToEdit?.role?.id ?? '')
       );
     }
     return (
@@ -187,19 +193,11 @@ function FormUser() {
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
 
-  const selectClass = (field) =>
-    `appearance-none w-full pl-10 pr-10 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 ${
-      touched[field] && errors[field]
-        ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-        : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
-    }`;
-
   const ErrorMsg = ({ field }) =>
     touched[field] && errors[field] ? <p className="mt-0.5 text-xs text-red-500">{errors[field]}</p> : null;
 
   return (
     <div
-      onClick={handleCancel}
       style={{ transition: 'opacity 250ms ease' }}
       className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4
         ${visible ? 'opacity-100' : 'opacity-0'}`}
@@ -294,23 +292,16 @@ function FormUser() {
             <label className="block text-sm font-medium text-gray-700">
               Rol
             </label>
-            <div className="relative">
-              <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" strokeWidth={1.8} />
-              <select
-                name="rol"
-                value={form.rol}
-                onChange={handleChange}
-                className={selectClass('rol')}
-              >
-                <option value="">Sin rol - Null</option>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
-            </div>
+            <FormSelect
+              value={form.rol}
+              options={roleOptions}
+              onChange={(value) => handleChange({ target: { name: 'rol', value } })}
+              icon={ShieldCheck}
+              disabled={loadingRoles}
+              error={touched.rol && errors.rol}
+              placeholder={loadingRoles ? 'Cargando roles...' : 'Seleccionar rol'}
+              ariaLabel="Rol"
+            />
           </div>
         </div>
 
@@ -320,7 +311,7 @@ function FormUser() {
             onClick={handleCancel}
             className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
           >
-            Cancelar
+            Cerrar
           </button>
           <button
             onClick={handleSubmit}

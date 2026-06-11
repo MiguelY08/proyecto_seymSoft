@@ -15,6 +15,7 @@ function AnnularSale() {
     <CancelOrder
       sale={sale}
       contexto="venta"
+      onClose={() => navigate('/admin/sales')}
     />
   );
 }

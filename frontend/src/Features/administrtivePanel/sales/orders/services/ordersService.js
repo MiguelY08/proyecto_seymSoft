@@ -3,8 +3,6 @@
 
 import apiClient from '../../../../../setting/apiClient';
 
-const IVA_RATE = 0.19;
-
 export const CAJA_CLIENTE_ID = 0;
 
 export const ESTADOS_LOGISTICOS = {
@@ -40,6 +38,16 @@ const toNumber = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const roundMoney = (value) =>
+  Math.round((Number(value) || 0) * 100) / 100;
+
+const getIncludedIvaAmount = (totalWithIva, ivaPercentage = 0) => {
+  const rate = toNumber(ivaPercentage) / 100;
+  if (rate <= 0) return 0;
+
+  return roundMoney(toNumber(totalWithIva) - (toNumber(totalWithIva) / (1 + rate)));
+};
+
 const normalizeEstadoLogistico = (value) => {
   const raw = String((value?.name ?? value) || ESTADOS_LOGISTICOS.EN_PROCESO).toLowerCase();
   if (raw.includes('cancel')) return ESTADOS_LOGISTICOS.CANCELADO;
@@ -48,16 +56,17 @@ const normalizeEstadoLogistico = (value) => {
 };
 
 const normalizePagoEstado = (value, totalPagado = 0, total = 0) => {
+  if (total > 0 && totalPagado >= total) return ESTADOS_PAGO.PAGADO;
   const raw = String((value?.name ?? value) || '').toLowerCase();
   if (raw.includes('pagad') || raw.includes('paid')) return ESTADOS_PAGO.PAGADO;
   if (raw.includes('pend') || raw.includes('pending')) return ESTADOS_PAGO.PENDIENTE;
-  return total > 0 && totalPagado >= total ? ESTADOS_PAGO.PAGADO : ESTADOS_PAGO.PENDIENTE;
+  return ESTADOS_PAGO.PENDIENTE;
 };
 
 const normalizeTipoEntrega = (order = {}) => {
   const deliveryType = String(order.deliveryType ?? '').toLowerCase();
   const deliveryAddress = String(order.deliveryAddress ?? order.direccionEntrega ?? '').toLowerCase();
-  if (deliveryType.includes('recoge') || deliveryAddress.includes('cliente lo recoge')) return 'recoge';
+  if (deliveryType.includes('recoge') || deliveryType.includes('recibe') || deliveryAddress.includes('cliente lo recoge')) return 'recoge';
   return 'domicilio';
 };
 
@@ -65,7 +74,7 @@ const normalizePayment = (payment = {}, pedidoId = null) => ({
   id: payment.id ?? payment.paymentId ?? payment.idPayment ?? Date.now(),
   pedidoId: toNumber(payment.pedidoId ?? payment.orderId ?? payment.idOrder ?? pedidoId, pedidoId),
   fechaPago: payment.fechaPago ?? payment.paymentDate ?? payment.createdAt ?? payment.date ?? new Date().toISOString(),
-  metodoPago: payment.metodoPago ?? payment.paymentMethod?.name ?? payment.paymentMethod ?? payment.method ?? payment.metodo ?? METODOS_PAGO.EFECTIVO,
+  metodoPago: payment.metodoPago ?? payment.paymentMethod?.namePaymentMethod ?? payment.paymentMethod?.name ?? payment.paymentMethod ?? payment.method ?? payment.metodo ?? METODOS_PAGO.EFECTIVO,
   monto: toNumber(payment.monto ?? payment.amount ?? payment.value),
   comprobante: payment.comprobante ?? payment.receipt ?? payment.reference ?? payment.voucher ?? null,
   observaciones: payment.observations ?? payment.observaciones ?? '',
@@ -75,18 +84,41 @@ const normalizeProduct = (product = {}) => {
   const productData = product.product ?? product;
   const cantidad = toNumber(product.cantidad ?? product.quantity ?? product.qty, 1);
   const precioUnitario = toNumber(
-    product.precioUnitario ?? product.unitPrice ?? product.price ?? productData.precioDetalle ?? productData.retailPrice
+    product.precioUnitario ??
+    product.unitPrice ??
+    product.unit_price ??
+    product.price ??
+    productData.precioDetalle ??
+    productData.retailPrice
+  );
+  const subtotalWithoutIva = toNumber(product.subtotal, null);
+  const ivaAmount = toNumber(product.iva ?? product.ivaAmount ?? product.iva_amount ?? product.tax, null);
+  const lineTotal = toNumber(
+    product.total ?? product.totalAmount ?? product.lineTotal,
+    subtotalWithoutIva !== null && ivaAmount !== null
+      ? roundMoney(subtotalWithoutIva + ivaAmount)
+      : toNumber(product.subtotal, cantidad * precioUnitario)
+  );
+  const ivaPercentage = toNumber(
+    product.ivaPercentage ??
+    product.ivaPct ??
+    productData.ivaPercentage ??
+    productData.iva_percentage ??
+    productData.iva
   );
 
   return {
-    id: toNumber(product.productId ?? product.idProduct ?? productData.productId ?? productData.id ?? product.id),
+    id: toNumber(product.productId ?? product.idProduct ?? product.id_product ?? productData.productId ?? productData.id ?? product.id),
     detalleId: product.id ?? product.detailId ?? null,
     nombre: product.nombre ?? product.productName ?? product.name ?? productData.nombre ?? productData.name ?? 'Producto sin nombre',
     codBarras: product.codBarras ?? product.barcode ?? productData.codBarras ?? productData.barcode ?? '',
     cantidad,
     precioUnitario,
-    subtotal: toNumber(product.subtotal ?? product.total ?? cantidad * precioUnitario),
-    iva: toNumber(product.iva ?? product.ivaAmount ?? product.tax),
+    subtotal: lineTotal,
+    subtotalSinIva: subtotalWithoutIva ?? roundMoney(lineTotal - getIncludedIvaAmount(lineTotal, ivaPercentage)),
+    iva: ivaAmount ?? getIncludedIvaAmount(lineTotal, ivaPercentage),
+    ivaPercentage,
+    stock: toNumber(product.stock ?? productData.stock ?? productData.totalStock ?? productData.availableStock),
   };
 };
 
@@ -94,41 +126,76 @@ const getPaymentsFromOrder = (order = {}) => (
   order.pagos ?? order.payments ?? order.orderPayments ?? []
 ).map((payment) => normalizePayment(payment, order.id));
 
+const getAdvisor = (order = {}) =>
+  order.advisor ??
+  order.asesor ??
+  order.employee ??
+  order.seller ??
+  order.user ??
+  order.sale?.employee ??
+  null;
+
 const normalizeOrder = (order = {}) => {
   const productos = (order.productos ?? order.products ?? order.items ?? order.details ?? []).map(normalizeProduct);
-  const subtotal = toNumber(
-    order.subtotal,
-    productos.reduce((sum, product) => sum + product.subtotal, 0)
+  const productsTotal = productos.reduce((sum, product) => sum + product.subtotal, 0);
+  const total = toNumber(order.total ?? order.totalAmount, productsTotal);
+  const iva = toNumber(
+    order.iva ?? order.ivaAmount ?? order.tax,
+    productos.reduce((sum, product) => sum + product.iva, 0)
   );
-  const iva = toNumber(order.iva ?? order.tax, subtotal * IVA_RATE);
-  const total = toNumber(order.total ?? order.totalAmount, subtotal + iva);
+  const subtotal = toNumber(order.subtotal, roundMoney(total - iva));
   const pagos = getPaymentsFromOrder(order);
   const totalPagado = toNumber(
     order.paidAmount ?? order.totalPagado,
     pagos.reduce((sum, payment) => sum + payment.monto, 0)
   );
   const id = toNumber(order.id ?? order.orderId ?? order.idOrder);
+  const advisor = getAdvisor(order);
 
   return {
     ...order,
     id,
     numeroPedido: String(order.numeroPedido ?? order.orderNumber ?? order.number ?? id),
     clienteId: toNumber(order.clienteId ?? order.clientId ?? order.idClient ?? order.customerId),
-    asesorId: toNumber(order.asesorId ?? order.advisorId ?? order.sellerId ?? order.userId, null),
+    asesorId: toNumber(
+      order.asesorId ??
+      order.advisorId ??
+      order.sellerId ??
+      order.idEmployee ??
+      order.id_employee ??
+      advisor?.idEmployee ??
+      advisor?.id_employee ??
+      advisor?.id ??
+      advisor?.user?.idUser ??
+      advisor?.user?.id_user ??
+      order.userId,
+      null
+    ),
+    asesorNombre:
+      advisor?.user?.fullName ??
+      advisor?.user?.name ??
+      advisor?.fullName ??
+      advisor?.name ??
+      advisor?.nombre ??
+      order.asesorNombre ??
+      order.advisorName ??
+      order.sellerName ??
+      '',
     fechaPedido: order.fechaPedido ?? order.orderDate ?? order.createdAt ?? order.date,
     direccionEntrega: order.direccionEntrega ?? order.deliveryAddress ?? order.address ?? '',
     tipoEntrega: normalizeTipoEntrega(order),
-    clienteNombre: order.customer?.name ?? order.clienteNombre ?? order.customerName ?? '',
-    clienteTelefono: order.customer?.phone ?? order.clienteTelefono ?? order.customerPhone ?? '',
-    clienteEmail: order.customer?.email ?? order.clienteEmail ?? order.customerEmail ?? '',
+    clienteNombre: order.customer?.user?.fullName ?? order.customer?.name ?? order.clienteNombre ?? order.customerName ?? '',
+    clienteTelefono: order.customer?.user?.phone ?? order.customer?.phone ?? order.clienteTelefono ?? order.customerPhone ?? '',
+    clienteEmail: order.customer?.user?.email ?? order.customer?.email ?? order.clienteEmail ?? order.customerEmail ?? '',
     clienteDireccion: order.customer?.address ?? '',
     productos,
     pagos,
     subtotal,
-    iva: toNumber(order.iva ?? order.ivaAmount ?? order.tax, iva),
+    iva,
     total,
+    totalApi: total,
     totalPagado,
-    saldoPendiente: toNumber(order.pendingAmount, Math.max(0, total - totalPagado)),
+    saldoPendiente: Math.max(0, total - totalPagado),
     tieneVenta: Boolean(order.hasSale),
     venta: order.sale ?? null,
     fechaLimitePago: order.paymentDeadline ?? null,
@@ -136,6 +203,9 @@ const normalizeOrder = (order = {}) => {
     pagoEstado: normalizePagoEstado(order.pagoEstado ?? order.paymentStatus, totalPagado, total),
     origen: order.origen ?? order.origin ?? ORIGENES.MANUAL,
     motivoCancelacion: order.motivoCancelacion ?? order.cancelReason ?? order.cancellationReason ?? null,
+    cancellationReason: order.cancellationReason ?? order.motivoCancelacion ?? order.cancelReason ?? null,
+    fechaCancelacion: order.fechaCancelacion ?? order.cancelledAt ?? order.canceledAt ?? null,
+    cancelledAt: order.cancelledAt ?? order.fechaCancelacion ?? order.canceledAt ?? null,
   };
 };
 
@@ -154,7 +224,7 @@ const buildCreateOrderPayload = (data = {}) => {
 
   return {
     idClient: data.clienteId,
-    deliveryType: isRecoge ? 'Recibe' : 'Domicilio',
+    deliveryType: isRecoge ? 'Recoge' : 'Domicilio',
     deliveryAddress: isRecoge ? null : data.direccionEntrega,
     items: (data.productos || []).map((product) => ({
       idProduct: product.id,
@@ -186,7 +256,7 @@ const buildUpdateOrderPayload = (data = {}) => {
   }
 
   if (data.tipoEntrega !== undefined || data.direccionEntrega !== undefined) {
-    payload.deliveryType = isRecoge ? 'Recibe' : 'Domicilio';
+    payload.deliveryType = isRecoge ? 'Recoge' : 'Domicilio';
     payload.deliveryAddress = isRecoge ? null : data.direccionEntrega;
   }
 
@@ -247,8 +317,8 @@ export const OrdersService = {
     const oldTotal = order.total;
     const totalPagado = await PaymentService.getTotalPagado(orderId);
     const subtotal = newProductos.reduce((sum, p) => sum + (p.subtotal || 0), 0);
-    const iva = subtotal * IVA_RATE;
-    const newTotal = subtotal + iva;
+    const iva = newProductos.reduce((sum, p) => sum + toNumber(p.iva), 0);
+    const newTotal = subtotal;
 
     const updatedOrder = await this.update({
       ...order,
@@ -283,8 +353,10 @@ export const OrdersService = {
     });
   },
 
-  async cancel(orderId) {
-    const response = await apiClient.patch(`/orders/${orderId}/cancel`);
+  async cancel(orderId, cancellationReason = '') {
+    const response = await apiClient.patch(`/orders/${orderId}/cancel`, {
+      cancellationReason,
+    });
     return normalizeOrder(unwrap(response));
   },
 };
@@ -309,11 +381,12 @@ export const PaymentService = {
 
   async add(pedidoId, { metodoPago, monto, comprobante = null, observations = null }) {
     const order = await OrdersService.findById(pedidoId);
+    const amount = toNumber(monto);
     const paymentNumber = (order?.pagos?.length || 0) + 1;
-    const pendingAfter = (order?.saldoPendiente ?? order?.total ?? 0) - monto;
+    const pendingAfter = (order?.saldoPendiente ?? order?.total ?? 0) - amount;
     const response = await apiClient.post(`/orders/${pedidoId}/payments`, {
       idPaymentMethod: PAYMENT_METHOD_IDS[metodoPago] ?? metodoPago,
-      amount: monto,
+      amount,
       reference: comprobante || `P${pedidoId}-${String(paymentNumber).padStart(3, '0')}`,
       observations: observations || `Abono ${paymentNumber} - ${pendingAfter <= 0 ? 'Pago completo' : 'Pago parcial'}`,
     });

@@ -95,6 +95,10 @@ const mapSaleItems = (sale, order) => {
         precioDetalle: precioUnitario,
       },
       cantidad,
+      precioUnitario,
+      subtotal: item.total ?? item.totalLinea ?? item.lineTotal ?? item.subtotal,
+      iva: item.iva ?? item.ivaAmount,
+      ivaPercentage: item.ivaPercentage ?? product.ivaPercentage,
       descripcion: item.descripcion ?? item.description ?? '',
     };
   });
@@ -152,7 +156,18 @@ const mapSaleFromApi = (sale) => {
       seller?.id ??
       seller?.idUser,
     cliente: client?.user?.fullName ?? client?.fullName ?? client?.name ?? client?.nombre ?? sale?.clientName ?? '-',
-    vendedor: seller?.user?.fullName ?? seller?.fullName ?? seller?.name ?? seller?.nombre ?? sale?.sellerName ?? '-',
+    vendedor:
+      seller?.user?.fullName ??
+      seller?.user?.name ??
+      seller?.user?.full_name ??
+      seller?.fullName ??
+      seller?.full_name ??
+      seller?.name ??
+      seller?.nombre ??
+      sale?.employee?.user?.fullName ??
+      sale?.employee?.user?.name ??
+      sale?.sellerName ??
+      '-',
     metodoPago: getPaymentMethod(sale),
     estado: getSaleStatus(sale),
     tipoVenta: getSaleType(sale),
@@ -163,8 +178,12 @@ const mapSaleFromApi = (sale) => {
     totalNumerico: total,
     registradoDesde: formatDate(order?.orderDate ?? order?.fechaPedido ?? order?.createdAt ?? sale?.createdAt),
     paymentAmounts: sale?.paymentAmounts ?? getPaymentAmounts(sale),
-    motivoAnulacion: sale?.annulmentReason ?? sale?.motivoAnulacion ?? order?.motivoCancelacion ?? '',
-    fechaAnulacion: formatDate(sale?.annulmentDate ?? sale?.fechaAnulacion ?? ''),
+    annulmentReason: sale?.annulmentReason ?? order?.cancellationReason ?? sale?.motivoAnulacion ?? order?.motivoCancelacion ?? '',
+    annulledAt: sale?.annulledAt ?? order?.cancelledAt ?? sale?.annulmentDate ?? sale?.fechaAnulacion ?? '',
+    motivoAnulacion: sale?.annulmentReason ?? order?.cancellationReason ?? sale?.motivoAnulacion ?? order?.motivoCancelacion ?? '',
+    fechaAnulacion: formatDate(sale?.annulledAt ?? order?.cancelledAt ?? sale?.annulmentDate ?? sale?.fechaAnulacion ?? ''),
+    cancellationReason: order?.cancellationReason ?? sale?.annulmentReason ?? '',
+    cancelledAt: order?.cancelledAt ?? sale?.annulledAt ?? '',
     pedidoId: sale?.idOrder ?? sale?.pedidoId ?? order?.id ?? order?.idOrder,
     numeroPedido: order?.numeroPedido ?? order?.orderNumber ?? order?.idOrder ?? '',
   };
@@ -308,6 +327,8 @@ export const SalesServices = {
             ...mapSaleFromApi(sale),
             annulmentReason: response.data?.data?.annulmentReason ?? motivo,
             motivoAnulacion: response.data?.data?.annulmentReason ?? motivo,
+            annulledAt: response.data?.data?.annulledAt ?? sale?.annulledAt ?? sale?.order?.cancelledAt ?? '',
+            fechaAnulacion: formatDate(response.data?.data?.annulledAt ?? sale?.annulledAt ?? sale?.order?.cancelledAt ?? ''),
           }
         : null;
     } catch (error) {

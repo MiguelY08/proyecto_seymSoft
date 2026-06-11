@@ -5,7 +5,9 @@ export const listRoles = async () => {
 
   return (response.data.data || []).map((role) => ({
     id: role.id_role,
+    idRole: role.id_role,
     name: role.name_role,
+    nameRole: role.name_role,
     description: role.description,
     active: role.id_status === 1,
     isAdmin: role.is_admin,

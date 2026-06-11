@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import {
   Info,
   SquarePen,
@@ -8,6 +9,7 @@ import {
 } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import { highlight } from "../helpers/salesHelpers";
+import Spinner from "../../../../shared/spinner";
 
 const estadoVariants = {
   Aprobada: "bg-green-100 text-green-700 border-green-300",
@@ -88,6 +90,14 @@ function TableText({ value, fallback, search, className = "" }) {
 function SalesTable({ data = [], search = "", totalData = 0 }) {
   const navigate = useNavigate();
   const { showError } = useAlert();
+  const [loadingMessage, setLoadingMessage] = useState("");
+
+  const navigateWithSpinner = (message, to, options) => {
+    setLoadingMessage(message);
+    window.setTimeout(() => {
+      navigate(to, options);
+    }, 80);
+  };
 
   const handleAnular = (row) => {
     const { puedeAnular } = getPermisos(row.estado);
@@ -125,6 +135,12 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
 
   return (
     <div className="flex-1 overflow-x-auto rounded-xl shadow-md min-h-0">
+      {loadingMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+          <Spinner message={loadingMessage} className="min-h-0" />
+        </div>
+      )}
+
       <table className="min-w-max w-full">
         <thead className="bg-[#004D77] text-white">
           <tr>
@@ -210,7 +226,7 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
                     <button
                       onClick={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
-                        navigate("/admin/sales/info-sale", {
+                        navigateWithSpinner("Cargando detalles de la venta...", "/admin/sales/info-sale", {
                           state: {
                             sale: row,
                             origin: {
@@ -236,7 +252,7 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
                     ) : (
                       <button
                         onClick={() =>
-                          navigate("/admin/sales/edit-sale", {
+                          navigateWithSpinner("Cargando edicion de la venta...", "/admin/sales/edit-sale", {
                             state: { sale: row },
                           })
                         }

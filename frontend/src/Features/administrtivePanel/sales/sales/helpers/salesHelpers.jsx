@@ -1,5 +1,6 @@
 // src/features/administrtivePanel/sales/helpers/salesHelpers.js
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { UserService } from '../../../users/services/userService';
 import { clientsService, creditAccountService } from '../../clients/services/clientsService';
 import { SalesServices } from '../services/salesServices';
@@ -137,198 +138,316 @@ const getSalesForExcel = async () => {
   return allSales;
 };
 
-export const downloadSalesExcel = async (salesToExport) => {
-  const sales = salesToExport ?? await getSalesForExcel();
-  if (sales.length === 0) return false;
+const COMPANY_COLOR = '004D77';
+const LIGHT_BLUE = 'DCEBF3';
+const LIGHT_GRAY = 'F3F4F6';
+const WHITE = 'FFFFFF';
+const CURRENCY_FORMAT = '"$"#,##0';
 
-  const formatCurrency = (value) => {
-    if (value === undefined || value === null) return '0';
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0,
-    }).format(value);
+const normalizeValue = (value, fallback = '') =>
+  value === undefined || value === null || value === '' ? fallback : value;
+
+const getPaymentMethodText = (method) =>
+  Array.isArray(method) ? method.filter(Boolean).join(', ') : normalizeValue(method);
+
+const getSaleLineTotal = (item) => {
+  const explicitTotal = item.total ?? item.totalLinea ?? item.lineTotal ?? item.subtotal;
+  if (explicitTotal !== undefined && explicitTotal !== null && explicitTotal !== '') {
+    return Number(explicitTotal) || 0;
+  }
+
+  const quantity = Number(item.cantidad ?? item.quantity ?? 0);
+  const product = item.product ?? {};
+  const unitPrice = Number(item.precioUnitario ?? product.precioDetalle ?? product.retailPrice ?? 0);
+  return quantity * unitPrice;
+};
+
+const styleTitle = (worksheet, range, title) => {
+  worksheet.mergeCells(range);
+  const cell = worksheet.getCell(range.split(':')[0]);
+  cell.value = title;
+  cell.font = {
+    bold: true,
+    size: 18,
+    color: { argb: WHITE },
   };
+  cell.alignment = {
+    horizontal: 'center',
+    vertical: 'middle',
+  };
+  cell.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: COMPANY_COLOR },
+  };
+};
 
-  const formatDate = (dateStr) => dateStr || '';
+const styleSubtitle = (worksheet, range, text) => {
+  worksheet.mergeCells(range);
+  const cell = worksheet.getCell(range.split(':')[0]);
+  cell.value = text;
+  cell.alignment = {
+    horizontal: 'center',
+  };
+  cell.font = {
+    italic: true,
+    color: { argb: COMPANY_COLOR },
+  };
+};
 
-  const currentDate = new Date();
-  const formattedDate = currentDate.toLocaleDateString('es-CO', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+const styleHeaderRow = (row) => {
+  row.eachCell((cell) => {
+    cell.font = {
+      bold: true,
+      color: { argb: WHITE },
+    };
+    cell.alignment = {
+      horizontal: 'center',
+      vertical: 'middle',
+    };
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: COMPANY_COLOR },
+    };
+    cell.border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' },
+    };
   });
-  const formattedDateTime = currentDate.toLocaleString('es-CO', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
+};
 
-  // ======================= HOJA 1: RESUMEN DE VENTAS =======================
-  const summaryHeaders = [
+const styleDataRow = (row, index) => {
+  row.eachCell((cell) => {
+    cell.alignment = {
+      vertical: 'middle',
+    };
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: index % 2 === 0 ? WHITE : LIGHT_GRAY },
+    };
+    cell.border = {
+      top: { style: 'thin', color: { argb: LIGHT_BLUE } },
+      left: { style: 'thin', color: { argb: LIGHT_BLUE } },
+      bottom: { style: 'thin', color: { argb: LIGHT_BLUE } },
+      right: { style: 'thin', color: { argb: LIGHT_BLUE } },
+    };
+  });
+};
+
+const setupWorksheetHeader = (worksheet, title, subtitle, lastColumn) => {
+  styleTitle(worksheet, `A1:${lastColumn}1`, title);
+  styleSubtitle(worksheet, `A2:${lastColumn}2`, subtitle);
+  worksheet.addRow([]);
+};
+
+const applyWorksheetTableSettings = (worksheet, headerRowNumber, lastColumn) => {
+  worksheet.views = [
+    {
+      state: 'frozen',
+      ySplit: headerRowNumber,
+    },
+  ];
+  worksheet.autoFilter = {
+    from: `A${headerRowNumber}`,
+    to: `${lastColumn}${headerRowNumber}`,
+  };
+};
+
+const buildSummarySheet = (workbook, sales, subtitle) => {
+  const worksheet = workbook.addWorksheet('Resumen Ventas');
+  setupWorksheetHeader(worksheet, 'VENTAS', subtitle, 'I');
+
+  worksheet.columns = [
+    { key: 'invoice', width: 16 },
+    { key: 'type', width: 16 },
+    { key: 'client', width: 30 },
+    { key: 'seller', width: 30 },
+    { key: 'date', width: 16 },
+    { key: 'paymentMethod', width: 22 },
+    { key: 'total', width: 16 },
+    { key: 'status', width: 18 },
+    { key: 'registeredFrom', width: 18 },
+  ];
+
+  const headerRow = worksheet.addRow([
     'No. Factura',
+    'Tipo',
     'Cliente',
     'Vendedor',
     'Fecha',
-    'Método de Pago',
+    'Metodo de pago',
     'Total',
     'Estado',
-    'Registrado Desde',
-  ];
-  const summaryData = sales.map((s) => [
-    s.factura || '',
-    s.cliente || '—',
-    s.vendedor || '—',
-    s.fecha || '',
-    Array.isArray(s.metodoPago) ? s.metodoPago.join(', ') : s.metodoPago || '',
-    formatCurrency(s.totalNumerico || 0),
-    s.estado || '—',
-    s.registradoDesde || '—',
+    'Registrado desde',
   ]);
+  styleHeaderRow(headerRow);
 
-  // ======================= HOJA 2: DETALLE DE PRODUCTOS =======================
-  const productHeaders = [
-    'No. Factura',
-    'Cliente',
-    'Fecha Venta',
-    'Producto',
-    'Cantidad',
-    'Precio Unitario',
-    'Total Producto',
-  ];
-  const productData = [];
-  sales.forEach((sale) => {
-    const items = sale.items || [];
-    const cliente = sale.cliente || '—';
-    if (items.length === 0) {
-      productData.push([sale.factura || '', cliente, sale.fecha || '', 'Sin productos registrados', '', '', '']);
-    } else {
-      items.forEach((item) => {
-        const producto = item.product || {};
-        const cantidad = item.cantidad || 1;
-        const precioUnit = producto.precioDetalle || 0;
-        const totalProducto = cantidad * precioUnit;
-        productData.push([
-          sale.factura || '',
-          cliente,
-          sale.fecha || '',
-          producto.nombre || 'Producto sin nombre',
-          cantidad,
-          formatCurrency(precioUnit),
-          formatCurrency(totalProducto),
-        ]);
-      });
-    }
+  sales.forEach((sale, index) => {
+    const row = worksheet.addRow({
+      invoice: normalizeValue(sale.factura),
+      type: normalizeValue(sale.tipoVenta, 'Sin tipo'),
+      client: normalizeValue(sale.cliente, 'Sin cliente'),
+      seller: normalizeValue(sale.vendedor, 'Sin vendedor'),
+      date: normalizeValue(sale.fecha),
+      paymentMethod: getPaymentMethodText(sale.metodoPago),
+      total: Number(sale.totalNumerico ?? 0),
+      status: normalizeValue(sale.estado, 'Sin estado'),
+      registeredFrom: normalizeValue(sale.registradoDesde),
+    });
+
+    row.getCell('total').numFmt = CURRENCY_FORMAT;
+    styleDataRow(row, index);
   });
 
-  // ======================= HOJA 3: ESTADÍSTICAS =======================
-  const statsHeaders = ['Métrica', 'Valor'];
+  applyWorksheetTableSettings(worksheet, 4, 'I');
+};
+
+const buildProductsSheet = (workbook, sales, subtitle) => {
+  const worksheet = workbook.addWorksheet('Detalle Productos');
+  setupWorksheetHeader(worksheet, 'DETALLE DE PRODUCTOS VENDIDOS', subtitle, 'H');
+
+  worksheet.columns = [
+    { key: 'invoice', width: 16 },
+    { key: 'type', width: 16 },
+    { key: 'client', width: 30 },
+    { key: 'date', width: 16 },
+    { key: 'product', width: 38 },
+    { key: 'quantity', width: 12 },
+    { key: 'unitPrice', width: 16 },
+    { key: 'lineTotal', width: 16 },
+  ];
+
+  const headerRow = worksheet.addRow([
+    'No. Factura',
+    'Tipo',
+    'Cliente',
+    'Fecha venta',
+    'Producto',
+    'Cantidad',
+    'Precio unitario',
+    'Total producto',
+  ]);
+  styleHeaderRow(headerRow);
+
+  let rowIndex = 0;
+  sales.forEach((sale) => {
+    const items = sale.items ?? [];
+
+    if (items.length === 0) {
+      const row = worksheet.addRow({
+        invoice: normalizeValue(sale.factura),
+        type: normalizeValue(sale.tipoVenta, 'Sin tipo'),
+        client: normalizeValue(sale.cliente, 'Sin cliente'),
+        date: normalizeValue(sale.fecha),
+        product: 'Sin productos registrados',
+      });
+      styleDataRow(row, rowIndex);
+      rowIndex += 1;
+      return;
+    }
+
+    items.forEach((item) => {
+      const product = item.product ?? {};
+      const quantity = Number(item.cantidad ?? item.quantity ?? 0);
+      const unitPrice = Number(item.precioUnitario ?? product.precioDetalle ?? product.retailPrice ?? 0);
+      const row = worksheet.addRow({
+        invoice: normalizeValue(sale.factura),
+        type: normalizeValue(sale.tipoVenta, 'Sin tipo'),
+        client: normalizeValue(sale.cliente, 'Sin cliente'),
+        date: normalizeValue(sale.fecha),
+        product: normalizeValue(product.nombre ?? item.nombre, 'Producto sin nombre'),
+        quantity,
+        unitPrice,
+        lineTotal: getSaleLineTotal(item),
+      });
+
+      row.getCell('unitPrice').numFmt = CURRENCY_FORMAT;
+      row.getCell('lineTotal').numFmt = CURRENCY_FORMAT;
+      styleDataRow(row, rowIndex);
+      rowIndex += 1;
+    });
+  });
+
+  applyWorksheetTableSettings(worksheet, 4, 'H');
+};
+
+const buildStatsSheet = (workbook, sales, subtitle, typeLabel) => {
+  const worksheet = workbook.addWorksheet('Estadisticas');
+  setupWorksheetHeader(worksheet, 'ESTADISTICAS DE VENTAS', subtitle, 'B');
+
+  worksheet.columns = [
+    { key: 'metric', width: 34 },
+    { key: 'value', width: 24 },
+  ];
+
   const totalSales = sales.length;
-  const totalValue = sales.reduce((sum, s) => sum + (s.totalNumerico || 0), 0);
-  const totalItems = sales.reduce((sum, s) => sum + (s.items?.length || 0), 0);
-  const totalUnits = sales.reduce((sum, s) => {
-    const units = (s.items || []).reduce((acc, item) => acc + (item.cantidad || 0), 0);
-    return sum + units;
-  }, 0);
-  const approvedSales = sales.filter((s) => s.estado === 'Aprobada').length;
-  const annulledSales = sales.filter((s) => s.estado === 'Anulada').length;
+  const totalValue = sales.reduce((sum, sale) => sum + Number(sale.totalNumerico ?? 0), 0);
+  const totalItems = sales.reduce((sum, sale) => sum + (sale.items?.length ?? 0), 0);
+  const totalUnits = sales.reduce(
+    (sum, sale) => sum + (sale.items ?? []).reduce((acc, item) => acc + Number(item.cantidad ?? 0), 0),
+    0
+  );
+  const approvedSales = sales.filter((sale) => sale.estado === 'Aprobada').length;
+  const annulledSales = sales.filter((sale) => sale.estado === 'Anulada').length;
+  const pendingApprovalSales = sales.filter((sale) => String(sale.estado ?? '').toLowerCase().includes('esp')).length;
   const avgPerSale = totalSales > 0 ? totalValue / totalSales : 0;
 
-  const statsData = [
-    ['Total Ventas', totalSales],
-    ['Total Valor Vendido', formatCurrency(totalValue)],
-    ['Total Productos (líneas)', totalItems],
-    ['Total Unidades Vendidas', totalUnits],
-    ['Promedio por Venta', formatCurrency(avgPerSale)],
-    [''],
-    ['Ventas Aprobadas', approvedSales],
-    ['Ventas Anuladas', annulledSales],
-    [''],
-    ['Fecha de Exportación', formattedDateTime],
+  const headerRow = worksheet.addRow(['Metrica', 'Valor']);
+  styleHeaderRow(headerRow);
+
+  const rows = [
+    ['Filtro exportado', typeLabel],
+    ['Total ventas', totalSales],
+    ['Total valor vendido', totalValue],
+    ['Promedio por venta', avgPerSale],
+    ['Total productos (lineas)', totalItems],
+    ['Total unidades vendidas', totalUnits],
+    ['Ventas aprobadas', approvedSales],
+    ['Ventas anuladas', annulledSales],
+    ['Ventas en espera de aprobacion', pendingApprovalSales],
   ];
 
-  // ======================= CREAR LIBRO Y HOJAS =======================
-  const wb = XLSX.utils.book_new();
+  rows.forEach(([metric, value], index) => {
+    const row = worksheet.addRow({ metric, value });
+    if (['Total valor vendido', 'Promedio por venta'].includes(metric)) {
+      row.getCell('value').numFmt = CURRENCY_FORMAT;
+    }
+    styleDataRow(row, index);
+  });
 
-  // --- Hoja Resumen ---
-  const summarySheetData = [
-    ['VENTAS'],
-    [`Fecha de exportación: ${formattedDate} - ${formattedDateTime}`],
-    [''],
-    ['RESUMEN DE VENTAS'],
-    [''],
-    summaryHeaders,
-    ...summaryData,
-  ];
-  const summaryWs = XLSX.utils.aoa_to_sheet(summarySheetData);
-  summaryWs['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: summaryHeaders.length - 1 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: summaryHeaders.length - 1 } },
-    { s: { r: 3, c: 0 }, e: { r: 3, c: summaryHeaders.length - 1 } },
-  ];
-  summaryWs['!cols'] = [
-    { wch: 16 },
-    { wch: 28 },
-    { wch: 28 },
-    { wch: 14 },
-    { wch: 20 },
-    { wch: 14 },
-    { wch: 18 },
-    { wch: 18 },
-  ];
+  applyWorksheetTableSettings(worksheet, 4, 'B');
+};
 
-  // --- Hoja Detalle de Productos ---
-  const productSheetData = [
-    ['VENTAS'],
-    [`Fecha de exportación: ${formattedDate} - ${formattedDateTime}`],
-    [''],
-    ['DETALLE DE PRODUCTOS VENDIDOS'],
-    [''],
-    productHeaders,
-    ...productData,
-  ];
-  const productWs = XLSX.utils.aoa_to_sheet(productSheetData);
-  productWs['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: productHeaders.length - 1 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: productHeaders.length - 1 } },
-    { s: { r: 3, c: 0 }, e: { r: 3, c: productHeaders.length - 1 } },
-  ];
-  productWs['!cols'] = [
-    { wch: 16 },
-    { wch: 30 },
-    { wch: 14 },
-    { wch: 35 },
-    { wch: 12 },
-    { wch: 16 },
-    { wch: 16 },
-  ];
+export const downloadSalesExcel = async (salesToExport, options = {}) => {
+  const sales = salesToExport ?? await getSalesForExcel();
+  if (sales.length === 0) return false;
 
-  // --- Hoja Estadísticas ---
-  const statsSheetData = [
-    ['VENTAS'],
-    [`Fecha de exportación: ${formattedDate} - ${formattedDateTime}`],
-    [''],
-    ['ESTADÍSTICAS'],
-    [''],
-    statsHeaders,
-    ...statsData,
-  ];
-  const statsWs = XLSX.utils.aoa_to_sheet(statsSheetData);
-  statsWs['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 1 } },
-    { s: { r: 3, c: 0 }, e: { r: 3, c: 1 } },
-  ];
-  statsWs['!cols'] = [{ wch: 28 }, { wch: 28 }];
+  const workbook = new ExcelJS.Workbook();
+  const currentDate = new Date();
+  const fileDate = currentDate.toISOString().split('T')[0];
+  const typeLabel = options.typeLabel ?? 'Todas';
+  const subtitle = `Fecha de exportacion: ${currentDate.toLocaleString('es-CO')} | Filtro: ${typeLabel}`;
 
-  XLSX.utils.book_append_sheet(wb, summaryWs, 'Resumen Ventas');
-  XLSX.utils.book_append_sheet(wb, productWs, 'Detalle Productos');
-  XLSX.utils.book_append_sheet(wb, statsWs, 'Estadísticas');
+  workbook.creator = 'SeymSoft';
+  workbook.created = currentDate;
 
-  const fileName = `ventas_${new Date().toISOString().split('T')[0]}.xlsx`;
-  XLSX.writeFile(wb, fileName);
+  buildSummarySheet(workbook, sales, subtitle);
+  buildProductsSheet(workbook, sales, subtitle);
+  buildStatsSheet(workbook, sales, subtitle, typeLabel);
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+
+  const normalizedType = String(options.activeType ?? typeLabel)
+    .toLowerCase()
+    .replace(/\s+/g, '_');
+
+  saveAs(blob, `ventas_${normalizedType}_${fileDate}.xlsx`);
   return true;
 };

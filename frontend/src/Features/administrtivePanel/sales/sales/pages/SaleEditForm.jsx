@@ -11,6 +11,7 @@ import {
 
 import { SalesServices } from '../services/salesServices';
 import { useAlert } from '../../../../shared/alerts/useAlert';
+import FormSelect from '../../../../shared/FormSelect';
 
 const SALE_STATUS = {
   APROBADA: 1,
@@ -83,7 +84,7 @@ const isApprovedStatus = (idSaleStatus) =>
 const isAnnulledStatus = (idSaleStatus) =>
   Number(idSaleStatus) === SALE_STATUS.ANULADA;
 
-const deliveryTypeToApi = (deliveryType) =>
+  const deliveryTypeToApi = (deliveryType) =>
   deliveryType === 'delivery' ? 'delivery' : 'pickup';
 
 function SaleEditForm() {
@@ -332,6 +333,23 @@ function SaleEditForm() {
 
   if (!sale) return null;
 
+  const saleStatusOptions = annulledSale
+    ? [{ value: SALE_STATUS.ANULADA, label: 'Anulada' }]
+    : approvedSale
+      ? [{ value: SALE_STATUS.APROBADA, label: 'Aprobada' }]
+      : SALE_STATUS_OPTIONS.map((status) => ({
+          value: status.id,
+          label: status.label,
+        }));
+  const deliveryTypeOptions = [
+    { value: 'pickup', label: 'Cliente recoge' },
+    { value: 'delivery', label: 'Domicilio' },
+  ];
+  const orderStatusOptions = ORDER_STATUS_OPTIONS.map((status) => ({
+    value: status.id,
+    label: status.label,
+  }));
+
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="mb-6 flex items-center justify-between gap-4">
@@ -418,32 +436,16 @@ function SaleEditForm() {
               Estado de la venta <span className="text-red-500">*</span>
             </label>
 
-            <div className="relative">
-              <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-
-              <select
-                value={formData.idSaleStatus}
-                onChange={handleSaleStatusChange}
-                disabled={loading || !canChangeSaleStatus}
-                className={`appearance-none w-full pl-10 pr-8 py-2.5 text-sm border rounded-lg outline-none transition-colors disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed ${
-                  errors.idSaleStatus
-                    ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-                    : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
-                }`}
-              >
-                {annulledSale && (
-                  <option value={SALE_STATUS.ANULADA}>Anulada</option>
-                )}
-                {approvedSale && (
-                  <option value={SALE_STATUS.APROBADA}>Aprobada</option>
-                )}
-                {!approvedSale && !annulledSale && SALE_STATUS_OPTIONS.map((status) => (
-                  <option key={status.id} value={status.id}>
-                    {status.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <FormSelect
+              value={formData.idSaleStatus}
+              options={saleStatusOptions}
+              onChange={(value) => handleSaleStatusChange({ target: { value } })}
+              icon={Tag}
+              disabled={loading || !canChangeSaleStatus}
+              error={errors.idSaleStatus}
+              placeholder="Estado de la venta"
+              ariaLabel="Estado de la venta"
+            />
 
             {errors.idSaleStatus && (
               <p className="text-xs text-red-500">{errors.idSaleStatus}</p>
@@ -455,23 +457,16 @@ function SaleEditForm() {
               Tipo de entrega <span className="text-red-500">*</span>
             </label>
 
-            <div className="relative">
-              <Truck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-
-              <select
-                value={formData.deliveryType}
-                onChange={handleDeliveryTypeChange}
-                disabled={loading || !canEditDelivery}
-                className={`appearance-none w-full pl-10 pr-8 py-2.5 text-sm border rounded-lg outline-none transition-colors disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed ${
-                  errors.deliveryType
-                    ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-                    : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
-                }`}
-              >
-                <option value="pickup">Cliente recoge</option>
-                <option value="delivery">Domicilio</option>
-              </select>
-            </div>
+            <FormSelect
+              value={formData.deliveryType}
+              options={deliveryTypeOptions}
+              onChange={(value) => handleDeliveryTypeChange({ target: { value } })}
+              icon={Truck}
+              disabled={loading || !canEditDelivery}
+              error={errors.deliveryType}
+              placeholder="Tipo de entrega"
+              ariaLabel="Tipo de entrega"
+            />
 
             {errors.deliveryType && (
               <p className="text-xs text-red-500">{errors.deliveryType}</p>
@@ -518,26 +513,16 @@ function SaleEditForm() {
               Estado del pedido <span className="text-red-500">*</span>
             </label>
 
-            <div className="relative">
-              <PackageCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-
-              <select
-                value={formData.idOrderStatus}
-                onChange={handleOrderStatusChange}
-                disabled={loading || !canChangeOrderStatus}
-                className={`appearance-none w-full pl-10 pr-8 py-2.5 text-sm border rounded-lg outline-none transition-colors disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed ${
-                  errors.idOrderStatus
-                    ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-                    : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
-                }`}
-              >
-                {ORDER_STATUS_OPTIONS.map((status) => (
-                  <option key={status.id} value={status.id}>
-                    {status.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <FormSelect
+              value={formData.idOrderStatus}
+              options={orderStatusOptions}
+              onChange={(value) => handleOrderStatusChange({ target: { value } })}
+              icon={PackageCheck}
+              disabled={loading || !canChangeOrderStatus}
+              error={errors.idOrderStatus}
+              placeholder="Estado del pedido"
+              ariaLabel="Estado del pedido"
+            />
 
             {!canChangeOrderStatus && !annulledSale && (
               <p className="text-xs text-gray-500">

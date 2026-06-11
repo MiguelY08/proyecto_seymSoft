@@ -31,11 +31,36 @@ const normalizeText = (value) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 
-const getPaymentMethodId = (methodName) =>
-  PAYMENT_METHOD_IDS[normalizeText(methodName)] ?? null;
+const getPaymentMethodId = (methodName) => {
+  const method = normalizeText(methodName);
+
+  if (method.includes('transfer')) return PAYMENT_METHOD_IDS.transferencia;
+  if (method.includes('efect')) return PAYMENT_METHOD_IDS.efectivo;
+  if (method.includes('credit') || /^cr.*dito$/.test(method)) return PAYMENT_METHOD_IDS.credito;
+
+  return null;
+};
 
 const roundMoney = (value) =>
   Math.round((Number(value) || 0) * 100) / 100;
+
+const getProductPriceForClient = (product, client) => {
+  const clientType = normalizeText(client?.clientType);
+
+  if (clientType.includes('mayor')) {
+    return roundMoney(product.wholesalePrice ?? product.retailPrice ?? product.precioDetalle ?? 0);
+  }
+
+  if (clientType.includes('colega') || clientType.includes('partner')) {
+    return roundMoney(product.partnerPrice ?? product.retailPrice ?? product.precioDetalle ?? 0);
+  }
+
+  if (clientType.includes('paca') || clientType.includes('bulk')) {
+    return roundMoney(product.bulkPrice ?? product.retailPrice ?? product.precioDetalle ?? 0);
+  }
+
+  return roundMoney(product.retailPrice ?? product.precioDetalle ?? 0);
+};
 
 const getIncludedIvaAmount = (totalWithIva, ivaPercentage) => {
   const rate = Number(ivaPercentage || 0) / 100;
@@ -88,6 +113,10 @@ const normalizeProduct = (product) => {
     ...product,
     id: product.id ?? product.idProduct,
     nombre: product.nombre ?? product.name,
+    retailPrice: Number(product.retailPrice ?? product.precioDetalle ?? 0),
+    wholesalePrice: Number(product.wholesalePrice ?? product.precioMayorista ?? product.retailPrice ?? product.precioDetalle ?? 0),
+    partnerPrice: Number(product.partnerPrice ?? product.precioColegas ?? product.retailPrice ?? product.precioDetalle ?? 0),
+    bulkPrice: Number(product.bulkPrice ?? product.precioPacas ?? product.retailPrice ?? product.precioDetalle ?? 0),
     precioDetalle: Number(product.precioDetalle ?? product.retailPrice ?? 0),
     ivaPercentage: Number(product.ivaPercentage ?? product.iva ?? 0),
     stock: getProductStock(product),
@@ -151,6 +180,11 @@ function SaleForm() {
   const [totalPagado, setTotalPagado] = useState(0);
 
   // Cálculo de totales
+  const selectedClient = clientes.find((cliente) => Number(cliente.id) === Number(formData.clienteId)) ?? null;
+  const productosCatalogoConPrecio = productosCatalogo.map((product) => ({
+    ...product,
+    precioDetalle: getProductPriceForClient(product, selectedClient),
+  }));
   const total = roundMoney(formData.productos.reduce((sum, p) => sum + (p.subtotal || 0), 0));
   const iva = formData.productos.reduce((sum, p) => sum + (p.ivaAmount || 0), 0);
   const subtotal = roundMoney(total - iva);
@@ -173,6 +207,28 @@ function SaleForm() {
 
     loadCatalogs();
   }, [showError]);
+
+  useEffect(() => {
+    if (formData.productos.length === 0) return;
+
+    setFormData(prev => ({
+      ...prev,
+      productos: prev.productos.map((line) => {
+        const product = productosCatalogo.find(item => item.id === line.id);
+        if (!product) return line;
+
+        const precioUnitario = getProductPriceForClient(product, selectedClient);
+        const lineTotal = roundMoney(line.cantidad * precioUnitario);
+
+        return {
+          ...line,
+          precioUnitario,
+          subtotal: lineTotal,
+          ivaAmount: getIncludedIvaAmount(lineTotal, line.ivaPercentage),
+        };
+      }),
+    }));
+  }, [formData.clienteId, productosCatalogo, clientes]);
 
   // ─── Manejadores para LeftSectionForm ─────────────────────────────────────
   const handleClienteChange = (e) => {
@@ -228,7 +284,7 @@ function SaleForm() {
       return;
     }
 
-    const precio = producto.precioDetalle || 0;
+    const precio = getProductPriceForClient(producto, selectedClient);
     const ivaPercentage = Number(producto.ivaPercentage ?? 0);
     const ivaAmount = getIncludedIvaAmount(precio, ivaPercentage);
     const nuevoProducto = {
@@ -294,7 +350,7 @@ function SaleForm() {
     }
 
     const tempPago = {
-      id: Date.now(),
+      id: `tmp-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       metodoPago,
       monto: roundMoney(monto),
       comprobante,
@@ -310,6 +366,20 @@ function SaleForm() {
     }));
 
     showSuccess('Abono agregado', `Se ha agregado un abono de $${roundMoney(monto).toLocaleString()}.`);
+  };
+
+  const handleRemovePayment = (paymentId) => {
+    const payment = pagos.find((pago) => pago.id === paymentId);
+
+    if (!payment) return;
+
+    setPagos(prev => prev.filter((pago) => pago.id !== paymentId));
+    setTotalPagado(prev => Math.max(0, roundMoney(prev - roundMoney(payment.monto))));
+    setPaymentAmounts(prev => ({
+      ...prev,
+      [payment.metodoPago]: Math.max(0, roundMoney((prev[payment.metodoPago] || 0) - roundMoney(payment.monto))),
+    }));
+    showSuccess('Abono eliminado', 'El abono pendiente fue eliminado.');
   };
 
   // ─── Validación (corregida para aceptar clienteId = 0) ───────────────────
@@ -343,7 +413,7 @@ function SaleForm() {
 
     const paymentTotal = roundMoney(totalPagado);
 
-    if (paymentTotal !== total) {
+    if (Math.round(paymentTotal * 100) !== Math.round(total * 100)) {
       showWarning(
         'Pago invalido',
         `La suma de los metodos de pago debe ser igual al total de la venta. Total: $${total.toLocaleString()}, pagado: $${paymentTotal.toLocaleString()}.`
@@ -351,9 +421,10 @@ function SaleForm() {
       return;
     }
 
+    let paymentMethods = [];
     setLoading(true);
     try {
-      const paymentMethods = pagos.map((pago) => ({
+      paymentMethods = pagos.map((pago) => ({
         idPaymentMethod: getPaymentMethodId(pago.metodoPago),
         amount: roundMoney(pago.monto),
       })).filter((payment) => payment.idPaymentMethod !== null);
@@ -401,6 +472,15 @@ function SaleForm() {
       navigate('/admin/sales');
     } catch (error) {
       console.error(error);
+      if (error?.message?.includes('metodos de pago')) {
+        console.error('Payload venta rechazado por suma de pagos:', {
+          totalFront: total,
+          totalPagado: paymentTotal,
+          productos: formData.productos,
+          pagos,
+          paymentMethods,
+        });
+      }
       showError('Error', error.message || 'No se pudo guardar la venta.');
     } finally {
       setLoading(false);
@@ -480,7 +560,7 @@ function SaleForm() {
 
         <RightSectionForm
           productos={formData.productos}
-          productosCatalogo={productosCatalogo}
+          productosCatalogo={productosCatalogoConPrecio}
           errors={errors}
           loading={loading}
           disabled={loading}
@@ -500,6 +580,7 @@ function SaleForm() {
           total={total}
           pagos={pagos}
           onAddPayment={handleAddPayment}
+          onRemovePayment={handleRemovePayment}
           loading={loading}
           isEditMode={false}
           disallowDuplicateMethods
