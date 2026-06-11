@@ -1,25 +1,17 @@
-// src/features/administrtivePanel/sales/services/salesServices.js
-/**
- * Servicio de Ventas (fachada sobre Pedidos).
- * 
- * Todas las operaciones de venta se delegan en OrdersService, PaymentService y SalesService.
- * Se mantiene la misma interfaz que esperaba la UI antigua para facilitar la migración.
- */
+import apiClient from '../../../../../setting/apiClient';
 
-import OrdersService, { PaymentService, SalesService, ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES, METODOS_PAGO } from '../../orders/services/ordersService';
-import ProductsService from '../../../purchases/products/services/productsServices';
-import { clientsService } from '../../clients/services/clientsService';
-import { UserService } from '../../../users/services/userService';
+const DEFAULT_PAGINATION = {
+  page: 1,
+  limit: 10,
+  total: 0,
+  totalPages: 0,
+  hasNextPage: false,
+  hasPrevPage: false,
+};
 
-// ----------------------------------------------------------------------
-// Helpers de formato y adaptación
-// ----------------------------------------------------------------------
-
-/**
- * Formatea un valor como moneda COP.
- */
 const formatCurrency = (value) => {
   if (value === undefined || value === null) return '0';
+
   return new Intl.NumberFormat('es-CO', {
     style: 'currency',
     currency: 'COP',
@@ -27,245 +19,322 @@ const formatCurrency = (value) => {
   }).format(value);
 };
 
-/**
- * Formatea una fecha ISO a dd/mm/yyyy.
- */
 const formatDate = (isoString) => {
   if (!isoString) return '';
+
   const date = new Date(isoString);
-  return isNaN(date.getTime()) ? isoString : date.toLocaleDateString('es-CO');
+  return Number.isNaN(date.getTime())
+    ? isoString
+    : date.toLocaleDateString('es-CO');
 };
 
-/**
- * Adapta un objeto Sale (del almacenamiento) al formato enriquecido que espera la UI.
- * Incluye datos del pedido, cliente, vendedor, productos y pagos.
- */
-const adaptSale = (sale) => {
-  const order = OrdersService.findById(sale.pedidoId);
-  if (!order) return null;
+const getSaleId = (sale) =>
+  sale?.idSale ?? sale?.idVending ?? sale?.id_vending ?? sale?.id ?? '';
 
-  const cliente = clientsService.getById(order.clienteId);
-  const vendedor = order.asesorId ? UserService.findById(order.asesorId) : null;
+const getSaleDate = (sale) =>
+  sale?.saleDate ?? sale?.fechaPago ?? sale?.createdAt ?? sale?.creationDate ?? sale?.date ?? '';
 
-  const pagos = PaymentService.getByPedidoId(order.id);
-  const totalPagado = pagos.reduce((sum, p) => sum + p.monto, 0);
-  const metodos = [...new Set(pagos.filter(p => p.monto > 0).map(p => p.metodoPago))];
-  const metodoPago = metodos.length === 1 ? metodos[0] : (metodos.length > 1 ? 'Mixto' : '—');
+const getSaleOrder = (sale) =>
+  sale?.order ?? sale?.pedido ?? sale?.salesOrder ?? sale?.relatedOrder ?? null;
 
-  // Mapear estado logístico a estado de venta (para la UI)
-  let estadoVenta = 'Pagada';
-  if (order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) {
-    estadoVenta = 'Cancelada';
-  } else if (order.pagoEstado === ESTADOS_PAGO.PENDIENTE) {
-    estadoVenta = 'Pendiente'; // Por si acaso, aunque una venta solo se crea al estar pagada
+const getSaleClient = (sale, order) =>
+  sale?.client ?? sale?.cliente ?? order?.client ?? order?.cliente ?? order?.customer ?? null;
+
+const getSaleSeller = (sale, order) =>
+  sale?.seller ??
+  sale?.vendedor ??
+  sale?.advisor ??
+  sale?.employee ??
+  order?.seller ??
+  order?.asesor ??
+  null;
+
+const getSaleStatus = (sale) =>
+  sale?.status?.nameStatus ??
+  sale?.saleStatus?.nameStatus ??
+  sale?.nameStatus ??
+  sale?.estado ??
+  sale?.status ??
+  '-';
+
+const getSaleType = (sale) =>
+  sale?.type?.saleTypeName ??
+  sale?.saleType?.saleTypeName ??
+  sale?.saleTypeName ??
+  sale?.vendingType ??
+  '';
+
+const getSaleTotal = (sale, order) =>
+  Number(sale?.total ?? sale?.totalSale ?? sale?.amount ?? order?.total ?? 0);
+
+const mapSaleItems = (sale, order) => {
+  const items =
+    sale?.items ??
+    sale?.details ??
+    sale?.products ??
+    order?.items ??
+    order?.products ??
+    order?.details ??
+    [];
+
+  return items.map((item) => {
+    const product = item.product ?? item.producto ?? item;
+    const precioUnitario = Number(
+      item.precioUnitario ??
+      item.unitPrice ??
+      product.precioDetalle ??
+      product.retailPrice ??
+      0
+    );
+    const cantidad = Number(item.cantidad ?? item.quantity ?? 1);
+
+    return {
+      product: {
+        id: product.id ?? product.idProduct ?? product.id_producto ?? '',
+        nombre: product.nombre ?? product.name ?? product.productName ?? 'Producto sin nombre',
+        precioDetalle: precioUnitario,
+      },
+      cantidad,
+      precioUnitario,
+      subtotal: item.total ?? item.totalLinea ?? item.lineTotal ?? item.subtotal,
+      iva: item.iva ?? item.ivaAmount,
+      ivaPercentage: item.ivaPercentage ?? product.ivaPercentage,
+      descripcion: item.descripcion ?? item.description ?? '',
+    };
+  });
+};
+
+const getPaymentMethod = (sale) => {
+  if (sale?.metodoPago || sale?.paymentMethod || sale?.paymentSummary) {
+    return sale.metodoPago ?? sale.paymentMethod ?? sale.paymentSummary;
   }
 
-  // Construir items en el formato esperado por la UI (array de { product, cantidad, descripcion })
-  const items = order.productos.map(p => ({
-    product: {
-      id: p.id,
-      nombre: p.nombre,
-      precioDetalle: p.precioUnitario,
-      // otros campos si son necesarios
-    },
-    cantidad: p.cantidad,
-    descripcion: '',
-  }));
+  const names = [
+    ...new Set(
+      (sale?.paymentMethods ?? [])
+        .map((item) => item.paymentMethod?.namePaymentMethod)
+        .filter(Boolean)
+    ),
+  ];
 
-  // Construir paymentAmounts a partir de los pagos
-  const paymentAmounts = {
-    Efectivo: 0,
-    Crédito: 0,
-    Transferencia: 0,
-  };
-  pagos.forEach(p => {
-    if (p.metodoPago === METODOS_PAGO.EFECTIVO) paymentAmounts.Efectivo += p.monto;
-    else if (p.metodoPago === METODOS_PAGO.CREDITO) paymentAmounts.Crédito += p.monto;
-    else if (p.metodoPago === METODOS_PAGO.TRANSFERENCIA) paymentAmounts.Transferencia += p.monto;
-    // Devoluciones no se muestran como método positivo
+  if (names.length === 0) return '-';
+  return names.length === 1 ? names[0] : 'Mixto';
+};
+
+const getPaymentAmounts = (sale) => {
+  const amounts = {};
+
+  (sale?.paymentMethods ?? []).forEach((item) => {
+    const name = item.paymentMethod?.namePaymentMethod;
+    if (!name) return;
+
+    amounts[name] = (amounts[name] ?? 0) + Number(item.amount ?? 0);
   });
 
+  return amounts;
+};
+
+const mapSaleFromApi = (sale) => {
+  const order = getSaleOrder(sale);
+  const client = getSaleClient(sale, order);
+  const seller = getSaleSeller(sale, order);
+  const id = getSaleId(sale);
+  const total = getSaleTotal(sale, order);
+
   return {
-    id: sale.id,
-    factura: String(sale.id), // o sale.id como número de factura
-    fecha: formatDate(sale.fechaPago),
-    clienteId: order.clienteId,
-    vendedorId: order.asesorId,
-    cliente: cliente?.name || cliente?.fullName || '—',
-    vendedor: vendedor?.name || '—',
-    metodoPago: metodoPago,
-    estado: estadoVenta,
-    entrega: order.direccionEntrega || 'Punto de venta',
-    direccion: order.direccionEntrega || '',
-    items: items,
-    total: formatCurrency(order.total),
-    totalNumerico: order.total,
-    registradoDesde: formatDate(order.fechaPedido),
-    paymentAmounts: paymentAmounts,
-    motivoAnulacion: order.motivoCancelacion || '',
-    fechaAnulacion: order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO ? formatDate(order.fechaPedido) : '',
-    // Datos extra para referencia
-    pedidoId: order.id,
-    numeroPedido: order.numeroPedido,
+    ...sale,
+    id,
+    factura: String(sale?.invoiceNumber ?? sale?.factura ?? id),
+    fecha: formatDate(getSaleDate(sale)),
+    clienteId: sale?.idClient ?? sale?.clienteId ?? order?.clienteId ?? client?.id ?? client?.idClient,
+    vendedorId:
+      sale?.idEmployee ??
+      sale?.idSeller ??
+      sale?.vendedorId ??
+      order?.asesorId ??
+      seller?.idEmployee ??
+      seller?.id ??
+      seller?.idUser,
+    cliente: client?.user?.fullName ?? client?.fullName ?? client?.name ?? client?.nombre ?? sale?.clientName ?? '-',
+    vendedor:
+      seller?.user?.fullName ??
+      seller?.user?.name ??
+      seller?.user?.full_name ??
+      seller?.fullName ??
+      seller?.full_name ??
+      seller?.name ??
+      seller?.nombre ??
+      sale?.employee?.user?.fullName ??
+      sale?.employee?.user?.name ??
+      sale?.sellerName ??
+      '-',
+    metodoPago: getPaymentMethod(sale),
+    estado: getSaleStatus(sale),
+    tipoVenta: getSaleType(sale),
+    entrega: order?.deliveryType ?? order?.tipoEntrega ?? order?.direccionEntrega ?? sale?.delivery ?? '-',
+    direccion: order?.deliveryAddress ?? order?.direccionEntrega ?? sale?.direccion ?? '',
+    items: mapSaleItems(sale, order),
+    total: formatCurrency(total),
+    totalNumerico: total,
+    registradoDesde: formatDate(order?.orderDate ?? order?.fechaPedido ?? order?.createdAt ?? sale?.createdAt),
+    paymentAmounts: sale?.paymentAmounts ?? getPaymentAmounts(sale),
+    annulmentReason: sale?.annulmentReason ?? order?.cancellationReason ?? sale?.motivoAnulacion ?? order?.motivoCancelacion ?? '',
+    annulledAt: sale?.annulledAt ?? order?.cancelledAt ?? sale?.annulmentDate ?? sale?.fechaAnulacion ?? '',
+    motivoAnulacion: sale?.annulmentReason ?? order?.cancellationReason ?? sale?.motivoAnulacion ?? order?.motivoCancelacion ?? '',
+    fechaAnulacion: formatDate(sale?.annulledAt ?? order?.cancelledAt ?? sale?.annulmentDate ?? sale?.fechaAnulacion ?? ''),
+    cancellationReason: order?.cancellationReason ?? sale?.annulmentReason ?? '',
+    cancelledAt: order?.cancelledAt ?? sale?.annulledAt ?? '',
+    pedidoId: sale?.idOrder ?? sale?.pedidoId ?? order?.id ?? order?.idOrder,
+    numeroPedido: order?.numeroPedido ?? order?.orderNumber ?? order?.idOrder ?? '',
   };
 };
 
-// ----------------------------------------------------------------------
-// Servicio de Ventas (fachada)
-// ----------------------------------------------------------------------
+const mapSalesResponse = (payload) => ({
+  sales: (payload?.data ?? []).map(mapSaleFromApi),
+  type: payload?.type ?? null,
+  pagination: payload?.pagination ?? DEFAULT_PAGINATION,
+});
+
+const getCreatedSaleFromPayload = (payload) =>
+  payload?.data?.sale ?? payload?.data ?? null;
+
+const formatErrorDetail = (detail) => {
+  if (!detail) return '';
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => item?.message ?? item?.msg ?? item)
+      .filter(Boolean)
+      .join(' ');
+  }
+  if (typeof detail === 'object') {
+    return Object.values(detail)
+      .flat()
+      .map((item) => item?.message ?? item?.msg ?? item)
+      .filter(Boolean)
+      .join(' ');
+  }
+  return '';
+};
+
+const getErrorMessage = (error, fallback) => {
+  const responseData = error?.response?.data;
+  const detail =
+    formatErrorDetail(responseData?.errors) ||
+    formatErrorDetail(responseData?.details) ||
+    formatErrorDetail(responseData?.data);
+
+  return [responseData?.message, detail].filter(Boolean).join(' ') || error?.message || fallback;
+};
 
 export const SalesServices = {
-  /**
-   * Obtiene todos los productos activos del catálogo.
-   */
-  getProducts() {
-    return ProductsService.list().filter(p => p.activo !== false);
-  },
-
-  /**
-   * Obtiene un producto por ID.
-   */
-  getProductById(id) {
-    return ProductsService.findById(id);
-  },
-
-  /**
-   * Obtiene todos los clientes activos (excluyendo sistema).
-   */
-  getClients() {
-    return clientsService.getAll().filter(c => c.active && !c.isSystem);
-  },
-
-  /**
-   * Obtiene un cliente por ID.
-   */
-  getClientById(id) {
-    return clientsService.getById(id);
-  },
-
-  /**
-   * Obtiene información de crédito del cliente.
-   */
-  getCreditInfo(clienteId) {
-    const cliente = clientsService.getById(clienteId);
-    if (!cliente) return { tieneCredito: false, cupoDisponible: 0 };
-    // Aquí podrías usar creditAccountService si lo necesitas; simplificamos con el campo clientCredit
-    const creditoAsignado = parseFloat(cliente.clientCredit) || 0;
-    // Asumimos que no hay consumo aún; en una implementación real consultarías el balance
-    return {
-      tieneCredito: creditoAsignado > 0,
-      cupoDisponible: creditoAsignado, // Simplificado
-    };
-  },
-
-  /**
-   * Lista todas las ventas en el formato enriquecido.
-   */
-  list() {
-    const sales = SalesService.list();
-    return sales
-      .map(adaptSale)
-      .filter(s => s !== null);
-  },
-
-  /**
-   * Obtiene una venta por su ID (enriquecida).
-   */
-  getById(id) {
-    const sale = SalesService.findById(id);
-    if (!sale) return null;
-    return adaptSale(sale);
-  },
-
-  /**
-   * Crea una nueva venta (a partir de un pedido pagado).
-   * Este método se usa para ventas directas (mostrador).
-   * Crea el pedido, registra los pagos y genera la venta automáticamente.
-   */
-  create(form, items, facturaNo, paymentAmounts) {
-    // Convertir items al formato de OrderProduct
-    const orderProductos = items.map(item => ({
-      id: item.product.id,
-      nombre: item.product.nombre,
-      cantidad: item.cantidad,
-      precioUnitario: item.product.precioDetalle,
-      subtotal: item.cantidad * item.product.precioDetalle,
-    }));
-
-    // Determinar estado logístico: si es venta directa, normalmente 'listo'
-    const estadoLogistico = ESTADOS_LOGISTICOS.LISTO;
-
-    // Crear pedido con estado 'pagado' (se forzará al registrar pagos)
-    const order = OrdersService.create({
-      clienteId: form.clienteId,
-      asesorId: form.vendedorId,
-      direccionEntrega: form.direccion || (form.entrega === 'Domicilio' ? form.direccion : 'Punto de venta'),
-      productos: orderProductos,
-      estadoLogistico: estadoLogistico,
-      origen: ORIGENES.MANUAL,
-    });
-
-    // Registrar los pagos según paymentAmounts
-    const metodos = [
-      { key: 'Efectivo', method: METODOS_PAGO.EFECTIVO },
-      { key: 'Crédito', method: METODOS_PAGO.CREDITO },
-      { key: 'Transferencia', method: METODOS_PAGO.TRANSFERENCIA },
-    ];
-
-    for (const { key, method } of metodos) {
-      const monto = paymentAmounts?.[key] || 0;
-      if (monto > 0) {
-        PaymentService.add(order.id, {
-          metodoPago: method,
-          monto: monto,
-          comprobante: null,
-        });
-      }
+  async getMetrics() {
+    try {
+      const response = await apiClient.get('/vendings/metrics');
+      return response.data.data;
+    } catch (error) {
+      console.error('Error en getMetrics():', error);
+      throw new Error(getErrorMessage(error, 'No se pudieron obtener las metricas de ventas.'));
     }
+  },
 
-    // Si la suma de pagos no alcanza el total, la venta no se crea (no debería ocurrir por validación previa)
-    const totalPagado = PaymentService.getTotalPagado(order.id);
-    if (totalPagado < order.total) {
-      // Forzar un pago adicional con el restante? Según reglas, debe pagarse completo.
-      throw new Error('El pago total no cubre el valor del pedido.');
+  async getAll(params = {}) {
+    try {
+      const response = await apiClient.get('/vendings', { params });
+      return mapSalesResponse(response.data);
+    } catch (error) {
+      console.error('Error en getAll():', error);
+      throw new Error(getErrorMessage(error, 'No se pudieron obtener las ventas.'));
     }
-
-    // Obtener la venta generada
-    const sale = SalesService.findByPedidoId(order.id);
-    return adaptSale(sale);
   },
 
-  /**
-   * Actualizar una venta.
-   * Las ventas son inmutables. Si se intenta editar, redirigimos a la edición del pedido subyacente.
-   * Por compatibilidad, lanzamos un error con un mensaje claro.
-   */
-  update(saleId, form, items, originalItems, paymentAmounts) {
-    throw new Error('Las ventas no se pueden modificar directamente. Use la edición del pedido asociado.');
+  async list(params = {}) {
+    return this.getAll(params);
   },
 
-  /**
-   * Anula una venta (cancela el pedido asociado).
-   */
-  anular(saleId, motivo = '') {
-    const sale = SalesService.findById(saleId);
-    if (!sale) throw new Error(`Venta ${saleId} no encontrada.`);
-
-    const order = OrdersService.findById(sale.pedidoId);
-    if (!order) throw new Error(`Pedido asociado no encontrado.`);
-
-    // Cancelar el pedido (esto restaura stock y cambia estado)
-    OrdersService.updateEstadoLogistico(order.id, ESTADOS_LOGISTICOS.CANCELADO, motivo);
-
-    // La venta sigue existiendo pero su estado se verá como 'Cancelada' en la UI
-    return this.list();
+  async getManual(params = {}) {
+    try {
+      const response = await apiClient.get('/vendings/manual', { params });
+      return mapSalesResponse(response.data);
+    } catch (error) {
+      console.error('Error en getManual():', error);
+      throw new Error(getErrorMessage(error, 'No se pudieron obtener las ventas manuales.'));
+    }
   },
 
-  // Método auxiliar para calcular totales (usado por SaleForm)
-  _calcTotals(items) {
-    const subtotal = items.reduce((acc, item) => acc + (item.product.precioDetalle * item.cantidad), 0);
-    const iva = Math.round(subtotal * 0.19);
-    return { subtotal, iva, total: subtotal + iva };
+  async getDirect(params = {}) {
+    try {
+      const response = await apiClient.get('/vendings/direct', { params });
+      return mapSalesResponse(response.data);
+    } catch (error) {
+      console.error('Error en getDirect():', error);
+      throw new Error(getErrorMessage(error, 'No se pudieron obtener las ventas directas.'));
+    }
+  },
+
+  async getWeb(params = {}) {
+    try {
+      const response = await apiClient.get('/vendings/web', { params });
+      return mapSalesResponse(response.data);
+    } catch (error) {
+      console.error('Error en getWeb():', error);
+      throw new Error(getErrorMessage(error, 'No se pudieron obtener las ventas web.'));
+    }
+  },
+
+  async getById(id) {
+    try {
+      const response = await apiClient.get(`/vendings/${id}`);
+      return response.data.data ? mapSaleFromApi(response.data.data) : null;
+    } catch (error) {
+      console.error(`Error en getById(${id}):`, error);
+      throw new Error(getErrorMessage(error, 'No se pudo obtener la venta.'));
+    }
+  },
+
+  async create(vendingType, payload) {
+    try {
+      const response = await apiClient.post(`/vendings/${vendingType}`, payload);
+      const sale = getCreatedSaleFromPayload(response.data);
+      return sale ? mapSaleFromApi(sale) : null;
+    } catch (error) {
+      console.error(`Error en create(${vendingType}):`, error);
+      console.error('Detalle create vending:', error?.response?.data);
+      throw new Error(getErrorMessage(error, 'No se pudo crear la venta.'));
+    }
+  },
+
+  async update(saleId, payload) {
+    try {
+      const response = await apiClient.put(`/vendings/${saleId}`, payload);
+      return response.data.data ? mapSaleFromApi(response.data.data) : null;
+    } catch (error) {
+      console.error(`Error en update(${saleId}):`, error);
+      throw new Error(getErrorMessage(error, 'No se pudo actualizar la venta.'));
+    }
+  },
+
+  async anular(saleId, motivo = '') {
+    try {
+      const response = await apiClient.post(`/vendings/${saleId}/annular`, {
+        annulmentReason: motivo,
+      });
+
+      const sale = response.data?.data?.sale;
+
+      return sale
+        ? {
+            ...mapSaleFromApi(sale),
+            annulmentReason: response.data?.data?.annulmentReason ?? motivo,
+            motivoAnulacion: response.data?.data?.annulmentReason ?? motivo,
+            annulledAt: response.data?.data?.annulledAt ?? sale?.annulledAt ?? sale?.order?.cancelledAt ?? '',
+            fechaAnulacion: formatDate(response.data?.data?.annulledAt ?? sale?.annulledAt ?? sale?.order?.cancelledAt ?? ''),
+          }
+        : null;
+    } catch (error) {
+      console.error(`Error en anular(${saleId}):`, error);
+      throw new Error(getErrorMessage(error, 'No se pudo anular la venta.'));
+    }
   },
 };
 

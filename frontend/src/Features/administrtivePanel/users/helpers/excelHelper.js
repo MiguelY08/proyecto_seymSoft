@@ -9,7 +9,7 @@ const WHITE = 'FFFFFF';
 
 const getStatusText = (active) => (active ? 'Activo' : 'Inactivo');
 
-const getRoleText = (role) => role?.nameRole || 'Sin rol';
+const getRoleText = (role) => role?.nameRole || role?.name || 'Sin rol';
 
 const buildUserRows = (users) =>
   users.map((user) => ({

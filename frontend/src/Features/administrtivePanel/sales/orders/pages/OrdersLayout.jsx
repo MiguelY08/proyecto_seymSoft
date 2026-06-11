@@ -10,9 +10,7 @@ import { Outlet } from 'react-router-dom';
 function OrdersLayout() {
   return (
     <div className="min-h-screen">
-      <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
-        <Outlet />
-      </div>
+      <Outlet />
     </div>
   );
 }

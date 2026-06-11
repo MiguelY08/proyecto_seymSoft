@@ -45,7 +45,7 @@ import ProvidersPage from "../../Features/administrtivePanel/purchases/providers
 import Purchases from "../../Features/administrtivePanel/purchases/purchases/pages/Purchases.jsx";
 // import CreatePurchase from "../../Features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx";
 import CreatePurchase from "../../Features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx";
-import ReturnsP from "../../Features/administrtivePanel/purchases/returns/pages/Returns.jsx";
+// import ReturnsP from "../../Features/administrtivePanel/purchases/returns/pages/Returns.jsx";
 // import ReturnForm from "../../Features/administrtivePanel/purchases/returns/modals/ReturnForm.jsx";
 // import ReturnInfo from "../../Features/administrtivePanel/purchases/returns/modals/ReturnInfo.jsx";
 import NonConformingProducts from "../../Features/administrtivePanel/purchases/nonConformingProducts/pages/NonConformingProducts.jsx";
@@ -58,10 +58,8 @@ import OrdersList from "../../Features/administrtivePanel/sales/orders/pages/Ord
 import OrderForm from "../../Features/administrtivePanel/sales/orders/pages/OrdersForm.jsx"
 
 import Sales from "../../Features/administrtivePanel/sales/sales/pages/Sales.jsx";
-// import SaleForm from "../../Features/administrtivePanel/sales/sales/pages/SaleForm.jsx";
 import SaleForm from "../../Features/administrtivePanel/sales/sales/pages/SaleForm.jsx";
-// import SaleInfo from "../../Features/administrtivePanel/sales/sales/modals/SaleInfo.jsx";
-// import AnnularSale from "../../Features/administrtivePanel/sales/sales/modals/AnnularSale.jsx";
+import SaleEditForm from "../../features/administrtivePanel/sales/sales/pages/SaleEditForm.jsx";
 import SaleInfo from "../../Features/administrtivePanel/sales/sales/modals/SaleInfo.jsx";
 import AnnularSale from "../../Features/administrtivePanel/sales/sales/modals/AnnularSale.jsx";
 
@@ -133,7 +131,7 @@ const AppRouter = () => {
           <Route path="purchases/providers" element={<ProvidersPage />} />
           <Route path="purchases" element={<Purchases />} />
           <Route path="purchases/create" element={<CreatePurchase />} />
-          <Route path="purchases/returns-p" element={<ReturnsP />} />
+          {/* <Route path="purchases/returns-p" element={<ReturnsP />} /> */}
           {/* <Route
             path="purchases/return-form"
             element={
@@ -158,6 +156,7 @@ const AppRouter = () => {
           {/* SALES */}
           <Route path="sales" element={<Sales />} />
           <Route path="sales/form-sale" element={<SaleForm />} />
+          <Route path="sales/edit-sale" element={<SaleEditForm />} />
           <Route path="sales/info-sale" element={<SaleInfo />} />
           <Route path="sales/annular-sale" element={<AnnularSale />} />
 

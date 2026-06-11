@@ -2,9 +2,10 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { ESTADOS_LOGISTICOS } from '../services/ordersService';
 import {
-  Users, Truck, MapPin, PackageCheck, FileX, ChevronDown, Home, Search, X,
+  Users, Truck, MapPin, PackageCheck, FileX, ChevronDown, Home, X,
   Phone, Mail, IdCard, FileText
 } from 'lucide-react';
+import FormSelect from '../../../../shared/FormSelect';
 
 function LeftSectionForm({
   formData,
@@ -94,17 +95,6 @@ function LeftSectionForm({
     onClienteChange({ target: { value: '' } });
   };
 
-  // Clase base para selects
-  const selectClass = (fieldName, isDisabled = false) => `
-    appearance-none w-full pl-10 pr-8 py-2.5 text-sm border rounded-lg outline-none
-    transition-colors duration-200
-    ${errors[fieldName] ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'}
-    ${isDisabled 
-      ? 'bg-gray-100 text-gray-600 border-gray-300 cursor-default' 
-      : 'bg-white text-gray-700 cursor-pointer'
-    }
-  `;
-
   const textareaClass = (fieldName, isDisabled = false) => `
     w-full pl-10 pr-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 resize-none
     transition-colors duration-200
@@ -136,6 +126,15 @@ function LeftSectionForm({
   const estadoColorClass = getEstadoColorClass(formData.estadoLogistico);
   // El estado solo se deshabilita en edición y si el estado actual es 'listo'
   const isEstadoDisabled = loading || (isEditMode && isEstadoListo);
+  const tipoEntregaOptions = [
+    { value: 'recoge', label: 'El cliente lo recoge' },
+    { value: 'domicilio', label: 'Entrega a domicilio' },
+  ];
+  const estadoOptions = [
+    { value: ESTADOS_LOGISTICOS.EN_PROCESO, label: 'En proceso' },
+    { value: ESTADOS_LOGISTICOS.LISTO, label: 'Listo' },
+    { value: ESTADOS_LOGISTICOS.CANCELADO, label: 'Cancelado' },
+  ];
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -244,21 +243,16 @@ function LeftSectionForm({
           <label className="block text-sm font-medium text-gray-700">
             Tipo de entrega <span className="text-red-500">*</span>
           </label>
-          <div className="relative">
-            <Truck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-            <select
-              value={formData.tipoEntrega}
-              onChange={onTipoEntregaChange}
-              disabled={loading}
-              className={selectClass('tipoEntrega', loading)}
-            >
-              <option value="recoge">El cliente lo recoge</option>
-              <option value="domicilio">Entrega a domicilio</option>
-            </select>
-            {!loading && (
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
-            )}
-          </div>
+          <FormSelect
+            value={formData.tipoEntrega}
+            options={tipoEntregaOptions}
+            onChange={(value) => onTipoEntregaChange({ target: { value } })}
+            icon={Truck}
+            disabled={loading}
+            error={errors.tipoEntrega}
+            placeholder="Tipo de entrega"
+            ariaLabel="Tipo de entrega"
+          />
           {errorMsg('tipoEntrega')}
         </div>
 
@@ -312,28 +306,17 @@ function LeftSectionForm({
           <label className="block text-sm font-medium text-gray-700">
             Estado del pedido <span className="text-red-500">*</span>
           </label>
-          <div className="relative">
-            <PackageCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-            <select
-              value={formData.estadoLogistico}
-              onChange={onEstadoLogisticoChange}
-              disabled={isEstadoDisabled}
-              className={`${selectClass('estadoLogistico', isEstadoDisabled)} ${!isEstadoDisabled ? estadoColorClass : ''}`}
-            >
-              <option value={ESTADOS_LOGISTICOS.EN_PROCESO} className="bg-yellow-50 text-yellow-800">
-                En proceso
-              </option>
-              <option value={ESTADOS_LOGISTICOS.LISTO} className="bg-green-50 text-green-800">
-                Listo
-              </option>
-              <option value={ESTADOS_LOGISTICOS.CANCELADO} className="bg-red-50 text-red-800">
-                Cancelado
-              </option>
-            </select>
-            {!isEstadoDisabled && (
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
-            )}
-          </div>
+          <FormSelect
+            value={formData.estadoLogistico}
+            options={estadoOptions}
+            onChange={(value) => onEstadoLogisticoChange({ target: { value } })}
+            icon={PackageCheck}
+            disabled={isEstadoDisabled}
+            error={errors.estadoLogistico}
+            placeholder="Estado del pedido"
+            className={!isEstadoDisabled ? estadoColorClass : ''}
+            ariaLabel="Estado del pedido"
+          />
           {errorMsg('estadoLogistico')}
           {isEditMode && isEstadoListo && (
             <p className="mt-0.5 text-xs text-gray-500">El estado "Listo" no se puede modificar.</p>
@@ -365,7 +348,7 @@ function LeftSectionForm({
         {user && (
           <div className="mt-2 p-3 bg-gray-100 rounded-lg border border-gray-200">
             <p className="text-sm text-gray-600">
-              <span className="font-medium">Asesor asignado:</span> {user.name}
+              <span className="font-medium">Asesor asignado:</span> {user.name || user.fullName || user.email || 'Usuario actual'}
             </p>
           </div>
         )}

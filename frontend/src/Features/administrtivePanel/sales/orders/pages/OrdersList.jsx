@@ -5,75 +5,18 @@ import TopBar from '../components/TopBar';
 import OrdersTable from '../components/OrdersTable';
 import DetailOrder from '../modals/DetailOrder';
 import CancelOrder from '../modals/CancelOrder';
-import OrdersService, { PaymentService, ESTADOS_LOGISTICOS } from '../services/ordersService';
+import OrdersService, { ESTADOS_LOGISTICOS } from '../services/ordersService';
 import { clientsService } from '../../clients/services/clientsService';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
+import Spinner from '../../../../shared/spinner';
+import PaginationAdmin from '../../../../shared/PaginationAdmin';
 
-const RECORDS_PER_PAGE = 13;
-
-// ─── Paginador (sin cambios) ─────────────────────────────────────────────
-function Pagination({ currentPage, totalPages, onPageChange }) {
-  const getVisiblePages = () => {
-    if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
-    if (currentPage <= 3) return [1, 2, 3, '...', totalPages];
-    if (currentPage >= totalPages - 2) return [1, '...', totalPages - 2, totalPages - 1, totalPages];
-    return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
-  };
-
-  return (
-    <div className="flex items-center gap-1">
-      <button
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1}
-        className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 ${
-          currentPage === 1
-            ? 'text-gray-300 cursor-not-allowed'
-            : 'text-[#004D77] hover:bg-[#004D77]/10 cursor-pointer'
-        }`}
-      >
-        <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />
-      </button>
-
-      {getVisiblePages().map((page, i) =>
-        page === '...' ? (
-          <span key={i} className="w-7 h-7 flex items-center justify-center text-gray-400 text-xs">
-            ...
-          </span>
-        ) : (
-          <button
-            key={page}
-            onClick={() => onPageChange(page)}
-            className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-semibold transition-all duration-200 ${
-              currentPage === page
-                ? 'bg-[#004D77] text-white shadow-sm'
-                : 'text-gray-600 hover:bg-[#004D77]/10 hover:text-[#004D77]'
-            }`}
-          >
-            {page}
-          </button>
-        )
-      )}
-
-      <button
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === totalPages}
-        className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 ${
-          currentPage === totalPages
-            ? 'text-gray-300 cursor-not-allowed'
-            : 'text-[#004D77] hover:bg-[#004D77]/10 cursor-pointer'
-        }`}
-      >
-        <ChevronRight className="w-4 h-4" strokeWidth={2.5} />
-      </button>
-    </div>
-  );
-}
+const RECORDS_PER_PAGE = 11;
 
 // ─── Componente principal de lista de pedidos ─────────────────────────────────
 function OrdersList() {
   const navigate = useNavigate();
-  const { showSuccess } = useAlert();
+  const { showSuccess, showError } = useAlert();
 
   // Estados
   const [orders, setOrders] = useState([]);
@@ -87,10 +30,13 @@ function OrdersList() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [cancelando, setCancelando] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoadingMessage, setActionLoadingMessage] = useState('');
 
   // Carga inicial de pedidos y clientes
   useEffect(() => {
   const loadOrders = async () => {
+    setLoading(true);
     try {
       // Cargar pedidos
       const rawOrders = await OrdersService.list();
@@ -115,6 +61,8 @@ function OrdersList() {
       setClientMap(map);
     } catch (error) {
       console.error('Error al cargar pedidos y clientes:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -125,21 +73,16 @@ function OrdersList() {
   const enrichedOrders = useMemo(() => {
     return orders.map(order => {
       const clienteInfo = clientMap[order.clienteId] || {
-        nombre: `Cliente ID ${order.clienteId}`,
-        telefono: '',
-        email: '',
+        nombre: order.clienteNombre || `Cliente ID ${order.clienteId}`,
+        telefono: order.clienteTelefono || '',
+        email: order.clienteEmail || '',
       };
-
-      // Calcular pagoEstado real desde los pagos
-      const totalPagado = PaymentService.getTotalPagado(order.id);
-      const pagoEstadoCalculado = totalPagado >= order.total ? 'pagado' : 'pendiente';
 
       return {
         ...order,
         clienteNombre: clienteInfo.nombre,
         clienteTelefono: clienteInfo.telefono,
         clienteEmail: clienteInfo.email,
-        pagoEstado: pagoEstadoCalculado,
       };
     });
   }, [orders, clientMap]);
@@ -191,7 +134,6 @@ function OrdersList() {
   }, [enrichedOrders, search, fechaInicial, fechaFinal, origenFilter, pagoEstadoFilter]);
 
   // Paginación
-  const totalPages = Math.ceil(filteredOrders.length / RECORDS_PER_PAGE);
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
   const endIndex = startIndex + RECORDS_PER_PAGE;
   const currentOrders = filteredOrders.slice(startIndex, endIndex);
@@ -202,9 +144,22 @@ function OrdersList() {
   }, [search, fechaInicial, fechaFinal, origenFilter, pagoEstadoFilter]);
 
   // Handlers
-  const handleViewDetail = (order) => {
-    setSelectedOrder(order);
-    setIsDetailOpen(true);
+  const handleViewDetail = async (order) => {
+    setActionLoadingMessage('Cargando detalles del pedido...');
+    try {
+      const freshOrder = await OrdersService.findById(order.id);
+      if (freshOrder) {
+        setOrders(prev => prev.map(item => item.id === freshOrder.id ? freshOrder : item));
+      }
+      setSelectedOrder(freshOrder || order);
+      setIsDetailOpen(true);
+    } catch (error) {
+      showError('Error', error.response?.data?.message || error.message || 'No se pudo cargar el pedido.');
+      setSelectedOrder(order);
+      setIsDetailOpen(true);
+    } finally {
+      setActionLoadingMessage('');
+    }
   };
 
   const handleCloseDetail = () => {
@@ -213,11 +168,14 @@ function OrdersList() {
   };
 
   const handleEdit = (order) => {
-    navigate(`/admin/sales/orders/${order.id}`);
+    setActionLoadingMessage('Cargando edicion del pedido...');
+    window.setTimeout(() => {
+      navigate(`/admin/sales/orders/${order.id}`);
+    }, 80);
   };
 
-  const handleEstadoLogisticoChange = (orderId, nuevoEstado, motivo = null) => {
-    const updated = OrdersService.updateEstadoLogistico(orderId, nuevoEstado, motivo);
+  const handleEstadoLogisticoChange = async (orderId, nuevoEstado, motivo = null) => {
+    const updated = await OrdersService.updateEstadoLogistico(orderId, nuevoEstado, motivo);
     if (updated) {
       setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
       if (selectedOrder?.id === updated.id) setSelectedOrder(updated);
@@ -229,9 +187,9 @@ function OrdersList() {
     setCancelando(order);
   }, []);
 
-  const confirmCancel = useCallback((motivo) => {
+  const confirmCancel = useCallback(async (motivo) => {
     if (!cancelando) return;
-    const updated = OrdersService.updateEstadoLogistico(cancelando.id, ESTADOS_LOGISTICOS.CANCELADO, motivo);
+    const updated = await OrdersService.updateEstadoLogistico(cancelando.id, ESTADOS_LOGISTICOS.CANCELADO, motivo);
     if (updated) {
       setOrders(prev => prev.map(o => (o.id === updated.id ? updated : o)));
       if (selectedOrder?.id === updated.id) setSelectedOrder(updated);
@@ -241,8 +199,20 @@ function OrdersList() {
     setCancelando(null);
   }, [cancelando, selectedOrder, isDetailOpen, showSuccess]);
 
+  if (loading && orders.length === 0) {
+    return (
+      <Spinner message="Cargando pedidos..." />
+    );
+  }
+
   return (
-    <>
+    <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
+      {actionLoadingMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+          <Spinner message={actionLoadingMessage} className="min-h-0" />
+        </div>
+      )}
+
       <TopBar
         search={search}
         setSearch={setSearch}
@@ -271,35 +241,12 @@ function OrdersList() {
       </div>
 
       {filteredOrders.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
-          <p className="text-xs sm:text-sm font-semibold text-gray-700">
-            {search.trim() || fechaInicial || fechaFinal || origenFilter || pagoEstadoFilter ? (
-              <>
-                <span className="text-[#004D77]">{filteredOrders.length}</span>
-                {' '}resultado{filteredOrders.length !== 1 ? 's' : ''} encontrado{filteredOrders.length !== 1 ? 's' : ''}
-              </>
-            ) : (
-              <>
-                Mostrando{' '}
-                <span className="text-[#004D77]">{startIndex + 1}</span>
-                {' '}a{' '}
-                <span className="text-[#004D77]">{Math.min(endIndex, filteredOrders.length)}</span>
-                {' '}de{' '}
-                <span className="text-[#004D77]">{filteredOrders.length}</span>
-                {' '}pedidos
-              </>
-            )}
-          </p>
-          {totalPages > 1 && (
-            <div className="bg-white shadow-md rounded-xl px-3 py-2">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
-            </div>
-          )}
-        </div>
+        <PaginationAdmin
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          totalRecords={filteredOrders.length}
+          recordsPerPage={RECORDS_PER_PAGE}
+        />
       )}
 
       {/* Modales (detalle y cancelación) */}
@@ -319,7 +266,7 @@ function OrdersList() {
           onConfirm={confirmCancel}
         />
       )}
-    </>
+    </div>
   );
 }
 
