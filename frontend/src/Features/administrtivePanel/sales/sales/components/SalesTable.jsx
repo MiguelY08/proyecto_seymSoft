@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import {
   Info,
   SquarePen,
@@ -6,48 +7,24 @@ import {
   XCircle,
   ShoppingCart,
 } from "lucide-react";
-import { useAlert }          from "../../../../shared/alerts/useAlert";
-import { UserService }           from "../../../users/services/userService";
-import { clientsService }    from "../../clients/services/clientsService";
-import { highlight }         from "../helpers/salesHelpers";
+import { useAlert } from "../../../../shared/alerts/useAlert";
+import { highlight } from "../helpers/salesHelpers";
+import Spinner from "../../../../shared/spinner";
 
-// ─── Resolver nombre de cliente por ID ───────────────────────────────────────
-const resolveClientName = (clientId, storedName) => {
-  if (!clientId) return storedName || "Cliente eliminado";
-  try {
-    const found = clientsService.getById(clientId);
-    return found ? found.name : (storedName || "Cliente eliminado");
-  } catch { return storedName || "Cliente eliminado"; }
-};
-
-// ─── Resolver nombre de vendedor por ID ──────────────────────────────────────
-const resolveVendorName = (vendorId, storedName) => {
-  if (!vendorId) return storedName || "Usuario eliminado";
-  try {
-    const found = UserService.list().find((u) => String(u.id) === String(vendorId));
-    return found ? found.name : (storedName || "Usuario eliminado");
-  } catch { return storedName || "Usuario eliminado"; }
-};
-
-// ─── Badge de estado ──────────────────────────────────────────────────────────
 const estadoVariants = {
   Aprobada: "bg-green-100 text-green-700 border-green-300",
-  "Esp. aprobación": "bg-yellow-100 text-yellow-700 border-yellow-300",
+  "Esp. aprobacion": "bg-yellow-100 text-yellow-700 border-yellow-300",
   Anulada: "bg-red-100 text-red-400 border-red-200",
-  Desaprobada: "bg-red-100 text-red-600 border-red-300",
+  Denegada: "bg-red-100 text-red-600 border-red-300",
   Cancelada: "bg-orange-100 text-orange-600 border-orange-300",
 };
 
-/**
- * Componente para mostrar un badge coloreado según el estado de la venta.
- * @param {Object} props - Propiedades del componente.
- * @param {string} props.estado - Estado de la venta.
- * @param {string} props.term - Término de búsqueda para resaltar.
- */
 function EstadoBadge({ estado, term }) {
+  const label = estado || "-";
   const classes =
-    estadoVariants[estado] ?? "bg-gray-100 text-gray-600 border-gray-300";
-  const content = term?.trim() ? highlight(estado, term) : estado;
+    estadoVariants[label] ?? "bg-gray-100 text-gray-600 border-gray-300";
+  const content = term?.trim() ? highlight(label, term) : label;
+
   return (
     <span
       className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${classes}`}
@@ -57,26 +34,18 @@ function EstadoBadge({ estado, term }) {
   );
 }
 
-// ─── Permisos por estado ──────────────────────────────────────────────────────
-/**
- * Determina los permisos disponibles según el estado de la venta.
- * @param {string} estado - Estado de la venta.
- * @returns {Object} Objeto con permisos: puedeDevolver, puedeAnular, deshabilitado.
- */
 const getPermisos = (estado) => {
-  if (estado === "Aprobada")
+  if (estado === "Aprobada") {
     return { puedeDevolver: true, puedeAnular: true, deshabilitado: false };
-  if (estado === "Anulada")
+  }
+
+  if (estado === "Anulada") {
     return { puedeDevolver: false, puedeAnular: false, deshabilitado: true };
+  }
+
   return { puedeDevolver: false, puedeAnular: false, deshabilitado: false };
 };
 
-// ─── Empty State ──────────────────────────────────────────────────────────────
-/**
- * Componente para mostrar estado vacío cuando no hay ventas.
- * @param {Object} props - Propiedades del componente.
- * @param {boolean} props.isSearching - Indica si se está buscando.
- */
 function EmptyState({ isSearching }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 gap-4">
@@ -92,7 +61,7 @@ function EmptyState({ isSearching }) {
             No se encontraron resultados
           </p>
           <p className="text-sm text-gray-400 text-center max-w-xs">
-            Ninguna venta coincide con la búsqueda. Intenta con otro término.
+            Ninguna venta coincide con la busqueda. Intenta con otro termino.
           </p>
         </>
       ) : (
@@ -101,7 +70,7 @@ function EmptyState({ isSearching }) {
             No hay ventas registradas
           </p>
           <p className="text-sm text-gray-400 text-center max-w-xs">
-            Aún no se han registrado ventas en el sistema. Crea la primera para
+            Aun no se han registrado ventas en el sistema. Crea la primera para
             comenzar.
           </p>
         </>
@@ -110,32 +79,51 @@ function EmptyState({ isSearching }) {
   );
 }
 
-// ─── SalesTable ───────────────────────────────────────────────────────────────
-function SalesTable({ data = [], search = "", totalData = 0, offset = 0 }) {
+function TableText({ value, fallback, search, className = "" }) {
+  if (!value || value === "-") {
+    return <span className="italic text-gray-400">{fallback}</span>;
+  }
+
+  return <span className={className}>{highlight(value, search)}</span>;
+}
+
+function SalesTable({ data = [], search = "", totalData = 0 }) {
   const navigate = useNavigate();
   const { showError } = useAlert();
+  const [loadingMessage, setLoadingMessage] = useState("");
+
+  const navigateWithSpinner = (message, to, options) => {
+    setLoadingMessage(message);
+    window.setTimeout(() => {
+      navigate(to, options);
+    }, 80);
+  };
 
   const handleAnular = (row) => {
     const { puedeAnular } = getPermisos(row.estado);
+
     if (!puedeAnular) {
       showError(
-        "Anulación no permitida",
+        "Anulacion no permitida",
         `No es posible anular una venta con estado "${row.estado}".`,
       );
       return;
     }
+
     navigate("/admin/sales/annular-sale", { state: { sale: row } });
   };
 
   const handleDevolucion = (row) => {
     const { puedeDevolver } = getPermisos(row.estado);
+
     if (!puedeDevolver) {
       showError(
-        "Devolución no permitida",
-        `No es posible generar una devolución sobre una venta con estado "${row.estado}".`,
+        "Devolucion no permitida",
+        `No es posible generar una devolucion sobre una venta con estado "${row.estado}".`,
       );
       return;
     }
+
     navigate("/admin/sales/returns-s", { state: { sale: row } });
   };
 
@@ -147,6 +135,12 @@ function SalesTable({ data = [], search = "", totalData = 0, offset = 0 }) {
 
   return (
     <div className="flex-1 overflow-x-auto rounded-xl shadow-md min-h-0">
+      {loadingMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+          <Spinner message={loadingMessage} className="min-h-0" />
+        </div>
+      )}
+
       <table className="min-w-max w-full">
         <thead className="bg-[#004D77] text-white">
           <tr>
@@ -179,55 +173,49 @@ function SalesTable({ data = [], search = "", totalData = 0, offset = 0 }) {
 
         <tbody>
           {data.map((row, index) => {
-            const rowBg = index % 2 === 0 ? "bg-gray-100 hover:bg-blue-50" : "bg-white hover:bg-blue-50";
+            const rowBg =
+              index % 2 === 0
+                ? "bg-gray-100 hover:bg-blue-50"
+                : "bg-white hover:bg-blue-50";
             const { puedeDevolver, puedeAnular, deshabilitado } = getPermisos(
               row.estado,
             );
 
-            const nombreCliente  = resolveClientName(row.clienteId,  row.cliente);
-            const nombreVendedor = resolveVendorName(row.vendedorId, row.vendedor);
-            const clienteEliminado  = nombreCliente  === "Cliente eliminado";
-            const vendedorEliminado = nombreVendedor === "Usuario eliminado";
-
             return (
               <tr
-                key={row.id}
+                key={row.id || row.idSale || row.factura}
                 className={`transition-colors duration-150 ${rowBg}`}
               >
                 <td
                   className={`sticky left-0 z-10 ${rowBg} px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap font-mono`}
                 >
-                  {highlight(String(row.factura), search)}
+                  {highlight(String(row.factura || row.id || "-"), search)}
                 </td>
 
                 <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap">
-                  {clienteEliminado ? (
-                    <span className="italic text-gray-400">
-                      Usuario eliminado
-                    </span>
-                  ) : (
-                    highlight(nombreCliente, search)
-                  )}
+                  <TableText
+                    value={row.cliente}
+                    fallback="Cliente no disponible"
+                    search={search}
+                  />
                 </td>
 
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {vendedorEliminado ? (
-                    <span className="italic text-gray-400">
-                      Usuario eliminado
-                    </span>
-                  ) : (
-                    highlight(nombreVendedor, search)
-                  )}
+                  <TableText
+                    value={row.vendedor}
+                    fallback="Vendedor no disponible"
+                    search={search}
+                  />
                 </td>
 
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(row.fecha, search)}
+                  {highlight(row.fecha || "-", search)}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(row.metodoPago, search)}
+                  {highlight(row.metodoPago || "-", search)}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap font-semibold">
-                  {highlight(row.total, search)}
+                  {highlight(row.total || "0", search)}
                 </td>
                 <td className="px-3 py-2 text-center whitespace-nowrap">
                   <EstadoBadge estado={row.estado} term={search} />
@@ -238,7 +226,7 @@ function SalesTable({ data = [], search = "", totalData = 0, offset = 0 }) {
                     <button
                       onClick={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
-                        navigate("/admin/sales/info-sale", {
+                        navigateWithSpinner("Cargando detalles de la venta...", "/admin/sales/info-sale", {
                           state: {
                             sale: row,
                             origin: {
@@ -249,22 +237,31 @@ function SalesTable({ data = [], search = "", totalData = 0, offset = 0 }) {
                         });
                       }}
                       className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
-                      title="Ver información"
+                      title="Ver informacion"
                     >
                       <Info className="w-4 h-4" strokeWidth={1.5} />
                     </button>
 
-                    <button
-                      onClick={() =>
-                        navigate("/admin/sales/form-sale", {
-                          state: { sale: row },
-                        })
-                      }
-                      className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
-                      title="Editar venta"
-                    >
-                      <SquarePen className="w-4 h-4" strokeWidth={1.5} />
-                    </button>
+                    {deshabilitado ? (
+                      <span
+                        className="text-gray-200 cursor-not-allowed"
+                        title="No disponible para ventas anuladas"
+                      >
+                        <SquarePen className="w-4 h-4" strokeWidth={1.5} />
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() =>
+                          navigateWithSpinner("Cargando edicion de la venta...", "/admin/sales/edit-sale", {
+                            state: { sale: row },
+                          })
+                        }
+                        className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                        title="Editar venta"
+                      >
+                        <SquarePen className="w-4 h-4" strokeWidth={1.5} />
+                      </button>
+                    )}
 
                     {deshabilitado ? (
                       <span
@@ -276,8 +273,16 @@ function SalesTable({ data = [], search = "", totalData = 0, offset = 0 }) {
                     ) : (
                       <button
                         onClick={() => handleDevolucion(row)}
-                        className="text-gray-400 hover:scale-110 hover:text-amber-500 transition cursor-pointer"
-                        title="Generar devolución"
+                        className={`transition ${
+                          puedeDevolver
+                            ? "text-gray-400 hover:scale-110 hover:text-amber-500 cursor-pointer"
+                            : "text-gray-200 cursor-not-allowed"
+                        }`}
+                        title={
+                          puedeDevolver
+                            ? "Generar devolucion"
+                            : "Devolucion no disponible"
+                        }
                       >
                         <RefreshCw className="w-4 h-4" strokeWidth={1.5} />
                       </button>
@@ -293,8 +298,16 @@ function SalesTable({ data = [], search = "", totalData = 0, offset = 0 }) {
                     ) : (
                       <button
                         onClick={() => handleAnular(row)}
-                        className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
-                        title="Anular venta"
+                        className={`transition ${
+                          puedeAnular
+                            ? "text-gray-400 hover:scale-110 hover:text-red-500 cursor-pointer"
+                            : "text-gray-200 cursor-not-allowed"
+                        }`}
+                        title={
+                          puedeAnular
+                            ? "Anular venta"
+                            : "Anulacion no disponible"
+                        }
                       >
                         <XCircle className="w-4 h-4" strokeWidth={1.5} />
                       </button>

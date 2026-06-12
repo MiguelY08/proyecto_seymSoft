@@ -77,28 +77,28 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
 
             return (
               <tr key={order.id} className={`transition-colors duration-150 ${rowBg}`}>
-                <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap font-mono">
+                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap font-mono">
                   {highlight(order.numeroPedido || String(order.id), search)}
                 </td>
-                <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">
+                <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap">
                   {highlight(clienteMostrar, search)}
                 </td>
-                <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(order.fechaPedido ? new Date(order.fechaPedido).toLocaleDateString('es-CO') : '', search)}
                 </td>
-                <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap max-w-xs truncate">
+                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap max-w-xs truncate">
                   {highlight(direccionMostrar, search)}
                 </td>
-                <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(`$${order.total.toLocaleString()}`, search)}
                 </td>
-                <td className="px-3 py-1.5 text-center whitespace-nowrap">
+                <td className="px-3 py-2 text-center whitespace-nowrap">
                   <EstadoLogisticoBadgeTable estado={order.estadoLogistico} term={search} />
                 </td>
-                <td className="px-3 py-1.5 text-center whitespace-nowrap">
+                <td className="px-3 py-2 text-center whitespace-nowrap">
                   <EstadoPagoBadgeTable estado={order.pagoEstado} term={search} />
                 </td>
-                <td className="px-3 py-1.5">
+                <td className="px-3 py-2">
                   <div className="flex items-center justify-center gap-1.5">
                     <button
                       onClick={() => onViewDetail(order)}

@@ -19,6 +19,113 @@ import PaymentsSection from '../../orders/components/PaymentsSection';
 import { generateFactura, getInitialPaymentAmounts } from '../helpers/salesHelpers';
 import { ESTADOS_LOGISTICOS, ORIGENES } from '../../orders/services/ordersService';
 
+const PAYMENT_METHOD_IDS = {
+  transferencia: 1,
+  efectivo: 2,
+  credito: 3,
+};
+
+const normalizeText = (value) =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+const getPaymentMethodId = (methodName) => {
+  const method = normalizeText(methodName);
+
+  if (method.includes('transfer')) return PAYMENT_METHOD_IDS.transferencia;
+  if (method.includes('efect')) return PAYMENT_METHOD_IDS.efectivo;
+  if (method.includes('credit') || /^cr.*dito$/.test(method)) return PAYMENT_METHOD_IDS.credito;
+
+  return null;
+};
+
+const roundMoney = (value) =>
+  Math.round((Number(value) || 0) * 100) / 100;
+
+const getProductPriceForClient = (product, client) => {
+  const clientType = normalizeText(client?.clientType);
+
+  if (clientType.includes('mayor')) {
+    return roundMoney(product.wholesalePrice ?? product.retailPrice ?? product.precioDetalle ?? 0);
+  }
+
+  if (clientType.includes('colega') || clientType.includes('partner')) {
+    return roundMoney(product.partnerPrice ?? product.retailPrice ?? product.precioDetalle ?? 0);
+  }
+
+  if (clientType.includes('paca') || clientType.includes('bulk')) {
+    return roundMoney(product.bulkPrice ?? product.retailPrice ?? product.precioDetalle ?? 0);
+  }
+
+  return roundMoney(product.retailPrice ?? product.precioDetalle ?? 0);
+};
+
+const getIncludedIvaAmount = (totalWithIva, ivaPercentage) => {
+  const rate = Number(ivaPercentage || 0) / 100;
+  if (rate <= 0) return 0;
+
+  return roundMoney(Number(totalWithIva || 0) - (Number(totalWithIva || 0) / (1 + rate)));
+};
+
+const hasDuplicatePaymentMethods = (paymentMethods) => {
+  const ids = paymentMethods.map((payment) => payment.idPaymentMethod);
+  return new Set(ids).size !== ids.length;
+};
+
+const getSessionUserId = (user) =>
+  user?.idUser ?? user?.id ?? null;
+
+const getCreditDueDate = () => {
+  const date = new Date();
+  date.setMonth(date.getMonth() + 1);
+  return date.toISOString().split('T')[0];
+};
+
+const normalizeClientList = (response) => response?.data ?? response ?? [];
+
+const getProductStock = (product) => {
+  const barcodeStock = product.barcodes?.reduce(
+    (sum, item) => sum + Number(item.stock ?? 0),
+    0
+  );
+
+  return Number(
+    product.stock ??
+    product.totalStock ??
+    product.availableStock ??
+    barcodeStock ??
+    0
+  );
+};
+
+const normalizeProduct = (product) => {
+  const barcode =
+    product.barcode ??
+    product.codBarras ??
+    product.barcodes?.[0]?.barcode ??
+    product.productBarcodes?.[0]?.barcode ??
+    product.reference ??
+    '';
+
+  return {
+    ...product,
+    id: product.id ?? product.idProduct,
+    nombre: product.nombre ?? product.name,
+    retailPrice: Number(product.retailPrice ?? product.precioDetalle ?? 0),
+    wholesalePrice: Number(product.wholesalePrice ?? product.precioMayorista ?? product.retailPrice ?? product.precioDetalle ?? 0),
+    partnerPrice: Number(product.partnerPrice ?? product.precioColegas ?? product.retailPrice ?? product.precioDetalle ?? 0),
+    bulkPrice: Number(product.bulkPrice ?? product.precioPacas ?? product.retailPrice ?? product.precioDetalle ?? 0),
+    precioDetalle: Number(product.precioDetalle ?? product.retailPrice ?? 0),
+    ivaPercentage: Number(product.ivaPercentage ?? product.iva ?? 0),
+    stock: getProductStock(product),
+    barcode,
+    codBarras: barcode,
+    categorias: product.categorias ?? product.categories?.map((category) => category.name) ?? [],
+  };
+};
+
 function SaleForm() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -27,6 +134,8 @@ function SaleForm() {
 
   const saleToEdit = location.state?.sale ?? null;
   const isEditing = saleToEdit !== null;
+  const vendingType = location.state?.vendingType ?? 'direct';
+  const vendingTypeLabel = vendingType === 'manual' ? 'Manual' : 'Directa';
 
   // Redirigir a edición de pedido si se intenta editar una venta existente
   useEffect(() => {
@@ -52,7 +161,6 @@ function SaleForm() {
   // Datos del formulario (similar a OrdersForm)
   const [formData, setFormData] = useState({
     clienteId: location.state?.newUserId ?? '',
-    asesorId: user?.id || null,
     tipoEntrega: 'recoge',
     direccionEntrega: '',
     productos: [],
@@ -72,26 +180,55 @@ function SaleForm() {
   const [totalPagado, setTotalPagado] = useState(0);
 
   // Cálculo de totales
-  const subtotal = formData.productos.reduce((sum, p) => sum + (p.subtotal || 0), 0);
-  const iva = subtotal * 0.19;
-  const total = subtotal + iva;
+  const selectedClient = clientes.find((cliente) => Number(cliente.id) === Number(formData.clienteId)) ?? null;
+  const productosCatalogoConPrecio = productosCatalogo.map((product) => ({
+    ...product,
+    precioDetalle: getProductPriceForClient(product, selectedClient),
+  }));
+  const total = roundMoney(formData.productos.reduce((sum, p) => sum + (p.subtotal || 0), 0));
+  const iva = formData.productos.reduce((sum, p) => sum + (p.ivaAmount || 0), 0);
+  const subtotal = roundMoney(total - iva);
   const saldoPendiente = Math.max(0, total - totalPagado);
 
   // ─── Carga inicial de catálogos ──────────────────────────────────────────
   useEffect(() => {
-    const clients = clientsService.getAll();
-    setClientes(clients);
+    const loadCatalogs = async () => {
+      try {
+        const clients = await clientsService.getAll();
+        setClientes(normalizeClientList(clients));
 
-    const products = ProductsService.list();
-    setProductosCatalogo(products);
-  }, []);
+        const products = await ProductsService.list();
+        setProductosCatalogo((products ?? []).map(normalizeProduct));
+      } catch (error) {
+        console.error(error);
+        showError('Error', 'No se pudieron cargar clientes o productos.');
+      }
+    };
 
-  // Actualizar asesorId desde contexto
+    loadCatalogs();
+  }, [showError]);
+
   useEffect(() => {
-    if (user) {
-      setFormData(prev => ({ ...prev, asesorId: user.id }));
-    }
-  }, [user]);
+    if (formData.productos.length === 0) return;
+
+    setFormData(prev => ({
+      ...prev,
+      productos: prev.productos.map((line) => {
+        const product = productosCatalogo.find(item => item.id === line.id);
+        if (!product) return line;
+
+        const precioUnitario = getProductPriceForClient(product, selectedClient);
+        const lineTotal = roundMoney(line.cantidad * precioUnitario);
+
+        return {
+          ...line,
+          precioUnitario,
+          subtotal: lineTotal,
+          ivaAmount: getIncludedIvaAmount(lineTotal, line.ivaPercentage),
+        };
+      }),
+    }));
+  }, [formData.clienteId, productosCatalogo, clientes]);
 
   // ─── Manejadores para LeftSectionForm ─────────────────────────────────────
   const handleClienteChange = (e) => {
@@ -136,19 +273,30 @@ function SaleForm() {
     const producto = productosCatalogo.find(p => p.id === Number(productoId));
     if (!producto) return;
 
+    if (producto.stock <= 0) {
+      showWarning('Sin stock', 'Este producto no tiene unidades disponibles.');
+      return;
+    }
+
     const existe = formData.productos.find(p => p.id === producto.id);
     if (existe) {
       showWarning('Producto ya agregado', 'Puedes editar la cantidad en la tabla.');
       return;
     }
 
-    const precio = producto.precioDetalle || 0;
+    const precio = getProductPriceForClient(producto, selectedClient);
+    const ivaPercentage = Number(producto.ivaPercentage ?? 0);
+    const ivaAmount = getIncludedIvaAmount(precio, ivaPercentage);
     const nuevoProducto = {
       id: producto.id,
       nombre: producto.nombre,
+      barcode: producto.barcode,
       cantidad: 1,
       precioUnitario: precio,
       subtotal: precio,
+      ivaPercentage,
+      ivaAmount,
+      stock: producto.stock,
     };
 
     setFormData(prev => ({
@@ -159,11 +307,27 @@ function SaleForm() {
 
   const handleUpdateCantidad = (productoId, nuevaCantidad) => {
     if (nuevaCantidad < 1) return;
+    const producto = formData.productos.find(p => p.id === productoId);
+    const stockDisponible = producto?.stock ?? nuevaCantidad;
+    const cantidad = Math.min(nuevaCantidad, stockDisponible);
+
+    if (cantidad < nuevaCantidad) {
+      showWarning('Stock insuficiente', `Solo hay ${stockDisponible} unidades disponibles.`);
+    }
+
     setFormData(prev => ({
       ...prev,
       productos: prev.productos.map(p =>
         p.id === productoId
-          ? { ...p, cantidad: nuevaCantidad, subtotal: nuevaCantidad * (p.precioUnitario || 0) }
+          ? {
+              ...p,
+              cantidad,
+              subtotal: cantidad * (p.precioUnitario || 0),
+              ivaAmount: getIncludedIvaAmount(
+                cantidad * (p.precioUnitario || 0),
+                p.ivaPercentage
+              ),
+            }
           : p
       ),
     }));
@@ -179,23 +343,43 @@ function SaleForm() {
   // ─── Manejador para pagos (PaymentsSection) ───────────────────────────────
   const handleAddPayment = (paymentData) => {
     const { metodoPago, monto, comprobante } = paymentData;
+
+    if (pagos.some((pago) => normalizeText(pago.metodoPago) === normalizeText(metodoPago))) {
+      showWarning('Metodo repetido', 'No se puede repetir un metodo de pago en la misma venta.');
+      return;
+    }
+
     const tempPago = {
-      id: Date.now(),
+      id: `tmp-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       metodoPago,
-      monto,
+      monto: roundMoney(monto),
       comprobante,
       fechaPago: new Date().toISOString(),
     };
     setPagos(prev => [...prev, tempPago]);
-    setTotalPagado(prev => prev + monto);
+    setTotalPagado(prev => roundMoney(prev + roundMoney(monto)));
 
     // Actualizar paymentAmounts (para compatibilidad con validación)
     setPaymentAmounts(prev => ({
       ...prev,
-      [metodoPago]: (prev[metodoPago] || 0) + monto,
+      [metodoPago]: (prev[metodoPago] || 0) + roundMoney(monto),
     }));
 
-    showSuccess('Abono agregado', `Se ha agregado un abono de $${monto.toLocaleString()}.`);
+    showSuccess('Abono agregado', `Se ha agregado un abono de $${roundMoney(monto).toLocaleString()}.`);
+  };
+
+  const handleRemovePayment = (paymentId) => {
+    const payment = pagos.find((pago) => pago.id === paymentId);
+
+    if (!payment) return;
+
+    setPagos(prev => prev.filter((pago) => pago.id !== paymentId));
+    setTotalPagado(prev => Math.max(0, roundMoney(prev - roundMoney(payment.monto))));
+    setPaymentAmounts(prev => ({
+      ...prev,
+      [payment.metodoPago]: Math.max(0, roundMoney((prev[payment.metodoPago] || 0) - roundMoney(payment.monto))),
+    }));
+    showSuccess('Abono eliminado', 'El abono pendiente fue eliminado.');
   };
 
   // ─── Validación (corregida para aceptar clienteId = 0) ───────────────────
@@ -204,7 +388,7 @@ function SaleForm() {
     if (formData.clienteId === undefined || formData.clienteId === null || formData.clienteId === '') {
       newErrors.clienteId = 'Debe seleccionar un cliente.';
     }
-    if (!formData.asesorId) newErrors.asesorId = 'No se pudo identificar al asesor.';
+    if (!getSessionUserId(user)) newErrors.idUser = 'No se pudo identificar al usuario en sesion.';
     if (!formData.direccionEntrega?.trim()) {
       newErrors.direccionEntrega = 'La dirección de entrega es obligatoria.';
     }
@@ -219,52 +403,84 @@ function SaleForm() {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      showWarning('Formulario incompleto', 'Revisa los campos marcados en rojo.');
+      if (validationErrors.idUser) {
+        showError('Sesion no valida', validationErrors.idUser);
+      } else {
+        showWarning('Formulario incompleto', 'Revisa los campos marcados en rojo.');
+      }
       return;
     }
 
-    // Validar que los pagos cubran el total
-    if (totalPagado < total) {
-      showWarning('Pago incompleto', `El total pagado ($${totalPagado.toLocaleString()}) no cubre el total del pedido ($${total.toLocaleString()}).`);
+    const paymentTotal = roundMoney(totalPagado);
+
+    if (Math.round(paymentTotal * 100) !== Math.round(total * 100)) {
+      showWarning(
+        'Pago invalido',
+        `La suma de los metodos de pago debe ser igual al total de la venta. Total: $${total.toLocaleString()}, pagado: $${paymentTotal.toLocaleString()}.`
+      );
       return;
     }
 
+    let paymentMethods = [];
     setLoading(true);
     try {
-      // Preparar items en el formato esperado por SalesServices
-      const items = formData.productos.map(p => ({
-        product: {
-          id: p.id,
-          nombre: p.nombre,
-          precioDetalle: p.precioUnitario,
+      paymentMethods = pagos.map((pago) => ({
+        idPaymentMethod: getPaymentMethodId(pago.metodoPago),
+        amount: roundMoney(pago.monto),
+      })).filter((payment) => payment.idPaymentMethod !== null);
+
+      if (paymentMethods.length !== pagos.length) {
+        showWarning('Metodo de pago no valido', 'Hay pagos con un metodo no reconocido.');
+        return;
+      }
+
+      if (hasDuplicatePaymentMethods(paymentMethods)) {
+        showWarning('Metodo repetido', 'No se puede repetir un metodo de pago en la misma venta.');
+        return;
+      }
+
+      const hasCreditPayment = paymentMethods.some(
+        (payment) => payment.idPaymentMethod === PAYMENT_METHOD_IDS.credito
+      );
+
+      const payload = {
+        idEmployee: getSessionUserId(user),
+        idSaleStatus: 1,
+        order: {
+          idClient: formData.clienteId,
+          deliveryType: formData.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Recoge',
+          deliveryAddress: formData.direccionEntrega,
+          items: formData.productos.map((producto) => ({
+            idProduct: producto.id,
+            barcode: producto.barcode,
+            quantity: producto.cantidad,
+          })),
         },
-        cantidad: p.cantidad,
-        descripcion: '',
-      }));
-
-      // Preparar objeto form (similar a SaleDetailsForm)
-      const form = {
-        clienteId: formData.clienteId,
-        vendedorId: formData.asesorId,
-        metodoPago: [...new Set(pagos.map(p => p.metodoPago))],
-        entrega: formData.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Cliente lo recoge',
-        direccion: formData.direccionEntrega,
-        estado: formData.estadoLogistico === ESTADOS_LOGISTICOS.LISTO ? 'Pagada' : 'Pendiente', // para referencia
+        paymentMethods,
       };
 
-      // Convertir paymentAmounts al formato esperado
-      const paymentAmountsMapped = {
-        Efectivo: paymentAmounts['Efectivo'] || 0,
-        Crédito: paymentAmounts['Crédito'] || 0,
-        Transferencia: paymentAmounts['Transferencia'] || 0,
-      };
+      if (hasCreditPayment) {
+        payload.credit = {
+          dueDate: getCreditDueDate(),
+          idCreditStatus: 1,
+        };
+      }
 
-      await SalesServices.create(form, items, facturaNo, paymentAmountsMapped);
+      await SalesServices.create(vendingType, payload);
 
       showSuccess('Venta creada', 'La venta ha sido registrada exitosamente.');
       navigate('/admin/sales');
     } catch (error) {
       console.error(error);
+      if (error?.message?.includes('metodos de pago')) {
+        console.error('Payload venta rechazado por suma de pagos:', {
+          totalFront: total,
+          totalPagado: paymentTotal,
+          productos: formData.productos,
+          pagos,
+          paymentMethods,
+        });
+      }
       showError('Error', error.message || 'No se pudo guardar la venta.');
     } finally {
       setLoading(false);
@@ -296,7 +512,7 @@ function SaleForm() {
             <ChevronLeft className="w-5 h-5 text-gray-600" />
           </button>
           <h1 className="text-2xl font-bold text-gray-900">
-            Nueva Venta (Factura No. {facturaNo})
+            Nueva Venta {vendingTypeLabel} (Factura No. {facturaNo})
           </h1>
         </div>
         <div className="flex gap-3">
@@ -344,7 +560,7 @@ function SaleForm() {
 
         <RightSectionForm
           productos={formData.productos}
-          productosCatalogo={productosCatalogo}
+          productosCatalogo={productosCatalogoConPrecio}
           errors={errors}
           loading={loading}
           disabled={loading}
@@ -364,8 +580,11 @@ function SaleForm() {
           total={total}
           pagos={pagos}
           onAddPayment={handleAddPayment}
+          onRemovePayment={handleRemovePayment}
           loading={loading}
           isEditMode={false}
+          disallowDuplicateMethods
+          allowCredit
         />
       </div>
 

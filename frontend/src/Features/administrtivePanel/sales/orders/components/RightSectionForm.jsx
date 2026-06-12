@@ -43,7 +43,7 @@ function RightSectionForm({
     }
     const term = searchTerm.toLowerCase().trim();
     return productosCatalogo.filter(prod => {
-      if (prod.nombre.toLowerCase().includes(term)) return true;
+      if (String(prod.nombre || '').toLowerCase().includes(term)) return true;
       if (prod.proveedor && prod.proveedor.toLowerCase().includes(term)) return true;
       if (prod.codBarras && prod.codBarras.toLowerCase().includes(term)) return true;
       if (prod.categorias && Array.isArray(prod.categorias)) {
@@ -125,16 +125,17 @@ function RightSectionForm({
                 <ul className="py-1">
                   {productosMostrados.map(prod => {
                     const selected = isProductSelected(prod.id);
+                    const hasStock = Number(prod.stock ?? 0) > 0;
                     return (
                       <li key={prod.id}>
                         <button
                           type="button"
-                          onClick={() => !selected && handleSelectProduct(prod.id)}
-                          disabled={selected}
+                          onClick={() => !selected && hasStock && handleSelectProduct(prod.id)}
+                          disabled={selected || !hasStock}
                           className={`
                             w-full px-4 py-2 text-left text-sm transition-colors duration-150
                             flex items-center justify-between gap-2
-                            ${selected 
+                            ${selected || !hasStock
                               ? 'opacity-60 bg-gray-100 cursor-not-allowed' 
                               : 'hover:bg-[#004D77]/10'
                             }
@@ -177,9 +178,10 @@ function RightSectionForm({
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
@@ -187,10 +189,12 @@ function RightSectionForm({
                 {productos.map((prod) => (
                   <tr key={prod.id} className="hover:bg-gray-50 transition-colors duration-150">
                     <td className="px-3 py-2 text-sm text-gray-800">{prod.nombre}</td>
+                    <td className="px-3 py-2 text-sm text-gray-700">{prod.stock ?? 0}</td>
                     <td className="px-3 py-2">
                       <input
                         type="number"
                         min="1"
+                        max={prod.stock ?? undefined}
                         value={prod.cantidad}
                         onChange={(e) => onUpdateCantidad(prod.id, parseInt(e.target.value) || 1)}
                         className="w-20 px-2 py-1.5 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 transition-colors duration-200 focus:ring-2 focus:ring-[#004D77]/20 focus:border-[#004D77] disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -232,7 +236,7 @@ function RightSectionForm({
             <span className="font-medium text-gray-800">{formatCurrency(subtotal)}</span>
           </div>
           <div className="flex justify-between text-sm mb-1">
-            <span className="text-gray-600">IVA (19%):</span>
+            <span className="text-gray-600">IVA incluido:</span>
             <span className="font-medium text-gray-800">{formatCurrency(iva)}</span>
           </div>
           <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-gray-200">
