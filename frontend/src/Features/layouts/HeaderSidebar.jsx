@@ -42,47 +42,35 @@ export default function HeaderSidebar() {
     showEditModal,
     setShowEditModal
   ] = useState(false);
-
+  
   const dropdownRef =
     useRef(null);
 
   // ─────────────────────────────
   // LOGOUT
   // ─────────────────────────────
-
   const handleLogout = async () => {
-
     await logout();
-
     navigate("/login");
-
   };
 
   // ─────────────────────────────
   // IR A TIENDA
   // ─────────────────────────────
-
   const handleGoToStore = async () => {
-
     setMenuOpen(false);
 
     const result =
       await showConfirm(
-
         "info",
-
         "¿Ir a la Tienda?",
-
         "Saldrás del panel administrativo e irás a la tienda.",
-
         {
           confirmButtonText:
             "Sí, ir a tienda",
-
           cancelButtonText:
             "Cancelar"
         }
-
       );
 
     if (result?.isConfirmed) {
@@ -137,7 +125,36 @@ export default function HeaderSidebar() {
       .split("/")
       .filter(Boolean);
 
+  const breadcrumbLabels = {
+    dashboard: "Métricas",
+    users: "Usuarios",
+    "form-user": "Formulario de usuario",
+    "info-user": "Informacion de usuario",
+    purchases: "Compras",
+    categories: "Categorias",
+    products: "Productos",
+    providers: "Proveedores",
+    create: "Crear",
+    "returns-p": "Devoluciones",
+    "non-conforming-products": "Prod. no conforme",
+    sales: "Ventas",
+    clients: "Clientes",
+    orders: "Pedidos",
+    "new-order": "Nuevo pedido",
+    "form-sale": "Formulario de venta",
+    "edit-sale": "Editar venta",
+    "info-sale": "Informacion de venta",
+    "annular-sale": "Anular venta",
+    "returns-s": "Devoluciones",
+    "payments-and-credits": "Pagos y abonos",
+    payment: "Pago",
+    configuration: "Configuracion",
+    roles: "Roles",
+    banners: "Carrusel"
+  };
+
   const formatText = (text) =>
+    breadcrumbLabels[text] ??
     text
       .replace(/-/g, " ")
       .replace(
@@ -158,7 +175,6 @@ export default function HeaderSidebar() {
   // ─────────────────────────────
   // DATOS USUARIO
   // ─────────────────────────────
-
   const fullName =
     user?.fullName || "Usuario";
 
@@ -166,106 +182,67 @@ export default function HeaderSidebar() {
     role?.nameRole || "Sin rol";
 
   const shortName =
-
     fullName.length > 18
-
       ? fullName.slice(0, 16) + "..."
-
       : fullName;
 
   return (
-
     <>
-
       <header className="w-full h-16 flex items-center justify-between px-4 md:px-6 bg-[#F0F0F0] border-b border-slate-200 font-lexend">
-
         {/* ─────────────────────────────
         BREADCRUMB
         ───────────────────────────── */}
-
         <div className="flex items-center gap-2 text-[#004D77] text-sm md:text-base font-medium truncate">
-
           <span className="truncate">
-
             {moduleName}
-
           </span>
-
           {subModuleName && (
-
             <>
-
               <span className="text-slate-400 hidden sm:block">
-
                 /
-
               </span>
-
               <span className="truncate hidden sm:block">
-
                 {subModuleName}
-
               </span>
-
             </>
-
           )}
-
         </div>
 
         {/* ─────────────────────────────
         PERFIL
         ───────────────────────────── */}
-
         <div
           className="relative"
           ref={dropdownRef}
         >
-
           <button
             onClick={()=>
               setMenuOpen(!menuOpen)
             }
             className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-200 transition-colors"
           >
-
             <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden text-slate-500">
-
               {user?.avatarUrl ? (
-
                 <img
                   src={user.avatarUrl}
                   alt={fullName}
                   className="w-full h-full object-cover"
                 />
-
               ) : (
-
                 <UserCircle2
                   size={26}
                   strokeWidth={1.5}
                 />
-
               )}
-
             </div>
-
             <div className="hidden sm:block text-left">
-
               <p className="text-sm font-medium text-[#004D77] leading-tight">
-
                 {shortName}
-
               </p>
-
               <p className="text-xs text-slate-500">
-
                 {roleName}
-
               </p>
-
             </div>
-
             <ChevronDown
               size={15}
               className={`transition-transform duration-200 ${
@@ -274,150 +251,99 @@ export default function HeaderSidebar() {
                   : ""
               }`}
             />
-
           </button>
 
           {/* ─────────────────────────────
           DROPDOWN
           ───────────────────────────── */}
-
           {menuOpen && (
-
             <div className="absolute right-0 mt-2 w-64 sm:w-72 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
-
               {/* HEADER */}
-
               <div className="flex flex-col items-center gap-1 px-5 py-5 bg-slate-50 border-b border-slate-200">
-
                 <div className="w-14 h-14 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 overflow-hidden mb-1">
-
                   {user?.avatarUrl ? (
-
                     <img
                       src={user.avatarUrl}
                       alt={fullName}
                       className="w-full h-full object-cover"
                     />
-
                   ) : (
-
                     <UserCircle2
                       size={48}
                       strokeWidth={1.2}
                     />
-
                   )}
-
                 </div>
-
                 <p className="text-sm font-semibold text-[#004D77] text-center leading-tight">
-
                   {fullName}
-
                 </p>
-
                 <p className="text-xs text-[#004D77] break-all">
-
                   {user?.email}
-
                 </p>
-
                 <p className="text-xs font-semibold text-slate-600 mt-0.5">
-
                   {roleName}
-
                 </p>
-
               </div>
 
               {/* ACCIONES */}
-
               <div className="py-1.5">
 
                 {/* IR A TIENDA */}
-
                 {role && (
-
                   <button
                     onClick={handleGoToStore}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#004D77] hover:bg-gray-200 transition-colors cursor-pointer"
                   >
-
                     <Store
                       size={16}
                       strokeWidth={1.8}
                     />
-
                     Ir a Tienda
-
                   </button>
-
                 )}
 
                 {/* EDITAR PERFIL */}
-
                 <button
                   onClick={() => {
-
                     setMenuOpen(false);
-
                     setShowEditModal(true);
-
                   }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#004D77] hover:bg-gray-200 transition-colors cursor-pointer"
                 >
-
                   <SquarePen
                     size={16}
                     strokeWidth={1.8}
                   />
-
                   Editar Mi Perfil
-
                 </button>
 
                 {/* LOGOUT */}
-
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
                 >
-
                   <LogOut
                     size={16}
                     strokeWidth={1.8}
                   />
-
                   Cerrar sesión
-
                 </button>
-
               </div>
-
             </div>
-
           )}
-
         </div>
-
       </header>
 
       {/* ─────────────────────────────
       MODAL PERFIL
       ───────────────────────────── */}
-
       {showEditModal && (
-
         <EditProfileForm
           onClose={()=>
             setShowEditModal(false)
           }
         />
-
       )}
-
     </>
-
   );
-
 }
