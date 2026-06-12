@@ -1,6 +1,7 @@
 // src/features/orders/helpers/ordersHelpers.jsx
 import React from 'react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES } from '../services/ordersService';
@@ -148,7 +149,7 @@ export const EstadoBadgePill = EstadoLogisticoBadgePill;
 export const EstadoBadgeTable = EstadoLogisticoBadgeTable;
 
 // ======================= EXPORTACIÓN A EXCEL =======================
-export const exportOrdersToExcel = (orders) => {
+const exportOrdersToExcelLegacy = (orders) => {
   if (!orders || orders.length === 0) return false;
 
   const formatCurrency = (value) => {
@@ -313,6 +314,296 @@ export const exportOrdersToExcel = (orders) => {
 
   const fileName = `pedidos_${new Date().toISOString().split('T')[0]}.xlsx`;
   XLSX.writeFile(wb, fileName);
+  return true;
+};
+
+const COMPANY_COLOR = '004D77';
+const LIGHT_BLUE = 'DCEBF3';
+const LIGHT_GRAY = 'F3F4F6';
+const WHITE = 'FFFFFF';
+const CURRENCY_FORMAT = '"$"#,##0';
+
+const normalizeValue = (value, fallback = '') =>
+  value === undefined || value === null || value === '' ? fallback : value;
+
+const formatDateForExcel = (isoString) => {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  return isNaN(date.getTime()) ? isoString : date.toLocaleDateString('es-CO');
+};
+
+const getOrderNumber = (order) => normalizeValue(order.numeroPedido ?? order.id, 'Sin numero');
+const getOrderProducts = (order) => order.productos ?? order.details ?? [];
+
+const getOriginLabel = (origin) => {
+  if (origin === ORIGENES.MANUAL) return 'Manual';
+  if (origin === ORIGENES.WEB) return 'Web';
+  return normalizeValue(origin, 'Sin origen');
+};
+
+const getProductName = (product) =>
+  normalizeValue(product.nombre ?? product.productName ?? product.product?.name, 'Producto sin nombre');
+
+const getProductQuantity = (product) => Number(product.cantidad ?? product.quantity ?? 0);
+
+const getProductUnitPrice = (product) =>
+  Number(product.precioUnitario ?? product.unitPrice ?? product.product?.retailPrice ?? 0);
+
+const getProductLineTotal = (product) => {
+  const explicitTotal = product.subtotal ?? product.total ?? product.lineTotal ?? product.totalProducto;
+  if (explicitTotal !== undefined && explicitTotal !== null && explicitTotal !== '') {
+    return Number(explicitTotal) || 0;
+  }
+
+  return getProductQuantity(product) * getProductUnitPrice(product);
+};
+
+const styleTitle = (worksheet, range, title) => {
+  worksheet.mergeCells(range);
+  const cell = worksheet.getCell(range.split(':')[0]);
+  cell.value = title;
+  cell.font = { bold: true, size: 18, color: { argb: WHITE } };
+  cell.alignment = { horizontal: 'center', vertical: 'middle' };
+  cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COMPANY_COLOR } };
+};
+
+const styleSubtitle = (worksheet, range, text) => {
+  worksheet.mergeCells(range);
+  const cell = worksheet.getCell(range.split(':')[0]);
+  cell.value = text;
+  cell.alignment = { horizontal: 'center' };
+  cell.font = { italic: true, color: { argb: COMPANY_COLOR } };
+};
+
+const styleHeaderRow = (row) => {
+  row.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: WHITE } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COMPANY_COLOR } };
+    cell.border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' },
+    };
+  });
+};
+
+const styleDataRow = (row, index) => {
+  row.eachCell((cell) => {
+    cell.alignment = { vertical: 'middle' };
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: index % 2 === 0 ? WHITE : LIGHT_GRAY },
+    };
+    cell.border = {
+      top: { style: 'thin', color: { argb: LIGHT_BLUE } },
+      left: { style: 'thin', color: { argb: LIGHT_BLUE } },
+      bottom: { style: 'thin', color: { argb: LIGHT_BLUE } },
+      right: { style: 'thin', color: { argb: LIGHT_BLUE } },
+    };
+  });
+};
+
+const setupWorksheetHeader = (worksheet, title, subtitle, lastColumn) => {
+  styleTitle(worksheet, `A1:${lastColumn}1`, title);
+  styleSubtitle(worksheet, `A2:${lastColumn}2`, subtitle);
+  worksheet.addRow([]);
+};
+
+const applyWorksheetTableSettings = (worksheet, headerRowNumber, lastColumn) => {
+  worksheet.views = [{ state: 'frozen', ySplit: headerRowNumber }];
+  worksheet.autoFilter = {
+    from: `A${headerRowNumber}`,
+    to: `${lastColumn}${headerRowNumber}`,
+  };
+};
+
+const buildOrdersSummarySheet = (workbook, orders, subtitle) => {
+  const worksheet = workbook.addWorksheet('Resumen Pedidos');
+  setupWorksheetHeader(worksheet, 'PEDIDOS', subtitle, 'J');
+
+  worksheet.columns = [
+    { key: 'orderNumber', width: 14 },
+    { key: 'client', width: 30 },
+    { key: 'deliveryAddress', width: 40 },
+    { key: 'date', width: 16 },
+    { key: 'total', width: 16 },
+    { key: 'logisticStatus', width: 18 },
+    { key: 'paymentStatus', width: 18 },
+    { key: 'origin', width: 14 },
+    { key: 'cancellationReason', width: 35 },
+    { key: 'productCount', width: 18 },
+  ];
+
+  const headerRow = worksheet.addRow([
+    'No. Pedido',
+    'Cliente',
+    'Direccion de entrega',
+    'Fecha pedido',
+    'Total',
+    'Estado logistico',
+    'Estado de pago',
+    'Origen',
+    'Motivo cancelacion',
+    'Cantidad productos',
+  ]);
+  styleHeaderRow(headerRow);
+
+  orders.forEach((order, index) => {
+    const row = worksheet.addRow({
+      orderNumber: getOrderNumber(order),
+      client: normalizeValue(order.clienteNombre, 'Cliente no identificado'),
+      deliveryAddress: normalizeValue(order.direccionEntrega),
+      date: formatDateForExcel(order.fechaPedido),
+      total: Number(order.total ?? 0),
+      logisticStatus: ESTADO_LOGISTICO_LABELS[order.estadoLogistico] || normalizeValue(order.estadoLogistico),
+      paymentStatus: ESTADO_PAGO_LABELS[order.pagoEstado] || normalizeValue(order.pagoEstado),
+      origin: getOriginLabel(order.origen),
+      cancellationReason: normalizeValue(order.motivoCancelacion),
+      productCount: getOrderProducts(order).length,
+    });
+
+    row.getCell('total').numFmt = CURRENCY_FORMAT;
+    styleDataRow(row, index);
+  });
+
+  applyWorksheetTableSettings(worksheet, 4, 'J');
+};
+
+const buildOrdersProductsSheet = (workbook, orders, subtitle) => {
+  const worksheet = workbook.addWorksheet('Detalle Productos');
+  setupWorksheetHeader(worksheet, 'DETALLE DE PRODUCTOS PEDIDOS', subtitle, 'G');
+
+  worksheet.columns = [
+    { key: 'orderNumber', width: 14 },
+    { key: 'client', width: 30 },
+    { key: 'date', width: 16 },
+    { key: 'product', width: 38 },
+    { key: 'quantity', width: 12 },
+    { key: 'unitPrice', width: 16 },
+    { key: 'lineTotal', width: 16 },
+  ];
+
+  const headerRow = worksheet.addRow([
+    'No. Pedido',
+    'Cliente',
+    'Fecha pedido',
+    'Producto',
+    'Cantidad',
+    'Precio unitario',
+    'Total producto',
+  ]);
+  styleHeaderRow(headerRow);
+
+  let rowIndex = 0;
+  orders.forEach((order) => {
+    const products = getOrderProducts(order);
+    const orderBase = {
+      orderNumber: getOrderNumber(order),
+      client: normalizeValue(order.clienteNombre, 'Cliente no identificado'),
+      date: formatDateForExcel(order.fechaPedido),
+    };
+
+    if (products.length === 0) {
+      const row = worksheet.addRow({ ...orderBase, product: 'Sin productos registrados' });
+      styleDataRow(row, rowIndex);
+      rowIndex += 1;
+      return;
+    }
+
+    products.forEach((product) => {
+      const row = worksheet.addRow({
+        ...orderBase,
+        product: getProductName(product),
+        quantity: getProductQuantity(product),
+        unitPrice: getProductUnitPrice(product),
+        lineTotal: getProductLineTotal(product),
+      });
+
+      row.getCell('unitPrice').numFmt = CURRENCY_FORMAT;
+      row.getCell('lineTotal').numFmt = CURRENCY_FORMAT;
+      styleDataRow(row, rowIndex);
+      rowIndex += 1;
+    });
+  });
+
+  applyWorksheetTableSettings(worksheet, 4, 'G');
+};
+
+const buildOrdersStatsSheet = (workbook, orders, subtitle) => {
+  const worksheet = workbook.addWorksheet('Estadisticas');
+  setupWorksheetHeader(worksheet, 'ESTADISTICAS DE PEDIDOS', subtitle, 'B');
+
+  worksheet.columns = [
+    { key: 'metric', width: 36 },
+    { key: 'value', width: 24 },
+  ];
+
+  const totalOrders = orders.length;
+  const totalValue = orders.reduce((sum, order) => sum + Number(order.total ?? 0), 0);
+  const totalProductLines = orders.reduce((sum, order) => sum + getOrderProducts(order).length, 0);
+  const totalUnits = orders.reduce(
+    (sum, order) => sum + getOrderProducts(order).reduce((acc, product) => acc + getProductQuantity(product), 0),
+    0
+  );
+  const enProceso = orders.filter((order) => order.estadoLogistico === ESTADOS_LOGISTICOS.EN_PROCESO).length;
+  const listo = orders.filter((order) => order.estadoLogistico === ESTADOS_LOGISTICOS.LISTO).length;
+  const cancelado = orders.filter((order) => order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO).length;
+  const pendientePago = orders.filter((order) => order.pagoEstado === ESTADOS_PAGO.PENDIENTE).length;
+  const pagado = orders.filter((order) => order.pagoEstado === ESTADOS_PAGO.PAGADO).length;
+  const avgPerOrder = totalOrders > 0 ? totalValue / totalOrders : 0;
+
+  const headerRow = worksheet.addRow(['Metrica', 'Valor']);
+  styleHeaderRow(headerRow);
+
+  const rows = [
+    ['Total pedidos', totalOrders],
+    ['Total valor', totalValue],
+    ['Promedio por pedido', avgPerOrder],
+    ['Total productos (lineas)', totalProductLines],
+    ['Total unidades', totalUnits],
+    ['Estado logistico: En proceso', enProceso],
+    ['Estado logistico: Listo', listo],
+    ['Estado logistico: Cancelado', cancelado],
+    ['Estado de pago: Pendiente', pendientePago],
+    ['Estado de pago: Pagado', pagado],
+    ['Fecha de exportacion', new Date().toLocaleString('es-CO')],
+  ];
+
+  rows.forEach(([metric, value], index) => {
+    const row = worksheet.addRow({ metric, value });
+    if (['Total valor', 'Promedio por pedido'].includes(metric)) {
+      row.getCell('value').numFmt = CURRENCY_FORMAT;
+    }
+    styleDataRow(row, index);
+  });
+
+  applyWorksheetTableSettings(worksheet, 4, 'B');
+};
+
+export const exportOrdersToExcel = async (orders) => {
+  if (!orders || orders.length === 0) return false;
+
+  const workbook = new ExcelJS.Workbook();
+  const currentDate = new Date();
+  const fileDate = currentDate.toISOString().split('T')[0];
+  const subtitle = `Fecha de exportacion: ${currentDate.toLocaleString('es-CO')}`;
+
+  workbook.creator = 'SeymSoft';
+  workbook.created = currentDate;
+
+  buildOrdersSummarySheet(workbook, orders, subtitle);
+  buildOrdersProductsSheet(workbook, orders, subtitle);
+  buildOrdersStatsSheet(workbook, orders, subtitle);
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+
+  saveAs(blob, `pedidos_${fileDate}.xlsx`);
   return true;
 };
 

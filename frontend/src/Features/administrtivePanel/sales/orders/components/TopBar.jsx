@@ -50,13 +50,13 @@ function TopBar({
     setOpenFilter(null);
   };
 
-  const handleDownloadExcel = () => {
+  const handleDownloadExcel = async () => {
     if (orders.length === 0) {
       showWarning('Sin registros', 'No hay pedidos que coincidan con los filtros actuales.');
       return;
     }
 
-    const success = exportOrdersToExcel(orders);
+    const success = await exportOrdersToExcel(orders);
     if (success) {
       showSuccess('Exportación exitosa', 'El archivo Excel se ha descargado correctamente.');
     }
