@@ -14,6 +14,7 @@ import CancelPaymentModal from "../components/CancelPaymentModal";
 import AccountReceipt from "../components/AccountReceipt";
 import StatusBadge from "../components/StatusBadge";
 import ButtonComponent from "../../../../shared/ButtonComponent";
+import Spinner from "../../../../shared/Spinner";
 
 import {
   createInstallment,
@@ -85,8 +86,9 @@ export default function AccountDetailsPage({ mode }) {
     loadCustomerData();
   }, [id, loadInvoices, reloadKey]);
 
+  // ✅ SPINNER INTEGRADO
   if (loading && (invoices?.length ?? 0) === 0) {
-    return <div className="p-6 font-lexend">Cargando...</div>;
+    return <Spinner message="Cargando datos de la cuenta..." />;
   }
 
   const facturas = invoices ?? [];

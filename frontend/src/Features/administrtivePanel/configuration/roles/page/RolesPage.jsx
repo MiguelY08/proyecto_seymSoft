@@ -1,4 +1,3 @@
-
 import { useMemo, useState, useEffect } from "react";
 
 import ButtonComponent from "../../../../shared/ButtonComponent";
@@ -8,6 +7,7 @@ import RoleMetricsCards from "../components/RoleMetricsCards";
 import RoleModal from "../components/RoleModal";
 import Permission from "../components/Permission";
 import PaginationAdmin from "../../../../shared/PaginationAdmin";
+import Spinner from "../../../../shared/spinner/Spinner";
 
 import {
   getRoles,
@@ -24,6 +24,9 @@ export default function RolesPage() {
 
   const [roles, setRoles] =
     useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
 
   const [currentPage, setCurrentPage] =
     useState(1);
@@ -47,6 +50,8 @@ export default function RolesPage() {
 
     try {
 
+      setLoading(true);
+
       const response =
         await getRoles();
 
@@ -66,6 +71,10 @@ export default function RolesPage() {
       );
 
       setRoles([]);
+
+    } finally {
+
+      setLoading(false);
 
     }
 
@@ -179,78 +188,73 @@ export default function RolesPage() {
 
   };
 
+  const handleEdit = async (
+    role
+  ) => {
 
-const handleEdit = async (
-  role
-) => {
+    try {
 
-  try {
+      const fullRole =
+        await getRoleById(
+          role.id
+        );
 
-    const fullRole =
-      await getRoleById(
-        role.id
+      setModalMode(
+        "edit"
       );
 
-    setModalMode(
-      "edit"
-    );
-
-    setSelectedRole(
-      fullRole
-    );
-
-    setIsModalOpen(
-      true
-    );
-
-  } catch (error) {
-
-    console.error(
-      "Error obteniendo rol:",
-      error
-    );
-
-  }
-
-};
-
-
-
-
-const handleView = async (
-  role
-) => {
-
-  try {
-
-    const fullRole =
-      await getRoleById(
-        role.id
+      setSelectedRole(
+        fullRole
       );
 
-    setModalMode(
-      "view"
-    );
+      setIsModalOpen(
+        true
+      );
 
-    setSelectedRole(
-      fullRole
-    );
+    } catch (error) {
 
-    setIsModalOpen(
-      true
-    );
+      console.error(
+        "Error obteniendo rol:",
+        error
+      );
 
-  } catch (error) {
+    }
 
-    console.error(
-      "Error obteniendo rol:",
-      error
-    );
+  };
 
-  }
+  const handleView = async (
+    role
+  ) => {
 
-};
+    try {
 
+      const fullRole =
+        await getRoleById(
+          role.id
+        );
+
+      setModalMode(
+        "view"
+      );
+
+      setSelectedRole(
+        fullRole
+      );
+
+      setIsModalOpen(
+        true
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Error obteniendo rol:",
+        error
+      );
+
+    }
+
+  };
 
   // ─────────────────────────────
   // GUARDAR
@@ -262,7 +266,6 @@ const handleView = async (
 
     try {
 
-      // ✅ CREAR
       if (
         modalMode === "create"
       ) {
@@ -273,7 +276,6 @@ const handleView = async (
 
       }
 
-      // ✅ EDITAR
       if (
         modalMode === "edit"
       ) {
@@ -289,7 +291,6 @@ const handleView = async (
 
       }
 
-      // ✅ RECARGAR TABLA
       await loadRoles();
 
       return {
@@ -339,6 +340,22 @@ const handleView = async (
     }
 
   };
+
+  if (loading) {
+
+    return (
+
+      <Permission permission="roles.ver">
+
+        <Spinner
+          message="Cargando roles..."
+        />
+
+      </Permission>
+
+    );
+
+  }
 
   return (
 
@@ -410,4 +427,3 @@ const handleView = async (
   );
 
 }
-

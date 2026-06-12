@@ -177,10 +177,10 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className={`w-full bg-blue-900 text-white py-2 rounded-lg transition cursor-pointer mt-4 text-sm font-medium
+          className={`w-full bg-[#004D77] text-white py-2 rounded-lg transition cursor-pointer mt-4 text-sm font-medium
             ${loading 
               ? "opacity-70 cursor-not-allowed" 
-              : "hover:bg-blue-800"
+              : "hover:bg-[#003D5e]"
             }
           `}
         >
@@ -201,10 +201,10 @@ export default function LoginForm() {
             window.location.href = `${import.meta.env.VITE_API_BASE_URL}/auth/google`;
           }}
           disabled={loading}
-          className={`w-full flex items-center justify-center gap-2 border border-gray-300 text-gray-700 py-2 rounded-lg transition mt-4
+          className={`w-full flex cursor-pointer items-center justify-center gap-2 border border-gray-300 text-gray-700 py-2 rounded-lg transition mt-4
             ${loading 
               ? "opacity-70 cursor-not-allowed" 
-              : "hover:bg-gray-50"
+              : "hover:bg-gray-100"
             }
           `}
           aria-label="Iniciar sesión con Google"

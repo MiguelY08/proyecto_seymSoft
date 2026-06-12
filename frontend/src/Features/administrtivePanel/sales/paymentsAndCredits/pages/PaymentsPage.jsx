@@ -8,6 +8,8 @@ import PaymentsTable from "../components/PaymentsTable";
 import PaymentsPaginator from "../components/PaymentsPaginator";
 import ContactClientModal from "../components/ContactClientModal";
 
+import Spinner from "../../../../shared/spinner/Spinner";
+
 import { exportAccountsToExcel } from "../utils/paymentHelpers";
 
 import {
@@ -20,6 +22,8 @@ import { mapCustomers } from "../mappers/paymentsMapper";
 export default function PaymentsPage() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const [loading, setLoading] = useState(true);
 
   const { showConfirm, showSuccess, showError } = useAlert();
 
@@ -40,6 +44,8 @@ export default function PaymentsPage() {
   ================================ */
   const loadCustomers = async () => {
     try {
+      setLoading(true);
+
       const customers = await getCreditCustomers();
 
       setAccounts(mapCustomers(customers));
@@ -47,9 +53,10 @@ export default function PaymentsPage() {
       console.error("Error cargando clientes:", error);
 
       showError("Error", "No fue posible cargar los clientes.");
+    } finally {
+      setLoading(false);
     }
   };
-
   /* ===============================
      INICIALIZAR
   ================================ */
@@ -176,6 +183,14 @@ export default function PaymentsPage() {
       );
     }
   };
+
+  if (loading) {
+    return (
+      <Spinner
+        message="Cargando pagos y abonos..."
+      />
+    );
+  }
 
   return (
     <div className="p-6 font-lexend space-y-3">
