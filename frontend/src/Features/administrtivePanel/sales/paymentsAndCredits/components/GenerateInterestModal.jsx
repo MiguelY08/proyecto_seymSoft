@@ -1,150 +1,165 @@
-import { useState, useMemo } from "react"
-import { X } from "lucide-react"
-import { calculateSaldoFactura } from "../utils/paymentHelpers"
-import { useAlert } from "../../../../shared/alerts/useAlert"
+import { useState, useMemo } from "react";
+import { X } from "lucide-react";
+import { useAlert } from "../../../../shared/alerts/useAlert";
 
-/*
-  Modal para aplicar interés por mora a una factura específica.
-
-  Props:
-    cliente  → objeto cliente { nombre, ... }
-    factura  → objeto factura vencida { id, nroFactura, valorCredito, abonos[] }
-    onClose  → () => void
-    onApply  → ({ percentage, interestAmount, newTotalDebt }) => void
-               El padre llama a applyInterest(clienteId, facturaId, percentage)
-*/
 export default function GenerateInterestModal({
   cliente,
   factura,
   onClose,
-  onApply
+  onApply,
 }) {
+  const { showWarning, showConfirm } = useAlert();
+  const [percentage, setPercentage] = useState("");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { showWarning, showSuccess, showConfirm } = useAlert()
+  const percentageNumber = useMemo(() => {
+    const value = Number(percentage);
+    return Number.isFinite(value) ? value : 0;
+  }, [percentage]);
 
-  const [percentage, setPercentage] = useState(10)
+  const interestGenerated = useMemo(() => {
+    const balance = Number(factura?.remainingBalance ?? 0);
+    if (percentageNumber <= 0) return 0;
+    return Math.round((balance * percentageNumber) / 100);
+  }, [factura?.remainingBalance, percentageNumber]);
 
-  // Saldo real de la factura usando la función del nuevo modelo
-  const originalDebt = calculateSaldoFactura(factura)
+  const totalDebt = useMemo(
+    () => Number(factura?.remainingBalance ?? 0) + interestGenerated,
+    [factura?.remainingBalance, interestGenerated],
+  );
 
-  const formatCOP = (value) =>
-    new Intl.NumberFormat("es-CO", {
-      style: "currency",
-      currency: "COP",
-      minimumFractionDigits: 0
-    }).format(value)
+  const formatCOP = (value) => new Intl.NumberFormat("es-CO").format(value);
 
-  const interestAmount = useMemo(() => (originalDebt * percentage) / 100, [originalDebt, percentage])
-  const newTotalDebt   = useMemo(() => originalDebt + interestAmount,      [originalDebt, interestAmount])
-
-  const handleApply = async () => {
-
-    if (originalDebt <= 0) {
-      showWarning("Sin deuda pendiente", "No se pueden aplicar intereses si el saldo es cero.")
-      return
+  const handleSubmit = async () => {
+    if (percentageNumber <= 0) {
+      setError("Ingrese un porcentaje valido mayor a 0");
+      showWarning(
+        "Porcentaje invalido",
+        "Ingrese un porcentaje de interes mayor a 0.",
+      );
+      return;
     }
 
-    if (!percentage || percentage < 1 || percentage > 99) {
-      showWarning("Porcentaje inválido", "Debe estar entre 1% y 99%.")
-      return
-    }
+    setError("");
 
     const confirm = await showConfirm(
-      "warning",
-      "¿Aplicar intereses?",
-      `Se incrementará la deuda de ${factura?.nroFactura} en ${formatCOP(interestAmount)}.`,
-      { confirmButtonText: "Sí, aplicar", cancelButtonText: "Cancelar" }
-    )
+      "question",
+      "Aplicar interes?",
+      `Se generara un interes de $${formatCOP(
+        interestGenerated,
+      )} para el credito #${factura?.idCredit}.`,
+      {
+        confirmButtonText: "Si, aplicar",
+        cancelButtonText: "Revisar",
+      },
+    );
 
-    if (!confirm.isConfirmed) return
+    if (!confirm.isConfirmed) return;
 
-    onApply({ percentage, interestAmount, newTotalDebt })
+    if (onApply) {
+      setIsSubmitting(true);
+      try {
+        await onApply({ percentage: percentageNumber });
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
 
-    showSuccess("Intereses aplicados", "La deuda fue actualizada correctamente.")
-    onClose()
-  }
+  if (!factura) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[9999] px-4 font-lexend">
-      <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden">
-
-        {/* HEADER */}
-        <div className="bg-[#004D77] text-white px-5 py-4 flex justify-between items-center">
-          <h3 className="font-semibold text-base sm:text-lg">Generar intereses por mora</h3>
-          <X size={18} className="cursor-pointer" onClick={onClose} />
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
+      <div className="bg-white w-full max-w-md rounded-2xl shadow-xl font-lexend">
+        <div className="bg-[#004D77] text-white px-6 py-4 rounded-t-2xl flex justify-between items-center">
+          <h2 className="text-lg font-semibold">Aplicar interes</h2>
+          <button onClick={onClose} className="cursor-pointer">
+            <X size={18} />
+          </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-5">
+          <div className="bg-gray-100 p-4 rounded-xl text-sm space-y-2">
+            <p>
+              <strong>Credito:</strong> #{factura.idCredit}
+            </p>
 
-          {/* Info */}
-          <div className="text-sm space-y-1">
-            <p className="font-medium">{cliente?.nombre}</p>
-            <p className="text-gray-500">
-              Factura: <span className="font-medium text-gray-700">{factura?.nroFactura}</span>
+            <p>
+              <strong>Cliente:</strong>{" "}
+              {cliente?.fullName ?? cliente?.nombre ?? "-"}
+            </p>
+
+            <p>
+              <strong>Saldo pendiente:</strong> $
+              {formatCOP(factura.remainingBalance ?? 0)}
+            </p>
+
+            <p>
+              <strong>Mora:</strong> {factura.overdueDays ?? 0} dias
             </p>
           </div>
 
-          {/* Alerta */}
-          <div className="bg-yellow-100 border border-yellow-400 rounded-xl p-4 text-sm text-yellow-800">
-            Esta factura supera el plazo máximo de pago (2 meses). Puede aplicar un interés por mora sobre el saldo pendiente.
-          </div>
-
-          {/* PORCENTAJE */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Porcentaje de interés</label>
-            <div className="flex items-center gap-3">
+          <div>
+            <label className="text-sm font-medium">Porcentaje de interes</label>
+            <div className="mt-1 flex items-center gap-2">
               <input
                 type="number"
-                min="1"
-                max="99"
+                min="0"
+                step="0.01"
                 value={percentage}
                 onChange={(e) => {
-                  let value = Number(e.target.value)
-                  if (value < 1)  value = 1
-                  if (value > 99) value = 99
-                  setPercentage(value)
+                  setPercentage(e.target.value);
+                  if (error) setError("");
                 }}
-                className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#004D77]"
+                placeholder="Ej. 5"
+                className={`w-full p-3 rounded-lg border outline-none transition ${
+                  error ? "border-red-500" : "border-gray-300"
+                }`}
               />
-              <span className="text-sm font-medium">%</span>
+              <span className="text-sm text-gray-600">%</span>
+            </div>
+            {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+          </div>
+
+          <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-sm space-y-2">
+            <p className="font-medium">Resumen de interes</p>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Saldo pendiente</span>
+              <span className="font-medium">
+                ${formatCOP(factura.remainingBalance ?? 0)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Interes generado</span>
+              <span className="font-medium text-green-600">
+                ${formatCOP(interestGenerated)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Nueva deuda total</span>
+              <span className="font-semibold">${formatCOP(totalDebt)}</span>
             </div>
           </div>
 
-          {/* RESUMEN */}
-          <div className="bg-gray-100 rounded-xl p-5 space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span>Saldo pendiente:</span>
-              <span className="font-semibold text-blue-700">{formatCOP(originalDebt)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Interés ({percentage}%):</span>
-              <span className="font-semibold text-red-600">{formatCOP(interestAmount)}</span>
-            </div>
-            <hr className="border-gray-300" />
-            <div className="flex justify-between font-semibold text-base">
-              <span>Nueva deuda total:</span>
-              <span className="text-[#004D77]">{formatCOP(newTotalDebt)}</span>
-            </div>
-          </div>
-
-          {/* BOTONES */}
-          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+          <div className="flex gap-3 pt-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-gray-400 rounded-lg text-sm text-white hover:bg-gray-600 transition-colors cursor-pointer"
+              className="flex-1 bg-gray-400 text-white py-2 rounded-xl cursor-pointer hover:bg-gray-500 transition"
             >
               Cancelar
             </button>
+
             <button
-              onClick={handleApply}
-              className="px-4 py-2 bg-[#004D77] text-white rounded-lg text-sm hover:bg-[#003D5e] transition-colors cursor-pointer"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="flex-1 text-white py-2 rounded-xl cursor-pointer bg-[#004D77] hover:bg-[#003D5e] transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Aplicar intereses
+              {isSubmitting ? "Aplicando..." : "Aplicar interes"}
             </button>
           </div>
-
         </div>
       </div>
     </div>
-  )
+  );
 }

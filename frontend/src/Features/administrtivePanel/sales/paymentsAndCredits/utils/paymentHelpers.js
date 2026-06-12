@@ -41,42 +41,6 @@ export const getAbonoStatus = (abono) => (abono.anulado ? "anulado" : "activo");
 /* ── NIVEL FACTURA ───────────────────────────────────────────────────────── */
 
 /**
- * Saldo de capital pendiente de UNA factura.
- * Solo suma abonos activos de tipo "capital".
- * Este valor es el que AFECTA el cupo del cliente.
- */
-export const calculateSaldoCapital = (factura) => {
-  const abonos = factura.abonos ?? [];
-  const abonadoCapital = abonos
-    .filter((a) => !a.anulado && a.tipo === "capital")
-    .reduce((acc, a) => acc + a.monto, 0);
-  return Math.max(0, factura.valorCredito - abonadoCapital);
-};
-
-/**
- * Saldo de interés pendiente de UNA factura.
- * Solo suma abonos activos de tipo "interes".
- * Este valor NO afecta el cupo del cliente.
- */
-export const calculateSaldoInteres = (factura) => {
-  const interes = factura.interes ?? 0;
-  if (interes <= 0) return 0;
-  const abonos = factura.abonos ?? [];
-  const abonadoInteres = abonos
-    .filter((a) => !a.anulado && a.tipo === "interes")
-    .reduce((acc, a) => acc + a.monto, 0);
-  return Math.max(0, interes - abonadoInteres);
-};
-
-/**
- * Saldo TOTAL de UNA factura = capital pendiente + interés pendiente.
- * Este es el valor real que debe pagar el cliente.
- */
-export const calculateSaldoFactura = (factura) => {
-  return calculateSaldoCapital(factura) + calculateSaldoInteres(factura);
-};
-
-/**
  * Total abonado activo de UNA factura (capital + interés, excluye anulados).
  * Útil para mostrar "Total abonado" en la tabla.
  */
@@ -92,8 +56,8 @@ export const getTotalAbonadoFactura = (factura) => {
 export const getTotalAbonadoCapital = (factura) => {
   const abonos = factura.abonos ?? [];
   return abonos
-    .filter((a) => !a.anulado && a.tipo === "capital")
-    .reduce((acc, a) => acc + a.monto, 0);
+    .filter((a) => !a.anulado)
+    .reduce((acc, a) => acc + Number(a.capitalPagado ?? 0), 0);
 };
 
 /**
@@ -103,24 +67,8 @@ export const getTotalAbonadoCapital = (factura) => {
 export const getTotalAbonadoInteres = (factura) => {
   const abonos = factura.abonos ?? [];
   return abonos
-    .filter((a) => !a.anulado && a.tipo === "interes")
-    .reduce((acc, a) => acc + a.monto, 0);
-};
-
-// Estado de UNA factura basado en saldo TOTAL: "al_dia" | "pendiente" | "vencido"
-export const getPaymentStatus = (saldo, fechaCredito) => {
-  if (saldo <= 0) return "al_dia";
-  const dueDate = new Date(fechaCredito);
-  dueDate.setMonth(dueDate.getMonth() + 2);
-  return new Date() > dueDate ? "vencido" : "pendiente";
-};
-
-// Días de mora (0 si no ha vencido)
-export const getDaysLate = (fechaCredito) => {
-  const dueDate = new Date(fechaCredito);
-  dueDate.setMonth(dueDate.getMonth() + 2);
-  if (new Date() <= dueDate) return 0;
-  return Math.floor((new Date() - dueDate) / (1000 * 60 * 60 * 24));
+    .filter((a) => !a.anulado)
+    .reduce((acc, a) => acc + Number(a.interesPagado ?? 0), 0);
 };
 
 // Fecha del último abono activo (capital o interés), o null
@@ -133,48 +81,10 @@ export const getLastPaymentDate = (abonos = []) => {
 
 /* ── NIVEL CLIENTE ───────────────────────────────────────────────────────── */
 
-/**
- * Saldo total pendiente del cliente = suma de saldos TOTALES de sus facturas.
- * (capital + interés de todas las facturas)
- */
-export const calculateSaldoCliente = (cliente) => {
-  const facturas = cliente.facturas ?? [];
-  return facturas.reduce((total, f) => total + calculateSaldoFactura(f), 0);
-};
-
-/**
- * Cupo ocupado del cliente = suma de saldos de CAPITAL únicamente.
- * El interés no consume cupo — este es el valor que se compara
- * contra creditoAsignado para saber cuánto puede seguir comprando.
- */
-export const calculateCupoOcupado = (cliente) => {
-  const facturas = cliente.facturas ?? [];
-  return facturas.reduce((total, f) => total + calculateSaldoCapital(f), 0);
-};
-
-// Estado general del cliente: peor estado entre todas sus facturas
-export const getClienteStatus = (cliente) => {
-  const facturas = cliente.facturas ?? [];
-  if (!facturas.length) return "al_dia";
-  const estados = facturas.map((f) =>
-    getPaymentStatus(calculateSaldoFactura(f), f.fechaCredito),
-  );
-  if (estados.includes("vencido")) return "vencido";
-  if (estados.includes("pendiente")) return "pendiente";
-  return "al_dia";
-};
-
 // Suma de valorCredito de todas las facturas del cliente
 export const getTotalCreditoCliente = (cliente) => {
   const facturas = cliente.facturas ?? [];
-  return facturas.reduce((total, f) => total + f.valorCredito, 0);
-};
-
-// Suma de intereses PENDIENTES de todas las facturas del cliente
-// (interes generado - abonos de tipo interes activos)
-export const getTotalInteresCliente = (cliente) => {
-  const facturas = cliente.facturas ?? [];
-  return facturas.reduce((total, f) => total + calculateSaldoInteres(f), 0);
+  return facturas.reduce((total, f) => total + (f.valorCredito ?? 0), 0);
 };
 
 // Suma de abonos activos (capital + interés) de todas las facturas
@@ -202,12 +112,15 @@ export const exportAccountsToExcel = (accounts = []) => {
     accounts.forEach((cliente) => {
       const facturas = cliente.facturas ?? [];
       facturas.forEach((factura) => {
-        const saldoCapital = calculateSaldoCapital(factura);
-        const saldoInteres = calculateSaldoInteres(factura);
-        const saldoTotal = saldoCapital + saldoInteres;
+        const saldoCapital = Math.max(
+          0,
+          (factura.saldo ?? 0) - (factura.interes ?? 0),
+        );
+        const saldoInteres = factura.interes ?? 0;
+        const saldoTotal = factura.saldo ?? 0;
         const aboCapital = getTotalAbonadoCapital(factura);
         const aboInteres = getTotalAbonadoInteres(factura);
-        const estado = getPaymentStatus(saldoTotal, factura.fechaCredito);
+        const estado = factura.estado ?? "al_dia";
         const dueDate = new Date(factura.fechaCredito);
         dueDate.setMonth(dueDate.getMonth() + 2);
 
@@ -216,9 +129,9 @@ export const exportAccountsToExcel = (accounts = []) => {
           Documento: cliente.documento,
           "Nombre Cliente": cliente.nombre,
           "Nro Factura": factura.nroFactura,
-          "Valor Crédito": factura.valorCredito,
-          Interés: factura.interes ?? 0,
-          "Total a Pagar": factura.valorCredito + (factura.interes ?? 0),
+          "Valor Crédito": factura.valorCredito ?? 0,
+          Interés: saldoInteres,
+          "Total a Pagar": saldoTotal,
           "Fecha Crédito": factura.fechaCredito,
           "Fin de Crédito": dueDate.toISOString().split("T")[0],
           "Abonado Capital": aboCapital,
@@ -234,9 +147,6 @@ export const exportAccountsToExcel = (accounts = []) => {
     const worksheet = XLSX.utils.json_to_sheet(data);
     const range = XLSX.utils.decode_range(worksheet["!ref"]);
 
-    // Columnas monetarias: 4=Valor Crédito, 5=Interés, 6=Total a Pagar,
-    //                      9=Abo Capital, 10=Abo Interés, 11=Saldo Cap,
-    //                      12=Saldo Int, 13=Saldo Total
     const moneyCols = [4, 5, 6, 9, 10, 11, 12, 13];
     for (let row = 1; row <= range.e.r; row++) {
       moneyCols.forEach((col) => {
@@ -245,20 +155,20 @@ export const exportAccountsToExcel = (accounts = []) => {
       });
     }
 
-    // Fila de totales
     const totCredito = accounts.reduce(
       (s, c) => s + getTotalCreditoCliente(c),
       0,
     );
     const totInteres = accounts.reduce(
-      (s, c) => s + getTotalInteresCliente(c),
+      (s, c) =>
+        s +
+        (c.facturas ?? []).reduce(
+          (subtotal, f) => subtotal + (f.interes ?? 0),
+          0,
+        ),
       0,
     );
-    const totAbonado = accounts.reduce(
-      (s, c) => s + getTotalAbonadoCliente(c),
-      0,
-    );
-    const totSaldo = accounts.reduce((s, c) => s + calculateSaldoCliente(c), 0);
+    const totSaldo = accounts.reduce((s, c) => s + (c.deudaTotal ?? 0), 0);
 
     XLSX.utils.sheet_add_aoa(
       worksheet,
@@ -271,7 +181,7 @@ export const exportAccountsToExcel = (accounts = []) => {
           "TOTALES:",
           totCredito,
           totInteres,
-          totCredito + totInteres,
+          totSaldo,
           "",
           "",
           "",

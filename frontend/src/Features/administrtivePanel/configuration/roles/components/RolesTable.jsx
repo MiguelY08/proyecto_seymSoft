@@ -61,7 +61,7 @@ export default function RolesTable({
   onEdit,
   onView,
 
-  // ✅ NUEVO
+  //  NUEVO
   reloadRoles,
 
   search = ""
@@ -309,7 +309,7 @@ export default function RolesTable({
             </th>
 
             <th className="px-3 py-2.5 text-center text-xs font-semibold">
-              Funciones
+              Acciones
             </th>
 
           </tr>

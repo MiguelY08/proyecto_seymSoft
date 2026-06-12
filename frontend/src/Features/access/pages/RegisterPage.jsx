@@ -1,8 +1,9 @@
 import RegisterForm from "../components/RegisterForm";
-import LoginBanner from "../components/LoginBanner";
+// import LoginBanner from "../components/LoginBanner";
 import AuthFooter from "../../shared/AuthFooter";
+import HeaderLanding from "../../layouts/HeaderLanding"
 
-import imagenBanner from "../../../assets/imagenBanner.png";
+// import imagenBanner from "../../../assets/imagenBanner.png";
 import logo from "../../../assets/PapeleriaMagicLogo.png";
 
 export default function RegisterPage() {
@@ -12,12 +13,13 @@ export default function RegisterPage() {
       {/* CONTENIDO PRINCIPAL */}
       <main className="flex flex-col flex-1">
 
-        {/* Banner */}
+        {/* Banner
         <LoginBanner
           titulo="Regístrate"
           imagen={imagenBanner}
           logo={logo}
-        />
+        /> */}
+        <HeaderLanding />
 
         {/* Contenedor del formulario */}
         <div className="flex flex-1 justify-center items-center bg-gray-100 px-3 py-3">
