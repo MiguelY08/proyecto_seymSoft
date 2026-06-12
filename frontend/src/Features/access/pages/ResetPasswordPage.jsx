@@ -1,6 +1,7 @@
-import imagenBanner from "../../../assets/imagenBanner.png"
-import LoginBanner from "../components/LoginBanner"
-import BackHeader from "../../shared/BackHeader"
+// import imagenBanner from "../../../assets/imagenBanner.png"
+// import LoginBanner from "../components/LoginBanner"
+// import BackHeader from "../../shared/BackHeader"
+import HeaderLanding from "../../layouts/HeaderLanding"
 import AuthFooter from "../../shared/AuthFooter"
 import ResetPasswordForm from "../components/ResetPasswordForm"
 import logo from "../../../assets/PapeleriaMagicLogo.png"
@@ -11,18 +12,20 @@ export default function ResetPasswordPage() {
 
       <main className="flex flex-col flex-1">
 
-        <LoginBanner 
+        <HeaderLanding />
+
+        {/* <LoginBanner 
           titulo="Restablecer contraseña"
           imagen={imagenBanner}
           logo={logo}
-        />
+        /> */}
 
         <div className="bg-gray-100 flex flex-col flex-1 overflow-hidden">
 
-          <BackHeader
+          {/* <BackHeader
             title="Volver"
             to="/login"
-          />
+          /> */}
 
           <div className="flex flex-1 justify-center items-center px-4 py-2 overflow-y-auto">
             <ResetPasswordForm />
