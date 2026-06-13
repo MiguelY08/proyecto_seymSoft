@@ -75,8 +75,7 @@ export const getEstadoPagoColor = (estado) => {
 export const getPermisos = (estadoLogistico, pagoEstado) => {
   const esCancelado = estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO;
   const esEntregado = estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO;
-  const esListoYPagado = estadoLogistico === ESTADOS_LOGISTICOS.LISTO && pagoEstado === ESTADOS_PAGO.PAGADO;
-  return { deshabilitado: esCancelado || esEntregado || esListoYPagado };
+  return { deshabilitado: esCancelado || esEntregado };
 };
 
 // ─── highlight (sin cambios) ──────────────────────────────────────────────────

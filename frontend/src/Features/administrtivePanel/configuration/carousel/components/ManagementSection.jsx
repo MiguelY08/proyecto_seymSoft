@@ -4,6 +4,7 @@ import { useAlert } from '../../../../shared/alerts/useAlert';
 import CardManagement from '../components/CardManagement';
 import Lightbox from '../components/Lightbox';
 import Permission from '../../roles/components/Permission';
+import Spinner from '../../../../shared/spinner';
 
 // ─── ManagementSection ────────────────────────────────────────────────────────
 function ManagementSection({ slides, onAdd, onDelete, onToggle, loading }) {
@@ -96,14 +97,7 @@ function ManagementSection({ slides, onAdd, onDelete, onToggle, loading }) {
         {/* Grid de imágenes */}
         <div className="p-3 sm:p-4 lg:p-5">
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {[...Array(3)].map((_, index) => (
-                <div
-                  key={index}
-                  className="aspect-video rounded-xl bg-gray-100 animate-pulse"
-                />
-              ))}
-            </div>
+            <Spinner message="Cargando banners..." className="min-h-[220px]" />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {slides.map((slide) => (

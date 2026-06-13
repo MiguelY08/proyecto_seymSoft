@@ -11,7 +11,7 @@ import {
   EstadoPagoBadgePill,
   exportOrderToPDF
 } from '../helpers/ordersHelpers';
-import { PaymentService, ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES } from '../services/ordersService';
+import { PaymentService, ESTADOS_LOGISTICOS, ORIGENES } from '../services/ordersService';
 import { UserService } from '../../../users/services/userService';
 
 // ─── DetailRow ────────────────────────────────────────────────────────────────
@@ -150,11 +150,11 @@ function DetailOrder({
   const fechaMostrar = formatDate(order.fechaPedido);
   const isCancelado = order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO;
   const isEntregado = order.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO;
-  const isListoYPagado = order.estadoLogistico === ESTADOS_LOGISTICOS.LISTO && order.pagoEstado === ESTADOS_PAGO.PAGADO;
-  const showEditButton = !isCancelado && !isEntregado && !isListoYPagado && modo === 'pedido';
+  const canChangeOrder = !isCancelado && !isEntregado;
+  const showEditButton = canChangeOrder && modo === 'pedido';
 
   const handleMarcarListo = async () => {
-    if (isCancelado || isEntregado) return;
+    if (!canChangeOrder) return;
     const result = await showConfirm(
       'info',
       'Marcar como listo',
@@ -167,7 +167,7 @@ function DetailOrder({
   };
 
   const handleCancelar = () => {
-    if (isCancelado || isEntregado) return;
+    if (!canChangeOrder) return;
     onCancel(order);
     onClose();
   };
@@ -380,14 +380,16 @@ function DetailOrder({
                       <CheckCircle className="w-4 h-4" />
                       Marcar listo
                     </button>
-                    <button
-                      onClick={handleCancelar}
-                      className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors flex items-center gap-1"
-                    >
-                      <XCircle className="w-4 h-4" />
-                      Cancelar
-                    </button>
                   </>
+                )}
+                {canChangeOrder && (
+                  <button
+                    onClick={handleCancelar}
+                    className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors flex items-center gap-1"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Cancelar
+                  </button>
                 )}
                 {showEditButton && (
                   <button onClick={handleEditClick} className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors">

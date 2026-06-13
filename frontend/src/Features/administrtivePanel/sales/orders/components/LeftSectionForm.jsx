@@ -3,7 +3,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { ESTADOS_LOGISTICOS } from '../services/ordersService';
 import {
   Users, Truck, MapPin, PackageCheck, FileX, ChevronDown, Home, X,
-  Phone, Mail, IdCard, FileText
+  Phone, Mail, IdCard, FileText, Plus
 } from 'lucide-react';
 import FormSelect from '../../../../shared/FormSelect';
 
@@ -20,8 +20,8 @@ function LeftSectionForm({
   onDireccionManualChange,
   onEstadoLogisticoChange,
   onMotivoCancelacionChange,
+  onCreateClient,
 }) {
-  const isEstadoListo = formData.estadoLogistico === ESTADOS_LOGISTICOS.LISTO;
   const isEstadoInmutable = [
     ESTADOS_LOGISTICOS.ENTREGADO,
     ESTADOS_LOGISTICOS.CANCELADO,
@@ -165,7 +165,8 @@ function LeftSectionForm({
           <label className="block text-sm font-medium text-gray-700">
             Cliente <span className="text-red-500">*</span>
           </label>
-          <div className="relative" ref={clienteWrapperRef}>
+          <div className="flex items-stretch gap-2">
+          <div className="relative flex-1 min-w-0" ref={clienteWrapperRef}>
             <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" strokeWidth={1.8} />
             <input
               type="text"
@@ -244,6 +245,18 @@ function LeftSectionForm({
                 )}
               </div>
             )}
+          </div>
+          {onCreateClient && !readOnly && !isEditMode && (
+            <button
+              type="button"
+              onClick={onCreateClient}
+              disabled={loading}
+              title="Crear cliente"
+              className="w-10 h-10 inline-flex items-center justify-center rounded-lg border border-[#004D77] text-[#004D77] bg-white hover:bg-[#004D77] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            >
+              <Plus className="w-4 h-4" strokeWidth={2} />
+            </button>
+          )}
           </div>
           {showClienteError && errorMsg('clienteId')}
         </div>

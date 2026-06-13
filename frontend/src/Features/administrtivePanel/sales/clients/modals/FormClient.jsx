@@ -10,6 +10,7 @@ import { validateClientForm } from '../helpers/clientHelpers';
 
 function FormClient({ isOpen, onClose, client, onSave }) {
   const [showGraph, setShowGraph] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const initialState = {
     personType:   '',
@@ -238,7 +239,7 @@ const validateNumeric10_2 = (value, fieldName) => {
     setErrors(prev => ({ ...prev, [name]: validationErrors[name] || '' }));
   };
 
-const handleSubmit = (e) => {
+const handleSubmit = async (e) => {
   e.preventDefault();
   
   // Validar campos numéricos
@@ -289,9 +290,14 @@ const handleSubmit = (e) => {
   
   console.log('📤 submitData:', JSON.stringify(submitData, null, 2));
   
-  onSave?.(submitData);
-  resetForm();
-  onClose();
+  try {
+    setSaving(true);
+    await onSave?.(submitData);
+    resetForm();
+    onClose();
+  } finally {
+    setSaving(false);
+  }
 };
 
   if (!isOpen) return null;
@@ -341,7 +347,11 @@ const handleSubmit = (e) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={() => { resetForm(); onClose(); }}
+        onClick={() => {
+          if (saving) return;
+          resetForm();
+          onClose();
+        }}
       />
 
       <div className={`relative bg-white rounded-lg shadow-2xl overflow-hidden flex transition-all duration-500 ease-in-out ${
@@ -357,8 +367,13 @@ const handleSubmit = (e) => {
               {isEditing ? 'Editar cliente' : 'Nuevo cliente'}
             </h2>
             <button
-              onClick={() => { resetForm(); onClose(); }}
+              onClick={() => {
+                if (saving) return;
+                resetForm();
+                onClose();
+              }}
               className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
+              disabled={saving}
             >
               <X className="w-5 h-5" strokeWidth={2} />
             </button>
@@ -667,16 +682,22 @@ const handleSubmit = (e) => {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => { resetForm(); onClose(); }}
-                  className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+                  onClick={() => {
+                    if (saving) return;
+                    resetForm();
+                    onClose();
+                  }}
+                  disabled={saving}
+                  className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"
+                  disabled={saving}
+                  className="px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isEditing ? 'Actualizar' : 'Crear'}
+                  {saving ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}
                 </button>
               </div>
             </div>

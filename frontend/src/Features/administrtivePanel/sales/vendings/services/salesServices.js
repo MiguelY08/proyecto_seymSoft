@@ -1,4 +1,4 @@
-import apiClient from '../../../../../setting/apiClient';
+import apiClient from '../../../../../setting/apiClient.js';
 
 const DEFAULT_PAGINATION = {
   page: 1,
@@ -156,6 +156,12 @@ const mapSaleFromApi = (sale) => {
       seller?.id ??
       seller?.idUser,
     cliente: client?.user?.fullName ?? client?.fullName ?? client?.name ?? client?.nombre ?? sale?.clientName ?? '-',
+    clienteDireccion:
+      client?.address ??
+      client?.direccion ??
+      client?.user?.address ??
+      client?.user?.direccion ??
+      '',
     vendedor:
       seller?.user?.fullName ??
       seller?.user?.name ??
@@ -242,7 +248,6 @@ export const SalesServices = {
       const response = await apiClient.get('/vendings/metrics');
       return response.data.data;
     } catch (error) {
-      console.error('Error en getMetrics():', error);
       throw new Error(getErrorMessage(error, 'No se pudieron obtener las metricas de ventas.'));
     }
   },
@@ -252,7 +257,6 @@ export const SalesServices = {
       const response = await apiClient.get('/vendings', { params });
       return mapSalesResponse(response.data);
     } catch (error) {
-      console.error('Error en getAll():', error);
       throw new Error(getErrorMessage(error, 'No se pudieron obtener las ventas.'));
     }
   },
@@ -266,7 +270,6 @@ export const SalesServices = {
       const response = await apiClient.get('/vendings/manual', { params });
       return mapSalesResponse(response.data);
     } catch (error) {
-      console.error('Error en getManual():', error);
       throw new Error(getErrorMessage(error, 'No se pudieron obtener las ventas manuales.'));
     }
   },
@@ -276,7 +279,6 @@ export const SalesServices = {
       const response = await apiClient.get('/vendings/direct', { params });
       return mapSalesResponse(response.data);
     } catch (error) {
-      console.error('Error en getDirect():', error);
       throw new Error(getErrorMessage(error, 'No se pudieron obtener las ventas directas.'));
     }
   },
@@ -286,7 +288,6 @@ export const SalesServices = {
       const response = await apiClient.get('/vendings/web', { params });
       return mapSalesResponse(response.data);
     } catch (error) {
-      console.error('Error en getWeb():', error);
       throw new Error(getErrorMessage(error, 'No se pudieron obtener las ventas web.'));
     }
   },
@@ -296,7 +297,6 @@ export const SalesServices = {
       const response = await apiClient.get(`/vendings/${id}`);
       return response.data.data ? mapSaleFromApi(response.data.data) : null;
     } catch (error) {
-      console.error(`Error en getById(${id}):`, error);
       throw new Error(getErrorMessage(error, 'No se pudo obtener la venta.'));
     }
   },
@@ -307,8 +307,6 @@ export const SalesServices = {
       const sale = getCreatedSaleFromPayload(response.data);
       return sale ? mapSaleFromApi(sale) : null;
     } catch (error) {
-      console.error(`Error en create(${vendingType}):`, error);
-      console.error('Detalle create vending:', error?.response?.data);
       throw new Error(getErrorMessage(error, 'No se pudo crear la venta.'));
     }
   },
@@ -318,7 +316,6 @@ export const SalesServices = {
       const response = await apiClient.put(`/vendings/${saleId}`, payload);
       return response.data.data ? mapSaleFromApi(response.data.data) : null;
     } catch (error) {
-      console.error(`Error en update(${saleId}):`, error);
       throw new Error(getErrorMessage(error, 'No se pudo actualizar la venta.'));
     }
   },
@@ -341,7 +338,6 @@ export const SalesServices = {
           }
         : null;
     } catch (error) {
-      console.error(`Error en anular(${saleId}):`, error);
       throw new Error(getErrorMessage(error, 'No se pudo anular la venta.'));
     }
   },
