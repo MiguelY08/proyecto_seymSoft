@@ -12,11 +12,12 @@
  * - Distinguir entre crear nuevo proveedor y editar existente
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { X, ChevronDown, Loader2 } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import { validateProviderForm } from '../utils/providerHelpers';
 import { categoriesService } from '../data/categoriesService';
+import FormSelect from '../../../../shared/FormSelect';
 
 function FormProvider({ isOpen, onClose, provider, onSave }) {
 
@@ -43,8 +44,9 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
   const [categoriasOpen, setCategoriasOpen] = useState(false);
   const [categoriesList, setCategoriesList] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
+  const [saving, setSaving] = useState(false);
   const categoriasRef = useRef(null);
-  const { showError, showSuccess } = useAlert();
+  const { showError, showConfirm } = useAlert();
   const isEditing = !!provider;
   const [isDocumentTypeDisabled, setIsDocumentTypeDisabled] = useState(false);
 
@@ -134,8 +136,28 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
   };
 
   const handleClose = () => {
+    if (saving) return;
+    if (isDirty) {
+      handleCancel();
+      return;
+    }
+
     resetForm();
     onClose();
+  };
+
+  const handleCancel = async () => {
+    const confirmed = await showConfirm(
+      'warning',
+      'Salir sin guardar?',
+      'Los cambios no guardados se perderan.',
+      { confirmButtonText: 'Sí, salir', cancelButtonText: 'Continuar editando' }
+    );
+
+    if (confirmed?.isConfirmed) {
+      resetForm();
+      onClose();
+    }
   };
 
   const handleChange = (e) => {
@@ -175,6 +197,11 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
         [name]: validationErrors[name] || '',
       }));
     }
+  };
+
+  const handleSelectChange = (name, value) => {
+    handleChange({ target: { name, value } });
+    setTouched((prev) => ({ ...prev, [name]: true }));
   };
 
   const handleCategoriaChange = (categoryId) => {
@@ -238,6 +265,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
 
     // Validación: Persona jurídica debe usar NIT
     if (formData.tipoPersona === 'juridica' && formData.tipo !== 'NIT') {
@@ -298,6 +326,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     };
 
     try {
+      setSaving(true);
       // ESPERAR a que onSave complete antes de cerrar
       await onSave?.(dataToSave);
       //  El éxito ya se muestra en ProvidersPage, no aquí
@@ -305,6 +334,8 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       onClose();
     } catch (error) {
       // No hacer nada, el error ya se muestra en ProvidersPage
+    } finally {
+      setSaving(false);
     }
 };
 
@@ -350,6 +381,55 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     return selectedCategories.map(cat => cat.name).join(', ');
   };
 
+  const isDirty = useMemo(() => {
+    const baseData = provider
+      ? {
+          tipoPersona: provider.tipoPersona || '',
+          tipo: provider.tipo || 'CC',
+          numero: provider.numero || '',
+          nombres: provider.nombres || '',
+          apellidos: provider.apellidos || '',
+          telefono: provider.telefono || '',
+          correo: provider.correo || '',
+          nombreContacto: provider.nombreContacto || '',
+          numeroContacto: provider.numeroContacto || '',
+          direccion: provider.direccion || '',
+          plazoDevoluciones: provider.plazoDevoluciones || '',
+          categoryIds: provider.categorias?.map(cat => cat.id) || [],
+          rut: provider.rut || '',
+          codigoCIU: provider.codigoCIU || '',
+        }
+      : initialState;
+
+    return Object.keys(initialState).some((key) => {
+      if (key === 'categoryIds') {
+        const current = [...(formData.categoryIds || [])].sort().join(',');
+        const base = [...(baseData.categoryIds || [])].sort().join(',');
+        return current !== base;
+      }
+
+      return String(formData[key] ?? '') !== String(baseData[key] ?? '');
+    });
+  }, [formData, provider]);
+
+  const personTypeOptions = [
+    { value: '', label: 'Selecciona una opción' },
+    { value: 'natural', label: 'Persona Natural' },
+    { value: 'juridica', label: 'Persona Jurídica' },
+  ];
+  const documentTypeOptions = formData.tipoPersona === 'juridica'
+    ? [{ value: 'NIT', label: 'NIT' }]
+    : [
+        { value: 'CC', label: 'CC' },
+        { value: 'CE', label: 'CE' },
+        { value: 'PP', label: 'PP' },
+      ];
+  const rutOptions = [
+    { value: '', label: 'Seleccione' },
+    { value: 'si', label: 'Sí' },
+    { value: 'no', label: 'No' },
+  ];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       
@@ -366,6 +446,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
           </h2>
           <button
             onClick={handleClose}
+            disabled={saving}
             className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" strokeWidth={2} />
@@ -386,21 +467,15 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
 
                 <div className="flex flex-col gap-1">
                   <label className="block text-xs font-semibold text-gray-600">Tipo de persona<span className="text-red-500">*</span></label>
-                  <div className="relative">
-                    <select
-                      name="tipoPersona"
-                      value={formData.tipoPersona}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      className={isEditing ? disabledSelectClass('tipoPersona') : selectClass('tipoPersona')}
-                      disabled={isEditing}
-                    >
-                      <option value="">Selecciona una opción</option>
-                      <option value="natural">Persona Natural</option>
-                      <option value="juridica">Persona Jurídica</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
-                  </div>
+                  <FormSelect
+                    value={formData.tipoPersona}
+                    options={personTypeOptions}
+                    onChange={(value) => handleSelectChange('tipoPersona', value)}
+                    disabled={isEditing}
+                    error={errors.tipoPersona && touched.tipoPersona}
+                    placeholder="Selecciona una opción"
+                    ariaLabel="Tipo de persona"
+                  />
                   {isEditing && <p className="text-xs text-gray-400 mt-0.5">No se puede modificar en edición</p>}
                   {renderError('tipoPersona')}
                 </div>
@@ -408,27 +483,15 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1">
                     <label className="block text-xs font-semibold text-gray-600">Tipo<span className="text-red-500">*</span></label>
-                    <div className="relative">
-                      <select
-                        name="tipo"
-                        value={formData.tipo}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        className={isEditing ? disabledSelectClass('tipo') : selectClass('tipo')}
-                        disabled={isEditing || isDocumentTypeDisabled}
-                      >
-                        {formData.tipoPersona === 'juridica' ? (
-                          <option value="NIT">NIT</option>
-                        ) : (
-                          <>
-                            <option value="CC">CC</option>
-                            <option value="CE">CE</option>
-                            <option value="PP">PP</option>
-                          </>
-                        )}
-                      </select>
-                      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
-                    </div>
+                    <FormSelect
+                      value={formData.tipo}
+                      options={documentTypeOptions}
+                      onChange={(value) => handleSelectChange('tipo', value)}
+                      disabled={isEditing || isDocumentTypeDisabled}
+                      error={errors.tipo && touched.tipo}
+                      placeholder="Tipo"
+                      ariaLabel="Tipo de documento"
+                    />
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
                     <label className="block text-xs font-semibold text-gray-600">Número<span className="text-red-500">*</span></label>
@@ -633,20 +696,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1 flex-1">
                     <label className="block text-xs font-semibold text-gray-600">RUT<span className="text-red-500">*</span></label>
-                    <div className="relative">
-                      <select
-                        name="rut"
-                        value={formData.rut}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        className={selectClass('rut')}
-                      >
-                        <option value="">Seleccione</option>
-                        <option value="si">Sí</option>
-                        <option value="no">No</option>
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
-                    </div>
+                    <FormSelect
+                      value={formData.rut}
+                      options={rutOptions}
+                      onChange={(value) => handleSelectChange('rut', value)}
+                      error={errors.rut && touched.rut}
+                      placeholder="Seleccione"
+                      ariaLabel="RUT"
+                    />
                     {renderError('rut')}
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
@@ -682,15 +739,18 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
             <button
               type="button"
               onClick={handleClose}
-              className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+              disabled={saving}
+              className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"
+              disabled={saving}
+              className="px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {isEditing ? 'Actualizar' : 'Crear'}
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              {saving ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}
             </button>
           </div>
 

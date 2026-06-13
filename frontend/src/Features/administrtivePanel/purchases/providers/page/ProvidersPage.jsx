@@ -13,6 +13,8 @@ import FormProvider from '../components/FormProvider';
 import InfoProvider from '../components/InfoProvider';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import { providersService } from '../data/providersService';
+import Spinner from '../../../../shared/spinner';
+import { downloadProvidersExcel } from '../utils/excelHelper';
 
 const RECORDS_PER_PAGE = 13;
 
@@ -54,23 +56,23 @@ function ProvidersPage() {
     const provider = providers.find(p => p.id === id);
     const newStatus = provider.activo ? 'Inactivo' : 'Activo';
 
-    const result = await showConfirm(
-      'warning',
-      'Cambiar estado',
-      `¿Está seguro de cambiar el estado del proveedor "${provider.nombre}" a ${newStatus}?`,
-      { confirmButtonText: 'Sí, cambiar', cancelButtonText: 'Cancelar' }
-    );
+    if (provider.activo) {
+      const result = await showConfirm(
+        'warning',
+        'Cambiar estado',
+        `¿Está seguro de cambiar el estado del proveedor "${provider.nombre}" a ${newStatus}?`,
+        { confirmButtonText: 'Sí, cambiar', cancelButtonText: 'Cancelar' }
+      );
 
-    if (result.isConfirmed) {
-      try {
-        // Llamar al toggle en el backend
-        await providersService.toggleActive(id);
-        // Recargar toda la lista para obtener los datos actualizados
-        await loadProviders();
-        showSuccess('Estado cambiado', `El proveedor ahora está ${newStatus}`);
-      } catch (error) {
-        showError('Error', error.message || 'No se pudo cambiar el estado del proveedor');
-      }
+      if (!result?.isConfirmed) return;
+    }
+
+    try {
+      await providersService.toggleActive(id);
+      await loadProviders();
+      showSuccess('Estado cambiado', `El proveedor ahora está ${newStatus}`);
+    } catch (error) {
+      showError('Error', error.message || 'No se pudo cambiar el estado del proveedor');
     }
   };
 
@@ -88,6 +90,17 @@ function ProvidersPage() {
     setSelectedProvider(null);
     setIsFormModalOpen(true);
   };
+
+  const handleExportProviders = async () => {
+    const result = await providersService.getAll({
+      page: 1,
+      limit: totalRecords || RECORDS_PER_PAGE,
+      search: searchTerm,
+    });
+
+    return downloadProvidersExcel(result.data);
+  };
+
 const handleSave = async (formData) => {
     try {
       if (selectedProvider) {
@@ -177,12 +190,7 @@ const handleSave = async (formData) => {
 
   if (loading && providers.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#004D77] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando proveedores...</p>
-        </div>
-      </div>
+      <Spinner message="Cargando proveedores..." />
     );
   }
 
@@ -192,6 +200,8 @@ const handleSave = async (formData) => {
         searchTerm={searchTerm}
         onSearchChange={handleSearchChange}
         onNewClick={handleNewProvider}
+        onExport={handleExportProviders}
+        totalProviders={totalRecords}
       />
 
       <div className="bg-white rounded-xl shadow-md">

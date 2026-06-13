@@ -4,7 +4,9 @@ export default function ButtonComponent({
   to,
   children,
   onClick,
-  className = ""   
+  className = "",
+  disabled = false,
+  title,
 }) {
 
   const baseClass =
@@ -19,7 +21,12 @@ export default function ButtonComponent({
   }
 
   return (
-    <button onClick={onClick} className={`${baseClass} ${className}`}>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={`${baseClass} ${disabled ? 'opacity-70 cursor-not-allowed' : ''} ${className}`}
+    >
       {children}
     </button>
   )

@@ -1,16 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   X, ChevronDown, ChevronRight,
   UserCircle, Users, IdCard, MapPin, Phone,
   Mail, UserCheck, CreditCard, ShoppingCart,
-  FileText, Hash, BarChart2, TrendingUp,
+  FileText, Hash, BarChart2, TrendingUp, Loader2,
 } from 'lucide-react';
 import GraphClient        from '../components/GraphClient';
 import { validateClientForm } from '../helpers/clientHelpers';
+import FormSelect from '../../../../shared/FormSelect';
+import { useAlert } from '../../../../shared/alerts/useAlert';
 
 function FormClient({ isOpen, onClose, client, onSave }) {
   const [showGraph, setShowGraph] = useState(false);
   const [saving, setSaving] = useState(false);
+  const { showConfirm } = useAlert();
 
   const initialState = {
     personType:   '',
@@ -165,6 +168,53 @@ const validateNumeric10_2 = (value, fieldName) => {
     setShowGraph(false);
   };
 
+  const isDirty = useMemo(() => {
+    const baseData = client
+      ? {
+          personType: client.personType || '',
+          documentType: client.documentType || 'CC',
+          document: client.document || '',
+          firstName: client.firstName || '',
+          lastName: client.lastName || '',
+          address: client.address || '',
+          phone: client.phone || '',
+          email: client.email || '',
+          contactName: client.contactName || '',
+          contactPhone: client.contactPhone || '',
+          clientCredit: client.clientCredit || '',
+          clientType: client.clientType || '',
+          rut: client.rut || '',
+          ciuCode: client.ciuCode || '',
+        }
+      : initialState;
+
+    return Object.keys(initialState).some(
+      (key) => String(formData[key] ?? '') !== String(baseData[key] ?? '')
+    );
+  }, [client, formData]);
+
+  const handleClose = async () => {
+    if (saving) return;
+
+    if (!isDirty) {
+      resetForm();
+      onClose();
+      return;
+    }
+
+    const confirmed = await showConfirm(
+      'warning',
+      'Salir sin guardar?',
+      'Los cambios no guardados se perderan.',
+      { confirmButtonText: 'Sí, salir', cancelButtonText: 'Continuar editando' }
+    );
+
+    if (confirmed?.isConfirmed) {
+      resetForm();
+      onClose();
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     
@@ -216,6 +266,11 @@ const validateNumeric10_2 = (value, fieldName) => {
         setErrors(prev => ({ ...prev, [name]: validationErrors[name] || '' }));
       }
     }
+  };
+
+  const handleSelectChange = (name, value) => {
+    handleChange({ target: { name, value } });
+    setTouched(prev => ({ ...prev, [name]: true }));
   };
 
   const handleBlur = (e) => {
@@ -288,7 +343,7 @@ const handleSubmit = async (e) => {
     ciuCode: formData.rut === 'no' ? '' : (formData.ciuCode || '')
   };
   
-  console.log('📤 submitData:', JSON.stringify(submitData, null, 2));
+  console.log(' submitData:', JSON.stringify(submitData, null, 2));
   
   try {
     setSaving(true);
@@ -342,16 +397,36 @@ const handleSubmit = async (e) => {
   );
 
   const isEditing = !!client;
+  const personTypeOptions = [
+    { value: '', label: 'Selecciona una opción' },
+    { value: 'natural', label: 'Persona Natural' },
+    { value: 'juridica', label: 'Persona Jurídica' },
+  ];
+  const documentTypeOptions = formData.personType === 'juridica'
+    ? [{ value: 'NIT', label: 'NIT' }]
+    : [
+        { value: 'CC', label: 'CC' },
+        { value: 'CE', label: 'CE' },
+        { value: 'NIT', label: 'NIT' },
+      ];
+  const clientTypeOptions = [
+    { value: '', label: 'Selecciona una opción' },
+    { value: 'Detal', label: 'Detal' },
+    { value: 'Mayorista', label: 'Mayorista' },
+    { value: 'Colegas', label: 'Colegas' },
+    { value: 'Por paca', label: 'Por paca' },
+  ];
+  const rutOptions = [
+    { value: '', label: 'Seleccione' },
+    { value: 'si', label: 'Sí' },
+    { value: 'no', label: 'No' },
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={() => {
-          if (saving) return;
-          resetForm();
-          onClose();
-        }}
+        onClick={handleClose}
       />
 
       <div className={`relative bg-white rounded-lg shadow-2xl overflow-hidden flex transition-all duration-500 ease-in-out ${
@@ -367,11 +442,7 @@ const handleSubmit = async (e) => {
               {isEditing ? 'Editar cliente' : 'Nuevo cliente'}
             </h2>
             <button
-              onClick={() => {
-                if (saving) return;
-                resetForm();
-                onClose();
-              }}
+              onClick={handleClose}
               className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
               disabled={saving}
             >
@@ -391,21 +462,15 @@ const handleSubmit = async (e) => {
 
                 <div className="flex flex-col gap-1">
                   <Label required>Tipo de persona</Label>
-                  <div className="relative">
-                    <select 
-                      name="personType" 
-                      value={formData.personType} 
-                      onChange={handleChange} 
-                      onBlur={handleBlur} 
-                      className={isEditing ? disabledSelectClass('personType') : selectClass('personType')}
-                      disabled={isEditing}
-                    >
-                      <option value="">Selecciona una opción</option>
-                      <option value="natural">Persona Natural</option>
-                      <option value="juridica">Persona Jurídica</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
-                  </div>
+                  <FormSelect
+                    value={formData.personType}
+                    options={personTypeOptions}
+                    onChange={(value) => handleSelectChange('personType', value)}
+                    disabled={isEditing}
+                    error={errors.personType && touched.personType}
+                    placeholder="Selecciona una opción"
+                    ariaLabel="Tipo de persona"
+                  />
                   {isEditing && <p className="text-xs text-gray-400 mt-0.5">No se puede modificar en edición</p>}
                   <ErrorMsg field="personType" />
                 </div>
@@ -413,27 +478,15 @@ const handleSubmit = async (e) => {
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1">
                     <Label>Tipo<span className="text-red-500">*</span></Label>
-                    <div className="relative">
-                      <select 
-                        name="documentType" 
-                        value={formData.documentType} 
-                        onChange={handleChange} 
-                        onBlur={handleBlur}
-                        className={(isEditing || formData.personType === 'juridica') ? disabledSelectClass('documentType') : selectClass('documentType')}
-                        disabled={isEditing || formData.personType === 'juridica'}
-                      >
-                        {formData.personType === 'juridica' ? (
-                          <option value="NIT">NIT</option>
-                        ) : (
-                          <>
-                            <option value="CC">CC</option>
-                            <option value="CE">CE</option>
-                            <option value="NIT">NIT</option>
-                          </>
-                        )}
-                      </select>
-                      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
-                    </div>
+                    <FormSelect
+                      value={formData.documentType}
+                      options={documentTypeOptions}
+                      onChange={(value) => handleSelectChange('documentType', value)}
+                      disabled={isEditing || formData.personType === 'juridica'}
+                      error={errors.documentType && touched.documentType}
+                      placeholder="Tipo"
+                      ariaLabel="Tipo de documento"
+                    />
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
                     <Label required>Documento</Label>
@@ -583,22 +636,14 @@ const handleSubmit = async (e) => {
 
                 <div className="flex flex-col gap-1">
                   <Label required>Tipo de cliente</Label>
-                  <div className="relative">
-                    <select 
-                      name="clientType" 
-                      value={formData.clientType} 
-                      onChange={handleChange} 
-                      onBlur={handleBlur} 
-                      className={selectClass('clientType')}
-                    >
-                      <option value="">Selecciona una opción</option>
-                      <option value="Detal">Detal</option>
-                      <option value="Mayorista">Mayorista</option>
-                      <option value="Colegas">Colegas</option>
-                      <option value="Por paca">Por paca</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
-                  </div>
+                  <FormSelect
+                    value={formData.clientType}
+                    options={clientTypeOptions}
+                    onChange={(value) => handleSelectChange('clientType', value)}
+                    error={errors.clientType && touched.clientType}
+                    placeholder="Selecciona una opción"
+                    ariaLabel="Tipo de cliente"
+                  />
                   <ErrorMsg field="clientType" />
                 </div>
 
@@ -621,20 +666,14 @@ const handleSubmit = async (e) => {
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1 flex-1">
                     <Label required>RUT</Label>
-                    <div className="relative">
-                      <select 
-                        name="rut" 
-                        value={formData.rut} 
-                        onChange={handleChange} 
-                        onBlur={handleBlur} 
-                        className={selectClass('rut')}
-                      >
-                        <option value="">Seleccione</option>
-                        <option value="si">Sí</option>
-                        <option value="no">No</option>
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
-                    </div>
+                    <FormSelect
+                      value={formData.rut}
+                      options={rutOptions}
+                      onChange={(value) => handleSelectChange('rut', value)}
+                      error={errors.rut && touched.rut}
+                      placeholder="Seleccione"
+                      ariaLabel="RUT"
+                    />
                     <ErrorMsg field="rut" />
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
@@ -682,11 +721,7 @@ const handleSubmit = async (e) => {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (saving) return;
-                    resetForm();
-                    onClose();
-                  }}
+                  onClick={handleClose}
                   disabled={saving}
                   className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -695,8 +730,9 @@ const handleSubmit = async (e) => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
+                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {saving ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}
                 </button>
               </div>
