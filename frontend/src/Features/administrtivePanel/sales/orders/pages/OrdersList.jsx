@@ -16,7 +16,7 @@ const RECORDS_PER_PAGE = 11;
 // ─── Componente principal de lista de pedidos ─────────────────────────────────
 function OrdersList() {
   const navigate = useNavigate();
-  const { showSuccess, showError } = useAlert();
+  const { showSuccess, showError, showWarning } = useAlert();
 
   // Estados
   const [orders, setOrders] = useState([]);
@@ -168,6 +168,10 @@ function OrdersList() {
   };
 
   const handleEdit = (order) => {
+    if ([ESTADOS_LOGISTICOS.ENTREGADO, ESTADOS_LOGISTICOS.CANCELADO].includes(order.estadoLogistico)) {
+      showWarning('Pedido inmutable', 'Los pedidos entregados o cancelados no pueden editarse.');
+      return;
+    }
     setActionLoadingMessage('Cargando edicion del pedido...');
     window.setTimeout(() => {
       navigate(`/admin/sales/orders/${order.id}`);
@@ -175,6 +179,15 @@ function OrdersList() {
   };
 
   const handleEstadoLogisticoChange = async (orderId, nuevoEstado, motivo = null) => {
+    const current = orders.find((order) => Number(order.id) === Number(orderId));
+    if ([ESTADOS_LOGISTICOS.ENTREGADO, ESTADOS_LOGISTICOS.CANCELADO].includes(current?.estadoLogistico)) {
+      showWarning('Pedido inmutable', 'Los pedidos entregados o cancelados no pueden cambiar de estado.');
+      return;
+    }
+    if (nuevoEstado === ESTADOS_LOGISTICOS.CANCELADO) {
+      showWarning('Usa el flujo de cancelacion', 'Para cancelar un pedido debes indicar el motivo desde la accion Cancelar.');
+      return;
+    }
     const updated = await OrdersService.updateEstadoLogistico(orderId, nuevoEstado, motivo);
     if (updated) {
       setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
@@ -184,12 +197,16 @@ function OrdersList() {
   };
 
   const handleCancelOrder = useCallback((order) => {
+    if ([ESTADOS_LOGISTICOS.ENTREGADO, ESTADOS_LOGISTICOS.CANCELADO].includes(order.estadoLogistico)) {
+      showWarning('Pedido inmutable', 'Los pedidos entregados o cancelados no pueden cancelarse.');
+      return;
+    }
     setCancelando(order);
-  }, []);
+  }, [showWarning]);
 
   const confirmCancel = useCallback(async (motivo) => {
     if (!cancelando) return;
-    const updated = await OrdersService.updateEstadoLogistico(cancelando.id, ESTADOS_LOGISTICOS.CANCELADO, motivo);
+    const updated = await OrdersService.cancel(cancelando.id, motivo);
     if (updated) {
       setOrders(prev => prev.map(o => (o.id === updated.id ? updated : o)));
       if (selectedOrder?.id === updated.id) setSelectedOrder(updated);

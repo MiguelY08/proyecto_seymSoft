@@ -13,6 +13,7 @@ function LeftSectionForm({
   clientes,
   user,
   loading,
+  readOnly = false,
   isEditMode,
   onClienteChange,
   onTipoEntregaChange,
@@ -21,8 +22,12 @@ function LeftSectionForm({
   onMotivoCancelacionChange,
 }) {
   const isEstadoListo = formData.estadoLogistico === ESTADOS_LOGISTICOS.LISTO;
+  const isEstadoInmutable = [
+    ESTADOS_LOGISTICOS.ENTREGADO,
+    ESTADOS_LOGISTICOS.CANCELADO,
+  ].includes(formData.estadoLogistico);
   const mostrarDireccionManual = formData.tipoEntrega === 'domicilio';
-  const isClienteDisabled = loading || isEditMode;
+  const isClienteDisabled = loading || readOnly || isEditMode;
 
   // Estados para el buscador de clientes
   const [clienteSearchTerm, setClienteSearchTerm] = useState('');
@@ -116,6 +121,8 @@ function LeftSectionForm({
         return 'bg-yellow-50 text-yellow-800 border-yellow-300';
       case ESTADOS_LOGISTICOS.LISTO:
         return 'bg-green-50 text-green-800 border-green-300';
+      case ESTADOS_LOGISTICOS.ENTREGADO:
+        return 'bg-blue-50 text-blue-800 border-blue-300';
       case ESTADOS_LOGISTICOS.CANCELADO:
         return 'bg-red-50 text-red-800 border-red-300';
       default:
@@ -125,7 +132,7 @@ function LeftSectionForm({
 
   const estadoColorClass = getEstadoColorClass(formData.estadoLogistico);
   // El estado solo se deshabilita en edición y si el estado actual es 'listo'
-  const isEstadoDisabled = loading || (isEditMode && isEstadoListo);
+  const isEstadoDisabled = loading || readOnly || (isEditMode && isEstadoInmutable);
   const tipoEntregaOptions = [
     { value: 'recoge', label: 'El cliente lo recoge' },
     { value: 'domicilio', label: 'Entrega a domicilio' },
@@ -133,7 +140,10 @@ function LeftSectionForm({
   const estadoOptions = [
     { value: ESTADOS_LOGISTICOS.EN_PROCESO, label: 'En proceso' },
     { value: ESTADOS_LOGISTICOS.LISTO, label: 'Listo' },
-    { value: ESTADOS_LOGISTICOS.CANCELADO, label: 'Cancelado' },
+    { value: ESTADOS_LOGISTICOS.ENTREGADO, label: 'Entregado' },
+    ...(formData.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO
+      ? [{ value: ESTADOS_LOGISTICOS.CANCELADO, label: 'Cancelado' }]
+      : []),
   ];
 
   return (
@@ -248,7 +258,7 @@ function LeftSectionForm({
             options={tipoEntregaOptions}
             onChange={(value) => onTipoEntregaChange({ target: { value } })}
             icon={Truck}
-            disabled={loading}
+            disabled={loading || readOnly}
             error={errors.tipoEntrega}
             placeholder="Tipo de entrega"
             ariaLabel="Tipo de entrega"
@@ -268,13 +278,13 @@ function LeftSectionForm({
                 value={formData.direccionEntrega}
                 onChange={onDireccionManualChange}
                 rows={2}
-                className={textareaClass('direccionEntrega', loading)}
+                className={textareaClass('direccionEntrega', loading || readOnly)}
                 placeholder="Ej: Calle 123 #45-67"
-                disabled={loading}
+                disabled={loading || readOnly}
               />
             </div>
             {errorMsg('direccionEntrega')}
-            {!isEditMode && formData.clienteId && (
+            {!isEditMode && !readOnly && formData.clienteId && (
               <button
                 type="button"
                 onClick={() => {
@@ -318,8 +328,8 @@ function LeftSectionForm({
             ariaLabel="Estado del pedido"
           />
           {errorMsg('estadoLogistico')}
-          {isEditMode && isEstadoListo && (
-            <p className="mt-0.5 text-xs text-gray-500">El estado "Listo" no se puede modificar.</p>
+          {isEditMode && isEstadoInmutable && (
+            <p className="mt-0.5 text-xs text-gray-500">Los pedidos entregados o cancelados no se pueden modificar.</p>
           )}
         </div>
 
@@ -337,7 +347,7 @@ function LeftSectionForm({
                 rows={3}
                 className={textareaClass('motivoCancelacion', loading)}
                 placeholder="Explique por qué se cancela el pedido..."
-                disabled={loading}
+                disabled={loading || readOnly}
               />
             </div>
             {errorMsg('motivoCancelacion')}

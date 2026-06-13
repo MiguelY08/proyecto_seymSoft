@@ -8,6 +8,8 @@ import { useAlert } from '../../../../shared/alerts/useAlert';
 import { SalesServices } from '../services/salesServices';
 import ProductsService from '../../../purchases/products/services/productsServices';
 import { clientsService } from '../../clients/services/clientsService';
+import { getCreditCustomers } from '../../paymentsAndCredits/services/paymentsServices';
+import { mapCustomers as mapCreditCustomers } from '../../paymentsAndCredits/mappers/paymentsMapper';
 import { useAuth } from '../../../../access/context/AuthContext';
 
 // Componentes reutilizados del módulo de pedidos
@@ -16,13 +18,20 @@ import RightSectionForm from '../../orders/components/RightSectionForm';
 import PaymentsSection from '../../orders/components/PaymentsSection';
 
 // Helpers
-import { generateFactura, getInitialPaymentAmounts } from '../helpers/salesHelpers';
+import { getInitialPaymentAmounts } from '../helpers/salesHelpers';
 import { ESTADOS_LOGISTICOS, ORIGENES } from '../../orders/services/ordersService';
 
 const PAYMENT_METHOD_IDS = {
   transferencia: 1,
   efectivo: 2,
   credito: 3,
+};
+
+const ORDER_STATUS_IDS = {
+  [ESTADOS_LOGISTICOS.EN_PROCESO]: 1,
+  [ESTADOS_LOGISTICOS.LISTO]: 2,
+  entregado: 3,
+  [ESTADOS_LOGISTICOS.CANCELADO]: 4,
 };
 
 const normalizeText = (value) =>
@@ -73,6 +82,51 @@ const hasDuplicatePaymentMethods = (paymentMethods) => {
   const ids = paymentMethods.map((payment) => payment.idPaymentMethod);
   return new Set(ids).size !== ids.length;
 };
+
+const getCreditPaymentAmount = (paymentMethods) =>
+  paymentMethods
+    .filter((payment) => payment.idPaymentMethod === PAYMENT_METHOD_IDS.credito)
+    .reduce((sum, payment) => sum + roundMoney(payment.amount), 0);
+
+const getFirstPositiveNumber = (...values) => {
+  for (const value of values) {
+    const number = Number(value);
+    if (Number.isFinite(number) && number > 0) return number;
+  }
+  return 0;
+};
+
+const getCreditValidationInfo = (creditAccount, client) => {
+  const assignedCredit = getFirstPositiveNumber(
+    creditAccount?.creditoAsignado,
+    creditAccount?.assignedCredit,
+    client?.assignedCredit,
+    client?.clientCredit
+  );
+  const usedCredit = getFirstPositiveNumber(
+    creditAccount?.saldo,
+    creditAccount?.usedCredit,
+    creditAccount?.deudaTotal,
+    creditAccount?.totalDebt,
+    client?.usedCredit,
+    client?.totalDebt
+  );
+  const explicitAvailable = getFirstPositiveNumber(
+    creditAccount?.cupoDisponible,
+    creditAccount?.availableCredit,
+    client?.availableCredit
+  );
+  const calculatedAvailable = Math.max(0, roundMoney(assignedCredit - usedCredit));
+
+  return {
+    assignedCredit,
+    usedCredit,
+    availableCredit: explicitAvailable > 0 ? explicitAvailable : calculatedAvailable,
+  };
+};
+
+const isCreditOverdue = (account) =>
+  normalizeText(account?.estado ?? account?.status).includes('vencido');
 
 const getSessionUserId = (user) =>
   user?.idUser ?? user?.id ?? null;
@@ -156,7 +210,6 @@ function SaleForm() {
 
   // ─── Estados para nueva venta ─────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
-  const [facturaNo] = useState(() => generateFactura());
 
   // Datos del formulario (similar a OrdersForm)
   const [formData, setFormData] = useState({
@@ -172,6 +225,7 @@ function SaleForm() {
 
   // Catálogos
   const [clientes, setClientes] = useState([]);
+  const [creditAccounts, setCreditAccounts] = useState([]);
   const [productosCatalogo, setProductosCatalogo] = useState([]);
 
   // Pagos (abonos)
@@ -181,6 +235,7 @@ function SaleForm() {
 
   // Cálculo de totales
   const selectedClient = clientes.find((cliente) => Number(cliente.id) === Number(formData.clienteId)) ?? null;
+  const selectedCreditAccount = creditAccounts.find((account) => Number(account.id) === Number(formData.clienteId)) ?? null;
   const productosCatalogoConPrecio = productosCatalogo.map((product) => ({
     ...product,
     precioDetalle: getProductPriceForClient(product, selectedClient),
@@ -189,6 +244,10 @@ function SaleForm() {
   const iva = formData.productos.reduce((sum, p) => sum + (p.ivaAmount || 0), 0);
   const subtotal = roundMoney(total - iva);
   const saldoPendiente = Math.max(0, total - totalPagado);
+  const creditValidationInfo = useMemo(
+    () => getCreditValidationInfo(selectedCreditAccount, selectedClient),
+    [selectedCreditAccount, selectedClient]
+  );
 
   // ─── Carga inicial de catálogos ──────────────────────────────────────────
   useEffect(() => {
@@ -196,6 +255,9 @@ function SaleForm() {
       try {
         const clients = await clientsService.getAll();
         setClientes(normalizeClientList(clients));
+
+        const creditCustomers = await getCreditCustomers();
+        setCreditAccounts(mapCreditCustomers(creditCustomers));
 
         const products = await ProductsService.list();
         setProductosCatalogo((products ?? []).map(normalizeProduct));
@@ -443,11 +505,35 @@ function SaleForm() {
         (payment) => payment.idPaymentMethod === PAYMENT_METHOD_IDS.credito
       );
 
+      if (hasCreditPayment) {
+        const creditAmount = getCreditPaymentAmount(paymentMethods);
+        const { assignedCredit, availableCredit } = creditValidationInfo;
+
+        if (assignedCredit <= 0) {
+          showWarning('Credito no disponible', 'El cliente no tiene cupo de credito asignado.');
+          return;
+        }
+
+        if (isCreditOverdue(selectedCreditAccount ?? selectedClient)) {
+          showWarning('Credito vencido', 'El cliente tiene creditos vencidos. No se puede registrar una venta a credito.');
+          return;
+        }
+
+        if (roundMoney(creditAmount) > roundMoney(availableCredit)) {
+          showWarning(
+            'Cupo insuficiente',
+            `El monto a credito ($${creditAmount.toLocaleString()}) supera el cupo disponible ($${availableCredit.toLocaleString()}).`
+          );
+          return;
+        }
+      }
+
       const payload = {
         idEmployee: getSessionUserId(user),
         idSaleStatus: 1,
         order: {
           idClient: formData.clienteId,
+          idOrderStatus: ORDER_STATUS_IDS[formData.estadoLogistico] ?? formData.estadoLogistico,
           deliveryType: formData.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Recoge',
           deliveryAddress: formData.direccionEntrega,
           items: formData.productos.map((producto) => ({
@@ -512,7 +598,7 @@ function SaleForm() {
             <ChevronLeft className="w-5 h-5 text-gray-600" />
           </button>
           <h1 className="text-2xl font-bold text-gray-900">
-            Nueva Venta {vendingTypeLabel} (Factura No. {facturaNo})
+            Nueva Venta {vendingTypeLabel}
           </h1>
         </div>
         <div className="flex gap-3">
@@ -585,6 +671,8 @@ function SaleForm() {
           isEditMode={false}
           disallowDuplicateMethods
           allowCredit
+          creditAvailable={creditValidationInfo.availableCredit}
+          creditAssigned={creditValidationInfo.assignedCredit}
         />
       </div>
 

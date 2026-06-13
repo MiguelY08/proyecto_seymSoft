@@ -6,7 +6,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
-import { SalesServices } from '../../sales/services/salesServices';
+import { SalesServices } from '../../vendings/services/salesServices';
 
 const MOTIVO_MAX = 500;
 const MOTIVO_MIN = 10;

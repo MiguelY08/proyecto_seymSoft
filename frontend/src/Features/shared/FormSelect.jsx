@@ -26,7 +26,7 @@ function FormSelect({
     if (!wrapperRef.current) return;
 
     const rect = wrapperRef.current.getBoundingClientRect();
-    const gap = 4;
+    const gap = 1;
     const maxHeight = 240;
     const spaceBelow = window.innerHeight - rect.bottom - gap;
     const spaceAbove = rect.top - gap;
@@ -113,7 +113,7 @@ function FormSelect({
         <div
           ref={dropdownRef}
           style={dropdownStyle}
-          className="bg-white border border-gray-200 rounded-lg shadow-lg overflow-y-auto"
+          className="bg-white border border-gray-300 rounded-lg shadow-2xl ring-1 ring-black/5 overflow-y-auto"
         >
           <ul className="py-1">
             {options.map((option) => {
@@ -127,7 +127,7 @@ function FormSelect({
                     onClick={() => handleSelect(option.value)}
                     className={`
                       w-full px-4 py-2 text-left text-sm transition-colors duration-150
-                      ${isSelected ? 'bg-[#004D77]/10 text-[#004D77]' : 'text-gray-700 hover:bg-[#004D77]/10'}
+                      ${isSelected ? 'bg-[#004D77]/10 text-[#004D77] cursor-pointer' : 'text-gray-700 hover:bg-[#004D77]/10 cursor-pointer'}
                       ${optionClassName}
                     `}
                   >
