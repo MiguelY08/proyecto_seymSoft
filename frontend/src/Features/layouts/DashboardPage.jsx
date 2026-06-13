@@ -2,7 +2,7 @@
 const DashboardPage = () => {
   return (
     <div className="bg-white rounded-xl border border-dashed min-height-[400px] flex items-center justify-center">
-      Dashboard
+      Bienvenida al Panel de Administración
     </div>
   );
 };
