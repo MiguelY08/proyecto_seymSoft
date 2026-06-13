@@ -118,11 +118,16 @@ function OrdersForm() {
     ...product,
     precioDetalle: getProductPriceForClient(product, selectedClient),
   }));
+  const pedidoInmutable = isEditMode && [
+    ESTADOS_LOGISTICOS.ENTREGADO,
+    ESTADOS_LOGISTICOS.CANCELADO,
+  ].includes(formData.estadoLogistico);
 
   // Determinar si los productos son editables
   const productosEditables = useMemo(() => {
     if (!isEditMode) return true; // en creaciÃ³n siempre editables
     if (formData.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) return false;
+    if (formData.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO) return false;
     if (formData.pagoEstado === ESTADOS_PAGO.PAGADO) return false;
     return true;
   }, [isEditMode, formData.estadoLogistico, formData.pagoEstado]);
@@ -262,6 +267,7 @@ function OrdersForm() {
   };
 
   const handleTipoEntregaChange = (e) => {
+    if (pedidoInmutable) return;
     const nuevoTipo = e.target.value;
     setFormData(prev => {
       const nuevaDireccion = nuevoTipo === 'recoge' ? 'El cliente lo recoge' : prev.direccionEntrega;
@@ -270,20 +276,17 @@ function OrdersForm() {
   };
 
   const handleDireccionManualChange = (e) => {
+    if (pedidoInmutable) return;
     setFormData(prev => ({ ...prev, direccionEntrega: e.target.value }));
     if (errors.direccionEntrega) setErrors(prev => ({ ...prev, direccionEntrega: null }));
   };
 
   const handleEstadoLogisticoChange = async (e) => {
+    if (pedidoInmutable) return;
     const newEstado = e.target.value;
     if (newEstado === ESTADOS_LOGISTICOS.CANCELADO) {
-      const result = await showConfirm(
-        'warning',
-        'Cancelar pedido',
-        'Al cancelar el pedido se liberará el stock reservado. Esta acción no se puede deshacer fácilmente.',
-        { confirmButtonText: 'Sí, cancelar', cancelButtonText: 'Mantener estado' }
-      );
-      if (!result?.isConfirmed) return;
+      showWarning('Usa el flujo de cancelacion', 'Para cancelar un pedido debes usar la accion Cancelar e indicar el motivo.');
+      return;
     }
     setFormData(prev => ({ ...prev, estadoLogistico: newEstado }));
     if (errors.estadoLogistico) setErrors(prev => ({ ...prev, estadoLogistico: null }));
@@ -370,6 +373,7 @@ function OrdersForm() {
 
   // --- Manejador para PaymentsSection ---
   const handleAddPayment = async (paymentData) => {
+    if (pedidoInmutable) return;
     try {
       const tempPago = {
         ...paymentData,
@@ -407,6 +411,10 @@ function OrdersForm() {
   // --- ValidaciÃ³n ---
   const validate = () => {
     const newErrors = {};
+    if (pedidoInmutable) {
+      newErrors.general = 'Este pedido ya esta entregado o cancelado y no puede modificarse.';
+      return newErrors;
+    }
     if (formData.clienteId === '' || formData.clienteId === undefined) {
       newErrors.clienteId = 'Debe seleccionar un cliente.';
     }
@@ -433,7 +441,7 @@ function OrdersForm() {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      showWarning('Formulario incompleto', 'Revisa los campos marcados en rojo.');
+      showWarning('No se puede guardar', validationErrors.general ?? 'Revisa los campos marcados en rojo.');
       return;
     }
 
@@ -587,7 +595,7 @@ function OrdersForm() {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || pedidoInmutable}
             className="px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {loading ? (
@@ -613,6 +621,7 @@ function OrdersForm() {
           clientes={clientes}
           user={user}
           loading={loading}
+          readOnly={pedidoInmutable}
           isEditMode={isEditMode}
           onClienteChange={handleClienteChange}
           onTipoEntregaChange={handleTipoEntregaChange}
@@ -626,7 +635,7 @@ function OrdersForm() {
           productosCatalogo={productosCatalogoConPrecio}
           errors={errors}
           loading={loading}
-          disabled={!productosEditables || loading}
+          disabled={!productosEditables || loading || pedidoInmutable}
           subtotal={subtotal}
           iva={iva}
           total={total}
@@ -645,6 +654,7 @@ function OrdersForm() {
           onAddPayment={handleAddPayment}
           onRemovePayment={handleRemovePayment}
           loading={loading}
+          disabled={pedidoInmutable}
           isEditMode={isEditMode}
         />
       </div>
@@ -663,7 +673,15 @@ function OrdersForm() {
       {isEditMode && !productosEditables && (
         <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-sm text-yellow-800">
-            <strong>Productos no editables:</strong> Este pedido ya ha sido pagado o cancelado, no se pueden modificar los productos.
+            <strong>Productos no editables:</strong> Este pedido ya ha sido pagado, entregado o cancelado, no se pueden modificar los productos.
+          </p>
+        </div>
+      )}
+
+      {pedidoInmutable && (
+        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700">
+            <strong>Pedido inmutable:</strong> Los pedidos entregados o cancelados no pueden modificarse.
           </p>
         </div>
       )}

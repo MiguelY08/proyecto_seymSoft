@@ -105,9 +105,9 @@ function TopBar({
         {hasPermission("usuarios.crear") && (
           <ButtonComponent
             onClick={() => navigate("/admin/users/form-user")}
-            title="Nuevo usuario"
+            title="Nuevo"
           >
-            <span className="hidden sm:inline">Nuevo usuario</span>
+            <span className="hidden sm:inline">Nuevo</span>
             <Plus className="w-4 h-4" strokeWidth={2} />
           </ButtonComponent>
         )}

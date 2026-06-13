@@ -67,6 +67,19 @@ function StatusBanner({ order }) {
       </div>
     );
   }
+  if (order.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO) {
+    return (
+      <div className="sticky top-0 z-10 mx-4 mt-4 flex items-start gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg shadow-sm">
+        <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" strokeWidth={2} />
+        <div>
+          <p className="text-xs font-semibold text-blue-600">Pedido entregado</p>
+          <p className="text-xs text-blue-500 leading-relaxed mt-0.5">
+            Este pedido ya fue entregado y no puede modificarse ni cancelarse.
+          </p>
+        </div>
+      </div>
+    );
+  }
   return null;
 }
 
@@ -136,10 +149,12 @@ function DetailOrder({
 
   const fechaMostrar = formatDate(order.fechaPedido);
   const isCancelado = order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO;
+  const isEntregado = order.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO;
   const isListoYPagado = order.estadoLogistico === ESTADOS_LOGISTICOS.LISTO && order.pagoEstado === ESTADOS_PAGO.PAGADO;
-  const showEditButton = !isCancelado && !isListoYPagado && modo === 'pedido';
+  const showEditButton = !isCancelado && !isEntregado && !isListoYPagado && modo === 'pedido';
 
   const handleMarcarListo = async () => {
+    if (isCancelado || isEntregado) return;
     const result = await showConfirm(
       'info',
       'Marcar como listo',
@@ -152,11 +167,13 @@ function DetailOrder({
   };
 
   const handleCancelar = () => {
+    if (isCancelado || isEntregado) return;
     onCancel(order);
     onClose();
   };
 
   const handleEditClick = () => {
+    if (!showEditButton) return;
     onEdit(order);
     onClose();
   };
@@ -324,7 +341,7 @@ function DetailOrder({
               {/* Estados */}
               <div className="mt-4 pt-3 border-t border-gray-100">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs text-gray-500">Estado logístico</span>
+                  <span className="text-xs text-gray-500">Estado pedido</span>
                   <EstadoLogisticoBadgePill estado={order.estadoLogistico} />
                 </div>
                 <div className="flex justify-between items-center">

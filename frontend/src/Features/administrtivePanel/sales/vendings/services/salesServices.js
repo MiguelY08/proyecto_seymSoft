@@ -217,14 +217,23 @@ const formatErrorDetail = (detail) => {
   return '';
 };
 
+const CREDIT_ERROR_MESSAGES = {
+  CLIENT_NOT_FOUND: 'Cliente no encontrado.',
+  CLIENT_INACTIVE: 'El cliente esta inactivo.',
+  CLIENT_HAS_OVERDUE_CREDITS: 'El cliente tiene creditos vencidos.',
+  CLIENT_WITHOUT_CREDIT_LIMIT: 'El cliente no tiene cupo de credito asignado.',
+  CREDIT_LIMIT_EXCEEDED: 'El monto a credito supera el cupo disponible del cliente.',
+};
+
 const getErrorMessage = (error, fallback) => {
   const responseData = error?.response?.data;
+  const errorCodeMessage = CREDIT_ERROR_MESSAGES[responseData?.errorCode];
   const detail =
     formatErrorDetail(responseData?.errors) ||
     formatErrorDetail(responseData?.details) ||
     formatErrorDetail(responseData?.data);
 
-  return [responseData?.message, detail].filter(Boolean).join(' ') || error?.message || fallback;
+  return [errorCodeMessage ?? responseData?.message, detail].filter(Boolean).join(' ') || error?.message || fallback;
 };
 
 export const SalesServices = {

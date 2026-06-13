@@ -10,6 +10,7 @@ import { ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES } from '../services/ordersSe
 const ESTADO_LOGISTICO_LABELS = {
   [ESTADOS_LOGISTICOS.EN_PROCESO]: 'En proceso',
   [ESTADOS_LOGISTICOS.LISTO]:      'Listo',
+  [ESTADOS_LOGISTICOS.ENTREGADO]:  'Entregado',
   [ESTADOS_LOGISTICOS.CANCELADO]:  'Cancelado',
 };
 
@@ -22,12 +23,14 @@ const ESTADO_PAGO_LABELS = {
 export const ESTADO_LOGISTICO_STYLES = {
   [ESTADOS_LOGISTICOS.EN_PROCESO]: { bg: '#fef9c3', color: '#a16207', dot: '#ca8a04' },
   [ESTADOS_LOGISTICOS.LISTO]:      { bg: '#dcfce7', color: '#15803d', dot: '#16a34a' },
+  [ESTADOS_LOGISTICOS.ENTREGADO]:  { bg: '#dbeafe', color: '#1d4ed8', dot: '#2563eb' },
   [ESTADOS_LOGISTICOS.CANCELADO]:  { bg: '#fee2e2', color: '#b91c1c', dot: '#dc2626' },
 };
 
 export const ESTADO_LOGISTICO_TABLE_CLASSES = {
   [ESTADOS_LOGISTICOS.EN_PROCESO]: 'bg-yellow-100 text-yellow-700 border-yellow-300',
   [ESTADOS_LOGISTICOS.LISTO]:      'bg-green-100  text-green-700  border-green-300',
+  [ESTADOS_LOGISTICOS.ENTREGADO]:  'bg-blue-100   text-blue-700   border-blue-300',
   [ESTADOS_LOGISTICOS.CANCELADO]:  'bg-red-100    text-red-400    border-red-200',
 };
 
@@ -50,6 +53,7 @@ export const getEstadoLogisticoColor = (estado) => {
   const map = {
     [ESTADOS_LOGISTICOS.EN_PROCESO]: 'bg-yellow-500',
     [ESTADOS_LOGISTICOS.LISTO]:      'bg-green-500',
+    [ESTADOS_LOGISTICOS.ENTREGADO]:  'bg-blue-500',
     [ESTADOS_LOGISTICOS.CANCELADO]:  'bg-red-500',
   };
   return map[estado] ?? 'bg-gray-500';
@@ -70,8 +74,9 @@ export const getEstadoPagoColor = (estado) => {
 // ─── Permisos (basados en estado logístico y pago) ───────────────────────────
 export const getPermisos = (estadoLogistico, pagoEstado) => {
   const esCancelado = estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO;
+  const esEntregado = estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO;
   const esListoYPagado = estadoLogistico === ESTADOS_LOGISTICOS.LISTO && pagoEstado === ESTADOS_PAGO.PAGADO;
-  return { deshabilitado: esCancelado || esListoYPagado };
+  return { deshabilitado: esCancelado || esEntregado || esListoYPagado };
 };
 
 // ─── highlight (sin cambios) ──────────────────────────────────────────────────

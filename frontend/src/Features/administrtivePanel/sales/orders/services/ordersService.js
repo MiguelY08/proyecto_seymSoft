@@ -8,6 +8,7 @@ export const CAJA_CLIENTE_ID = 0;
 export const ESTADOS_LOGISTICOS = {
   EN_PROCESO: 'en proceso',
   LISTO: 'listo',
+  ENTREGADO: 'entregado',
   CANCELADO: 'cancelado',
 };
 
@@ -49,8 +50,14 @@ const getIncludedIvaAmount = (totalWithIva, ivaPercentage = 0) => {
 };
 
 const normalizeEstadoLogistico = (value) => {
+  const id = Number(value?.id ?? value?.idOrderStatus ?? value);
+  if (id === 2) return ESTADOS_LOGISTICOS.LISTO;
+  if (id === 3) return ESTADOS_LOGISTICOS.ENTREGADO;
+  if (id === 4) return ESTADOS_LOGISTICOS.CANCELADO;
+
   const raw = String((value?.name ?? value) || ESTADOS_LOGISTICOS.EN_PROCESO).toLowerCase();
   if (raw.includes('cancel')) return ESTADOS_LOGISTICOS.CANCELADO;
+  if (raw.includes('entreg') || raw.includes('delivered')) return ESTADOS_LOGISTICOS.ENTREGADO;
   if (raw.includes('list')) return ESTADOS_LOGISTICOS.LISTO;
   return ESTADOS_LOGISTICOS.EN_PROCESO;
 };
@@ -224,6 +231,7 @@ const buildCreateOrderPayload = (data = {}) => {
 
   return {
     idClient: data.clienteId,
+    idOrderStatus: ORDER_STATUS_IDS[data.estadoLogistico] ?? data.estadoLogistico ?? 1,
     deliveryType: isRecoge ? 'Recoge' : 'Domicilio',
     deliveryAddress: isRecoge ? null : data.direccionEntrega,
     items: (data.productos || []).map((product) => ({
@@ -237,7 +245,7 @@ const buildCreateOrderPayload = (data = {}) => {
 const ORDER_STATUS_IDS = {
   [ESTADOS_LOGISTICOS.EN_PROCESO]: 1,
   [ESTADOS_LOGISTICOS.LISTO]: 2,
-  entregado: 3,
+  [ESTADOS_LOGISTICOS.ENTREGADO]: 3,
   [ESTADOS_LOGISTICOS.CANCELADO]: 4,
 };
 
@@ -261,7 +269,10 @@ const buildUpdateOrderPayload = (data = {}) => {
   }
 
   if (data.estadoLogistico !== undefined) {
-    payload.idOrderStatus = ORDER_STATUS_IDS[data.estadoLogistico] ?? data.estadoLogistico;
+    const idOrderStatus = ORDER_STATUS_IDS[data.estadoLogistico] ?? data.estadoLogistico;
+    if (Number(idOrderStatus) !== ORDER_STATUS_IDS[ESTADOS_LOGISTICOS.CANCELADO]) {
+      payload.idOrderStatus = idOrderStatus;
+    }
   }
 
   if (data.productos !== undefined) {
@@ -303,6 +314,7 @@ export const OrdersService = {
   canEditProductos(order) {
     if (!order) return false;
     if (order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) return false;
+    if (order.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO) return false;
     if (order.pagoEstado === ESTADOS_PAGO.PAGADO) return false;
     return true;
   },

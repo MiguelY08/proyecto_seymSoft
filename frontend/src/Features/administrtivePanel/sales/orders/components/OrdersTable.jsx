@@ -7,6 +7,7 @@ import {
   EstadoPagoBadgeTable,
   getPermisos
 } from '../helpers/ordersHelpers';
+import { ESTADOS_LOGISTICOS } from '../services/ordersService';
 
 // ─── Empty State ─────────────────────────────────────────────────────────────
 function EmptyState({ isSearching }) {
@@ -67,8 +68,10 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
 
             // Mensaje de tooltip según la razón del deshabilitado
             let disabledTitle = '';
-            if (order.estadoLogistico === 'cancelado') {
+            if (order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) {
               disabledTitle = 'No disponible para pedidos cancelados';
+            } else if (order.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO) {
+              disabledTitle = 'No disponible para pedidos entregados';
             } else if (order.estadoLogistico === 'listo' && order.pagoEstado === 'pagado') {
               disabledTitle = 'No disponible para pedidos listos y pagados';
             } else {

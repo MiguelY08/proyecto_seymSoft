@@ -2,7 +2,6 @@
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { UserService } from '../../../users/services/userService';
-import { clientsService, creditAccountService } from '../../clients/services/clientsService';
 import { SalesServices } from '../services/salesServices';
 
 // ─── Claves de almacenamiento (deprecadas, pero mantenidas por compatibilidad) ─
@@ -14,17 +13,7 @@ export const METODOS_PAGO = ['Efectivo', 'Crédito', 'Transferencia'];
 export const ESTADOS_VENTA = ['Pagada', 'Cancelada']; // ✅ actualizado
 export const ENTREGAS = ['Cliente lo recoge', 'Domicilio'];
 
-export const getClientCreditInfo = (clienteId) => {
-  if (!clienteId) return { creditAmount: 0, balance: 0, available: 0 };
-  const account = creditAccountService.getByClientId(clienteId);
-  if (!account) return { creditAmount: 0, balance: 0, available: 0 };
-  const available = account.creditAmount - account.balance;
-  return {
-    creditAmount: account.creditAmount,
-    balance: account.balance,
-    available: available > 0 ? available : 0,
-  };
-};
+export const getClientCreditInfo = () => ({ creditAmount: 0, balance: 0, available: 0 });
 
 // ─── Estructura inicial de montos de pago ─────────────────────────────────────
 export const getInitialPaymentAmounts = () => ({
@@ -34,19 +23,11 @@ export const getInitialPaymentAmounts = () => ({
 });
 
 // ─── Validación de montos de pago ────────────────────────────────────────────
-export const validatePaymentAmounts = (paymentAmounts, total, clienteId) => {
+export const validatePaymentAmounts = (paymentAmounts, total) => {
   const suma = Object.values(paymentAmounts).reduce((acc, val) => acc + (Number(val) || 0), 0);
   if (suma > total) {
     const formatter = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
     return `La suma de los pagos (${formatter.format(suma)}) supera el total de la venta (${formatter.format(total)}).`;
-  }
-  const creditAmount = paymentAmounts['Crédito'] || 0;
-  if (creditAmount > 0 && clienteId) {
-    const creditInfo = getClientCreditInfo(clienteId);
-    if (creditAmount > creditInfo.available) {
-      const fmt = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
-      return `El monto a crédito (${fmt(creditAmount)}) supera el cupo disponible (${fmt(creditInfo.available)}).`;
-    }
   }
   return null;
 };
@@ -66,10 +47,6 @@ export const today = () =>
     month: '2-digit',
     year: 'numeric',
   });
-
-// ─── Número de factura aleatorio (9 dígitos) ──────────────────────────────────
-export const generateFactura = () =>
-  String(Math.floor(100000000 + Math.random() * 900000000));
 
 // ─── Cargar usuarios desde UserService ───────────────────────────────────────────
 export const loadSalesUsers = () => UserService.list();
