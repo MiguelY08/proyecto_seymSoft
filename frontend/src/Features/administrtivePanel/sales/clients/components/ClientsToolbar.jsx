@@ -65,7 +65,7 @@ function ClientsToolbar({
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
-        {hasPermission('clientes.exportar') && (
+        {false && hasPermission('clientes.exportar') && (
           <ButtonComponent
             className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-2 flex items-center gap-2"
             onClick={handleDownload}

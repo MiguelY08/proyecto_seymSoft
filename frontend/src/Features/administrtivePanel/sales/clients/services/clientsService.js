@@ -1,28 +1,4 @@
-import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:3000/api/clients';
-
-const getAuthToken = () => {
-  return localStorage.getItem('accessToken') || '';
-};
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: { 'Content-Type': 'application/json' }
-});
-
-api.interceptors.request.use((config) => {
-  config.headers.Authorization = `Bearer ${getAuthToken()}`;
-  return config;
-});
-
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    const message = error.response?.data?.message || 'Error en la petición';
-    throw new Error(message);
-  }
-);
+import apiClient from '../../../../../setting/apiClient.js';
 
 export const SYSTEM_CLIENT_ID = 999999999;
 
@@ -80,7 +56,7 @@ export const clientsService = {
     if (personType) queryParams.append('personType', personType);
     if (idStatus) queryParams.append('idStatus', idStatus);
     
-    const response = await api.get(`?${queryParams.toString()}`);
+    const response = await apiClient.get(`/clients?${queryParams.toString()}`);
     const result = response.data;
     
     const clients = result.data.map(client => ({
@@ -118,7 +94,7 @@ export const clientsService = {
   },
 
   getById: async (id) => {
-    const response = await api.get(`/${id}`);
+    const response = await apiClient.get(`/clients/${id}`);
     return response.data.data;
   },
 
@@ -146,7 +122,7 @@ export const clientsService = {
       payload.userId = clientData.userId;
     }
     
-    const response = await api.post('', payload);
+    const response = await apiClient.post('/clients', payload);
     return response.data.data;
   },
 
@@ -175,7 +151,7 @@ export const clientsService = {
     console.log('📤 Payload a enviar al backend:', JSON.stringify(payload, null, 2));
     
     try {
-      const response = await api.put(`/${id}`, payload);
+      const response = await apiClient.put(`/clients/${id}`, payload);
       console.log('✅ Edición exitosa');
       return response.data.data;
     } catch (error) {
@@ -189,12 +165,12 @@ export const clientsService = {
   },
 
   delete: async (id) => {
-    await api.delete(`/${id}`);
+    await apiClient.delete(`/clients/${id}`);
     return true;
   },
 
   toggleActive: async (id) => {
-    const response = await api.patch(`/${id}/status`);
+    const response = await apiClient.patch(`/clients/${id}/status`);
     return response.data.data;
   }
 };

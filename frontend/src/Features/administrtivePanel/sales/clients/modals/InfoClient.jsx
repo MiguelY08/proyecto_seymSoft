@@ -30,6 +30,81 @@ function DetailRow({ icon: Icon, label, value, fullWidth = false }) {
   );
 }
 
+// Componente Mini Gráfica
+function MiniGraphClient({ clientStartDate, onExpand }) {
+  const [selectedYear, setSelectedYear] = useState(2024);
+  
+  const generateMockData = (year) => {
+    return [
+      { month: 'Ene', value: 30000000, products: 65 },
+      { month: 'Feb', value: 18000000, products: 45 },
+      { month: 'Mar', value: 15000000, products: 38 },
+      { month: 'Abr', value: 7000000, products: 22 },
+      { month: 'May', value: 12000000, products: 35 },
+      { month: 'Jun', value: 13000000, products: 40 },
+      { month: 'Jul', value: 17000000, products: 48 },
+      { month: 'Ago', value: 9000000, products: 28 },
+      { month: 'Sep', value: 6000000, products: 18 },
+      { month: 'Oct', value: 20000000, products: 55 },
+      { month: 'Nov', value: 14000000, products: 42 },
+      { month: 'Dic', value: 19000000, products: 50 },
+    ];
+  };
+  
+  const data = generateMockData(selectedYear);
+  const maxValue = Math.max(...data.map(d => d.value));
+  const totalValue = data.reduce((sum, d) => sum + d.value, 0);
+
+  return (
+    <div className="bg-gray-50 rounded-xl border border-gray-200 p-3 cursor-pointer hover:shadow-md transition-shadow" onClick={onExpand}>
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <p className="text-[9px] text-gray-400 uppercase tracking-wide">Compras {selectedYear}</p>
+          <p className="text-xs font-bold text-[#004D77]">
+            ${(totalValue / 1000000).toFixed(0)}M
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="text-[9px] px-1 py-0.5 border border-gray-300 rounded bg-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <option value={2024}>2024</option>
+            <option value={2023}>2023</option>
+            <option value={2022}>2022</option>
+          </select>
+          <div className="text-gray-400">
+            <BarChart2 className="w-3.5 h-3.5" strokeWidth={1.8} />
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex items-end gap-0.5 h-12">
+        {data.map((d, i) => (
+          <div
+            key={i}
+            className="flex-1 bg-[#004D77]/30 hover:bg-[#004D77] transition-all rounded-t cursor-pointer"
+            style={{ height: `${(d.value / maxValue) * 40}px` }}
+            title={`${d.month}: $${(d.value / 1000000).toFixed(1)}M`}
+          />
+        ))}
+      </div>
+      
+      <div className="flex justify-between mt-1 px-0.5">
+        {data.map((d, i) => (
+          <span key={i} className="text-[6px] text-gray-400">{d.month}</span>
+        ))}
+      </div>
+      
+      <p className="text-[9px] text-gray-400 text-center mt-2">
+        Haz clic para ver gráfica completa
+      </p>
+    </div>
+  );
+}
+
 function InfoClient({ isOpen, onClose, client }) {
   const [showGraph, setShowGraph] = useState(false);
 
@@ -56,6 +131,8 @@ function InfoClient({ isOpen, onClose, client }) {
   
   const deudaTotal = Number(client.totalDebt ?? montoOcupado);
   const creditosActivos = Number(client.activeCredits ?? 0);
+  
+  const identificacionCompleta = `${client.documentType || 'N/A'} ${client.document || '—'}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -67,6 +144,7 @@ function InfoClient({ isOpen, onClose, client }) {
 
         <div className="flex flex-col w-full min-w-360px shrink-0" style={{ width: showGraph ? '50%' : '100%', transition: 'width 500ms ease-in-out' }}>
 
+          {/* CABECERA */}
           <div className="relative bg-[#004D77] px-6 py-4 shrink-0">
             <button
               onClick={onClose}
@@ -85,8 +163,8 @@ function InfoClient({ isOpen, onClose, client }) {
                 <h2 className="text-white font-bold text-base leading-tight truncate">
                   {client.fullName || 'Sin nombre'}
                 </h2>
-                <p className="text-white/60 text-[11px] mt-0.5">
-                  Cliente desde {client.clientSince || '—'}
+                <p className="text-white/70 text-[11px] mt-0.5">
+                  Identificación: {identificacionCompleta}
                 </p>
                 <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusColor}`}>
@@ -103,6 +181,7 @@ function InfoClient({ isOpen, onClose, client }) {
             </div>
           </div>
 
+          {/* TARJETA DE CRÉDITO */}
           <div className="mx-4 mt-3 shrink-0">
             <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-2.5">
               
@@ -186,41 +265,47 @@ function InfoClient({ isOpen, onClose, client }) {
             </div>
           </div>
 
-          <div className="px-5 py-4 grid grid-cols-2 gap-x-4 gap-y-3.5 flex-1">
-            <div className="col-span-2 flex items-center gap-2">
-              <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Identificación</span>
-              <div className="flex-1 h-px bg-[#004D77]/15" />
-            </div>
-
-            <DetailRow
-              icon={IdCard}
-              label="Tipo y Número Doc."
-              value={`${client.documentType || '—'}  ${client.document || '—'}`}
-              fullWidth
-            />
-
-            <div className="col-span-2 flex items-center gap-2">
+          {/* CONTENIDO PRINCIPAL */}
+          <div className="px-5 py-4 flex-1">
+            
+            {/* DATOS PERSONALES - 2 filas x 2 columnas */}
+            <div className="flex items-center gap-2 mb-3">
               <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Datos personales</span>
               <div className="flex-1 h-px bg-[#004D77]/15" />
             </div>
 
-            <DetailRow icon={User}     label="Nombre completo" value={client.fullName || `${client.firstName || ''} ${client.lastName || ''}`.trim() || '—'} fullWidth />
-            <DetailRow icon={Mail}     label="Correo"     value={client.email}    fullWidth />
-            <DetailRow icon={Phone}    label="Teléfono"   value={client.phone} />
-            <DetailRow icon={MapPin}   label="Dirección"  value={client.address}  fullWidth />
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              {/* Fila 1: Nombre completo y Correo */}
+              <DetailRow icon={User} label="Nombre completo" value={client.fullName || '—'} />
+              <DetailRow icon={Mail} label="Correo" value={client.email || '—'} />
+              {/* Fila 2: Teléfono y Dirección */}
+              <DetailRow icon={Phone} label="Teléfono" value={client.phone || '—'} />
+              <DetailRow icon={MapPin} label="Dirección" value={client.address || '—'} />
+            </div>
 
-            <div className="col-span-2 flex items-center gap-2">
+            {/* MINI GRÁFICA */}
+            <div className="mt-4">
+              <MiniGraphClient 
+                clientStartDate={client.clientSince} 
+                onExpand={() => setShowGraph(!showGraph)}
+              />
+            </div>
+
+            {/* CONTACTO Y REGISTRO */}
+            <div className="flex items-center gap-2 mt-4 mb-3">
               <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Contacto y registro</span>
               <div className="flex-1 h-px bg-[#004D77]/15" />
             </div>
 
-            <DetailRow icon={UserCheck}    label="Persona contacto"   value={client.contactName  || '—'} />
-            <DetailRow icon={Phone}        label="Tel. contacto"      value={client.contactPhone || '—'} />
-            <DetailRow icon={CalendarDays} label="Cliente desde"      value={client.clientSince  || '—'} />
-            <DetailRow icon={IdCard}       label="ID Cliente"         value={`#${client.id}`} />
-
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <DetailRow icon={UserCheck} label="Persona contacto" value={client.contactName || '—'} />
+              <DetailRow icon={Phone} label="Tel. contacto" value={client.contactPhone || '—'} />
+              <DetailRow icon={CalendarDays} label="Cliente desde" value={client.clientSince || '—'} />
+              <DetailRow icon={IdCard} label="ID Cliente" value={`#${client.id}`} />
+            </div>
           </div>
 
+          {/* BOTONES */}
           <div className="border-t border-gray-100 px-5 py-3 flex items-center justify-between shrink-0">
             <button
               onClick={() => setShowGraph(v => !v)}
@@ -238,6 +323,7 @@ function InfoClient({ isOpen, onClose, client }) {
           </div>
         </div>
 
+        {/* PANEL DE GRÁFICA GRANDE */}
         <div
           className="overflow-hidden shrink-0 transition-all duration-500 ease-in-out border-l border-gray-100"
           style={{ width: showGraph ? '50%' : '0%', opacity: showGraph ? 1 : 0 }}

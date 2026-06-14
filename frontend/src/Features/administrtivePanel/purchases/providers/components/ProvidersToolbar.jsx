@@ -66,7 +66,7 @@ function ProvidersToolbar({
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
-        {hasPermission('proveedores.exportar') && (
+        {false && hasPermission('proveedores.exportar') && (
           <ButtonComponent
             className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-2 flex items-center gap-2"
             onClick={handleDownload}
