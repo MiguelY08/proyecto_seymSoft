@@ -4,6 +4,20 @@ import DetailOrder from '../../orders/modals/DetailOrder';
 import { SalesServices } from '../services/salesServices';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import Spinner from '../../../../shared/spinner';
+import { ESTADOS_PAGO } from '../../orders/services/ordersService';
+
+const toNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const normalizePaymentStatus = (status, totalPagado, total) => {
+  if (total > 0 && totalPagado >= total) return ESTADOS_PAGO.PAGADO;
+
+  const raw = String(status ?? '').toLowerCase();
+  if (raw.includes('pagad') || raw.includes('paid')) return ESTADOS_PAGO.PAGADO;
+  return ESTADOS_PAGO.PENDIENTE;
+};
 
 const mapSaleToOrderDetail = (sale) => {
   const order = sale.order ?? {};
@@ -12,19 +26,21 @@ const mapSaleToOrderDetail = (sale) => {
     id: payment.idSalePaymentMethod ?? payment.idOrderPayment ?? payment.id,
     fechaPago: payment.creationDate ?? payment.paymentDate ?? payment.createdAt,
     metodoPago: payment.paymentMethod?.namePaymentMethod ?? payment.metodoPago ?? '-',
-    monto: Number(payment.amount ?? payment.monto ?? 0),
+    monto: toNumber(payment.amount ?? payment.monto),
   }));
+  const total = toNumber(sale.totalNumerico ?? order.total);
+  const totalPagado = pagos.reduce((sum, payment) => sum + payment.monto, 0);
 
   const productos = (sale.items ?? []).map((item) => {
-    const cantidad = Number(item.cantidad ?? 0);
-    const precioUnitario = Number(item.product?.precioDetalle ?? 0);
+    const cantidad = toNumber(item.cantidad);
+    const precioUnitario = toNumber(item.precioUnitario ?? item.product?.precioDetalle);
 
     return {
       id: item.product?.id,
       nombre: item.product?.nombre ?? 'Producto sin nombre',
       cantidad,
       precioUnitario,
-      subtotal: cantidad * precioUnitario,
+      subtotal: toNumber(item.subtotal, cantidad * precioUnitario),
     };
   });
 
@@ -42,12 +58,12 @@ const mapSaleToOrderDetail = (sale) => {
       sale.employee?.user?.name ??
       '',
     direccionEntrega: order.deliveryAddress ?? order.deliveryAdress ?? sale.direccion,
-    total: sale.totalNumerico ?? order.total ?? 0,
+    total,
     productos,
     pagos,
-    totalPagado: pagos.reduce((sum, payment) => sum + payment.monto, 0),
+    totalPagado,
     estadoLogistico: order.orderStatus?.nameStatus?.toLowerCase() ?? order.estadoLogistico ?? '',
-    pagoEstado: order.paymentStatus?.toLowerCase() ?? order.pagoEstado ?? '',
+    pagoEstado: normalizePaymentStatus(order.paymentStatus ?? order.pagoEstado, totalPagado, total),
     motivoCancelacion: sale.motivoAnulacion ?? '',
     fechaCancelacion: sale.fechaAnulacion ?? '',
   };

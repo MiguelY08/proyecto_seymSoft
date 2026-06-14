@@ -52,34 +52,22 @@ export const UserService = {
    * Lista paginada de usuarios.
    * @param {number} page - Número de página (default 1)
    * @param {number} limit - Elementos por página (default 10)
+   * @param {string} search - Texto de búsqueda (opcional)
+   * @param {string} status - Filtro por estado (opcional)
    * @returns {Promise<{ users: Array, pagination: Object }>}
    */
   async list(page = 1, limit = 10, search = '', status = '') {
-    try {
-      const params = {
-        page,
-        limit,
-      };
+    const params = { page, limit };
 
-      if (status) {
-        params.status = status;
-      }
+    if (status) params.status = status;
+    if (search?.trim()) params.search = search.trim();
 
-      if (search && search.trim() !== '') {
-        params.search = search.trim();
-      }
+    const response = await apiClient.get('/users', { params });
 
-      const response = await apiClient.get('/users', { params });
+    const users = (response.data.data || []).map(mapUserFromApi);
+    const pagination = response.data.pagination || {};
 
-      const users = (response.data.data || []).map(mapUserFromApi);
-      const pagination = response.data.pagination || {};
-
-      return { users, pagination };
-
-    } catch (error) {
-      console.error('Error en list():', error);
-      throw error;
-    }
+    return { users, pagination };
   },
 
   /**
@@ -88,14 +76,9 @@ export const UserService = {
    * @returns {Promise<{ totalUsers: number, activeUsers: number, inactiveUsers: number }>}
    */
   async getMetrics() {
-    try {
-      const response = await apiClient.get('/users/metrics');
+    const response = await apiClient.get('/users/metrics');
 
-      return response.data.data;
-    } catch (error) {
-      console.error('Error en getMetrics():', error);
-      throw error;
-    }
+    return response.data.data;
   },
 
   /**
@@ -105,29 +88,25 @@ export const UserService = {
    * @returns {Promise<Object>} Usuario normalizado con campos: id, name, email, phone, active, createdAt, role, permissions
    */
   async findById(id) {
-    try {
-      const response = await apiClient.get(`/users/${id}`);
-      const apiData = response.data.data;
-      if (!apiData || !apiData.user) {
-        throw new Error('Usuario no encontrado');
-      }
-      const user = apiData.user;
-      // Mapeo según reglas: idStatus: 1=Activo, 2=Inactivo, otros=Desconocido (se tratará como inactivo por seguridad)
-      const isActive = user.idStatus === 1;
-      return {
-        id: user.idUser,
-        name: user.fullName,
-        email: user.email,
-        phone: user.phone,
-        active: isActive,
-        createdAt: user.creationDate,
-        role: normalizeRole(apiData.role),        // null o el rol proveniente de otra API
-        permissions: apiData.permissions || [],
-      };
-    } catch (error) {
-      console.error(`Error en findById(${id}):`, error);
-      throw error;
+    const response = await apiClient.get(`/users/${id}`);
+    const apiData = response.data.data;
+
+    if (!apiData || !apiData.user) {
+      throw new Error('Usuario no encontrado');
     }
+
+    const user = apiData.user;
+    // Mapeo según reglas: idStatus: 1=Activo, 2=Inactivo, otros=Desconocido (se tratará como inactivo por seguridad)
+    return {
+      id: user.idUser,
+      name: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      active: user.idStatus === 1,
+      createdAt: user.creationDate,
+      role: normalizeRole(apiData.role),        // null o el rol proveniente de otra API
+      permissions: apiData.permissions || [],
+    };
   },
 
   /**
@@ -137,60 +116,52 @@ export const UserService = {
    * @returns {Promise<Object>} Usuario creado y normalizado
    */
   async create(userData) {
-    try {
-      const payload = {
-        fullName: userData.name,
-        email: userData.email,
-        phone: userData.phone ? Number(userData.phone) : null,
-        idRole: userData.roleId ?? null,
-      };
+    const payload = {
+      fullName: userData.name,
+      email: userData.email,
+      phone: userData.phone ? Number(userData.phone) : null,
+      idRole: userData.roleId ?? null,
+    };
 
-      const response = await apiClient.post('/users', payload);
+    const response = await apiClient.post('/users', payload);
 
-      const createdData = response.data.data ?? response.data.user ?? response.data;
-      const createdUser = createdData?.user ?? createdData;
+    const createdData = response.data.data ?? response.data.user ?? response.data;
+    const createdUser = createdData?.user ?? createdData;
 
-      return {
-        id: createdUser.idUser ?? createdUser.id,
-        name: createdUser.fullName ?? createdUser.name,
-        email: createdUser.email,
-        phone: createdUser.phone ?? null,
-        active:
-          createdUser.idStatus === 1 ||
-          createdUser.status?.id === 1 ||
-          createdUser.status?.name === 'Activo',
-        createdAt: createdUser.creationDate ?? createdUser.createdAt,
-        role: normalizeRole(createdData?.role ?? createdUser.role),
-        permissions: createdData?.permissions || [],
-      };
-    } catch (error) {
-      console.error('Error en create():', error);
-      throw error;
-    }
+    return {
+      id: createdUser.idUser ?? createdUser.id,
+      name: createdUser.fullName ?? createdUser.name,
+      email: createdUser.email,
+      phone: createdUser.phone ?? null,
+      active:
+        createdUser.idStatus === 1 ||
+        createdUser.status?.id === 1 ||
+        createdUser.status?.name === 'Activo',
+      createdAt: createdUser.creationDate ?? createdUser.createdAt,
+      role: normalizeRole(createdData?.role ?? createdUser.role),
+      permissions: createdData?.permissions || [],
+    };
   },
 
-/**
- * Actualiza un usuario (PUT soporta modificación parcial).
- * La API espera: { fullName?, email?, phone? }
- * @param {number|string} id
- * @param {Object} changes - Campos a modificar (name, email, phone)
- * @returns {Promise<Object>} Usuario actualizado y normalizado
- */
-async update(id, changes) {
-  try {
-    // Construir payload solo con los campos que soporta la API
+  /**
+   * Actualiza un usuario (PUT soporta modificación parcial).
+   * La API espera: { fullName?, email?, phone?, idRole? }
+   * @param {number|string} id
+   * @param {Object} changes - Campos a modificar (name, email, phone, roleId)
+   * @returns {Promise<Object>} Usuario actualizado y normalizado
+   */
+  async update(id, changes) {
     const payload = {};
-    if (changes.name !== undefined) payload.fullName = changes.name;
-    if (changes.email !== undefined) payload.email = changes.email;
-    if (changes.phone !== undefined) payload.phone = Number(changes.phone); // convertir a número
-    if (changes.roleId !== undefined) {
-      payload.idRole = changes.roleId ?? null;
-    }
+    if (changes.name !== undefined)   payload.fullName = changes.name;
+    if (changes.email !== undefined)  payload.email    = changes.email;
+    if (changes.phone !== undefined)  payload.phone    = Number(changes.phone);
+    if (changes.roleId !== undefined) payload.idRole   = changes.roleId ?? null;
 
     const response = await apiClient.put(`/users/${id}`, payload);
+
     // La API devuelve: { success, message, data: { user, role, permissions } }
     const { user, role, permissions } = response.data.data;
-    // Normalizar al formato interno del frontend
+
     return {
       id: user.idUser,
       name: user.fullName,
@@ -201,26 +172,22 @@ async update(id, changes) {
       role: normalizeRole(role),        // null o rol desde otra API
       permissions: permissions || [],
     };
-  } catch (error) {
-    console.error(`Error en update(${id}):`, error);
-    throw error;
-  }
-},
+  },
 
-/**
- * Cambia el estado (activo/inactivo) de un usuario.
- * Endpoint específico: PATCH /users/:id/status
- * @param {number|string} id
- * @param {boolean} active - true = activo, false = inactivo
- * @returns {Promise<Object>} Usuario actualizado y normalizado
- */
-async toggle(id, active) {
-  try {
+  /**
+   * Cambia el estado (activo/inactivo) de un usuario.
+   * Endpoint específico: PATCH /users/:id/status
+   * @param {number|string} id
+   * @param {boolean} active - true = activo, false = inactivo
+   * @returns {Promise<Object>} Usuario actualizado y normalizado
+   */
+  async toggle(id, active) {
     // Convertir booleano a idStatus: 1 = Activo, 2 = Inactivo
-    const idStatus = active ? 1 : 2;
-    const response = await apiClient.patch(`/users/${id}/status`, { idStatus });
+    const response = await apiClient.patch(`/users/${id}/status`, { idStatus: active ? 1 : 2 });
+
     // La API devuelve: { message, data: { id, name, email, phone, creationDate, status } }
     const updatedData = response.data.data;
+
     return {
       id: updatedData.id ?? updatedData.idUser,
       name: updatedData.name ?? updatedData.fullName,
@@ -231,14 +198,10 @@ async toggle(id, active) {
         updatedData.status?.name === 'Activo' ||
         updatedData.idStatus === 1,
       createdAt: updatedData.creationDate ?? updatedData.createdAt,
-      role: null,      // pendiente de integración con API de roles
-      permissions: [], // este endpoint no devuelve permisos
+      role: null,       // pendiente de integración con API de roles
+      permissions: [],  // este endpoint no devuelve permisos
     };
-  } catch (error) {
-    console.error(`Error en toggle(${id}):`, error);
-    throw error;
-  }
-},
+  },
 
   /**
    * Elimina un usuario permanentemente.
@@ -246,13 +209,8 @@ async toggle(id, active) {
    * @returns {Promise<void>}
    */
   async delete(id) {
-    try {
-      await apiClient.delete(`/users/${id}`);
-      // Sin contenido de retorno (204)
-    } catch (error) {
-      console.error(`Error en delete(${id}):`, error);
-      throw error;
-    }
+    await apiClient.delete(`/users/${id}`);
+    // Sin contenido de retorno (204)
   },
 };
 

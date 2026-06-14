@@ -21,6 +21,7 @@ function FormSelect({
   const selectedOption = options.find((option) => String(option.value) === String(value));
   const SelectedIcon = selectedOption?.icon || Icon;
   const selectedIconClassName = selectedOption?.iconClassName || 'text-gray-400';
+  const hasIcon = Boolean(SelectedIcon);
 
   const updateDropdownPosition = useCallback(() => {
     if (!wrapperRef.current) return;
@@ -83,7 +84,7 @@ function FormSelect({
         disabled={disabled}
         aria-label={ariaLabel || placeholder}
         className={`
-          w-full pl-10 pr-8 py-2.5 text-sm border rounded-lg outline-none
+          w-full ${hasIcon ? 'pl-10' : 'pl-4'} pr-8 py-2.5 text-sm border rounded-lg outline-none
           transition-colors duration-200 flex items-center justify-between gap-2
           ${error ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'}
           ${disabled ? 'bg-gray-100 text-gray-600 border-gray-300 cursor-not-allowed' : 'bg-white text-gray-700 cursor-pointer hover:border-[#004D77]'}

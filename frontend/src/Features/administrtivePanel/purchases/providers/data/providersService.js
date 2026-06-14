@@ -5,7 +5,7 @@
  * consumiendo la API backend.
  */
 
-import apiClient from '../../../settings/apiClient.js';
+import apiClient from '../../../../../setting/apiClient.js';
 
 export const providersService = {
   getAll: async (params = {}) => {

@@ -131,40 +131,31 @@ function ActiveToggle({
 
     if (isLoading) return;
 
-    const mensajeConfirm =
+    if (activo) {
+      const confirm =
+        await showConfirm(
 
-      activo
+          "warning",
 
-        ? "¿Está seguro que desea desactivar este usuario?"
+          "¿Está seguro que desea desactivar este usuario?",
 
-        : "¿Está seguro que desea activar este usuario?";
+          "",
 
-    const confirm =
-      await showConfirm(
+          {
 
-        "warning",
+            confirmButtonText:
+              "Desactivar",
 
-        mensajeConfirm,
+            cancelButtonText:
+              "Cancelar",
 
-        "",
+          }
 
-        {
+        );
 
-          confirmButtonText:
-
-            activo
-              ? "Desactivar"
-              : "Activar",
-
-          cancelButtonText:
-            "Cancelar",
-
-        }
-
-      );
-
-    if (!confirm?.isConfirmed)
-      return;
+      if (!confirm?.isConfirmed)
+        return;
+    }
 
     setIsLoading(true);
 

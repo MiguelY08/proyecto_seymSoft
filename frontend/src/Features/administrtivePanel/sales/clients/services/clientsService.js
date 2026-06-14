@@ -1,4 +1,4 @@
-import apiClient from '../../../settings/apiClient.js';
+import apiClient from '../../../../../setting/apiClient.js';
 
 export const SYSTEM_CLIENT_ID = 999999999;
 

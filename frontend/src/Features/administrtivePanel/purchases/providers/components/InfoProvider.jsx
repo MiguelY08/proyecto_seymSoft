@@ -217,7 +217,7 @@ function InfoProvider({ isOpen, onClose, provider }) {
           <DetailRow 
             icon={Clock} 
             label="Plazo devoluciones" 
-            value={provider.plazoDevoluciones || '—'} 
+            value={provider.plazoDevoluciones ? `${provider.plazoDevoluciones} Dia/s` : '—'} 
           />
 
           {/* Categorías - CORREGIDO: usar el string formateado */}

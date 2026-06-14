@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 import OrderSection from '../components/OrderSection';
 import ManagementSection from '../components/ManagementSection';
+import Spinner from '../../../../shared/spinner';
 
 import {
   getAllBanners,
@@ -23,11 +24,12 @@ import Permission from '../../roles/components/Permission';
 function Banner() {
   const [slides, setSlides] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actionMessage, setActionMessage] = useState('');
 
   // ─── Cargar banners desde API ───────────────────────────────────────────────
-  const fetchBanners = useCallback(async () => {
+  const fetchBanners = useCallback(async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
 
       const banners = await getAllBanners();
       const mappedBanners = mapBannersFromApi(banners);
@@ -36,7 +38,7 @@ function Banner() {
     } catch (error) {
       console.error('Error al cargar banners:', error);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, []);
 
@@ -62,8 +64,9 @@ function Banner() {
       }
 
       try {
+        setActionMessage('Subiendo banner...');
         await createBanner(file);
-        await fetchBanners();
+        await fetchBanners(false);
 
         return { ok: true };
       } catch (error) {
@@ -73,6 +76,8 @@ function Banner() {
           ok: false,
           error: error.response?.data?.message ?? 'Error al subir la imagen.',
         };
+      } finally {
+        setActionMessage('');
       }
     },
     [fetchBanners]
@@ -82,11 +87,14 @@ function Banner() {
   const handleDeleteImage = useCallback(
     async (id) => {
       try {
+        setActionMessage('Eliminando banner...');
         await deleteBanner(id);
-        await fetchBanners();
+        await fetchBanners(false);
       } catch (error) {
         console.error('Error al eliminar banner:', error);
         throw error;
+      } finally {
+        setActionMessage('');
       }
     },
     [fetchBanners]
@@ -99,11 +107,14 @@ function Banner() {
         const slide = slides.find((item) => item.id === id);
         const nextStatusId = getNextStatusId(slide?.activo);
 
+        setActionMessage(slide?.activo ? 'Desactivando banner...' : 'Activando banner...');
         await toggleBannerStatus(id, nextStatusId);
-        await fetchBanners();
+        await fetchBanners(false);
       } catch (error) {
         console.error('Error al actualizar estado:', error);
         throw error;
+      } finally {
+        setActionMessage('');
       }
     },
     [slides, fetchBanners]
@@ -115,11 +126,14 @@ function Banner() {
       try {
         const payload = buildReorderPayload(newOrderIds);
 
+        setActionMessage('Guardando orden...');
         await reorderActiveBanners(payload);
-        await fetchBanners();
+        await fetchBanners(false);
       } catch (error) {
         console.error('Error al reordenar banners:', error);
         throw error;
+      } finally {
+        setActionMessage('');
       }
     },
     [fetchBanners]
@@ -130,6 +144,16 @@ function Banner() {
   return (
     <Permission permission="banners.ver">
       <div className="flex flex-col gap-6 sm:gap-8 p-3 sm:p-4 lg:p-6 max-w-7xl mx-auto w-full">
+        {actionMessage && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+            <Spinner message={actionMessage} className="min-h-0" />
+          </div>
+        )}
+
+        {loading && slides.length === 0 ? (
+          <Spinner message="Cargando banners..." />
+        ) : (
+          <>
         <div className="flex flex-col gap-1">
           <h1 className="text-lg sm:text-xl font-bold text-[#004D77]">
             Gestión del carrusel
@@ -154,6 +178,8 @@ function Banner() {
           onToggle={handleToggleActive}
           loading={loading}
         />
+          </>
+        )}
       </div>
     </Permission>
   );

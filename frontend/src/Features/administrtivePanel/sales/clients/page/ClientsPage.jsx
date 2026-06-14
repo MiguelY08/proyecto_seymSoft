@@ -7,6 +7,8 @@ import InfoClient        from '../modals/InfoClient';
 import { useAlert }      from '../../../../shared/alerts/useAlert';
 import { clientsService } from '../services/clientsService';
 import Permission from "../../../configuration/roles/components/Permission";
+import Spinner from '../../../../shared/spinner';
+import { downloadClientsExcel } from '../helpers/excelHelper';
 
 
 const RECORDS_PER_PAGE = 13;
@@ -48,21 +50,23 @@ function ClientsPage() {
     const client = clients.find(c => c.id === id);
     const newStatus = client.active ? 'Inactivo' : 'Activo';
 
-    const result = await showConfirm(
-      'warning',
-      'Cambiar estado',
-      `¿Está seguro de cambiar el estado del cliente "${client.fullName}" a ${newStatus}?`,
-      { confirmButtonText: 'Sí, cambiar', cancelButtonText: 'Cancelar' }
-    );
+    if (client.active) {
+      const result = await showConfirm(
+        'warning',
+        'Cambiar estado',
+        `¿Está seguro de cambiar el estado del cliente "${client.fullName}" a ${newStatus}?`,
+        { confirmButtonText: 'Sí, cambiar', cancelButtonText: 'Cancelar' }
+      );
 
-    if (result.isConfirmed) {
-      try {
-        await clientsService.toggleActive(id);
-        await loadClients();
-        showSuccess('Estado cambiado', `El cliente ahora está ${newStatus}`);
-      } catch (error) {
-        showError('Error', error.message || 'No se pudo cambiar el estado');
-      }
+      if (!result?.isConfirmed) return;
+    }
+
+    try {
+      await clientsService.toggleActive(id);
+      await loadClients();
+      showSuccess('Estado cambiado', `El cliente ahora está ${newStatus}`);
+    } catch (error) {
+      showError('Error', error.message || 'No se pudo cambiar el estado');
     }
   };
 
@@ -79,6 +83,16 @@ function ClientsPage() {
   const handleNewClient = () => {
     setSelectedClient(null);
     setIsFormModalOpen(true);
+  };
+
+  const handleExportClients = async () => {
+    const result = await clientsService.getAll({
+      page: 1,
+      limit: totalRecords || RECORDS_PER_PAGE,
+      search: searchTerm,
+    });
+
+    return downloadClientsExcel(result.data);
   };
 
 const handleSave = async (formData) => {
@@ -111,7 +125,7 @@ const handleDelete = async (client) => {
       await loadClients();
       showSuccess('Cliente eliminado', 'El cliente ha sido eliminado');
     } catch (error) {
-      // 🔥 Mensaje específico según el error
+      //  Mensaje específico según el error
       if (error.message.includes('registros relacionados')) {
         showError(
           'No se puede eliminar', 
@@ -133,12 +147,7 @@ const handleDelete = async (client) => {
 
   if (loading && clients.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#004D77] mx-auto" />
-          <p className="mt-4 text-gray-600">Cargando clientes...</p>
-        </div>
-      </div>
+      <Spinner message="Cargando clientes..." />
     );
   }
 
@@ -149,6 +158,8 @@ const handleDelete = async (client) => {
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
           onNewClick={handleNewClient}
+          onExport={handleExportClients}
+          totalClients={totalRecords}
         />
 
         <div className="bg-white rounded-xl shadow-md">
