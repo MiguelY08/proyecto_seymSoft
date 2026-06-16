@@ -8,67 +8,92 @@ import PaymentsTable from "../components/PaymentsTable";
 import PaymentsPaginator from "../components/PaymentsPaginator";
 import ContactClientModal from "../components/ContactClientModal";
 
+import Spinner from "../../../../shared/spinner/Spinner";
+
 import { exportAccountsToExcel } from "../utils/paymentHelpers";
-import { initializePayments, getAccounts } from "../data/paymentsServices";
+
 import {
-  calculateSaldoCliente,
-  getClienteStatus,
-} from "../utils/paymentHelpers";
+  getCreditCustomers,
+  getCustomerContact,
+} from "../services/paymentsServices";
+
+import { mapCustomers } from "../mappers/paymentsMapper";
 
 export default function PaymentsPage() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const [loading, setLoading] = useState(true);
+
   const { showConfirm, showSuccess, showError } = useAlert();
 
   const [accounts, setAccounts] = useState([]);
+
   const [search, setSearch] = useState("");
+
   const [estado, setEstado] = useState("todos");
+
   const [currentPage, setCurrentPage] = useState(1);
+
   const [selectedAccount, setSelectedAccount] = useState(null);
 
   const itemsPerPage = 11;
 
   /* ===============================
-     Inicializar datos
+     CARGAR CLIENTES
+  ================================ */
+  const loadCustomers = async () => {
+    try {
+      setLoading(true);
+
+      const customers = await getCreditCustomers();
+
+      setAccounts(mapCustomers(customers));
+    } catch (error) {
+      console.error("Error cargando clientes:", error);
+
+      showError("Error", "No fue posible cargar los clientes.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  /* ===============================
+     INICIALIZAR
   ================================ */
   useEffect(() => {
-    initializePayments();
-    setAccounts(getAccounts());
+    loadCustomers();
   }, [location]);
 
-  useEffect(() => {
-    const handlePaymentsUpdate = () => {
-      setAccounts(getAccounts());
-    };
-    window.addEventListener("paymentsUpdated", handlePaymentsUpdate);
-    return () =>
-      window.removeEventListener("paymentsUpdated", handlePaymentsUpdate);
-  }, []);
-
   /* ===============================
-     Filtrado
+     FILTRADO
   ================================ */
   const filteredData = useMemo(() => {
     return accounts.filter((item) => {
-      const saldo = calculateSaldoCliente(item);
-      const status = getClienteStatus(item);
-      const credito = item.creditoAsignado ?? 0;
-      const disponible = Math.max(0, credito - saldo);
+      const saldo = item.saldo ?? 0;
 
-      // Filtrar por estado
-      if (estado !== "todos" && status !== estado) return false;
+      const status = item.estado ?? "al_dia";
+
+      const credito = item.creditoAsignado ?? 0;
+
+      const disponible = item.cupoDisponible ?? 0;
+
+      if (estado !== "todos" && status !== estado) {
+        return false;
+      }
 
       if (search) {
         const searchLower = search.toLowerCase();
-        const matchNombre = item.nombre.toLowerCase().includes(searchLower);
 
-        // Buscar también en números
+        const matchNombre = item.nombre?.toLowerCase().includes(searchLower);
+
         const matchNumeros =
           saldo.toString().includes(search) ||
           credito.toString().includes(search) ||
           disponible.toString().includes(search);
 
-        if (!matchNombre && !matchNumeros) return false;
+        if (!matchNombre && !matchNumeros) {
+          return false;
+        }
       }
 
       return true;
@@ -76,32 +101,25 @@ export default function PaymentsPage() {
   }, [accounts, search, estado]);
 
   /* ===============================
-     Formateo
+     FORMATEO
   ================================ */
   const formattedData = useMemo(() => {
-    return filteredData.map((item) => {
-      const saldo = calculateSaldoCliente(item);
-      const status = getClienteStatus(item);
-
-      return {
-        ...item,
-        valor: item.valorCredito,
-        saldo,
-        estado: status,
-      };
-    });
+    return filteredData.map((item) => ({
+      ...item,
+    }));
   }, [filteredData]);
 
   /* ===============================
-     Paginación
+     PAGINACIÓN
   ================================ */
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
+
     return formattedData.slice(start, start + itemsPerPage);
   }, [formattedData, currentPage]);
 
   /* ===============================
-     Navegación
+     NAVEGACIÓN
   ================================ */
   const handleView = (id) => {
     navigate(`/admin/sales/payments-and-credits/${id}`);
@@ -111,16 +129,24 @@ export default function PaymentsPage() {
     navigate(`/admin/sales/payments-and-credits/${id}/payment`);
   };
 
-  const handleContact = (item) => {
-    setSelectedAccount(item);
+  const handleContact = async (account) => {
+    try {
+      const contactData = await getCustomerContact(account.id);
+      console.log("CONTACT RESPONSE", contactData);
+      setSelectedAccount(contactData);
+    } catch (error) {
+      console.error("Error cargando contacto cliente:", error);
+      showError("Error", "No fue posible cargar la información de contacto.");
+    }
   };
 
   /* ===============================
-     Exportar Excel CON ALERTAS
+     EXPORTAR EXCEL
   ================================ */
   const handleExportExcel = async () => {
     if (!filteredData.length) {
       showError("Sin datos", "No hay registros para exportar.");
+
       return;
     }
 
@@ -130,31 +156,45 @@ export default function PaymentsPage() {
       "Se generará el archivo Excel con los datos filtrados.",
       {
         confirmButtonText: "Sí, exportar",
+
         cancelButtonText: "Cancelar",
-      }
+      },
     );
 
     if (!confirm.isConfirmed) return;
 
     try {
       const success = exportAccountsToExcel(filteredData);
+
       if (!success) {
         showError("Error", "No se pudo generar el archivo.");
+
         return;
       }
 
       showSuccess(
         "Exportación completada",
-        "El archivo Excel fue generado correctamente."
+        "El archivo Excel fue generado correctamente.",
       );
     } catch (error) {
-      showError("Error al exportar", "Ocurrió un problema al generar el Excel.");
+      showError(
+        "Error al exportar",
+        "Ocurrió un problema al generar el Excel.",
+      );
     }
   };
 
+  if (loading) {
+    return (
+      <Spinner
+        message="Cargando pagos y abonos..."
+      />
+    );
+  }
+
   return (
     <div className="p-6 font-lexend space-y-3">
-      {/* ENCABEZADO PERSONALIZADO */}
+      {/* ENCABEZADO */}
       <div className="flex items-center justify-between gap-3">
         {/* BUSCADOR */}
         <div className="relative flex-1 max-w-md">
@@ -164,10 +204,12 @@ export default function PaymentsPage() {
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
+
               setCurrentPage(1);
             }}
             className="w-full pl-4 pr-10 py-2.5 bg-white rounded-xl border border-gray-300 shadow-sm outline-none focus:ring-2 focus:ring-sky-900 text-black text-sm"
           />
+
           <svg
             className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600"
             fill="none"
@@ -183,21 +225,26 @@ export default function PaymentsPage() {
           </svg>
         </div>
 
-        {/* FILTROS Y EXPORTAR */}
+        {/* FILTROS */}
         <div className="flex items-end gap-4">
           <div className="w-48">
             <label className="block text-xs font-medium mb-1">Estado</label>
+
             <select
               value={estado}
               onChange={(e) => {
                 setEstado(e.target.value);
+
                 setCurrentPage(1);
               }}
               className="w-full px-3 py-2 bg-white rounded-xl border border-gray-300 shadow-sm focus:ring-2 focus:ring-sky-900 text-sm"
             >
               <option value="todos">Todos</option>
+
               <option value="al_dia">Al día</option>
+
               <option value="pendiente">Pendiente</option>
+
               <option value="vencido">Vencido</option>
             </select>
           </div>
@@ -238,10 +285,7 @@ export default function PaymentsPage() {
         <ContactClientModal
           account={selectedAccount}
           onClose={() => setSelectedAccount(null)}
-          onInterestApplied={() => {
-            const updated = getAccounts();
-            setAccounts(updated);
-          }}
+          onInterestApplied={() => loadCustomers()}
         />
       )}
     </div>

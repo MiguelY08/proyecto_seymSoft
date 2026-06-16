@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Eye, EyeOff } from "lucide-react"
-import { cancelPayment } from "../data/paymentsServices"
+import { cancelInstallment } from "../services/paymentsServices";
 import { useAlert } from "../../../../shared/alerts/useAlert"
 
 /*
@@ -53,44 +53,82 @@ export default function CancelPaymentModal({
     setErrors(prev => ({ ...prev, password: "" }))
   }
 
-  const handleSubmit = async () => {
+const handleSubmit = async () => {
 
-    const reasonError = validateReason(reason)
-    if (reasonError) {
-      setErrors({ reason: reasonError })
-      showWarning("Motivo inválido", reasonError)
-      return
-    }
+  const reasonError =
+    validateReason(reason);
 
-    const confirm = await showConfirm(
+  if (reasonError) {
+    setErrors({
+      reason: reasonError,
+    });
+
+    showWarning(
+      "Motivo inválido",
+      reasonError
+    );
+
+    return;
+  }
+
+  const confirm =
+    await showConfirm(
       "warning",
       "¿Confirmar anulación?",
       "Esta acción no se puede deshacer.",
-      { confirmButtonText: "Sí, anular", cancelButtonText: "Volver" }
-    )
+      {
+        confirmButtonText:
+          "Sí, anular",
+        cancelButtonText:
+          "Volver",
+      }
+    );
 
-    if (!confirm.isConfirmed) return
+  if (!confirm.isConfirmed)
+    return;
 
-    try {
-      // cancelPayment ahora recibe clienteId + facturaId + abonoId
-      cancelPayment(clienteId, facturaId, payment?.id, reason, password)
+  try {
 
-      showSuccess("Abono anulado", "El abono fue anulado correctamente.")
+    await cancelInstallment(
+      payment?.id,
+      reason,
+      password
+    );
 
-      if (onSuccess) onSuccess()
+    showSuccess(
+      "Abono anulado",
+      "El abono fue anulado correctamente."
+    );
 
-      setReason("")
-      setPassword("")
-      setErrors({})
-      setShowPassword(false)
-      onClose()
-
-    } catch (error) {
-      const message = error.message || "Contraseña incorrecta."
-      setErrors(prev => ({ ...prev, password: message }))
-      showError("Error", message)
+    if (onSuccess) {
+      await onSuccess();
     }
+
+    setReason("");
+    setPassword("");
+    setErrors({});
+    setShowPassword(false);
+
+    onClose();
+
+  } catch (error) {
+
+    const message =
+      error?.response?.data?.message ||
+      error?.message ||
+      "No fue posible anular el abono.";
+
+    setErrors((prev) => ({
+      ...prev,
+      password: message,
+    }));
+
+    showError(
+      "Error",
+      message
+    );
   }
+};
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">

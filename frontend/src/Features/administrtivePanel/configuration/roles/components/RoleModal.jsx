@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 
+import Spinner from "../../../../shared/spinner/Spinner";
+
 import PermissionsGrid from "./PermissionsGrid";
 
 import { validateRole } from "../validators/rolesValidators";
@@ -612,30 +614,28 @@ Permisos y Privilegios
 </h3>
 
 {
+  loadingPermissions
 
-loadingPermissions
+  ?
 
-?
+  <Spinner
+    message="Cargando permisos..."
+    className="min-h-[250px]"
+  />
 
-<div className="text-sm text-gray-500">
+  :
 
-Cargando permisos...
+  <PermissionsGrid
 
-</div>
+    permisosSistema={permisosSistema}
 
-:
+    permisosRol={permisosRol}
 
-<PermissionsGrid
+    onChange={handlePermissionsChange}
 
-permisosSistema={permisosSistema}
+    readOnly={isView}
 
-permisosRol={permisosRol}
-
-onChange={handlePermissionsChange}
-
-readOnly={isView}
-
-/>
+  />
 
 }
 

@@ -347,7 +347,7 @@ export default function ResetPasswordForm() {
     <div className="w-full max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
 
       {/* Header */}
-      <div className="bg-blue-900 py-4">
+      <div className="bg-[#004D77] py-4">
         <h2 className="font-lexend text-lg md:text-xl font-semibold text-white text-center">
           Restablecer Contraseña
         </h2>
@@ -485,17 +485,18 @@ export default function ResetPasswordForm() {
 
           {/* Botón Enviar */}
           <button
-            type="submit"
-            disabled={loading || codeStatus !== "valid"}
-            className={`w-full bg-blue-900 text-white py-2.5 rounded-lg transition cursor-pointer text-sm font-medium
-              ${loading || codeStatus !== "valid"
-                ? "opacity-70 cursor-not-allowed"
-                : "hover:bg-blue-800"
-              }
-            `}
-          >
-            {loading ? "Actualizando..." : "Restablecer Contraseña"}
-          </button>
+              type="submit"
+              disabled={loading || codeStatus !== "valid"}
+              className={`w-full py-2.5 rounded-lg transition cursor-pointer text-sm font-medium
+                ${
+                  loading || codeStatus !== "valid"
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-[#004D77] text-white hover:bg-[#003D5E]"
+                }
+              `}
+              >
+              {loading ? "Actualizando..." : "Restablecer Contraseña"}
+            </button>
 
           {/* Reenviar Código */}
           <div className="text-center mt-1">
