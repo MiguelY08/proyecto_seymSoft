@@ -733,10 +733,19 @@ function Products() {
                           />
                         </td>
                         <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                          <HighlightText
-                            text={String(row.totalStock || 0)}
-                            highlight={search}
-                          />
+                          <div className="mx-auto flex h-7 w-24 items-center justify-center gap-1.5 rounded-md border border-[#004D77]/15 bg-white px-2 shadow-sm">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[#004D77]/10 text-[#004D77]">
+                              <Package className="h-3.5 w-3.5" strokeWidth={2} />
+                            </span>
+                            <span className="min-w-0 truncate font-semibold text-gray-800">
+                              <HighlightText
+                                text={Number(row.totalStock || 0).toLocaleString(
+                                  "es-CO",
+                                )}
+                                highlight={search}
+                              />
+                            </span>
+                          </div>
                         </td>
                         <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                           <HighlightText
