@@ -89,58 +89,35 @@ export const mapInvoice = (invoice) => {
  * Backend -> Frontend
  * =====================================================
  */
-export const mapInstallment = (
-  installment
-) => ({
-  id:
-    installment.idInstallment,
+export const mapInstallment = (installment) => ({
+  id: installment.idInstallment,
 
-  nroAbono:
-    installment.idInstallment,
+  nroAbono: installment.idInstallment,
 
-  fecha:
-    installment.installmentDate,
+  fecha: installment.installmentDate,
 
-  monto:
-    Number(
-      installment.installmentAmount ?? 0
-    ),
+  monto: Number(installment.installmentAmount ?? 0),
 
-  capitalPagado:
-    Number(
-      installment.capitalPaid ?? 0
-    ),
+  capitalPagado: Number(installment.capitalPaid ?? 0),
 
-  interesPagado:
-    Number(
-      installment.interestPaid ?? 0
-    ),
+  interesPagado: Number(installment.interestPaid ?? 0),
 
-  medioPago:
-    installment.paymentMethod,
+  medioPago: installment.paymentMethod?.nombre || "N/A",  // ✅ CAMBIO: extrae .nombre
 
-  observacion:
-    installment.observations,
+  observacion: installment.observations,
 
-  anulado:
-    installment.isCancelled,
+  anulado: installment.isCancelled,
 
-  cancelledAt:
-    installment.cancelledAt,
+  cancelledAt: installment.cancelledAt,
 
-  motivoCancelacion:
-    installment.cancellationReason,
+  motivoCancelacion: installment.cancellationReason,
 
-  cancelledBy:
-    installment.cancelledBy
-      ? {
-          id:
-            installment.cancelledBy.id,
-          nombre:
-            installment.cancelledBy
-              .fullName,
-        }
-      : null,
+  cancelledBy: installment.cancelledBy
+    ? {
+        id: installment.cancelledBy.id,  // ← DTO tiene .id
+        nombre: installment.cancelledBy.nombre,  // ✅ CAMBIO: es .nombre no .fullName
+      }
+    : null,
 });
 
 /**

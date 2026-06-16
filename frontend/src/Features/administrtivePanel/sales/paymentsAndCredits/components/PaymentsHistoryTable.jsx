@@ -19,10 +19,19 @@ export default function PaymentHistoryTable({
   const formatCurrency = (value) =>
     new Intl.NumberFormat("es-CO").format(value || 0);
 
-  const formatDate = (date) => {
-    if (!date) return "-";
+  const formatDate = (dateString) => {
+    if (!dateString) {
+      return "";
+    }
 
-    return new Date(date).toLocaleDateString("es-CO");
+    const date = new Date(dateString);
+
+    return date.toLocaleDateString("es-CO", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      timeZone: "UTC",
+    });
   };
 
   return (
