@@ -23,7 +23,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     contactName:  '',
     contactPhone: '',
     clientCredit: '',
-    saldoFavor:   '',
     clientType:   '',
     rut:          '',
     ciuCode:      '',
@@ -145,7 +144,6 @@ const validateNumeric10_2 = (value, fieldName) => {
         contactName:  client.contactName  || '',
         contactPhone: client.contactPhone || '',
         clientCredit: client.clientCredit || '',
-        saldoFavor:   client.saldoFavor   || '0',
         clientType:   client.clientType   || '',
         rut:          client.rut          || '',
         ciuCode:      client.ciuCode      || '',
@@ -172,9 +170,9 @@ const validateNumeric10_2 = (value, fieldName) => {
     let newFormData = { ...formData, [name]: value };
     
     // ============================================
-    // VALIDACIÓN PARA clientCredit y saldoFavor
+    // VALIDACIÓN PARA clientCredit
     // ============================================
-    if (name === 'clientCredit' || name === 'saldoFavor') {
+    if (name === 'clientCredit') {
       // Formatear el valor según numeric(10,2)
       const formattedValue = formatNumericValue(value);
       newFormData[name] = formattedValue;
@@ -206,8 +204,8 @@ const validateNumeric10_2 = (value, fieldName) => {
     
     // Validaciones en tiempo real
     if (touched[name]) {
-      if (name === 'clientCredit' || name === 'saldoFavor') {
-        const numericError = validateNumeric10_2(newFormData[name], name === 'clientCredit' ? 'Crédito cliente' : 'Saldo a favor');
+      if (name === 'clientCredit') {
+        const numericError = validateNumeric10_2(newFormData[name], 'Crédito cliente');
         setErrors(prev => ({ ...prev, [name]: numericError }));
       } else if (name === 'ciuCode') {
         const ciuError = validateCiuCode(newFormData.ciuCode, newFormData.rut);
@@ -224,8 +222,8 @@ const validateNumeric10_2 = (value, fieldName) => {
     setTouched(prev => ({ ...prev, [name]: true }));
     
     // Validación específica para cada campo
-    if (name === 'clientCredit' || name === 'saldoFavor') {
-      const numericError = validateNumeric10_2(formData[name], name === 'clientCredit' ? 'Crédito cliente' : 'Saldo a favor');
+    if (name === 'clientCredit') {
+      const numericError = validateNumeric10_2(formData[name], 'Crédito cliente');
       setErrors(prev => ({ ...prev, [name]: numericError }));
       if (numericError) return;
     }
@@ -245,15 +243,13 @@ const handleSubmit = (e) => {
   
   // Validar campos numéricos
   const creditError = validateNumeric10_2(formData.clientCredit, 'Crédito cliente');
-  const saldoError = validateNumeric10_2(formData.saldoFavor, 'Saldo a favor');
   
-  if (creditError || saldoError) {
+  if (creditError) {
     setErrors({
       ...errors,
-      clientCredit: creditError || '',
-      saldoFavor: saldoError || ''
+      clientCredit: creditError || ''
     });
-    setTouched(prev => ({ ...prev, clientCredit: true, saldoFavor: true }));
+    setTouched(prev => ({ ...prev, clientCredit: true }));
     return;
   }
   
@@ -287,7 +283,6 @@ const handleSubmit = (e) => {
     contactPhone: formData.contactPhone,
     clientType: formData.clientType,
     clientCredit: formData.clientCredit || '0',
-    saldoFavor: formData.saldoFavor || '0',
     rut: formData.rut,
     ciuCode: formData.rut === 'no' ? '' : (formData.ciuCode || '')
   };
@@ -606,26 +601,6 @@ const handleSubmit = (e) => {
                   />
                   <ErrorMsg field="clientCredit" />
                   <p className="text-[10px] text-gray-400 mt-0.5"></p>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <Label>Saldo a favor</Label>
-                  <div className="relative">
-                    <input 
-                      type="text" 
-                      name="saldoFavor" 
-                      value={formData.saldoFavor} 
-                      onChange={handleChange} 
-                      onBlur={handleBlur} 
-                      placeholder="0" 
-                      autoComplete="off" 
-                      className={inputClass('saldoFavor')} 
-                    />
-                  </div>
-                  <ErrorMsg field="saldoFavor" />
-                  <p className="text-[10px] text-gray-400 mt-0.5">
-                    
-                  </p>
                 </div>
 
                 <div className="flex gap-2">

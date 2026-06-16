@@ -50,13 +50,13 @@ function TopBar({
     setOpenFilter(null);
   };
 
-  const handleDownloadExcel = () => {
+  const handleDownloadExcel = async () => {
     if (orders.length === 0) {
       showWarning('Sin registros', 'No hay pedidos que coincidan con los filtros actuales.');
       return;
     }
 
-    const success = exportOrdersToExcel(orders);
+    const success = await exportOrdersToExcel(orders);
     if (success) {
       showSuccess('Exportación exitosa', 'El archivo Excel se ha descargado correctamente.');
     }
@@ -330,9 +330,9 @@ function TopBar({
 
         <ButtonComponent
           onClick={() => navigate('new-order')}
-          title="Nuevo pedido"
+          title="Nuevo"
         >
-          <span className="hidden sm:inline">Nuevo pedido</span>
+          <span className="hidden sm:inline">Nuevo</span>
           <Plus className="w-4 h-4" strokeWidth={2} />
         </ButtonComponent>
       </div>

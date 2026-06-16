@@ -298,11 +298,10 @@ function TopBar({
         <div className="relative">
           <ButtonComponent
             onClick={() => setShowSaleTypeMenu((prev) => !prev)}
-            title="Nueva venta"
+            title="Nueva"
           >
-            <span className="hidden sm:inline">Nueva venta</span>
+            <span className="hidden sm:inline">Nueva</span>
             <Plus className="w-4 h-4" strokeWidth={2} />
-            <ChevronDown className="w-4 h-4" strokeWidth={2} />
           </ButtonComponent>
 
           {showSaleTypeMenu && (
@@ -310,14 +309,14 @@ function TopBar({
               <button
                 type="button"
                 onClick={() => handleNewSale('manual')}
-                className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-[#004D77]/10 hover:text-[#004D77]"
+                className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-[#004D77]/10 hover:text-[#004D77] cursor-pointer"
               >
                 Venta manual
               </button>
               <button
                 type="button"
                 onClick={() => handleNewSale('direct')}
-                className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-[#004D77]/10 hover:text-[#004D77]"
+                className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-[#004D77]/10 hover:text-[#004D77] cursor-pointer"
               >
                 Venta directa
               </button>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   X, IdCard, User, Mail, Phone,
   MapPin, UserCheck, CreditCard,
@@ -32,36 +32,6 @@ function DetailRow({ icon: Icon, label, value, fullWidth = false }) {
 
 function InfoClient({ isOpen, onClose, client }) {
   const [showGraph, setShowGraph] = useState(false);
-  const [montoOcupado, setMontoOcupado] = useState(0);
-  const [loadingMonto, setLoadingMonto] = useState(false);
-
-  const CREDIT_USAGE_KEY = 'client_credit_usage';
-
-  useEffect(() => {
-    if (client && isOpen) {
-      loadMontoOcupado(client.id);
-    }
-  }, [client, isOpen]);
-
-  const loadMontoOcupado = (clientId) => {
-    setLoadingMonto(true);
-    try {
-      const storedData = localStorage.getItem(CREDIT_USAGE_KEY);
-      const usageData = storedData ? JSON.parse(storedData) : {};
-      const clientUsage = usageData[clientId];
-      setMontoOcupado(clientUsage?.occupiedAmount || 0);
-    } catch (error) {
-      console.error('Error al cargar monto ocupado:', error);
-      setMontoOcupado(0);
-    } finally {
-      setLoadingMonto(false);
-    }
-  };
-
-  const getCreditoDisponible = () => {
-    const creditoTotal = parseInt(client?.clientCredit) || 0;
-    return creditoTotal - montoOcupado;
-  };
 
   if (!isOpen || !client) return null;
 
@@ -80,11 +50,12 @@ function InfoClient({ isOpen, onClose, client }) {
     'por paca': 'bg-orange-50 text-orange-700 border-orange-200',
   }[(client.clientType || '').toLowerCase()] || 'bg-gray-50 text-gray-600 border-gray-200';
 
-  const creditoTotal = parseInt(client.clientCredit) || 0;
-  const disponible = getCreditoDisponible();
+  const creditoTotal = Number(client.assignedCredit ?? client.clientCredit ?? 0);
+  const montoOcupado = Number(client.usedCredit ?? 0);
+  const disponible = Number(client.availableCredit ?? Math.max(0, creditoTotal - montoOcupado));
   
-  // ✅ Saldo a favor viene del backend en credit_balance
-  const saldoFavor = parseInt(client.credit_balance) || 0;
+  const deudaTotal = Number(client.totalDebt ?? montoOcupado);
+  const creditosActivos = Number(client.activeCredits ?? 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -155,7 +126,7 @@ function InfoClient({ isOpen, onClose, client }) {
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Crédito disponible</p>
                     <p className="text-sm font-bold text-blue-600">
-                      {loadingMonto ? '...' : formatCurrency(disponible)}
+                      {formatCurrency(disponible)}
                     </p>
                   </div>
                 </div>
@@ -167,7 +138,7 @@ function InfoClient({ isOpen, onClose, client }) {
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Monto ocupado</p>
                     <p className="text-sm font-bold text-amber-600">
-                      {loadingMonto ? '...' : (montoOcupado > 0 ? formatCurrency(montoOcupado) : '$ 0')}
+                      {montoOcupado > 0 ? formatCurrency(montoOcupado) : '$ 0'}
                     </p>
                   </div>
                 </div>
@@ -201,12 +172,16 @@ function InfoClient({ isOpen, onClose, client }) {
                     <Wallet className="w-3.5 h-3.5 text-green-600" strokeWidth={1.8} />
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Saldo a favor</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Deuda total</p>
                     <p className="text-sm font-bold text-green-600">
-                      {saldoFavor > 0 ? formatCurrency(saldoFavor) : '$ 0'}
+                      {deudaTotal > 0 ? formatCurrency(deudaTotal) : '$ 0'}
                     </p>
                   </div>
                 </div>
+              </div>
+
+              <div className="mt-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+                Creditos activos: <span className="text-gray-700">{creditosActivos}</span>
               </div>
             </div>
           </div>
