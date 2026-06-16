@@ -1,4 +1,4 @@
-import { X, Upload, Plus, ImagePlus, Trash2, Ruler } from 'lucide-react';
+import { X, Upload, Plus, ImagePlus, Trash2, Ruler, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import ProductsService from '../services/productsServices';
@@ -59,6 +59,7 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [unitMeasures, setUnitMeasures] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
   const [selectedSubcategoryIds, setSelectedSubcategoryIds] = useState([]);
   const [expandedCategoryIds, setExpandedCategoryIds] = useState({});
@@ -251,6 +252,8 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     const all = { ...validate(formData), ...validatePrices(formData) };
 
     if (Object.keys(all).length > 0) {
@@ -261,6 +264,7 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
     }
 
     try {
+      setIsSubmitting(true);
       const saved = await ProductsService.update(producto.id, {
         nombre: formData.nombre,
         referencia: formData.referencia,
@@ -285,6 +289,8 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
       onClose();
     } catch (error) {
       showError('Error', error.message || 'No se pudo actualizar el producto. Intenta de nuevo.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -298,8 +304,8 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="bg-white rounded-lg w-full max-w-6xl shadow-2xl relative z-10 max-h-[92vh] flex flex-col">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div className="bg-white rounded-xl w-full max-w-6xl shadow-2xl relative z-10 max-h-[92vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 flex-shrink-0" style={{ backgroundColor: '#004D77' }}>
           <h3 className="text-lg font-bold text-white">Editar producto</h3>
           <button type="button" onClick={onClose} className="text-white hover:text-gray-200 cursor-pointer"><X className="w-5 h-5" /></button>
@@ -462,7 +468,17 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
           </div>
 
           <div className="flex gap-3 pt-3 border-t mt-auto">
-            <button type="submit" className="flex-1 px-6 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors font-medium text-sm cursor-pointer" style={{ backgroundColor: '#004D77' }}>Guardar cambios</button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`flex-1 px-6 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors font-medium text-sm flex items-center justify-center gap-2 ${
+                isSubmitting ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'
+              }`}
+              style={{ backgroundColor: '#004D77' }}
+            >
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isSubmitting ? 'Cargando...' : 'Guardar cambios'}
+            </button>
             <button type="button" onClick={onClose} className="flex-1 px-6 py-2.5 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium text-sm cursor-pointer">Cancelar</button>
           </div>
         </form>
