@@ -173,10 +173,7 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
 
         <tbody>
           {data.map((row, index) => {
-            const rowBg =
-              index % 2 === 0
-                ? "bg-gray-100 hover:bg-blue-50"
-                : "bg-white hover:bg-blue-50";
+            const baseRowBg = index % 2 === 0 ? "bg-gray-100" : "bg-white";
             const { puedeDevolver, puedeAnular, deshabilitado } = getPermisos(
               row.estado,
             );
@@ -184,10 +181,10 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
             return (
               <tr
                 key={row.id || row.idSale || row.factura}
-                className={`transition-colors duration-150 ${rowBg}`}
+                className={`group transition-colors duration-150 ${baseRowBg} hover:bg-blue-50`}
               >
                 <td
-                  className={`sticky left-0 z-10 ${rowBg} px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap font-mono`}
+                  className={`sticky left-0 z-10 ${baseRowBg} group-hover:bg-blue-50 px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap font-mono transition-colors duration-150`}
                 >
                   {highlight(String(row.factura || row.id || "-"), search)}
                 </td>

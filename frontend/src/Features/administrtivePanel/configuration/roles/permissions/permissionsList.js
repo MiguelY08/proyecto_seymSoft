@@ -181,7 +181,7 @@ export const permissionsList = [
     id:15,
     modulo:"dashboard",
     acciones:[
-      {key:"ver", backend:"READ", label:"Ver"}
+      {key:"ver", backend:"READ", label:"Visualizar metricas de inicio"}
     ]
   }
 

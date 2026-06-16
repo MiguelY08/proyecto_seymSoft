@@ -330,9 +330,9 @@ function TopBar({
 
         <ButtonComponent
           onClick={() => navigate('new-order')}
-          title="Nuevo pedido"
+          title="Nuevo"
         >
-          <span className="hidden sm:inline">Nuevo pedido</span>
+          <span className="hidden sm:inline">Nuevo</span>
           <Plus className="w-4 h-4" strokeWidth={2} />
         </ButtonComponent>
       </div>

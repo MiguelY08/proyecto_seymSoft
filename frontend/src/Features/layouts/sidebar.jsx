@@ -18,7 +18,6 @@ import {
   SlidersHorizontal,
   Menu,
   X,
-  LayoutDashboard,
   CreditCard,
 } from "lucide-react";
 
@@ -57,12 +56,6 @@ export default function Sidebar() {
       label: "Inicio",
       icon: Home,
       href: `${ADMIN_BASE}`
-    },
-    {
-      label: "Dashboard",
-      icon: LayoutDashboard,
-      permission: "dashboard.ver",
-      href: `${ADMIN_BASE}/dashboard`
     },
     {
       label: "Usuarios",

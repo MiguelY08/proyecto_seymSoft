@@ -202,6 +202,27 @@ const PRIVILEGE_LABELS = {
 
 };
 
+const getPrivilegeLabel = (
+  moduleName,
+  privilegeName
+) => {
+
+  if (
+    moduleName === "dashboard" &&
+    privilegeName === "READ"
+  ) {
+
+    return "Visualizar metricas de inicio";
+
+  }
+
+  return (
+    PRIVILEGE_LABELS[privilegeName] ||
+    privilegeName.replaceAll("_", " ")
+  );
+
+};
+
 // ─────────────────────────────────────────────
 // MAPEAR ROL API → FRONT
 // ─────────────────────────────────────────────
@@ -314,13 +335,10 @@ export const mapPermissionsFromApi = (data) => {
             action.id_privilege,
 
           label:
-
-            PRIVILEGE_LABELS[
+            getPrivilegeLabel(
+              moduleName,
               action.name_privilege
-            ] ||
-
-            action.name_privilege
-              .replaceAll("_", " ")
+            )
 
         }));
 

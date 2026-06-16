@@ -23,9 +23,12 @@ function PaymentsSection({
   onAddPayment,
   onRemovePayment,
   loading = false,
+  disabled = false,
   isEditMode = false,
   disallowDuplicateMethods = false,
   allowCredit = false,
+  creditAvailable = null,
+  creditAssigned = null,
 }) {
   const [showForm, setShowForm] = useState(false);
   const [newPayment, setNewPayment] = useState({
@@ -42,6 +45,10 @@ function PaymentsSection({
   const saldoPendiente = Math.max(0, roundMoney(totalRedondeado - totalPagado));
   const estaCompletado = totalPagado >= totalRedondeado && totalRedondeado > 0;
   const montoPreview = roundMoney(newPayment.monto);
+  const creditLimit = creditAvailable === null || creditAvailable === undefined
+    ? null
+    : roundMoney(creditAvailable);
+  const isCreditPayment = newPayment.metodoPago === METODOS_PAGO.CREDITO;
   const paymentMethodOptions = [
     { value: METODOS_PAGO.EFECTIVO, label: 'Efectivo' },
     { value: METODOS_PAGO.TRANSFERENCIA, label: 'Transferencia' },
@@ -66,7 +73,12 @@ function PaymentsSection({
 
   const handleMontoChange = (e) => {
     const value = e.target.value;
+    const amount = roundMoney(value);
     setNewPayment(prev => ({ ...prev, monto: value }));
+    if (isCreditPayment && creditLimit !== null && amount > creditLimit) {
+      setFormError(`El monto supera el cupo disponible (${formatCurrency(creditLimit)}).`);
+      return;
+    }
     setFormError('');
   };
 
@@ -84,6 +96,10 @@ function PaymentsSection({
     }
     if (!allowCredit && newPayment.metodoPago === METODOS_PAGO.CREDITO) {
       setFormError('El pago por credito no esta disponible para pedidos.');
+      return;
+    }
+    if (newPayment.metodoPago === METODOS_PAGO.CREDITO && creditLimit !== null && monto > creditLimit) {
+      setFormError(`El monto supera el cupo disponible (${formatCurrency(creditLimit)}).`);
       return;
     }
     if (
@@ -112,6 +128,7 @@ function PaymentsSection({
   const canRemovePayment = (pago) =>
     Boolean(onRemovePayment) &&
     !loading &&
+    !disabled &&
     !pago.locked &&
     !pago.isLocked &&
     !pago.persisted;
@@ -133,10 +150,10 @@ function PaymentsSection({
             <p className="text-xs text-gray-400">Gestión de pagos del pedido</p>
           </div>
         </div>
-        {!estaCompletado && (
+        {!estaCompletado && !disabled && (
           <button
             onClick={() => setShowForm(!showForm)}
-            disabled={loading}
+            disabled={loading || disabled}
             className="text-sm text-[#004D77] hover:bg-[#004D77]/10 transition-colors duration-200 flex items-center gap-1 px-2 py-1 rounded-md"
           >
             <Plus className="w-4 h-4" strokeWidth={1.8} />
@@ -165,7 +182,7 @@ function PaymentsSection({
         </div>
 
         {/* Formulario para agregar pago */}
-        {showForm && !estaCompletado && (
+        {showForm && !estaCompletado && !disabled && (
           <form onSubmit={handleSubmit} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
             <h3 className="text-sm font-medium mb-3">Nuevo abono</h3>
 
@@ -176,9 +193,20 @@ function PaymentsSection({
                 <FormSelect
                   value={newPayment.metodoPago}
                   options={availablePaymentMethodOptions}
-                  onChange={(value) => setNewPayment(prev => ({ ...prev, metodoPago: value }))}
+                  onChange={(value) => {
+                    setNewPayment(prev => ({ ...prev, metodoPago: value }));
+                    if (
+                      value === METODOS_PAGO.CREDITO &&
+                      creditLimit !== null &&
+                      montoPreview > creditLimit
+                    ) {
+                      setFormError(`El monto supera el cupo disponible (${formatCurrency(creditLimit)}).`);
+                      return;
+                    }
+                    setFormError('');
+                  }}
                   icon={CreditCard}
-                  disabled={loading}
+                  disabled={loading || disabled}
                   placeholder="Método"
                   ariaLabel="Método de pago"
                 />
@@ -197,12 +225,20 @@ function PaymentsSection({
                     onChange={handleMontoChange}
                     placeholder="0.00"
                     className={inputBaseClass}
-                    disabled={loading}
+                    disabled={loading || disabled}
                   />
                 </div>
                 <p className={`text-xs ${montoPreview > 0 ? 'text-[#004D77] font-semibold' : 'text-gray-400'}`}>
                   {montoPreview > 0 ? formatCurrency(montoPreview) : 'Ingresa un monto para ver el valor formateado.'}
                 </p>
+                {isCreditPayment && (
+                  <p className={`text-xs ${creditLimit !== null && montoPreview > creditLimit ? 'text-red-500 font-medium' : 'text-emerald-600 font-medium'}`}>
+                    Cupo disponible: {creditLimit !== null ? formatCurrency(creditLimit) : 'No disponible'}
+                    {creditAssigned !== null && creditAssigned !== undefined
+                      ? ` / asignado: ${formatCurrency(creditAssigned)}`
+                      : ''}
+                  </p>
+                )}
               </div>
 
               {/* Comprobante */}
@@ -216,7 +252,7 @@ function PaymentsSection({
                     onChange={(e) => setNewPayment(prev => ({ ...prev, comprobante: e.target.value }))}
                     placeholder="N° referencia"
                     className={inputBaseClass}
-                    disabled={loading}
+                    disabled={loading || disabled}
                   />
                 </div>
               </div>
@@ -231,13 +267,13 @@ function PaymentsSection({
                 type="button"
                 onClick={() => { setShowForm(false); setFormError(''); }}
                 className="px-4 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
-                disabled={loading}
+                disabled={loading || disabled}
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || disabled || Boolean(formError)}
                 className="px-4 py-2 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Guardando...' : 'Agregar abono'}

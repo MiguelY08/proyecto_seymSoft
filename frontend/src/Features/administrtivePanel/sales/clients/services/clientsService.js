@@ -97,8 +97,12 @@ export const clientsService = {
       contactPhone: client.contactPhone,
       clientType: client.clientType,
       clientCredit: client.clientCredit,
-      credit_balance: client.credit_balance,
-      saldoFavor: client.credit_balance,
+      assignedCredit: client.assignedCredit ?? client.clientCredit,
+      usedCredit: client.usedCredit,
+      availableCredit: client.availableCredit,
+      totalDebt: client.totalDebt,
+      activeCredits: client.activeCredits,
+      status: client.status,
       rut: client.rut,
       ciuCode: client.ciuCode,
       active: client.active,
@@ -120,7 +124,6 @@ export const clientsService = {
 
   create: async (clientData) => {
     const formattedClientCredit = validateAndFormatNumber(clientData.clientCredit);
-    const formattedCreditBalance = validateAndFormatNumber(clientData.saldoFavor || clientData.credit_balance);
     
     const payload = {
       personType: clientData.personType || '',
@@ -135,7 +138,6 @@ export const clientsService = {
       contactPhone: clientData.contactPhone || null,
       clientType: clientData.clientType || '',
       clientCredit: formattedClientCredit,
-      credit_balance: formattedCreditBalance,
       rut: clientData.rut || 'no',
       ciuCode: (clientData.ciuCode === 'No aplica' || !clientData.ciuCode) ? null : clientData.ciuCode
     };
@@ -164,12 +166,6 @@ export const clientsService = {
     
     if (clientData.clientCredit !== undefined) {
       payload.clientCredit = validateAndFormatNumber(clientData.clientCredit);
-    }
-    if (clientData.saldoFavor !== undefined) {
-      payload.credit_balance = validateAndFormatNumber(clientData.saldoFavor);
-    }
-    if (clientData.credit_balance !== undefined) {
-      payload.credit_balance = validateAndFormatNumber(clientData.credit_balance);
     }
     
     if (clientData.ciuCode !== undefined) {

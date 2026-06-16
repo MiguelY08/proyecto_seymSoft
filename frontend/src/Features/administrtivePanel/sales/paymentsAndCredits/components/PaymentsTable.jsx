@@ -63,7 +63,7 @@ export default function PaymentsTable({
             const status          = item.estado
             const cupoOcupado     = item.saldo ?? 0
             const creditoAsignado = item.creditoAsignado ?? 0
-            const cupoDisponible  = Math.max(0, creditoAsignado - cupoOcupado)
+            const cupoDisponible  = item.cupoDisponible ?? 0
             const pctOcupado      = creditoAsignado > 0
               ? Math.min(100, Math.round((cupoOcupado / creditoAsignado) * 100))
               : 0

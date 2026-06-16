@@ -10,6 +10,14 @@ export default function PermissionsGrid({
 
 }) {
 
+  const getModuleLabel = (moduleName) => {
+    if (moduleName === "dashboard") {
+      return "Inicio";
+    }
+
+    return moduleName;
+  };
+
   // ─────────────────────────────
   // TOGGLE ACCIÓN
   // ─────────────────────────────
@@ -252,7 +260,7 @@ export default function PermissionsGrid({
 
                   <h4 className="font-semibold text-sm">
 
-                    {modulo.modulo}
+                    {getModuleLabel(modulo.modulo)}
 
                   </h4>
 

@@ -3,7 +3,7 @@ import { useAuth } from "../../../../access/context/AuthContext";
 
 export function usePermissions() {
 
-  const { permissions } = useAuth();
+  const { permissions, role } = useAuth();
 
   // ─────────────────────────────────────
   // NORMALIZAR PERMISOS DEL BACKEND
@@ -100,6 +100,18 @@ export function usePermissions() {
 
     if (!permission) {
       return false;
+    }
+
+    const roleName =
+      role?.nameRole ||
+      role?.name ||
+      role?.role;
+
+    if (
+      permission === "dashboard.ver" &&
+      roleName === "Administrador"
+    ) {
+      return true;
     }
 
     return normalizedPermissions.includes(
