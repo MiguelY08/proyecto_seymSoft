@@ -165,6 +165,8 @@ function Products() {
           row.barcodes?.[0]?.barcode?.toLowerCase().includes(query) ||
           row.reference?.toLowerCase().includes(query) ||
           row.category?.name?.toLowerCase().includes(query) ||
+          row.unitMeasure?.name?.toLowerCase().includes(query) ||
+          row.unitMeasure?.abbreviation?.toLowerCase().includes(query) ||
           String(row.retailPrice).includes(query) ||
           String(row.totalStock).includes(query);
       }
@@ -288,6 +290,7 @@ function Products() {
         Referencia: product.reference || "N/A",
         Proveedor: product.provider || "N/A",
         Categorías: product.category?.name || "N/A",
+        Unidad: product.unitMeasure?.abbreviation || product.unitMeasure?.name || "N/A",
         Stock: product.totalStock ?? 0,
         "Precio Detalle": product.retailPrice ?? 0,
         "Precio Mayorista": product.wholesalePrice ?? 0,
@@ -309,6 +312,7 @@ function Products() {
           "Referencia",
           "Proveedor",
           "Categorías",
+          "Unidad",
           "Stock",
           "Precio Detalle",
           "Precio Mayorista",
@@ -327,8 +331,8 @@ function Products() {
 
       // Estilos para el título (merge cells)
       ws["!merges"] = [
-        { s: { r: 0, c: 0 }, e: { r: 0, c: 11 } }, // Merge título en toda la primera fila
-        { s: { r: 1, c: 0 }, e: { r: 1, c: 11 } }, // Merge fecha en toda la segunda fila
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } }, // Merge título en toda la primera fila
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 12 } }, // Merge fecha en toda la segunda fila
       ];
 
       // Ajustar ancho de columnas
@@ -338,6 +342,7 @@ function Products() {
         { wch: 15 }, // Referencia
         { wch: 25 }, // Proveedor
         { wch: 30 }, // Categorías
+        { wch: 14 }, // Unidad
         { wch: 10 }, // Stock
         { wch: 15 }, // Precio Detalle
         { wch: 15 }, // Precio Mayorista
@@ -573,6 +578,9 @@ function Products() {
                       Categoría/Sub
                     </th>
                     <th className="px-3 py-2.5 text-center text-xs font-semibold">
+                      Unidad
+                    </th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold">
                       Stock
                     </th>
                     <th className="px-3 py-2.5 text-center text-xs font-semibold">
@@ -595,6 +603,9 @@ function Products() {
                         : row.categories?.length > 0
                           ? row.categories.map((cat) => cat.name).join(", ")
                           : "";
+                    const unitMeasureDisplay = row.unitMeasure
+                      ? `${row.unitMeasure.name || ""}${row.unitMeasure.abbreviation ? ` (${row.unitMeasure.abbreviation})` : ""}`.trim()
+                      : "N/A";
                     return (
                       <tr
                         key={row.id}
@@ -618,6 +629,12 @@ function Products() {
                         <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                           <HighlightText
                             text={subcategoriaDisplay}
+                            highlight={search}
+                          />
+                        </td>
+                        <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                          <HighlightText
+                            text={unitMeasureDisplay}
                             highlight={search}
                           />
                         </td>

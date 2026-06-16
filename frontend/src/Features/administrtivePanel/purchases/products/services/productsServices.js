@@ -1,6 +1,11 @@
 import apiClient from '../../../../../setting/apiClient.js';
 
 export const ProductsService = {
+  async listUnitMeasures() {
+    const response = await apiClient.get('/products/unit-measures');
+    return response.data.data || [];
+  },
+
   async list(filters = {}) {
     const response = await apiClient.get('/products', { params: filters });
     return response.data.data || [];
@@ -28,7 +33,7 @@ export const ProductsService = {
     formData.append('precioColegas', data.precioColegas ? Number(data.precioColegas) : '');
     formData.append('precioPacas', data.precioPacas ? Number(data.precioPacas) : '');
     formData.append('ivaPercentage', data.ivaPercentage || 0);
-    formData.append('idUnitMeasure', data.idUnitMeasure || 2);
+    formData.append('idUnitMeasure', data.idUnitMeasure);
     formData.append('idCategorie', data.id_category || data.idCategorie || 1);
     formData.append('description', data.descripcion || data.description || '');
     formData.append('quantityPerPack', data.cantidadXPaca ? Number(data.cantidadXPaca) : 0);

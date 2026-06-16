@@ -143,6 +143,15 @@ function DetailProduct({ producto, isOpen, onClose }) {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <span className="font-semibold text-gray-700">Unidad:</span>
+                  <span className="text-gray-600">
+                    {producto.unitMeasure
+                      ? `${producto.unitMeasure.name || ''}${producto.unitMeasure.abbreviation ? ` (${producto.unitMeasure.abbreviation})` : ''}`.trim()
+                      : 'No especificada'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
                   <span className="font-semibold text-gray-700">Referencia:</span>
                   <span className="text-gray-600">{producto.reference}</span>
                 </div>
