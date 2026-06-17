@@ -57,7 +57,7 @@ export const CategoriesTable = ({
               <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Nombre Categoría</th>
               <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Subcategorías</th>
               <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Estado</th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Acciones</th>
+              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Funciones</th>
             </tr>
           </thead>
 

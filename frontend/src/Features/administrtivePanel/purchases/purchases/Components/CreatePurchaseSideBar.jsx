@@ -29,7 +29,7 @@ const CreateSidebar = ({
   providerTouched,
   setProviderTouched,
   openCreateProduct,
-  isFormModalOpen,
+  openCreateProvider,  // ← NUEVO PROP
   extraBarcodes = {},
   onExtraBarcodesChange,
 }) => {
@@ -234,8 +234,9 @@ const CreateSidebar = ({
                     className="bg-transparent outline-none text-sm w-full"
                   />
                 </div>
+                {/* ← BOTÓN CREAR PROVEEDOR CORREGIDO */}
                 <button
-                  onClick={openCreateProduct}
+                  onClick={openCreateProvider}  // ← Cambiado de openCreateProduct a openCreateProvider
                   className="flex items-center gap-1 px-3 py-1 border border-sky-700 text-[#004D77] bg-white hover:bg-sky-50 rounded-lg text-xs font-semibold transition-all"
                 >
                   Crear <Plus size={14} />

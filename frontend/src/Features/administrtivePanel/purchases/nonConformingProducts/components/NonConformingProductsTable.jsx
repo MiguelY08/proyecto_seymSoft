@@ -1,7 +1,6 @@
-
+// Features/administrtivePanel/purchases/nonConformingProducts/components/NonConformingProductsTable.jsx
 import { Info, XCircle, Ban } from "lucide-react";
 import Pagination from "../../../../shared/PaginationAdmin";
-import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 
 export const NonConformingProductsTable = ({
   currentData,
@@ -24,24 +23,12 @@ export const NonConformingProductsTable = ({
               <tr>
                 <th className="px-3 py-2 text-center font-semibold">#</th>
                 <th className="px-3 py-2 text-left font-semibold">Nombre</th>
-                <th className="px-3 py-2 text-center font-semibold">
-                  Código de Barras
-                </th>
-                <th className="px-3 py-2 text-center font-semibold">
-                  Categoría
-                </th>
-                <th className="px-3 py-2 text-center font-semibold">
-                  Cantidad Afectada
-                </th>
-                <th className="px-3 py-2 text-center font-semibold">
-                  Fecha de Detección
-                </th>
-                <th className="px-3 py-2 text-left font-semibold">
-                  Motivo del Reporte
-                </th>
-                <th className="px-3 py-2 text-center font-semibold">
-                  Acciones
-                </th>
+                <th className="px-3 py-2 text-center font-semibold">Código de Barras</th>
+                <th className="px-3 py-2 text-center font-semibold">Categoría</th>
+                <th className="px-3 py-2 text-center font-semibold">Cantidad Afectada</th>
+                <th className="px-3 py-2 text-center font-semibold">Fecha de Detección</th>
+                <th className="px-3 py-2 text-left font-semibold">Motivo del Reporte</th>
+                <th className="px-3 py-2 text-center font-semibold">Funciones</th>
               </tr>
             </thead>
 
@@ -60,60 +47,46 @@ export const NonConformingProductsTable = ({
                   <td className="px-3 py-2.5 text-center">
                     {highlightText(startIndex + index + 1)}
                   </td>
-
                   <td className="px-3 py-2.5">
                     {highlightText(report.nombre)}
                   </td>
-
                   <td className="px-3 py-2.5 text-center">
                     {highlightText(report.codigoBarras)}
                   </td>
-
                   <td className="px-3 py-2.5 text-center">
                     {highlightText(report.categoria)}
                   </td>
-
                   <td className="px-3 py-2.5 text-center">
                     {highlightText(report.cantidadAfectada)}
                   </td>
-
                   <td className="px-3 py-2.5 text-center">
                     {highlightText(report.fechaDeteccion)}
                   </td>
-
                   <td className="px-3 py-2.5">
                     {highlightText(report.motivo)}
                   </td>
-
                   <td className="px-3 py-2.5 text-center">
                     <div className="flex justify-center gap-3">
-
-                      
-                        <button
-                          onClick={() => handleViewDetails(report)}
-                          className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-125"
-                        >
-                          <Info size={16} />
-                        </button>
-
-                        <button
-                          onClick={() => {
-                              if (report.estado !== "Anulado") {
-                              handleCancel(report.id);
-                              }
-                          }}
-                          className={`transition-all duration-200 transform hover:scale-125 ${
-                              report.estado === "Anulado"
-                              ? "text-red-600 cursor-not-allowed"
-                              : "text-gray-400 hover:text-red-600"
-                          }`}
-                          >
-                          {report.estado === "Anulado" ? (
-                              <Ban size={16} />
-                          ) : (
-                              <XCircle size={16} />
-                          )}
-                          </button>
+                      <button
+                        onClick={() => handleViewDetails(report)}
+                        className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-125"
+                      >
+                        <Info size={16} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (report.estado !== "Anulado") {
+                            handleCancel(report.id);
+                          }
+                        }}
+                        className={`transition-all duration-200 transform hover:scale-125 ${
+                          report.estado === "Anulado"
+                            ? "text-red-600 cursor-not-allowed"
+                            : "text-gray-400 hover:text-red-600"
+                        }`}
+                      >
+                        {report.estado === "Anulado" ? <Ban size={16} /> : <XCircle size={16} />}
+                      </button>
                     </div>
                   </td>
                 </tr>
