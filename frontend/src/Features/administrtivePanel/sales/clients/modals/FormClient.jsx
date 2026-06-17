@@ -10,30 +10,101 @@ import { validateClientForm } from '../helpers/clientHelpers';
 import FormSelect from '../../../../shared/FormSelect';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 
-// Componente Mini Gráfica para el formulario (solo edición)
-function MiniFormGraph({ onExpand }) {
-  const [selectedYear, setSelectedYear] = useState(2024);
+// Componente Mini Gráfica para el formulario (solo edición) - CON DATOS REALES
+function MiniFormGraph({ clientId, onExpand }) {
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [totalValue, setTotalValue] = useState(0);
+  const [availableYears, setAvailableYears] = useState([]);
+  const [purchasesCache, setPurchasesCache] = useState(null);
 
-  const generateMockData = (year) => {
-    return [
-      { month: 'Ene', value: 30000000 },
-      { month: 'Feb', value: 18000000 },
-      { month: 'Mar', value: 15000000 },
-      { month: 'Abr', value: 7000000 },
-      { month: 'May', value: 12000000 },
-      { month: 'Jun', value: 13000000 },
-      { month: 'Jul', value: 17000000 },
-      { month: 'Ago', value: 9000000 },
-      { month: 'Sep', value: 6000000 },
-      { month: 'Oct', value: 20000000 },
-      { month: 'Nov', value: 14000000 },
-      { month: 'Dic', value: 19000000 },
-    ];
+  useEffect(() => {
+    if (clientId) {
+      loadPurchases();
+    }
+  }, [clientId]);
+
+  const loadPurchases = async () => {
+    setLoading(true);
+    try {
+      const { clientsService } = await import('../services/clientsService');
+      const purchasesData = await clientsService.getClientPurchases(clientId);
+      setPurchasesCache(purchasesData);
+      
+      if (purchasesData && purchasesData.byMonth) {
+        const years = [...new Set(purchasesData.byMonth.map(item => item.year))];
+        setAvailableYears(years.sort((a, b) => b - a));
+        
+        const defaultYear = years.length > 0 ? years[0] : new Date().getFullYear();
+        setSelectedYear(defaultYear);
+        
+        const filtered = purchasesData.byMonth.filter(item => item.year === defaultYear);
+        const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const completeData = monthNames.map(month => {
+          const existing = filtered.find(item => item.month === month);
+          return {
+            month,
+            value: existing ? existing.total : 0,
+            year: defaultYear
+          };
+        });
+        
+        setData(completeData);
+        setTotalValue(purchasesData.total || 0);
+      } else {
+        setData([]);
+        setTotalValue(0);
+      }
+    } catch (error) {
+      console.error('Error al cargar compras del cliente:', error);
+      setData([]);
+      setTotalValue(0);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const data = generateMockData(selectedYear);
-  const maxValue = Math.max(...data.map(d => d.value));
-  const totalValue = data.reduce((sum, d) => sum + d.value, 0);
+  const handleYearChange = (year) => {
+    setSelectedYear(year);
+    if (purchasesCache && purchasesCache.byMonth) {
+      const filtered = purchasesCache.byMonth.filter(item => item.year === year);
+      const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      const completeData = monthNames.map(month => {
+        const existing = filtered.find(item => item.month === month);
+        return {
+          month,
+          value: existing ? existing.total : 0,
+          year
+        };
+      });
+      setData(completeData);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-gray-50 rounded-xl border border-gray-200 p-3 h-32 flex items-center justify-center mt-2">
+        <Loader2 className="w-5 h-5 text-[#004D77] animate-spin" />
+        <span className="ml-2 text-xs text-gray-400">Cargando...</span>
+      </div>
+    );
+  }
+
+  if (!loading && data.length === 0) {
+    return (
+      <div className="bg-gray-50 rounded-xl border border-gray-200 p-3 cursor-pointer hover:shadow-md transition-shadow mt-2" onClick={onExpand}>
+        <div className="flex items-center justify-center h-16">
+          <p className="text-xs text-gray-400">Sin compras registradas</p>
+        </div>
+        <p className="text-[9px] text-gray-400 text-center mt-2">
+          Haz clic para ver gráfica completa
+        </p>
+      </div>
+    );
+  }
+
+  const maxValue = Math.max(...data.map(d => d.value), 1);
 
   return (
     <div className="bg-gray-50 rounded-xl border border-gray-200 p-3 cursor-pointer hover:shadow-md transition-shadow mt-2" onClick={onExpand}>
@@ -45,23 +116,24 @@ function MiniFormGraph({ onExpand }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="text-[9px] px-1 py-0.5 border border-gray-300 rounded bg-white"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <option value={2024}>2024</option>
-            <option value={2023}>2023</option>
-            <option value={2022}>2022</option>
-          </select>
+          {availableYears.length > 0 && (
+            <select
+              value={selectedYear}
+              onChange={(e) => handleYearChange(Number(e.target.value))}
+              className="text-[9px] px-1 py-0.5 border border-gray-300 rounded bg-white"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {availableYears.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          )}
           <div className="text-gray-400">
             <BarChart2 className="w-3.5 h-3.5" strokeWidth={1.8} />
           </div>
         </div>
       </div>
 
-      {/* Gráfica más larga - h-28 (112px) para que parezca el campo de correo */}
       <div className="flex items-end gap-0.5 h-28">
         {data.map((d, i) => (
           <div
@@ -341,59 +413,59 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     setErrors(prev => ({ ...prev, [name]: validationErrors[name] || '' }));
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  const creditError = validateNumeric10_2(formData.clientCredit, 'Crédito cliente');
-  if (creditError) {
-    setErrors({
-      ...errors,
-      clientCredit: creditError || ''
-    });
-    setTouched(prev => ({ ...prev, clientCredit: true }));
-    return;
-  }
+    const creditError = validateNumeric10_2(formData.clientCredit, 'Crédito cliente');
+    if (creditError) {
+      setErrors({
+        ...errors,
+        clientCredit: creditError || ''
+      });
+      setTouched(prev => ({ ...prev, clientCredit: true }));
+      return;
+    }
 
-  const ciuError = validateCiuCode(formData.ciuCode, formData.rut);
-  if (ciuError) {
-    setErrors(prev => ({ ...prev, ciuCode: ciuError }));
-    setTouched(prev => ({ ...prev, ciuCode: true }));
-    return;
-  }
+    const ciuError = validateCiuCode(formData.ciuCode, formData.rut);
+    if (ciuError) {
+      setErrors(prev => ({ ...prev, ciuCode: ciuError }));
+      setTouched(prev => ({ ...prev, ciuCode: true }));
+      return;
+    }
 
-  const validationErrors = validateClientForm(formData);
-  if (Object.keys(validationErrors).length > 0) {
-    setErrors(validationErrors);
-    setTouched(Object.keys(formData).reduce((acc, k) => ({ ...acc, [k]: true }), {}));
-    return;
-  }
+    const validationErrors = validateClientForm(formData);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      setTouched(Object.keys(formData).reduce((acc, k) => ({ ...acc, [k]: true }), {}));
+      return;
+    }
 
-  const submitData = {
-    personType: formData.personType,
-    documentType: formData.documentType,
-    document: formData.document,
-    firstName: formData.firstName,
-    lastName: formData.lastName,
-    address: formData.address,
-    phone: formData.phone,
-    email: formData.email,
-    contactName: formData.contactName,
-    contactPhone: formData.contactPhone,
-    clientType: formData.clientType,
-    clientCredit: formData.clientCredit || '0',
-    rut: formData.rut,
-    ciuCode: formData.rut === 'no' ? '' : (formData.ciuCode || '')
+    const submitData = {
+      personType: formData.personType,
+      documentType: formData.documentType,
+      document: formData.document,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      address: formData.address,
+      phone: formData.phone,
+      email: formData.email,
+      contactName: formData.contactName,
+      contactPhone: formData.contactPhone,
+      clientType: formData.clientType,
+      clientCredit: formData.clientCredit || '0',
+      rut: formData.rut,
+      ciuCode: formData.rut === 'no' ? '' : (formData.ciuCode || '')
+    };
+
+    try {
+      setSaving(true);
+      await onSave?.(submitData);
+      resetForm();
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   };
-
-  try {
-    setSaving(true);
-    await onSave?.(submitData);
-    resetForm();
-    onClose();
-  } finally {
-    setSaving(false);
-  }
-};
 
   if (!isOpen) return null;
 
@@ -729,9 +801,9 @@ const handleSubmit = async (e) => {
                   </div>
                 </div>
 
-                {/* MINI GRÁFICA - SOLO EN MODO EDICIÓN (toggle) */}
+                {/* MINI GRÁFICA - SOLO EN MODO EDICIÓN (toggle) CON DATOS REALES */}
                 {isEditing && (
-                  <MiniFormGraph onExpand={() => setShowGraph(!showGraph)} />
+                  <MiniFormGraph clientId={client?.id} onExpand={() => setShowGraph(!showGraph)} />
                 )}
               </div>
             </div>
@@ -772,13 +844,13 @@ const handleSubmit = async (e) => {
           </form>
         </div>
 
-        {/* Panel derecho - Gráfica grande */}
+        {/* Panel derecho - Gráfica grande con datos reales */}
         <div
           className="overflow-hidden shrink-0 transition-all duration-500 ease-in-out"
           style={{ width: showGraph ? '50%' : '0%', opacity: showGraph ? 1 : 0 }}
         >
           <div className="w-full h-full flex flex-col" style={{ minWidth: '360px' }}>
-            {isEditing && <GraphClient clientStartDate={client?.clientSince || '07/05/2023'} />}
+            {isEditing && <GraphClient clientId={client?.id} clientStartDate={client?.clientSince || '07/05/2023'} />}
           </div>
         </div>
 

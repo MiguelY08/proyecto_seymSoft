@@ -98,6 +98,11 @@ export const clientsService = {
     return response.data.data;
   },
 
+  getClientPurchases: async (clientId) => {
+    const response = await apiClient.get(`/clients/${clientId}/purchases`);
+    return response.data.data;
+  },
+
   create: async (clientData) => {
     const formattedClientCredit = validateAndFormatNumber(clientData.clientCredit);
     
@@ -165,8 +170,12 @@ export const clientsService = {
   },
 
   delete: async (id) => {
-    await apiClient.delete(`/clients/${id}`);
-    return true;
+    try {
+      const response = await apiClient.delete(`/clients/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   },
 
   toggleActive: async (id) => {

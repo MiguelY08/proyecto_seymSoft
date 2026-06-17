@@ -24,6 +24,7 @@ import { useAuth } from "../access/context/AuthContext";
 import { useAlert } from "../shared/alerts/useAlert";
 import { useCart } from "../shared/Context/Cartcontext";
 import { useFavorites } from "../shared/Context/Favoritescontext";
+import EditProfileForm from "../access/components/EditProfileForm";
 
 function HeaderLanding() {
   const {
@@ -56,7 +57,6 @@ function HeaderLanding() {
     setSearchQuery
   ] = useState("");
 
-
   const [
     menuOpen,
     setMenuOpen
@@ -70,6 +70,11 @@ function HeaderLanding() {
   const [
     profileModal,
     setProfileModal
+  ] = useState(false);
+
+  const [
+    isEditProfileOpen, // ✅ NUEVO
+    setIsEditProfileOpen
   ] = useState(false);
 
   const [
@@ -504,17 +509,20 @@ function HeaderLanding() {
                               onClick={handleGoToAdmin}
                               className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-[#004D77] hover:bg-gray-100 cursor-pointer transition-colors"
                             >
-                              <Store size={16} />
-                              Ir al panel
+                              <LayoutDashboard size={16} />
+                              Ir a Panel Adeministrativo
                             </button>
                           }
-                          <Link
-                            to="/perfil/editar"
-                            className="flex items-center gap-2.5 px-3.5 py-2 text-xs text-[#004D77] hover:bg-gray-100 transition-colors"
+                          <button
+                            onClick={() => {
+                              setIsEditProfileOpen(true);
+                              setProfileModal(false);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-[#004D77] hover:bg-gray-100 transition-colors cursor-pointer"
                           >
                             <SquarePen size={16} />
                             Editar Perfil
-                          </Link>
+                          </button>
                           <button
                             onClick={handleLogout}
                             disabled={isLoggingOut}
@@ -584,6 +592,14 @@ function HeaderLanding() {
             : "h-14 sm:h-16"
         }`}
       />
+
+      {/* MODAL EDITAR PERFIL */}
+      {isEditProfileOpen && (
+        <EditProfileForm 
+          onClose={() => setIsEditProfileOpen(false)}
+          isModal={true}
+        />
+      )}
     </>
   );
 }
@@ -678,4 +694,3 @@ const IconButton = ({
 );
 
 export default HeaderLanding;
-

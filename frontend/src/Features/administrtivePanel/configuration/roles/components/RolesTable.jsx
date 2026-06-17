@@ -45,14 +45,15 @@ const highlight = (text, term) => {
 };
 
 const formatDate = (dateString) => {
-
   if (!dateString) {
     return "";
   }
 
-  return new Date(dateString)
-    .toLocaleDateString("es-ES");
-
+  return new Date(dateString).toLocaleDateString("es-CO", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 };
 
 export default function RolesTable({
