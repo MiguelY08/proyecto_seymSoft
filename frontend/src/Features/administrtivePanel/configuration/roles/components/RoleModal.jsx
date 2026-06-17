@@ -25,6 +25,7 @@ export default function RoleModal({
 
 }) {
 
+  
   const {
 
     showSuccess,
@@ -37,6 +38,19 @@ export default function RoleModal({
 
   const today =
     new Date().toLocaleDateString();
+    const formatDate = (dateString) => {
+      if (!dateString) return "";
+
+      return new Date(dateString).toLocaleDateString(
+        "es-CO",
+        {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          timeZone: "UTC",
+        }
+      );
+    };
 
   const [nombre,setNombre] =
     useState("");
@@ -564,9 +578,9 @@ Fecha de Creación
 </label>
 
 <input
-value={roleData?.createdAt || today}
-disabled
-className="w-full mt-2 bg-gray-200 rounded-lg px-4 py-2 text-sm"
+  value={formatDate(roleData?.createdAt || today)}
+  disabled
+  className="w-full mt-2 bg-gray-200 rounded-lg px-4 py-2 text-sm"
 />
 
 </div>

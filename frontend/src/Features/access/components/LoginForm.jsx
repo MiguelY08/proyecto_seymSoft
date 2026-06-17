@@ -31,38 +31,37 @@ export default function LoginForm() {
     setErrors((prev) => ({ ...prev, [name]: validationErrors[name] }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    // Marcar todos como tocados
-    setTouched({ email: true, password: true });
+  setTouched({ email: true, password: true });
 
-    // Validar formulario completo
-    const validationErrors = validateLogin(formData);
+  const validationErrors = validateLogin(formData);
 
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      showWarning("Campos incompletos", "Por favor completa email y contraseña");
-      return;
+  if (Object.keys(validationErrors).length > 0) {
+    setErrors(validationErrors);
+    showWarning("Campos incompletos", "Por favor completa email y contraseña");
+    return;
+  }
+
+  try {
+    const result = await login(formData.email, formData.password);
+
+    if (result.success) {
+      // ESPERA AQUÍ para que se vea el spinner
+      
+      navigate(result.redirectTo);
+    } else {
+      setErrors({ general: result.error });
+      showError("Error de autenticación", result.error);
     }
 
-    try {
-      const result = await login(formData.email, formData.password);
-
-      if (result.success) {
-        // showSuccess se muestra en AuthContext
-        navigate(result.redirectTo);
-      } else {
-        setErrors({ general: result.error });
-        showError("Error de autenticación", result.error);
-      }
-
-    } catch (error) {
-      console.error("Error en handleSubmit:", error);
-      showError("Error inesperado", "No pudimos procesar tu login");
-      setErrors({ general: "Error inesperado" });
-    }
-  };
+  } catch (error) {
+    console.error("Error en handleSubmit:", error);
+    showError("Error inesperado", "No pudimos procesar tu login");
+    setErrors({ general: "Error inesperado" });
+  }
+};
 
   const inputStyle = (field) =>
     `w-full px-3 py-2 border rounded-lg text-sm outline-none transition-colors
