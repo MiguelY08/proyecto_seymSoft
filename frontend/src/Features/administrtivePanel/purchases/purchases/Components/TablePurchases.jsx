@@ -17,13 +17,27 @@ const highlightText = (text, search) => {
   );
 };
 
-const isWithinReturnPeriod = (fechaCompra) => {
+const isWithinReturnPeriod = (fechaCompra, maxReturnDate) => {
+  if (maxReturnDate) {
+    const hoy = new Date();
+    const maxDate = new Date(maxReturnDate);
+    hoy.setHours(0, 0, 0, 0);
+    maxDate.setHours(0, 0, 0, 0);
+    return hoy <= maxDate;
+  }
+  // Si no hay maxReturnDate, usar la lógica anterior (60 días)
   if (!fechaCompra) return false;
   const fecha = new Date(fechaCompra);
   const hoy = new Date();
   const diffTime = hoy - fecha;
   const diffDays = diffTime / (1000 * 60 * 60 * 24);
   return diffDays <= 60;
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return '-';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', day: '2-digit' });
 };
 
 export const PurchasesTable = ({
@@ -52,6 +66,7 @@ export const PurchasesTable = ({
                 <th className="px-3 py-2 text-center font-semibold">Proveedor</th>
                 <th className="px-3 py-2 text-center font-semibold">Cantidad</th>
                 <th className="px-3 py-2 text-center font-semibold">Precio</th>
+                <th className="px-3 py-2 text-center font-semibold">Fecha límite devolución</th>
                 <th className="px-3 py-2 text-center font-semibold">Estado</th>
                 <th className="px-3 py-2 text-center font-semibold">Acciones</th>
               </tr>
@@ -60,22 +75,26 @@ export const PurchasesTable = ({
             <tbody>
               {!currentData.length ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-sm text-gray-400">
+                  <td colSpan={9} className="py-8 text-center text-sm text-gray-400">
                     No se encontraron compras.
                   </td>
                 </tr>
               ) : (
                 currentData.map((compra, index) => {
                   const recordNumber = startIndex + index + 1;
-                  const canReturn = isWithinReturnPeriod(compra.fechaCompra);
+                  const canReturn = isWithinReturnPeriod(compra.fechaCompra, compra.maxReturnDate);
                   const isAnnulled = compra.estado === "Anulada";
 
                   let returnTitle = "Registrar devolución";
                   if (isAnnulled) {
                     returnTitle = "No se puede devolver una compra anulada";
                   } else if (!canReturn) {
-                    returnTitle = "La compra tiene más de 2 meses, no se puede generar devolución";
+                    returnTitle = compra.maxReturnDate 
+                      ? `La fecha límite de devolución era ${formatDate(compra.maxReturnDate)}`
+                      : "La compra tiene más de 2 meses, no se puede generar devolución";
                   }
+
+                  const isExpired = compra.maxReturnDate && new Date(compra.maxReturnDate) < new Date();
 
                   return (
                     <tr key={compra.id} className={`${index % 2 === 0 ? "bg-white hover:bg-gray-50" : "bg-gray-50 hover:bg-gray-100"}`}>
@@ -83,7 +102,6 @@ export const PurchasesTable = ({
                       <td className="px-3 py-2.5 text-center">{highlightText(compra.numeroFacturacion || "", search)}</td>
                       <td className="px-3 py-2.5 text-center">{compra.fechaCompra}</td>
                       <td className="px-3 py-2.5">{highlightText(compra.proveedor || "", search)}</td>
-                      {/* CANTIDAD - AHORA USA compra.cantidadProductos */}
                       <td className="px-3 py-2.5 text-center font-semibold">
                         {highlightText(compra.cantidadProductos?.toString() || "0", search)}
                       </td>
@@ -92,12 +110,20 @@ export const PurchasesTable = ({
                       </td>
                       <td className="px-3 py-2.5 text-center">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          isExpired ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                        }`}>
+                          {formatDate(compra.maxReturnDate)}
+                          {isExpired && " (Vencida)"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                           compra.estado === "Completada" ? "bg-green-100 text-green-700" :
                           compra.estado === "Anulada" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"
                         }`}>
                           {highlightText(compra.estado || "Devuelta", search)}
                         </span>
-                       </td>
+                      </td>
                       <td className="px-3 py-2.5 text-center">
                         <div className="flex justify-center gap-3">
                           <button onClick={() => handleViewDetail(compra)} className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-125" title="Ver detalle">
@@ -110,8 +136,8 @@ export const PurchasesTable = ({
                             <XCircle size={16} />
                           </button>
                         </div>
-                       </td>
-                     </tr>
+                      </td>
+                    </tr>
                   );
                 })
               )}
