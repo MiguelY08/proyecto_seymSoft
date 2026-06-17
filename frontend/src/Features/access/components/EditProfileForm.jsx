@@ -46,7 +46,7 @@ const PasswordField = ({ label, name, value, onChange, show, onToggle, touched, 
   </div>
 );
 
-function EditProfileForm({ onClose }) {
+function EditProfileForm({ onClose, isModal = false }) {
   const { user, updateProfile, logout, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -150,13 +150,23 @@ function EditProfileForm({ onClose }) {
 
   const handleCancel = () => {
     if (!isDirty) {
-      isAdminContext ? onClose?.() : navigate(-1);
+      // Si es modal, cierra el modal
+      if (isModal || isAdminContext) {
+        onClose?.();
+      } else {
+        // Si es página, navega atrás
+        navigate(-1);
+      }
       return;
     }
 
     showWarning("Cambios sin guardar", "Los cambios serán descartados");
     setTimeout(() => {
-      isAdminContext ? onClose?.() : navigate(-1);
+      if (isModal || isAdminContext) {
+        onClose?.();
+      } else {
+        navigate(-1);
+      }
     }, 1500);
   };
 
@@ -281,9 +291,11 @@ function EditProfileForm({ onClose }) {
         setTimeout(
           () => {
 
-            isAdminContext
-              ? onClose?.()
-              : navigate(-1);
+            if (isModal || isAdminContext) {
+              onClose?.();
+            } else {
+              navigate(-1);
+            }
 
           },
           1500
@@ -321,7 +333,7 @@ function EditProfileForm({ onClose }) {
 
   const formContent = (
     <>
-      <div className="flex items-center justify-between px-6 py-4 bg-blue-900 shrink-0">
+      <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
         <h2 className="text-white font-semibold text-lg">Editar Mi Perfil</h2>
         <button
           onClick={handleCancel}
@@ -443,8 +455,8 @@ function EditProfileForm({ onClose }) {
         <button
           onClick={handleSubmit}
           disabled={loading}
-          className={`flex-1 py-2.5 text-sm font-medium text-white bg-blue-900 rounded-lg transition-colors cursor-pointer
-            ${loading ? "opacity-70 cursor-not-allowed" : "hover:bg-blue-800"}
+          className={`flex-1 py-2.5 text-sm font-medium text-white bg-[#004D77] rounded-lg transition-colors cursor-pointer
+            ${loading ? "opacity-70 cursor-not-allowed" : "hover:bg-[#003A5C]"}
           `}
         >
           {loading ? "Guardando..." : "Guardar Cambios"}
@@ -462,7 +474,10 @@ function EditProfileForm({ onClose }) {
     </>
   );
 
-  if (isAdminContext) {
+  // ✅ Renderiza como modal si isModal=true O si está en ruta /admin
+  const shouldRenderAsModal = isModal || isAdminContext;
+
+  if (shouldRenderAsModal) {
     return (
       <div
         onClick={handleCancel}
@@ -478,6 +493,7 @@ function EditProfileForm({ onClose }) {
     );
   }
 
+  // Renderiza como página completa
   return (
     <div className="max-w-2xl w-full mx-auto bg-white rounded-2xl shadow-xl overflow-hidden my-6">
       {formContent}

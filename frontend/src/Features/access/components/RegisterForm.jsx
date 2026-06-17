@@ -98,7 +98,7 @@ export default function RegisterForm() {
   return (
     <div className="max-w-2xl w-full mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
 
-      <div className="bg-blue-900 py-4">
+      <div className="bg-[#004D77] py-4">
         <h2 className="font-lexend text-xl md:text-2xl font-semibold text-white text-center">
           Crear Cuenta
         </h2>
@@ -251,10 +251,10 @@ export default function RegisterForm() {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full bg-blue-900 text-white py-2.5 rounded-lg text-sm font-medium transition cursor-pointer
+              className={`w-full bg-[#004D77] text-white py-2.5 rounded-lg text-sm font-medium transition cursor-pointer
                 ${loading 
                   ? "opacity-70 cursor-not-allowed" 
-                  : "hover:bg-blue-800"
+                  : "hover:bg-[#003D5e]"
                 }
               `}
             >

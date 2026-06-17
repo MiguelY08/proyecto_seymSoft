@@ -1,11 +1,8 @@
 import {
-  calculateSaldoFactura,
   getTotalAbonadoFactura,
-  calculateSaldoCliente,
   getTotalCreditoCliente,
   getTotalAbonadoCliente,
-  calculateCupoOcupado
-} from "../utils/paymentHelpers"
+} from "../utils/paymentHelpers";
 
 /*
   Comprobante PDF del estado de cuenta completo de un cliente.
@@ -16,30 +13,43 @@ import {
     account → objeto cliente completo { nombre, documento, telefono, facturas[] }
 */
 export default function AccountReceipt({ account }) {
+  if (!account) return null;
 
-  if (!account) return null
-
-  const facturas      = account.facturas ?? []
-  const saldoTotal    = calculateSaldoCliente(account)
-  const totalCredito  = getTotalCreditoCliente(account)
-  const totalAbonado  = getTotalAbonadoCliente(account)
-  const cupoOcupado   = calculateCupoOcupado(account)
-  const creditoAsignado = account.creditoAsignado ?? 0
-  const cupoDisponible = Math.max(0, creditoAsignado - cupoOcupado)
-  const today         = new Date().toLocaleDateString("es-CO")
+  const facturas = account.facturas ?? [];
+  const saldoTotal = account.deudaTotal ?? 0;
+  const totalCredito = getTotalCreditoCliente(account);
+  const totalAbonado = getTotalAbonadoCliente(account);
+  const cupoOcupado = account.saldo ?? 0;
+  const creditoAsignado = account.creditoAsignado ?? 0;
+  const cupoDisponible =
+    account.cupoDisponible ?? Math.max(0, creditoAsignado - cupoOcupado);
+  const today = new Date().toLocaleDateString("es-CO");
 
   const formatCOP = (value) =>
     new Intl.NumberFormat("es-CO", {
       style: "currency",
       currency: "COP",
-      minimumFractionDigits: 0
-    }).format(value)
+      minimumFractionDigits: 0,
+    }).format(value);
 
   return (
     <div style={wrapperStyle}>
-
-      <div style={{ textAlign: "center", marginBottom: "30px", borderBottom: "2px solid #004D77", paddingBottom: "20px" }}>
-        <h2 style={{ fontSize: "24px", fontWeight: "700", color: "#004D77", margin: "0" }}>
+      <div
+        style={{
+          textAlign: "center",
+          marginBottom: "30px",
+          borderBottom: "2px solid #004D77",
+          paddingBottom: "20px",
+        }}
+      >
+        <h2
+          style={{
+            fontSize: "24px",
+            fontWeight: "700",
+            color: "#004D77",
+            margin: "0",
+          }}
+        >
           Estado de Cuenta — Comprobante Oficial
         </h2>
         <p style={{ fontSize: "14px", color: "#6B7280", margin: "8px 0 0 0" }}>
@@ -53,39 +63,41 @@ export default function AccountReceipt({ account }) {
       {/* DATOS DEL CLIENTE */}
       <h3 style={sectionTitle}>Datos del Cliente</h3>
       <div style={cardStyle}>
-        <Info label="Cliente"            value={account.nombre} />
-        <Info label="Documento"          value={account.documento} />
-        <Info label="Teléfono"           value={account.telefono} />
-        <Info label="Correo"             value={account.correo || "-"} />
-        <Info label="Crédito Asignado"   value={formatCOP(creditoAsignado)} />
-        <Info label="Crédito Utilizado"  value={formatCOP(cupoOcupado)} />
-        <Info label="Cupo Disponible"    value={formatCOP(cupoDisponible)} />
+        <Info label="Cliente" value={account.nombre} />
+        <Info label="Documento" value={account.documento} />
+        <Info label="Teléfono" value={account.telefono} />
+        <Info label="Correo" value={account.correo || "-"} />
+        <Info label="Crédito Asignado" value={formatCOP(creditoAsignado)} />
+        <Info label="Crédito Utilizado" value={formatCOP(cupoOcupado)} />
+        <Info label="Cupo Disponible" value={formatCOP(cupoDisponible)} />
       </div>
 
       {/* FACTURAS — una sección por cada factura */}
       {facturas.map((factura, fi) => {
-
-        const saldoFac    = calculateSaldoFactura(factura)
-        const abonadoFac  = getTotalAbonadoFactura(factura)
+        const saldoFac = factura.saldo ?? 0;
+        const abonadoFac = getTotalAbonadoFactura(factura);
 
         // Fecha de vencimiento: 2 meses desde la fecha del crédito
-        const dueDate = new Date(factura.fechaCredito)
-        dueDate.setMonth(dueDate.getMonth() + 2)
+        const dueDate = new Date(factura.fechaCredito);
+        dueDate.setMonth(dueDate.getMonth() + 2);
 
         return (
           <div key={factura.id} style={{ marginTop: "36px" }}>
-
             {/* Título de la factura */}
-            <h3 style={sectionTitle}>
-              Factura {factura.nroFactura}
-            </h3>
+            <h3 style={sectionTitle}>Factura {factura.nroFactura}</h3>
 
             {/* Resumen rápido de la factura */}
             <div style={{ ...cardStyle, marginBottom: "16px" }}>
-              <Info label="Valor crédito"    value={formatCOP(factura.valorCredito)} />
-              <Info label="Fecha crédito"    value={factura.fechaCredito} />
-              <Info label="Fecha vencimiento" value={dueDate.toLocaleDateString("es-CO")} />
-              <Info label="Saldo pendiente"  value={formatCOP(saldoFac)} />
+              <Info
+                label="Valor crédito"
+                value={formatCOP(factura.valorCredito)}
+              />
+              <Info label="Fecha crédito" value={factura.fechaCredito} />
+              <Info
+                label="Fecha vencimiento"
+                value={dueDate.toLocaleDateString("es-CO")}
+              />
+              <Info label="Saldo pendiente" value={formatCOP(saldoFac)} />
             </div>
 
             {/* Tabla de abonos de esta factura */}
@@ -103,21 +115,29 @@ export default function AccountReceipt({ account }) {
               <tbody>
                 {factura.abonos && factura.abonos.length > 0 ? (
                   factura.abonos.map((a, index) => (
-                    <tr key={a.id} style={{ backgroundColor: index % 2 === 0 ? "#FFFFFF" : "#F9FAFB" }}>
+                    <tr
+                      key={a.id}
+                      style={{
+                        backgroundColor:
+                          index % 2 === 0 ? "#FFFFFF" : "#F9FAFB",
+                      }}
+                    >
                       <td style={tdStyle}>#{a.nroAbono}</td>
                       <td style={tdStyle}>{a.fecha}</td>
                       <td style={tdStyle}>{formatCOP(a.monto)}</td>
                       <td style={tdStyle}>{a.medioPago ?? "-"}</td>
                       <td style={tdStyle}>{a.observacion || "-"}</td>
                       <td style={tdStyle}>
-                        <span style={{
-                          padding: "4px 12px",
-                          borderRadius: "20px",
-                          fontSize: "12px",
-                          fontWeight: "500",
-                          backgroundColor: a.anulado ? "#FEE2E2" : "#DCFCE7",
-                          color:           a.anulado ? "#991B1B" : "#166534"
-                        }}>
+                        <span
+                          style={{
+                            padding: "4px 12px",
+                            borderRadius: "20px",
+                            fontSize: "12px",
+                            fontWeight: "500",
+                            backgroundColor: a.anulado ? "#FEE2E2" : "#DCFCE7",
+                            color: a.anulado ? "#991B1B" : "#166534",
+                          }}
+                        >
                           {a.anulado ? "Anulado" : "Activo"}
                         </span>
                       </td>
@@ -125,7 +145,14 @@ export default function AccountReceipt({ account }) {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6" style={{ padding: "16px", textAlign: "center", color: "#6B7280" }}>
+                    <td
+                      colSpan="6"
+                      style={{
+                        padding: "16px",
+                        textAlign: "center",
+                        color: "#6B7280",
+                      }}
+                    >
                       Sin abonos registrados para esta factura.
                     </td>
                   </tr>
@@ -135,18 +162,26 @@ export default function AccountReceipt({ account }) {
 
             {/* Subtotal de la factura */}
             <div style={{ ...cardStyle, marginTop: "12px" }}>
-              <SummaryRow label="Valor crédito"  value={formatCOP(factura.valorCredito)} />
-              <SummaryRow label="Total abonado"  value={formatCOP(abonadoFac)} />
+              <SummaryRow
+                label="Valor crédito"
+                value={formatCOP(factura.valorCredito)}
+              />
+              <SummaryRow label="Total abonado" value={formatCOP(abonadoFac)} />
               <div style={totalRowStyle}>
                 <span style={{ fontWeight: "600" }}>Saldo factura:</span>
-                <span style={{ fontSize: "18px", fontWeight: "700", color: "#004D77" }}>
+                <span
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "700",
+                    color: "#004D77",
+                  }}
+                >
                   {formatCOP(saldoFac)}
                 </span>
               </div>
             </div>
-
           </div>
-        )
+        );
       })}
 
       {/* RESUMEN GLOBAL DEL CLIENTE */}
@@ -154,11 +189,16 @@ export default function AccountReceipt({ account }) {
         Resumen General del Cliente
       </h3>
       <div style={cardStyle}>
-        <SummaryRow label="Total crédito otorgado" value={formatCOP(totalCredito)} />
-        <SummaryRow label="Total abonado"           value={formatCOP(totalAbonado)} />
+        <SummaryRow
+          label="Total crédito otorgado"
+          value={formatCOP(totalCredito)}
+        />
+        <SummaryRow label="Total abonado" value={formatCOP(totalAbonado)} />
         <div style={totalRowStyle}>
           <span style={{ fontWeight: "600" }}>Saldo total pendiente:</span>
-          <span style={{ fontSize: "20px", fontWeight: "700", color: "#004D77" }}>
+          <span
+            style={{ fontSize: "20px", fontWeight: "700", color: "#004D77" }}
+          >
             {formatCOP(saldoTotal)}
           </span>
         </div>
@@ -166,13 +206,12 @@ export default function AccountReceipt({ account }) {
 
       {/* NOTA LEGAL */}
       <div style={footerStyle}>
-        Este comprobante certifica el estado de cuenta del cliente a la fecha de emisión.
-        Los abonos anulados no se incluyen en el cálculo del saldo.
+        Este comprobante certifica el estado de cuenta del cliente a la fecha de
+        emisión. Los abonos anulados no se incluyen en el cálculo del saldo.
         Documento generado automáticamente por el sistema SeymSoft.
       </div>
-
     </div>
-  )
+  );
 }
 
 /* ── Estilos ── */
@@ -185,14 +224,14 @@ const wrapperStyle = {
   color: "#374151",
   width: "210mm", // A4 width
   minHeight: "297mm", // A4 height
-  boxSizing: "border-box"
-}
+  boxSizing: "border-box",
+};
 
 const sectionTitle = {
   color: "#004D77",
   fontWeight: "600",
-  marginBottom: "12px"
-}
+  marginBottom: "12px",
+};
 
 const cardStyle = {
   border: "1px solid #E5E7EB",
@@ -202,8 +241,8 @@ const cardStyle = {
   gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
   gap: "16px",
   backgroundColor: "#F9FAFB",
-  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)"
-}
+  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+};
 
 const tableStyle = {
   width: "100%",
@@ -212,18 +251,18 @@ const tableStyle = {
   border: "1px solid #E5E7EB",
   borderRadius: "8px",
   overflow: "hidden",
-  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)"
-}
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+};
 
 const thStyle = {
   padding: "10px",
   textAlign: "left",
-  fontWeight: "500"
-}
+  fontWeight: "500",
+};
 
 const tdStyle = {
-  padding: "10px"
-}
+  padding: "10px",
+};
 
 const totalRowStyle = {
   display: "flex",
@@ -232,8 +271,8 @@ const totalRowStyle = {
   borderTop: "1px solid #E5E7EB",
   paddingTop: "12px",
   marginTop: "4px",
-  gridColumn: "1 / -1"
-}
+  gridColumn: "1 / -1",
+};
 
 const footerStyle = {
   marginTop: "50px",
@@ -242,8 +281,8 @@ const footerStyle = {
   fontSize: "12px",
   color: "#6B7280",
   textAlign: "center",
-  lineHeight: "1.6"
-}
+  lineHeight: "1.6",
+};
 
 function Info({ label, value }) {
   return (
@@ -251,14 +290,20 @@ function Info({ label, value }) {
       <p style={{ fontSize: "12px", color: "#9CA3AF" }}>{label}</p>
       <p style={{ fontWeight: "500" }}>{value}</p>
     </div>
-  )
+  );
 }
 
 function SummaryRow({ label, value }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        padding: "4px 0",
+      }}
+    >
       <span style={{ color: "#6B7280" }}>{label}:</span>
       <span style={{ fontWeight: "500" }}>{value}</span>
     </div>
-  )
+  );
 }

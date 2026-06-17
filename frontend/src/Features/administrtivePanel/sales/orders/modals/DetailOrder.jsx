@@ -42,18 +42,40 @@ function DetailRow({ icon: Icon, label, value, placeholder, highlight = false })
 
 // ─── StatusBanner ─────────────────────────────────────────────────────────────
 function StatusBanner({ order }) {
+  const formatDate = (dateValue) => {
+    if (!dateValue) return '';
+    const date = new Date(dateValue);
+    return isNaN(date.getTime()) ? dateValue : date.toLocaleDateString('es-CO');
+  };
+
   if (order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) {
+    const cancellationReason = order.cancellationReason ?? order.motivoCancelacion;
+    const cancelledAt = order.cancelledAt ?? order.fechaCancelacion;
+
     return (
       <div className="sticky top-0 z-10 mx-4 mt-4 flex items-start gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-lg shadow-sm">
         <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" strokeWidth={2} />
         <div>
           <p className="text-xs font-semibold text-red-600">Pedido cancelado</p>
           <p className="text-xs text-red-500 leading-relaxed mt-0.5">
-            {order.motivoCancelacion || 'Sin motivo registrado.'}
+            {cancellationReason || 'Sin motivo registrado.'}
           </p>
-          {order.fechaCancelacion && (
-            <p className="text-xs text-red-400 mt-0.5">Cancelado el {order.fechaCancelacion}</p>
+          {cancelledAt && (
+            <p className="text-xs text-red-400 mt-0.5">Cancelado el {formatDate(cancelledAt)}</p>
           )}
+        </div>
+      </div>
+    );
+  }
+  if (order.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO) {
+    return (
+      <div className="sticky top-0 z-10 mx-4 mt-4 flex items-start gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg shadow-sm">
+        <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" strokeWidth={2} />
+        <div>
+          <p className="text-xs font-semibold text-blue-600">Pedido entregado</p>
+          <p className="text-xs text-blue-500 leading-relaxed mt-0.5">
+            Este pedido ya fue entregado y no puede modificarse ni cancelarse.
+          </p>
         </div>
       </div>
     );
@@ -85,18 +107,28 @@ function DetailOrder({
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && order) {
-      const pagosPedido = PaymentService.getByPedidoId(order.id);
+    const loadPayments = async () => {
+      if (!isOpen || !order) return;
+      const pagosPedido = await PaymentService.getByPedidoId(order.id);
       setPagos(pagosPedido);
-      setTotalPagado(PaymentService.getTotalPagado(order.id));
+      setTotalPagado(await PaymentService.getTotalPagado(order.id));
 
-      if (order.asesorId) {
-        const asesor = UserService.findById(order.asesorId);
-        setAsesorNombre(asesor ? asesor.name : `ID: ${order.asesorId}`);
+      if (order.asesorNombre) {
+        setAsesorNombre(order.asesorNombre);
+      } else if (order.asesorId) {
+        const asesor = await UserService.findById(order.asesorId);
+        setAsesorNombre(
+          asesor?.fullName ??
+          asesor?.name ??
+          asesor?.user?.fullName ??
+          `ID: ${order.asesorId}`
+        );
       } else {
         setAsesorNombre('N/A');
       }
-    }
+    };
+
+    loadPayments();
   }, [isOpen, order]);
 
   if (!isOpen || !order) return null;
@@ -117,10 +149,12 @@ function DetailOrder({
 
   const fechaMostrar = formatDate(order.fechaPedido);
   const isCancelado = order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO;
+  const isEntregado = order.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO;
   const isListoYPagado = order.estadoLogistico === ESTADOS_LOGISTICOS.LISTO && order.pagoEstado === ESTADOS_PAGO.PAGADO;
-  const showEditButton = !isCancelado && !isListoYPagado && modo === 'pedido';
+  const showEditButton = !isCancelado && !isEntregado && !isListoYPagado && modo === 'pedido';
 
   const handleMarcarListo = async () => {
+    if (isCancelado || isEntregado) return;
     const result = await showConfirm(
       'info',
       'Marcar como listo',
@@ -133,11 +167,13 @@ function DetailOrder({
   };
 
   const handleCancelar = () => {
+    if (isCancelado || isEntregado) return;
     onCancel(order);
     onClose();
   };
 
   const handleEditClick = () => {
+    if (!showEditButton) return;
     onEdit(order);
     onClose();
   };
@@ -153,7 +189,6 @@ function DetailOrder({
 
   return (
     <div
-      onClick={onClose}
       style={{ transition: 'opacity 250ms ease' }}
       className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm
         ${visible ? 'opacity-100' : 'opacity-0'}`}
@@ -172,21 +207,12 @@ function DetailOrder({
           <h2 className="text-white font-semibold text-lg">
             {titulo}
           </h2>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleDownloadPDF}
-              className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
-              title="Descargar PDF"
-            >
-              <FileDown className="w-5 h-5" strokeWidth={1.8} />
-            </button>
-            <button
-              onClick={onClose}
-              className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" strokeWidth={2} />
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" strokeWidth={2} />
+          </button>
         </div>
 
         {/* Cuerpo */}
@@ -209,7 +235,9 @@ function DetailOrder({
               <DetailRow icon={User}       label="Cliente"    value={order.clienteNombre || 'No especificado'} />
               <DetailRow icon={Phone}      label="Teléfono"   value={order.clienteTelefono || 'No registrado'} />
               <DetailRow icon={Mail}       label="Correo"     value={order.clienteEmail || 'No registrado'} />
-              <DetailRow icon={UserCheck}  label="Asesor"     value={asesorNombre} />
+              {esModoVenta && (
+                <DetailRow icon={UserCheck} label="Asesor" value={asesorNombre} />
+              )}
               {!esModoVenta && (
                 <DetailRow icon={Tag}      label="Origen"     value={order.origen || ORIGENES.MANUAL} />
               )}
@@ -313,7 +341,7 @@ function DetailOrder({
               {/* Estados */}
               <div className="mt-4 pt-3 border-t border-gray-100">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs text-gray-500">Estado logístico</span>
+                  <span className="text-xs text-gray-500">Estado pedido</span>
                   <EstadoLogisticoBadgePill estado={order.estadoLogistico} />
                 </div>
                 <div className="flex justify-between items-center">
@@ -326,7 +354,7 @@ function DetailOrder({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
+        <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
           <button
             onClick={handleDownloadPDF}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 border border-gray-400 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
@@ -334,11 +362,12 @@ function DetailOrder({
             <FileDown className="w-4 h-4" strokeWidth={1.8} />
             Exportar PDF
           </button>
-
-          <div className="flex items-center gap-3">
-            <button onClick={onClose} className="px-6 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer">
-              Cerrar
-            </button>
+          <button
+            onClick={onClose}
+            className="px-6 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+          >
+            Cerrar
+          </button>
             {/* Acciones solo visibles en modo pedido */}
             {modo === 'pedido' && (
               <>
@@ -368,7 +397,6 @@ function DetailOrder({
                 )}
               </>
             )}
-          </div>
         </div>
       </div>
     </div>

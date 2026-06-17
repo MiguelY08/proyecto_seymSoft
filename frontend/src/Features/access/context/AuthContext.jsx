@@ -57,53 +57,52 @@ export const AuthProvider = ({ children }) => {
   // LOGIN
   // ═══════════════════════════════════════════════════════════
 
-  const login = async (email, password) => {
-    try {
-      setLoading(true);
-      setError(null);
+const login = async (email, password) => {
+  try {
+    setLoading(true);
+    setError(null);
 
-      const result = await loginService(email, password);
+    const result = await loginService(email, password);
 
-if (result.success) {
+    if (result.success) {
+      console.log("RESULT LOGIN:", result);
 
-  console.log("RESULT LOGIN:", result);
+      setUser(result.user);
+      setRole(result.role);
+      setPermissions(result.permissions || []);
+      setIsAuthenticated(true);
 
-  setUser(result.user);
-  setRole(result.role);
-  setPermissions(result.permissions || []);
+      showSuccess("¡Bienvenido!", `Hola ${result.user.fullName}`);
 
-  setIsAuthenticated(true);
-
-
-        showSuccess("¡Bienvenido!", `Hola ${result.user.fullName}`);
-
-        return {
-          success: true,
-          redirectTo: result.redirectTo || "/",
-        };
-      } else {
-        setError(result.error);
-        showError("Error de autenticación", result.error);
-
-        return {
-          success: false,
-          error: result.error,
-        };
-      }
-
-    } catch (err) {
-      const errorMessage = "Error al iniciar sesión";
-      setError(errorMessage);
-      showError("Error", errorMessage);
+      return {
+        success: true,
+        redirectTo: result.redirectTo || "/",
+      };
+    } else {
+      setError(result.error);
+      showError("Error de autenticación", result.error);
 
       return {
         success: false,
-        error: errorMessage,
+        error: result.error,
       };
-    } finally {
-      setLoading(false);
     }
-  };
+
+  } catch (err) {
+    const errorMessage = "Error al iniciar sesión";
+    setError(errorMessage);
+    showError("Error", errorMessage);
+
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  } finally {
+    // ✅ DELAY AQUÍ ANTES DE PONER FALSE
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setLoading(false);
+  }
+};
 
   // ═══════════════════════════════════════════════════════════
   // REGISTER - Acepta OBJETO { fullName, email, password, phone }

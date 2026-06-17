@@ -31,38 +31,37 @@ export default function LoginForm() {
     setErrors((prev) => ({ ...prev, [name]: validationErrors[name] }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    // Marcar todos como tocados
-    setTouched({ email: true, password: true });
+  setTouched({ email: true, password: true });
 
-    // Validar formulario completo
-    const validationErrors = validateLogin(formData);
+  const validationErrors = validateLogin(formData);
 
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      showWarning("Campos incompletos", "Por favor completa email y contraseña");
-      return;
+  if (Object.keys(validationErrors).length > 0) {
+    setErrors(validationErrors);
+    showWarning("Campos incompletos", "Por favor completa email y contraseña");
+    return;
+  }
+
+  try {
+    const result = await login(formData.email, formData.password);
+
+    if (result.success) {
+      // ESPERA AQUÍ para que se vea el spinner
+      
+      navigate(result.redirectTo);
+    } else {
+      setErrors({ general: result.error });
+      showError("Error de autenticación", result.error);
     }
 
-    try {
-      const result = await login(formData.email, formData.password);
-
-      if (result.success) {
-        // showSuccess se muestra en AuthContext
-        navigate(result.redirectTo);
-      } else {
-        setErrors({ general: result.error });
-        showError("Error de autenticación", result.error);
-      }
-
-    } catch (error) {
-      console.error("Error en handleSubmit:", error);
-      showError("Error inesperado", "No pudimos procesar tu login");
-      setErrors({ general: "Error inesperado" });
-    }
-  };
+  } catch (error) {
+    console.error("Error en handleSubmit:", error);
+    showError("Error inesperado", "No pudimos procesar tu login");
+    setErrors({ general: "Error inesperado" });
+  }
+};
 
   const inputStyle = (field) =>
     `w-full px-3 py-2 border rounded-lg text-sm outline-none transition-colors
@@ -177,10 +176,10 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className={`w-full bg-blue-900 text-white py-2 rounded-lg transition cursor-pointer mt-4 text-sm font-medium
+          className={`w-full bg-[#004D77] text-white py-2 rounded-lg transition cursor-pointer mt-4 text-sm font-medium
             ${loading 
               ? "opacity-70 cursor-not-allowed" 
-              : "hover:bg-blue-800"
+              : "hover:bg-[#003D5e]"
             }
           `}
         >
@@ -201,10 +200,10 @@ export default function LoginForm() {
             window.location.href = `${import.meta.env.VITE_API_BASE_URL}/auth/google`;
           }}
           disabled={loading}
-          className={`w-full flex items-center justify-center gap-2 border border-gray-300 text-gray-700 py-2 rounded-lg transition mt-4
+          className={`w-full flex cursor-pointer items-center justify-center gap-2 border border-gray-300 text-gray-700 py-2 rounded-lg transition mt-4
             ${loading 
               ? "opacity-70 cursor-not-allowed" 
-              : "hover:bg-gray-50"
+              : "hover:bg-gray-100"
             }
           `}
           aria-label="Iniciar sesión con Google"

@@ -45,7 +45,7 @@ export default function PaymentsTable({
             <th className="px-3 py-1 text-[11px]">Cupo Ocupado</th>
             <th className="px-3 py-1 text-[11px]">Cupo Disponible</th>
             <th className="px-3 py-1 text-[11px]">Estado</th>
-            <th className="px-3 py-1 text-[11px]">Funciones</th>
+            <th className="px-3 py-1 text-[11px]">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -63,7 +63,7 @@ export default function PaymentsTable({
             const status          = item.estado
             const cupoOcupado     = item.saldo ?? 0
             const creditoAsignado = item.creditoAsignado ?? 0
-            const cupoDisponible  = Math.max(0, creditoAsignado - cupoOcupado)
+            const cupoDisponible  = item.cupoDisponible ?? 0
             const pctOcupado      = creditoAsignado > 0
               ? Math.min(100, Math.round((cupoOcupado / creditoAsignado) * 100))
               : 0
@@ -104,7 +104,7 @@ export default function PaymentsTable({
                         }`}
                         style={{ width: `${pctOcupado}%` }}
                       />
-                    </div>
+                    </div> 
 
                     <span className="text-gray-400 text-[9px] leading-none">{pctOcupado}%</span>
                   </div>

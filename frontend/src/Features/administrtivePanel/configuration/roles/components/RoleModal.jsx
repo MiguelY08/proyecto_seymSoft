@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 
+import Spinner from "../../../../shared/spinner/Spinner";
+
 import PermissionsGrid from "./PermissionsGrid";
 
 import { validateRole } from "../validators/rolesValidators";
@@ -23,6 +25,7 @@ export default function RoleModal({
 
 }) {
 
+  
   const {
 
     showSuccess,
@@ -35,6 +38,19 @@ export default function RoleModal({
 
   const today =
     new Date().toLocaleDateString();
+    const formatDate = (dateString) => {
+      if (!dateString) return "";
+
+      return new Date(dateString).toLocaleDateString(
+        "es-CO",
+        {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          timeZone: "UTC",
+        }
+      );
+    };
 
   const [nombre,setNombre] =
     useState("");
@@ -562,9 +578,9 @@ Fecha de Creación
 </label>
 
 <input
-value={roleData?.createdAt || today}
-disabled
-className="w-full mt-2 bg-gray-200 rounded-lg px-4 py-2 text-sm"
+  value={formatDate(roleData?.createdAt || today)}
+  disabled
+  className="w-full mt-2 bg-gray-200 rounded-lg px-4 py-2 text-sm"
 />
 
 </div>
@@ -612,30 +628,28 @@ Permisos y Privilegios
 </h3>
 
 {
+  loadingPermissions
 
-loadingPermissions
+  ?
 
-?
+  <Spinner
+    message="Cargando permisos..."
+    className="min-h-[250px]"
+  />
 
-<div className="text-sm text-gray-500">
+  :
 
-Cargando permisos...
+  <PermissionsGrid
 
-</div>
+    permisosSistema={permisosSistema}
 
-:
+    permisosRol={permisosRol}
 
-<PermissionsGrid
+    onChange={handlePermissionsChange}
 
-permisosSistema={permisosSistema}
+    readOnly={isView}
 
-permisosRol={permisosRol}
-
-onChange={handlePermissionsChange}
-
-readOnly={isView}
-
-/>
+  />
 
 }
 

@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Navigate, Routes, Route } from "react-router-dom";
 import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
 
@@ -7,7 +7,7 @@ import LoginPage from "../../Features/access/pages/LoginPage.jsx";
 import RegisterPage from "../../Features/access/pages/RegisterPage.jsx";
 import ForgotPasswordPage from "../../Features/access/pages/ForgotPasswordPage.jsx";
 import ResetPasswordPage from "../../Features/access/pages/ResetPasswordPage.jsx";
-import EditProfilePage from "../../Features/access/pages/EditProfilePage.jsx";
+// import EditProfilePage from "../../Features/access/pages/EditProfilePage.jsx";
 import AuthCallback from "../../Features/access/pages/AuthCallback.jsx";
 
 /* ========= LANDING ========= */
@@ -35,9 +35,6 @@ import Users from "../../Features/administrtivePanel/users/pages/Users.jsx";
 import FormUser from "../../Features/administrtivePanel/users/components/FormUser.jsx";
 import InfoUser from "../../Features/administrtivePanel/users/components/InfoUser.jsx";
 
-//*INDICATORS */
-import IndicatorsPage from "../../Features/administrtivePanel/performance/indicators/pages/IndicatorsPage.jsx";
-
 /* PURCHASES */
 import CategoriesPage from "../../Features/administrtivePanel/purchases/categories/pages/CategoriesPage.jsx"; 
 import Products from "../../Features/administrtivePanel/purchases/products/pages/Products.jsx";
@@ -57,13 +54,11 @@ import OrdersLayout from "../../Features/administrtivePanel/sales/orders/pages/O
 import OrdersList from "../../Features/administrtivePanel/sales/orders/pages/OrdersList.jsx";
 import OrderForm from "../../Features/administrtivePanel/sales/orders/pages/OrdersForm.jsx"
 
-import Sales from "../../Features/administrtivePanel/sales/sales/pages/Sales.jsx";
-// import SaleForm from "../../Features/administrtivePanel/sales/sales/pages/SaleForm.jsx";
-import SaleForm from "../../Features/administrtivePanel/sales/sales/pages/SaleForm.jsx";
-// import SaleInfo from "../../Features/administrtivePanel/sales/sales/modals/SaleInfo.jsx";
-// import AnnularSale from "../../Features/administrtivePanel/sales/sales/modals/AnnularSale.jsx";
-import SaleInfo from "../../Features/administrtivePanel/sales/sales/modals/SaleInfo.jsx";
-import AnnularSale from "../../Features/administrtivePanel/sales/sales/modals/AnnularSale.jsx";
+import Sales from "../../Features/administrtivePanel/sales/vendings/pages/Sales.jsx";
+import SaleForm from "../../Features/administrtivePanel/sales/vendings/pages/SaleForm.jsx";
+import SaleEditForm from "../../features/administrtivePanel/sales/vendings/pages/SaleEditForm.jsx";
+import SaleInfo from "../../Features/administrtivePanel/sales/vendings/modals/SaleInfo.jsx";
+import AnnularSale from "../../Features/administrtivePanel/sales/vendings/modals/AnnularSale.jsx";
 
 import ReturnsPage from "../../Features/administrtivePanel/sales/returns/page/ReturnsPage.jsx";
 
@@ -114,13 +109,13 @@ const AppRouter = () => {
 
       <Route element={<PrivateRoute requireRole={false} />}>
         {/* Ruta para editar perfil, accesible para cualquier usuario autenticado */}
-        <Route path="/perfil/editar" element={<EditProfilePage />} />
+        {/* <Route path="/perfil/editar" element={<EditProfilePage />} /> */}
 
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<DashboardPage />} />
 
           {/* PERFORMANCE */}
-          <Route path="dashboard" element={<IndicatorsPage />} />
+          <Route path="dashboard" element={<Navigate to="/admin" replace />} />
 
           {/* USERS */}
           <Route path="users" element={<Users />} />
@@ -158,6 +153,7 @@ const AppRouter = () => {
           {/* SALES */}
           <Route path="sales" element={<Sales />} />
           <Route path="sales/form-sale" element={<SaleForm />} />
+          <Route path="sales/edit-sale" element={<SaleEditForm />} />
           <Route path="sales/info-sale" element={<SaleInfo />} />
           <Route path="sales/annular-sale" element={<AnnularSale />} />
 

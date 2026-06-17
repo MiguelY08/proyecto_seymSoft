@@ -45,14 +45,15 @@ const highlight = (text, term) => {
 };
 
 const formatDate = (dateString) => {
-
   if (!dateString) {
     return "";
   }
 
-  return new Date(dateString)
-    .toLocaleDateString("es-ES");
-
+  return new Date(dateString).toLocaleDateString("es-CO", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 };
 
 export default function RolesTable({
@@ -61,7 +62,7 @@ export default function RolesTable({
   onEdit,
   onView,
 
-  // ✅ NUEVO
+  //  NUEVO
   reloadRoles,
 
   search = ""
@@ -309,7 +310,7 @@ export default function RolesTable({
             </th>
 
             <th className="px-3 py-2.5 text-center text-xs font-semibold">
-              Funciones
+              Acciones
             </th>
 
           </tr>

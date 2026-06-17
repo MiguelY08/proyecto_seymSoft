@@ -15,6 +15,7 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
 
   const [productInfo, setProductInfo] = useState(null);
   const [loadingProduct, setLoadingProduct] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [codigoTouched, setCodigoTouched] = useState(false);
   const [cantidadTouched, setCantidadTouched] = useState(false);
   const [motivoTouched, setMotivoTouched] = useState(false);
@@ -28,12 +29,15 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
     return null;
   })();
 
-  // Validación de la cantidad
+  // Validación de la cantidad (incluye stock disponible en tiempo real)
   const cantidadError = (() => {
     if (!cantidadTouched) return null;
     if (!form.cantidad) return "La cantidad es obligatoria.";
     if (Number(form.cantidad) <= 0) return "La cantidad debe ser mayor a 0.";
     if (Number(form.cantidad) > 10000) return "Cantidad demasiado grande.";
+    if (productInfo && Number(form.cantidad) > productInfo.stock) {
+      return `Stock disponible: ${productInfo.stock}. No puedes reportar más de lo que hay en inventario.`;
+    }
     return null;
   })();
 
@@ -59,6 +63,8 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
       const product = await getProductByBarcode(form.codigo.trim());
       if (product) {
         setProductInfo(product);
+        // Re-validar la cantidad ya ingresada contra el nuevo stock encontrado
+        setCantidadTouched(true);
         showSuccess("Producto encontrado", `"${product.nombre}"`);
       } else {
         setProductInfo(null);
@@ -73,6 +79,9 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
   };
 
   const handleSubmit = async () => {
+    // Evita doble envío si ya hay una petición en curso
+    if (submitting) return;
+
     setCodigoTouched(true);
     setCantidadTouched(true);
     setMotivoTouched(true);
@@ -87,12 +96,13 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
       return;
     }
 
-    // Verificar stock disponible
+    // Verificar stock disponible (doble chequeo justo antes de enviar)
     if (productInfo.stock < Number(form.cantidad)) {
       showWarning("Stock insuficiente", `Stock disponible: ${productInfo.stock}, Cantidad solicitada: ${form.cantidad}`);
       return;
     }
 
+    setSubmitting(true);
     try {
       await createNonConforming({
         id_barcode: productInfo.id_barcode,
@@ -106,10 +116,13 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
       onClose();
     } catch (error) {
       showError("Error", error.message || "No se pudo guardar el reporte.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleCancel = () => {
+    if (submitting) return;
     onClose();
   };
 
@@ -155,6 +168,7 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
                   onBlur={() => setCodigoTouched(true)}
                   placeholder="Código de barras del producto"
                   className={inputClass(codigoError)}
+                  disabled={submitting}
                 />
                 {codigoTouched && codigoError && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -165,7 +179,7 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
               <button
                 type="button"
                 onClick={handleSearchProduct}
-                disabled={loadingProduct}
+                disabled={loadingProduct || submitting}
                 className="px-4 py-2 bg-[#0E5679] text-white rounded-xl hover:bg-[#0a435c] transition disabled:opacity-50"
               >
                 <Search size={18} />
@@ -203,6 +217,7 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
               <input
                 type="number"
                 min="1"
+                max={productInfo?.stock ?? undefined}
                 value={form.cantidad}
                 onChange={(e) => {
                   setForm({ ...form, cantidad: e.target.value });
@@ -211,6 +226,7 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
                 onBlur={() => setCantidadTouched(true)}
                 placeholder="Cantidad"
                 className={inputClass(cantidadError)}
+                disabled={submitting}
               />
               {cantidadTouched && cantidadError && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -238,6 +254,7 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
               onBlur={() => setMotivoTouched(true)}
               placeholder="Ingrese el motivo del reporte"
               className={inputClass(motivoError)}
+              disabled={submitting}
             />
             {motivoError && (
               <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
@@ -251,18 +268,19 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
         <div className="px-6 pb-6 flex gap-4">
           <button
             onClick={handleSubmit}
-            disabled={hasErrors || !productInfo}
+            disabled={hasErrors || !productInfo || submitting}
             className={`flex-1 py-2.5 text-sm font-medium text-white rounded-xl transition ${
-              hasErrors || !productInfo
+              hasErrors || !productInfo || submitting
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-[#0E5679] hover:bg-[#0a435c]"
             }`}
           >
-            Guardar
+            {submitting ? "Guardando..." : "Guardar"}
           </button>
           <button
             onClick={handleCancel}
-            className="flex-1 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-xl transition"
+            disabled={submitting}
+            className="flex-1 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-xl transition disabled:opacity-50"
           >
             Cancelar
           </button>

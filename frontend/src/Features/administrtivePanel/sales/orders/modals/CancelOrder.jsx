@@ -3,14 +3,47 @@ import React, { useState, useMemo } from 'react';
 import {
   X, XCircle, AlertTriangle, Package,
   Hash, Calendar, User, UserCheck, CreditCard, Tag, Truck, MapPin,
+  Loader2,
 } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
-import { useModalAnimation } from '../../../../shared/useModalAnimation';
-import OrdersService, { ESTADOS_LOGISTICOS } from '../services/ordersService';
-import { SalesServices } from '../../sales/services/salesServices';
+import { SalesServices } from '../../vendings/services/salesServices';
 
 const MOTIVO_MAX = 500;
 const MOTIVO_MIN = 10;
+const DEFAULT_IVA_PERCENTAGE = 19;
+
+const toNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const roundMoney = (value) =>
+  Math.round((Number(value) || 0) * 100) / 100;
+
+const calculateIncludedIva = (total, ivaPercentage = DEFAULT_IVA_PERCENTAGE) => {
+  const percentage = toNumber(ivaPercentage, DEFAULT_IVA_PERCENTAGE);
+  return roundMoney(toNumber(total) - (toNumber(total) / (1 + (percentage / 100))));
+};
+
+const getLineTotal = (item = {}) => {
+  const explicitTotal = item.total ?? item.totalLinea ?? item.lineTotal ?? item.subtotal;
+
+  if (explicitTotal !== undefined && explicitTotal !== null && explicitTotal !== '') {
+    return roundMoney(explicitTotal);
+  }
+
+  return roundMoney(toNumber(item.precioUnitario) * toNumber(item.cantidad));
+};
+
+const getLineIva = (item = {}) => {
+  const explicitIva = item.iva ?? item.ivaAmount;
+
+  if (explicitIva !== undefined && explicitIva !== null && explicitIva !== '') {
+    return roundMoney(explicitIva);
+  }
+
+  return calculateIncludedIva(getLineTotal(item), item.ivaPercentage);
+};
 
 // ─── DetailRow ──────────────────────────────────────────────────────────────
 function DetailRow({ icon: Icon, label, value }) {
@@ -38,17 +71,29 @@ function DetailRow({ icon: Icon, label, value }) {
 function CancelOrder({ 
   order,        // para pedidos
   sale,         // para ventas
-  onClose, 
+  onClose,
   onConfirm,
   contexto = 'pedido' // 'pedido' o 'venta'
 }) {
-  const { showSuccess } = useAlert();
-  const { visible, handleClose } = useModalAnimation(
-    contexto === 'pedido' ? '/admin/sales/orders' : '/admin/sales'
-  );
-
+  const { showSuccess, showError } = useAlert();
+  const [visible, setVisible] = useState(false);
   const [motivo, setMotivo] = useState('');
   const [touched, setTouched] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    const id = requestAnimationFrame(() => setVisible(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  const handleClose = () => {
+    if (isSubmitting) return;
+
+    setVisible(false);
+    setTimeout(() => {
+      onClose?.();
+    }, 250);
+  };
 
   const motivoError = touched && motivo.trim().length < MOTIVO_MIN
     ? `El motivo debe tener al menos ${MOTIVO_MIN} caracteres.`
@@ -56,7 +101,6 @@ function CancelOrder({
 
   // Determinar la entidad según el contexto
   const entidad = contexto === 'pedido' ? order : sale;
-  const id = entidad?.id;
   const numero = contexto === 'pedido' 
     ? (order?.numeroPedido || order?.id)
     : (sale?.factura || sale?.id);
@@ -84,17 +128,54 @@ function CancelOrder({
     : sale?.direccion;
   const items = contexto === 'pedido'
     ? (order?.productos ?? [])
-    : (sale?.items?.map(item => ({
-        id: item.product.id,
-        nombre: item.product.nombre,
-        cantidad: item.cantidad,
-        precioUnitario: item.product.precioDetalle,
+    : (sale?.items?.map((item, index) => ({
+        id: item.product?.id ?? item.id ?? index,
+        nombre: item.product?.nombre ?? item.nombre ?? 'Producto sin nombre',
+        cantidad: Number(item.cantidad ?? item.quantity ?? 0),
+        precioUnitario: Number(item.product?.precioDetalle ?? item.precioUnitario ?? 0),
+        subtotal: item.subtotal,
+        iva: item.iva,
+        ivaPercentage: item.ivaPercentage,
       })) ?? []);
 
-  // Calcular totales
-  const subtotal = useMemo(() => items.reduce((acc, i) => acc + (i.precioUnitario * i.cantidad), 0), [items]);
-  const iva = Math.round(subtotal * 0.19);
-  const total = subtotal + iva;
+  const totals = useMemo(() => {
+    const itemsTotal = roundMoney(items.reduce((acc, item) => acc + getLineTotal(item), 0));
+    const itemsIva = roundMoney(items.reduce((acc, item) => acc + getLineIva(item), 0));
+    const source = contexto === 'pedido' ? order : sale;
+    const sourceOrder = contexto === 'venta' ? sale?.order : null;
+
+    const providedTotal = toNumber(
+      source?.totalNumerico ??
+      source?.total ??
+      sourceOrder?.total
+    );
+    const totalValue = roundMoney(providedTotal || itemsTotal);
+
+    const providedIva = toNumber(
+      sourceOrder?.ivaAmount ??
+      sourceOrder?.iva ??
+      source?.iva ??
+      source?.ivaAmount
+    );
+    const ivaValue = roundMoney(providedIva || itemsIva || calculateIncludedIva(totalValue));
+
+    const providedSubtotal = toNumber(
+      sourceOrder?.subtotal ??
+      sourceOrder?.subtotalSinIva ??
+      source?.subtotalSinIva ??
+      source?.subtotalBase ??
+      source?.subtotal
+    );
+    const subtotalValue = roundMoney(providedSubtotal || Math.max(totalValue - ivaValue, 0));
+
+    return {
+      subtotal: subtotalValue,
+      iva: ivaValue,
+      total: totalValue,
+    };
+  }, [contexto, items, order, sale]);
+
+  const { subtotal, iva, total } = totals;
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('es-CO', {
@@ -113,13 +194,16 @@ function CancelOrder({
   };
 
   const handleConfirm = async () => {
+    if (isSubmitting) return;
+
     setTouched(true);
     if (motivo.trim().length < MOTIVO_MIN) return;
 
     try {
+      setIsSubmitting(true);
       if (contexto === 'pedido') {
         // Llamar al callback onConfirm proporcionado (que a su vez llama a OrdersService)
-        onConfirm(motivo.trim());
+        await onConfirm(motivo.trim());
       } else {
         // Anular venta a través de SalesServices
         await SalesServices.anular(sale.id, motivo.trim());
@@ -131,11 +215,11 @@ function CancelOrder({
       handleClose();
     } catch (error) {
       showError('Error', error.message || 'No se pudo completar la operación.');
+      setIsSubmitting(false);
     }
   };
 
   if (!entidad) {
-    handleClose();
     return null;
   }
 
@@ -147,7 +231,6 @@ function CancelOrder({
 
   return (
     <div
-      onClick={handleClose}
       style={{ transition: 'opacity 250ms ease' }}
       className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm
         ${visible ? 'opacity-100' : 'opacity-0'}`}
@@ -170,7 +253,15 @@ function CancelOrder({
               <p className="text-red-200 text-xs">{entidadLabel} {numero}</p>
             </div>
           </div>
-          <button onClick={handleClose} className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer">
+          <button
+            onClick={handleClose}
+            disabled={isSubmitting}
+            className={`text-white rounded-full p-1 transition-colors ${
+              isSubmitting
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:bg-white/20 cursor-pointer'
+            }`}
+          >
             <X className="w-5 h-5" strokeWidth={2} />
           </button>
         </div>
@@ -223,6 +314,7 @@ function CancelOrder({
                 <div className="relative">
                   <textarea
                     value={motivo}
+                    disabled={isSubmitting}
                     onChange={(e) => {
                       if (e.target.value.length <= MOTIVO_MAX) setMotivo(e.target.value);
                     }}
@@ -230,7 +322,9 @@ function CancelOrder({
                     placeholder={`Describe el motivo por el cual se ${contexto === 'pedido' ? 'cancela este pedido' : 'anula esta venta'}...`}
                     rows={4}
                     className={`w-full px-4 py-2.5 text-sm border rounded-lg outline-none resize-none text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
-                      motivoError
+                      isSubmitting
+                        ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                        : motivoError
                         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
                         : 'border-gray-300 focus:border-red-500 focus:ring-2 focus:ring-red-200'
                     }`}
@@ -285,7 +379,7 @@ function CancelOrder({
                           {formatCurrency(producto.precioUnitario)}
                         </span>
                         <span className="text-xs font-semibold text-gray-700 text-right tabular-nums">
-                          {formatCurrency(producto.precioUnitario * producto.cantidad)}
+                          {formatCurrency(getLineTotal(producto))}
                         </span>
                       </div>
                     ))}
@@ -326,16 +420,32 @@ function CancelOrder({
         <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
           <button
             onClick={handleClose}
-            className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+            disabled={isSubmitting}
+            className={`px-6 py-2.5 text-sm font-medium text-white rounded-lg transition-colors ${
+              isSubmitting
+                ? 'bg-gray-300 cursor-not-allowed'
+                : 'bg-gray-500 hover:bg-gray-600 cursor-pointer'
+            }`}
           >
-            Cancelar
+            Cerrar
           </button>
           <button
             onClick={handleConfirm}
-            className="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors cursor-pointer"
+            disabled={isSubmitting}
+            className={`flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition-colors ${
+              isSubmitting
+                ? 'bg-red-400 cursor-not-allowed'
+                : 'bg-red-600 hover:bg-red-700 cursor-pointer'
+            }`}
           >
-            <XCircle className="w-4 h-4" strokeWidth={2} />
-            Confirmar {contexto === 'pedido' ? 'cancelación' : 'anulación'}
+            {isSubmitting ? (
+              <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />
+            ) : (
+              <XCircle className="w-4 h-4" strokeWidth={2} />
+            )}
+            {isSubmitting
+              ? (contexto === 'pedido' ? 'Cancelando...' : 'Anulando...')
+              : `Confirmar ${contexto === 'pedido' ? 'cancelación' : 'anulación'}`}
           </button>
         </div>
       </div>

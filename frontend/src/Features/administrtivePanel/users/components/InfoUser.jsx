@@ -49,7 +49,7 @@ function InfoUser() {
     .join('');
 
   // Valor a mostrar para el rol (si es null o vacío, se muestra "Sin rol" o "Nulo")
-  const roleDisplay = user.role?.nameRole || 'Sin rol - Null';
+  const roleDisplay = user.role?.nameRole || user.role?.name || 'Sin rol';
 
   // Filas de información (se eliminó el campo de documento)
   const fields = [
@@ -62,7 +62,6 @@ function InfoUser() {
 
   return (
     <div
-      onClick={handleClose}
       style={{ transition: 'opacity 250ms ease' }}
       className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm
         ${visible ? 'opacity-100' : 'opacity-0'}`}
@@ -142,6 +141,7 @@ function InfoUser() {
           >
             Cerrar
           </button>
+
           {!isSystemUser && (
             <button
               onClick={handleEdit}
