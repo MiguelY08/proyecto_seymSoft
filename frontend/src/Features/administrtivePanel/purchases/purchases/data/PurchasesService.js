@@ -49,6 +49,7 @@ export const mapPurchaseToList = (purchase) => {
     cantidadProductos: purchase.totalQuantity || 0,
     precioTotal: purchase.totalAmount || 0,
     estado: mapStatusFromBackend(purchase.statusId, purchase.status),
+    maxReturnDate: purchase.maxReturnDate,  // ← FECHA MÁXIMA DE DEVOLUCIÓN
   };
 };
 
@@ -83,6 +84,7 @@ export const mapPurchaseToFrontend = (purchase) => {
     ivaTotal: details.reduce((sum, d) => sum + (d.ivaSubtotal || 0), 0),
     motivoAnulacion: purchase.cancellationReason || details.find(d => d.cancellationReason)?.cancellationReason,
     productos,
+    maxReturnDate: purchase.maxReturnDate,  // ← FECHA MÁXIMA DE DEVOLUCIÓN
   };
 };
 
@@ -203,6 +205,7 @@ export const getProviders = async () => {
       id: p.id,
       nombre: p.fullName || `${p.nameProvider} ${p.lastname || ''}`.trim(),
       documento: p.documentNumber,
+      maxReturnPeriod: p.maxReturnPeriod || 0,  // ← PLAZO DE DEVOLUCIÓN EN DÍAS
     }));
   } catch (error) {
     console.error('Error al cargar proveedores:', error);

@@ -19,6 +19,14 @@ import { validateProviderForm } from '../utils/providerHelpers';
 import { categoriesService } from '../data/categoriesService';
 import FormSelect from '../../../../shared/FormSelect';
 
+const getCategoryIds = (categories) => {
+  if (!Array.isArray(categories)) return [];
+
+  return categories
+    .map((category) => (typeof category === 'object' && category !== null ? category.id : category))
+    .filter((categoryId) => categoryId !== undefined && categoryId !== null);
+};
+
 function FormProvider({ isOpen, onClose, provider, onSave }) {
 
   const initialState = {
@@ -73,7 +81,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
   useEffect(() => {
     if (provider) {
       // Extraer IDs de categorías del proveedor
-      const categoryIds = provider.categorias?.map(cat => cat.id) || [];
+      const categoryIds = getCategoryIds(provider.categorias);
       
       setFormData({
         tipoPersona: provider.tipoPersona || '',
@@ -339,8 +347,6 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     }
 };
 
-  if (!isOpen) return null;
-
   const inputClass = (field) =>
     `w-full px-3 py-1.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors ${
       errors[field] && touched[field]
@@ -395,7 +401,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
           numeroContacto: provider.numeroContacto || '',
           direccion: provider.direccion || '',
           plazoDevoluciones: provider.plazoDevoluciones || '',
-          categoryIds: provider.categorias?.map(cat => cat.id) || [],
+          categoryIds: getCategoryIds(provider.categorias),
           rut: provider.rut || '',
           codigoCIU: provider.codigoCIU || '',
         }
@@ -411,6 +417,8 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       return String(formData[key] ?? '') !== String(baseData[key] ?? '');
     });
   }, [formData, provider]);
+
+  if (!isOpen) return null;
 
   const personTypeOptions = [
     { value: '', label: 'Selecciona una opción' },

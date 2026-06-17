@@ -111,6 +111,7 @@ const handleSave = async (formData) => {
       throw error;
     }
 };
+
 const handleDelete = async (client) => {
   const result = await showConfirm(
     'warning',
@@ -125,14 +126,35 @@ const handleDelete = async (client) => {
       await loadClients();
       showSuccess('Cliente eliminado', 'El cliente ha sido eliminado');
     } catch (error) {
-      //  Mensaje específico según el error
-      if (error.message.includes('registros relacionados')) {
+      // 🔥 Obtener el mensaje desde error.response.data
+      const errorMessage = error.response?.data?.message || error.message || '';
+      const errorCode = error.response?.data?.errorCode || '';
+      
+      console.log('📛 errorMessage:', errorMessage);
+      console.log('📛 errorCode:', errorCode);
+      
+      // Verificar por errorCode específico
+      if (errorCode === 'CLIENT_HAS_SALES') {
         showError(
-          'No se puede eliminar', 
-          'Este cliente tiene ventas, créditos o accesos asociados. No se puede eliminar por integridad de datos.'
+          'NO SE PUEDE ELIMINAR',
+          'ESTE CLIENTE TIENE VENTAS ASOCIADAS. HISTÓRICAMENTE NO SE PUEDEN BORRAR CLIENTES CON TRANSACCIONES.'
         );
-      } else {
-        showError('Error', error.message || 'No se pudo eliminar el cliente');
+      } 
+      // Verificar por mensaje
+      else if (errorMessage.includes('ventas asociadas')) {
+        showError(
+          'NO SE PUEDE ELIMINAR',
+          'ESTE CLIENTE TIENE VENTAS ASOCIADAS. HISTÓRICAMENTE NO SE PUEDEN BORRAR CLIENTES CON TRANSACCIONES.'
+        );
+      } 
+      else if (errorMessage.includes('registros relacionados')) {
+        showError(
+          'NO SE PUEDE ELIMINAR', 
+          'ESTE CLIENTE TIENE VENTAS, CRÉDITOS O ACCESOS ASOCIADOS. NO SE PUEDE ELIMINAR POR INTEGRIDAD DE DATOS.'
+        );
+      } 
+      else {
+        showError('Error', errorMessage || 'No se pudo eliminar el cliente');
       }
     }
   }

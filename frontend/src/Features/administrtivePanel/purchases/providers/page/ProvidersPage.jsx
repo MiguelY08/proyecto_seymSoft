@@ -101,47 +101,37 @@ function ProvidersPage() {
     return downloadProvidersExcel(result.data);
   };
 
-const handleSave = async (formData) => {
+  const mapProviderFormToService = (formData) => ({
+    tipoPersona: formData.personType ?? formData.tipoPersona,
+    tipo: formData.documentType ?? formData.tipo,
+    numero: formData.documentNumber ?? formData.numero,
+    nombres: formData.nameProvider ?? formData.nombres,
+    apellidos: formData.lastname ?? formData.apellidos,
+    correo: formData.email ?? formData.correo,
+    telefono: formData.phone ?? formData.telefono,
+    direccion: formData.address ?? formData.direccion,
+    nombreContacto: formData.contactPersonName ?? formData.nombreContacto,
+    numeroContacto: formData.contactPersonNumber ?? formData.numeroContacto,
+    rut: typeof formData.rut === 'boolean' ? (formData.rut ? 'si' : 'no') : formData.rut,
+    codigoCIU: formData.ciuCode ?? formData.codigoCIU,
+    plazoDevoluciones: formData.maxReturnPeriod ?? formData.plazoDevoluciones,
+    categoryIds: formData.categoryIds || [],
+    idStatus: formData.idStatus
+  });
+
+  const handleSave = async (formData) => {
     try {
+      const providerPayload = mapProviderFormToService(formData);
+
       if (selectedProvider) {
-        //  Para editar, pasar los datos en el formato que espera el servicio
-        const updatedProvider = await providersService.update(selectedProvider.id, {
-          tipoPersona: formData.personType,
-          correo: formData.email,
-          phone: formData.phone,  //  El servicio espera 'telefono'
-          direccion: formData.address,
-          nombreContacto: formData.contactPersonName,
-          numeroContacto: formData.contactPersonNumber,
-          rut: formData.rut ? 'si' : 'no',  // Convertir booleano a 'si'/'no'
-          codigoCIU: formData.ciuCode,
-          plazoDevoluciones: formData.maxReturnPeriod,
-          categoryIds: formData.categoryIds,
-          idStatus: formData.idStatus
-        });
+        const updatedProvider = await providersService.update(selectedProvider.id, providerPayload);
         
         if (updatedProvider) {
           setProviders(prev => prev.map(p => p.id === selectedProvider.id ? updatedProvider : p));
           showSuccess('Proveedor actualizado', 'Los datos se actualizaron correctamente');
         }
       } else {
-        //  Para crear, pasar los datos en el formato que espera el servicio
-        const newProvider = await providersService.create({
-          tipoPersona: formData.personType,
-          tipo: formData.documentType,
-          numero: formData.documentNumber,
-          nombres: formData.nameProvider,
-          apellidos: formData.lastname,
-          correo: formData.email,
-          telefono: formData.phone,  //  El servicio espera 'telefono'
-          direccion: formData.address,
-          nombreContacto: formData.contactPersonName,
-          numeroContacto: formData.contactPersonNumber,
-          rut: formData.rut ? 'si' : 'no',  //  Convertir booleano a 'si'/'no'
-          codigoCIU: formData.ciuCode,
-          plazoDevoluciones: formData.maxReturnPeriod,
-          categoryIds: formData.categoryIds,
-          idStatus: formData.idStatus
-        });
+        const newProvider = await providersService.create(providerPayload);
         
         setProviders(prev => [...prev, newProvider]);
         showSuccess('Proveedor creado', 'El nuevo proveedor se creó exitosamente');
@@ -152,7 +142,7 @@ const handleSave = async (formData) => {
       showError('Error', error.message || 'No se pudo guardar el proveedor');
       throw error; //  Relanzar para que FormProvider no cierre el modal
     }
-};
+  };
 
   const handleDelete = async (provider) => {
     const result = await showConfirm(

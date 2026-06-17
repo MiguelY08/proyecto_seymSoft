@@ -9,6 +9,7 @@ import CreateProduct from "../../products/modals/CreateProduct";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import FormProvider from "../../providers/components/FormProvider";
 import { createPurchase, getProducts, getProviders } from "../data/purchasesService";
+import { providersService } from "../../providers/data/providersService";
 
 const CreatePurchase = () => {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ const CreatePurchase = () => {
   const [selectedProviderData, setSelectedProviderData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [extraBarcodes, setExtraBarcodes] = useState({});
+  const [fechaLimiteDevolucion, setFechaLimiteDevolucion] = useState("");
   
   // Datos reales desde API
   const [productsDB, setProductsDB] = useState([]);
@@ -72,6 +74,27 @@ const CreatePurchase = () => {
     loadProviders();
   }, [showError]);
 
+  // Calcular fecha límite de devolución
+  useEffect(() => {
+    if (selectedProviderId && purchaseDate) {
+      const provider = providersList.find(p => p.id === selectedProviderId);
+      if (provider && provider.maxReturnPeriod) {
+        const fechaCompra = new Date(purchaseDate);
+        const fechaLimite = new Date(fechaCompra);
+        fechaLimite.setDate(fechaLimite.getDate() + provider.maxReturnPeriod);
+        setFechaLimiteDevolucion(fechaLimite.toLocaleDateString('es-CO', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }));
+      } else {
+        setFechaLimiteDevolucion('');
+      }
+    } else {
+      setFechaLimiteDevolucion('');
+    }
+  }, [selectedProviderId, purchaseDate, providersList]);
+
   const handleCancelPurchase = async () => {
     if (purchaseItems.length > 0) {
       const result = await showConfirm(
@@ -85,13 +108,43 @@ const CreatePurchase = () => {
     navigate("/admin/purchases");
   };
 
-  const handleSaveProvider = (formData) => {
-    showSuccess("Proveedor creado", "El proveedor se creó correctamente");
-    const fullName = `${formData.nameProvider} ${formData.lastname || ""}`.trim();
-    setSelectedProvider(fullName);
-    setIsFormModalOpen(false);
-    // Recargar proveedores
-    getProviders().then(setProvidersList);
+  const handleSaveProvider = async (dataToSave) => {
+    // Convertir las claves en inglés que envía FormProvider al formato
+    // que espera providersService.create (claves en español)
+    const providerPayload = {
+      tipoPersona: dataToSave.personType,
+      tipo: dataToSave.documentType,
+      numero: dataToSave.documentNumber,
+      nombres: dataToSave.nameProvider,
+      apellidos: dataToSave.lastname,
+      correo: dataToSave.email,
+      telefono: dataToSave.phone,
+      direccion: dataToSave.address,
+      nombreContacto: dataToSave.contactPersonName,
+      numeroContacto: dataToSave.contactPersonNumber,
+      rut: dataToSave.rut ? "si" : "no",
+      codigoCIU: dataToSave.ciuCode,
+      plazoDevoluciones: dataToSave.maxReturnPeriod,
+      categoryIds: dataToSave.categoryIds,
+    };
+
+    try {
+      const newProvider = await providersService.create(providerPayload);
+      showSuccess("Proveedor creado", "El proveedor se creó correctamente");
+
+      // Seleccionar automáticamente el proveedor recién creado
+      setSelectedProvider(newProvider.nombre);
+      setSelectedProviderId(newProvider.id);
+
+      setIsFormModalOpen(false);
+
+      // Recargar lista de proveedores
+      const updatedProviders = await getProviders();
+      setProvidersList(updatedProviders);
+    } catch (error) {
+      showError("Error", error.message || "No se pudo crear el proveedor");
+      throw error; // Para que FormProvider no cierre el modal
+    }
   };
 
   const RECORDS_PER_PAGE = 6;
@@ -267,7 +320,7 @@ const CreatePurchase = () => {
             providerTouched={providerTouched}
             setProviderTouched={setProviderTouched}
             openCreateProduct={() => setShowCreateProduct(true)}
-            isFormModalOpen={() => setIsFormModalOpen(true)}
+            openCreateProvider={() => setIsFormModalOpen(true)}
             extraBarcodes={extraBarcodes}
             onExtraBarcodesChange={setExtraBarcodes}
           />
@@ -278,12 +331,20 @@ const CreatePurchase = () => {
             <h2 className="text-xl font-bold text-gray-800">Detalle productos</h2>
           </div>
 
-          <div className="flex gap-4 mb-6">
+          {/* Totales con fecha límite de devolución */}
+          <div className="flex flex-wrap gap-4 mb-6">
             <div className="px-5 py-3 border-2 border-gray-300 rounded-full text-sm font-semibold">
               Total De La Compra: ${totalCompra.toLocaleString()}
             </div>
             <div className="px-5 py-3 border-2 border-gray-300 rounded-full text-sm font-semibold">
               Impuestos totales (IVA): ${totalIVA.toLocaleString()}
+            </div>
+            <div className={`px-5 py-3 border-2 rounded-full text-sm font-semibold ${
+              fechaLimiteDevolucion 
+                ? 'border-blue-300 bg-blue-50 text-blue-700' 
+                : 'border-gray-300 bg-gray-50 text-gray-400'
+            }`}>
+              📅 Fecha límite devolución: {fechaLimiteDevolucion || 'Selecciona proveedor y fecha'}
             </div>
           </div>
 

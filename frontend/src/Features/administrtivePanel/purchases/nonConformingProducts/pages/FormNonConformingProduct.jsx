@@ -1,211 +1,223 @@
-import { X, AlertCircle } from "lucide-react"; // Importa íconos para la UI
-import { useState } from "react"; // Hook useState de React para manejo de estado
-import { useAlert } from "../../../../shared/alerts/useAlert"; // Hook personalizado para mostrar alertas
+// Features/administrtivePanel/purchases/nonConformingProducts/pages/FormNonConformingProduct.jsx
+import { X, AlertCircle, Search, Check } from "lucide-react";
+import { useState } from "react";
+import { useAlert } from "../../../../shared/alerts/useAlert";
+import { createNonConforming, getProductByBarcode } from "../data/nonConformingService";
 
-// Clave de almacenamiento local para guardar los reportes
-const STORAGE_KEY = "pm_non_conforming_products";
+function FormNonConformingProduct({ onClose, onSuccess }) {
+  const { showWarning, showSuccess, showError } = useAlert();
 
-// Componente principal del formulario de producto no conforme
-function FormNonConformingProduct({ onClose }) {
-  // Hook de alertas
-  const { showWarning, showSuccess } = useAlert();
-
-  // Estado del formulario
   const [form, setForm] = useState({
-    codigo: "",   // Código de barras del producto
-    cantidad: "", // Cantidad afectada
-    motivo: "",   // Motivo del reporte
+    codigo: "",
+    cantidad: "",
+    motivo: "",
   });
 
-  // ── Estados "touched" para mostrar errores solo cuando el usuario interactúa ──
+  const [productInfo, setProductInfo] = useState(null);
+  const [loadingProduct, setLoadingProduct] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [codigoTouched, setCodigoTouched] = useState(false);
   const [cantidadTouched, setCantidadTouched] = useState(false);
   const [motivoTouched, setMotivoTouched] = useState(false);
 
-  // ── VALIDACIONES ─────────────────────────────
-
   // Validación del código de barras
   const codigoError = (() => {
-    if (!codigoTouched) return null; // No mostrar error si no se tocó el input
+    if (!codigoTouched) return null;
     if (!form.codigo.trim()) return "El código de barras es obligatorio.";
     if (!/^[0-9]{6,20}$/.test(form.codigo.trim()))
       return "Debe contener solo números (6-20 dígitos).";
     return null;
   })();
 
-  // Validación de la cantidad afectada
+  // Validación de la cantidad (incluye stock disponible en tiempo real)
   const cantidadError = (() => {
     if (!cantidadTouched) return null;
     if (!form.cantidad) return "La cantidad es obligatoria.";
     if (Number(form.cantidad) <= 0) return "La cantidad debe ser mayor a 0.";
     if (Number(form.cantidad) > 10000) return "Cantidad demasiado grande.";
+    if (productInfo && Number(form.cantidad) > productInfo.stock) {
+      return `Stock disponible: ${productInfo.stock}. No puedes reportar más de lo que hay en inventario.`;
+    }
     return null;
   })();
 
-  // Validación del motivo del reporte
+  // Validación del motivo
   const motivoError = (() => {
     if (!motivoTouched) return null;
     if (!form.motivo.trim()) return "El motivo del reporte es obligatorio.";
-    if (form.motivo.trim().length < 5)
-      return "Debe tener al menos 5 caracteres.";
+    if (form.motivo.trim().length < 5) return "Debe tener al menos 5 caracteres.";
     return null;
   })();
 
-  // Combinación de errores para deshabilitar el botón Guardar
   const hasErrors = codigoError || cantidadError || motivoError;
 
-  // ── FUNCIONES DEL FORMULARIO ─────────────────────────────
+  // Buscar producto por código de barras
+  const handleSearchProduct = async () => {
+    if (!form.codigo.trim()) {
+      showWarning("Campo vacío", "Ingresa un código de barras para buscar.");
+      return;
+    }
 
-  // Maneja el envío del formulario
-  const handleSubmit = () => {
-    // Marca todos los campos como "touched" para mostrar errores
+    setLoadingProduct(true);
+    try {
+      const product = await getProductByBarcode(form.codigo.trim());
+      if (product) {
+        setProductInfo(product);
+        // Re-validar la cantidad ya ingresada contra el nuevo stock encontrado
+        setCantidadTouched(true);
+        showSuccess("Producto encontrado", `"${product.nombre}"`);
+      } else {
+        setProductInfo(null);
+        showError("No encontrado", "No se encontró un producto con ese código de barras.");
+      }
+    } catch (error) {
+      setProductInfo(null);
+      showError("Error", error.message || "No se pudo buscar el producto.");
+    } finally {
+      setLoadingProduct(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    // Evita doble envío si ya hay una petición en curso
+    if (submitting) return;
+
     setCodigoTouched(true);
     setCantidadTouched(true);
     setMotivoTouched(true);
 
-    // Validación final antes de guardar
-    if (
-      !form.codigo.trim() ||
-      !form.cantidad ||
-      !form.motivo.trim() ||
-      codigoError ||
-      cantidadError ||
-      motivoError
-    ) {
-      // Mostrar alerta de advertencia si hay errores
-      showWarning(
-        "Campos incompletos",
-        "Debes completar todos los campos correctamente."
-      );
-      return; // Salir de la función
+    if (!form.codigo.trim() || !form.cantidad || !form.motivo.trim() || hasErrors) {
+      showWarning("Campos incompletos", "Debes completar todos los campos correctamente.");
+      return;
     }
 
-    // Recupera los reportes guardados en localStorage
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const reports = stored ? JSON.parse(stored) : [];
+    if (!productInfo) {
+      showWarning("Producto no verificado", "Primero busca y verifica el producto.");
+      return;
+    }
 
-    // Genera un nuevo ID único
-    const newId =
-      reports.length > 0
-        ? Math.max(...reports.map((r) => r.id)) + 1
-        : 1;
+    // Verificar stock disponible (doble chequeo justo antes de enviar)
+    if (productInfo.stock < Number(form.cantidad)) {
+      showWarning("Stock insuficiente", `Stock disponible: ${productInfo.stock}, Cantidad solicitada: ${form.cantidad}`);
+      return;
+    }
 
-    // Crea el nuevo objeto de reporte
-    const newReport = {
-      id: newId,
-      codigo: form.codigo.trim(),
-      cantidad: Number(form.cantidad),
-      motivo: form.motivo.trim(),
-      fecha: new Date().toISOString(), // Fecha actual
-    };
+    setSubmitting(true);
+    try {
+      await createNonConforming({
+        id_barcode: productInfo.id_barcode,
+        affected_quantity: Number(form.cantidad),
+        report_reason: form.motivo.trim(),
+        detection_date: new Date().toISOString(),
+      });
 
-    // Guarda el reporte en localStorage
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify([...reports, newReport])
-    );
-
-    // Muestra alerta de éxito
-    showSuccess(
-      "Reporte guardado",
-      "El producto no conforme fue registrado correctamente."
-    );
-
-    // Cierra el formulario
-    onClose();
+      showSuccess("Reporte guardado", "El producto no conforme fue registrado correctamente.");
+      onSuccess?.();
+      onClose();
+    } catch (error) {
+      showError("Error", error.message || "No se pudo guardar el reporte.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  // Maneja la cancelación del formulario
   const handleCancel = () => {
+    if (submitting) return;
     onClose();
   };
 
-  // ── ESTILOS PARA LOS INPUTS ─────────────────────────────
   const inputClass = (error) =>
     `w-full px-4 py-2.5 text-sm border rounded-xl outline-none bg-gray-100 text-gray-700 transition
-    ${
-      error
-        ? "border-red-400 focus:ring-2 focus:ring-red-300"
-        : "border-gray-300 focus:ring-2 focus:ring-[#0E5679]/20"
+    ${error
+      ? "border-red-400 focus:ring-2 focus:ring-red-300"
+      : "border-gray-300 focus:ring-2 focus:ring-[#0E5679]/20"
     }`;
 
-  // ── RENDER DEL COMPONENTE ─────────────────────────────
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-      onClick={handleCancel} // Cierra el modal al hacer click afuera
+      onClick={handleCancel}
     >
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()} // Evita cerrar modal al hacer click dentro
+        onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#0E5679]">
-          <h2 className="text-white font-semibold text-xl">
-            Reporte de Producto No Conforme
-          </h2>
-
-          <button
-            onClick={handleCancel}
-            className="text-white hover:bg-white/20 rounded-full p-1 transition"
-          >
+          <h2 className="text-white font-semibold text-xl">Reporte de Producto No Conforme</h2>
+          <button onClick={handleCancel} className="text-white hover:bg-white/20 rounded-full p-1 transition">
             <X className="w-6 h-6" />
           </button>
         </div>
 
         {/* BODY */}
         <div className="px-6 py-6 flex flex-col gap-5">
-
-          {/* CODIGO */}
+          {/* CÓDIGO DE BARRAS */}
           <div>
-            <label className="text-sm font-medium text-gray-700">
-              Código de Barras
-            </label>
-
-            <div className="relative mt-1">
-              <input
-                type="text"
-                value={form.codigo}
-                onChange={(e) => {
-                  setForm({ ...form, codigo: e.target.value });
-                  setCodigoTouched(true);
-                }}
-                onBlur={() => setCodigoTouched(true)}
-                placeholder="Código"
-                className={inputClass(codigoError)}
-              />
-
-              {/* Ícono de error */}
-              {codigoTouched && codigoError && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <AlertCircle size={16} className="text-red-400" />
-                </div>
-              )}
+            <label className="text-sm font-medium text-gray-700">Código de Barras</label>
+            <div className="flex gap-2 mt-1">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={form.codigo}
+                  onChange={(e) => {
+                    setForm({ ...form, codigo: e.target.value });
+                    setProductInfo(null);
+                    setCodigoTouched(true);
+                  }}
+                  onBlur={() => setCodigoTouched(true)}
+                  placeholder="Código de barras del producto"
+                  className={inputClass(codigoError)}
+                  disabled={submitting}
+                />
+                {codigoTouched && codigoError && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <AlertCircle size={16} className="text-red-400" />
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleSearchProduct}
+                disabled={loadingProduct || submitting}
+                className="px-4 py-2 bg-[#0E5679] text-white rounded-xl hover:bg-[#0a435c] transition disabled:opacity-50"
+              >
+                <Search size={18} />
+              </button>
             </div>
 
-            {/* Mensaje de error */}
-            <div
-              className={`overflow-hidden transition-all duration-300 ${
-                codigoError ? "max-h-10 mt-1 opacity-100" : "max-h-0 opacity-0"
-              }`}
-            >
-              <p className="text-xs text-red-500 flex items-center gap-1">
-                <AlertCircle size={12} />
-                {codigoError}
+            {codigoError && (
+              <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                <AlertCircle size={12} /> {codigoError}
               </p>
-            </div>
+            )}
+
+            {/* Información del producto encontrado */}
+            {productInfo && !codigoError && (
+              <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Check size={16} className="text-green-600" />
+                  <span className="text-sm font-semibold text-green-800">Producto verificado</span>
+                </div>
+                <p className="text-sm text-gray-700 mt-1">
+                  <strong>{productInfo.nombre}</strong>
+                  <br />
+                  <span className="text-xs text-gray-500">Categoría: {productInfo.categoria}</span>
+                  <br />
+                  <span className="text-xs text-gray-500">Stock disponible: {productInfo.stock}</span>
+                </p>
+              </div>
+            )}
           </div>
 
           {/* CANTIDAD */}
           <div className="w-1/2">
-            <label className="text-sm font-medium text-gray-700">
-              Cantidad Afectada
-            </label>
-
+            <label className="text-sm font-medium text-gray-700">Cantidad Afectada</label>
             <div className="relative mt-1">
               <input
                 type="number"
                 min="1"
+                max={productInfo?.stock ?? undefined}
                 value={form.cantidad}
                 onChange={(e) => {
                   setForm({ ...form, cantidad: e.target.value });
@@ -214,35 +226,24 @@ function FormNonConformingProduct({ onClose }) {
                 onBlur={() => setCantidadTouched(true)}
                 placeholder="Cantidad"
                 className={inputClass(cantidadError)}
+                disabled={submitting}
               />
-
-              {/* Ícono de error */}
               {cantidadTouched && cantidadError && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
                   <AlertCircle size={16} className="text-red-400" />
                 </div>
               )}
             </div>
-
-            {/* Mensaje de error */}
-            <div
-              className={`overflow-hidden transition-all duration-300 ${
-                cantidadError ? "max-h-10 mt-1 opacity-100" : "max-h-0 opacity-0"
-              }`}
-            >
-              <p className="text-xs text-red-500 flex items-center gap-1">
-                <AlertCircle size={12} />
-                {cantidadError}
+            {cantidadError && (
+              <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                <AlertCircle size={12} /> {cantidadError}
               </p>
-            </div>
+            )}
           </div>
 
           {/* MOTIVO */}
           <div>
-            <label className="text-sm font-medium text-gray-700">
-              Motivo Reporte
-            </label>
-
+            <label className="text-sm font-medium text-gray-700">Motivo Reporte</label>
             <textarea
               rows="4"
               value={form.motivo}
@@ -253,19 +254,13 @@ function FormNonConformingProduct({ onClose }) {
               onBlur={() => setMotivoTouched(true)}
               placeholder="Ingrese el motivo del reporte"
               className={inputClass(motivoError)}
+              disabled={submitting}
             />
-
-            {/* Mensaje de error */}
-            <div
-              className={`overflow-hidden transition-all duration-300 ${
-                motivoError ? "max-h-10 mt-1 opacity-100" : "max-h-0 opacity-0"
-              }`}
-            >
-              <p className="text-xs text-red-500 flex items-center gap-1">
-                <AlertCircle size={12} />
-                {motivoError}
+            {motivoError && (
+              <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                <AlertCircle size={12} /> {motivoError}
               </p>
-            </div>
+            )}
           </div>
         </div>
 
@@ -273,19 +268,19 @@ function FormNonConformingProduct({ onClose }) {
         <div className="px-6 pb-6 flex gap-4">
           <button
             onClick={handleSubmit}
-            disabled={hasErrors} // Deshabilita el botón si hay errores
+            disabled={hasErrors || !productInfo || submitting}
             className={`flex-1 py-2.5 text-sm font-medium text-white rounded-xl transition ${
-              hasErrors
+              hasErrors || !productInfo || submitting
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-[#0E5679] hover:bg-[#0a435c]"
             }`}
           >
-            Guardar
+            {submitting ? "Guardando..." : "Guardar"}
           </button>
-
           <button
             onClick={handleCancel}
-            className="flex-1 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-xl transition"
+            disabled={submitting}
+            className="flex-1 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-xl transition disabled:opacity-50"
           >
             Cancelar
           </button>
@@ -295,5 +290,4 @@ function FormNonConformingProduct({ onClose }) {
   );
 }
 
-// Exporta el componente para usarlo en otros archivos
 export default FormNonConformingProduct;
