@@ -6,12 +6,14 @@ import {
   Info,
   SquarePen,
   Trash2,
-  Download,
+  FileSpreadsheet,
   Filter,
   Eraser,
   Package,
+  Loader2,
 } from "lucide-react";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 import ActiveToggle from "../components/ActiveToggle";
@@ -21,10 +23,16 @@ import DetailProduct from "../modals/DetailProduct";
 import CreateProduct from "../modals/CreateProduct";
 import EditProduct from "../modals/EditProduct";
 import { useAlert } from "../../../../shared/alerts/useAlert";
+import Spinner from "../../../../shared/spinner";
+import ButtonComponent from "../../../../shared/ButtonComponent";
 import ProductsService from "../services/productsServices";
-import { getParentCategories, HighlightText } from "../helpers/productsHelpers";
+import { HighlightText } from "../helpers/productsHelpers";
 
 const RECORDS_PER_PAGE = 13;
+const COMPANY_COLOR = "004D77";
+const LIGHT_BLUE = "DCEBF3";
+const LIGHT_GRAY = "F3F4F6";
+const WHITE = "FFFFFF";
 
 function EmptyState({ onCreateProduct, canCreate }) {
   return (
@@ -80,12 +88,21 @@ function Products() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [loading, setLoading] = useState(true);
-  const refreshData = async () => {
+  const [screenLoadingMessage, setScreenLoadingMessage] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [deletingIds, setDeletingIds] = useState([]);
+  const [togglingIds, setTogglingIds] = useState([]);
+  const refreshData = async (message = "") => {
+    if (message) setScreenLoadingMessage(message);
+
     try {
       const products = await ProductsService.list();
       setData(products || []);
     } catch (error) {
       console.error("Error al recargar:", error);
+      showError("Error de carga", "No se pudieron actualizar los productos.");
+    } finally {
+      if (message) setScreenLoadingMessage("");
     }
   };
   // Cargar productos del backend
@@ -165,6 +182,8 @@ function Products() {
           row.barcodes?.[0]?.barcode?.toLowerCase().includes(query) ||
           row.reference?.toLowerCase().includes(query) ||
           row.category?.name?.toLowerCase().includes(query) ||
+          row.unitMeasure?.name?.toLowerCase().includes(query) ||
+          row.unitMeasure?.abbreviation?.toLowerCase().includes(query) ||
           String(row.retailPrice).includes(query) ||
           String(row.totalStock).includes(query);
       }
@@ -191,6 +210,8 @@ function Products() {
   const currentData = filteredData.slice(startIndex, endIndex);
 
   const handleToggle = async (id) => {
+    if (togglingIds.includes(id)) return;
+
     try {
       const producto = data.find((row) => row.id === id);
       if (!producto) return;
@@ -207,6 +228,8 @@ function Products() {
         );
         if (!result.isConfirmed) return;
       }
+
+      setTogglingIds((prev) => [...prev, id]);
 
       // Llamar al backend para cambiar estado
       const updated = await ProductsService.toggleStatus(id);
@@ -227,10 +250,14 @@ function Products() {
         "Error",
         error.message || "No se pudo cambiar el estado del producto",
       );
+    } finally {
+      setTogglingIds((prev) => prev.filter((item) => item !== id));
     }
   };
 
   const handleDelete = async (producto) => {
+    if (deletingIds.includes(producto.id)) return;
+
     // Validar que esté desactivado
     if (producto.status === "Activo") {
       showError(
@@ -250,6 +277,7 @@ function Products() {
     if (!result.isConfirmed) return;
 
     try {
+      setDeletingIds((prev) => [...prev, producto.id]);
       await ProductsService.delete(producto.id);
       setData(data.filter((p) => p.id !== producto.id));
       showSuccess(
@@ -261,103 +289,156 @@ function Products() {
         "Error",
         error.message || "No se pudo eliminar el producto. Intenta de nuevo.",
       );
+    } finally {
+      setDeletingIds((prev) => prev.filter((id) => id !== producto.id));
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
+    if (exporting) return;
+
     try {
-      const wb = XLSX.utils.book_new();
+      setExporting(true);
+      if (filteredData.length === 0) {
+        showError("Sin registros", "No hay productos para exportar.");
+        return;
+      }
 
-      // Crear array de datos con encabezado personalizado
-      const now = new Date();
-      const dateStr = now.toLocaleDateString("es-CO", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-      const timeStr = now.toLocaleTimeString("es-CO", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Productos");
+      const currentDate = new Date();
+      const fileDate = currentDate.toISOString().split("T")[0];
 
-      // Preparar datos de productos
-      const productData = filteredData.map((product) => ({
-        Nombre: product.name || "N/A",
-        "Código de Barras": product.barcodes?.[0]?.barcode || "N/A",
-        Referencia: product.reference || "N/A",
-        Proveedor: product.provider || "N/A",
-        Categorías: product.category?.name || "N/A",
-        Stock: product.totalStock ?? 0,
-        "Precio Detalle": product.retailPrice ?? 0,
-        "Precio Mayorista": product.wholesalePrice ?? 0,
-        "Precio Colegas": product.partnerPrice ?? 0,
-        "Precio Pacas": product.bulkPrice ?? 0,
-        "IVA %": product.ivaPercentage ?? 0,
-        Estado: product.status === "Activo" ? "Activo" : "Inactivo",
-      }));
+      worksheet.mergeCells("A1:M1");
+      worksheet.getCell("A1").value = "PRODUCTOS";
+      worksheet.getCell("A1").font = {
+        bold: true,
+        size: 18,
+        color: { argb: WHITE },
+      };
+      worksheet.getCell("A1").alignment = {
+        horizontal: "center",
+        vertical: "middle",
+      };
+      worksheet.getCell("A1").fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: COMPANY_COLOR },
+      };
 
-      // Crear hoja de trabajo manualmente para personalizar el encabezado
-      const ws = XLSX.utils.aoa_to_sheet([
-        ["PRODUCTOS"], // Título
-        [`Fecha de exportación: ${dateStr} - ${timeStr}`], // Fecha y hora
-        [], // Fila vacía
-        // Headers de las columnas
-        [
-          "Nombre",
-          "Código de Barras",
-          "Referencia",
-          "Proveedor",
-          "Categorías",
-          "Stock",
-          "Precio Detalle",
-          "Precio Mayorista",
-          "Precio Colegas",
-          "Precio Pacas",
-          "Cantidad x Paca",
-          "Estado",
-        ],
+      worksheet.mergeCells("A2:M2");
+      worksheet.getCell("A2").value =
+        `Fecha de exportacion: ${currentDate.toLocaleString("es-CO")}`;
+      worksheet.getCell("A2").alignment = { horizontal: "center" };
+      worksheet.getCell("A2").font = {
+        italic: true,
+        color: { argb: COMPANY_COLOR },
+      };
+
+      worksheet.addRow([]);
+
+      const headerRow = worksheet.addRow([
+        "ID",
+        "Nombre",
+        "Codigo de barras",
+        "Referencia",
+        "Categorias",
+        "Subcategorias",
+        "Unidad",
+        "Stock",
+        "Precio detalle",
+        "Precio mayorista",
+        "Precio colegas",
+        "Precio pacas",
+        "Estado",
       ]);
 
-      // Agregar los datos de productos
-      XLSX.utils.sheet_add_json(ws, productData, {
-        origin: "A4", // Comenzar desde la fila 4 (después del título, fecha y espacio)
-        skipHeader: true, // No agregar headers automáticos porque ya los pusimos
+      headerRow.eachCell((cell) => {
+        cell.font = { bold: true, color: { argb: WHITE } };
+        cell.alignment = { horizontal: "center", vertical: "middle" };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: COMPANY_COLOR },
+        };
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
       });
 
-      // Estilos para el título (merge cells)
-      ws["!merges"] = [
-        { s: { r: 0, c: 0 }, e: { r: 0, c: 11 } }, // Merge título en toda la primera fila
-        { s: { r: 1, c: 0 }, e: { r: 1, c: 11 } }, // Merge fecha en toda la segunda fila
+      filteredData.forEach((product, index) => {
+        const categoriesText = product.categories?.length
+          ? product.categories.map((cat) => cat.name).join(", ")
+          : product.category?.name || "N/A";
+        const subcategoriesText = product.subcategories?.length
+          ? product.subcategories.map((sub) => sub.name).join(", ")
+          : product.subcategory?.name || "N/A";
+        const unitText = product.unitMeasure
+          ? `${product.unitMeasure.name || ""}${product.unitMeasure.abbreviation ? ` (${product.unitMeasure.abbreviation})` : ""}`.trim()
+          : "N/A";
+
+        const row = worksheet.addRow([
+          product.id,
+          product.name || "N/A",
+          product.barcodes?.[0]?.barcode || "N/A",
+          product.reference || "N/A",
+          categoriesText,
+          subcategoriesText,
+          unitText,
+          product.totalStock ?? 0,
+          product.retailPrice ?? 0,
+          product.wholesalePrice ?? 0,
+          product.partnerPrice ?? 0,
+          product.bulkPrice ?? 0,
+          product.status === "Activo" ? "Activo" : "Inactivo",
+        ]);
+
+        row.eachCell((cell) => {
+          cell.alignment = { vertical: "middle" };
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: index % 2 === 0 ? WHITE : LIGHT_GRAY },
+          };
+          cell.border = {
+            top: { style: "thin", color: { argb: LIGHT_BLUE } },
+            left: { style: "thin", color: { argb: LIGHT_BLUE } },
+            bottom: { style: "thin", color: { argb: LIGHT_BLUE } },
+            right: { style: "thin", color: { argb: LIGHT_BLUE } },
+          };
+        });
+      });
+
+      worksheet.columns = [
+        { key: "id", width: 10 },
+        { key: "name", width: 30 },
+        { key: "barcode", width: 18 },
+        { key: "reference", width: 16 },
+        { key: "categories", width: 30 },
+        { key: "subcategories", width: 30 },
+        { key: "unit", width: 18 },
+        { key: "stock", width: 12 },
+        { key: "retailPrice", width: 18 },
+        { key: "wholesalePrice", width: 18 },
+        { key: "partnerPrice", width: 18 },
+        { key: "bulkPrice", width: 18 },
+        { key: "status", width: 14 },
       ];
+      worksheet.views = [{ state: "frozen", ySplit: 4 }];
+      worksheet.autoFilter = { from: "A4", to: "M4" };
 
-      // Ajustar ancho de columnas
-      const colWidths = [
-        { wch: 30 }, // Nombre
-        { wch: 15 }, // Código de Barras
-        { wch: 15 }, // Referencia
-        { wch: 25 }, // Proveedor
-        { wch: 30 }, // Categorías
-        { wch: 10 }, // Stock
-        { wch: 15 }, // Precio Detalle
-        { wch: 15 }, // Precio Mayorista
-        { wch: 15 }, // Precio Colegas
-        { wch: 15 }, // Precio Pacas
-        { wch: 15 }, // Cantidad x Paca
-        { wch: 10 }, // Estado
-      ];
-      ws["!cols"] = colWidths;
-
-      // Agregar hoja al libro
-      XLSX.utils.book_append_sheet(wb, ws, "Productos");
-
-      // Descargar archivo
-      const fileName = `productos_${now.toISOString().split("T")[0]}.xlsx`;
-      XLSX.writeFile(wb, fileName);
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      saveAs(blob, `productos_${fileDate}.xlsx`);
 
       showSuccess(
         "Excel exportado",
-        `Se descargaron ${productData.length} productos exitosamente.`,
+        `Se descargaron ${filteredData.length} productos exitosamente.`,
       );
     } catch (error) {
       showError(
@@ -365,16 +446,17 @@ function Products() {
         "No se pudo generar el archivo Excel. Intenta de nuevo.",
       );
       console.error("Error al exportar:", error);
+    } finally {
+      setExporting(false);
     }
   };
-
-  const handleProductoCreado = () => {
-    refreshData();
+  const handleProductoCreado = async () => {
+    await refreshData("Actualizando productos...");
     setCurrentPage(1);
     setShowFormModal(false);
   };
-  const handleProductoActualizado = () => {
-    refreshData();
+  const handleProductoActualizado = async () => {
+    await refreshData("Actualizando productos...");
     setShowEditModal(false);
     setSelectedProduct(null);
   };
@@ -412,6 +494,12 @@ function Products() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {screenLoadingMessage && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-white/80 backdrop-blur-sm">
+          <Spinner message={screenLoadingMessage} className="min-h-0" />
+        </div>
+      )}
+
       <div
         className={`h-full flex flex-col gap-3 p-3 sm:p-4 ${showModal || showFormModal || showEditModal ? "blur-sm" : ""}`}
       >
@@ -421,21 +509,38 @@ function Products() {
             <ProductsToolbar
               search={search}
               onSearchChange={setSearch}
-              onNewClick={() => setShowFormModal(true)}
             />
 
             {/* Botón Exportar Excel */}
-            {canExport && (
-              <button
-                onClick={handleExportExcel}
-                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border border-green-600 rounded-lg text-green-700 bg-white hover:bg-green-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap w-full sm:w-auto justify-center"
-                title="Exportar a Excel"
-              >
-                {" "}
-                <Download className="w-4 h-4" strokeWidth={2} />
-                <span> Exportar Excel </span>
-              </button>
-            )}
+            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+              {canExport && (
+                <ButtonComponent
+                  onClick={handleExportExcel}
+                  disabled={exporting}
+                  className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-2"
+                  title="Exportar a Excel"
+                >
+                  {exporting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
+                  )}
+                  <span className="hidden sm:inline">
+                    {exporting ? "Exportando..." : "Exportar Excel"}
+                  </span>
+                </ButtonComponent>
+              )}
+
+              {canCreate && (
+                <ButtonComponent
+                  onClick={() => setShowFormModal(true)}
+                  title="Nuevo"
+                >
+                  <span className="hidden sm:inline">Nuevo</span>
+                  <Plus className="w-4 h-4" strokeWidth={2} />
+                </ButtonComponent>
+              )}
+            </div>
           </div>
         )}
 
@@ -506,13 +611,7 @@ function Products() {
           )}
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4">
-            <div className="w-full max-w-3xl animate-pulse space-y-4">
-              <div className="h-12 bg-gray-200 rounded-xl" />
-              <div className="h-64 bg-gray-200 rounded-xl" />
-              <div className="h-12 bg-gray-200 rounded-xl" />
-            </div>
-          </div>
+          <Spinner message="Cargando productos..." />
         ) : !canView ? (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
@@ -573,13 +672,16 @@ function Products() {
                       Categoría/Sub
                     </th>
                     <th className="px-3 py-2.5 text-center text-xs font-semibold">
+                      Unidad
+                    </th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold">
                       Stock
                     </th>
                     <th className="px-3 py-2.5 text-center text-xs font-semibold">
                       Precio detal
                     </th>
                     <th className="px-3 py-2.5 text-center text-xs font-semibold">
-                      Funciones
+                      Acciones
                     </th>
                   </tr>
                 </thead>
@@ -595,6 +697,9 @@ function Products() {
                         : row.categories?.length > 0
                           ? row.categories.map((cat) => cat.name).join(", ")
                           : "";
+                    const unitMeasureDisplay = row.unitMeasure
+                      ? `${row.unitMeasure.name || ""}${row.unitMeasure.abbreviation ? ` (${row.unitMeasure.abbreviation})` : ""}`.trim()
+                      : "N/A";
                     return (
                       <tr
                         key={row.id}
@@ -623,9 +728,24 @@ function Products() {
                         </td>
                         <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                           <HighlightText
-                            text={String(row.totalStock || 0)}
+                            text={unitMeasureDisplay}
                             highlight={search}
                           />
+                        </td>
+                        <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                          <div className="mx-auto flex h-7 w-24 items-center justify-center gap-1.5 rounded-md border border-[#004D77]/15 bg-white px-2 shadow-sm">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[#004D77]/10 text-[#004D77]">
+                              <Package className="h-3.5 w-3.5" strokeWidth={2} />
+                            </span>
+                            <span className="min-w-0 truncate font-semibold text-gray-800">
+                              <HighlightText
+                                text={Number(row.totalStock || 0).toLocaleString(
+                                  "es-CO",
+                                )}
+                                highlight={search}
+                              />
+                            </span>
+                          </div>
                         </td>
                         <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
                           <HighlightText
@@ -637,6 +757,15 @@ function Products() {
                         </td>
                         <td className="px-3 py-1.5">
                           <div className="flex items-center justify-center gap-1 sm:gap-1.5">
+                            {canToggle && (
+                              <ActiveToggle
+                                activo={row.status === "Activo" ? true : false}
+                                onChange={() => handleToggle(row.id)}
+                                loading={togglingIds.includes(row.id)}
+                                disabled={deletingIds.includes(row.id)}
+                              />
+                            )}
+
                             {canViewInfo && (
                               <button
                                 onClick={() => handleVerDetalles(row)}
@@ -649,6 +778,7 @@ function Products() {
                                 />
                               </button>
                             )}
+
                             {canEdit && (
                               <button
                                 onClick={() => handleEditarProducto(row)}
@@ -661,23 +791,25 @@ function Products() {
                                 />
                               </button>
                             )}
+
                             {canDelete && (
                               <button
                                 onClick={() => handleDelete(row)}
-                                className="text-gray-400 hover:text-red-600 hover:scale-110 transition cursor-pointer"
+                                disabled={deletingIds.includes(row.id)}
+                                className={`text-gray-400 hover:text-red-600 hover:scale-110 transition ${
+                                  deletingIds.includes(row.id) ? "cursor-not-allowed opacity-70" : "cursor-pointer"
+                                }`}
                                 title="Eliminar"
                               >
-                                <Trash2
-                                  className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                                  strokeWidth={1.5}
-                                />
+                                {deletingIds.includes(row.id) ? (
+                                  <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" strokeWidth={1.5} />
+                                ) : (
+                                  <Trash2
+                                    className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                                    strokeWidth={1.5}
+                                  />
+                                )}
                               </button>
-                            )}
-                            {canToggle && (
-                              <ActiveToggle
-                                activo={row.status === "Activo" ? true : false}
-                                onChange={() => handleToggle(row.id)}
-                              />
                             )}
                           </div>
                         </td>

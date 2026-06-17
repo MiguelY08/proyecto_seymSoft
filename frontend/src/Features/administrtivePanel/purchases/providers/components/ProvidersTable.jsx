@@ -6,16 +6,19 @@
  */
 
 import React from "react";
-import { Info, SquarePen, Trash2 } from "lucide-react";
+import { Info, SquarePen, Trash2, PackageCheck } from "lucide-react";
 import ActiveToggle from "./ActiveToggle";
 import { formatPhoneNumber } from "../utils/providerHelpers";
 import Permission from "../../../configuration/roles/components/Permission";
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 
+const escapeRegExp = (value) =>
+  String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const highlightText = (text, search) => {
   if (!search || !text) return text;
 
-  const regex = new RegExp(`(${search})`, "gi");
+  const regex = new RegExp(`(${escapeRegExp(search)})`, "gi");
   const parts = text.toString().split(regex);
 
   return parts.map((part, index) =>
@@ -67,13 +70,23 @@ function ProvidersTable({
               <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">P.Contacto</th>
               <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Nu.Contacto</th>
               <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Categorías</th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Funciones</th>
+              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Acciones</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td colSpan={8} className="py-8 text-center text-sm text-gray-400">
-                No se encontraron proveedores.
+              <td colSpan={8}>
+                <div className="flex flex-col items-center justify-center py-16 px-4 gap-4">
+                  <div className="w-20 h-20 rounded-full bg-[#004D77]/10 flex items-center justify-center">
+                    <PackageCheck className="w-10 h-10 text-[#004D77]/40" strokeWidth={1.5} />
+                  </div>
+                  <p className="text-base font-semibold text-gray-500">
+                    No se encontraron proveedores
+                  </p>
+                  <p className="text-sm text-gray-400 text-center max-w-xs">
+                    Ningún proveedor coincide con la búsqueda actual.
+                  </p>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -94,19 +107,20 @@ function ProvidersTable({
             <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">P.Contacto</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Nu.Contacto</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Categorías</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Funciones</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Acciones</th>
           </tr>
         </thead>
 
         <tbody>
           {providers.map((provider, index) => {
-            const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-100";
+            const rowBg = index % 2 === 0 ? "bg-gray-100 hover:bg-blue-50" : "bg-white hover:bg-blue-50";
+            const stickyBg = index % 2 === 0 ? "bg-gray-100" : "bg-white";
             const recordNumber = (startIndex || 0) + index + 1;
             const categoriasTexto = formatCategories(provider.categorias);
 
             return (
-              <tr key={provider.id} className={`transition-colors duration-150 ${rowBg}`}>
-                <td className={`sticky left-0 z-10 ${rowBg} px-3 py-2 text-center text-xs text-gray-500 font-medium whitespace-nowrap`}>
+              <tr key={provider.id} className={`group transition-colors duration-150 ${rowBg}`}>
+                <td className={`sticky left-0 z-10 ${stickyBg} group-hover:bg-blue-50 px-3 py-2 text-center text-xs text-gray-500 font-medium whitespace-nowrap`}>
                   {String(recordNumber)}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
@@ -129,6 +143,13 @@ function ProvidersTable({
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex items-center justify-center gap-1.5">
+                    {canToggle && (
+                      <ActiveToggle
+                        activo={provider.activo}
+                        onChange={() => onToggleActive(provider.id)}
+                      />
+                    )}
+
                     {canView && (
                       <Permission permission ="proveedores.ver_informacion" >
                         <button
@@ -151,13 +172,6 @@ function ProvidersTable({
                           <SquarePen className="w-4 h-4" strokeWidth={1.5} />
                         </button>
                       </Permission>
-                    )}
-
-                    {canToggle && (
-                      <ActiveToggle
-                        activo={provider.activo}
-                        onChange={() => onToggleActive(provider.id)}
-                      />
                     )}
 
                     {canDelete && (

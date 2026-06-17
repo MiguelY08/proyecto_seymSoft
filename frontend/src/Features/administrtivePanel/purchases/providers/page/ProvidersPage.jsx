@@ -13,6 +13,8 @@ import FormProvider from '../components/FormProvider';
 import InfoProvider from '../components/InfoProvider';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import { providersService } from '../data/providersService';
+import Spinner from '../../../../shared/spinner';
+import { downloadProvidersExcel } from '../utils/excelHelper';
 
 const RECORDS_PER_PAGE = 13;
 
@@ -54,23 +56,23 @@ function ProvidersPage() {
     const provider = providers.find(p => p.id === id);
     const newStatus = provider.activo ? 'Inactivo' : 'Activo';
 
-    const result = await showConfirm(
-      'warning',
-      'Cambiar estado',
-      `¿Está seguro de cambiar el estado del proveedor "${provider.nombre}" a ${newStatus}?`,
-      { confirmButtonText: 'Sí, cambiar', cancelButtonText: 'Cancelar' }
-    );
+    if (provider.activo) {
+      const result = await showConfirm(
+        'warning',
+        'Cambiar estado',
+        `¿Está seguro de cambiar el estado del proveedor "${provider.nombre}" a ${newStatus}?`,
+        { confirmButtonText: 'Sí, cambiar', cancelButtonText: 'Cancelar' }
+      );
 
-    if (result.isConfirmed) {
-      try {
-        // Llamar al toggle en el backend
-        await providersService.toggleActive(id);
-        // Recargar toda la lista para obtener los datos actualizados
-        await loadProviders();
-        showSuccess('Estado cambiado', `El proveedor ahora está ${newStatus}`);
-      } catch (error) {
-        showError('Error', error.message || 'No se pudo cambiar el estado del proveedor');
-      }
+      if (!result?.isConfirmed) return;
+    }
+
+    try {
+      await providersService.toggleActive(id);
+      await loadProviders();
+      showSuccess('Estado cambiado', `El proveedor ahora está ${newStatus}`);
+    } catch (error) {
+      showError('Error', error.message || 'No se pudo cambiar el estado del proveedor');
     }
   };
 
@@ -88,47 +90,48 @@ function ProvidersPage() {
     setSelectedProvider(null);
     setIsFormModalOpen(true);
   };
-const handleSave = async (formData) => {
+
+  const handleExportProviders = async () => {
+    const result = await providersService.getAll({
+      page: 1,
+      limit: totalRecords || RECORDS_PER_PAGE,
+      search: searchTerm,
+    });
+
+    return downloadProvidersExcel(result.data);
+  };
+
+  const mapProviderFormToService = (formData) => ({
+    tipoPersona: formData.personType ?? formData.tipoPersona,
+    tipo: formData.documentType ?? formData.tipo,
+    numero: formData.documentNumber ?? formData.numero,
+    nombres: formData.nameProvider ?? formData.nombres,
+    apellidos: formData.lastname ?? formData.apellidos,
+    correo: formData.email ?? formData.correo,
+    telefono: formData.phone ?? formData.telefono,
+    direccion: formData.address ?? formData.direccion,
+    nombreContacto: formData.contactPersonName ?? formData.nombreContacto,
+    numeroContacto: formData.contactPersonNumber ?? formData.numeroContacto,
+    rut: typeof formData.rut === 'boolean' ? (formData.rut ? 'si' : 'no') : formData.rut,
+    codigoCIU: formData.ciuCode ?? formData.codigoCIU,
+    plazoDevoluciones: formData.maxReturnPeriod ?? formData.plazoDevoluciones,
+    categoryIds: formData.categoryIds || [],
+    idStatus: formData.idStatus
+  });
+
+  const handleSave = async (formData) => {
     try {
+      const providerPayload = mapProviderFormToService(formData);
+
       if (selectedProvider) {
-        //  Para editar, pasar los datos en el formato que espera el servicio
-        const updatedProvider = await providersService.update(selectedProvider.id, {
-          tipoPersona: formData.personType,
-          correo: formData.email,
-          phone: formData.phone,  //  El servicio espera 'telefono'
-          direccion: formData.address,
-          nombreContacto: formData.contactPersonName,
-          numeroContacto: formData.contactPersonNumber,
-          rut: formData.rut ? 'si' : 'no',  // Convertir booleano a 'si'/'no'
-          codigoCIU: formData.ciuCode,
-          plazoDevoluciones: formData.maxReturnPeriod,
-          categoryIds: formData.categoryIds,
-          idStatus: formData.idStatus
-        });
+        const updatedProvider = await providersService.update(selectedProvider.id, providerPayload);
         
         if (updatedProvider) {
           setProviders(prev => prev.map(p => p.id === selectedProvider.id ? updatedProvider : p));
           showSuccess('Proveedor actualizado', 'Los datos se actualizaron correctamente');
         }
       } else {
-        //  Para crear, pasar los datos en el formato que espera el servicio
-        const newProvider = await providersService.create({
-          tipoPersona: formData.personType,
-          tipo: formData.documentType,
-          numero: formData.documentNumber,
-          nombres: formData.nameProvider,
-          apellidos: formData.lastname,
-          correo: formData.email,
-          telefono: formData.phone,  //  El servicio espera 'telefono'
-          direccion: formData.address,
-          nombreContacto: formData.contactPersonName,
-          numeroContacto: formData.contactPersonNumber,
-          rut: formData.rut ? 'si' : 'no',  //  Convertir booleano a 'si'/'no'
-          codigoCIU: formData.ciuCode,
-          plazoDevoluciones: formData.maxReturnPeriod,
-          categoryIds: formData.categoryIds,
-          idStatus: formData.idStatus
-        });
+        const newProvider = await providersService.create(providerPayload);
         
         setProviders(prev => [...prev, newProvider]);
         showSuccess('Proveedor creado', 'El nuevo proveedor se creó exitosamente');
@@ -139,7 +142,7 @@ const handleSave = async (formData) => {
       showError('Error', error.message || 'No se pudo guardar el proveedor');
       throw error; //  Relanzar para que FormProvider no cierre el modal
     }
-};
+  };
 
   const handleDelete = async (provider) => {
     const result = await showConfirm(
@@ -177,12 +180,7 @@ const handleSave = async (formData) => {
 
   if (loading && providers.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#004D77] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando proveedores...</p>
-        </div>
-      </div>
+      <Spinner message="Cargando proveedores..." />
     );
   }
 
@@ -192,6 +190,8 @@ const handleSave = async (formData) => {
         searchTerm={searchTerm}
         onSearchChange={handleSearchChange}
         onNewClick={handleNewProvider}
+        onExport={handleExportProviders}
+        totalProviders={totalRecords}
       />
 
       <div className="bg-white rounded-xl shadow-md">

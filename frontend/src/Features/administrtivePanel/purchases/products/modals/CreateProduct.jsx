@@ -1,8 +1,9 @@
-import { X, Upload, Plus, ImagePlus, Trash2 } from 'lucide-react';
+import { X, Upload, Plus, ImagePlus, Trash2, Ruler, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import ProductsService from '../services/productsServices';
 import CategorySelector from '../components/CategorySelector';
+import FormSelect from '../../../../shared/FormSelect';
 
 function PriceCard({ label, fieldMain, fieldPaca, valueMain, valuePaca, placeholderMain, placeholderPaca, onChange, errMain, errPaca }) {
   const block = (e) => { if (['e', 'E', '+', '-', '.'].includes(e.key)) e.preventDefault(); };
@@ -57,7 +58,7 @@ const EMPTY = {
   precioMayorista: '',
   precioColegas: '',
   precioPacas: '',
-  idUnitMeasure: 2,
+  idUnitMeasure: '',
   ivaPercentage: 0,
   retailDiscountPct: 0,
   wholesaleDiscountPct: 0,
@@ -74,10 +75,19 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
   const [priceErrors, setPriceErrors] = useState({});
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
+  const [unitMeasures, setUnitMeasures] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
   const [selectedSubcategoryIds, setSelectedSubcategoryIds] = useState([]);
   const [expandedCategoryIds, setExpandedCategoryIds] = useState({});
   const imageInputRef = useRef(null);
+  const unitMeasureOptions = [
+    { value: '', label: 'Selecciona una unidad' },
+    ...unitMeasures.map((unit) => ({
+      value: String(unit.id),
+      label: `${unit.name} (${unit.abbreviation})`,
+    })),
+  ];
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -105,6 +115,19 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
     loadSubcategories();
   }, []);
 
+  useEffect(() => {
+    const loadUnitMeasures = async () => {
+      try {
+        const units = await ProductsService.listUnitMeasures();
+        setUnitMeasures(units);
+      } catch (error) {
+        console.error('Error al cargar unidades de medida:', error);
+        setUnitMeasures([]);
+      }
+    };
+    loadUnitMeasures();
+  }, []);
+
   const numeric = (v) => v.replace(/[^0-9]/g, '');
   const block = (e) => { if (['e', 'E', '+', '-', '.'].includes(e.key)) e.preventDefault(); };
 
@@ -129,6 +152,7 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
     const e = {};
     if (imagenesPreview.length === 0) e.imagen = 'Debes agregar al menos una imagen.';
     if (selectedCategoryIds.length === 0) e.categorias = 'Debes seleccionar al menos una categoria.';
+    if (!d.idUnitMeasure) e.idUnitMeasure = 'Selecciona una unidad de medida.';
     if (!d.nombre.trim()) e.nombre = 'El nombre del producto es obligatorio.';
     else if (d.nombre.trim().length < 3) e.nombre = 'El nombre debe tener al menos 3 caracteres.';
     if (!d.codBarras.trim()) e.codBarras = 'El codigo de barras es obligatorio.';
@@ -208,6 +232,8 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     const all = { ...validate(formData), ...validatePrices(formData) };
 
     if (Object.keys(all).length > 0) {
@@ -218,6 +244,7 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
     }
 
     try {
+      setIsSubmitting(true);
       const formDataToSend = new FormData();
       formDataToSend.append('nombre', formData.nombre);
       formDataToSend.append('referencia', formData.referencia);
@@ -230,7 +257,7 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
       formDataToSend.append('wholesaleDiscountPct', formData.wholesaleDiscountPct || 0);
       formDataToSend.append('partnerDiscountPct', formData.partnerDiscountPct || 0);
       formDataToSend.append('bulkDiscountPct', formData.bulkDiscountPct || 0);
-      formDataToSend.append('idUnitMeasure', formData.idUnitMeasure || 2);
+      formDataToSend.append('idUnitMeasure', formData.idUnitMeasure);
       formDataToSend.append('idCategorie', formData.id_category || selectedCategoryIds[0]);
       formDataToSend.append('description', formData.descripcion || '');
       formDataToSend.append('quantityPerPack', formData.cantidadXPaca ? Number(formData.cantidadXPaca) : 0);
@@ -253,6 +280,8 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
       onClose();
     } catch (error) {
       showError('Error', error.message || 'No se pudo guardar el producto. Intenta de nuevo.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -266,8 +295,8 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="bg-white rounded-lg w-full max-w-6xl shadow-2xl relative z-10 max-h-[92vh] flex flex-col">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div className="bg-white rounded-xl w-full max-w-6xl shadow-2xl relative z-10 max-h-[92vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 flex-shrink-0" style={{ backgroundColor: '#004D77' }}>
           <h3 className="text-lg font-bold text-white">Crear producto</h3>
           <button type="button" onClick={onClose} className="text-white hover:text-gray-200 cursor-pointer"><X className="w-5 h-5" /></button>
@@ -383,13 +412,17 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
                   <input type="text" inputMode="numeric" name="cantidadXPaca" value={formData.cantidadXPaca} onChange={(e) => setFormData((prev) => ({ ...prev, cantidadXPaca: numeric(e.target.value) }))} onKeyDown={block} placeholder="12" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Unidad de medida</label>
-                  <select name="idUnitMeasure" value={formData.idUnitMeasure} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                    <option value={2}>Unidad</option>
-                    <option value={3}>Docena</option>
-                    <option value={4}>Caja</option>
-                    <option value={5}>Paca</option>
-                  </select>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Unidad de medida <span className="text-red-500">*</span></label>
+                  <FormSelect
+                    value={formData.idUnitMeasure}
+                    options={unitMeasureOptions}
+                    onChange={(value) => handleChange({ target: { name: 'idUnitMeasure', value } })}
+                    icon={Ruler}
+                    error={errors.idUnitMeasure}
+                    placeholder="Selecciona una unidad"
+                    ariaLabel="Unidad de medida"
+                  />
+                  <ErrMsg field="idUnitMeasure" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">IVA %</label>
@@ -410,7 +443,17 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
           </div>
 
           <div className="flex gap-3 pt-3 border-t mt-auto">
-            <button type="submit" className="flex-1 px-6 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors font-medium text-sm cursor-pointer" style={{ backgroundColor: '#004D77' }}>Crear Producto</button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`flex-1 px-6 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors font-medium text-sm flex items-center justify-center gap-2 ${
+                isSubmitting ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'
+              }`}
+              style={{ backgroundColor: '#004D77' }}
+            >
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isSubmitting ? 'Cargando...' : 'Crear Producto'}
+            </button>
             <button type="button" onClick={onClose} className="flex-1 px-6 py-2.5 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium text-sm cursor-pointer">Cancelar</button>
           </div>
         </form>

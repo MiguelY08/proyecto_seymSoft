@@ -1,5 +1,5 @@
 // src/features/orders/modals/CancelOrder.jsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   X, XCircle, AlertTriangle, Package,
   Hash, Calendar, User, UserCheck, CreditCard, Tag, Truck, MapPin,
@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import { SalesServices } from '../../vendings/services/salesServices';
+import OrdersService from '../services/ordersService';
 
 const MOTIVO_MAX = 500;
 const MOTIVO_MIN = 10;
@@ -45,6 +46,50 @@ const getLineIva = (item = {}) => {
   return calculateIncludedIva(getLineTotal(item), item.ivaPercentage);
 };
 
+const hasItems = (entity, contexto) => {
+  if (!entity) return false;
+
+  const products = contexto === 'pedido'
+    ? (entity.productos ?? entity.products ?? entity.items ?? entity.details)
+    : (entity.items ?? entity.details ?? entity.products ?? entity.order?.details ?? entity.order?.productos);
+
+  return Array.isArray(products) && products.length > 0;
+};
+
+const normalizeItem = (item = {}, index = 0) => {
+  const product = item.product ?? item.producto ?? {};
+  const precioUnitario = toNumber(
+    item.precioUnitario ??
+    item.unitPrice ??
+    item.unit_price ??
+    item.price ??
+    product.precioDetalle ??
+    product.retailPrice
+  );
+
+  return {
+    id:
+      item.id ??
+      item.detalleId ??
+      item.idOrderDetail ??
+      product.id ??
+      product.idProduct ??
+      index,
+    nombre:
+      item.nombre ??
+      item.productName ??
+      item.name ??
+      product.nombre ??
+      product.name ??
+      'Producto sin nombre',
+    cantidad: toNumber(item.cantidad ?? item.quantity ?? item.qty),
+    precioUnitario,
+    subtotal: item.total ?? item.totalLinea ?? item.lineTotal ?? item.subtotal,
+    iva: item.iva ?? item.ivaAmount,
+    ivaPercentage: item.ivaPercentage ?? product.ivaPercentage,
+  };
+};
+
 // ─── DetailRow ──────────────────────────────────────────────────────────────
 function DetailRow({ icon: Icon, label, value }) {
   const hasValue = value && String(value).trim() !== '';
@@ -80,11 +125,62 @@ function CancelOrder({
   const [motivo, setMotivo] = useState('');
   const [touched, setTouched] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [detailEntity, setDetailEntity] = useState(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
 
-  React.useEffect(() => {
+  const baseEntity = contexto === 'pedido' ? order : sale;
+  const entityId = contexto === 'pedido'
+    ? (order?.id ?? order?.idOrder ?? order?.pedidoId)
+    : (sale?.id ?? sale?.idSale);
+
+  useEffect(() => {
     const id = requestAnimationFrame(() => setVisible(true));
     return () => cancelAnimationFrame(id);
   }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    const loadDetail = async () => {
+      if (!baseEntity || !entityId) {
+        setDetailEntity(baseEntity ?? null);
+        setIsDetailLoading(false);
+        return;
+      }
+
+      if (hasItems(baseEntity, contexto)) {
+        setDetailEntity(baseEntity);
+        setIsDetailLoading(false);
+        return;
+      }
+
+      try {
+        setIsDetailLoading(true);
+        const detail = contexto === 'pedido'
+          ? await OrdersService.findById(entityId)
+          : await SalesServices.getById(entityId);
+
+        if (!ignore) {
+          setDetailEntity(detail ?? baseEntity);
+        }
+      } catch (error) {
+        console.error('Error cargando detalle para anulacion/cancelacion:', error);
+        if (!ignore) {
+          setDetailEntity(baseEntity);
+        }
+      } finally {
+        if (!ignore) {
+          setIsDetailLoading(false);
+        }
+      }
+    };
+
+    loadDetail();
+
+    return () => {
+      ignore = true;
+    };
+  }, [baseEntity, contexto, entityId]);
 
   const handleClose = () => {
     if (isSubmitting) return;
@@ -100,49 +196,43 @@ function CancelOrder({
     : '';
 
   // Determinar la entidad según el contexto
-  const entidad = contexto === 'pedido' ? order : sale;
+  const activeOrder = contexto === 'pedido' ? (detailEntity ?? order) : order;
+  const activeSale = contexto === 'venta' ? (detailEntity ?? sale) : sale;
+  const entidad = contexto === 'pedido' ? activeOrder : activeSale;
   const numero = contexto === 'pedido' 
-    ? (order?.numeroPedido || order?.id)
-    : (sale?.factura || sale?.id);
+    ? (activeOrder?.numeroPedido || activeOrder?.id)
+    : (activeSale?.factura || activeSale?.id);
 
   // Extraer datos según contexto
   const fecha = contexto === 'pedido' 
-    ? order?.fechaPedido 
-    : sale?.fecha;
+    ? activeOrder?.fechaPedido 
+    : activeSale?.fecha;
   const clienteNombre = contexto === 'pedido'
-    ? (order?.clienteNombre || order?.clienteId)
-    : (sale?.cliente || sale?.clienteId);
+    ? (activeOrder?.clienteNombre || activeOrder?.clienteId)
+    : (activeSale?.cliente || activeSale?.clienteId);
   const asesorNombre = contexto === 'pedido'
-    ? (order?.asesorNombre || order?.asesorId)
-    : (sale?.vendedor || sale?.vendedorId);
+    ? (activeOrder?.asesorNombre || activeOrder?.asesorId)
+    : (activeSale?.vendedor || activeSale?.vendedorId);
   const metodoPagoLabel = contexto === 'pedido'
-    ? (order?.metodoPago
-        ? (Array.isArray(order.metodoPago) ? order.metodoPago.filter(Boolean).join(' · ') : order.metodoPago)
+    ? (activeOrder?.metodoPago
+        ? (Array.isArray(activeOrder.metodoPago) ? activeOrder.metodoPago.filter(Boolean).join(' · ') : activeOrder.metodoPago)
         : '—')
-    : (sale?.metodoPago || '—');
+    : (activeSale?.metodoPago || '—');
   const estadoActual = contexto === 'pedido'
-    ? order?.estadoLogistico
-    : sale?.estado;
+    ? activeOrder?.estadoLogistico
+    : activeSale?.estado;
   const direccionEntrega = contexto === 'pedido'
-    ? order?.direccionEntrega
-    : sale?.direccion;
+    ? activeOrder?.direccionEntrega
+    : activeSale?.direccion;
   const items = contexto === 'pedido'
-    ? (order?.productos ?? [])
-    : (sale?.items?.map((item, index) => ({
-        id: item.product?.id ?? item.id ?? index,
-        nombre: item.product?.nombre ?? item.nombre ?? 'Producto sin nombre',
-        cantidad: Number(item.cantidad ?? item.quantity ?? 0),
-        precioUnitario: Number(item.product?.precioDetalle ?? item.precioUnitario ?? 0),
-        subtotal: item.subtotal,
-        iva: item.iva,
-        ivaPercentage: item.ivaPercentage,
-      })) ?? []);
+    ? (activeOrder?.productos ?? activeOrder?.products ?? activeOrder?.items ?? activeOrder?.details ?? []).map(normalizeItem)
+    : (activeSale?.items ?? activeSale?.details ?? activeSale?.products ?? activeSale?.order?.details ?? activeSale?.order?.productos ?? []).map(normalizeItem);
 
   const totals = useMemo(() => {
     const itemsTotal = roundMoney(items.reduce((acc, item) => acc + getLineTotal(item), 0));
     const itemsIva = roundMoney(items.reduce((acc, item) => acc + getLineIva(item), 0));
-    const source = contexto === 'pedido' ? order : sale;
-    const sourceOrder = contexto === 'venta' ? sale?.order : null;
+    const source = contexto === 'pedido' ? activeOrder : activeSale;
+    const sourceOrder = contexto === 'venta' ? activeSale?.order : null;
 
     const providedTotal = toNumber(
       source?.totalNumerico ??
@@ -173,7 +263,7 @@ function CancelOrder({
       iva: ivaValue,
       total: totalValue,
     };
-  }, [contexto, items, order, sale]);
+  }, [contexto, items, activeOrder, activeSale]);
 
   const { subtotal, iva, total } = totals;
 
@@ -206,7 +296,7 @@ function CancelOrder({
         await onConfirm(motivo.trim());
       } else {
         // Anular venta a través de SalesServices
-        await SalesServices.anular(sale.id, motivo.trim());
+        await SalesServices.anular(activeSale.id, motivo.trim());
       }
       showSuccess(
         contexto === 'pedido' ? 'Pedido cancelado' : 'Venta anulada',
@@ -349,7 +439,12 @@ function CancelOrder({
                 <div className="h-px flex-1 bg-gray-100" />
               </div>
 
-              {items.length > 0 ? (
+              {isDetailLoading ? (
+                <div className="flex flex-col items-center justify-center flex-1 py-10 gap-3 rounded-lg border-2 border-dashed border-red-100 bg-red-50/40">
+                  <Loader2 className="w-6 h-6 text-red-500 animate-spin" strokeWidth={2} />
+                  <p className="text-xs text-red-400 text-center">Cargando productos...</p>
+                </div>
+              ) : items.length > 0 ? (
                 <>
                   <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-2 py-1.5 rounded-md bg-red-50 mb-1">
                     <span className="text-[10px] font-bold text-red-400 uppercase tracking-wide">Producto</span>

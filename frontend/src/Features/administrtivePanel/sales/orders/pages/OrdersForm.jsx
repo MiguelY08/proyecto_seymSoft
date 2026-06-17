@@ -17,6 +17,7 @@ import { useAuth } from '../../../../access/context/AuthContext';
 import LeftSectionForm from '../components/LeftSectionForm';
 import RightSectionForm from '../components/RightSectionForm';
 import PaymentsSection from '../components/PaymentsSection';
+import FormClient from '../../clients/modals/FormClient';
 
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
@@ -78,6 +79,23 @@ const calculateLineSubtotal = (cantidad, precioUnitario) =>
 const calculateLineIva = (subtotal, ivaPercentage = 19) =>
   roundMoney(subtotal - (subtotal / (1 + (toNumber(ivaPercentage, 19) / 100))));
 
+const normalizeClientForForm = (client = {}) => ({
+  ...client,
+  id: client.id ?? client.idClient,
+  fullName:
+    client.fullName ??
+    client.name ??
+    [client.firstName, client.lastName].filter(Boolean).join(' ') ??
+    '',
+  name:
+    client.name ??
+    client.fullName ??
+    [client.firstName, client.lastName].filter(Boolean).join(' ') ??
+    '',
+  clientCredit: client.clientCredit ?? client.assignedCredit,
+  assignedCredit: client.assignedCredit ?? client.clientCredit,
+});
+
 function OrdersForm() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -99,8 +117,11 @@ function OrdersForm() {
     estadoLogistico: ESTADOS_LOGISTICOS.EN_PROCESO,
     origen: ORIGENES.MANUAL,
     motivoCancelacion: '',
+    tieneVenta: false,
   });
   const [errors, setErrors] = useState({});
+  const [itemsChangedFromReady, setItemsChangedFromReady] = useState(false);
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
 
   const [clientes, setClientes] = useState([]);
   const [productosCatalogo, setProductosCatalogo] = useState([]);
@@ -129,8 +150,23 @@ function OrdersForm() {
     if (formData.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) return false;
     if (formData.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO) return false;
     if (formData.pagoEstado === ESTADOS_PAGO.PAGADO) return false;
+    if (formData.tieneVenta) return false;
     return true;
-  }, [isEditMode, formData.estadoLogistico, formData.pagoEstado]);
+  }, [isEditMode, formData.estadoLogistico, formData.pagoEstado, formData.tieneVenta]);
+
+  const getOrderStatusAfterItemsChange = (currentStatus) =>
+    currentStatus === ESTADOS_LOGISTICOS.LISTO
+      ? ESTADOS_LOGISTICOS.EN_PROCESO
+      : currentStatus;
+
+  const notifyReadyOrderReturnsToProcess = () => {
+    if (formData.estadoLogistico !== ESTADOS_LOGISTICOS.LISTO) return;
+    setItemsChangedFromReady(true);
+    showWarning(
+      'Pedido vuelve a En proceso',
+      'Al modificar productos o cantidades, el pedido deja de estar listo y vuelve a preparacion.'
+    );
+  };
 
   // Actualizar asesorId cuando el usuario estÃ© disponible
   useEffect(() => {
@@ -144,7 +180,7 @@ function OrdersForm() {
     const loadInitialData = async () => {
       try {
         const clientsResponse = await clientsService.getAll();
-        setClientes(clientsResponse.data || clientsResponse || []);
+        setClientes((clientsResponse.data || clientsResponse || []).map(normalizeClientForForm));
 
         const rawProductsList = await ProductsService.list();
         const normalizedProductsList = rawProductsList.map(product => ({
@@ -207,6 +243,7 @@ function OrdersForm() {
             productos: productosNormalizados,
             estadoLogistico: order.estadoLogistico,
             pagoEstado: order.pagoEstado, // importante para permisos
+            tieneVenta: order.tieneVenta,
             origen: order.origen,
             motivoCancelacion: order.motivoCancelacion || '',
           });
@@ -247,11 +284,12 @@ function OrdersForm() {
   // --- Manejadores para LeftSectionForm ---
   const handleClienteChange = (e) => {
     if (isEditMode) return;
-    const clienteId = Number(e.target.value);
+    const rawValue = e.target.value;
+    const clienteId = rawValue === '' ? '' : Number(rawValue);
     setFormData(prev => ({ ...prev, clienteId }));
 
     if (clienteId !== '') {
-      const cliente = clientes.find(c => c.id === clienteId);
+      const cliente = clientes.find(c => Number(c.id) === Number(clienteId));
       if (cliente) {
         if (formData.tipoEntrega === 'recoge') {
           setFormData(prev => ({ ...prev, direccionEntrega: 'El cliente lo recoge' }));
@@ -264,6 +302,35 @@ function OrdersForm() {
       }
     }
     if (errors.clienteId) setErrors(prev => ({ ...prev, clienteId: null }));
+  };
+
+  const handleQuickCreateClient = async (clientData) => {
+    try {
+      const createdClient = normalizeClientForForm(await clientsService.create(clientData));
+      const createdClientId = createdClient.id;
+
+      setClientes(prev => {
+        const exists = prev.some(client => Number(client.id) === Number(createdClientId));
+        return exists
+          ? prev.map(client => Number(client.id) === Number(createdClientId) ? createdClient : client)
+          : [createdClient, ...prev];
+      });
+
+      setFormData(prev => ({
+        ...prev,
+        clienteId: createdClientId,
+        direccionEntrega: prev.tipoEntrega === 'recoge'
+          ? 'El cliente lo recoge'
+          : (createdClient.address || createdClient.direccion || ''),
+      }));
+      setErrors(prev => ({ ...prev, clienteId: null, direccionEntrega: null }));
+      showSuccess('Cliente creado', 'El nuevo cliente fue creado y asignado al pedido.');
+      setIsClientModalOpen(false);
+      return createdClient;
+    } catch (error) {
+      showError('Error', error.message || 'No se pudo crear el cliente.');
+      throw error;
+    }
   };
 
   const handleTipoEntregaChange = (e) => {
@@ -314,6 +381,8 @@ function OrdersForm() {
       return;
     }
 
+    notifyReadyOrderReturnsToProcess();
+
     const precio = getProductPriceForClient(producto, selectedClient);
     const subtotalLinea = calculateLineSubtotal(1, precio);
     const nuevoProducto = {
@@ -330,6 +399,7 @@ function OrdersForm() {
 
     setFormData(prev => ({
       ...prev,
+      estadoLogistico: getOrderStatusAfterItemsChange(prev.estadoLogistico),
       productos: [...prev.productos, nuevoProducto],
     }));
   };
@@ -338,6 +408,7 @@ function OrdersForm() {
     if (!productosEditables) return;
     if (nuevaCantidad < 1) return;
     const producto = formData.productos.find(p => p.id === productoId);
+    if (!producto) return;
     const stockDisponible = toNumber(producto?.stock, nuevaCantidad);
     const cantidad = Math.min(nuevaCantidad, stockDisponible);
 
@@ -345,8 +416,13 @@ function OrdersForm() {
       showWarning('Stock insuficiente', `Solo hay ${stockDisponible} unidades disponibles.`);
     }
 
+    if (cantidad === toNumber(producto?.cantidad)) return;
+
+    notifyReadyOrderReturnsToProcess();
+
     setFormData(prev => ({
       ...prev,
+      estadoLogistico: getOrderStatusAfterItemsChange(prev.estadoLogistico),
       productos: prev.productos.map(p =>
         p.id === productoId
           ? {
@@ -365,8 +441,10 @@ function OrdersForm() {
 
   const handleRemoveProduct = (productoId) => {
     if (!productosEditables) return;
+    notifyReadyOrderReturnsToProcess();
     setFormData(prev => ({
       ...prev,
+      estadoLogistico: getOrderStatusAfterItemsChange(prev.estadoLogistico),
       productos: prev.productos.filter(p => p.id !== productoId),
     }));
   };
@@ -628,6 +706,7 @@ function OrdersForm() {
           onDireccionManualChange={handleDireccionManualChange}
           onEstadoLogisticoChange={handleEstadoLogisticoChange}
           onMotivoCancelacionChange={handleMotivoCancelacionChange}
+          onCreateClient={() => setIsClientModalOpen(true)}
         />
 
         <RightSectionForm
@@ -673,7 +752,15 @@ function OrdersForm() {
       {isEditMode && !productosEditables && (
         <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-sm text-yellow-800">
-            <strong>Productos no editables:</strong> Este pedido ya ha sido pagado, entregado o cancelado, no se pueden modificar los productos.
+            <strong>Productos no editables:</strong> Este pedido ya ha sido pagado, tiene una venta asociada, fue entregado o fue cancelado; no se pueden modificar los productos.
+          </p>
+        </div>
+      )}
+
+      {itemsChangedFromReady && (
+        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">
+            <strong>Estado actualizado:</strong> Al modificar productos o cantidades, el pedido volverá a En proceso al guardar.
           </p>
         </div>
       )}
@@ -685,6 +772,13 @@ function OrdersForm() {
           </p>
         </div>
       )}
+
+      <FormClient
+        isOpen={isClientModalOpen}
+        onClose={() => setIsClientModalOpen(false)}
+        client={null}
+        onSave={handleQuickCreateClient}
+      />
     </div>
   );
 }

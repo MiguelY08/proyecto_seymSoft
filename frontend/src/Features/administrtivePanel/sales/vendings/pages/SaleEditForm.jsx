@@ -7,6 +7,9 @@ import {
   MapPin,
   PackageCheck,
   Tag,
+  FileText,
+  Info,
+  Home,
 } from 'lucide-react';
 
 import { SalesServices } from '../services/salesServices';
@@ -115,6 +118,7 @@ function SaleEditForm() {
     () => getInitialSaleStatus(sale),
     [sale]
   );
+
   const originalOrderStatus = useMemo(
     () => getInitialOrderStatus(sale),
     [sale]
@@ -214,6 +218,7 @@ function SaleEditForm() {
 
   const handleDeliveryAddressChange = (e) => {
     if (!canEditDelivery) return;
+
     setFormData((prev) => ({
       ...prev,
       deliveryAddress: e.target.value,
@@ -227,9 +232,36 @@ function SaleEditForm() {
     }
   };
 
+  const handleUseClientAddress = () => {
+    if (!canEditDelivery) return;
+
+    const clientAddress = String(sale?.clienteDireccion ?? '').trim();
+
+    if (!clientAddress) {
+      showWarning(
+        'Direccion no disponible',
+        'El cliente no tiene una direccion registrada.'
+      );
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      deliveryAddress: clientAddress,
+    }));
+
+    if (errors.deliveryAddress) {
+      setErrors((prev) => ({
+        ...prev,
+        deliveryAddress: null,
+      }));
+    }
+  };
+
   const handleOrderStatusChange = (e) => {
     if (!canChangeOrderStatus) return;
     const idOrderStatus = Number(e.target.value);
+
     if (idOrderStatus === ORDER_STATUS.CANCELADO) {
       setErrors((prev) => ({
         ...prev,
@@ -398,7 +430,7 @@ function SaleEditForm() {
     ));
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="mb-6 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4 min-w-0">
           <button
@@ -414,227 +446,250 @@ function SaleEditForm() {
             <h1 className="text-2xl font-bold text-gray-900 truncate">
               {title}
             </h1>
-            <p className="text-sm text-gray-500">
-              Las acciones disponibles dependen del estado actual de la venta.
+            <p className="text-sm text-gray-500 mt-0.5">
+              Actualiza los datos permitidos según el estado actual de la venta.
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={loading || annulledSale}
-          className="px-4 py-2 text-sm font-medium text-white bg-[#004D77] rounded-lg hover:bg-[#003b5c] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shrink-0"
-        >
-          {loading ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-              Guardando...
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4" />
-              Guardar cambios
-            </>
-          )}
-        </button>
+        <div className="flex gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={loading || annulledSale}
+            className="px-4 py-2 text-sm font-medium text-white bg-[#004D77] rounded-lg hover:bg-[#003b5c] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                Guardar cambios
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
-          <h2 className="text-sm font-semibold text-gray-800">
-            Informacion editable de la venta
-          </h2>
-          <p className="text-xs text-gray-400">
-            Productos, pagos, vendedor, subtotal y tipo de venta no se editan aqui.
-          </p>
-        </div>
+      <div className="mb-6 space-y-3">
+        {!approvedSale && !annulledSale && (
+          <Notice tone="blue">
+            Mientras la venta no este aprobada, el pedido no puede avanzar.
+            Si apruebas la venta aqui, puedes actualizar el estado del pedido en la misma peticion.
+          </Notice>
+        )}
 
-        <div className="p-5 flex flex-col gap-5">
-          {(approvedSale || !approvedSale || annulledSale || deliveredOrder || cancelledOrder) && (
-            <div className="flex flex-col gap-3">
-              {!approvedSale && !annulledSale && (
-                <Notice tone="blue">
-                  Mientras la venta no este aprobada, el pedido no puede avanzar.
-                  Si apruebas la venta aqui, puedes actualizar el estado del pedido en la misma peticion.
-                </Notice>
-              )}
+        {annulledSale && (
+          <Notice tone="red">
+            La venta esta anulada. No se puede modificar desde este formulario.
+          </Notice>
+        )}
 
-              {annulledSale && (
-                <Notice tone="red">
-                  La venta esta anulada. No se puede modificar desde este formulario.
-                </Notice>
-              )}
+        {deliveredOrder && (
+          <Notice tone="blue">
+            El pedido relacionado ya esta entregado. Su informacion y estado no pueden modificarse.
+          </Notice>
+        )}
 
-              {deliveredOrder && (
-                <Notice tone="blue">
-                  El pedido relacionado ya esta entregado. Su informacion y estado no pueden modificarse.
-                </Notice>
-              )}
+        {cancelledOrder && (
+          <Notice tone="red">
+            El pedido relacionado esta cancelado. Su informacion y estado no pueden modificarse.
+          </Notice>
+        )}
+      </div>
 
-              {cancelledOrder && (
-                <Notice tone="red">
-                  El pedido relacionado esta cancelado. Su informacion y estado no pueden modificarse.
-                </Notice>
-              )}
-            </div>
-          )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-visible">
+          <SectionHeader
+            icon={FileText}
+            title="Información editable"
+            description="Estado, entrega y pedido relacionado"
+          />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-            <section className="rounded-xl border border-gray-100 bg-white">
-              <div className="px-4 py-3 border-b border-gray-100">
-                <h3 className="text-sm font-semibold text-gray-800">
-                  Datos editables
-                </h3>
-                <p className="text-xs text-gray-400">
-                  Actualiza el estado y la informacion de entrega permitida.
-                </p>
-              </div>
+          <div className="p-5 flex flex-col gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="block text-sm font-medium text-gray-700">
+                  Estado de la venta <span className="text-red-500">*</span>
+                </label>
 
-              <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Estado de la venta <span className="text-red-500">*</span>
-                  </label>
-
-                  <div className="relative group">
-                    <FormSelect
-                      value={formData.idSaleStatus}
-                      options={saleStatusOptions}
-                      onChange={(value) => handleSaleStatusChange({ target: { value } })}
-                      icon={Tag}
-                      disabled={loading || !canChangeSaleStatus}
-                      error={errors.idSaleStatus}
-                      placeholder="Estado de la venta"
-                      ariaLabel="Estado de la venta"
-                    />
-
-                    {approvedSale && (
-                      <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 hidden w-full min-w-[260px] rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 shadow-lg group-hover:block">
-                        <p className="text-xs leading-relaxed text-yellow-800">
-                          La venta ya esta aprobada y su estado no se puede cambiar;
-                          para anularla se usa el flujo especial de anulación.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {errors.idSaleStatus && (
-                    <p className="text-xs text-red-500">{errors.idSaleStatus}</p>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Tipo de entrega <span className="text-red-500">*</span>
-                  </label>
-
+                <div className="relative group">
                   <FormSelect
-                    value={formData.deliveryType}
-                    options={deliveryTypeOptions}
-                    onChange={(value) => handleDeliveryTypeChange({ target: { value } })}
-                    icon={Truck}
-                    disabled={loading || !canEditDelivery}
-                    error={errors.deliveryType}
-                    placeholder="Tipo de entrega"
-                    ariaLabel="Tipo de entrega"
+                    value={formData.idSaleStatus}
+                    options={saleStatusOptions}
+                    onChange={(value) => handleSaleStatusChange({ target: { value } })}
+                    icon={Tag}
+                    disabled={loading || !canChangeSaleStatus}
+                    error={errors.idSaleStatus}
+                    placeholder="Estado de la venta"
+                    ariaLabel="Estado de la venta"
                   />
 
-                  {errors.deliveryType && (
-                    <p className="text-xs text-red-500">{errors.deliveryType}</p>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-1.5 sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Direccion de entrega
-                    {formData.deliveryType === 'delivery' && (
-                      <span className="text-red-500"> *</span>
-                    )}
-                  </label>
-
-                  {formData.deliveryType === 'delivery' ? (
-                    <>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
-
-                        <textarea
-                          value={formData.deliveryAddress}
-                          onChange={handleDeliveryAddressChange}
-                          disabled={loading || !canEditDelivery}
-                          rows={3}
-                          placeholder="Ej: Cra 73 #21-30"
-                          className={`w-full pl-10 pr-4 py-2.5 text-sm border rounded-lg outline-none placeholder-gray-400 resize-none transition-colors disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed ${
-                            errors.deliveryAddress
-                              ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-                              : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
-                          }`}
-                        />
-                      </div>
-
-                      {errors.deliveryAddress && (
-                        <p className="text-xs text-red-500">{errors.deliveryAddress}</p>
-                      )}
-                    </>
-                  ) : (
-                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Direccion de entrega:</span> Cliente recoge.
+                  {approvedSale && (
+                    <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 hidden w-full min-w-[260px] rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 shadow-lg group-hover:block">
+                      <p className="text-xs leading-relaxed text-yellow-800">
+                        La venta ya esta aprobada y su estado no se puede cambiar;
+                        para anularla se usa el flujo especial de anulación.
                       </p>
                     </div>
                   )}
                 </div>
 
-                <div className="flex flex-col gap-1.5 sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Estado del pedido <span className="text-red-500">*</span>
-                  </label>
+                {errors.idSaleStatus && (
+                  <p className="mt-0.5 text-xs text-red-500">{errors.idSaleStatus}</p>
+                )}
+              </div>
 
-                  <FormSelect
-                    value={formData.idOrderStatus}
-                    options={orderStatusOptions}
-                    onChange={(value) => handleOrderStatusChange({ target: { value } })}
-                    icon={PackageCheck}
-                    disabled={loading || !canChangeOrderStatus}
-                    error={errors.idOrderStatus}
-                    placeholder="Estado del pedido"
-                    ariaLabel="Estado del pedido"
+              <div className="flex flex-col gap-1.5">
+                <label className="block text-sm font-medium text-gray-700">
+                  Tipo de entrega <span className="text-red-500">*</span>
+                </label>
+
+                <FormSelect
+                  value={formData.deliveryType}
+                  options={deliveryTypeOptions}
+                  onChange={(value) => handleDeliveryTypeChange({ target: { value } })}
+                  icon={Truck}
+                  disabled={loading || !canEditDelivery}
+                  error={errors.deliveryType}
+                  placeholder="Tipo de entrega"
+                  ariaLabel="Tipo de entrega"
+                />
+
+                {errors.deliveryType && (
+                  <p className="mt-0.5 text-xs text-red-500">{errors.deliveryType}</p>
+                )}
+              </div>
+            </div>
+
+            {formData.deliveryType === 'delivery' ? (
+              <div className="flex flex-col gap-1.5">
+                <label className="block text-sm font-medium text-gray-700">
+                  Dirección de entrega <span className="text-red-500">*</span>
+                </label>
+
+                <div className="relative">
+                  <MapPin
+                    className="absolute left-3 top-3 w-4 h-4 text-gray-400 pointer-events-none"
+                    strokeWidth={1.8}
                   />
 
-                  {!canChangeOrderStatus && !annulledSale && (
-                    <p className="text-xs text-gray-500">
-                      {finalOrder
-                        ? 'El pedido relacionado ya esta entregado o cancelado.'
-                        : 'Disponible solo cuando la venta esta aprobada.'}
-                    </p>
-                  )}
-
-                  {errors.idOrderStatus && (
-                    <p className="text-xs text-red-500">{errors.idOrderStatus}</p>
-                  )}
+                  <textarea
+                    value={formData.deliveryAddress}
+                    onChange={handleDeliveryAddressChange}
+                    disabled={loading || !canEditDelivery}
+                    rows={2}
+                    placeholder="Ej: Cra 73 #21-30"
+                    className={`w-full pl-10 pr-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 resize-none transition-colors duration-200 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed ${
+                      errors.deliveryAddress
+                        ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+                        : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
+                    }`}
+                  />
                 </div>
-              </div>
-            </section>
 
-            <section className="rounded-xl border border-gray-100 bg-gray-50">
-              <div className="px-4 py-3 border-b border-gray-100 bg-white rounded-t-xl">
-                <h3 className="text-sm font-semibold text-gray-800">
-                  Informacion general
-                </h3>
-                <p className="text-xs text-gray-400">
-                  Resumen del pedido y la venta actual.
+                {errors.deliveryAddress && (
+                  <p className="mt-0.5 text-xs text-red-500">{errors.deliveryAddress}</p>
+                )}
+
+                {canEditDelivery && (
+                  <button
+                    type="button"
+                    onClick={handleUseClientAddress}
+                    disabled={loading}
+                    className="mt-2 text-sm text-[#004D77] hover:bg-[#004D77]/10 inline-flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors duration-200 w-fit disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Home className="w-3.5 h-3.5" strokeWidth={1.8} />
+                    Usar dirección del cliente
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium text-gray-700">Dirección de entrega:</span> Cliente recoge.
                 </p>
               </div>
+            )}
 
-              <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <InfoItem label="Cliente" value={sale.cliente ?? '-'} />
-                <InfoItem label="Vendedor" value={sale.vendedor ?? '-'} />
-                <InfoItem label="Estado venta" value={sale.estado ?? '-'} />
-                <InfoItem label="Total" value={sale.total ?? '-'} />
-              </div>
-            </section>
+            <div className="flex flex-col gap-1.5">
+              <label className="block text-sm font-medium text-gray-700">
+                Estado del pedido <span className="text-red-500">*</span>
+              </label>
+
+              <FormSelect
+                value={formData.idOrderStatus}
+                options={orderStatusOptions}
+                onChange={(value) => handleOrderStatusChange({ target: { value } })}
+                icon={PackageCheck}
+                disabled={loading || !canChangeOrderStatus}
+                error={errors.idOrderStatus}
+                placeholder="Estado del pedido"
+                ariaLabel="Estado del pedido"
+              />
+
+              {!canChangeOrderStatus && !annulledSale && (
+                <p className="mt-0.5 text-xs text-gray-500">
+                  {finalOrder
+                    ? 'El pedido relacionado ya esta entregado o cancelado.'
+                    : 'Disponible solo cuando la venta esta aprobada.'}
+                </p>
+              )}
+
+              {errors.idOrderStatus && (
+                <p className="mt-0.5 text-xs text-red-500">{errors.idOrderStatus}</p>
+              )}
+            </div>
           </div>
-        </div>
+        </section>
+
+        <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <SectionHeader
+            icon={Info}
+            title="Información general"
+            description="Resumen actual de la venta y el pedido"
+          />
+
+          <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <InfoItem label="Cliente" value={sale.cliente ?? '-'} />
+            <InfoItem label="Vendedor" value={sale.vendedor ?? '-'} />
+            <InfoItem label="Estado venta" value={sale.estado ?? '-'} />
+            <InfoItem label="Total" value={sale.total ?? '-'} />
+          </div>
+
+          <div className="px-5 pb-5">
+            <div className="p-3 bg-gray-100 rounded-lg border border-gray-200">
+              <p className="text-sm text-gray-600">
+                Productos, pagos, vendedor, subtotal y tipo de venta no se editan desde este formulario.
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function SectionHeader({ icon: Icon, title, description }) {
+  return (
+    <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gray-50">
+      <div className="w-7 h-7 rounded-md bg-[#004D77] flex items-center justify-center shrink-0">
+        <Icon className="w-4 h-4 text-white" strokeWidth={2} />
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-gray-800">{title}</p>
+        <p className="text-xs text-gray-400">{description}</p>
       </div>
     </div>
   );
@@ -642,7 +697,7 @@ function SaleEditForm() {
 
 function InfoItem({ label, value }) {
   return (
-    <div className="p-3 bg-white rounded-lg border border-gray-100">
+    <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
       <p className="text-xs text-gray-400">{label}</p>
       <p className="text-sm font-semibold text-gray-700 mt-1">{value}</p>
     </div>

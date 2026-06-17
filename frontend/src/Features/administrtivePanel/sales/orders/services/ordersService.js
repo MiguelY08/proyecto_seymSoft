@@ -203,7 +203,7 @@ const normalizeOrder = (order = {}) => {
     totalApi: total,
     totalPagado,
     saldoPendiente: Math.max(0, total - totalPagado),
-    tieneVenta: Boolean(order.hasSale),
+    tieneVenta: Boolean(order.hasSale ?? order.sale ?? order.venta),
     venta: order.sale ?? null,
     fechaLimitePago: order.paymentDeadline ?? null,
     estadoLogistico: normalizeEstadoLogistico(order.estadoLogistico ?? order.logisticStatus ?? order.status),
@@ -316,6 +316,7 @@ export const OrdersService = {
     if (order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) return false;
     if (order.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO) return false;
     if (order.pagoEstado === ESTADOS_PAGO.PAGADO) return false;
+    if (order.tieneVenta) return false;
     return true;
   },
 

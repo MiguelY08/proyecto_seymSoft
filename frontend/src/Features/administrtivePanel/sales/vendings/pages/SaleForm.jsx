@@ -16,6 +16,7 @@ import { useAuth } from '../../../../access/context/AuthContext';
 import LeftSectionForm from '../../orders/components/LeftSectionForm';
 import RightSectionForm from '../../orders/components/RightSectionForm';
 import PaymentsSection from '../../orders/components/PaymentsSection';
+import FormClient from '../../clients/modals/FormClient';
 
 // Helpers
 import { getInitialPaymentAmounts } from '../helpers/salesHelpers';
@@ -139,6 +140,23 @@ const getCreditDueDate = () => {
 
 const normalizeClientList = (response) => response?.data ?? response ?? [];
 
+const normalizeClientForForm = (client = {}) => ({
+  ...client,
+  id: client.id ?? client.idClient,
+  fullName:
+    client.fullName ??
+    client.name ??
+    [client.firstName, client.lastName].filter(Boolean).join(' ') ??
+    '',
+  name:
+    client.name ??
+    client.fullName ??
+    [client.firstName, client.lastName].filter(Boolean).join(' ') ??
+    '',
+  clientCredit: client.clientCredit ?? client.assignedCredit,
+  assignedCredit: client.assignedCredit ?? client.clientCredit,
+});
+
 const getProductStock = (product) => {
   const barcodeStock = product.barcodes?.reduce(
     (sum, item) => sum + Number(item.stock ?? 0),
@@ -210,6 +228,7 @@ function SaleForm() {
 
   // ─── Estados para nueva venta ─────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
 
   // Datos del formulario (similar a OrdersForm)
   const [formData, setFormData] = useState({
@@ -254,7 +273,7 @@ function SaleForm() {
     const loadCatalogs = async () => {
       try {
         const clients = await clientsService.getAll();
-        setClientes(normalizeClientList(clients));
+        setClientes(normalizeClientList(clients).map(normalizeClientForForm));
 
         const creditCustomers = await getCreditCustomers();
         setCreditAccounts(mapCreditCustomers(creditCustomers));
@@ -294,11 +313,12 @@ function SaleForm() {
 
   // ─── Manejadores para LeftSectionForm ─────────────────────────────────────
   const handleClienteChange = (e) => {
-    const clienteId = Number(e.target.value);
+    const rawValue = e.target.value;
+    const clienteId = rawValue === '' ? '' : Number(rawValue);
     setFormData(prev => ({ ...prev, clienteId }));
 
     if (clienteId !== '') {
-      const cliente = clientes.find(c => c.id === clienteId);
+      const cliente = clientes.find(c => Number(c.id) === Number(clienteId));
       if (cliente) {
         const direccionSugerida = cliente.id === 0
           ? 'El cliente lo recoge'
@@ -307,6 +327,42 @@ function SaleForm() {
       }
     }
     if (errors.clienteId) setErrors(prev => ({ ...prev, clienteId: null }));
+  };
+
+  const handleQuickCreateClient = async (clientData) => {
+    try {
+      const createdClient = normalizeClientForForm(await clientsService.create(clientData));
+      const createdClientId = createdClient.id;
+
+      setClientes(prev => {
+        const exists = prev.some(client => Number(client.id) === Number(createdClientId));
+        return exists
+          ? prev.map(client => Number(client.id) === Number(createdClientId) ? createdClient : client)
+          : [createdClient, ...prev];
+      });
+
+      try {
+        const creditCustomers = await getCreditCustomers();
+        setCreditAccounts(mapCreditCustomers(creditCustomers));
+      } catch (error) {
+        console.warn('No se pudo refrescar cartera despues de crear cliente:', error);
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        clienteId: createdClientId,
+        direccionEntrega: prev.tipoEntrega === 'recoge'
+          ? 'El cliente lo recoge'
+          : (createdClient.address || createdClient.direccion || ''),
+      }));
+      setErrors(prev => ({ ...prev, clienteId: null, direccionEntrega: null }));
+      showSuccess('Cliente creado', 'El nuevo cliente fue creado y asignado a la venta.');
+      setIsClientModalOpen(false);
+      return createdClient;
+    } catch (error) {
+      showError('Error', error.message || 'No se pudo crear el cliente.');
+      throw error;
+    }
   };
 
   const handleTipoEntregaChange = (e) => {
@@ -642,6 +698,7 @@ function SaleForm() {
           onDireccionManualChange={handleDireccionManualChange}
           onEstadoLogisticoChange={handleEstadoLogisticoChange}
           onMotivoCancelacionChange={handleMotivoCancelacionChange}
+          onCreateClient={() => setIsClientModalOpen(true)}
         />
 
         <RightSectionForm
@@ -684,6 +741,13 @@ function SaleForm() {
           </p>
         </div>
       )}
+
+      <FormClient
+        isOpen={isClientModalOpen}
+        onClose={() => setIsClientModalOpen(false)}
+        client={null}
+        onSave={handleQuickCreateClient}
+      />
     </div>
   );
 }

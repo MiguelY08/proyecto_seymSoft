@@ -72,8 +72,6 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
               disabledTitle = 'No disponible para pedidos cancelados';
             } else if (order.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO) {
               disabledTitle = 'No disponible para pedidos entregados';
-            } else if (order.estadoLogistico === 'listo' && order.pagoEstado === 'pagado') {
-              disabledTitle = 'No disponible para pedidos listos y pagados';
             } else {
               disabledTitle = 'No disponible';
             }

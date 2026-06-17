@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import { X, IdCard, User, Mail, Phone, MapPin, UserCheck, CalendarDays, Building2, Package, FileText, Hash, Clock } from 'lucide-react';
+import { X, User, Mail, Phone, MapPin, UserCheck, CalendarDays, Building2, Package, FileText, Hash, Clock } from 'lucide-react';
 import { 
   formatPersonType, 
   formatRut, 
@@ -86,6 +86,7 @@ function InfoProvider({ isOpen, onClose, provider }) {
 
   // Formatear categorías para mostrar
   const categoriasTexto = formatCategories(provider.categorias);
+  const identificacionCompleta = `${provider.tipo || 'N/A'} ${provider.numero || '—'}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -115,6 +116,9 @@ function InfoProvider({ isOpen, onClose, provider }) {
               <h2 className="text-white font-bold text-base leading-tight truncate">
                 {provider.nombre || `${provider.nombres || ''} ${provider.apellidos || ''}`.trim() || 'Sin nombre'}
               </h2>
+              <p className="text-white/70 text-[11px] mt-0.5">
+                Identificación: {identificacionCompleta}
+              </p>
               <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusColor}`}>
                   {getStatusText(provider.activo)}
@@ -130,29 +134,6 @@ function InfoProvider({ isOpen, onClose, provider }) {
         {/* Campos de detalle — grid de 2 columnas como InfoClient */}
         <div className="px-6 py-5 grid grid-cols-2 gap-x-6 gap-y-4">
 
-          {/* Separador Identificación */}
-          <div className="col-span-2 flex items-center gap-2">
-            <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Identificación</span>
-            <div className="flex-1 h-px bg-[#004D77]/15" />
-          </div>
-
-          {/* Tipo y Número de Documento - igual que InfoClient */}
-          <div className="col-span-2">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[#004D77]/8 flex items-center justify-center shrink-0 mt-0.5">
-                <IdCard className="w-4 h-4 text-[#004D77]/60" strokeWidth={1.8} />
-              </div>
-              <div className="flex flex-col gap-0.5 min-w-0">
-                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide leading-none">
-                  Tipo y Número Doc.
-                </span>
-                <span className="text-sm font-medium text-gray-800 wrap-break-words leading-snug">
-                  {provider.tipo || '—'} {provider.numero || '—'}
-                </span>
-              </div>
-            </div>
-          </div>
-
           {/* Separador Datos personales */}
           <div className="col-span-2 flex items-center gap-2">
             <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Datos personales</span>
@@ -160,24 +141,18 @@ function InfoProvider({ isOpen, onClose, provider }) {
           </div>
 
           {/* Nombre completo */}
-          <div className="col-span-2">
             <DetailRow 
               icon={User} 
               label="Nombre completo" 
               value={provider.nombre || `${provider.nombres || ''} ${provider.apellidos || ''}`.trim() || '—'} 
-              fullWidth 
             />
-          </div>
 
           {/* Correo electrónico */}
-          <div className="col-span-2">
             <DetailRow 
               icon={Mail} 
               label="Correo electrónico" 
               value={provider.correo || '—'} 
-              fullWidth 
             />
-          </div>
 
           {/* Teléfono */}
           <DetailRow 
@@ -217,7 +192,7 @@ function InfoProvider({ isOpen, onClose, provider }) {
           <DetailRow 
             icon={Clock} 
             label="Plazo devoluciones" 
-            value={provider.plazoDevoluciones || '—'} 
+            value={provider.plazoDevoluciones ? `${provider.plazoDevoluciones} Dia/s` : '—'} 
           />
 
           {/* Categorías - CORREGIDO: usar el string formateado */}

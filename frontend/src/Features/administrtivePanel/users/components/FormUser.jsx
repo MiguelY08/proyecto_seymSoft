@@ -179,9 +179,9 @@ function FormUser() {
     }
     const confirmed = await showConfirm(
       'warning',
-      '¿Salir sin guardar?',
-      'Tienes cambios sin guardar. Si sales ahora perderás todo lo que has ingresado.',
-      { confirmButtonText: 'Sí, salir', cancelButtonText: 'Seguir editando' }
+      'Salir sin guardar?',
+      'Los cambios no guardados se perderan.',
+      { confirmButtonText: 'Sí, salir', cancelButtonText: 'Continuar editando' }
     );
     if (confirmed?.isConfirmed) animatedClose();
   };

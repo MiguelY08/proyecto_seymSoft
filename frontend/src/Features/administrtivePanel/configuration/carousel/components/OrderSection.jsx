@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ArrowLeftRight } from 'lucide-react';
 import CardOrder from '../components/CardOrder';
 import Permission from '../../roles/components/Permission';
+import Spinner from '../../../../shared/spinner';
 
 // ─── OrderSection ─────────────────────────────────────────────────────────────
 function OrderSection({ slides, onReorder, loading }) {
@@ -124,15 +125,7 @@ function OrderSection({ slides, onReorder, loading }) {
           onDragEnd={handleDragEnd}
         >
           {loading ? (
-            <div className="flex gap-4">
-              {[...Array(3)].map((_, index) => (
-                <div
-                  key={index}
-                  className="rounded-xl bg-gray-100 animate-pulse shrink-0"
-                  style={{ width: '280px', aspectRatio: '16/9' }}
-                />
-              ))}
-            </div>
+            <Spinner message="Cargando orden de banners..." className="min-h-[180px]" />
           ) : slidesVisibles.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 gap-2 text-gray-400">
               <ArrowLeftRight className="w-8 h-8 opacity-30" strokeWidth={1.5} />

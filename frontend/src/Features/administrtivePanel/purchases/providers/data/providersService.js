@@ -5,36 +5,7 @@
  * consumiendo la API backend.
  */
 
-import axios from 'axios';
-
-// URL base de la API (ajusta según tu entorno)
-const API_BASE_URL = 'http://localhost:3000/api/providers';
-
-// Helper para obtener el token de autenticación
-const getAuthToken = () => {
-  return localStorage.getItem('accessToken') || '';
-};
-
-// Configuración de axios
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: { 'Content-Type': 'application/json' }
-});
-
-// Interceptor para agregar el token a cada petición
-api.interceptors.request.use((config) => {
-  config.headers.Authorization = `Bearer ${getAuthToken()}`;
-  return config;
-});
-
-// Interceptor para manejar errores de respuesta
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    const message = error.response?.data?.message || 'Error en la petición';
-    throw new Error(message);
-  }
-);
+import apiClient from '../../../../../setting/apiClient.js';
 
 export const providersService = {
   getAll: async (params = {}) => {
@@ -47,7 +18,7 @@ export const providersService = {
     if (personType) queryParams.append('personType', personType);
     if (idStatus) queryParams.append('idStatus', idStatus);
     
-    const response = await api.get(`?${queryParams.toString()}`);
+    const response = await apiClient.get(`/providers?${queryParams.toString()}`);
     const result = response.data;
     
     if (!response.data.success && result.message) {
@@ -83,7 +54,7 @@ export const providersService = {
   },
 
   getById: async (id) => {
-    const response = await api.get(`/${id}`);
+    const response = await apiClient.get(`/providers/${id}`);
     const result = response.data;
     
     if (!response.data.success && result.message) {
@@ -134,7 +105,7 @@ export const providersService = {
       idStatus: 1
     };
     
-    const response = await api.post('', payload);
+    const response = await apiClient.post('/providers', payload);
     const result = response.data;
     
     if (!response.data.success && result.message) {
@@ -187,7 +158,7 @@ export const providersService = {
     
     console.log(' Update payload:', payload);
     
-    const response = await api.put(`/${id}`, payload);
+    const response = await apiClient.put(`/providers/${id}`, payload);
     const result = response.data;
     
     if (!response.data.success && result.message) {
@@ -220,7 +191,7 @@ export const providersService = {
   },
 
   delete: async (id) => {
-    const response = await api.delete(`/${id}`);
+    const response = await apiClient.delete(`/providers/${id}`);
     const result = response.data;
     
     if (!response.data.success && result.message) {
@@ -231,7 +202,7 @@ export const providersService = {
   },
 
   toggleActive: async (id) => {
-    const response = await api.patch(`/${id}/status`);
+    const response = await apiClient.patch(`/providers/${id}/status`);
     const result = response.data;
     
     if (!response.data.success && result.message) {

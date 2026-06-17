@@ -16,9 +16,9 @@ function DetailProduct({ producto, isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
-      <div className="bg-white rounded-lg max-w-3xl w-full shadow-2xl relative z-10 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl max-w-3xl w-full shadow-2xl relative z-10 max-h-[90vh] overflow-hidden">
         <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b" style={{ backgroundColor: '#004D77' }}>
           <h3 className="text-lg font-bold text-white">Detalles del producto</h3>
           <button onClick={onClose} className="text-white hover:text-gray-200 transition-colors">
@@ -26,7 +26,7 @@ function DetailProduct({ producto, isOpen, onClose }) {
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-64px)]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex justify-center">
               {images.length > 0 ? (
@@ -140,6 +140,15 @@ function DetailProduct({ producto, isOpen, onClose }) {
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-gray-700">Stock general:</span>
                   <span className="font-bold text-gray-900">{producto.totalStock ?? 0} unidades</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-gray-700">Unidad:</span>
+                  <span className="text-gray-600">
+                    {producto.unitMeasure
+                      ? `${producto.unitMeasure.name || ''}${producto.unitMeasure.abbreviation ? ` (${producto.unitMeasure.abbreviation})` : ''}`.trim()
+                      : 'No especificada'}
+                  </span>
                 </div>
 
                 <div className="flex items-center gap-2">
