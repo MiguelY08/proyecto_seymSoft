@@ -8,6 +8,7 @@ import DetailPurchases from "../pages/DetailPurchases";
 import Anulatepurchase from "../pages/Anulatepurchase";
 import { Plus, FileSpreadsheet } from "lucide-react";
 import { getAllPurchases, annulPurchase, getPurchaseById } from "../data/purchasesService";
+import Spinner from "../../../../shared/spinner"; // ← IMPORTAR SPINNER
 import * as XLSX from "xlsx";
 
 export const Purchases = () => {
@@ -204,12 +205,9 @@ export const Purchases = () => {
   const endIndex = startIndex + 13;
   const currentData = products;
 
+  // ✅ USAR SPINNER IGUAL QUE EN PROVIDERS Y CATEGORÍAS
   if (loading && products.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-gray-500">Cargando compras...</div>
-      </div>
-    );
+    return <Spinner message="Cargando compras..." />;
   }
 
   return (

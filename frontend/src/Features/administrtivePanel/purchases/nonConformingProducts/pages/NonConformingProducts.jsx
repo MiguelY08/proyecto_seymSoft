@@ -7,6 +7,7 @@ import ViewDetailsPN from "./ViewDetailsPN";
 import { PurchasesFilters } from "../../../../shared/DateFilter";
 import { Plus, FileSpreadsheet } from "lucide-react";
 import { getNonConforming, cancelNonConforming } from "../data/nonConformingService";
+import Spinner from "../../../../shared/spinner"; // ← IMPORTAR SPINNER
 import * as XLSX from "xlsx";
 
 export const NonConformingProducts = () => {
@@ -181,10 +182,15 @@ export const NonConformingProducts = () => {
   const endIndex = startIndex + 13;
   const currentData = reports;
 
+  // ✅ USAR SPINNER IGUAL QUE EN LAS DEMÁS PÁGINAS
   if (loading && reports.length === 0) {
+    return <Spinner message="Cargando reportes..." />;
+  }
+
+  if (error) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-gray-500">Cargando reportes...</div>
+        <div className="text-red-500">{error}</div>
       </div>
     );
   }
