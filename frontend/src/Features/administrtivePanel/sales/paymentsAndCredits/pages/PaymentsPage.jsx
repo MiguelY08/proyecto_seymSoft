@@ -164,7 +164,7 @@ export default function PaymentsPage() {
     if (!confirm.isConfirmed) return;
 
     try {
-      const success = exportAccountsToExcel(filteredData);
+      const success = await exportAccountsToExcel(filteredData);
 
       if (!success) {
         showError("Error", "No se pudo generar el archivo.");

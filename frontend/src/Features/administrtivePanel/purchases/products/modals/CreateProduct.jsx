@@ -164,10 +164,8 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
     else if (Number(d.precioDetalle) <= 0) e.precioDetalle = 'El precio detal debe ser mayor a 0.';
     if (d.precioMayorista === '') e.precioMayorista = 'El precio mayorista es obligatorio.';
     else if (Number(d.precioMayorista) <= 0) e.precioMayorista = 'El precio mayorista debe ser mayor a 0.';
-    if (d.precioColegas === '') e.precioColegas = 'El precio colegas es obligatorio.';
-    else if (Number(d.precioColegas) <= 0) e.precioColegas = 'El precio colegas debe ser mayor a 0.';
-    if (d.precioPacas === '') e.precioPacas = 'El precio por pacas es obligatorio.';
-    else if (Number(d.precioPacas) <= 0) e.precioPacas = 'El precio por pacas debe ser mayor a 0.';
+    if (d.precioColegas !== '' && Number(d.precioColegas) <= 0) e.precioColegas = 'El precio colegas debe ser mayor a 0.';
+    if (d.precioPacas !== '' && Number(d.precioPacas) <= 0) e.precioPacas = 'El precio por pacas debe ser mayor a 0.';
     return e;
   };
 
@@ -263,6 +261,20 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
       formDataToSend.append('quantityPerPack', formData.cantidadXPaca ? Number(formData.cantidadXPaca) : 0);
       formDataToSend.append('codBarras', formData.codBarras);
       formDataToSend.append('stock', Number(formData.stockPrincipal) || 0);
+      formDataToSend.append('barcodes', JSON.stringify([
+        {
+          barcode: formData.codBarras,
+          barcode_type: 'EAN13',
+          stock: Number(formData.stockPrincipal) || 0,
+        },
+        ...formData.codsBarrasExtra
+          .filter((barcode) => barcode?.cod)
+          .map((barcode) => ({
+            barcode: barcode.cod,
+            barcode_type: 'SKU',
+            stock: Number(barcode.stock) || 0,
+          })),
+      ]));
       selectedCategoryIds.forEach((catId) => formDataToSend.append('categories[]', catId));
       selectedSubcategoryIds.forEach((subId) => formDataToSend.append('subcategories[]', subId));
       imagenesPreview.forEach((file) => formDataToSend.append('images', file));
