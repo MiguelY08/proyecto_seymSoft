@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   X, IdCard, User, Mail, Phone,
   MapPin, UserCheck, CreditCard,
@@ -30,30 +30,100 @@ function DetailRow({ icon: Icon, label, value, fullWidth = false }) {
   );
 }
 
-// Componente Mini Gráfica
-function MiniGraphClient({ clientStartDate, onExpand }) {
-  const [selectedYear, setSelectedYear] = useState(2024);
-  
-  const generateMockData = (year) => {
-    return [
-      { month: 'Ene', value: 30000000, products: 65 },
-      { month: 'Feb', value: 18000000, products: 45 },
-      { month: 'Mar', value: 15000000, products: 38 },
-      { month: 'Abr', value: 7000000, products: 22 },
-      { month: 'May', value: 12000000, products: 35 },
-      { month: 'Jun', value: 13000000, products: 40 },
-      { month: 'Jul', value: 17000000, products: 48 },
-      { month: 'Ago', value: 9000000, products: 28 },
-      { month: 'Sep', value: 6000000, products: 18 },
-      { month: 'Oct', value: 20000000, products: 55 },
-      { month: 'Nov', value: 14000000, products: 42 },
-      { month: 'Dic', value: 19000000, products: 50 },
-    ];
+// Componente Mini Gráfica con datos reales
+function MiniGraphClient({ clientId, onExpand }) {
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [totalValue, setTotalValue] = useState(0);
+  const [availableYears, setAvailableYears] = useState([]);
+  const [purchasesCache, setPurchasesCache] = useState(null);
+
+  useEffect(() => {
+    if (clientId) {
+      loadPurchases();
+    }
+  }, [clientId]);
+
+  const loadPurchases = async () => {
+    setLoading(true);
+    try {
+      const { clientsService } = await import('../services/clientsService');
+      const purchasesData = await clientsService.getClientPurchases(clientId);
+      setPurchasesCache(purchasesData);
+      
+      if (purchasesData && purchasesData.byMonth) {
+        const years = [...new Set(purchasesData.byMonth.map(item => item.year))];
+        setAvailableYears(years.sort((a, b) => b - a));
+        
+        const defaultYear = years.length > 0 ? years[0] : new Date().getFullYear();
+        setSelectedYear(defaultYear);
+        
+        const filtered = purchasesData.byMonth.filter(item => item.year === defaultYear);
+        const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const completeData = monthNames.map(month => {
+          const existing = filtered.find(item => item.month === month);
+          return {
+            month,
+            value: existing ? existing.total : 0,
+            year: defaultYear
+          };
+        });
+        
+        setData(completeData);
+        setTotalValue(purchasesData.total || 0);
+      } else {
+        setData([]);
+        setTotalValue(0);
+      }
+    } catch (error) {
+      console.error('Error al cargar compras del cliente:', error);
+      setData([]);
+      setTotalValue(0);
+    } finally {
+      setLoading(false);
+    }
   };
-  
-  const data = generateMockData(selectedYear);
-  const maxValue = Math.max(...data.map(d => d.value));
-  const totalValue = data.reduce((sum, d) => sum + d.value, 0);
+
+  const handleYearChange = (year) => {
+    setSelectedYear(year);
+    if (purchasesCache && purchasesCache.byMonth) {
+      const filtered = purchasesCache.byMonth.filter(item => item.year === year);
+      const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      const completeData = monthNames.map(month => {
+        const existing = filtered.find(item => item.month === month);
+        return {
+          month,
+          value: existing ? existing.total : 0,
+          year
+        };
+      });
+      setData(completeData);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-gray-50 rounded-xl border border-gray-200 p-3 h-32 flex items-center justify-center">
+        <p className="text-xs text-gray-400">Cargando...</p>
+      </div>
+    );
+  }
+
+  if (!loading && data.length === 0) {
+    return (
+      <div className="bg-gray-50 rounded-xl border border-gray-200 p-3 cursor-pointer hover:shadow-md transition-shadow" onClick={onExpand}>
+        <div className="flex items-center justify-center h-16">
+          <p className="text-xs text-gray-400">Sin compras registradas</p>
+        </div>
+        <p className="text-[9px] text-gray-400 text-center mt-2">
+          Haz clic para ver detalles
+        </p>
+      </div>
+    );
+  }
+
+  const maxValue = Math.max(...data.map(d => d.value), 1);
 
   return (
     <div className="bg-gray-50 rounded-xl border border-gray-200 p-3 cursor-pointer hover:shadow-md transition-shadow" onClick={onExpand}>
@@ -65,16 +135,18 @@ function MiniGraphClient({ clientStartDate, onExpand }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="text-[9px] px-1 py-0.5 border border-gray-300 rounded bg-white"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <option value={2024}>2024</option>
-            <option value={2023}>2023</option>
-            <option value={2022}>2022</option>
-          </select>
+          {availableYears.length > 0 && (
+            <select
+              value={selectedYear}
+              onChange={(e) => handleYearChange(Number(e.target.value))}
+              className="text-[9px] px-1 py-0.5 border border-gray-300 rounded bg-white"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {availableYears.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          )}
           <div className="text-gray-400">
             <BarChart2 className="w-3.5 h-3.5" strokeWidth={1.8} />
           </div>
@@ -268,30 +340,25 @@ function InfoClient({ isOpen, onClose, client }) {
           {/* CONTENIDO PRINCIPAL */}
           <div className="px-5 py-4 flex-1">
             
-            {/* DATOS PERSONALES - 2 filas x 2 columnas */}
             <div className="flex items-center gap-2 mb-3">
               <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Datos personales</span>
               <div className="flex-1 h-px bg-[#004D77]/15" />
             </div>
 
             <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-              {/* Fila 1: Nombre completo y Correo */}
               <DetailRow icon={User} label="Nombre completo" value={client.fullName || '—'} />
               <DetailRow icon={Mail} label="Correo" value={client.email || '—'} />
-              {/* Fila 2: Teléfono y Dirección */}
               <DetailRow icon={Phone} label="Teléfono" value={client.phone || '—'} />
               <DetailRow icon={MapPin} label="Dirección" value={client.address || '—'} />
             </div>
 
-            {/* MINI GRÁFICA */}
             <div className="mt-4">
               <MiniGraphClient 
-                clientStartDate={client.clientSince} 
+                clientId={client.id}
                 onExpand={() => setShowGraph(!showGraph)}
               />
             </div>
 
-            {/* CONTACTO Y REGISTRO */}
             <div className="flex items-center gap-2 mt-4 mb-3">
               <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Contacto y registro</span>
               <div className="flex-1 h-px bg-[#004D77]/15" />
@@ -305,7 +372,6 @@ function InfoClient({ isOpen, onClose, client }) {
             </div>
           </div>
 
-          {/* BOTONES */}
           <div className="border-t border-gray-100 px-5 py-3 flex items-center justify-between shrink-0">
             <button
               onClick={() => setShowGraph(v => !v)}
@@ -323,13 +389,12 @@ function InfoClient({ isOpen, onClose, client }) {
           </div>
         </div>
 
-        {/* PANEL DE GRÁFICA GRANDE */}
         <div
           className="overflow-hidden shrink-0 transition-all duration-500 ease-in-out border-l border-gray-100"
           style={{ width: showGraph ? '50%' : '0%', opacity: showGraph ? 1 : 0 }}
         >
           <div className="w-full h-full flex flex-col" style={{ minWidth: '360px' }}>
-            <GraphClient clientStartDate={client.clientSince || '07/05/2023'} />
+            <GraphClient clientId={client.id} clientStartDate={client.clientSince || '07/05/2023'} />
           </div>
         </div>
 

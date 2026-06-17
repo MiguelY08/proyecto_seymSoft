@@ -4,7 +4,7 @@ import { ChevronDown } from 'lucide-react';
 
 function FormSelect({
   value,
-  options,
+  options = [],
   onChange,
   icon: Icon,
   disabled = false,
@@ -14,11 +14,12 @@ function FormSelect({
   optionClassName = '',
   ariaLabel,
 }) {
+  const safeOptions = Array.isArray(options) ? options : [];
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownStyle, setDropdownStyle] = useState(null);
   const wrapperRef = useRef(null);
   const dropdownRef = useRef(null);
-  const selectedOption = options.find((option) => String(option.value) === String(value));
+  const selectedOption = safeOptions.find((option) => String(option.value) === String(value));
   const SelectedIcon = selectedOption?.icon || Icon;
   const selectedIconClassName = selectedOption?.iconClassName || 'text-gray-400';
   const hasIcon = Boolean(SelectedIcon);
@@ -117,7 +118,7 @@ function FormSelect({
           className="bg-white border border-gray-300 rounded-lg shadow-2xl ring-1 ring-black/5 overflow-y-auto"
         >
           <ul className="py-1">
-            {options.map((option) => {
+            {safeOptions.map((option) => {
               const isSelected = String(option.value) === String(value);
               const OptionIcon = option.icon;
 
