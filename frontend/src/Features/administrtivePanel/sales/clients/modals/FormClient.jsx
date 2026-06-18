@@ -134,12 +134,13 @@ function MiniFormGraph({ clientId, onExpand }) {
         </div>
       </div>
 
-      <div className="flex items-end gap-0.5 h-28">
+      {/* Mini gráfica menos larga - h-20 en lugar de h-28 */}
+      <div className="flex items-end gap-0.5 h-20">
         {data.map((d, i) => (
           <div
             key={i}
             className="flex-1 bg-[#004D77]/30 hover:bg-[#004D77] transition-all rounded-t cursor-pointer"
-            style={{ height: `${(d.value / maxValue) * 100}px` }}
+            style={{ height: `${(d.value / maxValue) * 70}px` }}
             title={`${d.month}: $${(d.value / 1000000).toFixed(1)}M`}
           />
         ))}
@@ -175,6 +176,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     contactName:  '',
     contactPhone: '',
     clientCredit: '',
+    saldoFavor:   '',
     clientType:   '',
     rut:          '',
     ciuCode:      '',
@@ -280,6 +282,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
         contactName:  client.contactName  || '',
         contactPhone: client.contactPhone || '',
         clientCredit: client.clientCredit || '',
+        saldoFavor:   client.saldoFavor   || '', // ✅ Ya no tiene '0' por defecto
         clientType:   client.clientType   || '',
         rut:          client.rut          || '',
         ciuCode:      client.ciuCode      || '',
@@ -314,6 +317,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
           contactName: client.contactName || '',
           contactPhone: client.contactPhone || '',
           clientCredit: client.clientCredit || '',
+          saldoFavor: client.saldoFavor || '',
           clientType: client.clientType || '',
           rut: client.rut || '',
           ciuCode: client.ciuCode || '',
@@ -352,7 +356,10 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
     let newFormData = { ...formData, [name]: value };
 
-    if (name === 'clientCredit') {
+    // ============================================
+    // VALIDACIÓN PARA clientCredit y saldoFavor
+    // ============================================
+    if (name === 'clientCredit' || name === 'saldoFavor') {
       const formattedValue = formatNumericValue(value);
       newFormData[name] = formattedValue;
     }
@@ -375,8 +382,8 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     setFormData(newFormData);
 
     if (touched[name]) {
-      if (name === 'clientCredit') {
-        const numericError = validateNumeric10_2(newFormData[name], 'Crédito cliente');
+      if (name === 'clientCredit' || name === 'saldoFavor') {
+        const numericError = validateNumeric10_2(newFormData[name], name === 'clientCredit' ? 'Crédito cliente' : 'Saldo a favor');
         setErrors(prev => ({ ...prev, [name]: numericError }));
       } else if (name === 'ciuCode') {
         const ciuError = validateCiuCode(newFormData.ciuCode, newFormData.rut);
@@ -397,8 +404,8 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     const { name } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
 
-    if (name === 'clientCredit') {
-      const numericError = validateNumeric10_2(formData[name], 'Crédito cliente');
+    if (name === 'clientCredit' || name === 'saldoFavor') {
+      const numericError = validateNumeric10_2(formData[name], name === 'clientCredit' ? 'Crédito cliente' : 'Saldo a favor');
       setErrors(prev => ({ ...prev, [name]: numericError }));
       if (numericError) return;
     }
@@ -416,13 +423,17 @@ function FormClient({ isOpen, onClose, client, onSave }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Validar campos numéricos
     const creditError = validateNumeric10_2(formData.clientCredit, 'Crédito cliente');
-    if (creditError) {
+    const saldoError = validateNumeric10_2(formData.saldoFavor, 'Saldo a favor');
+
+    if (creditError || saldoError) {
       setErrors({
         ...errors,
-        clientCredit: creditError || ''
+        clientCredit: creditError || '',
+        saldoFavor: saldoError || ''
       });
-      setTouched(prev => ({ ...prev, clientCredit: true }));
+      setTouched(prev => ({ ...prev, clientCredit: true, saldoFavor: true }));
       return;
     }
 
@@ -453,6 +464,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       contactPhone: formData.contactPhone,
       clientType: formData.clientType,
       clientCredit: formData.clientCredit || '0',
+      saldoFavor: formData.saldoFavor || '',
       rut: formData.rut,
       ciuCode: formData.rut === 'no' ? '' : (formData.ciuCode || '')
     };
@@ -765,6 +777,21 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     className={inputClass('clientCredit')}
                   />
                   <ErrorMsg field="clientCredit" />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <Label>Saldo a favor</Label>
+                  <input
+                    type="text"
+                    name="saldoFavor"
+                    value={formData.saldoFavor}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="0"
+                    autoComplete="off"
+                    className={inputClass('saldoFavor')}
+                  />
+                  <ErrorMsg field="saldoFavor" />
                 </div>
 
                 <div className="flex gap-2">

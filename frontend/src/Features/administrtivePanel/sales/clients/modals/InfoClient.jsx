@@ -11,6 +11,7 @@ import {
   formatRut,
   formatCurrency,
 } from '../helpers/clientHelpers';
+import { clientsService } from '../services/clientsService';
 
 function DetailRow({ icon: Icon, label, value, fullWidth = false }) {
   return (
@@ -179,6 +180,30 @@ function MiniGraphClient({ clientId, onExpand }) {
 
 function InfoClient({ isOpen, onClose, client }) {
   const [showGraph, setShowGraph] = useState(false);
+  
+  // ✅ Estados para datos financieros (vienen del módulo de pagos)
+  const [financialData, setFinancialData] = useState(null);
+  const [loadingFinancial, setLoadingFinancial] = useState(true);
+
+  // Cargar datos financieros al abrir el modal
+  useEffect(() => {
+    if (client && isOpen) {
+      loadFinancialSummary(client.id);
+    }
+  }, [client, isOpen]);
+
+  const loadFinancialSummary = async (clientId) => {
+    setLoadingFinancial(true);
+    try {
+      const data = await clientsService.getClientFinancialSummary(clientId);
+      setFinancialData(data);
+    } catch (error) {
+      console.error('Error al cargar resumen financiero:', error);
+      setFinancialData(null);
+    } finally {
+      setLoadingFinancial(false);
+    }
+  };
 
   if (!isOpen || !client) return null;
 
@@ -197,14 +222,31 @@ function InfoClient({ isOpen, onClose, client }) {
     'por paca': 'bg-orange-50 text-orange-700 border-orange-200',
   }[(client.clientType || '').toLowerCase()] || 'bg-gray-50 text-gray-600 border-gray-200';
 
-  const creditoTotal = Number(client.assignedCredit ?? client.clientCredit ?? 0);
-  const montoOcupado = Number(client.usedCredit ?? 0);
-  const disponible = Number(client.availableCredit ?? Math.max(0, creditoTotal - montoOcupado));
+  // ✅ Datos financieros (vienen del módulo de pagos)
+  const creditoTotal = financialData?.assignedCredit ?? 0;
+  const montoOcupado = financialData?.usedCredit ?? 0;
+  const disponible = financialData?.availableCredit ?? 0;
+  const deudaTotal = financialData?.totalDebt ?? 0;
+  const creditosActivos = financialData?.activeCreditsCount ?? 0;
   
-  const deudaTotal = Number(client.totalDebt ?? montoOcupado);
-  const creditosActivos = Number(client.activeCredits ?? 0);
+  // ✅ SALDO A FAVOR: viene DIRECTAMENTE del cliente (tabla clients)
+  // ⚠️ NO viene de financialData, sino de client.credit_balance
+  const saldoFavor = client.credit_balance ?? 0;
   
   const identificacionCompleta = `${client.documentType || 'N/A'} ${client.document || '—'}`;
+
+  // ✅ Badge de estado financiero (viene de financialData)
+  const getFinancialStatusBadge = () => {
+    if (!financialData) return null;
+    const status = financialData.status;
+    if (status === 'VENCIDO') {
+      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border bg-red-50 text-red-500 border-red-200">Moroso</span>;
+    } else if (status === 'PENDIENTE') {
+      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border bg-yellow-50 text-yellow-600 border-yellow-200">Con créditos</span>;
+    } else {
+      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border bg-green-50 text-green-700 border-green-200">Al día</span>;
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -248,6 +290,8 @@ function InfoClient({ isOpen, onClose, client }) {
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white border border-white/30">
                     {formatPersonType(client.personType)}
                   </span>
+                  {/* ✅ Badge de estado financiero */}
+                  {getFinancialStatusBadge()}
                 </div>
               </div>
             </div>
@@ -318,14 +362,15 @@ function InfoClient({ isOpen, onClose, client }) {
                   </div>
                 </div>
 
+                {/* ✅ SALDO A FAVOR: viene del cliente (credit_balance) */}
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center">
                     <Wallet className="w-3.5 h-3.5 text-green-600" strokeWidth={1.8} />
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Deuda total</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Saldo a favor</p>
                     <p className="text-sm font-bold text-green-600">
-                      {deudaTotal > 0 ? formatCurrency(deudaTotal) : '$ 0'}
+                      {saldoFavor > 0 ? formatCurrency(saldoFavor) : '$ 0'}
                     </p>
                   </div>
                 </div>
@@ -389,6 +434,7 @@ function InfoClient({ isOpen, onClose, client }) {
           </div>
         </div>
 
+        {/* PANEL DE GRÁFICA GRANDE */}
         <div
           className="overflow-hidden shrink-0 transition-all duration-500 ease-in-out border-l border-gray-100"
           style={{ width: showGraph ? '50%' : '0%', opacity: showGraph ? 1 : 0 }}

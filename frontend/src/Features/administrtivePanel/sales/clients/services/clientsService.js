@@ -84,6 +84,8 @@ export const clientsService = {
       active: client.active,
       personType: client.personType,
       clientSince: client.clientSince,
+      credit_balance: client.credit_balance,
+      saldoFavor: client.credit_balance,
       isSystem: client.id === SYSTEM_CLIENT_ID
     }));
     
@@ -103,6 +105,11 @@ export const clientsService = {
     return response.data.data;
   },
 
+  getClientFinancialSummary: async (clientId) => {
+    const response = await apiClient.get(`/clients/${clientId}/financial-summary`);
+    return response.data.data;
+  },
+
   create: async (clientData) => {
     const formattedClientCredit = validateAndFormatNumber(clientData.clientCredit);
     
@@ -119,6 +126,7 @@ export const clientsService = {
       contactPhone: clientData.contactPhone || null,
       clientType: clientData.clientType || '',
       clientCredit: formattedClientCredit,
+      credit_balance: clientData.saldoFavor || '0', // ✅ Mapeado correctamente
       rut: clientData.rut || 'no',
       ciuCode: (clientData.ciuCode === 'No aplica' || !clientData.ciuCode) ? null : clientData.ciuCode
     };
@@ -147,6 +155,11 @@ export const clientsService = {
     
     if (clientData.clientCredit !== undefined) {
       payload.clientCredit = validateAndFormatNumber(clientData.clientCredit);
+    }
+    
+    // ✅ Mapear saldoFavor → credit_balance
+    if (clientData.saldoFavor !== undefined) {
+      payload.credit_balance = validateAndFormatNumber(clientData.saldoFavor);
     }
     
     if (clientData.ciuCode !== undefined) {
