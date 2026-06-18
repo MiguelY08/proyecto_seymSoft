@@ -1,5 +1,11 @@
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import React from "react";
+
+const COMPANY_COLOR = "004D77";
+const LIGHT_BLUE = "DCEBF3";
+const LIGHT_GRAY = "F3F4F6";
+const WHITE = "FFFFFF";
 
 /* =============================================================================
    paymentHelpers.js
@@ -102,12 +108,262 @@ export const getTotalAbonadoCliente = (cliente) => {
  *           Abonado Capital | Abonado Interés | Saldo Capital |
  *           Saldo Interés | Saldo Total | Estado
  */
-export const exportAccountsToExcel = (accounts = []) => {
+const exportAccountsSummaryToExcel = async (accounts = []) => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Pagos y Abonos");
+  const currentDate = new Date();
+  const fileDate = currentDate.toISOString().split("T")[0];
+
+  workbook.creator = "SeymSoft";
+  workbook.created = currentDate;
+
+  worksheet.mergeCells("A1:G1");
+  worksheet.getCell("A1").value = "PAGOS Y ABONOS";
+  worksheet.getCell("A1").font = {
+    bold: true,
+    size: 18,
+    color: { argb: WHITE },
+  };
+  worksheet.getCell("A1").alignment = {
+    horizontal: "center",
+    vertical: "middle",
+  };
+  worksheet.getCell("A1").fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: COMPANY_COLOR },
+  };
+
+  worksheet.mergeCells("A2:G2");
+  worksheet.getCell("A2").value = `Fecha de exportación: ${currentDate.toLocaleString("es-CO")}`;
+  worksheet.getCell("A2").alignment = { horizontal: "center" };
+  worksheet.getCell("A2").font = {
+    italic: true,
+    color: { argb: COMPANY_COLOR },
+  };
+
+  worksheet.addRow([]);
+
+  worksheet.columns = [
+    { key: "nro", width: 8 },
+    { key: "nombre", width: 32 },
+    { key: "creditoAsignado", width: 18 },
+    { key: "cupoOcupado", width: 18 },
+    { key: "cupoDisponible", width: 18 },
+    { key: "creditosActivos", width: 18 },
+    { key: "estado", width: 16 },
+  ];
+
+  const headerRow = worksheet.addRow([
+    "#",
+    "Nombre",
+    "Crédito Asignado",
+    "Cupo Ocupado",
+    "Cupo Disponible",
+    "Créditos Activos",
+    "Estado",
+  ]);
+
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: WHITE } };
+    cell.alignment = { horizontal: "center", vertical: "middle" };
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: COMPANY_COLOR },
+    };
+    cell.border = {
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
+    };
+  });
+
+  accounts.forEach((account, index) => {
+    const row = worksheet.addRow({
+      nro: index + 1,
+      nombre: account.nombre || "Sin nombre",
+      creditoAsignado: Number(account.creditoAsignado ?? 0),
+      cupoOcupado: Number(account.saldo ?? 0),
+      cupoDisponible: Number(account.cupoDisponible ?? 0),
+      creditosActivos: Number(account.creditosActivos ?? 0),
+      estado: account.estado ?? "al_dia",
+    });
+
+    row.eachCell((cell) => {
+      cell.alignment = { vertical: "middle" };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: index % 2 === 0 ? WHITE : LIGHT_GRAY },
+      };
+      cell.border = {
+        top: { style: "thin", color: { argb: LIGHT_BLUE } },
+        left: { style: "thin", color: { argb: LIGHT_BLUE } },
+        bottom: { style: "thin", color: { argb: LIGHT_BLUE } },
+        right: { style: "thin", color: { argb: LIGHT_BLUE } },
+      };
+    });
+
+    ["creditoAsignado", "cupoOcupado", "cupoDisponible"].forEach((key) => {
+      row.getCell(key).numFmt = '"$"#,##0';
+    });
+  });
+
+  worksheet.addRow([]);
+  const totalsRow = worksheet.addRow({
+    nombre: "TOTALES:",
+    creditoAsignado: accounts.reduce((sum, account) => sum + Number(account.creditoAsignado ?? 0), 0),
+    cupoOcupado: accounts.reduce((sum, account) => sum + Number(account.saldo ?? 0), 0),
+    cupoDisponible: accounts.reduce((sum, account) => sum + Number(account.cupoDisponible ?? 0), 0),
+    creditosActivos: accounts.reduce((sum, account) => sum + Number(account.creditosActivos ?? 0), 0),
+  });
+
+  totalsRow.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: COMPANY_COLOR } };
+    cell.alignment = { vertical: "middle" };
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: LIGHT_BLUE },
+    };
+    cell.border = {
+      top: { style: "thin", color: { argb: COMPANY_COLOR } },
+      left: { style: "thin", color: { argb: COMPANY_COLOR } },
+      bottom: { style: "thin", color: { argb: COMPANY_COLOR } },
+      right: { style: "thin", color: { argb: COMPANY_COLOR } },
+    };
+  });
+
+  ["creditoAsignado", "cupoOcupado", "cupoDisponible"].forEach((key) => {
+    totalsRow.getCell(key).numFmt = '"$"#,##0';
+  });
+
+  worksheet.views = [{ state: "frozen", ySplit: 4 }];
+  worksheet.autoFilter = { from: "A4", to: "G4" };
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+
+  saveAs(blob, `pagos_y_abonos_${fileDate}.xlsx`);
+
+  return true;
+};
+
+export const exportAccountsToExcel = async (accounts = []) => {
   if (!accounts.length) return false;
 
   try {
-    const data = [];
+    const hasInvoiceRows = accounts.some((account) => (account.facturas ?? []).length > 0);
+    if (!hasInvoiceRows) return exportAccountsSummaryToExcel(accounts);
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Créditos");
+    const currentDate = new Date();
+    const fileDate = currentDate.toISOString().split("T")[0];
     let rowNumber = 1;
+
+    workbook.creator = "SeymSoft";
+    workbook.created = currentDate;
+
+    worksheet.mergeCells("A1:O1");
+    worksheet.getCell("A1").value = "PAGOS Y ABONOS";
+    worksheet.getCell("A1").font = {
+      bold: true,
+      size: 18,
+      color: { argb: WHITE },
+    };
+    worksheet.getCell("A1").alignment = {
+      horizontal: "center",
+      vertical: "middle",
+    };
+    worksheet.getCell("A1").fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: COMPANY_COLOR },
+    };
+
+    worksheet.mergeCells("A2:O2");
+    worksheet.getCell("A2").value = `Fecha de exportación: ${currentDate.toLocaleString("es-CO")}`;
+    worksheet.getCell("A2").alignment = { horizontal: "center" };
+    worksheet.getCell("A2").font = {
+      italic: true,
+      color: { argb: COMPANY_COLOR },
+    };
+
+    worksheet.addRow([]);
+
+    worksheet.columns = [
+      { key: "nro", width: 8 },
+      { key: "documento", width: 16 },
+      { key: "nombreCliente", width: 26 },
+      { key: "nroFactura", width: 14 },
+      { key: "valorCredito", width: 16 },
+      { key: "interes", width: 14 },
+      { key: "totalPagar", width: 16 },
+      { key: "fechaCredito", width: 16 },
+      { key: "finCredito", width: 16 },
+      { key: "abonadoCapital", width: 17 },
+      { key: "abonadoInteres", width: 17 },
+      { key: "saldoCapital", width: 16 },
+      { key: "saldoInteres", width: 16 },
+      { key: "saldoTotal", width: 16 },
+      { key: "estado", width: 14 },
+    ];
+
+    const headerRow = worksheet.addRow([
+      "Nro",
+      "Documento",
+      "Nombre Cliente",
+      "Nro Factura",
+      "Valor Crédito",
+      "Interés",
+      "Total a Pagar",
+      "Fecha Crédito",
+      "Fin de Crédito",
+      "Abonado Capital",
+      "Abonado Interés",
+      "Saldo Capital",
+      "Saldo Interés",
+      "Saldo Total",
+      "Estado",
+    ]);
+
+    headerRow.eachCell((cell) => {
+      cell.font = {
+        bold: true,
+        color: { argb: WHITE },
+      };
+      cell.alignment = {
+        horizontal: "center",
+        vertical: "middle",
+      };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: COMPANY_COLOR },
+      };
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+    });
+
+    const moneyKeys = [
+      "valorCredito",
+      "interes",
+      "totalPagar",
+      "abonadoCapital",
+      "abonadoInteres",
+      "saldoCapital",
+      "saldoInteres",
+      "saldoTotal",
+    ];
 
     accounts.forEach((cliente) => {
       const facturas = cliente.facturas ?? [];
@@ -124,36 +380,46 @@ export const exportAccountsToExcel = (accounts = []) => {
         const dueDate = new Date(factura.fechaCredito);
         dueDate.setMonth(dueDate.getMonth() + 2);
 
-        data.push({
-          Nro: rowNumber++,
-          Documento: cliente.documento,
-          "Nombre Cliente": cliente.nombre,
-          "Nro Factura": factura.nroFactura,
-          "Valor Crédito": factura.valorCredito ?? 0,
-          Interés: saldoInteres,
-          "Total a Pagar": saldoTotal,
-          "Fecha Crédito": factura.fechaCredito,
-          "Fin de Crédito": dueDate.toISOString().split("T")[0],
-          "Abonado Capital": aboCapital,
-          "Abonado Interés": aboInteres,
-          "Saldo Capital": saldoCapital,
-          "Saldo Interés": saldoInteres,
-          "Saldo Total": saldoTotal,
-          Estado: estado,
+        const row = worksheet.addRow({
+          nro: rowNumber++,
+          documento: cliente.documento,
+          nombreCliente: cliente.nombre,
+          nroFactura: factura.nroFactura,
+          valorCredito: factura.valorCredito ?? 0,
+          interes: saldoInteres,
+          totalPagar: saldoTotal,
+          fechaCredito: factura.fechaCredito,
+          finCredito: dueDate.toISOString().split("T")[0],
+          abonadoCapital: aboCapital,
+          abonadoInteres: aboInteres,
+          saldoCapital,
+          saldoInteres,
+          saldoTotal,
+          estado,
+        });
+
+        row.eachCell((cell) => {
+          cell.alignment = { vertical: "middle" };
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: rowNumber % 2 === 0 ? WHITE : LIGHT_GRAY },
+          };
+          cell.border = {
+            top: { style: "thin", color: { argb: LIGHT_BLUE } },
+            left: { style: "thin", color: { argb: LIGHT_BLUE } },
+            bottom: { style: "thin", color: { argb: LIGHT_BLUE } },
+            right: { style: "thin", color: { argb: LIGHT_BLUE } },
+          };
+        });
+
+        moneyKeys.forEach((key) => {
+          row.getCell(key).numFmt = '"$"#,##0';
         });
       });
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const range = XLSX.utils.decode_range(worksheet["!ref"]);
-
-    const moneyCols = [4, 5, 6, 9, 10, 11, 12, 13];
-    for (let row = 1; row <= range.e.r; row++) {
-      moneyCols.forEach((col) => {
-        const cell = XLSX.utils.encode_cell({ r: row, c: col });
-        if (worksheet[cell]) worksheet[cell].z = '"$"#,##0';
-      });
-    }
+    if (rowNumber === 1) return false;
 
     const totCredito = accounts.reduce(
       (s, c) => s + getTotalCreditoCliente(c),
@@ -170,61 +436,47 @@ export const exportAccountsToExcel = (accounts = []) => {
     );
     const totSaldo = accounts.reduce((s, c) => s + (c.deudaTotal ?? 0), 0);
 
-    XLSX.utils.sheet_add_aoa(
-      worksheet,
-      [
-        [],
-        [
-          "",
-          "",
-          "",
-          "TOTALES:",
-          totCredito,
-          totInteres,
-          totSaldo,
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          totSaldo,
-          "",
-        ],
-      ],
-      { origin: -1 },
-    );
-
-    const newRange = XLSX.utils.decode_range(worksheet["!ref"]);
-    const totalRowIndex = newRange.e.r;
-    moneyCols.forEach((col) => {
-      const cell = XLSX.utils.encode_cell({ r: totalRowIndex, c: col });
-      if (worksheet[cell]) worksheet[cell].z = '"$"#,##0';
+    worksheet.addRow([]);
+    const totalRow = worksheet.addRow({
+      nroFactura: "TOTALES:",
+      valorCredito: totCredito,
+      interes: totInteres,
+      totalPagar: totSaldo,
+      saldoTotal: totSaldo,
     });
 
-    worksheet["!cols"] = [
-      { wch: 5 },
-      { wch: 15 },
-      { wch: 22 },
-      { wch: 12 },
-      { wch: 14 },
-      { wch: 12 },
-      { wch: 14 },
-      { wch: 14 },
-      { wch: 14 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 14 },
-      { wch: 13 },
-      { wch: 12 },
-      { wch: 12 },
-    ];
+    totalRow.eachCell((cell) => {
+      cell.font = {
+        bold: true,
+        color: { argb: COMPANY_COLOR },
+      };
+      cell.alignment = { vertical: "middle" };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: LIGHT_BLUE },
+      };
+      cell.border = {
+        top: { style: "thin", color: { argb: COMPANY_COLOR } },
+        left: { style: "thin", color: { argb: COMPANY_COLOR } },
+        bottom: { style: "thin", color: { argb: COMPANY_COLOR } },
+        right: { style: "thin", color: { argb: COMPANY_COLOR } },
+      };
+    });
 
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Créditos");
+    moneyKeys.forEach((key) => {
+      totalRow.getCell(key).numFmt = '"$"#,##0';
+    });
 
-    const today = new Date().toLocaleDateString("es-CO").replaceAll("/", "-");
-    XLSX.writeFile(workbook, `Listado_Creditos_${today}.xlsx`);
+    worksheet.views = [{ state: "frozen", ySplit: 4 }];
+    worksheet.autoFilter = { from: "A4", to: "O4" };
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    saveAs(blob, `listado_creditos_${fileDate}.xlsx`);
 
     return true;
   } catch (error) {

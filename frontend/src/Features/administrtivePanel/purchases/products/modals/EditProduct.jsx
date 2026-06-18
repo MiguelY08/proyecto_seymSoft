@@ -141,10 +141,10 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
       bulkDiscountPct: producto.bulkDiscountPct || 0,
       descripcion: producto.description || '',
       cantidadXPaca: String(producto.quantityPerPack || 0),
-      id_category: producto.category?.id || categoryIds[0] || null,
+      id_category: categoryIds[0] || null,
       codBarras: producto.barcodes?.[0]?.barcode || '',
       stockPrincipal: producto.barcodes?.[0]?.stock || 0,
-      codsBarrasExtra: producto.barcodes?.slice(1).map((b) => ({ cod: b.barcode, stock: b.stock })) || [],
+      codsBarrasExtra: producto.barcodes?.slice(1).map((b) => ({ id: b.id, cod: b.barcode, stock: b.stock })) || [],
     });
     setErrors({});
     setPriceErrors({});
@@ -185,10 +185,8 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
     else if (Number(d.precioDetalle) <= 0) e.precioDetalle = 'El precio detal debe ser mayor a 0.';
     if (d.precioMayorista === '') e.precioMayorista = 'El precio mayorista es obligatorio.';
     else if (Number(d.precioMayorista) <= 0) e.precioMayorista = 'El precio mayorista debe ser mayor a 0.';
-    if (d.precioColegas === '') e.precioColegas = 'El precio colegas es obligatorio.';
-    else if (Number(d.precioColegas) <= 0) e.precioColegas = 'El precio colegas debe ser mayor a 0.';
-    if (d.precioPacas === '') e.precioPacas = 'El precio por pacas es obligatorio.';
-    else if (Number(d.precioPacas) <= 0) e.precioPacas = 'El precio por pacas debe ser mayor a 0.';
+    if (d.precioColegas !== '' && Number(d.precioColegas) <= 0) e.precioColegas = 'El precio colegas debe ser mayor a 0.';
+    if (d.precioPacas !== '' && Number(d.precioPacas) <= 0) e.precioPacas = 'El precio por pacas debe ser mayor a 0.';
     return e;
   };
 
@@ -268,6 +266,10 @@ function EditProduct({ isOpen, onClose, onUpdate, producto }) {
       const saved = await ProductsService.update(producto.id, {
         nombre: formData.nombre,
         referencia: formData.referencia,
+        precioDetalle: formData.precioDetalle,
+        precioMayorista: formData.precioMayorista,
+        precioColegas: formData.precioColegas,
+        precioPacas: formData.precioPacas,
         idUnitMeasure: formData.idUnitMeasure,
         ivaPercentage: formData.ivaPercentage,
         retailDiscountPct: formData.retailDiscountPct,
