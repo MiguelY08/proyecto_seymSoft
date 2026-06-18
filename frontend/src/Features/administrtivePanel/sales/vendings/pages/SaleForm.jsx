@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, Save } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
+import { getPrimaryProductBarcode } from '../../../../shared/scanner';
 
 // Servicios
 import { SalesServices } from '../services/salesServices';
@@ -173,13 +174,7 @@ const getProductStock = (product) => {
 };
 
 const normalizeProduct = (product) => {
-  const barcode =
-    product.barcode ??
-    product.codBarras ??
-    product.barcodes?.[0]?.barcode ??
-    product.productBarcodes?.[0]?.barcode ??
-    product.reference ??
-    '';
+  const barcode = getPrimaryProductBarcode(product);
 
   return {
     ...product,
@@ -207,7 +202,10 @@ function SaleForm() {
   const saleToEdit = location.state?.sale ?? null;
   const isEditing = saleToEdit !== null;
   const vendingType = location.state?.vendingType ?? 'direct';
-  const vendingTypeLabel = vendingType === 'manual' ? 'Manual' : 'Directa';
+  const vendingTypeLabel =
+    vendingType === 'manual' ? 'Manual' :
+    vendingType === 'web' ? 'Web' :
+    'Directa';
 
   // Redirigir a edición de pedido si se intenta editar una venta existente
   useEffect(() => {
@@ -456,6 +454,13 @@ function SaleForm() {
       ...prev,
       productos: prev.productos.filter(p => p.id !== productoId),
     }));
+  };
+
+  const handleScannerProductNotFound = (code) => {
+    showError(
+      'Codigo no registrado',
+      `No se encontro ningun producto con el codigo de barras ${code}.`
+    );
   };
 
   // ─── Manejador para pagos (PaymentsSection) ───────────────────────────────
@@ -713,6 +718,8 @@ function SaleForm() {
           onAddProduct={handleAddProduct}
           onUpdateCantidad={handleUpdateCantidad}
           onRemoveProduct={handleRemoveProduct}
+          scannerField="sale-product-search"
+          onScannerProductNotFound={handleScannerProductNotFound}
         />
       </div>
 

@@ -6,6 +6,7 @@ function ProductsToolbar({ search, onSearchChange }) {
     <div className="relative w-full sm:w-80">
       <input
         type="text"
+        data-scanner-field="product-search"
         placeholder="Buscar"
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
