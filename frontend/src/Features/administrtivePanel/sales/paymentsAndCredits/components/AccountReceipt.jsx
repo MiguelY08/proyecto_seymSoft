@@ -73,13 +73,29 @@ export default function AccountReceipt({ account }) {
       </div>
 
       {/* FACTURAS — una sección por cada factura */}
+      {facturas.length === 0 && (
+        <div style={{ ...cardStyle, marginTop: "24px" }}>
+          <p style={{ gridColumn: "1 / -1", textAlign: "center", color: "#6B7280" }}>
+            No hay facturas registradas para este cliente.
+          </p>
+        </div>
+      )}
+
       {facturas.map((factura, fi) => {
-        const saldoFac = factura.saldo ?? 0;
+        const saldoFac =
+          Number(factura.deudaTotal ?? 0) ||
+          Number(factura.saldo ?? 0) + Number(factura.interes ?? 0);
         const abonadoFac = getTotalAbonadoFactura(factura);
+        const fechaVencimiento = factura.fechaVencimiento
+          ? new Date(factura.fechaVencimiento)
+          : null;
 
         // Fecha de vencimiento: 2 meses desde la fecha del crédito
         const dueDate = new Date(factura.fechaCredito);
         dueDate.setMonth(dueDate.getMonth() + 2);
+        const displayDueDate = fechaVencimiento && !Number.isNaN(fechaVencimiento.getTime())
+          ? fechaVencimiento.toLocaleDateString("es-CO")
+          : dueDate.toLocaleDateString("es-CO");
 
         return (
           <div key={factura.id} style={{ marginTop: "36px" }}>
@@ -95,7 +111,7 @@ export default function AccountReceipt({ account }) {
               <Info label="Fecha crédito" value={factura.fechaCredito} />
               <Info
                 label="Fecha vencimiento"
-                value={dueDate.toLocaleDateString("es-CO")}
+                value={displayDueDate}
               />
               <Info label="Saldo pendiente" value={formatCOP(saldoFac)} />
             </div>

@@ -39,15 +39,11 @@ export const validate = (data, { isCreating = true } = {}) => {
     errors.precioMayorista = 'El precio mayorista debe ser mayor a 0.';
   }
 
-  if (data.precioColegas === '') {
-    errors.precioColegas = 'El precio colegas es obligatorio.';
-  } else if (Number(data.precioColegas) <= 0) {
+  if (data.precioColegas !== '' && data.precioColegas !== undefined && Number(data.precioColegas) <= 0) {
     errors.precioColegas = 'El precio colegas debe ser mayor a 0.';
   }
 
-  if (data.precioPacas === '') {
-    errors.precioPacas = 'El precio por pacas es obligatorio.';
-  } else if (Number(data.precioPacas) <= 0) {
+  if (data.precioPacas !== '' && data.precioPacas !== undefined && Number(data.precioPacas) <= 0) {
     errors.precioPacas = 'El precio por pacas debe ser mayor a 0.';
   }
 

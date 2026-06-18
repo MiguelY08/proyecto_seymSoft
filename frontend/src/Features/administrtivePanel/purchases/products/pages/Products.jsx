@@ -34,6 +34,18 @@ const LIGHT_BLUE = "DCEBF3";
 const LIGHT_GRAY = "F3F4F6";
 const WHITE = "FFFFFF";
 
+const getProductCategories = (product) =>
+  Array.isArray(product.categories) ? product.categories : [];
+
+const getProductSubcategories = (product) =>
+  Array.isArray(product.subcategories) ? product.subcategories : [];
+
+const getProductCategoryNames = (product) =>
+  getProductCategories(product).map((category) => category.name).filter(Boolean);
+
+const getProductSubcategoryNames = (product) =>
+  getProductSubcategories(product).map((subcategory) => subcategory.name).filter(Boolean);
+
 function EmptyState({ onCreateProduct, canCreate }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4">
@@ -140,9 +152,7 @@ function Products() {
 
     const allCategories = new Set();
     data.forEach((product) => {
-      if (product.category?.name) {
-        allCategories.add(product.category.name);
-      }
+      getProductCategoryNames(product).forEach((name) => allCategories.add(name));
     });
     return Array.from(allCategories).sort();
   }, [data]);
@@ -154,14 +164,12 @@ function Products() {
     const allSubcategories = new Set();
 
     data.forEach((product) => {
-      // Si hay subcategoría y coincide con el filtro de categoría
-      if (product.subcategory?.name) {
-        if (
-          filterCategory === "all" ||
-          product.category?.name === filterCategory
-        ) {
-          allSubcategories.add(product.subcategory.name);
-        }
+      const categoryNames = getProductCategoryNames(product);
+      const matchesSelectedCategory =
+        filterCategory === "all" || categoryNames.includes(filterCategory);
+
+      if (matchesSelectedCategory) {
+        getProductSubcategoryNames(product).forEach((name) => allSubcategories.add(name));
       }
     });
 
@@ -181,7 +189,8 @@ function Products() {
           row.name?.toLowerCase().includes(query) ||
           row.barcodes?.[0]?.barcode?.toLowerCase().includes(query) ||
           row.reference?.toLowerCase().includes(query) ||
-          row.category?.name?.toLowerCase().includes(query) ||
+          getProductCategoryNames(row).some((name) => name.toLowerCase().includes(query)) ||
+          getProductSubcategoryNames(row).some((name) => name.toLowerCase().includes(query)) ||
           row.unitMeasure?.name?.toLowerCase().includes(query) ||
           row.unitMeasure?.abbreviation?.toLowerCase().includes(query) ||
           String(row.retailPrice).includes(query) ||
@@ -189,13 +198,16 @@ function Products() {
       }
 
       // Filtro de categoría
+      const categoryNames = getProductCategoryNames(row);
+      const subcategoryNames = getProductSubcategoryNames(row);
+
       const matchesCategory =
-        filterCategory === "all" || row.category?.name === filterCategory;
+        filterCategory === "all" || categoryNames.includes(filterCategory);
 
       // Filtro de subcategoría
       const matchesSubcategory =
         filterSubcategory === "all" ||
-        row.subcategory?.name === filterSubcategory;
+        subcategoryNames.includes(filterSubcategory);
 
       return matchesSearch && matchesCategory && matchesSubcategory;
     });
@@ -370,12 +382,8 @@ function Products() {
       });
 
       filteredData.forEach((product, index) => {
-        const categoriesText = product.categories?.length
-          ? product.categories.map((cat) => cat.name).join(", ")
-          : product.category?.name || "N/A";
-        const subcategoriesText = product.subcategories?.length
-          ? product.subcategories.map((sub) => sub.name).join(", ")
-          : product.subcategory?.name || "N/A";
+        const categoriesText = getProductCategoryNames(product).join(", ") || "N/A";
+        const subcategoriesText = getProductSubcategoryNames(product).join(", ") || "N/A";
         const unitText = product.unitMeasure
           ? `${product.unitMeasure.name || ""}${product.unitMeasure.abbreviation ? ` (${product.unitMeasure.abbreviation})` : ""}`.trim()
           : "N/A";

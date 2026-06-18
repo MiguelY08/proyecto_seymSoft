@@ -1,5 +1,35 @@
 import apiClient from '../../../../../setting/apiClient.js';
 
+const hasValue = (value) => value !== undefined && value !== null && value !== '';
+
+const toOptionalNumber = (value) => (hasValue(value) ? Number(value) : '');
+
+const buildBarcodesPayload = (data) => {
+  const barcodes = [];
+
+  if (data.codBarras) {
+    barcodes.push({
+      barcode: data.codBarras,
+      barcode_type: 'EAN13',
+      stock: Number(data.stock) || 0,
+    });
+  }
+
+  if (data.codsBarrasExtra?.length > 0) {
+    data.codsBarrasExtra.forEach((barcode) => {
+      if (barcode?.cod) {
+        barcodes.push({
+          barcode: barcode.cod,
+          barcode_type: 'SKU',
+          stock: Number(barcode.stock) || 0,
+        });
+      }
+    });
+  }
+
+  return barcodes;
+};
+
 export const ProductsService = {
   async listUnitMeasures() {
     const response = await apiClient.get('/products/unit-measures');
@@ -30,8 +60,8 @@ export const ProductsService = {
     formData.append('referencia', data.referencia);
     formData.append('precioDetalle', Number(data.precioDetalle));
     formData.append('precioMayorista', Number(data.precioMayorista));
-    formData.append('precioColegas', data.precioColegas ? Number(data.precioColegas) : '');
-    formData.append('precioPacas', data.precioPacas ? Number(data.precioPacas) : '');
+    formData.append('precioColegas', toOptionalNumber(data.precioColegas));
+    formData.append('precioPacas', toOptionalNumber(data.precioPacas));
     formData.append('ivaPercentage', data.ivaPercentage || 0);
     formData.append('idUnitMeasure', data.idUnitMeasure);
     formData.append('idCategorie', data.id_category || data.idCategorie || 1);
@@ -39,13 +69,7 @@ export const ProductsService = {
     formData.append('quantityPerPack', data.cantidadXPaca ? Number(data.cantidadXPaca) : 0);
     formData.append('codBarras', data.codBarras);
     formData.append('stock', Number(data.stock) || 0);
-
-    if (data.codsBarrasExtra?.length > 0) {
-      data.codsBarrasExtra.forEach((barcode, idx) => {
-        formData.append(`codsBarrasExtra[${idx}]`, barcode.cod);
-        formData.append(`stocksExtra[${idx}]`, Number(barcode.stock) || 0);
-      });
-    }
+    formData.append('barcodes', JSON.stringify(buildBarcodesPayload(data)));
 
     if (data.categories !== undefined) {
       formData.append('categories', JSON.stringify(data.categories));
@@ -75,8 +99,8 @@ export const ProductsService = {
     if (data.referencia !== undefined)      formData.append('reference', data.referencia);
     if (data.precioDetalle !== undefined)   formData.append('retailPrice', Number(data.precioDetalle));
     if (data.precioMayorista !== undefined) formData.append('wholesalePrice', Number(data.precioMayorista));
-    if (data.precioColegas !== undefined)   formData.append('partnerPrice', Number(data.precioColegas));
-    if (data.precioPacas !== undefined)     formData.append('bulkPrice', Number(data.precioPacas));
+    if (data.precioColegas !== undefined)   formData.append('partnerPrice', toOptionalNumber(data.precioColegas));
+    if (data.precioPacas !== undefined)     formData.append('bulkPrice', toOptionalNumber(data.precioPacas));
     if (data.ivaPercentage !== undefined)   formData.append('ivaPercentage', data.ivaPercentage);
 
     if (data.retailDiscountPct !== undefined)    formData.append('retailDiscountPct', data.retailDiscountPct);
@@ -94,29 +118,7 @@ export const ProductsService = {
     if (data.cantidadXPaca !== undefined) formData.append('quantityPerPack', Number(data.cantidadXPaca));
     if (data.activo !== undefined)        formData.append('idStatus', data.activo ? 1 : 2);
 
-    const barcodes = [];
-
-    if (data.codBarras) {
-      barcodes.push({
-        barcode: data.codBarras,
-        barcode_type: 'EAN13',
-        stock: Number(data.stock) || 0,
-      });
-    }
-
-    if (data.codsBarrasExtra?.length > 0) {
-      data.codsBarrasExtra.forEach((barcode) => {
-        if (barcode?.cod) {
-          barcodes.push({
-            barcode: barcode.cod,
-            barcode_type: 'SKU',
-            stock: Number(barcode.stock) || 0,
-          });
-        }
-      });
-    }
-
-    formData.append('barcodes', JSON.stringify(barcodes));
+    formData.append('barcodes', JSON.stringify(buildBarcodesPayload(data)));
 
     if (data.categories !== undefined) {
       formData.append('categories', JSON.stringify(data.categories));
