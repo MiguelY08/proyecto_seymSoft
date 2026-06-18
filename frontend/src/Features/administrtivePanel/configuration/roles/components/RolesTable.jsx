@@ -1,5 +1,3 @@
-
-
 import React from "react";
 import { Info, SquarePen, Trash2 } from "lucide-react";
 
@@ -11,7 +9,15 @@ import {
   toggleRoleStatus,
 } from "../services/rolesServices";
 
-const PROTECTED_ROLES = ["Administrator"];
+// ─────────────────────────────────────────────────────
+// FUNCIÓN CENTRALIZADA: VALIDAR ROL PROTEGIDO
+// ─────────────────────────────────────────────────────
+// Soporta "Administrador" y "Administrator" (case-insensitive)
+
+const isProtectedRole = (roleName) => {
+  const protectedRoles = ["administrador", "administrator"];
+  return protectedRoles.includes(roleName?.toLowerCase());
+};
 
 const highlight = (text, term) => {
 
@@ -85,6 +91,25 @@ export default function RolesTable({
   } = useAlert();
 
   // ─────────────────────────────
+  // EDITAR
+  // ─────────────────────────────
+
+  const handleEditRole = (role) => {
+
+    if (isProtectedRole(role.name)) {
+
+      showWarning(
+        "Rol protegido",
+        "El rol Administrador no puede ser editado."
+      );
+
+      return;
+    }
+
+    onEdit(role);
+  };
+
+  // ─────────────────────────────
   // ACTIVAR / DESACTIVAR
   // ─────────────────────────────
 
@@ -92,15 +117,11 @@ export default function RolesTable({
 
     try {
 
-      if (
-        PROTECTED_ROLES.includes(
-          role.name
-        )
-      ) {
+      if (isProtectedRole(role.name)) {
 
         showWarning(
           "Rol protegido",
-          "Este rol no puede modificarse"
+          "Este rol no puede desactivarse"
         );
 
         return;
@@ -187,11 +208,7 @@ export default function RolesTable({
 
     try {
 
-      if (
-        PROTECTED_ROLES.includes(
-          role.name
-        )
-      ) {
+      if (isProtectedRole(role.name)) {
 
         showWarning(
           "Rol protegido",
@@ -453,9 +470,9 @@ export default function RolesTable({
                         <SquarePen
                           size={16}
                           onClick={() =>
-                            onEdit(role)
+                            handleEditRole(role)
                           }
-                          className="text-gray-400 cursor-pointer hover:scale-110 hover:text-[#004D77] transition"
+                          className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-[#004D77]"
                         />
 
                       }
@@ -499,4 +516,3 @@ export default function RolesTable({
   );
 
 }
-

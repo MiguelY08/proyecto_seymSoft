@@ -1,10 +1,14 @@
 import { XCircle } from "lucide-react";
+import { useRef, useState } from "react";
 
 export default function PaymentHistoryTable({
   abonos = [],
   mode = "view",
   onDelete,
 }) {
+  const tooltipRef = useRef(null);
+  const [activeTooltip, setActiveTooltip] = useState(null);
+
   const canCancel = (abono) => {
     if (abono.anulado) return false;
     if (!abono.createdAt) return true;
@@ -30,8 +34,21 @@ export default function PaymentHistoryTable({
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-      timeZone: "UTC",
     });
+  };
+
+  const handleMouseEnter = (e, abonoId) => {
+    if (tooltipRef.current) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      tooltipRef.current.style.left = rect.left - 160 - 16 + "px";
+      tooltipRef.current.style.top = rect.top + rect.height / 2 + "px";
+      tooltipRef.current.style.transform = "translateY(-50%)";
+    }
+    setActiveTooltip(abonoId);
+  };
+
+  const handleMouseLeave = () => {
+    setActiveTooltip(null);
   };
 
   return (
@@ -44,19 +61,19 @@ export default function PaymentHistoryTable({
           <thead className="sticky top-0 z-10 bg-[#004D77] text-white">
             <tr>
               <th className="px-3 py-2 text-xs font-semibold text-center">
-                #
+                Nro Abono
               </th>
 
               <th className="px-3 py-2 text-xs font-semibold text-center">
-                Fecha
+                Fecha Abono
               </th>
 
               <th className="px-3 py-2 text-xs font-semibold text-center">
-                Monto
+                Monto Abonado
               </th>
 
               <th className="px-3 py-2 text-xs font-semibold text-center">
-                Medio
+                Medio de Pago
               </th>
 
               <th className="px-3 py-2 text-xs font-semibold text-center">
@@ -115,43 +132,43 @@ export default function PaymentHistoryTable({
                   <td className="px-3 py-2 text-center">
 
                     {abono.anulado ? (
-                      <div className="relative inline-block group">
+                      <div 
+                        className="relative inline-block"
+                        onMouseEnter={(e) => handleMouseEnter(e, abono.id)}
+                        onMouseLeave={handleMouseLeave}
+                      >
 
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-600 cursor-help">
                           Anulado
                         </span>
 
                         <div
-                          className="
-                            invisible
-                            opacity-0
-                            group-hover:visible
-                            group-hover:opacity-100
-                            transition-all
-                            duration-150
-                            absolute
-                            left-1/2
-                            -translate-x-1/2
-                            bottom-full
-                            mb-2
-                            z-50
-                            min-w-[180px]
-                            max-w-[220px]
+                          ref={tooltipRef}
+                          className={`
+                            fixed
+                            z-[9999]
+                            w-[160px]
                             bg-[#0F172A]
                             text-white
                             rounded-lg
                             shadow-xl
-                            px-3
-                            py-2
-                          "
+                            px-2
+                            py-1.5
+                            transition-all
+                            duration-150
+                            ${activeTooltip === abono.id ? 'opacity-100 visible' : 'opacity-0 invisible'}
+                          `}
+                          style={{
+                            pointerEvents: activeTooltip === abono.id ? 'auto' : 'none'
+                          }}
                         >
-                          <div className="text-center space-y-1">
+                          <div className="text-center space-y-0.5">
 
-                            <p className="font-medium text-[11px]">
+                            <p className="font-medium text-[10px]">
                               {abono.cancelledBy?.nombre || "N/A"}
                             </p>
 
-                            <p className="text-[10px] text-slate-300">
+                            <p className="text-[9px] text-slate-300">
                               {abono.cancelledAt
                                 ? new Date(
                                     abono.cancelledAt
@@ -161,9 +178,9 @@ export default function PaymentHistoryTable({
                                 : "N/A"}
                             </p>
 
-                            <div className="h-px bg-slate-700 my-1" />
+                            <div className="h-px bg-slate-700 my-0.5" />
 
-                            <p className="text-[10px] break-words">
+                            <p className="text-[9px] break-words">
                               {abono.motivoCancelacion ||
                                 "Sin motivo"}
                             </p>
