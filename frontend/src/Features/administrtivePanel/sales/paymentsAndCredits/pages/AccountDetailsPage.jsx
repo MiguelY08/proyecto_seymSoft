@@ -69,7 +69,7 @@ export default function AccountDetailsPage({ mode }) {
         setAccount({
           id: customer.idClient,
           nombre: customer.fullName,
-          documento: "",
+          documento: customer.doc_number ,
           telefono: customer.phone,
           creditoAsignado: Number(customer.assignedCredit ?? 0),
           saldo: Number(customer.usedCredit ?? 0),
@@ -99,6 +99,20 @@ export default function AccountDetailsPage({ mode }) {
     (total, factura) => total + Number(factura.interes ?? 0),
     0,
   );
+
+  // fecha convertida 
+  const formatDate = (dateString) => {
+    if (!dateString) return "-";
+
+    return new Date(dateString).toLocaleDateString(
+      "es-CO",
+      {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }
+    );
+  };
 
   const estadoGeneral = account.estado ?? "al_dia";
 
@@ -329,7 +343,7 @@ export default function AccountDetailsPage({ mode }) {
 
                   {/* Fecha Crédito */}
                   <span className="text-center text-gray-500">
-                    {factura.fechaCredito}
+                    {formatDate(factura.fechaCredito)}
                   </span>
 
                   {/* Total Abonado a Capital */}

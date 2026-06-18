@@ -45,6 +45,7 @@ export default function ContactClientModal({
     setShowInterestModal(true);
   };
 
+
   const handleApplyInterest = async ({ percentage }) => {
     try {
       await generateInterest({
@@ -113,7 +114,18 @@ export default function ContactClientModal({
             <div className="flex justify-between">
               <div>
                 <p className="text-xs text-gray-500">Último pago</p>
-                <p className="font-medium">No disponible</p>
+
+                <p className="font-medium">
+                  {account.lastPaymentDate
+                    ? new Date(
+                        account.lastPaymentDate
+                      ).toLocaleDateString("es-CO", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })
+                    : "Sin registros"}
+                </p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-gray-500">Días de atraso</p>
@@ -153,10 +165,6 @@ export default function ContactClientModal({
                       {new Intl.NumberFormat("es-CO").format(
                         credit.remainingBalance ?? 0,
                       )}
-                    </span>
-                    <span className="text-gray-400 mx-2">·</span>
-                    <span className="text-sm text-gray-600">
-                      Mora: {credit.overdueDays ?? 0} días
                     </span>
                   </div>
                   <button
