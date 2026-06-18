@@ -6,6 +6,7 @@ import CategoriesToolbar from "../components/CategoriesToolbar";
 import CategoryDetail from "./CategoryDetail";
 import FormCategory from "./FormCategory";
 import EditCategory from "./EditCategory";
+import Spinner from "../../../../shared/spinner"; // ← IMPORTAR SPINNER
 import {
   getCategories,
   deleteCategory,
@@ -36,7 +37,6 @@ const CategoriesPage = () => {
       const categoriesWithCount = await Promise.all(
         cats.map(async (cat) => {
           const subs = await getSubcategories(cat.id);
-          // La API puede retornar status como "Active"/"Inactive" o "Activo"/"Inactivo"
           const rawStatus = cat.status ?? cat.statusName ?? cat.estado ?? "";
           const isActive =
             rawStatus === "Active" ||
@@ -52,8 +52,6 @@ const CategoriesPage = () => {
         })
       );
 
-      // Ordenar por id ascendente para que las más nuevas aparezcan al final
-      // y el orden sea consistente con la creación
       const sorted = [...categoriesWithCount].sort((a, b) => a.id - b.id);
       setCategories(sorted);
     } catch (err) {
@@ -187,12 +185,9 @@ const CategoriesPage = () => {
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
   const currentData = filteredCategories.slice(startIndex, startIndex + RECORDS_PER_PAGE);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-gray-500">Cargando categorías...</div>
-      </div>
-    );
+  // ✅ USAR SPINNER IGUAL QUE EN PROVIDERS
+  if (loading && categories.length === 0) {
+    return <Spinner message="Cargando categorías..." />;
   }
 
   if (error) {
