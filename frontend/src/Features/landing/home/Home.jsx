@@ -3,16 +3,10 @@ import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ShoppingBag, Briefcase, ClipboardPen, FileText, Palette, ArrowRight } from 'lucide-react';
 
 import { getActiveBanners } from '../../administrtivePanel/configuration/carousel/services/bannerService.js';
-
+import ProductsService from '../../administrtivePanel/purchases/products/services/productsServices.js';
+import categoriesService from '../../administrtivePanel/purchases/categories/services/categoriesService.js';
 import ProductCard from '../../shared/productCard/ProductCard.jsx';
-import correctorCinta      from '../../../assets/products/correctorencinta.png';
-import cuadernoPrimavera   from '../../../assets/products/cuadernoprimaverax100h.png';
-import notebookPen         from '../../../assets/products/notebookAndPen.png';
-import setSharpie30        from '../../../assets/products/setsharpiex30.png';
-import cosedora            from '../../../assets/products/sewingmachine.png';
-import tijeraPuntaRoma     from '../../../assets/products/Tijeraspuntaroma.png';
-import viniloRojo          from '../../../assets/products/vinilopqpowercolorrojo.png';
-import marcadorEterna      from '../../../assets/products/marcadoreseterna.png';
+import useClientType from '../../shared/hooks/useClientType.js';
 
 import mayoristaBg from '../../../assets/mayoristasBg.png';
 
@@ -161,6 +155,17 @@ const PAGE_STYLES = `
   .products-grid .pm-card:nth-child(7)  { animation-delay: 0.34s; }
   .products-grid .pm-card:nth-child(8)  { animation-delay: 0.39s; }
 
+  /* ─ Loading skeleton ─ */
+  .loading-skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+  }
+  @keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
   /* ─ Mayoristas section ─ */
   .mayoristas-wrap {
     width: 100%;
@@ -261,137 +266,33 @@ function injectHomeStyles() {
 function Home() {
   injectHomeStyles();
 
+  // Estado para carrusel
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [slides,       setSlides]       = useState([]);
+  const [slides, setSlides] = useState([]);
 
-  const categories = [
-    { id: 1, name: 'Escolar',          icon: ShoppingBag,  href: '/categoria/escolar'         },
-    { id: 2, name: 'Oficina',          icon: Briefcase,    href: '/categoria/oficina'          },
-    { id: 3, name: 'Escritura',        icon: ClipboardPen, href: '/categoria/escritura'        },
-    { id: 4, name: 'Papelería básica', icon: FileText,     href: '/categoria/papeleria-basica' },
-    { id: 5, name: 'Arte',             icon: Palette,      href: '/categoria/arte'             },
-  ];
+  // Estado para productos y categorías
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
-  const products = [
-    {
-      id: 1,
-      name: 'Corrector en Cinta',
-      retailPrice: 4500,
-      totalStock: 12,
-      status: 'Activo',
-      category: {
-        id: 3,
-        name: 'ESCRITURA',
-      },
-      images: [
-        { url: correctorCinta },
-      ],
-    },
-    {
-      id: 2,
-      name: 'Cuaderno Primavera x100h',
-      retailPrice: 8900,
-      totalStock: 15,
-      status: 'Activo',
-      category: {
-        id: 1,
-        name: 'ESCOLAR',
-      },
-      images: [
-        { url: cuadernoPrimavera },
-      ],
-    },
-    {
-      id: 3,
-      name: 'Notebook con Bolígrafo',
-      retailPrice: 15900,
-      totalStock: 8,
-      status: 'Activo',
-      category: {
-        id: 2,
-        name: 'OFICINA',
-      },
-      images: [
-        { url: notebookPen },
-      ],
-    },
-    {
-      id: 4,
-      name: 'Set Sharpie x30 Colores',
-      retailPrice: 62000,
-      totalStock: 5,
-      status: 'Activo',
-      category: {
-        id: 4,
-        name: 'ARTE',
-      },
-      images: [
-        { url: setSharpie30 },
-      ],
-    },
-    {
-      id: 5,
-      name: 'Cosedora Metálica',
-      retailPrice: 18500,
-      totalStock: 10,
-      status: 'Activo',
-      category: {
-        id: 2,
-        name: 'OFICINA',
-      },
-      images: [
-        { url: cosedora },
-      ],
-    },
-    {
-      id: 6,
-      name: 'Tijeras Punta Roma',
-      retailPrice: 6200,
-      totalStock: 20,
-      status: 'Activo',
-      category: {
-        id: 1,
-        name: 'ESCOLAR',
-      },
-      images: [
-        { url: tijeraPuntaRoma },
-      ],
-    },
-    {
-      id: 7,
-      name: 'Vinilo Power Color Rojo',
-      retailPrice: 9800,
-      totalStock: 14,
-      status: 'Activo',
-      category: {
-        id: 4,
-        name: 'ARTE',
-      },
-      images: [
-        { url: viniloRojo },
-      ],
-    },
-    {
-      id: 8,
-      name: 'Marcadores Eterna x12',
-      retailPrice: 13500,
-      totalStock: 18,
-      status: 'Activo',
-      category: {
-        id: 3,
-        name: 'ESCRITURA',
-      },
-      images: [
-        { url: marcadorEterna },
-      ],
-    },
-  ];
+  // Hook para obtener clientType
+  const { clientType, loading: loadingClientType } = useClientType();
 
+  // Iconos para categorías (placeholder - se reemplazarán con dinámicos si es necesario)
+  const categoryIcons = {
+    1: ShoppingBag,
+    2: Briefcase,
+    3: ClipboardPen,
+    4: FileText,
+    5: Palette,
+  };
+
+  // ═══ CARGAR CARRUSEL ═══
   useEffect(() => {
     const loadCarousel = async () => {
       try {
         const activeBanners = await getActiveBanners();
-
         const mappedSlides = activeBanners.map((banner) => ({
           id: banner.id,
           image: banner.imageUrl,
@@ -401,7 +302,6 @@ function Home() {
         setSlides((prevSlides) => {
           const prevJson = JSON.stringify(prevSlides);
           const nextJson = JSON.stringify(mappedSlides);
-
           return prevJson === nextJson ? prevSlides : mappedSlides;
         });
       } catch (err) {
@@ -418,10 +318,43 @@ function Home() {
     return () => clearInterval(intervalId);
   }, []);
 
+  // ═══ CARGAR PRODUCTOS DESTACADOS ═══
   useEffect(() => {
-    if (slides.length > 0 && currentSlide >= slides.length) setCurrentSlide(0);
-  }, [slides]);
+    const loadFeaturedProducts = async () => {
+      try {
+        setLoadingProducts(true);
+        const featuredProducts = await ProductsService.getFeatured(8);
+        setProducts(featuredProducts);
+      } catch (error) {
+        console.error('Error cargando productos destacados:', error);
+        setProducts([]);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
 
+    loadFeaturedProducts();
+  }, []);
+
+  // ═══ CARGAR CATEGORÍAS ═══
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        const allCategories = await categoriesService.getAll();
+        setCategories(allCategories);
+      } catch (error) {
+        console.error('Error cargando categorías:', error);
+        setCategories([]);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
+  // ═══ CARRUSEL AUTOMÁTICO ═══
   useEffect(() => {
     if (slides.length === 0) return;
     const interval = setInterval(() => {
@@ -430,6 +363,11 @@ function Home() {
     return () => clearInterval(interval);
   }, [slides.length]);
 
+  useEffect(() => {
+    if (slides.length > 0 && currentSlide >= slides.length) setCurrentSlide(0);
+  }, [slides]);
+
+  // ═══ CONTROLES DEL CARRUSEL ═══
   const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % slides.length);
   const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
   const goToSlide = (index) => setCurrentSlide(index);
@@ -528,7 +466,7 @@ function Home() {
             <p className="section-eyebrow">Explora</p>
             <h2 className="section-title">Categorías</h2>
           </div>
-          <a href="/categorias" className="btn-outline">
+          <a href="/tienda" className="btn-outline">
             Ver todas <ArrowRight size={13} strokeWidth={3} />
           </a>
         </div>
@@ -539,14 +477,27 @@ function Home() {
             @media (max-width: 767px) { .categories-grid { grid-template-columns: repeat(2, 1fr) !important; } }
             @media (min-width: 768px) and (max-width: 1023px) { .categories-grid { grid-template-columns: repeat(3, 1fr) !important; } }
           `}</style>
-          {categories.map((cat) => (
-            <a key={cat.id} href={cat.href} className="cat-card">
-              <div className="cat-icon-wrap">
-                <cat.icon size={24} color="#004D77" strokeWidth={1.75} />
-              </div>
-              <span className="cat-label">{cat.name}</span>
-            </a>
-          ))}
+
+          {loadingCategories ? (
+            // Skeleton loaders
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={`skeleton-${i}`} className="cat-card loading-skeleton" style={{ minHeight: '120px' }} />
+            ))
+          ) : categories.length > 0 ? (
+            categories.map((cat) => {
+              const Icon = categoryIcons[cat.id] || ShoppingBag;
+              return (
+                <a key={cat.id} href={`/tienda?category=${cat.id}`} className="cat-card">
+                  <div className="cat-icon-wrap">
+                    <Icon size={24} color="#004D77" strokeWidth={1.75} />
+                  </div>
+                  <span className="cat-label">{cat.name}</span>
+                </a>
+              );
+            })
+          ) : (
+            <p className="section-subtitle">No hay categorías disponibles</p>
+          )}
         </div>
 
         <div className="section-divider" />
@@ -573,14 +524,28 @@ function Home() {
             @media (max-width: 639px)  { .products-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; } }
             @media (min-width: 640px) and (max-width: 1023px) { .products-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 12px !important; } }
           `}</style>
-          {products
-            .filter((product) => product.status === 'Activo')
-            .map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-              />
-            ))}
+
+          {loadingProducts || loadingClientType ? (
+            // Skeleton loaders
+            Array.from({ length: 8 }).map((_, i) => (
+              <div key={`skeleton-${i}`} className="loading-skeleton" style={{ minHeight: '300px', borderRadius: '16px' }} />
+            ))
+          ) : products.length > 0 ? (
+            products
+              .filter((product) => product.isActive)
+              .map((product) => (
+                <div key={product.id} className="pm-card">
+                  <ProductCard
+                    product={product}
+                    clientType={clientType}
+                  />
+                </div>
+              ))
+          ) : (
+            <p className="section-subtitle" style={{ gridColumn: '1 / -1', textAlign: 'center' }}>
+              No hay productos disponibles en este momento
+            </p>
+          )}
         </div>
 
         <div className="section-divider" />

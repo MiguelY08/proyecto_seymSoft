@@ -1,19 +1,15 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Filters from "../components/FilterLanding";
 import SortDropdown from "../components/SortDropdown";
 import ProductCard from "../../../shared/productCard/ProductCard";
 import Pagination from "../../../shared/PaginationLanding";
 import ShopHero from "../components/ShopHero";
 
+import ProductsService from "../../../administrtivePanel/purchases/products/services/productsServices.js";
+import categoriesService from "../../../administrtivePanel/purchases/categories/services/categoriesService.js";
+import useClientType from "../../../shared/hooks/useClientType.js";
+
 import BgTienda from "../../../../assets/BgTienda.png";
-import nacional from "../../../../assets/products/atlNacional.png";
-import notebookPen from "../../../../assets/products/notebookAndPen.png";
-import correctorcinta from "../../../../assets/products/correctorencinta.png";
-import cuadernoprimavera from "../../../../assets/products/cuadernoprimaverax100h.png";
-import setsharpie from "../../../../assets/products/setsharpiex30.png";
-import sewingmachine from "../../../../assets/products/sewingmachine.png";
-import Tijeraspunta from "../../../../assets/products/Tijeraspuntaroma.png";
-import vinilopq from "../../../../assets/products/vinilopqpowercolorrojo.png";
 
 /* ── Estilos inyectados (coherentes con Home/Favorites) ── */
 const SHOP_STYLES = `
@@ -121,6 +117,18 @@ const SHOP_STYLES = `
     color: #64748b;
     max-width: 280px;
   }
+
+  /* Loading skeleton */
+  .loading-skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 16px;
+  }
+  @keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
 `;
 
 let shopStylesInjected = false;
@@ -135,44 +143,11 @@ function injectShopStyles() {
 function Shop() {
   injectShopStyles();
 
-  const products = [
-    { id:1, image: notebookPen, name: 'Libreta con lapicero', category: 'Escolar', subcategory: 'Cuadernos', childCategory: 'Cosidos', brand: 'Norma', price: 5000 },
-    { id:2, image: correctorcinta, name: 'Corrector en cinta', category: 'Escritura', subcategory: 'Correctores', childCategory: 'Cinta', brand: 'Pelikan', price: 4000 },
-    { id:3, image: cuadernoprimavera, name: 'Cuaderno primavera x100h', category: 'Escolar', subcategory: 'Cuadernos', childCategory: 'Argollados', brand: 'Scribe', price: 70000 },
-    { id:4, image: setsharpie, name: 'Set Sharpie x30', category: 'Escritura', subcategory: 'Marcadores', childCategory: 'Permanentes', brand: 'Gilpao', price: 120000 },
-    { id:5, image: sewingmachine, name: 'Resma hojas blancas', category: 'Papelería Básica', subcategory: 'Hojas blancas', childCategory: 'Resma', brand: 'Eterna', price: 5000 },
-    { id:6, image: Tijeraspunta, name: 'Tijeras punta roma', category: 'Escolar', subcategory: 'Tijeras', childCategory: 'Escolares', brand: 'Norma', price: 3000 },
-    { id:7, image: vinilopq, name: 'Vinilo rojo', category: 'Arte', subcategory: 'Pinturas', childCategory: 'Vinilos', brand: 'Pelikan', price: 1500 },
-    { id:8, image: correctorcinta, name: 'Corrector líquido', category: 'Escritura', subcategory: 'Correctores', childCategory: 'Líquido', brand: 'Norma', price: 7000 },
-    { id:9, image: nacional, name: 'Lapicero Atlético Nacional', category: 'Escritura', subcategory: 'Bolígrafos', childCategory: 'Tinta negra', brand: 'Gilpao', price: 200 },
-    { id:10, image: nacional, name: 'Block notas Atlético Nacional', category: 'Papelería Básica', subcategory: 'Blocks de notas', childCategory: 'Decorados', brand: 'Eterna', price: 10000 },
-    { id:11, image: notebookPen, name: 'Cuaderno cuadriculado', category: 'Escolar', subcategory: 'Cuadernos', childCategory: 'Cosidos', brand: 'Norma', price: 6000 },
-    { id:12, image: notebookPen, name: 'Cuaderno universitario', category: 'Escolar', subcategory: 'Cuadernos', childCategory: 'Argollados', brand: 'Scribe', price: 8000 },
-    { id:13, image: Tijeraspunta, name: 'Tijeras escolares pequeñas', category: 'Escolar', subcategory: 'Tijeras', childCategory: 'Escolares', brand: 'Norma', price: 2500 },
-    { id:14, image: Tijeraspunta, name: 'Tijeras metálicas oficina', category: 'Oficina', subcategory: 'Tijeras', childCategory: 'Metálicas', brand: 'Pelikan', price: 9000 },
-    { id:15, image: setsharpie, name: 'Marcador permanente negro', category: 'Escritura', subcategory: 'Marcadores', childCategory: 'Permanentes', brand: 'Pelikan', price: 3500 },
-    { id:16, image: setsharpie, name: 'Marcadores escolares x12', category: 'Arte', subcategory: 'Marcadores artísticos', childCategory: 'Escolares', brand: 'Norma', price: 15000 },
-    { id:17, image: vinilopq, name: 'Vinilo azul', category: 'Arte', subcategory: 'Pinturas', childCategory: 'Vinilos', brand: 'Pelikan', price: 1700 },
-    { id:18, image: vinilopq, name: 'Vinilo amarillo', category: 'Arte', subcategory: 'Pinturas', childCategory: 'Vinilos', brand: 'Pelikan', price: 1700 },
-    { id:19, image: sewingmachine, name: 'Hojas blancas carta', category: 'Papelería Básica', subcategory: 'Hojas blancas', childCategory: 'Paquete', brand: 'Eterna', price: 4500 },
-    { id:20, image: sewingmachine, name: 'Hojas de colores', category: 'Papelería Básica', subcategory: 'Hojas de colores', childCategory: 'Paquete', brand: 'Eterna', price: 6500 },
-    { id:21, image: correctorcinta, name: 'Corrector tipo pluma', category: 'Escritura', subcategory: 'Correctores', childCategory: 'Líquido', brand: 'Pelikan', price: 3000 },
-    { id:22, image: correctorcinta, name: 'Corrector escolar', category: 'Escritura', subcategory: 'Correctores', childCategory: 'Cinta', brand: 'Norma', price: 3500 },
-    { id:23, image: nacional, name: 'Bolígrafo azul', category: 'Escritura', subcategory: 'Bolígrafos', childCategory: 'Tinta azul', brand: 'Gilpao', price: 500 },
-    { id:24, image: nacional, name: 'Bolígrafo rojo', category: 'Escritura', subcategory: 'Bolígrafos', childCategory: 'Tinta roja', brand: 'Gilpao', price: 500 },
-    { id:25, image: nacional, name: 'Block de notas pequeño', category: 'Papelería Básica', subcategory: 'Blocks de notas', childCategory: 'Decorados', brand: 'Eterna', price: 3000 }
-  ];
-
-  const categoriesBase = [
-    { name: "Escolar", subcategories: ["Cuadernos", "Cartucheras", "Mochilas", "Tijeras", "Reglas", "Pegantes"] },
-    { name: "Oficina", subcategories: ["Archivadores", "Carpetas", "Grapadoras", "Perforadoras", "Clips", "Notas adhesivas"] },
-    { name: "Arte", subcategories: ["Pinturas", "Pinceles", "Lienzos", "Blocks de dibujo", "Marcadores artísticos", "Manualidades"] },
-    { name: "Papelería Básica", subcategories: ["Hojas blancas", "Hojas de colores", "Cartulinas", "Sobres", "Etiquetas", "Post-it"] },
-    { name: "Escritura", subcategories: ["Bolígrafos", "Lápices", "Portaminas", "Marcadores", "Resaltadores", "Correctores"] }
-  ];
-
-  const brands = ['Gilpao', 'Eterna', 'Pelikan', 'Norma', 'Scribe'];
-
+  // ═══ ESTADO ═══
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -181,25 +156,110 @@ function Shop() {
   const [categoryOpen, setCategoryOpen] = useState(true);
   const [brandOpen, setBrandOpen] = useState(true);
 
+  // Hook para obtener clientType
+  const { clientType } = useClientType();
+
   const productsPerPage = 8;
 
+  // ═══ CARGAR PRODUCTOS ═══
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setLoadingProducts(true);
+        const allProducts = await ProductsService.list();
+        setProducts(allProducts);
+      } catch (error) {
+        console.error('Error cargando productos:', error);
+        setProducts([]);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
+
+  // ═══ CARGAR CATEGORÍAS ═══
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        const allCategories = await categoriesService.getAll();
+        setCategories(allCategories);
+      } catch (error) {
+        console.error('Error cargando categorías:', error);
+        setCategories([]);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
+  // ═══ EXTRAER MARCAS DINÁMICAMENTE ═══
+  const brands = useMemo(() => {
+    const brandSet = new Set();
+    products.forEach(p => {
+      if (p.mainCategory?.name) {
+        brandSet.add(p.mainCategory.name);
+      }
+    });
+    return Array.from(brandSet);
+  }, [products]);
+
+  // ═══ CONSTRUIR CATEGORÍAS CON CONTEOS ═══
+  const categoriesWithCount = useMemo(() => {
+    const catMap = {};
+
+    products.forEach(product => {
+      // Contar por categoría
+      if (product.categories && product.categories.length > 0) {
+        product.categories.forEach(cat => {
+          if (!catMap[cat.name]) {
+            catMap[cat.name] = { count: 0, id: cat.id, subcategories: {} };
+          }
+          catMap[cat.name].count++;
+
+          // Contar subcategorías dentro de cada categoría
+          if (product.subcategories && product.subcategories.length > 0) {
+            product.subcategories.forEach(sub => {
+              if (!catMap[cat.name].subcategories[sub.name]) {
+                catMap[cat.name].subcategories[sub.name] = { count: 0, id: sub.id };
+              }
+              catMap[cat.name].subcategories[sub.name].count++;
+            });
+          }
+        });
+      }
+    });
+
+    // Convertir a array con estructura esperada
+    return Object.entries(catMap).map(([name, data]) => ({
+      name,
+      id: data.id,
+      count: data.count,
+      subcategories: Object.entries(data.subcategories).map(([subName, subData]) => ({
+        name: subName,
+        id: subData.id,
+        count: subData.count
+      }))
+    }));
+  }, [products]);
+
+  // ═══ MANEJAR CAMBIOS DE CATEGORÍA ═══
   const handleCategoryChange = (category) => {
     let updated = [...selectedCategories];
     if (updated.includes(category)) {
       updated = updated.filter(c => c !== category);
     } else {
       updated.push(category);
-      const parentCategory = categoriesBase.find(cat =>
-        cat.subcategories.includes(category)
-      );
-      if (parentCategory && !updated.includes(parentCategory.name)) {
-        updated.push(parentCategory.name);
-      }
     }
     setSelectedCategories(updated);
     setCurrentPage(1);
   };
 
+  // ═══ MANEJAR CAMBIOS DE MARCA ═══
   const handleBrandChange = (brand) => {
     const updated = selectedBrands.includes(brand)
       ? selectedBrands.filter(b => b !== brand)
@@ -208,36 +268,44 @@ function Shop() {
     setCurrentPage(1);
   };
 
-  const filteredProducts = products.filter(product => {
-    const mainCategories = selectedCategories.filter(cat =>
-      categoriesBase.some(c => c.name === cat)
-    );
-    const subCategories = selectedCategories.filter(cat =>
-      categoriesBase.some(c => c.subcategories.includes(cat))
-    );
-    const matchMainCategory = mainCategories.length === 0 || mainCategories.includes(product.category);
-    const matchSubCategory = subCategories.length === 0 || subCategories.includes(product.subcategory);
-    const matchBrand = selectedBrands.length === 0 || selectedBrands.includes(product.brand);
-    return matchMainCategory && matchSubCategory && matchBrand;
-  });
+  // ═══ FILTRAR PRODUCTOS ═══
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      // Filtrar solo productos activos
+      if (!product.isActive) return false;
 
-  const categoriesWithCount = useMemo(() => {
-    return categoriesBase.map(cat => {
-      const catProducts = products.filter(p => p.category === cat.name);
-      const subcategories = cat.subcategories.map(sub => {
-        const subProducts = products.filter(p => p.subcategory === sub);
-        return { name: sub, count: subProducts.length };
-      });
-      return { name: cat.name, count: catProducts.length, subcategories };
+      // Filtrar por categorías
+      if (selectedCategories.length > 0) {
+        const hasSelectedCategory = product.categories?.some(cat =>
+          selectedCategories.includes(cat.name)
+        );
+        if (!hasSelectedCategory) return false;
+      }
+
+      // Filtrar por marca (usando categoría principal)
+      if (selectedBrands.length > 0) {
+        const hasBrand = selectedBrands.includes(product.mainCategory?.name);
+        if (!hasBrand) return false;
+      }
+
+      return true;
     });
-  }, [products]);
+  }, [products, selectedCategories, selectedBrands]);
 
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    if (selectedSort === "price_high") return b.price - a.price;
-    if (selectedSort === "price_low") return a.price - b.price;
-    return 0;
-  });
+  // ═══ ORDENAR PRODUCTOS ═══
+  const sortedProducts = useMemo(() => {
+    const sorted = [...filteredProducts];
 
+    if (selectedSort === "price_high") {
+      sorted.sort((a, b) => b.retailPrice - a.retailPrice);
+    } else if (selectedSort === "price_low") {
+      sorted.sort((a, b) => a.retailPrice - b.retailPrice);
+    }
+
+    return sorted;
+  }, [filteredProducts, selectedSort]);
+
+  // ═══ PAGINACIÓN ═══
   const totalProducts = sortedProducts.length;
   const indexOfLastProduct = currentPage * productsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
@@ -259,21 +327,28 @@ function Shop() {
       />
       <div className="shop-container">
         <div className="shop-layout">
+          {/* ═══ FILTROS ═══ */}
           <div className="shop-filters-col">
-            <Filters
-              totalProducts={totalProducts}
-              categories={categoriesWithCount}
-              brands={brands}
-              categoryOpen={categoryOpen}
-              brandOpen={brandOpen}
-              setCategoryOpen={setCategoryOpen}
-              setBrandOpen={setBrandOpen}
-              selectedCategories={selectedCategories}
-              selectedBrands={selectedBrands}
-              handleCategoryChange={handleCategoryChange}
-              handleBrandChange={handleBrandChange}
-            />
+            {loadingCategories ? (
+              <div className="loading-skeleton" style={{ height: '400px' }} />
+            ) : (
+              <Filters
+                totalProducts={totalProducts}
+                categories={categoriesWithCount}
+                brands={brands}
+                categoryOpen={categoryOpen}
+                brandOpen={brandOpen}
+                setCategoryOpen={setCategoryOpen}
+                setBrandOpen={setBrandOpen}
+                selectedCategories={selectedCategories}
+                selectedBrands={selectedBrands}
+                handleCategoryChange={handleCategoryChange}
+                handleBrandChange={handleBrandChange}
+              />
+            )}
           </div>
+
+          {/* ═══ PRODUCTOS ═══ */}
           <div className="shop-products-col">
             <SortDropdown
               selectedSort={selectedSort}
@@ -282,7 +357,15 @@ function Shop() {
               setSortOpen={setSortOpen}
               sortOptions={sortOptions}
             />
-            {currentProducts.length === 0 ? (
+
+            {loadingProducts ? (
+              // Loading skeletons
+              <div className="products-grid">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={`skeleton-${i}`} className="loading-skeleton" style={{ minHeight: '300px' }} />
+                ))}
+              </div>
+            ) : currentProducts.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#004D77" strokeWidth="1.5">
@@ -300,6 +383,7 @@ function Shop() {
                     <ProductCard
                       key={product.id}
                       product={product}
+                      clientType={clientType}
                     />
                   ))}
                 </div>

@@ -1,4 +1,5 @@
 import apiClient from '../../../../../setting/apiClient.js';
+import { normalizeProduct, normalizeProducts } from '../helpers/productNormalizer.js';
 
 const hasValue = (value) => value !== undefined && value !== null && value !== '';
 
@@ -31,27 +32,52 @@ const buildBarcodesPayload = (data) => {
 };
 
 export const ProductsService = {
+  /**
+   * Obtener unidades de medida disponibles
+   * @returns {Promise<Array>}
+   */
   async listUnitMeasures() {
     const response = await apiClient.get('/products/unit-measures');
     return response.data.data || [];
   },
 
+  /**
+   * Obtener todos los productos con filtros opcionales
+   * @param {Object} filters - Filtros opcionales
+   * @returns {Promise<Array>} Productos normalizados
+   */
   async list(filters = {}) {
     const response = await apiClient.get('/products', { params: filters });
-    return response.data.data || [];
+    const products = response.data.data || [];
+    
+    // Normalizar todos los productos
+    return normalizeProducts(products);
   },
 
+  /**
+   * Obtener un producto por ID
+   * @param {number} id - ID del producto
+   * @returns {Promise<Object>} Producto normalizado
+   */
   async findById(id) {
     const response = await apiClient.get(`/products/${id}`);
-    return response.data.data || null;
+    const product = response.data.data || null;
+    
+    // Normalizar el producto
+    return product ? normalizeProduct(product) : null;
   },
 
+  /**
+   * Crear un nuevo producto
+   * @param {Object|FormData} data - Datos del producto
+   * @returns {Promise<Object>} Producto creado (normalizado)
+   */
   async create(data) {
     if (data instanceof FormData) {
       const response = await apiClient.post('/products', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      return response.data.data || null;
+      return normalizeProduct(response.data.data);
     }
 
     const formData = new FormData();
@@ -89,9 +115,15 @@ export const ProductsService = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
-    return response.data.data || null;
+    return normalizeProduct(response.data.data);
   },
 
+  /**
+   * Actualizar un producto existente
+   * @param {number} id - ID del producto
+   * @param {Object} data - Datos a actualizar
+   * @returns {Promise<Object>} Producto actualizado (normalizado)
+   */
   async update(id, data) {
     const formData = new FormData();
 
@@ -138,23 +170,84 @@ export const ProductsService = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
-    return response.data.data || null;
+    return normalizeProduct(response.data.data);
   },
 
+  /**
+   * Eliminar un producto (solo si está inactivo)
+   * @param {number} id - ID del producto
+   * @returns {Promise<boolean>}
+   */
   async delete(id) {
     const response = await apiClient.delete(`/products/${id}`);
     return response.data.success || false;
   },
 
+  /**
+   * Cambiar estado de un producto (activo/inactivo)
+   * @param {number} id - ID del producto
+   * @returns {Promise<Object>} Producto con estado actualizado
+   */
   async toggleStatus(id) {
     const response = await apiClient.patch(`/products/${id}/toggle`);
-    return response.data.data || null;
+    return normalizeProduct(response.data.data);
   },
 
+  /**
+   * Obtener productos destacados (primeros N activos)
+   * @param {number} limit - Cantidad de productos (default: 8)
+   * @returns {Promise<Array>} Productos normalizados
+   */
+  async getFeatured(limit = 8) {
+    try {
+      const products = await ProductsService.list({ active: true });
+      return products.slice(0, limit);
+    } catch (error) {
+      console.error('Error fetching featured products:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener productos por categoría
+   * @param {number} categoryId - ID de la categoría
+   * @returns {Promise<Array>} Productos de esa categoría
+   */
+  async getByCategory(categoryId) {
+    try {
+      return await ProductsService.list({ categoryId });
+    } catch (error) {
+      console.error(`Error fetching products by category ${categoryId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Buscar productos por nombre/referencia
+   * @param {string} searchTerm - Término de búsqueda
+   * @returns {Promise<Array>} Productos que coinciden
+   */
+  async search(searchTerm) {
+    try {
+      return await ProductsService.list({ search: searchTerm });
+    } catch (error) {
+      console.error(`Error searching products with term "${searchTerm}":`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Decrementar stock de productos (implementar cuando esté módulo de ventas)
+   * @param {Array} items - Items a decrementar
+   */
   async decrementStock(items) {
     console.warn('decrementStock: Implementar cuando haya módulo de ventas');
   },
 
+  /**
+   * Restaurar stock de productos (implementar cuando esté módulo de ventas)
+   * @param {Array} items - Items a restaurar
+   */
   async restoreStock(items) {
     console.warn('restoreStock: Implementar cuando haya módulo de ventas');
   },
