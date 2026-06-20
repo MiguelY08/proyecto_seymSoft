@@ -382,7 +382,7 @@ export default function RolesPage() {
               onClick={handleCreate}
             >
 
-              Crear nuevo Rol +
+              Nuevo +
 
             </ButtonComponent>
 

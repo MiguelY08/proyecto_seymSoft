@@ -9,6 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
   const [permissions, setPermissions] = useState([]);
+  const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -28,7 +29,9 @@ export const AuthProvider = ({ children }) => {
         if (session && session.user) {
           setUser(session.user);
           setRole(session.role || null);
+          setPermissions(session.permissions || []);
           setIsAuthenticated(true);
+          setClient(session.client || null);
 
           const profileResult = await getProfile();
           
@@ -36,14 +39,23 @@ export const AuthProvider = ({ children }) => {
             setUser(profileResult.user);
             setRole(profileResult.role);
             setPermissions(profileResult.permissions || []);
+            setClient(profileResult.client || null);
           } else {
             clearSession();
+            setUser(null);
+            setRole(null);
+            setPermissions([]);
+            setClient(null);
             setIsAuthenticated(false);
           }
         }
       } catch (err) {
         console.error("Error inicializando auth:", err);
         clearSession();
+        setUser(null);
+        setRole(null);
+        setPermissions([]);
+        setClient(null);
         setIsAuthenticated(false);
       } finally {
         setLoading(false);
@@ -64,6 +76,7 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         setRole(null);
         setPermissions([]);
+        setClient(null);
         setIsAuthenticated(false);
         return;
       }
@@ -73,6 +86,7 @@ export const AuthProvider = ({ children }) => {
         setUser(session.user ?? null);
         setRole(session.role ?? null);
         setPermissions(session.permissions ?? []);
+        setClient(session.client ?? null);
         setIsAuthenticated(Boolean(session.user && session.accessToken));
       } catch (sessionError) {
         console.error('Error sincronizando la sesión entre pestañas:', sessionError);
@@ -80,6 +94,7 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         setRole(null);
         setPermissions([]);
+        setClient(null);
         setIsAuthenticated(false);
       }
     };
@@ -106,6 +121,7 @@ const login = async (email, password) => {
       setRole(result.role);
       setPermissions(result.permissions || []);
       setIsAuthenticated(true);
+      setClient(result.client || null);
 
       showSuccess("¡Bienvenido!", `Hola ${result.user.fullName}`);
 
@@ -153,9 +169,10 @@ const login = async (email, password) => {
 
       if (result.success) {
         setUser(result.user);
-        setRole(null); // Nuevo usuario sin rol
-        setPermissions([]);
+        setRole(result.role || null);
+        setPermissions(result.permissions || []);
         setIsAuthenticated(true);
+        setClient(result.client || null);
 
         showSuccess("¡Bienvenido!", "Cuenta creada exitosamente");
 
@@ -205,6 +222,7 @@ const logout = async () => {
     setPermissions([]);
     setIsAuthenticated(false);
     setError(null);
+    setClient(null);
 
     showSuccess("Sesión cerrada", "Hasta pronto");
 
@@ -222,6 +240,7 @@ const logout = async () => {
     setRole(null);
     setPermissions([]);
     setIsAuthenticated(false);
+    setClient(null);
 
     return {
       success: true,
@@ -245,6 +264,9 @@ const logout = async () => {
         setUser(result.user);
         setRole(result.role);
         setPermissions(result.permissions || []);
+        if (Object.prototype.hasOwnProperty.call(result, "client")) {
+          setClient(result.client);
+        }
 
         showSuccess("Perfil actualizado", "Tus cambios se guardaron correctamente");
 
@@ -280,13 +302,25 @@ const logout = async () => {
   // PROVIDER VALUE
   // ═══════════════════════════════════════════════════════════
 
+  const isEmployee = !!role;
+
+  const isClient = !!client;
+
+  const clientType =
+    client?.clientType || "Detal";
+
+
   const value = {
     user,
     role,
     permissions,
+    client,
     loading,
     error,
     isAuthenticated,
+    isEmployee,
+    isClient,
+    clientType,
     login,
     register,
     logout,
@@ -294,7 +328,8 @@ const logout = async () => {
     setUser,
     setRole,
     setPermissions,
-    setIsAuthenticated
+    setIsAuthenticated,
+    setClient
   };
 
   return (

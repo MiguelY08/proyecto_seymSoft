@@ -1006,8 +1006,8 @@ function ShoppingCart() {
         <CompletePay
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
-          onCompleted={(order) => {
-            clearCart();
+          onCompleted={async (order) => {
+            await clearCart();
             setShowPaymentModal(false);
             navigate(`/orders-l/${order.id}`);
           }}

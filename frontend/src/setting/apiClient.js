@@ -35,7 +35,7 @@ const refreshAccessToken = async () => {
     }
 
     const response = await axios.post(`${BASE_URL}/auth/refresh`, {
-      refreshToken: session.refreshToken,
+      refresh_token: session.refreshToken,
     });
 
     const { accessToken, refreshToken } = response.data.data;
@@ -120,32 +120,48 @@ apiClient.interceptors.response.use(
 
     const originalRequest = error.config;
 
-    // ── Problema 1: Race condition en refresh token ─────────
-    // Si error es 401 (token expirado) y NO es un retry,
-    // usar refreshAccessToken() que serializa peticiones
-    // concurrentes en una única llamada a /auth/refresh.
-    if (error.response.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
+// Endpoints donde NO se debe intentar refresh
+const authEndpoints = [
+  "/auth/login",
+  "/auth/register",
+  "/auth/forgot-password",
+  "/auth/reset-password",
+];
 
-      try {
-        const newAccessToken = await refreshAccessToken();
+const isAuthRequest = authEndpoints.some(
+  endpoint => originalRequest.url?.includes(endpoint)
+);
 
-        // Actualizar el header del request original
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+if (
+  error.response.status === 401 &&
+  !originalRequest._retry &&
+  !isAuthRequest
+) {
+  originalRequest._retry = true;
 
-        // Reintentar el request original
-        return apiClient(originalRequest);
+  try {
+    const newAccessToken = await refreshAccessToken();
 
-      } catch (refreshError) {
-        // Error al refrescar token → Hacer logout
-        clearSession();
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
-      }
-    }
+    originalRequest.headers.Authorization =
+      `Bearer ${newAccessToken}`;
 
-    // Otros errores - retornar como están
-    return Promise.reject(error);
+    return apiClient(originalRequest);
+
+  } catch (refreshError) {
+
+    console.error(
+      "REFRESH TOKEN ERROR:",
+      refreshError
+    );
+
+    clearSession();
+    sessionStorage.clear();
+
+    return Promise.reject(refreshError);
+  }
+}
+
+return Promise.reject(error);
   }
 );
 
