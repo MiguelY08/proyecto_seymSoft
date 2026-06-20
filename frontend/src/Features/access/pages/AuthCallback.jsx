@@ -9,7 +9,7 @@ import Spinner from "../../shared/spinner/Spinner.jsx";
 const AuthCallback = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { setUser, setRole, setPermissions, setIsAuthenticated, } = useAuth();
+  const { setUser, setRole, setPermissions, setIsAuthenticated,setClient } = useAuth();
   const { showSuccess, showError } = useAlert();
 
   useEffect(() => {
@@ -38,14 +38,18 @@ const AuthCallback = () => {
         saveSession({
           user: profileResult.user,
           role: profileResult.role,
+          permissions: profileResult.permissions || [],
           accessToken,
           refreshToken,
+          client: profileResult.client,
+          
         });
 
         setUser(profileResult.user);
         setRole( profileResult.role || null );
         setPermissions( profileResult.permissions || [] ); 
         setIsAuthenticated(true);
+        setClient( profileResult.client || null );
 
         showSuccess("Bienvenido", profileResult.user.fullName);
 
