@@ -9,6 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
   const [permissions, setPermissions] = useState([]);
+  const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -29,6 +30,7 @@ export const AuthProvider = ({ children }) => {
           setUser(session.user);
           setRole(session.role || null);
           setIsAuthenticated(true);
+          setClient(session.client || null);
 
           const profileResult = await getProfile();
           
@@ -36,6 +38,7 @@ export const AuthProvider = ({ children }) => {
             setUser(profileResult.user);
             setRole(profileResult.role);
             setPermissions(profileResult.permissions || []);
+            setClient(profileResult.client || null);
           } else {
             clearSession();
             setIsAuthenticated(false);
@@ -71,6 +74,7 @@ const login = async (email, password) => {
       setRole(result.role);
       setPermissions(result.permissions || []);
       setIsAuthenticated(true);
+      setClient(result.client || null);
 
       showSuccess("¡Bienvenido!", `Hola ${result.user.fullName}`);
 
@@ -121,6 +125,7 @@ const login = async (email, password) => {
         setRole(null); // Nuevo usuario sin rol
         setPermissions([]);
         setIsAuthenticated(true);
+        setClient(null);
 
         showSuccess("¡Bienvenido!", "Cuenta creada exitosamente");
 
@@ -170,6 +175,7 @@ const logout = async () => {
     setPermissions([]);
     setIsAuthenticated(false);
     setError(null);
+    setClient(null);
 
     showSuccess("Sesión cerrada", "Hasta pronto");
 
@@ -187,6 +193,7 @@ const logout = async () => {
     setRole(null);
     setPermissions([]);
     setIsAuthenticated(false);
+    setClient(null);
 
     return {
       success: true,
@@ -210,6 +217,7 @@ const logout = async () => {
         setUser(result.user);
         setRole(result.role);
         setPermissions(result.permissions || []);
+        setClient(result.client || null);
 
         showSuccess("Perfil actualizado", "Tus cambios se guardaron correctamente");
 
@@ -245,13 +253,25 @@ const logout = async () => {
   // PROVIDER VALUE
   // ═══════════════════════════════════════════════════════════
 
+  const isEmployee = !!role;
+
+  const isClient = !!client;
+
+  const clientType =
+    client?.clientType || "Detal";
+
+
   const value = {
     user,
     role,
     permissions,
+    client,
     loading,
     error,
     isAuthenticated,
+    isEmployee,
+    isClient,
+    clientType,
     login,
     register,
     logout,
@@ -259,7 +279,8 @@ const logout = async () => {
     setUser,
     setRole,
     setPermissions,
-    setIsAuthenticated
+    setIsAuthenticated,
+    setClient
   };
 
   return (

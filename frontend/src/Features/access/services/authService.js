@@ -125,7 +125,8 @@ export const login = async (
   role,
   permissions,
   accessToken,
-  refreshToken
+  refreshToken,
+  client,
 } = response.data.data;
 
 console.log("LOGIN RESPONSE:");
@@ -139,6 +140,7 @@ saveSession({
   permissions,
   accessToken,
   refreshToken,
+  client
 });
 
 console.log("SESSION SAVED:", getSession());
@@ -150,6 +152,7 @@ return {
   permissions,
   accessToken,
   refreshToken,
+  client,
   redirectTo: role ? "/admin" : "/"
 };
 
@@ -254,7 +257,8 @@ export const getProfile = async()=>{
 
       user,
       role,
-      permissions
+      permissions,
+      client
 
     }=response.data.data;
 
@@ -266,7 +270,9 @@ export const getProfile = async()=>{
 
       role,
 
-      permissions
+      permissions,
+
+      client
 
     };
 
@@ -395,7 +401,7 @@ export const updateProfile = async(
 
       user,
       role,
-      permissions
+      permissions,
 
     }=response.data.data;
 
@@ -412,7 +418,8 @@ export const updateProfile = async(
 
       role,
 
-      permissions
+      permissions,
+
 
     });
 
