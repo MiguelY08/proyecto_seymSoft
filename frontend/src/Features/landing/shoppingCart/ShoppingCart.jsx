@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ShoppingCart as CartIcon,
   Minus,
@@ -18,6 +18,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../shared/Context/Cartcontext';
 import { useAlert } from '../../shared/alerts/useAlert';
+import useAuthenticatedClient from '../../shared/hooks/useAuthenticatedClient';
+import { getDisplayPricing, normalizeClientType } from '../../shared/utils/shopPricingHelper';
 import CompletePay from './modals/CompletePay.jsx';
 
 /* ── Estilos (coherentes con Home/Favorites) ── */
@@ -462,14 +464,20 @@ function ShoppingCart() {
   const navigate = useNavigate();
   const { showConfirm, showError } = useAlert();
   const {
+    clientId,
+    clientType: resolvedClientType,
+    isAuthenticated,
+    loading: clientLoading,
+    error: clientError,
+  } = useAuthenticatedClient();
+  const clientType = normalizeClientType(resolvedClientType);
+  const {
     cartItems,
     increaseQuantity,
     decreaseQuantity,
+    updateQuantity,
     removeFromCart,
     clearCart,
-    getSubtotal,
-    getTax,
-    getTotalItems,
   } = useCart();
 
   const [deliveryMethod, setDeliveryMethod] = useState('tienda');
@@ -644,6 +652,25 @@ function ShoppingCart() {
   };
 
   const handleProcederPago = () => {
+    if (!isAuthenticated) {
+      showError('Inicia sesión', 'Debes iniciar sesión para crear y consultar tu pedido.');
+      navigate('/login', { state: { from: '/cart' } });
+      return;
+    }
+
+    if (clientLoading) {
+      showError('Consultando cliente', 'Espera un momento mientras cargamos tu perfil de cliente.');
+      return;
+    }
+
+    if (!clientId) {
+      showError(
+        'Cuenta sin cliente asociado',
+        clientError || 'No encontramos el perfil de cliente vinculado a tu cuenta. Contacta a un asesor antes de finalizar la compra.'
+      );
+      return;
+    }
+
     if (deliveryMethod === 'domicilio') {
       if (!validateForm()) {
         showError('Formulario incompleto', 'Por favor completa todos los campos correctamente.');
@@ -653,7 +680,25 @@ function ShoppingCart() {
     setShowPaymentModal(true);
   };
 
-  const subtotal = getSubtotal();
+  const displayCartItems = useMemo(
+    () =>
+      cartItems.map(item => {
+        const pricing = getDisplayPricing(item, clientType);
+        return {
+          ...item,
+          price: pricing.price,
+          originalPrice: pricing.originalPrice,
+          priceLabel: pricing.label,
+          clientType: pricing.clientType,
+        };
+      }),
+    [cartItems, clientType]
+  );
+
+  const subtotal = displayCartItems.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
 
   if (cartItems.length === 0) {
     return (
@@ -697,7 +742,7 @@ function ShoppingCart() {
 
         <div className="grid lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 space-y-2.5">
-            {cartItems.map((item, idx) => (
+            {displayCartItems.map((item, idx) => (
               <div
                 key={item.id}
                 className="cart-item-card"
@@ -706,18 +751,23 @@ function ShoppingCart() {
                 <div className="cart-item-inner">
                   <div
                     className="cart-item-img"
-                    onClick={() => navigate('/shop/detail')}
+                    onClick={() => navigate(`/shop/detail/${item.id}`)}
                   >
-                    <img src={item.image} alt={item.name} />
+                    <img
+                      src={item.image || item.mainImage?.url || item.images?.[0]?.url}
+                      alt={item.name}
+                    />
                   </div>
                   <div className="cart-item-info">
                     <div
                       className="cart-item-name"
-                      onClick={() => navigate('/shop/detail')}
+                      onClick={() => navigate(`/shop/detail/${item.id}`)}
                     >
                       {item.name}
                     </div>
-                    <div className="cart-item-category">{item.category}</div>
+                    <div className="cart-item-category">
+                      {item.category || item.mainCategory?.name || item.categories?.[0]?.name || 'Sin categoría'}
+                    </div>
                     <div className="cart-item-price">
                       ${item.price.toLocaleString()} COP
                     </div>
@@ -731,8 +781,24 @@ function ShoppingCart() {
                       >
                         <Minus size={12} />
                       </button>
-                      <span className="qty-number">{item.quantity}</span>
-                      <button className="qty-btn" onClick={() => increaseQuantity(item.id)}>
+                      <input
+                        type="number"
+                        min="1"
+                        max={Number(item.totalStock ?? item.stock) || undefined}
+                        value={item.quantity}
+                        aria-label={`Cantidad de ${item.name}`}
+                        onFocus={(event) => event.currentTarget.select()}
+                        onChange={(event) => updateQuantity(item.id, event.target.value)}
+                        className="qty-number w-12 bg-transparent text-center outline-none"
+                      />
+                      <button
+                        className="qty-btn"
+                        onClick={() => increaseQuantity(item.id)}
+                        disabled={
+                          Number(item.totalStock ?? item.stock) > 0 &&
+                          item.quantity >= Number(item.totalStock ?? item.stock)
+                        }
+                      >
                         <Plus size={12} />
                       </button>
                     </div>
@@ -940,9 +1006,16 @@ function ShoppingCart() {
         <CompletePay
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
+          onCompleted={(order) => {
+            clearCart();
+            setShowPaymentModal(false);
+            navigate(`/orders-l/${order.id}`);
+          }}
           totalAmount={subtotal}
           deliveryMethod={deliveryMethod}
           deliveryInfo={deliveryMethod === 'domicilio' ? formData : null}
+          cartItems={displayCartItems}
+          clientId={clientId}
         />
       )}
     </div>

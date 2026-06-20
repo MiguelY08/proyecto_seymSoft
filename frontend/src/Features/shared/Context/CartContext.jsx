@@ -11,19 +11,17 @@ export const useCart = () => {
 };
 
 export const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState([]);
-
-  useEffect(() => {
+  const [cartItems, setCartItems] = useState(() => {
     const storedCart = localStorage.getItem('cart');
-    if (storedCart) {
-      try {
-        setCartItems(JSON.parse(storedCart));
-      } catch (error) {
-        console.error('Error al cargar carrito:', error);
-        setCartItems([]);
-      }
+    if (!storedCart) return [];
+
+    try {
+      return JSON.parse(storedCart);
+    } catch (error) {
+      console.error('Error al cargar carrito:', error);
+      return [];
     }
-  }, []);
+  });
 
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(cartItems));
@@ -32,15 +30,31 @@ export const CartProvider = ({ children }) => {
   const addToCart = (product, quantity = 1) => {
     setCartItems(prevItems => {
       const existingItem = prevItems.find(item => item.id === product.id);
+      const stock = Number(product.totalStock ?? product.stock ?? 0);
+      const requestedQuantity = Math.max(1, Number(quantity) || 1);
 
       if (existingItem) {
         return prevItems.map(item =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
+            ? {
+                ...item,
+                ...product,
+                quantity: stock > 0
+                  ? Math.min(item.quantity + requestedQuantity, stock)
+                  : item.quantity + requestedQuantity,
+              }
             : item
         );
       } else {
-        return [...prevItems, { ...product, quantity }];
+        return [
+          ...prevItems,
+          {
+            ...product,
+            quantity: stock > 0
+              ? Math.min(requestedQuantity, stock)
+              : requestedQuantity,
+          },
+        ];
       }
     });
     
@@ -51,9 +65,15 @@ export const CartProvider = ({ children }) => {
   const increaseQuantity = (productId) => {
     setCartItems(prevItems =>
       prevItems.map(item =>
-        item.id === productId
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
+        item.id !== productId
+          ? item
+          : {
+              ...item,
+              quantity: Math.min(
+                item.quantity + 1,
+                Number(item.totalStock ?? item.stock) || item.quantity + 1
+              ),
+            }
       )
     );
   };
@@ -69,13 +89,17 @@ export const CartProvider = ({ children }) => {
   };
 
   const updateQuantity = (productId, newQuantity) => {
-    if (newQuantity < 1) return;
-    
     setCartItems(prevItems =>
       prevItems.map(item =>
-        item.id === productId
-          ? { ...item, quantity: newQuantity }
-          : item
+        item.id !== productId
+          ? item
+          : {
+              ...item,
+              quantity: Math.min(
+                Math.max(1, Number(newQuantity) || 1),
+                Number(item.totalStock ?? item.stock) || Number.MAX_SAFE_INTEGER
+              ),
+            }
       )
     );
   };

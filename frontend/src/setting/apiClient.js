@@ -40,7 +40,7 @@ const refreshAccessToken = async () => {
 
     const { accessToken, refreshToken } = response.data.data;
     saveSession({
-      user: session.user,
+      ...session,
       accessToken,
       refreshToken,
     });

@@ -16,6 +16,7 @@ import {
   UserCircle2,
   Loader2,
   LogIn,
+  LayoutDashboard
 } from "lucide-react";
 
 import logo from "../../assets/PapeleriaMagicLogo.png";
@@ -25,6 +26,7 @@ import { useAlert } from "../shared/alerts/useAlert";
 import { useCart } from "../shared/Context/Cartcontext";
 import { useFavorites } from "../shared/Context/Favoritescontext";
 import EditProfileForm from "../access/components/EditProfileForm";
+
 
 function HeaderLanding() {
   const {

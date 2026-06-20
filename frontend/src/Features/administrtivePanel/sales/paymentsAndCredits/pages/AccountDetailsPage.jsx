@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { ChevronDown, ChevronUp, PlusCircle } from "lucide-react";
@@ -69,7 +69,7 @@ export default function AccountDetailsPage({ mode }) {
         setAccount({
           id: customer.idClient,
           nombre: customer.fullName,
-          documento: "",
+          documento: customer.doc_number ,
           telefono: customer.phone,
           creditoAsignado: Number(customer.assignedCredit ?? 0),
           saldo: Number(customer.usedCredit ?? 0),
@@ -86,11 +86,6 @@ export default function AccountDetailsPage({ mode }) {
     loadCustomerData();
   }, [id, loadInvoices, reloadKey]);
 
-  // ✅ SPINNER INTEGRADO
-  if (loading && (invoices?.length ?? 0) === 0) {
-    return <Spinner message="Cargando datos de la cuenta..." />;
-  }
-
   const facturas = invoices ?? [];
 
   const cupoOcupado = Number(account.saldo ?? 0);
@@ -99,6 +94,20 @@ export default function AccountDetailsPage({ mode }) {
     (total, factura) => total + Number(factura.interes ?? 0),
     0,
   );
+
+  // fecha convertida 
+  const formatDate = (dateString) => {
+    if (!dateString) return "-";
+
+    return new Date(dateString).toLocaleDateString(
+      "es-CO",
+      {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }
+    );
+  };
 
   const estadoGeneral = account.estado ?? "al_dia";
 
@@ -116,12 +125,29 @@ export default function AccountDetailsPage({ mode }) {
     facturas.reduce((total, factura) => total + getFacturaDebtTotal(factura), 0) ||
     Number(account.deudaTotal ?? 0);
 
+  const receiptAccount = useMemo(
+    () => ({
+      ...account,
+      documento: account.documento || "-",
+      telefono: account.telefono || "-",
+      deudaTotal: totalDebt,
+      saldo: cupoOcupado,
+      facturas,
+    }),
+    [account, cupoOcupado, facturas, totalDebt],
+  );
+
   const formatCOP = (value) =>
     new Intl.NumberFormat("es-CO", {
       style: "currency",
       currency: "COP",
       minimumFractionDigits: 0,
     }).format(value ?? 0);
+
+  // ✅ SPINNER INTEGRADO
+  if (loading && (invoices?.length ?? 0) === 0) {
+    return <Spinner message="Cargando datos de la cuenta..." />;
+  }
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const toggleFactura = (facturaId) =>
@@ -171,10 +197,12 @@ export default function AccountDetailsPage({ mode }) {
     try {
       setIsGeneratingPDF(true);
       const canvas = await html2canvas(pdfRef.current, {
-        scale: 3,
+        scale: 2,
         useCORS: true,
         backgroundColor: "#ffffff",
         allowTaint: false,
+        windowWidth: pdfRef.current.scrollWidth,
+        windowHeight: pdfRef.current.scrollHeight,
       });
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
@@ -183,19 +211,20 @@ export default function AccountDetailsPage({ mode }) {
       const margin = 10;
       const imgWidth = pageWidth - 2 * margin;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pageContentHeight = pageHeight - 2 * margin;
 
-      if (imgHeight <= pageHeight - 2 * margin) {
+      if (imgHeight <= pageContentHeight) {
         pdf.addImage(imgData, "PNG", margin, margin, imgWidth, imgHeight);
       } else {
         let heightLeft = imgHeight;
         let position = margin;
         pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight - 2 * margin;
+        heightLeft -= pageContentHeight;
         while (heightLeft > 0) {
-          position = pageHeight - 2 * margin - imgHeight + margin;
+          position -= pageContentHeight;
           pdf.addPage();
           pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
-          heightLeft -= pageHeight - 2 * margin;
+          heightLeft -= pageContentHeight;
         }
       }
       pdf.save(`Comprobante_${account.nombre}.pdf`);
@@ -329,7 +358,7 @@ export default function AccountDetailsPage({ mode }) {
 
                   {/* Fecha Crédito */}
                   <span className="text-center text-gray-500">
-                    {factura.fechaCredito}
+                    {formatDate(factura.fechaCredito)}
                   </span>
 
                   {/* Total Abonado a Capital */}
@@ -452,16 +481,17 @@ export default function AccountDetailsPage({ mode }) {
       {/* ── RECEIPT OCULTO PARA PDF ── */}
       <div
         style={{
-          position: "absolute",
+          position: "fixed",
           top: 0,
-          left: "-9999px",
+          left: 0,
           width: "210mm",
           backgroundColor: "#ffffff",
-          zIndex: -1,
+          pointerEvents: "none",
+          transform: "translateX(-120%)",
         }}
       >
         <div ref={pdfRef}>
-          <AccountReceipt account={account} />
+          <AccountReceipt account={receiptAccount} />
         </div>
       </div>
     </>

@@ -1,8 +1,6 @@
 // categoriesService.js - Servicio para consumir categorías desde backend
 
-import axios from 'axios';
-
-const API_URL = 'http://localhost:3000/api/categories';
+import apiClient from '../../../../../setting/apiClient.js';
 
 export const categoriesService = {
   /**
@@ -11,7 +9,7 @@ export const categoriesService = {
    */
   getAll: async () => {
     try {
-      const response = await axios.get(API_URL);
+      const response = await apiClient.get('/categories');
       return response.data.data || [];
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -26,7 +24,7 @@ export const categoriesService = {
    */
   getById: async (id) => {
     try {
-      const response = await axios.get(`${API_URL}/${id}`);
+      const response = await apiClient.get(`/categories/${id}`);
       return response.data.data;
     } catch (error) {
       console.error(`Error fetching category ${id}:`, error);
@@ -41,13 +39,34 @@ export const categoriesService = {
    */
   getSubcategories: async (categoryId) => {
     try {
-      const response = await axios.get(`${API_URL}/${categoryId}/subcategories`);
-      return response.data.data || [];
+      const category = await categoriesService.getById(categoryId);
+      return category?.subcategories || [];
     } catch (error) {
       console.error(`Error fetching subcategories for category ${categoryId}:`, error);
       throw error;
     }
-  }
+  },
+
+  getAllWithSubcategories: async () => {
+    const categories = await categoriesService.getAll();
+
+    return Promise.all(
+      categories.map(async (category) => {
+        if (Array.isArray(category.subcategories)) return category;
+
+        try {
+          const detail = await categoriesService.getById(category.id);
+          return {
+            ...category,
+            ...detail,
+            subcategories: detail?.subcategories || [],
+          };
+        } catch {
+          return { ...category, subcategories: [] };
+        }
+      })
+    );
+  },
 };
 
 export default categoriesService;

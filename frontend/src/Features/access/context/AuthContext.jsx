@@ -53,6 +53,41 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
   }, []);
 
+  // Mantener sincronizada la identidad entre pestañas del mismo navegador.
+  // Evita que el panel conserve un usuario administrador en memoria mientras
+  // apiClient ya está enviando el token de una sesión de cliente más reciente.
+  useEffect(() => {
+    const synchronizeSession = (event) => {
+      if (event.key !== 'session') return;
+
+      if (!event.newValue) {
+        setUser(null);
+        setRole(null);
+        setPermissions([]);
+        setIsAuthenticated(false);
+        return;
+      }
+
+      try {
+        const session = JSON.parse(event.newValue);
+        setUser(session.user ?? null);
+        setRole(session.role ?? null);
+        setPermissions(session.permissions ?? []);
+        setIsAuthenticated(Boolean(session.user && session.accessToken));
+      } catch (sessionError) {
+        console.error('Error sincronizando la sesión entre pestañas:', sessionError);
+        clearSession();
+        setUser(null);
+        setRole(null);
+        setPermissions([]);
+        setIsAuthenticated(false);
+      }
+    };
+
+    window.addEventListener('storage', synchronizeSession);
+    return () => window.removeEventListener('storage', synchronizeSession);
+  }, []);
+
   // ═══════════════════════════════════════════════════════════
   // LOGIN
   // ═══════════════════════════════════════════════════════════

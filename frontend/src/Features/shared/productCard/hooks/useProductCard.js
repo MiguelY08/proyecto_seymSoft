@@ -12,8 +12,9 @@ import {
   getProductDetailPath,
   isProductAvailable,
 } from '../helpers/productCard.helpers';
+import { getDisplayPricing } from '../../utils/shopPricingHelper';
 
-export function useProductCard(productData = {}) {
+export function useProductCard(productData = {}, clientType = 'DETAL') {
   const navigate = useNavigate();
 
   const { addToCart } = useCart();
@@ -26,7 +27,19 @@ export function useProductCard(productData = {}) {
    * useMemo evita normalizar el producto en cada render,
    * a menos que productData cambie.
    */
-  const product = useMemo(() => normalizeProduct(productData), [productData]);
+  const product = useMemo(() => {
+    const normalizedProduct = normalizeProduct(productData);
+    const pricing = getDisplayPricing(normalizedProduct, clientType);
+
+    return {
+      ...normalizedProduct,
+      price: pricing.price,
+      originalPrice: pricing.originalPrice,
+      discountPct: pricing.discountPct,
+      priceLabel: pricing.label,
+      clientType: pricing.clientType,
+    };
+  }, [clientType, productData]);
 
   /**
    * Estados visuales del botón de favoritos.
@@ -198,14 +211,6 @@ export function useProductCard(productData = {}) {
   const goToDetail = useCallback(() => {
     navigate(getProductDetailPath(product));
   }, [navigate, product]);
-
-  /**
-   * Si cambia el producto, reiniciamos la imagen activa.
-   */
-  useEffect(() => {
-    setActiveImageIndex(0);
-    clearCarouselInterval();
-  }, [product.id, clearCarouselInterval]);
 
   /**
    * Limpieza general al desmontar el componente.

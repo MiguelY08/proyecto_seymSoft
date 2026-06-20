@@ -1,9 +1,23 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 const FavoritesContext = createContext(null);
 
 export function FavoritesProvider({ children }) {
-  const [favorites, setFavorites] = useState([]);
+  const [favorites, setFavorites] = useState(() => {
+    const storedFavorites = localStorage.getItem('favorites');
+    if (!storedFavorites) return [];
+
+    try {
+      return JSON.parse(storedFavorites);
+    } catch (error) {
+      console.error('Error al cargar favoritos:', error);
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('favorites', JSON.stringify(favorites));
+  }, [favorites]);
 
   const isFavorite = useCallback(
     (productId) => favorites.some((p) => p.id === productId),
@@ -13,13 +27,12 @@ export function FavoritesProvider({ children }) {
   const toggleFavorite = useCallback(
     (product) => {
       const alreadyFav = favorites.some((p) => p.id === product.id);
-      if (alreadyFav) {
-        setFavorites((prev) => prev.filter((p) => p.id !== product.id));
-        return false; // fue eliminado
-      } else {
-        setFavorites((prev) => [...prev, product]);
-        return true;  // fue agregado
-      }
+      setFavorites((prev) =>
+        alreadyFav
+          ? prev.filter((p) => p.id !== product.id)
+          : [...prev, product]
+      );
+      return !alreadyFav;
     },
     [favorites]
   );

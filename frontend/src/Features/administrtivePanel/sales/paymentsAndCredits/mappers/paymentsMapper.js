@@ -11,6 +11,8 @@ export const mapCustomer = (customer) => ({
 
   nombre: customer.fullName,
 
+  documento: customer.doc_number,
+
   telefono: customer.phone,
 
   creditoAsignado:
@@ -126,37 +128,42 @@ export const mapInstallment = (installment) => ({
  * Backend -> Frontend
  * =====================================================
  */
-export const mapCustomerContact = (
-  contact
-) => ({
-  id: contact.idClient,
+export const mapCustomerContact = (contact ) => {
 
-  nombre:
-    contact.fullName,
 
-  telefono:
-    contact.phone,
+  const mapped = {
+    id: contact.idClient,
 
-  creditosVencidos:
-    (
-      contact.overdueCredits ?? []
-    ).map((credit) => ({
-      idCredit:
-        credit.idCredit,
+    nombre: contact.fullName,
 
-      idSale:
-        credit.idSale,
+    telefono: contact.phone,
 
-      saldo:
-        Number(
-          credit.remainingBalance ?? 0
-        ),
+    ultimoPago:
+      contact.lastPaymentDate,
 
-      diasVencido:
-        credit.overdueDays,
-    })),
-});
+    creditosVencidos:
+      (
+        contact.overdueCredits ?? []
+      ).map((credit) => ({
+        idCredit:
+          credit.idCredit,
 
+        idSale:
+          credit.idSale,
+
+        saldo:
+          Number(
+            credit.remainingBalance ?? 0
+          ),
+
+        diasVencido:
+          credit.overdueDays,
+      })),
+  };
+
+
+  return mapped;
+};
 /**
  * =====================================================
  * LIST HELPERS

@@ -1,6 +1,30 @@
 // shopPricingHelper.js - Helper para mostrar precios según clientType
 
-import { getProductPrice, getPriceWithDiscount } from './productNormalizer';
+const CLIENT_TYPES = {
+  DETAL: 'DETAL',
+  MAYORISTA: 'MAYORISTA',
+  COLEGA: 'COLEGA',
+  PACAS: 'PACAS',
+};
+
+const toNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+export const normalizeClientType = (clientType) => {
+  const normalized = String(clientType ?? '').trim().toUpperCase();
+
+  if (normalized.includes('MAYOR')) return CLIENT_TYPES.MAYORISTA;
+  if (normalized.includes('COLEGA') || normalized.includes('PARTNER')) {
+    return CLIENT_TYPES.COLEGA;
+  }
+  if (normalized.includes('PACA') || normalized.includes('BULK')) {
+    return CLIENT_TYPES.PACAS;
+  }
+
+  return CLIENT_TYPES.DETAL;
+};
 
 /**
  * Obtiene el precio y descuento a mostrar según el tipo de cliente
@@ -9,50 +33,57 @@ import { getProductPrice, getPriceWithDiscount } from './productNormalizer';
  * @returns {Object} { price, originalPrice, discountPct, label, clientType }
  */
 export const getDisplayPricing = (product, clientType = 'DETAL') => {
+  const normalizedClientType = normalizeClientType(clientType);
+
   if (!product) {
     return {
       price: 0,
       originalPrice: 0,
       discountPct: 0,
       label: 'Precio no disponible',
-      clientType: 'DETAL'
+      clientType: normalizedClientType,
+      hasDiscount: false
     };
   }
 
+  const retailPrice = toNumber(
+    product.retailPrice ?? product.detailPrice ?? product.price
+  );
+
   const clientTypeMap = {
     'DETAL': {
-      basePrice: product.retailPrice,
-      discountPct: product.retailDiscountPct || 0,
+      basePrice: retailPrice,
+      discountPct: toNumber(product.retailDiscountPct),
       label: 'Precio Detal'
     },
     'MAYORISTA': {
-      basePrice: product.wholesalePrice,
-      discountPct: product.wholesaleDiscountPct || 0,
+      basePrice: toNumber(product.wholesalePrice, retailPrice) || retailPrice,
+      discountPct: toNumber(product.wholesaleDiscountPct),
       label: 'Precio Mayorista'
     },
     'COLEGA': {
-      basePrice: product.partnerPrice || product.retailPrice,
-      discountPct: product.partnerDiscountPct || 0,
+      basePrice: toNumber(product.partnerPrice, retailPrice) || retailPrice,
+      discountPct: toNumber(product.partnerDiscountPct),
       label: 'Precio Colega'
     },
     'PACAS': {
-      basePrice: product.bulkPrice || product.retailPrice,
-      discountPct: product.bulkDiscountPct || 0,
+      basePrice: toNumber(product.bulkPrice, retailPrice) || retailPrice,
+      discountPct: toNumber(product.bulkDiscountPct),
       label: 'Precio Pacas'
     }
   };
 
-  const pricing = clientTypeMap[clientType] || clientTypeMap['DETAL'];
-
-  const finalPrice = pricing.basePrice - (pricing.basePrice * (pricing.discountPct / 100));
+  const pricing = clientTypeMap[normalizedClientType] || clientTypeMap.DETAL;
+  const safeDiscountPct = Math.min(Math.max(pricing.discountPct, 0), 100);
+  const finalPrice = pricing.basePrice * (1 - safeDiscountPct / 100);
 
   return {
     price: Math.round(finalPrice),
     originalPrice: Math.round(pricing.basePrice),
-    discountPct: pricing.discountPct,
+    discountPct: safeDiscountPct,
     label: pricing.label,
-    clientType,
-    hasDiscount: pricing.discountPct > 0
+    clientType: normalizedClientType,
+    hasDiscount: safeDiscountPct > 0
   };
 };
 

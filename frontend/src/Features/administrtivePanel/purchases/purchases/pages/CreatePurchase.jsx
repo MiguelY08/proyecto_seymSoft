@@ -10,6 +10,7 @@ import { useAlert } from "../../../../shared/alerts/useAlert";
 import FormProvider from "../../providers/components/FormProvider";
 import { createPurchase, getProducts, getProviders } from "../data/purchasesService";
 import { providersService } from "../../providers/data/providersService";
+import { findProductByBarcode, productMatchesBarcodeSearch } from "../../../../shared/scanner";
 
 const CreatePurchase = () => {
   const navigate = useNavigate();
@@ -173,15 +174,30 @@ const CreatePurchase = () => {
     getProducts().then(setProductsDB);
   };
 
+  const getProductWithLocalBarcodes = (product) => ({
+    ...product,
+    codigosExtra: [
+      ...(Array.isArray(product.codigosExtra) ? product.codigosExtra : []),
+      ...(extraBarcodes[product.codigoBarras] || []),
+    ],
+  });
+
   const handleAddProduct = async (resolvedBarcode) => {
-    if (!searchProduct) {
+    const searchTerm = searchProduct.trim();
+
+    if (!searchTerm && !resolvedBarcode) {
       showWarning("Producto requerido", "Debes escribir un producto o código");
       return;
     }
 
-    const foundProduct = productsDB.find(
-      (p) => p.nombre.toLowerCase().includes(searchProduct.toLowerCase()) || 
-             p.codigoBarras.includes(searchProduct)
+    const productsWithLocalBarcodes = productsDB.map(getProductWithLocalBarcodes);
+    const productByResolvedBarcode = resolvedBarcode
+      ? findProductByBarcode(productsWithLocalBarcodes, resolvedBarcode)
+      : null;
+    const foundProduct = productByResolvedBarcode ?? productsWithLocalBarcodes.find(
+      (p) =>
+        p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        productMatchesBarcodeSearch(p, searchTerm)
     );
 
     if (!foundProduct) {

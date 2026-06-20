@@ -1,629 +1,276 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Calendar, CreditCard, LoaderCircle, Package, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Package, Calendar, CreditCard } from 'lucide-react';
+import OrdersService from '../../administrtivePanel/sales/orders/services/ordersService';
+import useAuthenticatedClient from '../../shared/hooks/useAuthenticatedClient';
 import ShopHero from '../shop/components/ShopHero';
 import BgPedidos from '../../../assets/BgPedidos.png';
-import cuaderno from '../../../assets/products/cuadernoprimaverax100h.png';
-
-/* ── Estilos inyectados (versión compacta con imagen grande) ── */
-const ORDERS_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito:wght@400;600;700;800;900&display=swap');
-
-  @keyframes orders-fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  .orders-page {
-    background: #f6f9fc;
-    font-family: 'Nunito', sans-serif;
-    min-height: 100vh;
-  }
-
-  .orders-container {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: clamp(24px, 4vw, 40px) 20px;
-  }
-
-  /* Barra de filtros */
-  .orders-filters-bar {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 16px;
-    margin-bottom: 32px;
-    background: #ffffff;
-    padding: 12px 24px;
-    border-radius: 20px;
-    border: 1.5px solid #e2edf5;
-    box-shadow: 0 2px 8px rgba(0, 77, 119, 0.05);
-  }
-  .orders-search {
-    flex: 1;
-    min-width: 200px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #f8fafc;
-    padding: 8px 16px;
-    border-radius: 40px;
-    border: 1px solid #e2edf5;
-  }
-  .orders-search input {
-    flex: 1;
-    border: none;
-    background: transparent;
-    font-size: 0.85rem;
-    font-weight: 500;
-    outline: none;
-  }
-  .orders-search input::placeholder {
-    color: #9abcce;
-  }
-  .date-filters {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  .date-input {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #f8fafc;
-    padding: 6px 12px;
-    border-radius: 40px;
-    border: 1px solid #e2edf5;
-  }
-  .date-input input {
-    border: none;
-    background: transparent;
-    font-size: 0.8rem;
-    padding: 4px 0;
-    width: 130px;
-    outline: none;
-    font-family: 'Nunito', sans-serif;
-  }
-  .clear-dates {
-    font-size: 0.7rem;
-    color: #64748b;
-    background: none;
-    border: none;
-    cursor: pointer;
-    transition: color 0.2s;
-  }
-  .clear-dates:hover {
-    color: #004D77;
-  }
-  .orders-divider {
-    width: 1px;
-    height: 30px;
-    background: #e2edf5;
-  }
-  .orders-count {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: #64748b;
-    background: #f1f5f9;
-    padding: 4px 12px;
-    border-radius: 40px;
-  }
-  .btn-outline-sm {
-    background: transparent;
-    border: 1.5px solid #004D77;
-    border-radius: 40px;
-    padding: 6px 16px;
-    font-weight: 800;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #004D77;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .btn-outline-sm:hover {
-    background: #f0f8ff;
-    transform: translateY(-1px);
-  }
-
-  /* Tarjeta de pedido */
-  .order-card {
-    background: #ffffff;
-    border: 1.5px solid #e4eff6;
-    border-radius: 24px;
-    margin-bottom: 20px;
-    overflow: hidden;
-    transition: all 0.25s ease;
-    animation: orders-fadeUp 0.4s ease both;
-  }
-  .order-card:hover {
-    box-shadow: 0 12px 28px rgba(0, 77, 119, 0.1);
-    transform: translateY(-2px);
-    border-color: #afd0e6;
-  }
-  .order-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 20px;
-    background: #fefcf5;
-    border-bottom: 1px solid #eef2f6;
-  }
-  .order-date {
-    font-weight: 800;
-    font-size: 0.8rem;
-    color: #1e4060;
-  }
-  .order-id {
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: #9abcce;
-    letter-spacing: 0.05em;
-  }
-
-  /* Grid principal */
-  .order-body-grid {
-    display: grid;
-    grid-template-columns: auto 1fr 1fr;
-    gap: 24px;
-    padding: 20px;
-    align-items: start;
-  }
-
-  /* Columna izquierda: imagen grande */
-  .order-image-col {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
-  .order-image {
-    width: 140px;
-    height: 140px;
-    background: linear-gradient(150deg, #eef6fb, #e0eef7);
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .order-image img {
-    width: 80%;
-    height: auto;
-    object-fit: contain;
-  }
-  .order-title-small {
-    font-weight: 800;
-    font-size: 0.85rem;
-    color: #0c2a3a;
-    text-align: center;
-    margin: 0;
-  }
-  .order-status {
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: 40px;
-    font-size: 0.65rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  /* Columna central: detalles */
-  .order-details-col {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .detail-row {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    font-size: 0.85rem;
-    color: #475569;
-  }
-  .detail-row strong {
-    color: #1e4060;
-    font-weight: 700;
-    min-width: 85px;
-  }
-  .product-count {
-    font-weight: 800;
-    color: #004D77;
-  }
-
-  /* Columna derecha: cards y acciones */
-  .order-right-col {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .payment-status-card {
-    background: #f8fafc;
-    border-radius: 16px;
-    padding: 12px;
-    border: 1px solid #eef2f6;
-  }
-  .payment-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 800;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    color: #1e4060;
-    margin-bottom: 8px;
-  }
-  .payment-amount {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.8rem;
-    margin-bottom: 4px;
-  }
-  .total-amount {
-    font-weight: 900;
-    color: #004D77;
-  }
-  .pending-amount {
-    font-weight: 900;
-    color: #e53e3e;
-  }
-  .devolution-card {
-    background: #fff3e6;
-    border-radius: 16px;
-    padding: 12px;
-    border: 1px solid #fde68a;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .devolution-text {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #e67e22;
-  }
-  .order-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 4px;
-  }
-  .btn-primary-sm {
-    background: #004D77;
-    border: none;
-    border-radius: 40px;
-    padding: 8px 12px;
-    font-weight: 800;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: white;
-    cursor: pointer;
-    transition: all 0.2s;
-    width: 100%;
-    text-align: center;
-  }
-  .btn-primary-sm:hover {
-    background: #0c5c88;
-    transform: translateY(-1px);
-  }
-
-  @media (max-width: 1024px) {
-    .order-body-grid {
-      grid-template-columns: 1fr;
-      gap: 16px;
-    }
-    .order-image-col {
-      flex-direction: row;
-      gap: 16px;
-    }
-    .order-image {
-      width: 100px;
-      height: 100px;
-    }
-  }
-  @media (max-width: 640px) {
-    .order-image-col {
-      flex-direction: column;
-      align-items: center;
-    }
-  }
-`;
-
-let ordersStylesInjected = false;
-function injectOrdersStyles() {
-  if (ordersStylesInjected) return;
-  const style = document.createElement('style');
-  style.textContent = ORDERS_STYLES;
-  document.head.appendChild(style);
-  ordersStylesInjected = true;
-}
-
-// ─── Datos (sin cambios) ───────────────────────────────────────────────
-const P = {
-  libreta:    { productId: 1, nombre: 'LIBRETA CON LAPICERO',      precioUnidad: 5000   },
-  corrector:  { productId: 2, nombre: 'CORRECTOR CINTA',            precioUnidad: 4000   },
-  cuaderno:   { productId: 3, nombre: 'CUADERNO PRIMAVERA X100H',   precioUnidad: 70000  },
-  sharpie:    { productId: 4, nombre: 'SET SHARPIE X30',            precioUnidad: 120000 },
-  sewingMachine: { productId: 5, nombre: 'SEWING MACHINE',          precioUnidad: 5000   },
-  tijeras:    { productId: 6, nombre: 'TIJERAS PUNTA ROMA',         precioUnidad: 3000   },
-  vinilo:     { productId: 7, nombre: 'VINILO PQ POWER COLOR ROJO', precioUnidad: 1500   },
-  correctorEnc:  { productId: 8, nombre: 'CORRECTORCINTA',          precioUnidad: 7000   },
-};
-
-export const pedidos = [
-  {
-    id: '123456789',
-    fecha: '7 de septiembre 2025',
-    fecha_corta: '7 de septiembre',
-    numeroOrden: '#123456789',
-    estado: 'En proceso',
-    estadoColor: 'bg-yellow-100 text-yellow-700',
-    titulo: 'El pedido ha sido recibido',
-    metodoEnvio: 'Entrega',
-    cliente: 'El cliente lo recoge',
-    direccion: 'El cliente lo recoge',
-    infoPago: 'Crédito (Pendiente de pago)',
-    tieneDevolucion: false,
-    abonado: 50000,
-    metodoPagoDetalle: { tipo: 'Transferencia', llave: '0900485426' },
-    productos: [
-      { lineItemId: 1, ...P.cuaderno,  cantidad: 10 },
-      { lineItemId: 2, ...P.libreta,   cantidad: 5  },
-      { lineItemId: 3, ...P.tijeras,   cantidad: 8  },
-    ],
-  },
-  {
-    id: '987654321',
-    fecha: '25 de agosto 2025',
-    fecha_corta: '25 de agosto',
-    numeroOrden: '#987654321',
-    estado: 'Entregado',
-    estadoColor: 'bg-green-100 text-green-700',
-    titulo: 'Pedido finalizado y entregado',
-    metodoEnvio: 'Entrega',
-    cliente: 'Cra 75 #21-50 (Belén San Bernardo)',
-    direccion: 'Cra 75 #21-50 (Belén San Bernardo)',
-    infoPago: 'Transferencia',
-    tieneDevolucion: true,
-    abonado: 132000,
-    metodoPagoDetalle: { tipo: 'Transferencia', llave: '0900485426' },
-    productos: [
-      { lineItemId: 1, ...P.sharpie,   cantidad: 1 },
-      { lineItemId: 2, ...P.corrector, cantidad: 3 },
-    ],
-  },
-  {
-    id: '456789123',
-    fecha: '15 de agosto 2025',
-    fecha_corta: '15 de agosto',
-    numeroOrden: '#456789123',
-    estado: 'En proceso',
-    estadoColor: 'bg-yellow-100 text-yellow-700',
-    titulo: 'El pedido ha sido recibido',
-    metodoEnvio: 'Domicilio',
-    cliente: 'Calle 50 #34-12 (Laureles)',
-    direccion: 'Calle 50 #34-12 (Laureles)',
-    infoPago: 'Efectivo (Pendiente de pago)',
-    tieneDevolucion: false,
-    abonado: 0,
-    metodoPagoDetalle: { tipo: 'Efectivo', llave: '' },
-    productos: [
-      { lineItemId: 1, ...P.vinilo,        cantidad: 20 },
-      { lineItemId: 2, ...P.sewingMachine, cantidad: 2  },
-      { lineItemId: 3, ...P.correctorEnc,  cantidad: 5  },
-      { lineItemId: 4, ...P.tijeras,       cantidad: 10 },
-    ],
-  },
-  {
-    id: '741852963',
-    fecha: '2 de agosto 2025',
-    fecha_corta: '2 de agosto',
-    numeroOrden: '#741852963',
-    estado: 'Cancelado',
-    estadoColor: 'bg-red-100 text-red-700',
-    titulo: 'El pedido fue cancelado',
-    metodoEnvio: 'Entrega',
-    cliente: 'El cliente lo recoge',
-    direccion: 'El cliente lo recoge',
-    infoPago: 'Tarjeta de débito',
-    tieneDevolucion: false,
-    abonado: 0,
-    metodoPagoDetalle: { tipo: 'Tarjeta de débito', llave: '' },
-    productos: [
-      { lineItemId: 1, ...P.libreta,   cantidad: 30 },
-      { lineItemId: 2, ...P.corrector, cantidad: 15 },
-    ],
-  },
-];
+import {
+  formatMoney,
+  formatOrderDate,
+  getOrderStatusClasses,
+} from './helpers/customerOrderHelpers';
 
 function Orders() {
-  injectOrdersStyles();
   const navigate = useNavigate();
+  const {
+    clientId,
+    isAuthenticated,
+    loading: authLoading,
+  } = useAuthenticatedClient();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
-  const [fechaInicial, setFechaInicial] = useState('');
-  const [fechaFinal, setFechaFinal] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
-  const parseFechaPedido = (fechaStr) => {
-    const meses = {
-      enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
-      julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated || !clientId) {
+      setOrders([]);
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
+    const loadOrders = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const response = await OrdersService.list({ clientId });
+        if (!active) return;
+        setOrders(
+          response
+            .filter((order) => Number(order.clienteId) === Number(clientId))
+            .sort((a, b) => new Date(b.fechaPedido || 0) - new Date(a.fechaPedido || 0))
+        );
+      } catch (requestError) {
+        if (!active) return;
+        setError(
+          requestError?.response?.data?.message ??
+          requestError?.message ??
+          'No fue posible cargar tus pedidos.'
+        );
+      } finally {
+        if (active) setLoading(false);
+      }
     };
-    const partes = fechaStr.split(' de ');
-    if (partes.length < 2) return null;
-    const dia = parseInt(partes[0]);
-    const mesStr = partes[1].toLowerCase();
-    const anio = partes[2] ? parseInt(partes[2]) : new Date().getFullYear();
-    const mes = meses[mesStr];
-    if (isNaN(dia) || mes === undefined || isNaN(anio)) return null;
-    return new Date(anio, mes, dia);
+
+    loadOrders();
+    return () => {
+      active = false;
+    };
+  }, [authLoading, clientId, isAuthenticated]);
+
+  const filteredOrders = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    return orders.filter((order) => {
+      const matchesSearch =
+        !query ||
+        String(order.numeroPedido || order.id).toLowerCase().includes(query) ||
+        order.productos.some((product) => product.nombre.toLowerCase().includes(query));
+
+      if (!matchesSearch) return false;
+
+      const orderDate = new Date(order.fechaPedido);
+      if (Number.isNaN(orderDate.getTime())) return !startDate && !endDate;
+      if (startDate && orderDate < new Date(`${startDate}T00:00:00`)) return false;
+      if (endDate && orderDate > new Date(`${endDate}T23:59:59`)) return false;
+      return true;
+    });
+  }, [endDate, orders, search, startDate]);
+
+  const renderContent = () => {
+    if (authLoading || loading) {
+      return (
+        <div className="flex min-h-64 items-center justify-center text-[#004D77]">
+          <LoaderCircle className="animate-spin" size={32} />
+        </div>
+      );
+    }
+
+    if (!isAuthenticated) {
+      return (
+        <EmptyState
+          title="Inicia sesión para ver tus pedidos"
+          description="Tu historial de compras está asociado a tu cuenta."
+          action="Iniciar sesión"
+          onAction={() => navigate('/login', { state: { from: '/orders-l' } })}
+        />
+      );
+    }
+
+    if (!clientId) {
+      return (
+        <EmptyState
+          title="Tu cuenta no tiene un cliente asociado"
+          description="Contacta a un asesor para vincular tu perfil y consultar tus pedidos."
+        />
+      );
+    }
+
+    if (error) {
+      return <EmptyState title="No pudimos cargar tus pedidos" description={error} />;
+    }
+
+    if (!filteredOrders.length) {
+      return (
+        <EmptyState
+          title={orders.length ? 'No hay resultados para estos filtros' : 'Aún no tienes pedidos'}
+          description={orders.length ? 'Prueba cambiando la búsqueda o las fechas.' : 'Cuando finalices una compra aparecerá aquí.'}
+          action={orders.length ? 'Limpiar filtros' : 'Ir a la tienda'}
+          onAction={() => {
+            if (orders.length) {
+              setSearch('');
+              setStartDate('');
+              setEndDate('');
+            } else {
+              navigate('/shop');
+            }
+          }}
+        />
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {filteredOrders.map((order) => {
+          const units = order.productos.reduce((sum, product) => sum + product.cantidad, 0);
+          return (
+            <article
+              key={order.id}
+              className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+            >
+              <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-amber-50/60 px-5 py-3">
+                <span className="text-sm font-extrabold text-slate-700">
+                  {formatOrderDate(order.fechaPedido)}
+                </span>
+                <span className="text-xs font-bold tracking-wide text-slate-400">
+                  Pedido No. {order.numeroPedido || order.id}
+                </span>
+              </header>
+
+              <div className="grid gap-5 p-5 md:grid-cols-[auto_1fr_auto] md:items-center">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-16 w-16 overflow-hidden items-center justify-center rounded-2xl bg-blue-50 text-[#004D77]">
+                    {order.productos[0]?.image ? (
+                      <img
+                        src={order.productos[0].image}
+                        alt={order.productos[0].nombre}
+                        className="h-full w-full object-contain p-1"
+                      />
+                    ) : (
+                      <Package size={28} />
+                    )}
+                  </div>
+                  <div>
+                    <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-black uppercase ${getOrderStatusClasses(order.estadoLogistico)}`}>
+                      {order.estadoLogistico}
+                    </span>
+                    <p className="mt-2 text-sm font-bold text-slate-800">
+                      {units} {units === 1 ? 'unidad' : 'unidades'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-1 text-sm text-slate-600">
+                  <p><strong className="text-slate-800">Entrega:</strong> {order.tipoEntrega === 'recoge' ? 'Recoger en tienda' : order.direccionEntrega}</p>
+                  <p><strong className="text-slate-800">Productos:</strong> {order.productos.map((product) => product.nombre).join(', ')}</p>
+                </div>
+
+                <div className="min-w-48 rounded-2xl bg-slate-50 p-4">
+                  <p className="flex items-center gap-2 text-xs font-black uppercase text-slate-500">
+                    <CreditCard size={14} /> Estado de pago
+                  </p>
+                  <p className="mt-2 text-lg font-black text-[#004D77]">{formatMoney(order.total)}</p>
+                  <p className={`text-xs font-bold ${order.saldoPendiente > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    {order.saldoPendiente > 0
+                      ? `Pendiente: ${formatMoney(order.saldoPendiente)}`
+                      : 'Pago registrado'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/orders-l/${order.id}`)}
+                    className="mt-3 w-full rounded-full bg-[#004D77] px-4 py-2 text-xs font-black uppercase text-white"
+                  >
+                    Ver pedido
+                  </button>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    );
   };
 
-  const pedidosFiltrados = pedidos.filter(pedido => {
-    if (search && !pedido.id.includes(search) && !pedido.titulo.toLowerCase().includes(search.toLowerCase())) {
-      return false;
-    }
-    if (fechaInicial || fechaFinal) {
-      const fechaPedido = parseFechaPedido(pedido.fecha);
-      if (fechaPedido) {
-        if (fechaInicial && fechaPedido < new Date(fechaInicial)) return false;
-        if (fechaFinal && fechaPedido > new Date(fechaFinal)) return false;
-      }
-    }
-    return true;
-  });
-
-  const handleVerPedido = (id) => navigate(`/orders-l/${id}`);
-  const handleVerDevoluciones = () => navigate('/returnsOnOrders');
-
   return (
-    <div className="orders-page">
-      <ShopHero
-        image={BgPedidos}
-        title="Pedidos"
-        tag="Historial"
-        subtitle="Revisa el estado de tus compras"
-      />
+    <div className="min-h-screen bg-[#f6f9fc]">
+      <ShopHero image={BgPedidos} title="Pedidos" tag="Historial" subtitle="Revisa el estado de tus compras" />
 
-      <div className="orders-container">
-        {/* Barra de filtros */}
-        <div className="orders-filters-bar">
-          <div className="orders-search">
-            <Search size={16} className="text-gray-400" />
+      <main className="mx-auto max-w-7xl px-5 py-8">
+        <div className="mb-7 flex flex-wrap items-center gap-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+          <label className="flex min-w-56 flex-1 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2">
+            <Search size={16} className="text-slate-400" />
             <input
-              type="text"
-              placeholder="Buscar por número de pedido o producto"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Buscar pedido o producto"
+              className="w-full bg-transparent text-sm outline-none"
             />
-          </div>
-
-          <div className="date-filters">
-            <div className="date-input">
-              <Calendar size={14} className="text-gray-400" />
-              <input
-                type="date"
-                value={fechaInicial}
-                onChange={(e) => setFechaInicial(e.target.value)}
-              />
-            </div>
-            <span className="text-gray-400">—</span>
-            <div className="date-input">
-              <Calendar size={14} className="text-gray-400" />
-              <input
-                type="date"
-                value={fechaFinal}
-                onChange={(e) => setFechaFinal(e.target.value)}
-              />
-            </div>
-            {(fechaInicial || fechaFinal) && (
-              <button
-                onClick={() => { setFechaInicial(''); setFechaFinal(''); }}
-                className="clear-dates"
-              >
-                Limpiar
-              </button>
-            )}
-          </div>
-
-          <div className="orders-divider" />
-          <span className="orders-count">{pedidosFiltrados.length} pedidos</span>
-          <button onClick={handleVerDevoluciones} className="btn-outline-sm">
+          </label>
+          <DateField value={startDate} onChange={setStartDate} label="Desde" />
+          <DateField value={endDate} onChange={setEndDate} label="Hasta" />
+          <span className="rounded-full bg-slate-100 px-4 py-2 text-xs font-bold text-slate-600">
+            {filteredOrders.length} pedidos
+          </span>
+          <button
+            type="button"
+            onClick={() => navigate('/returnsOnOrders')}
+            className="rounded-full border-2 border-[#004D77] px-4 py-2 text-xs font-black uppercase text-[#004D77]"
+          >
             Ver devoluciones
           </button>
         </div>
 
-        {/* Lista de pedidos */}
-        <div className="orders-list">
-          {pedidosFiltrados.map((pedido, idx) => {
-            const total = pedido.productos.reduce((s, p) => s + p.precioUnidad * p.cantidad, 0);
-            const totalUnidades = pedido.productos.reduce((s, p) => s + p.cantidad, 0);
-            const faltante = total - pedido.abonado;
-            const pagadoCompleto = faltante <= 0 && pedido.estado !== 'Cancelado';
+        {renderContent()}
+      </main>
+    </div>
+  );
+}
 
-            return (
-              <div key={pedido.id} className="order-card" style={{ animationDelay: `${idx * 0.05}s` }}>
-                <div className="order-header">
-                  <span className="order-date">{pedido.fecha}</span>
-                  <span className="order-id">Pedido No. {pedido.id}</span>
-                </div>
+function DateField({ value, onChange, label }) {
+  return (
+    <label className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2">
+      <Calendar size={14} className="text-slate-400" />
+      <span className="sr-only">{label}</span>
+      <input
+        type="date"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="bg-transparent text-xs outline-none"
+      />
+    </label>
+  );
+}
 
-                <div className="order-body-grid">
-                  {/* Columna izquierda: imagen + título/estado */}
-                  <div className="order-image-col">
-                    <div className="order-image">
-                      <img src={cuaderno} alt="producto" />
-                    </div>
-                    <div className="order-title-small">{pedido.titulo}</div>
-                    <span className={`order-status ${pedido.estadoColor}`}>
-                      {pedido.estado}
-                    </span>
-                  </div>
-
-                  {/* Columna central: detalles */}
-                  <div className="order-details-col">
-                    <div className="detail-row">
-                      <strong>Entrega:</strong> {pedido.cliente}
-                    </div>
-                    <div className="detail-row">
-                      <strong>Pago:</strong> {pedido.infoPago}
-                    </div>
-                    <div className="detail-row">
-                      <strong>Productos:</strong> <span className="product-count">{totalUnidades} unidades</span>
-                    </div>
-                  </div>
-
-                  {/* Columna derecha: estado de pago + devolución activa + acción */}
-                  <div className="order-right-col">
-                    <div className="payment-status-card">
-                      <div className="payment-header">
-                        <CreditCard size={14} /> Estado de pago
-                      </div>
-                      <div className="payment-amount">
-                        <span>Total:</span>
-                        <span className="total-amount">${total.toLocaleString()}</span>
-                      </div>
-                      <div className="payment-amount">
-                        <span>Abonado:</span>
-                        <span>${pedido.abonado.toLocaleString()}</span>
-                      </div>
-                      {faltante > 0 ? (
-                        <div className="payment-amount">
-                          <span>Faltante:</span>
-                          <span className="pending-amount">${faltante.toLocaleString()}</span>
-                        </div>
-                      ) : pagadoCompleto && (
-                        <div className="payment-amount">
-                          <span>Estado:</span>
-                          <span className="text-green-600 font-bold">Pagado completo ✓</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {pedido.tieneDevolucion && (
-                      <div className="devolution-card">
-                        <Package size={16} className="text-orange-500" />
-                        <div className="devolution-text">
-                          Este pedido tiene un proceso de devolución activo
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="order-actions">
-                      <button
-                        onClick={() => handleVerPedido(pedido.id)}
-                        className="btn-primary-sm"
-                      >
-                        Ver pedido
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+function EmptyState({ title, description, action, onAction }) {
+  return (
+    <div className="flex min-h-72 flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white p-8 text-center">
+      <Package size={38} className="mb-4 text-[#004D77]" />
+      <h2 className="text-xl font-black text-slate-800">{title}</h2>
+      <p className="mt-2 max-w-md text-sm text-slate-500">{description}</p>
+      {action && (
+        <button
+          type="button"
+          onClick={onAction}
+          className="mt-5 rounded-full bg-[#004D77] px-6 py-3 text-xs font-black uppercase text-white"
+        >
+          {action}
+        </button>
+      )}
     </div>
   );
 }

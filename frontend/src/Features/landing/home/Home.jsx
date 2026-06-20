@@ -407,9 +407,9 @@ function Home() {
             ))}
 
             {/* Nav buttons */}
-            {[{ dir: 'prev', Icon: ChevronLeft, action: prevSlide, side: 'left' },
-              { dir: 'next', Icon: ChevronRight, action: nextSlide, side: 'right' }
-            ].map(({ Icon, action, side }) => (
+            {[{ action: prevSlide, side: 'left' },
+              { action: nextSlide, side: 'right' }
+            ].map(({ action, side }) => (
               <button
                 key={side}
                 onClick={action}
@@ -428,7 +428,9 @@ function Home() {
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.35)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
               >
-                <Icon size={20} color="#fff" strokeWidth={2.5} />
+                {side === 'left'
+                  ? <ChevronLeft size={20} color="#fff" strokeWidth={2.5} />
+                  : <ChevronRight size={20} color="#fff" strokeWidth={2.5} />}
               </button>
             ))}
 
@@ -466,9 +468,9 @@ function Home() {
             <p className="section-eyebrow">Explora</p>
             <h2 className="section-title">Categorías</h2>
           </div>
-          <a href="/tienda" className="btn-outline">
+          <Link to="/shop" className="btn-outline">
             Ver todas <ArrowRight size={13} strokeWidth={3} />
-          </a>
+          </Link>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}
@@ -487,12 +489,12 @@ function Home() {
             categories.map((cat) => {
               const Icon = categoryIcons[cat.id] || ShoppingBag;
               return (
-                <a key={cat.id} href={`/tienda?category=${cat.id}`} className="cat-card">
+                <Link key={cat.id} to={`/shop?category=${cat.id}`} className="cat-card">
                   <div className="cat-icon-wrap">
                     <Icon size={24} color="#004D77" strokeWidth={1.75} />
                   </div>
                   <span className="cat-label">{cat.name}</span>
-                </a>
+                </Link>
               );
             })
           ) : (
@@ -511,7 +513,7 @@ function Home() {
             <h2 className="section-title">Nuestros productos</h2>
             <p className="section-subtitle">Encuentra los productos ideales para ti en un solo lugar</p>
           </div>
-          <Link to="/tienda" className="btn-outline">
+          <Link to="/shop" className="btn-outline">
             Ver más <ArrowRight size={13} strokeWidth={3} />
           </Link>
         </div>

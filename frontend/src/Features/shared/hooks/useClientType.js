@@ -1,67 +1,43 @@
-// useClientType.js - Hook para obtener clientType del usuario
+import { useMemo } from 'react';
+import { normalizeClientType } from '../utils/shopPricingHelper';
+import useAuthenticatedClient from './useAuthenticatedClient';
 
-import { useState, useEffect } from 'react';
+const getUserClientType = (user) => {
+  if (!user) return null;
+
+  return (
+    user.clientType ??
+    user.client_type ??
+    user.tipoCliente ??
+    user.client?.clientType ??
+    user.client?.client_type ??
+    user.client?.type ??
+    null
+  );
+};
 
 /**
- * Hook para obtener el tipo de cliente del usuario autenticado
- * Si no está autenticado, retorna 'DETAL' por defecto
- * @returns {string} clientType: 'DETAL' | 'MAYORISTA' | 'COLEGA' | 'PACAS'
+ * Obtiene el tipo de cliente desde el usuario administrado por AuthContext.
+ * Los visitantes y usuarios sin tipo asociado usan precio DETAL.
  */
 export const useClientType = () => {
-  const [clientType, setClientType] = useState('DETAL');
-  const [loading, setLoading] = useState(true);
+  const {
+    client,
+    clientType: resolvedClientType,
+    isAuthenticated,
+    loading,
+  } = useAuthenticatedClient();
 
-  useEffect(() => {
-    const loadClientType = async () => {
-      try {
-        // Intentar obtener del localStorage primero (cached)
-        const cached = localStorage.getItem('clientType');
-        if (cached) {
-          setClientType(cached);
-          setLoading(false);
-          return;
-        }
+  const clientType = useMemo(() => {
+    if (!isAuthenticated) return 'DETAL';
+    return normalizeClientType(resolvedClientType ?? getUserClientType(client));
+  }, [client, isAuthenticated, resolvedClientType]);
 
-        // Verificar si hay token (usuario autenticado)
-        const token = localStorage.getItem('token');
-        if (!token) {
-          // No autenticado → DETAL
-          setClientType('DETAL');
-          setLoading(false);
-          return;
-        }
-
-        // Obtener clientType desde el backend
-        const response = await fetch('http://localhost:3000/api/auth/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const type = data.client?.client_type || 'DETAL';
-          
-          // Guardar en localStorage para futuras cargas
-          localStorage.setItem('clientType', type);
-          setClientType(type);
-        } else {
-          // Token inválido → DETAL
-          setClientType('DETAL');
-        }
-      } catch (error) {
-        console.error('Error loading clientType:', error);
-        // En caso de error → DETAL
-        setClientType('DETAL');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadClientType();
-  }, []);
-
-  return { clientType, loading };
+  return {
+    clientType,
+    loading,
+    isAuthenticated,
+  };
 };
 
 export default useClientType;

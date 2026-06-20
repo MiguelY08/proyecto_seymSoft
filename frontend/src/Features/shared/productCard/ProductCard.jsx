@@ -7,7 +7,7 @@ import { ProductCardBody } from './ProductCardBody';
 import { ProductCardActions } from './ProductCardActions';
 import { useProductCard } from './hooks/useProductCard';
 
-function ProductCard({ product: productData }) {
+function ProductCard({ product: productData, clientType = 'DETAL' }) {
   const {
     product,
 
@@ -31,7 +31,7 @@ function ProductCard({ product: productData }) {
     handleFavorite,
     handleAddToCart,
     goToDetail,
-  } = useProductCard(productData);
+  } = useProductCard(productData, clientType);
 
   return (
     <article

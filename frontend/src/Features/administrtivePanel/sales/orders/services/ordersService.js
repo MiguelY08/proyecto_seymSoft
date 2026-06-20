@@ -87,8 +87,58 @@ const normalizePayment = (payment = {}, pedidoId = null) => ({
   observaciones: payment.observations ?? payment.observaciones ?? '',
 });
 
+const normalizePaymentReceipt = (receipt = {}, pedidoId = null) => ({
+  id: receipt.id ?? receipt.idPaymentReceipt ?? receipt.receiptId ?? receipt.publicId ?? receipt.url,
+  pedidoId: toNumber(
+    receipt.pedidoId ?? receipt.orderId ?? receipt.idOrder ?? pedidoId,
+    pedidoId
+  ),
+  imageUrl:
+    receipt.imageUrl ??
+    receipt.image_url ??
+    receipt.secureUrl ??
+    receipt.secure_url ??
+    receipt.url ??
+    receipt.path ??
+    '',
+  fileName:
+    receipt.fileName ??
+    receipt.filename ??
+    receipt.originalName ??
+    receipt.original_name ??
+    receipt.name ??
+    '',
+  uploadedAt:
+    receipt.uploadedAt ??
+    receipt.createdAt ??
+    receipt.created_at ??
+    receipt.date ??
+    new Date().toISOString(),
+  status: receipt.status ?? receipt.verificationStatus ?? 'pendiente',
+  observations: receipt.observations ?? receipt.observaciones ?? '',
+});
+
 const normalizeProduct = (product = {}) => {
   const productData = product.product ?? product;
+  const images =
+    product.images ??
+    product.productImages ??
+    productData.images ??
+    productData.productImages ??
+    [];
+  const image =
+    product.image ??
+    product.imageUrl ??
+    product.image_url ??
+    productData.image ??
+    productData.imageUrl ??
+    productData.image_url ??
+    images.find((item) => item.isPrimary ?? item.is_primary)?.url ??
+    images.find((item) => item.isPrimary ?? item.is_primary)?.imageUrl ??
+    images[0]?.url ??
+    images[0]?.imageUrl ??
+    images[0]?.image_url ??
+    null;
   const cantidad = toNumber(product.cantidad ?? product.quantity ?? product.qty, 1);
   const precioUnitario = toNumber(
     product.precioUnitario ??
@@ -126,12 +176,22 @@ const normalizeProduct = (product = {}) => {
     iva: ivaAmount ?? getIncludedIvaAmount(lineTotal, ivaPercentage),
     ivaPercentage,
     stock: toNumber(product.stock ?? productData.stock ?? productData.totalStock ?? productData.availableStock),
+    image,
+    images,
   };
 };
 
 const getPaymentsFromOrder = (order = {}) => (
   order.pagos ?? order.payments ?? order.orderPayments ?? []
 ).map((payment) => normalizePayment(payment, order.id));
+
+const getPaymentReceiptsFromOrder = (order = {}) => (
+  order.comprobantesPago ??
+  order.paymentReceipts ??
+  order.paymentProofs ??
+  order.receipts ??
+  []
+).map((receipt) => normalizePaymentReceipt(receipt, order.id));
 
 const getAdvisor = (order = {}) =>
   order.advisor ??
@@ -152,6 +212,7 @@ const normalizeOrder = (order = {}) => {
   );
   const subtotal = toNumber(order.subtotal, roundMoney(total - iva));
   const pagos = getPaymentsFromOrder(order);
+  const comprobantesPago = getPaymentReceiptsFromOrder(order);
   const totalPagado = toNumber(
     order.paidAmount ?? order.totalPagado,
     pagos.reduce((sum, payment) => sum + payment.monto, 0)
@@ -197,6 +258,7 @@ const normalizeOrder = (order = {}) => {
     clienteDireccion: order.customer?.address ?? '',
     productos,
     pagos,
+    comprobantesPago,
     subtotal,
     iva,
     total,
@@ -215,16 +277,6 @@ const normalizeOrder = (order = {}) => {
     cancelledAt: order.cancelledAt ?? order.fechaCancelacion ?? order.canceledAt ?? null,
   };
 };
-
-const buildOrderPayload = (data = {}) => ({
-  clienteId: data.clienteId,
-  asesorId: data.asesorId,
-  direccionEntrega: data.direccionEntrega,
-  productos: data.productos,
-  estadoLogistico: data.estadoLogistico,
-  origen: data.origen ?? ORIGENES.MANUAL,
-  motivoCancelacion: data.motivoCancelacion ?? null,
-});
 
 const buildCreateOrderPayload = (data = {}) => {
   const isRecoge = data.tipoEntrega === 'recoge' || data.direccionEntrega === 'El cliente lo recoge';
@@ -415,6 +467,29 @@ export const PaymentService = {
       monto: -Math.abs(monto),
       comprobante: null,
     });
+  },
+};
+
+export const PaymentReceiptService = {
+  async getByPedidoId(pedidoId) {
+    const order = await OrdersService.findById(pedidoId);
+    return order?.comprobantesPago || [];
+  },
+
+  async upload(pedidoId, file, observations = null) {
+    const formData = new FormData();
+    formData.append('image', file);
+    if (observations) formData.append('observations', observations);
+
+    const response = await apiClient.postForm(
+      `/orders/${pedidoId}/payment-receipts`,
+      formData
+    );
+    const result = unwrap(response);
+    return normalizePaymentReceipt(
+      result?.paymentReceipt ?? result?.receipt ?? result,
+      pedidoId
+    );
   },
 };
 
