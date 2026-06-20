@@ -512,7 +512,7 @@ function HeaderLanding() {
                               className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-[#004D77] hover:bg-gray-100 cursor-pointer transition-colors"
                             >
                               <LayoutDashboard size={16} />
-                              Ir a Panel Administrativo
+                              Ir a Panel Administrativo.
                             </button>
                           }
                           <button
