@@ -1,8 +1,16 @@
 // Features/administrtivePanel/purchases/purchases/components/CreatePurchaseSideBar.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, Plus, Minus, AlertCircle, Barcode, ChevronDown, ChevronUp, Check } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAlert } from "../../../../shared/alerts/useAlert";
+import {
+  findProductByBarcode,
+  getProductBarcodeValues,
+  normalizeBarcode,
+  productMatchesBarcodeSearch,
+  ScannerStatus,
+  useBarcodeScanner,
+} from "../../../../shared/scanner";
 
 const CreateSidebar = ({
   productsDB,
@@ -34,7 +42,7 @@ const CreateSidebar = ({
   onExtraBarcodesChange,
 }) => {
   const navigate = useNavigate();
-  const { showConfirm } = useAlert();
+  const { showConfirm, showError } = useAlert();
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchProvider, setSearchProvider] = useState("");
@@ -47,24 +55,37 @@ const CreateSidebar = ({
   const [barcodeSaved, setBarcodeSaved] = useState(false);
   const [barcodeError, setBarcodeError] = useState("");
   const [activeBarcodeIndex, setActiveBarcodeIndex] = useState(0);
+  const [scannerMessage, setScannerMessage] = useState(null);
+
+  const getProductWithLocalBarcodes = (product) => ({
+    ...product,
+    codigosExtra: [
+      ...(Array.isArray(product.codigosExtra) ? product.codigosExtra : []),
+      ...(extraBarcodes[product.codigoBarras] || []),
+    ],
+  });
 
   const filteredProviders = providersList.filter((p) =>
     p.nombre?.toLowerCase().includes(searchProvider.toLowerCase())
   );
 
   const filteredProducts = productsDB.filter(
-    (p) =>
-      p.nombre.toLowerCase().includes(searchProduct.toLowerCase()) ||
-      p.codigoBarras.includes(searchProduct)
+    (p) => {
+      const product = getProductWithLocalBarcodes(p);
+      return (
+        p.nombre.toLowerCase().includes(searchProduct.toLowerCase()) ||
+        productMatchesBarcodeSearch(product, searchProduct)
+      );
+    }
   );
 
   const allUsedBarcodes = [
-    ...productsDB.map((p) => p.codigoBarras),
+    ...productsDB.flatMap((p) => getProductBarcodeValues(getProductWithLocalBarcodes(p))),
     ...Object.values(extraBarcodes).flat(),
-  ];
+  ].map((code) => normalizeBarcode(code));
 
   const availableBarcodes = selectedProduct
-    ? [selectedProduct.codigoBarras, ...(extraBarcodes[selectedProduct.codigoBarras] || [])]
+    ? [...new Set(getProductBarcodeValues(getProductWithLocalBarcodes(selectedProduct)))]
     : [];
 
   const resolvedBarcode =
@@ -119,7 +140,13 @@ const CreateSidebar = ({
     navigate("/admin/purchases");
   };
 
-  const handleSelectProduct = (product) => {
+  const handleSelectProduct = (product, activeBarcode = "") => {
+    const normalizedActiveBarcode = normalizeBarcode(activeBarcode);
+    const productBarcodes = getProductBarcodeValues(getProductWithLocalBarcodes(product));
+    const nextActiveBarcodeIndex = normalizedActiveBarcode
+      ? Math.max(0, productBarcodes.findIndex((code) => code === normalizedActiveBarcode))
+      : 0;
+
     setSearchProduct(product.nombre);
     setSelectedProduct(product);
     setShowSuggestions(false);
@@ -127,7 +154,7 @@ const CreateSidebar = ({
     setBarcodeValue("");
     setBarcodeError("");
     setBarcodeSaved(false);
-    setActiveBarcodeIndex(0);
+    setActiveBarcodeIndex(nextActiveBarcodeIndex);
   };
 
   const handleSearchChange = (e) => {
@@ -143,6 +170,59 @@ const CreateSidebar = ({
       setActiveBarcodeIndex(0);
     }
   };
+
+  const handleScannedProduct = (code) => {
+    const normalizedCode = normalizeBarcode(code, { numericOnly: true });
+
+    const product = findProductByBarcode(
+      productsDB.map(getProductWithLocalBarcodes),
+      normalizedCode
+    );
+
+    if (!product) {
+      setSearchProduct(normalizedCode);
+      setSelectedProduct(null);
+      setShowSuggestions(true);
+      setShowBarcodeForm(false);
+      setBarcodeValue("");
+      setBarcodeError("");
+      setBarcodeSaved(false);
+      setActiveBarcodeIndex(0);
+      setScannerMessage({ type: 'error', message: `No encontrado: ${normalizedCode}` });
+      showError(
+        "Codigo no registrado",
+        `No se encontro ningun producto con el codigo de barras ${normalizedCode}.`
+      );
+      return;
+    }
+
+    handleSelectProduct(product, normalizedCode);
+    setScannerMessage({ type: 'success', message: `Seleccionado: ${product.nombre}` });
+  };
+
+  useBarcodeScanner({
+    enabled: true,
+    numericOnly: true,
+    minLength: 6,
+    maxLength: 20,
+    scannerFields: ["purchase-product-search"],
+    duplicateDelayMs: 800,
+    preventTerminatorDefault: true,
+    onScan: ({ code, scannerField }) => {
+      if (scannerField !== "purchase-product-search") return;
+      handleScannedProduct(code);
+    },
+  });
+
+  useEffect(() => {
+    if (!scannerMessage) return undefined;
+
+    const timeout = window.setTimeout(() => {
+      setScannerMessage(null);
+    }, 2200);
+
+    return () => window.clearTimeout(timeout);
+  }, [scannerMessage]);
 
   const handleToggleBarcodeForm = () => {
     if (!selectedProduct) return;
@@ -356,6 +436,7 @@ const CreateSidebar = ({
                 type="text"
                 value={searchProduct}
                 onChange={handleSearchChange}
+                data-scanner-field="purchase-product-search"
                 placeholder="Buscar producto o código"
                 className={`w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-600 focus:ring-2 focus:ring-[#004D77] outline-none transition-all ${
                   searchProduct && !selectedProduct && filteredProducts.length === 0
@@ -584,6 +665,10 @@ const CreateSidebar = ({
         >
           Agregar ({purchaseItems.length})
         </button>
+
+        <div className="mt-2 flex justify-center">
+          <ScannerStatus status={scannerMessage} />
+        </div>
 
         <Link
           to="/admin/purchases"

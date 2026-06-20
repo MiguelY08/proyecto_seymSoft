@@ -1,6 +1,7 @@
 // src/features/orders/components/RightSectionForm.jsx
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Trash2, Search, X, ChevronDown, CheckCircle, ShoppingBag } from 'lucide-react';
+import { ScannerStatus, findProductByBarcode, normalizeBarcode, productMatchesBarcodeSearch, useBarcodeScanner } from '../../../../shared/scanner';
 
 function RightSectionForm({
   productos,
@@ -14,10 +15,13 @@ function RightSectionForm({
   onAddProduct,
   onUpdateCantidad,
   onRemoveProduct,
+  scannerField = 'order-product-search',
+  onScannerProductNotFound,
 }) {
   const isDisabled = disabled || loading;
   const [searchTerm, setSearchTerm] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [scannerMessage, setScannerMessage] = useState(null);
   const wrapperRef = useRef(null);
 
   const formatCurrency = (value) => {
@@ -45,7 +49,7 @@ function RightSectionForm({
     return productosCatalogo.filter(prod => {
       if (String(prod.nombre || '').toLowerCase().includes(term)) return true;
       if (prod.proveedor && prod.proveedor.toLowerCase().includes(term)) return true;
-      if (prod.codBarras && prod.codBarras.toLowerCase().includes(term)) return true;
+      if (productMatchesBarcodeSearch(prod, term)) return true;
       if (prod.categorias && Array.isArray(prod.categorias)) {
         if (prod.categorias.some(cat => cat.toLowerCase().includes(term))) return true;
       }
@@ -73,6 +77,59 @@ function RightSectionForm({
   const isProductSelected = (productoId) => {
     return productos.some(p => p.id === productoId);
   };
+
+  useBarcodeScanner({
+    enabled: !isDisabled,
+    numericOnly: true,
+    minLength: 6,
+    maxLength: 20,
+    scannerFields: [scannerField],
+    duplicateDelayMs: 800,
+    preventDefault: true,
+    onScan: ({ code, scannerField: activeScannerField }) => {
+      if (activeScannerField !== scannerField) return;
+
+      const normalizedCode = normalizeBarcode(code, { numericOnly: true });
+      const product = findProductByBarcode(productosCatalogo, normalizedCode);
+
+      if (!product) {
+        setSearchTerm(normalizedCode);
+        setIsDropdownOpen(true);
+        setScannerMessage({ type: 'error', message: `No encontrado: ${normalizedCode}` });
+        onScannerProductNotFound?.(normalizedCode);
+        return;
+      }
+
+      if (isProductSelected(product.id)) {
+        setSearchTerm('');
+        setIsDropdownOpen(false);
+        setScannerMessage({ type: 'error', message: `Ya agregado: ${product.nombre}` });
+        return;
+      }
+
+      if (Number(product.stock ?? 0) <= 0) {
+        setSearchTerm(product.nombre ?? normalizedCode);
+        setIsDropdownOpen(true);
+        setScannerMessage({ type: 'error', message: `Sin stock: ${product.nombre}` });
+        return;
+      }
+
+      onAddProduct(product.id);
+      setSearchTerm('');
+      setIsDropdownOpen(false);
+      setScannerMessage({ type: 'success', message: `Leido: ${product.nombre}` });
+    },
+  });
+
+  useEffect(() => {
+    if (!scannerMessage) return undefined;
+
+    const timeout = window.setTimeout(() => {
+      setScannerMessage(null);
+    }, 2200);
+
+    return () => window.clearTimeout(timeout);
+  }, [scannerMessage]);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -102,6 +159,7 @@ function RightSectionForm({
               }}
               onFocus={handleInputFocus}
               disabled={isDisabled}
+              data-scanner-field={scannerField}
               className="w-full pl-9 pr-8 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 focus:ring-2 focus:ring-[#004D77]/20 focus:border-[#004D77] disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -166,6 +224,7 @@ function RightSectionForm({
               )}
             </div>
           )}
+          <ScannerStatus status={scannerMessage} className="mt-1" />
         </div>
 
         {/* Error de validación de productos */}

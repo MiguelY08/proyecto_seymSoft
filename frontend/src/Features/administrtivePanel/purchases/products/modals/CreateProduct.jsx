@@ -4,6 +4,13 @@ import { useAlert } from '../../../../shared/alerts/useAlert';
 import ProductsService from '../services/productsServices';
 import CategorySelector from '../components/CategorySelector';
 import FormSelect from '../../../../shared/FormSelect';
+import {
+  ScannerStatus,
+  findProductBarcodeOwner,
+  getDuplicateBarcodesInValues,
+  normalizeBarcode,
+  useBarcodeScanner,
+} from '../../../../shared/scanner';
 
 function PriceCard({ label, fieldMain, fieldPaca, valueMain, valuePaca, placeholderMain, placeholderPaca, onChange, errMain, errPaca }) {
   const block = (e) => { if (['e', 'E', '+', '-', '.'].includes(e.key)) e.preventDefault(); };
@@ -67,7 +74,7 @@ const EMPTY = {
   id_category: null,
 };
 
-function CreateProduct({ isOpen, onClose, onCreate }) {
+function CreateProduct({ isOpen, onClose, onCreate, existingProducts = [] }) {
   const { showSuccess, showError } = useAlert();
   const [formData, setFormData] = useState(EMPTY);
   const [imagenesPreview, setImagenesPreview] = useState([]);
@@ -80,6 +87,8 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
   const [selectedSubcategoryIds, setSelectedSubcategoryIds] = useState([]);
   const [expandedCategoryIds, setExpandedCategoryIds] = useState({});
+  const [activeBarcodeTarget, setActiveBarcodeTarget] = useState({ type: 'main', index: null });
+  const [scannerMessage, setScannerMessage] = useState(null);
   const imageInputRef = useRef(null);
   const unitMeasureOptions = [
     { value: '', label: 'Selecciona una unidad' },
@@ -148,6 +157,35 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
     return e;
   };
 
+  const getFormBarcodeValues = (data = formData) => [
+    data.codBarras,
+    ...(data.codsBarrasExtra || []).map((item) => item?.cod),
+  ];
+
+  const getBarcodeConflictMessage = (code) => {
+    const owner = findProductBarcodeOwner(existingProducts, code);
+    if (!owner) return '';
+
+    return owner.productName
+      ? `El codigo de barras ya esta registrado en "${owner.productName}".`
+      : 'El codigo de barras ya esta registrado en otro producto.';
+  };
+
+  const getInternalDuplicateMessage = (values = getFormBarcodeValues()) => {
+    const duplicates = getDuplicateBarcodesInValues(values);
+    if (duplicates.length === 0) return '';
+
+    return `Hay codigos repetidos en el formulario: ${duplicates.join(', ')}.`;
+  };
+
+  const getFormBarcodeValuesWithoutActiveTarget = () => {
+    const values = getFormBarcodeValues();
+    if (activeBarcodeTarget.type === 'main') return values.slice(1);
+
+    const extraPosition = activeBarcodeTarget.index + 1;
+    return values.filter((_, index) => index !== extraPosition);
+  };
+
   const validate = (d) => {
     const e = {};
     if (imagenesPreview.length === 0) e.imagen = 'Debes agregar al menos una imagen.';
@@ -157,6 +195,18 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
     else if (d.nombre.trim().length < 3) e.nombre = 'El nombre debe tener al menos 3 caracteres.';
     if (!d.codBarras.trim()) e.codBarras = 'El codigo de barras es obligatorio.';
     else if (d.codBarras.trim().length < 8) e.codBarras = 'El codigo de barras debe tener minimo 8 caracteres.';
+    else {
+      const conflictMessage = getBarcodeConflictMessage(d.codBarras);
+      if (conflictMessage) e.codBarras = conflictMessage;
+    }
+    const duplicateMessage = getInternalDuplicateMessage(getFormBarcodeValues(d));
+    if (duplicateMessage) e.codsBarrasExtra = duplicateMessage;
+    const extraConflict = (d.codsBarrasExtra || [])
+      .map((item) => item?.cod)
+      .filter(Boolean)
+      .map((code) => getBarcodeConflictMessage(code))
+      .find(Boolean);
+    if (extraConflict) e.codsBarrasExtra = extraConflict;
     if (d.stockPrincipal === '') e.stockPrincipal = 'El stock es obligatorio.';
     else if (!Number.isInteger(Number(d.stockPrincipal)) || Number(d.stockPrincipal) < 0) e.stockPrincipal = 'El stock debe ser un numero entero mayor o igual a 0.';
     if (!d.referencia.trim()) e.referencia = 'La referencia es obligatoria.';
@@ -217,6 +267,8 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
   };
 
   const handleAddCodBarras = () => {
+    const nextIndex = formData.codsBarrasExtra.length;
+    setActiveBarcodeTarget({ type: 'extra', index: nextIndex });
     setFormData((prev) => ({ ...prev, codsBarrasExtra: [...prev.codsBarrasExtra, { cod: '', stock: '' }] }));
   };
 
@@ -227,6 +279,59 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
       return { ...prev, codsBarrasExtra: updated };
     });
   };
+
+  const applyScannedBarcode = (code) => {
+    const normalizedCode = normalizeBarcode(code, { numericOnly: true });
+    const internalDuplicate = getFormBarcodeValuesWithoutActiveTarget()
+      .map((value) => normalizeBarcode(value))
+      .filter(Boolean)
+      .includes(normalizedCode);
+    const conflictMessage = getBarcodeConflictMessage(normalizedCode);
+
+    if (conflictMessage || internalDuplicate) {
+      const message = conflictMessage || 'Este codigo ya esta en el formulario.';
+      setScannerMessage({ type: 'error', message });
+      if (activeBarcodeTarget.type === 'main') {
+        setErrors((prev) => ({ ...prev, codBarras: message }));
+      } else {
+        setErrors((prev) => ({ ...prev, codsBarrasExtra: message }));
+      }
+      return;
+    }
+
+    if (activeBarcodeTarget.type === 'extra' && formData.codsBarrasExtra[activeBarcodeTarget.index]) {
+      handleCodBarrasExtraChange(activeBarcodeTarget.index, 'cod', normalizedCode);
+      if (errors.codsBarrasExtra) setErrors((prev) => ({ ...prev, codsBarrasExtra: undefined }));
+      setScannerMessage({ type: 'success', message: `Codigo extra ${activeBarcodeTarget.index + 2}: ${normalizedCode}` });
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, codBarras: normalizedCode }));
+    if (errors.codBarras) setErrors((prev) => ({ ...prev, codBarras: undefined }));
+    setActiveBarcodeTarget({ type: 'main', index: null });
+    setScannerMessage({ type: 'success', message: `Codigo principal: ${normalizedCode}` });
+  };
+
+  useBarcodeScanner({
+    enabled: isOpen && !isSubmitting,
+    numericOnly: true,
+    minLength: 6,
+    maxLength: 20,
+    scannerFields: ['product-barcode-main', 'product-barcode-extra'],
+    duplicateDelayMs: 800,
+    preventTerminatorDefault: true,
+    onScan: ({ code }) => applyScannedBarcode(code),
+  });
+
+  useEffect(() => {
+    if (!scannerMessage) return undefined;
+
+    const timeout = window.setTimeout(() => {
+      setScannerMessage(null);
+    }, 2200);
+
+    return () => window.clearTimeout(timeout);
+  }, [scannerMessage]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -392,7 +497,7 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
                   </div>
                   <div className="flex items-start gap-2">
                     <div className="flex-1">
-                      <input type="text" name="codBarras" value={formData.codBarras} onChange={handleChange} placeholder="Codigo de barras principal" className={inputCls('codBarras')} />
+                      <input type="text" name="codBarras" value={formData.codBarras} onChange={handleChange} onFocus={() => setActiveBarcodeTarget({ type: 'main', index: null })} data-scanner-field="product-barcode-main" placeholder="Codigo de barras principal" className={inputCls('codBarras')} />
                       <ErrMsg field="codBarras" />
                     </div>
                     <div className="w-24 flex-shrink-0">
@@ -402,13 +507,15 @@ function CreateProduct({ isOpen, onClose, onCreate }) {
                   </div>
                   {formData.codsBarrasExtra.map((item, i) => (
                     <div key={i} className="flex items-center gap-2 mt-2">
-                      <input type="text" value={item.cod} onChange={(e) => handleCodBarrasExtraChange(i, 'cod', e.target.value)} placeholder={`Codigo de barras ${i + 2}`} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                      <input type="text" value={item.cod} onChange={(e) => handleCodBarrasExtraChange(i, 'cod', e.target.value)} onFocus={() => setActiveBarcodeTarget({ type: 'extra', index: i })} data-scanner-field="product-barcode-extra" placeholder={`Codigo de barras ${i + 2}`} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
                       <input type="text" inputMode="numeric" value={item.stock} onChange={(e) => handleCodBarrasExtraChange(i, 'stock', numeric(e.target.value))} onKeyDown={block} placeholder="Stock" className="w-24 flex-shrink-0 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
                       <button type="button" onClick={() => setFormData((prev) => ({ ...prev, codsBarrasExtra: prev.codsBarrasExtra.filter((_, idx) => idx !== i) }))} className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-md bg-red-100 text-red-500 hover:bg-red-200 transition-colors cursor-pointer">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ))}
+                  <ErrMsg field="codsBarrasExtra" />
+                  <ScannerStatus status={scannerMessage} className="mt-1" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Referencia <span className="text-red-500">*</span></label>

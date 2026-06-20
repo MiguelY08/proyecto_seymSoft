@@ -15,6 +15,7 @@ function LeftSectionForm({
   loading,
   readOnly = false,
   isEditMode,
+  estadoLogisticoOriginal = null,
   onClienteChange,
   onTipoEntregaChange,
   onDireccionManualChange,
@@ -22,10 +23,16 @@ function LeftSectionForm({
   onMotivoCancelacionChange,
   onCreateClient,
 }) {
-  const isEstadoInmutable = [
+  const isEstadoPersistidoInmutable = [
     ESTADOS_LOGISTICOS.ENTREGADO,
     ESTADOS_LOGISTICOS.CANCELADO,
-  ].includes(formData.estadoLogistico);
+  ].includes(estadoLogisticoOriginal);
+  const mostrarAvisoEntregadoPendiente =
+    !isEstadoPersistidoInmutable &&
+    formData.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO;
+  const mensajeEntregadoPendiente = isEditMode
+    ? 'Al guardar como Entregado, el pedido quedara inmutable y el pago debe estar completo. Si el pago se completa ahora, tambien se generara la venta manual.'
+    : 'Al guardar como Entregado, se registrara como venta directa. Debes agregar el pago completo antes de crear el registro.';
   const mostrarDireccionManual = formData.tipoEntrega === 'domicilio';
   const isClienteDisabled = loading || readOnly || isEditMode;
 
@@ -132,7 +139,7 @@ function LeftSectionForm({
 
   const estadoColorClass = getEstadoColorClass(formData.estadoLogistico);
   // El estado solo se deshabilita en edición y si el estado actual es 'listo'
-  const isEstadoDisabled = loading || readOnly || (isEditMode && isEstadoInmutable);
+  const isEstadoDisabled = loading || readOnly || isEstadoPersistidoInmutable;
   const tipoEntregaOptions = [
     { value: 'recoge', label: 'El cliente lo recoge' },
     { value: 'domicilio', label: 'Entrega a domicilio' },
@@ -341,8 +348,13 @@ function LeftSectionForm({
             ariaLabel="Estado del pedido"
           />
           {errorMsg('estadoLogistico')}
-          {isEditMode && isEstadoInmutable && (
+          {isEditMode && isEstadoPersistidoInmutable && (
             <p className="mt-0.5 text-xs text-gray-500">Los pedidos entregados o cancelados no se pueden modificar.</p>
+          )}
+          {mostrarAvisoEntregadoPendiente && (
+            <p className="mt-0.5 text-xs text-blue-600">
+              {mensajeEntregadoPendiente}
+            </p>
           )}
         </div>
 

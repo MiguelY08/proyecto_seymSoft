@@ -1,9 +1,12 @@
 import { ShoppingCart, Info, Heart, HeartCrack, ChevronDown, ArrowRight } from 'lucide-react';
 import { useState, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import BgFavoritos from '../../../assets/BgFavoritos.png';
 import { useFavorites } from '../../shared/Context/Favoritescontext';
 import { useCart } from '../../shared/Context/Cartcontext';
 import { useAlert } from '../../shared/alerts/useAlert';
+import useClientType from '../../shared/hooks/useClientType';
+import { getDisplayPricing } from '../../shared/utils/shopPricingHelper';
 
 /* ── Estilos ── */
 const STYLES = `
@@ -371,10 +374,12 @@ function injectStyles() {
 /* ── Componente ── */
 function Favorites() {
   injectStyles();
+  const navigate = useNavigate();
 
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
   const { addToCart } = useCart();
-  const { showSuccess, showConfirm } = useAlert();
+  const { showSuccess, showConfirm, showError } = useAlert();
+  const { clientType } = useClientType();
 
   const [ordenar, setOrdenar] = useState('A - Z');
   const [hoveringHeart, setHoveringHeart] = useState(null);
@@ -388,7 +393,17 @@ function Favorites() {
   ];
 
   const productosOrdenados = useMemo(() => {
-    const lista = [...favorites];
+    const lista = favorites.map(producto => {
+      const pricing = getDisplayPricing(producto, clientType);
+      return {
+        ...producto,
+        price: pricing.price,
+        originalPrice: pricing.originalPrice,
+        discountPct: pricing.discountPct,
+        priceLabel: pricing.label,
+        clientType: pricing.clientType,
+      };
+    });
     switch (ordenar) {
       case 'A - Z':                 return lista.sort((a, b) => a.name.localeCompare(b.name));
       case 'Z - A':                 return lista.sort((a, b) => b.name.localeCompare(a.name));
@@ -396,7 +411,7 @@ function Favorites() {
       case 'Precio: Mayor a Menor': return lista.sort((a, b) => b.price - a.price);
       default:                       return lista;
     }
-  }, [ordenar, favorites]);
+  }, [clientType, ordenar, favorites]);
 
   const handleToggleFavorito = async (producto) => {
     const result = await showConfirm(
@@ -411,6 +426,12 @@ function Favorites() {
   };
 
   const handleAgregarAlCarrito = (producto) => {
+    const stock = Number(producto.totalStock ?? producto.stock ?? 0);
+    if (!producto.isActive || stock <= 0) {
+      showError('Producto no disponible', 'Este producto no tiene stock disponible.');
+      return;
+    }
+
     addToCart(producto, 1);
     showSuccess('Añadido al carrito', `${producto.name} se ha agregado al carrito.`);
   };
@@ -485,9 +506,9 @@ function Favorites() {
             <p className="fav-empty-sub">
               Explora nuestra tienda y guarda los productos que más te gusten para encontrarlos fácilmente después.
             </p>
-            <a href="/shop" className="fav-btn-outline">
+            <Link to="/shop" className="fav-btn-outline">
               Explorar tienda <ArrowRight size={13} strokeWidth={3} />
-            </a>
+            </Link>
           </div>
         )}
 
@@ -504,8 +525,13 @@ function Favorites() {
 
                   {/* Zona imagen */}
                   <div className="fav-img-zone">
-                    <img src={producto.image} alt={producto.name} />
-                    <span className="fav-chip">{producto.category}</span>
+                    <img
+                      src={producto.image || producto.mainImage?.url || producto.images?.[0]?.url}
+                      alt={producto.name}
+                    />
+                    <span className="fav-chip">
+                      {producto.category || producto.mainCategory?.name || producto.categories?.[0]?.name || 'Sin categoría'}
+                    </span>
                   </div>
 
                   {/* Info */}
@@ -530,7 +556,7 @@ function Favorites() {
 
                       <button
                         className="fav-btn-detail"
-                        onClick={() => console.log('Ver detalle:', producto.id)}
+                        onClick={() => navigate(`/shop/detail/${producto.id}`)}
                         title="Ver detalle"
                       >
                         <Info size={16} strokeWidth={2} />

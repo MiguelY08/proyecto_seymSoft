@@ -27,6 +27,11 @@ import Spinner from "../../../../shared/spinner";
 import ButtonComponent from "../../../../shared/ButtonComponent";
 import ProductsService from "../services/productsServices";
 import { HighlightText } from "../helpers/productsHelpers";
+import {
+  findProductByBarcode,
+  productMatchesBarcodeSearch,
+  useBarcodeScanner,
+} from "../../../../shared/scanner";
 
 const RECORDS_PER_PAGE = 13;
 const COMPANY_COLOR = "004D77";
@@ -146,6 +151,33 @@ function Products() {
     setFilterSubcategory("all");
   }, [filterCategory]);
 
+  useBarcodeScanner({
+    enabled: canView && canViewInfo && data.length > 0 && !showModal && !showFormModal && !showEditModal,
+    numericOnly: true,
+    minLength: 6,
+    maxLength: 20,
+    scannerFields: ["product-search"],
+    duplicateDelayMs: 800,
+    preventTerminatorDefault: true,
+    onScan: ({ code, scannerField }) => {
+      if (scannerField !== "product-search") return;
+
+      const product = findProductByBarcode(data, code);
+
+      if (!product) {
+        setSearch(code);
+        showError(
+          "Codigo no registrado",
+          `No se encontro ningun producto con el codigo de barras ${code}.`
+        );
+        return;
+      }
+
+      setSearch("");
+      handleVerDetalles(product);
+    },
+  });
+
   // Extraer categorías únicas
   const categories = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
@@ -187,7 +219,7 @@ function Products() {
       if (query) {
         matchesSearch =
           row.name?.toLowerCase().includes(query) ||
-          row.barcodes?.[0]?.barcode?.toLowerCase().includes(query) ||
+          productMatchesBarcodeSearch(row, query) ||
           row.reference?.toLowerCase().includes(query) ||
           getProductCategoryNames(row).some((name) => name.toLowerCase().includes(query)) ||
           getProductSubcategoryNames(row).some((name) => name.toLowerCase().includes(query)) ||
@@ -881,12 +913,14 @@ function Products() {
         isOpen={showFormModal}
         onClose={handleCloseFormModal}
         onCreate={handleProductoCreado}
+        existingProducts={data}
       />
       <EditProduct
         producto={selectedProduct}
         isOpen={showEditModal}
         onClose={handleCloseEditModal}
         onUpdate={handleProductoActualizado}
+        existingProducts={data}
       />
     </div>
   );

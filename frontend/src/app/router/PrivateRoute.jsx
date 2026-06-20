@@ -9,8 +9,6 @@ export default function PrivateRoute({ requireRole = true }) {
 
   if (!user) {
     return <Navigate to="/login" replace />;
-    console.log("USER:", user);
-console.log("ROLE:", role);
   }
 
   //  AQUÍ está el fix real

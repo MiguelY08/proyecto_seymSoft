@@ -4,11 +4,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 
 // Servicios
-import OrdersService, { PaymentService, ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES } from '../services/ordersService';
+import OrdersService, { PaymentService, ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES, METODOS_PAGO } from '../services/ordersService';
+import { SalesServices } from '../../vendings/services/salesServices';
 import ProductsService from '../../../purchases/products/services/productsServices';
 import { clientsService } from '../../clients/services/clientsService';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import Spinner from '../../../../shared/spinner';
+import { getPrimaryProductBarcode } from '../../../../shared/scanner';
 
 // Contexto de autenticaciÃ³n
 import { useAuth } from '../../../../access/context/AuthContext';
@@ -17,6 +19,7 @@ import { useAuth } from '../../../../access/context/AuthContext';
 import LeftSectionForm from '../components/LeftSectionForm';
 import RightSectionForm from '../components/RightSectionForm';
 import PaymentsSection from '../components/PaymentsSection';
+import PaymentReceiptsSection from '../components/PaymentReceiptsSection';
 import FormClient from '../../clients/modals/FormClient';
 
 const toNumber = (value, fallback = 0) => {
@@ -34,11 +37,7 @@ const normalizeText = (value) =>
     .toLowerCase();
 
 const getPrimaryBarcode = (product = {}) => (
-  product.codBarras ||
-  product.barcode ||
-  product.mainBarcode ||
-  product.barcodes?.[0]?.barcode ||
-  ''
+  getPrimaryProductBarcode(product)
 );
 
 const getTotalStock = (product = {}) => {
@@ -96,6 +95,20 @@ const normalizeClientForForm = (client = {}) => ({
   assignedCredit: client.assignedCredit ?? client.clientCredit,
 });
 
+const PAYMENT_METHOD_IDS = {
+  [METODOS_PAGO.TRANSFERENCIA]: 1,
+  [METODOS_PAGO.EFECTIVO]: 2,
+};
+
+const buildDirectSalePaymentMethods = (payments = []) =>
+  payments.map((payment) => ({
+    idPaymentMethod: PAYMENT_METHOD_IDS[payment.metodoPago],
+    amount: roundMoney(payment.monto),
+  }));
+
+const getSessionUserId = (user) =>
+  user?.idUser ?? user?.id ?? null;
+
 function OrdersForm() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -120,6 +133,7 @@ function OrdersForm() {
     tieneVenta: false,
   });
   const [errors, setErrors] = useState({});
+  const [estadoLogisticoOriginal, setEstadoLogisticoOriginal] = useState(null);
   const [itemsChangedFromReady, setItemsChangedFromReady] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
 
@@ -128,12 +142,12 @@ function OrdersForm() {
 
   // Pagos existentes (solo en ediciÃ³n)
   const [pagos, setPagos] = useState([]);
+  const [paymentReceipts, setPaymentReceipts] = useState([]);
   const [totalPagado, setTotalPagado] = useState(0);
 
   const total = roundMoney(formData.productos.reduce((sum, p) => sum + toNumber(p.subtotal), 0));
   const iva = roundMoney(formData.productos.reduce((sum, p) => sum + toNumber(p.iva), 0));
   const subtotal = roundMoney(total - iva);
-  const saldoPendiente = Math.max(0, total - totalPagado);
   const selectedClient = clientes.find((cliente) => Number(cliente.id) === Number(formData.clienteId)) ?? null;
   const productosCatalogoConPrecio = productosCatalogo.map((product) => ({
     ...product,
@@ -142,17 +156,33 @@ function OrdersForm() {
   const pedidoInmutable = isEditMode && [
     ESTADOS_LOGISTICOS.ENTREGADO,
     ESTADOS_LOGISTICOS.CANCELADO,
-  ].includes(formData.estadoLogistico);
+  ].includes(estadoLogisticoOriginal);
+  const creaVentaDirecta = !isEditMode && formData.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO;
+  const tieneAbonosPendientes = pagos.some((pago) => !pago.locked && !pago.persisted);
+  const pagoCompleto = totalPagado >= total && total > 0;
+  const pagoCompletoPendienteGuardar = pagoCompleto && tieneAbonosPendientes;
+  const mensajePagoCompleto = (() => {
+    if (creaVentaDirecta) {
+      return 'Al crear, este pedido se registrara como venta directa porque fue marcado como Entregado.';
+    }
+    if (pagoCompletoPendienteGuardar) {
+      return 'Al guardar, se registrara el pago completo y se generara la venta manual. El estado logistico puede mantenerse en En proceso o Listo hasta la entrega.';
+    }
+    if (isEditMode) {
+      return 'Este pedido ya esta pagado. Si tiene una venta asociada, los productos quedan bloqueados.';
+    }
+    return 'El pedido quedara pagado al crearlo. Si no esta Entregado, seguira pendiente de gestion logistica.';
+  })();
 
   // Determinar si los productos son editables
   const productosEditables = useMemo(() => {
     if (!isEditMode) return true; // en creaciÃ³n siempre editables
-    if (formData.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) return false;
-    if (formData.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO) return false;
+    if (estadoLogisticoOriginal === ESTADOS_LOGISTICOS.CANCELADO) return false;
+    if (estadoLogisticoOriginal === ESTADOS_LOGISTICOS.ENTREGADO) return false;
     if (formData.pagoEstado === ESTADOS_PAGO.PAGADO) return false;
     if (formData.tieneVenta) return false;
     return true;
-  }, [isEditMode, formData.estadoLogistico, formData.pagoEstado, formData.tieneVenta]);
+  }, [isEditMode, estadoLogisticoOriginal, formData.pagoEstado, formData.tieneVenta]);
 
   const getOrderStatusAfterItemsChange = (currentStatus) =>
     currentStatus === ESTADOS_LOGISTICOS.LISTO
@@ -215,6 +245,7 @@ function OrdersForm() {
             persisted: true,
           })));
           setTotalPagado(await PaymentService.getTotalPagado(order.id));
+          setPaymentReceipts(order.comprobantesPago || []);
 
           const productosNormalizados = (order.productos || []).map(p => {
             const catalogProduct = normalizedProductsList.find(product => product.id === p.id || product.idProduct === p.id);
@@ -247,6 +278,7 @@ function OrdersForm() {
             origen: order.origen,
             motivoCancelacion: order.motivoCancelacion || '',
           });
+          setEstadoLogisticoOriginal(order.estadoLogistico);
         }
       } catch (error) {
         showError('Error', 'No se pudieron cargar los datos iniciales.');
@@ -504,6 +536,28 @@ function OrdersForm() {
     } else if (formData.productos.some(product => !product.codBarras && !product.barcode)) {
       newErrors.productos = 'Todos los productos deben tener código de barras.';
     }
+    if (
+      formData.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO &&
+      Math.round(totalPagado * 100) < Math.round(total * 100)
+    ) {
+      newErrors.general = 'Para entregar el pedido, el pago debe estar completo.';
+    }
+    if (creaVentaDirecta) {
+      const paymentMethods = buildDirectSalePaymentMethods(pagos);
+      if (!getSessionUserId(user)) {
+        newErrors.general = 'No se pudo identificar al usuario en sesion.';
+      } else if (paymentMethods.length === 0) {
+        newErrors.general = 'Para registrar una venta directa, debes agregar al menos un pago.';
+      } else if (paymentMethods.some((payment) => !payment.idPaymentMethod)) {
+        newErrors.general = 'Hay pagos con un metodo no valido para registrar la venta directa.';
+      } else if (paymentMethods.some((payment) => payment.amount <= 0)) {
+        newErrors.general = 'Todos los pagos de la venta directa deben ser mayores a cero.';
+      } else if (new Set(paymentMethods.map((payment) => payment.idPaymentMethod)).size !== paymentMethods.length) {
+        newErrors.general = 'No se puede repetir un metodo de pago en una venta directa.';
+      } else if (Math.round(totalPagado * 100) !== Math.round(total * 100)) {
+        newErrors.general = 'Para registrar una venta directa, la suma de pagos debe ser igual al total.';
+      }
+    }
     if (formData.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) {
       if (!formData.motivoCancelacion?.trim()) {
         newErrors.motivoCancelacion = 'Debe indicar el motivo de cancelación.';
@@ -606,6 +660,31 @@ function OrdersForm() {
 
         showSuccess('Pedido actualizado', `Pedido #${orderResult.numeroPedido} actualizado correctamente.`);
       } else {
+        if (creaVentaDirecta) {
+          const paymentMethods = buildDirectSalePaymentMethods(pagos);
+
+          await SalesServices.create('direct', {
+            idEmployee: getSessionUserId(user),
+            idSaleStatus: 1,
+            order: {
+              idClient: payload.clienteId,
+              idOrderStatus: 3,
+              deliveryType: payload.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Recoge',
+              deliveryAddress: payload.direccionEntrega,
+              items: payload.productos.map((producto) => ({
+                idProduct: producto.id,
+                barcode: producto.codBarras || producto.barcode || '',
+                quantity: producto.cantidad,
+              })),
+            },
+            paymentMethods,
+          });
+
+          showSuccess('Venta directa registrada', 'El pedido fue entregado y registrado como venta directa.');
+          navigate('/admin/sales');
+          return;
+        }
+
         orderResult = await OrdersService.create(payload);
 
         for (const pago of pagos.filter((item) => !item.persisted)) {
@@ -701,6 +780,7 @@ function OrdersForm() {
           loading={loading}
           readOnly={pedidoInmutable}
           isEditMode={isEditMode}
+          estadoLogisticoOriginal={estadoLogisticoOriginal}
           onClienteChange={handleClienteChange}
           onTipoEntregaChange={handleTipoEntregaChange}
           onDireccionManualChange={handleDireccionManualChange}
@@ -725,6 +805,12 @@ function OrdersForm() {
       </div>
 
       {/* SecciÃ³n de pagos */}
+      {isEditMode && paymentReceipts.length > 0 && (
+        <div className="mt-5">
+          <PaymentReceiptsSection receipts={paymentReceipts} />
+        </div>
+      )}
+
       <div className="mt-5">
         <PaymentsSection
           pedidoId={id ? Number(id) : null}
@@ -735,14 +821,15 @@ function OrdersForm() {
           loading={loading}
           disabled={pedidoInmutable}
           isEditMode={isEditMode}
+          disallowDuplicateMethods={creaVentaDirecta}
         />
       </div>
 
       {/* Aviso para pago completado */}
-      {totalPagado >= total && total > 0 && (
+      {pagoCompleto && (
         <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
           <p className="text-sm text-green-800">
-            <strong>Pago completado:</strong> El pedido ha sido pagado en su totalidad.
+            <strong>Pago completado:</strong> {mensajePagoCompleto}
             {formData.estadoLogistico === ESTADOS_LOGISTICOS.LISTO && ' El pedido está listo para entrega.'}
           </p>
         </div>

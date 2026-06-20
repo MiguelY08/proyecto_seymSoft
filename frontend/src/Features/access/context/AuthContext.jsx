@@ -29,6 +29,7 @@ export const AuthProvider = ({ children }) => {
         if (session && session.user) {
           setUser(session.user);
           setRole(session.role || null);
+          setPermissions(session.permissions || []);
           setIsAuthenticated(true);
           setClient(session.client || null);
 
@@ -41,12 +42,20 @@ export const AuthProvider = ({ children }) => {
             setClient(profileResult.client || null);
           } else {
             clearSession();
+            setUser(null);
+            setRole(null);
+            setPermissions([]);
+            setClient(null);
             setIsAuthenticated(false);
           }
         }
       } catch (err) {
         console.error("Error inicializando auth:", err);
         clearSession();
+        setUser(null);
+        setRole(null);
+        setPermissions([]);
+        setClient(null);
         setIsAuthenticated(false);
       } finally {
         setLoading(false);
@@ -54,6 +63,44 @@ export const AuthProvider = ({ children }) => {
     };
 
     initializeAuth();
+  }, []);
+
+  // Mantener sincronizada la identidad entre pestañas del mismo navegador.
+  // Evita que el panel conserve un usuario administrador en memoria mientras
+  // apiClient ya está enviando el token de una sesión de cliente más reciente.
+  useEffect(() => {
+    const synchronizeSession = (event) => {
+      if (event.key !== 'session') return;
+
+      if (!event.newValue) {
+        setUser(null);
+        setRole(null);
+        setPermissions([]);
+        setClient(null);
+        setIsAuthenticated(false);
+        return;
+      }
+
+      try {
+        const session = JSON.parse(event.newValue);
+        setUser(session.user ?? null);
+        setRole(session.role ?? null);
+        setPermissions(session.permissions ?? []);
+        setClient(session.client ?? null);
+        setIsAuthenticated(Boolean(session.user && session.accessToken));
+      } catch (sessionError) {
+        console.error('Error sincronizando la sesión entre pestañas:', sessionError);
+        clearSession();
+        setUser(null);
+        setRole(null);
+        setPermissions([]);
+        setClient(null);
+        setIsAuthenticated(false);
+      }
+    };
+
+    window.addEventListener('storage', synchronizeSession);
+    return () => window.removeEventListener('storage', synchronizeSession);
   }, []);
 
   // ═══════════════════════════════════════════════════════════
@@ -122,10 +169,10 @@ const login = async (email, password) => {
 
       if (result.success) {
         setUser(result.user);
-        setRole(null); // Nuevo usuario sin rol
-        setPermissions([]);
+        setRole(result.role || null);
+        setPermissions(result.permissions || []);
         setIsAuthenticated(true);
-        setClient(null);
+        setClient(result.client || null);
 
         showSuccess("¡Bienvenido!", "Cuenta creada exitosamente");
 
@@ -217,7 +264,9 @@ const logout = async () => {
         setUser(result.user);
         setRole(result.role);
         setPermissions(result.permissions || []);
-        setClient(result.client || null);
+        if (Object.prototype.hasOwnProperty.call(result, "client")) {
+          setClient(result.client);
+        }
 
         showSuccess("Perfil actualizado", "Tus cambios se guardaron correctamente");
 

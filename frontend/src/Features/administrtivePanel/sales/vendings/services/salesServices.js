@@ -57,6 +57,15 @@ const getSaleStatus = (sale) =>
   sale?.status ??
   '-';
 
+const getOrderStatus = (order) =>
+  order?.orderStatus?.nameStatus ??
+  order?.status?.nameStatus ??
+  order?.estadoLogistico ??
+  order?.estadoPedido ??
+  order?.orderStatusName ??
+  order?.status ??
+  '-';
+
 const getSaleType = (sale) =>
   sale?.type?.saleTypeName ??
   sale?.saleType?.saleTypeName ??
@@ -176,6 +185,13 @@ const mapSaleFromApi = (sale) => {
       '-',
     metodoPago: getPaymentMethod(sale),
     estado: getSaleStatus(sale),
+    estadoPedido: getOrderStatus(order),
+    estadoPedidoId:
+      order?.idOrderStatus ??
+      order?.orderStatus?.idOrderStatus ??
+      order?.status?.idOrderStatus ??
+      order?.estadoLogisticoId ??
+      null,
     tipoVenta: getSaleType(sale),
     entrega: order?.deliveryType ?? order?.tipoEntrega ?? order?.direccionEntrega ?? sale?.delivery ?? '-',
     direccion: order?.deliveryAddress ?? order?.direccionEntrega ?? sale?.direccion ?? '',

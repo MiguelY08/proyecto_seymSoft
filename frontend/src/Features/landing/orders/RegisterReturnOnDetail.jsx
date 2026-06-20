@@ -1,7 +1,9 @@
 import { ChevronLeft, Package, Phone, MessageCircle, Info } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaInstagram, FaTiktok } from 'react-icons/fa';
-import { pedidos } from './Orders'; // Importar los pedidos reales
+import OrdersService from '../../administrtivePanel/sales/orders/services/ordersService';
+import useAuthenticatedClient from '../../shared/hooks/useAuthenticatedClient';
 
 /* ── Estilos inyectados (coherentes con el sistema) ── */
 const REGISTER_RETURN_STYLES = `
@@ -238,16 +240,93 @@ function RegisterReturnOnDetail() {
   injectRegisterStyles();
   const { id } = useParams();
   const navigate = useNavigate();
+  const {
+    clientId,
+    isAuthenticated,
+    loading: authLoading,
+  } = useAuthenticatedClient();
+  const [pedido, setPedido] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Buscar el pedido por ID
-  const pedido = pedidos.find((p) => p.id === id);
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated || !clientId) return;
 
-  // Si no se encuentra el pedido, mostrar mensaje de error
+    let active = true;
+    OrdersService.findById(id)
+      .then((order) => {
+        if (!active) return;
+        if (!order || Number(order.clienteId) !== Number(clientId)) {
+          setError('El pedido no existe o no pertenece a tu cuenta.');
+          return;
+        }
+        setPedido(order);
+      })
+      .catch((requestError) => {
+        if (!active) return;
+        setError(
+          requestError?.response?.data?.message ??
+          requestError?.message ??
+          'No fue posible cargar el pedido.'
+        );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [authLoading, clientId, id, isAuthenticated]);
+
+  if (authLoading) {
+    return (
+      <div className="register-return-page">
+        <div className="register-return-container text-center py-20">
+          <p className="text-xl font-semibold text-gray-700">Cargando pedido...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || !clientId) {
+    return (
+      <div className="register-return-page">
+        <div className="register-return-container text-center py-20">
+          <p className="text-xl font-semibold text-gray-700 mb-4">
+            {!isAuthenticated ? 'Inicia sesión para consultar el pedido' : 'Tu cuenta no tiene un cliente asociado'}
+          </p>
+          <button
+            onClick={() => navigate(!isAuthenticated ? '/login' : '/orders-l')}
+            className="btn-back"
+            style={{ margin: '0 auto' }}
+          >
+            {!isAuthenticated ? 'Iniciar sesión' : 'Volver a pedidos'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="register-return-page">
+        <div className="register-return-container text-center py-20">
+          <p className="text-xl font-semibold text-gray-700">Cargando pedido...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!pedido) {
     return (
       <div className="register-return-page">
         <div className="register-return-container text-center py-20">
-          <p className="text-xl font-semibold text-gray-700 mb-4">Pedido no encontrado</p>
+          <p className="text-xl font-semibold text-gray-700 mb-4">
+            {!isAuthenticated ? 'Inicia sesión para consultar el pedido' : 'Pedido no encontrado'}
+          </p>
+          {error && <p className="mb-4 text-sm text-gray-500">{error}</p>}
           <button
             onClick={() => navigate('/orders-l')}
             className="btn-back"

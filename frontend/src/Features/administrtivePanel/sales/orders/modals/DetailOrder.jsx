@@ -13,16 +13,18 @@ import {
 } from '../helpers/ordersHelpers';
 import { PaymentService, ESTADOS_LOGISTICOS, ORIGENES } from '../services/ordersService';
 import { UserService } from '../../../users/services/userService';
+import PaymentReceiptsSection from '../components/PaymentReceiptsSection';
 
 // ─── DetailRow ────────────────────────────────────────────────────────────────
-function DetailRow({ icon: Icon, label, value, placeholder, highlight = false }) {
+function DetailRow({ icon, label, value, placeholder, highlight = false }) {
   const hasValue = value && String(value).trim() !== '';
+  const IconComponent = icon;
   return (
     <div className="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0">
       <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5 ${
         hasValue ? 'bg-[#004D77]/10' : 'bg-gray-100'
       }`}>
-        <Icon className={`w-3.5 h-3.5 ${hasValue ? 'text-[#004D77]' : 'text-gray-300'}`} strokeWidth={1.8} />
+        <IconComponent className={`w-3.5 h-3.5 ${hasValue ? 'text-[#004D77]' : 'text-gray-300'}`} strokeWidth={1.8} />
       </div>
       <div className="flex-1 min-w-0">
         <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wide leading-none mb-0.5">
@@ -95,16 +97,9 @@ function DetailOrder({
   const { showConfirm, showSuccess } = useAlert();
   const [pagos, setPagos] = useState([]);
   const [totalPagado, setTotalPagado] = useState(0);
+  const [paymentReceipts, setPaymentReceipts] = useState([]);
   const [asesorNombre, setAsesorNombre] = useState('');
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setVisible(true);
-    } else {
-      setVisible(false);
-    }
-  }, [isOpen]);
+  const visible = isOpen;
 
   useEffect(() => {
     const loadPayments = async () => {
@@ -118,6 +113,7 @@ function DetailOrder({
             ? Number(order.totalPagado)
             : salePayments.reduce((sum, payment) => sum + Number(payment.monto || 0), 0)
         );
+        setPaymentReceipts(order.comprobantesPago || []);
 
         if (order.asesorNombre) {
           setAsesorNombre(order.asesorNombre);
@@ -132,6 +128,7 @@ function DetailOrder({
       const pagosPedido = await PaymentService.getByPedidoId(order.id);
       setPagos(pagosPedido);
       setTotalPagado(await PaymentService.getTotalPagado(order.id));
+      setPaymentReceipts(order.comprobantesPago || []);
 
       if (order.asesorNombre) {
         setAsesorNombre(order.asesorNombre);
@@ -238,6 +235,12 @@ function DetailOrder({
         {/* Cuerpo */}
         <div className="overflow-y-auto flex-1">
           <StatusBanner order={order} />
+
+          {!esModoVenta && paymentReceipts.length > 0 && (
+            <div className="px-6 pt-5">
+              <PaymentReceiptsSection receipts={paymentReceipts} compact />
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
             {/* ── Columna izquierda: Detalles ─────────────────── */}

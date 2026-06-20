@@ -87,6 +87,12 @@ export function ProductCardBody({ product, available }) {
 
       {/* Precios */}
       <div className="mt-auto flex flex-col gap-1">
+        {product.priceLabel && (
+          <span className="text-[0.58rem] font-extrabold uppercase tracking-[0.1em] text-[#6f8795]">
+            {product.priceLabel}
+          </span>
+        )}
+
         {/* Precio anterior */}
         {productHasDiscount && (
           <div className="flex items-center gap-1.5">

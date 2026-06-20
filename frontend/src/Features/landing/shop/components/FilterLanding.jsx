@@ -11,12 +11,8 @@ const SIDEBAR_STYLES = `
     border-radius: 20px;
     padding: 20px 16px;
     transition: all 0.2s;
-    /* Sin límite de altura ni overflow */
   }
-
-  .filter-header {
-    margin-bottom: 16px;
-  }
+  .filter-header { margin-bottom: 16px; }
   .filter-title {
     font-family: 'Playfair Display', serif;
     font-size: 1.3rem;
@@ -31,7 +27,6 @@ const SIDEBAR_STYLES = `
     letter-spacing: 0.05em;
     text-transform: uppercase;
   }
-
   .filter-section {
     border-top: 1px solid #eef2f6;
     margin-top: 16px;
@@ -41,7 +36,7 @@ const SIDEBAR_STYLES = `
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    padding: 12px 0 8px 0;
+    padding: 12px 0 8px;
     font-weight: 800;
     font-size: 0.8rem;
     text-transform: uppercase;
@@ -50,23 +45,15 @@ const SIDEBAR_STYLES = `
     cursor: pointer;
     transition: color 0.2s;
   }
-  .filter-section-header:hover {
-    color: #004D77;
-  }
-
-  /* Contenedor de opciones SIN scroll interno */
-  .filter-options {
-    margin-bottom: 12px;
-    /* Sin max-height ni overflow */
-  }
-
-  .filter-option {
-    margin-bottom: 8px;
-  }
-  .filter-option-main {
+  .filter-section-header:hover { color: #004D77; }
+  .filter-options { margin-bottom: 12px; }
+  .filter-option { margin-bottom: 8px; }
+  .filter-option-main,
+  .filter-subcategory-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
     padding: 4px 0;
   }
   .filter-checkbox-label {
@@ -97,11 +84,7 @@ const SIDEBAR_STYLES = `
     color: #9abcce;
     transition: color 0.2s;
   }
-  .filter-expand-btn:hover {
-    color: #004D77;
-  }
-
-  /* Subcategorías con animación suave y SIN scroll (max-height enorme) */
+  .filter-expand-btn:hover { color: #004D77; }
   .filter-subcategory-list {
     overflow: hidden;
     transition: max-height 0.3s ease-out, opacity 0.2s ease;
@@ -109,33 +92,19 @@ const SIDEBAR_STYLES = `
     opacity: 0;
   }
   .filter-subcategory-list.open {
-    max-height: 2000px;  /* Suficiente para cualquier cantidad */
+    max-height: 2000px;
     opacity: 1;
   }
   .filter-subcategory-item {
     margin-left: 24px;
-    padding: 4px 0;
+    padding: 4px 0 4px 12px;
     border-left: 2px solid #e2edf5;
-    padding-left: 12px;
   }
-  .filter-subcategory-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+  .filter-empty {
+    padding: 12px 0;
+    font-size: 0.78rem;
+    color: #94a3b8;
   }
-  .filter-child-list {
-    overflow: hidden;
-    transition: max-height 0.3s ease-out;
-    max-height: 0;
-  }
-  .filter-child-list.open {
-    max-height: 2000px;
-  }
-  .filter-child-item {
-    margin-left: 20px;
-    padding: 2px 0;
-  }
-
   @media (max-width: 767px) {
     .filter-sidebar {
       border-radius: 16px;
@@ -147,7 +116,7 @@ const SIDEBAR_STYLES = `
 let sidebarStylesInjected = false;
 function injectSidebarStyles() {
   if (sidebarStylesInjected) return;
-  const style = document.createElement('style');
+  const style = document.createElement("style");
   style.textContent = SIDEBAR_STYLES;
   document.head.appendChild(style);
   sidebarStylesInjected = true;
@@ -156,27 +125,21 @@ function injectSidebarStyles() {
 function Filters({
   totalProducts,
   categories,
-  brands,
   categoryOpen,
-  brandOpen,
   setCategoryOpen,
-  setBrandOpen,
-  selectedCategories,
-  selectedBrands,
-  handleCategoryChange,
-  handleBrandChange
+  selectedCategoryIds,
+  selectedSubcategoryIds,
+  onCategoryChange,
+  onSubcategoryChange,
 }) {
   injectSidebarStyles();
-
   const [expandedCategories, setExpandedCategories] = useState({});
-  const [expandedSubs, setExpandedSubs] = useState({});
 
-  const toggleCategory = (catName) => {
-    setExpandedCategories(prev => ({ ...prev, [catName]: !prev[catName] }));
-  };
-
-  const toggleSubcategory = (subName) => {
-    setExpandedSubs(prev => ({ ...prev, [subName]: !prev[subName] }));
+  const toggleCategory = (categoryId) => {
+    setExpandedCategories(current => ({
+      ...current,
+      [categoryId]: !current[categoryId],
+    }));
   };
 
   return (
@@ -186,9 +149,9 @@ function Filters({
         <p className="filter-results">{totalProducts} resultados</p>
       </div>
 
-      {/* Sección Categorías */}
       <div className="filter-section">
         <button
+          type="button"
           className="filter-section-header"
           onClick={() => setCategoryOpen(!categoryOpen)}
         >
@@ -198,103 +161,62 @@ function Filters({
 
         {categoryOpen && (
           <div className="filter-options">
-            {categories.map(cat => (
-              <div key={cat.name} className="filter-option">
-                <div className="filter-option-main">
-                  <label className="filter-checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={selectedCategories.includes(cat.name)}
-                      onChange={() => handleCategoryChange(cat.name)}
-                    />
-                    <span>{cat.name}</span>
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <span className="filter-count">{cat.count}</span>
-                    {cat.subcategories && cat.subcategories.length > 0 && (
-                      <button
-                        className="filter-expand-btn"
-                        onClick={() => toggleCategory(cat.name)}
-                      >
-                        {expandedCategories[cat.name] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                      </button>
-                    )}
-                  </div>
-                </div>
+            {categories.length === 0 ? (
+              <p className="filter-empty">No hay categorías disponibles.</p>
+            ) : (
+              categories.map(category => (
+                <div key={category.id} className="filter-option">
+                  <div className="filter-option-main">
+                    <label className="filter-checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={selectedCategoryIds.includes(category.id)}
+                        onChange={() => onCategoryChange(category.id)}
+                      />
+                      <span>{category.name}</span>
+                    </label>
 
-                <div className={`filter-subcategory-list ${expandedCategories[cat.name] ? 'open' : ''}`}>
-                  {cat.subcategories?.map(sub => (
-                    <div key={sub.name} className="filter-subcategory-item">
-                      <div className="filter-subcategory-header">
-                        <label className="filter-checkbox-label">
-                          <input
-                            type="checkbox"
-                            checked={selectedCategories.includes(sub.name)}
-                            onChange={() => handleCategoryChange(sub.name)}
-                          />
-                          <span>{sub.name}</span>
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <span className="filter-count">{sub.count}</span>
-                          {sub.children && sub.children.length > 0 && (
-                            <button
-                              className="filter-expand-btn"
-                              onClick={() => toggleSubcategory(sub.name)}
-                            >
-                              {expandedSubs[sub.name] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                            </button>
-                          )}
+                    <div className="flex items-center gap-2">
+                      <span className="filter-count">{category.count}</span>
+                      {category.subcategories.length > 0 && (
+                        <button
+                          type="button"
+                          className="filter-expand-btn"
+                          aria-label={`Mostrar subcategorías de ${category.name}`}
+                          onClick={() => toggleCategory(category.id)}
+                        >
+                          {expandedCategories[category.id]
+                            ? <ChevronUp size={14} />
+                            : <ChevronDown size={14} />}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div
+                    className={`filter-subcategory-list ${
+                      expandedCategories[category.id] ? "open" : ""
+                    }`}
+                  >
+                    {category.subcategories.map(subcategory => (
+                      <div key={subcategory.id} className="filter-subcategory-item">
+                        <div className="filter-subcategory-header">
+                          <label className="filter-checkbox-label">
+                            <input
+                              type="checkbox"
+                              checked={selectedSubcategoryIds.includes(subcategory.id)}
+                              onChange={() => onSubcategoryChange(subcategory.id)}
+                            />
+                            <span>{subcategory.name}</span>
+                          </label>
+                          <span className="filter-count">{subcategory.count}</span>
                         </div>
                       </div>
-
-                      <div className={`filter-child-list ${expandedSubs[sub.name] ? 'open' : ''}`}>
-                        {sub.children?.map(child => (
-                          <div key={child.name} className="filter-child-item">
-                            <label className="filter-checkbox-label">
-                              <input
-                                type="checkbox"
-                                checked={selectedCategories.includes(child.name)}
-                                onChange={() => handleCategoryChange(child.name)}
-                              />
-                              <span>{child.name}</span>
-                            </label>
-                            <span className="filter-count ml-2">{child.count}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Sección Marcas */}
-      <div className="filter-section">
-        <button
-          className="filter-section-header"
-          onClick={() => setBrandOpen(!brandOpen)}
-        >
-          <span>Marca</span>
-          {brandOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
-
-        {brandOpen && (
-          <div className="filter-options">
-            {brands.map(brand => (
-              <div key={brand} className="filter-option-main">
-                <label className="filter-checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={selectedBrands.includes(brand)}
-                    onChange={() => handleBrandChange(brand)}
-                  />
-                  <span>{brand}</span>
-                </label>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         )}
       </div>

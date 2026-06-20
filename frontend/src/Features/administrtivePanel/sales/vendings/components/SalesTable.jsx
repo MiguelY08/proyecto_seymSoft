@@ -34,6 +34,67 @@ function EstadoBadge({ estado, term }) {
   );
 }
 
+const normalizeStatusText = (value = "") =>
+  String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+const pedidoStatusVariants = {
+  "en proceso": {
+    dot: "bg-orange-500",
+    text: "text-orange-700",
+    pulse: true,
+  },
+  listo: {
+    dot: "bg-green-500",
+    text: "text-green-700",
+    pulse: true,
+  },
+  entregado: {
+    dot: "bg-blue-500",
+    text: "text-blue-700",
+    pulse: false,
+  },
+  cancelado: {
+    dot: "bg-red-500",
+    text: "text-red-700",
+    pulse: false,
+  },
+};
+
+function EstadoPedidoIndicator({ estado, term }) {
+  const label = estado || "-";
+  const normalized = normalizeStatusText(label);
+  const variant =
+    pedidoStatusVariants[normalized] ?? {
+      dot: "bg-gray-400",
+      text: "text-gray-600",
+      pulse: false,
+    };
+  const content = term?.trim() ? highlight(label, term) : label;
+
+  return (
+    <span
+      className={`inline-flex items-center justify-center gap-1.5 text-xs font-semibold whitespace-nowrap ${variant.text}`}
+      title={`Pedido: ${label}`}
+    >
+      <span className="relative inline-flex h-2.5 w-2.5 shrink-0">
+        {variant.pulse && (
+          <span
+            className={`absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping ${variant.dot}`}
+          />
+        )}
+        <span
+          className={`relative inline-flex h-2.5 w-2.5 rounded-full ${variant.dot}`}
+        />
+      </span>
+      {content}
+    </span>
+  );
+}
+
 const getPermisos = (estado) => {
   if (estado === "Aprobada") {
     return { puedeDevolver: true, puedeAnular: true, deshabilitado: false };
@@ -163,6 +224,9 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
               Total
             </th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">
+              Estado pedido
+            </th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Estado
             </th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">
@@ -213,6 +277,9 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap font-semibold">
                   {highlight(row.total || "0", search)}
+                </td>
+                <td className="px-3 py-2 text-center whitespace-nowrap">
+                  <EstadoPedidoIndicator estado={row.estadoPedido} term={search} />
                 </td>
                 <td className="px-3 py-2 text-center whitespace-nowrap">
                   <EstadoBadge estado={row.estado} term={search} />

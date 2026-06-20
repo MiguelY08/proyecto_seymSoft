@@ -37,6 +37,9 @@ export const register = async (userData) => {
 
     const {
       user,
+      role,
+      permissions,
+      client,
       accessToken,
       refreshToken
     } = response.data.data;
@@ -46,8 +49,9 @@ export const register = async (userData) => {
     saveSession({
 
       user,
-
-      permissions: [],
+      role: role || null,
+      permissions: permissions || [],
+      client: client || null,
 
       accessToken,
 
@@ -60,8 +64,9 @@ export const register = async (userData) => {
       success: true,
 
       user,
-
-      permissions: [],
+      role: role || null,
+      permissions: permissions || [],
+      client: client || null,
 
       accessToken,
 
@@ -402,6 +407,7 @@ export const updateProfile = async(
       user,
       role,
       permissions,
+      client,
 
     }=response.data.data;
 
@@ -420,6 +426,8 @@ export const updateProfile = async(
 
       permissions,
 
+      client: client ?? currentSession?.client ?? null,
+
 
     });
 
@@ -432,7 +440,9 @@ export const updateProfile = async(
 
       role,
 
-      permissions
+      permissions,
+
+      client: client ?? currentSession?.client ?? null
 
     };
 

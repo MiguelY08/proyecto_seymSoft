@@ -107,7 +107,7 @@ const AppRouter = () => {
 
       {/* ========= PANEL ADMIN ========= */}
 
-      <Route element={<PrivateRoute requireRole={false} />}>
+      <Route element={<PrivateRoute requireRole />}>
         {/* Ruta para editar perfil, accesible para cualquier usuario autenticado */}
         {/* <Route path="/perfil/editar" element={<EditProfilePage />} /> */}
 
