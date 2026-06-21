@@ -74,15 +74,33 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
-    // Obtener tokens del localStorage
+
     const session = getSession();
 
-    if (session && session.accessToken) {
-      // Agregar token al header Authorization
-      config.headers.Authorization = `Bearer ${session.accessToken}`;
+    console.log(
+      "SESSION INTERCEPTOR:",
+      session
+    );
+
+    console.log(
+      "AUTH HEADER:",
+      session?.accessToken
+        ? "TOKEN PRESENTE"
+        : "SIN TOKEN"
+    );
+
+    if (
+      session &&
+      session.accessToken
+    ) {
+
+      config.headers.Authorization =
+        `Bearer ${session.accessToken}`;
+
     }
 
     return config;
+
   },
   (error) => {
     return Promise.reject(error);

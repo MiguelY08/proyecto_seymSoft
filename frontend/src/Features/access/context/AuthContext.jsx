@@ -13,6 +13,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [requiresPasswordSetup, setRequiresPasswordSetup] = useState(false);
 
   const { showSuccess, showError, showWarning, showInfo } = useAlert();
 
@@ -40,6 +41,7 @@ export const AuthProvider = ({ children }) => {
             setRole(profileResult.role);
             setPermissions(profileResult.permissions || []);
             setClient(profileResult.client || null);
+            setRequiresPasswordSetup(profileResult.requiresPasswordSetup || false);
           } else {
             clearSession();
             setUser(null);
@@ -47,6 +49,7 @@ export const AuthProvider = ({ children }) => {
             setPermissions([]);
             setClient(null);
             setIsAuthenticated(false);
+            setRequiresPasswordSetup(false);
           }
         }
       } catch (err) {
@@ -88,6 +91,7 @@ export const AuthProvider = ({ children }) => {
         setPermissions(session.permissions ?? []);
         setClient(session.client ?? null);
         setIsAuthenticated(Boolean(session.user && session.accessToken));
+        setRequiresPasswordSetup(session.requiresPasswordSetup ?? false);
       } catch (sessionError) {
         console.error('Error sincronizando la sesión entre pestañas:', sessionError);
         clearSession();
@@ -96,6 +100,7 @@ export const AuthProvider = ({ children }) => {
         setPermissions([]);
         setClient(null);
         setIsAuthenticated(false);
+        setRequiresPasswordSetup(false);
       }
     };
 
@@ -122,6 +127,7 @@ const login = async (email, password) => {
       setPermissions(result.permissions || []);
       setIsAuthenticated(true);
       setClient(result.client || null);
+      setRequiresPasswordSetup(result.requiresPasswordSetup || false);
 
       showSuccess("¡Bienvenido!", `Hola ${result.user.fullName}`);
 
@@ -223,6 +229,7 @@ const logout = async () => {
     setIsAuthenticated(false);
     setError(null);
     setClient(null);
+    setRequiresPasswordSetup(false);
 
     showSuccess("Sesión cerrada", "Hasta pronto");
 
@@ -241,6 +248,7 @@ const logout = async () => {
     setPermissions([]);
     setIsAuthenticated(false);
     setClient(null);
+    setRequiresPasswordSetup(false);
 
     return {
       success: true,
@@ -321,6 +329,8 @@ const logout = async () => {
     isEmployee,
     isClient,
     clientType,
+    requiresPasswordSetup,
+    setRequiresPasswordSetup,
     login,
     register,
     logout,

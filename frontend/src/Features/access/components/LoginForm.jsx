@@ -151,26 +151,17 @@ const handleSubmit = async (e) => {
         )}
 
         {/* Opciones extra */}
-        <div className="flex items-center justify-between text-xs mt-4">
+          <div className="flex justify-end text-xs mt-4">
 
-          <label htmlFor="remember" className="flex items-center gap-2 cursor-pointer">
-            <input 
-              id="remember"
-              type="checkbox" 
-              disabled={loading}
-            />
-            Recordarme
-          </label>
+            <Link
+              to="/forgotpassword"
+              className="text-blue-700 hover:underline"
+              onClick={(e) => loading && e.preventDefault()}
+            >
+              ¿Olvidaste tu contraseña?
+            </Link>
 
-          <Link
-            to="/forgotpassword"
-            className="text-blue-700 hover:underline"
-            onClick={(e) => loading && e.preventDefault()}
-          >
-            ¿Olvidaste tu contraseña?
-          </Link>
-
-        </div>
+          </div>
 
         {/* Botón login */}
         <button

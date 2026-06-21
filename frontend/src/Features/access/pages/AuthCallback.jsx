@@ -9,7 +9,7 @@ import Spinner from "../../shared/spinner/Spinner.jsx";
 const AuthCallback = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { setUser, setRole, setPermissions, setIsAuthenticated,setClient } = useAuth();
+  const { setUser, setRole, setPermissions, setIsAuthenticated,setClient, setRequiresPasswordSetup  } = useAuth();
   const { showSuccess, showError } = useAlert();
 
   useEffect(() => {
@@ -23,10 +23,20 @@ const AuthCallback = () => {
           throw new Error("Tokens no encontrados");
         }
 
+        console.log("ACCESS TOKEN:", accessToken);
+console.log("REFRESH TOKEN:", refreshToken);
+
         localStorage.setItem(
           "session",
           JSON.stringify({ accessToken, refreshToken })
         );
+
+        console.log(
+  "SESSION TEMPORAL:",
+  JSON.parse(
+    localStorage.getItem("session")
+  )
+);
 
         const profileResult = await getProfile();
         console.log( "PROFILE RESULT:", profileResult );
@@ -42,6 +52,7 @@ const AuthCallback = () => {
           accessToken,
           refreshToken,
           client: profileResult.client,
+          requiresPasswordSetup: profileResult.requiresPasswordSetup
           
         });
 
@@ -50,6 +61,7 @@ const AuthCallback = () => {
         setPermissions( profileResult.permissions || [] ); 
         setIsAuthenticated(true);
         setClient( profileResult.client || null );
+        setRequiresPasswordSetup( profileResult.requiresPasswordSetup || false );
 
         showSuccess("Bienvenido", profileResult.user.fullName);
 
@@ -66,6 +78,11 @@ const AuthCallback = () => {
           hasRole
             ? "/admin"
             : "/";
+
+          console.log(
+            "REQUIRES PASSWORD SETUP:",
+            profileResult.requiresPasswordSetup
+          );
 
         navigate(redirectTo);
 
