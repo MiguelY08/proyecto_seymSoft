@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { saveSession } from "../helpers/authStorage.js";
@@ -7,12 +7,16 @@ import { useAlert } from "../../shared/alerts/useAlert.js";
 import Spinner from "../../shared/spinner/Spinner.jsx"; 
 
 const AuthCallback = () => {
+  const callbackProcessedRef = useRef(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { setUser, setRole, setPermissions, setIsAuthenticated, } = useAuth();
+  const { setUser, setRole, setPermissions, setIsAuthenticated,setClient, setRequiresPasswordSetup  } = useAuth();
   const { showSuccess, showError } = useAlert();
 
   useEffect(() => {
+    if (callbackProcessedRef.current) return;
+    callbackProcessedRef.current = true;
+
     const handleCallback = async () => {
       try {
         const accessToken = searchParams.get("accessToken");
@@ -23,10 +27,20 @@ const AuthCallback = () => {
           throw new Error("Tokens no encontrados");
         }
 
+        console.log("ACCESS TOKEN:", accessToken);
+console.log("REFRESH TOKEN:", refreshToken);
+
         localStorage.setItem(
           "session",
           JSON.stringify({ accessToken, refreshToken })
         );
+
+        console.log(
+  "SESSION TEMPORAL:",
+  JSON.parse(
+    localStorage.getItem("session")
+  )
+);
 
         const profileResult = await getProfile();
         console.log( "PROFILE RESULT:", profileResult );
@@ -38,14 +52,20 @@ const AuthCallback = () => {
         saveSession({
           user: profileResult.user,
           role: profileResult.role,
+          permissions: profileResult.permissions || [],
           accessToken,
           refreshToken,
+          client: profileResult.client,
+          requiresPasswordSetup: profileResult.requiresPasswordSetup
+          
         });
 
         setUser(profileResult.user);
         setRole( profileResult.role || null );
         setPermissions( profileResult.permissions || [] ); 
         setIsAuthenticated(true);
+        setClient( profileResult.client || null );
+        setRequiresPasswordSetup( profileResult.requiresPasswordSetup || false );
 
         showSuccess("Bienvenido", profileResult.user.fullName);
 
@@ -62,6 +82,11 @@ const AuthCallback = () => {
           hasRole
             ? "/admin"
             : "/";
+
+          console.log(
+            "REQUIRES PASSWORD SETUP:",
+            profileResult.requiresPasswordSetup
+          );
 
         navigate(redirectTo);
 

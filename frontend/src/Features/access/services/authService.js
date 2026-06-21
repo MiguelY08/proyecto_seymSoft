@@ -16,6 +16,7 @@ import {
  * - PUT /auth/profile
  * - POST /auth/forgot-password
  * - POST /auth/reset-password
+ * - PUT /auth/change-password
  */
 
 // ═══════════════════════════════════════════════════════════
@@ -37,6 +38,9 @@ export const register = async (userData) => {
 
     const {
       user,
+      role,
+      permissions,
+      client,
       accessToken,
       refreshToken
     } = response.data.data;
@@ -46,8 +50,9 @@ export const register = async (userData) => {
     saveSession({
 
       user,
-
-      permissions: [],
+      role: role || null,
+      permissions: permissions || [],
+      client: client || null,
 
       accessToken,
 
@@ -60,8 +65,9 @@ export const register = async (userData) => {
       success: true,
 
       user,
-
-      permissions: [],
+      role: role || null,
+      permissions: permissions || [],
+      client: client || null,
 
       accessToken,
 
@@ -125,7 +131,8 @@ export const login = async (
   role,
   permissions,
   accessToken,
-  refreshToken
+  refreshToken,
+  client,
 } = response.data.data;
 
 console.log("LOGIN RESPONSE:");
@@ -139,6 +146,7 @@ saveSession({
   permissions,
   accessToken,
   refreshToken,
+  client
 });
 
 console.log("SESSION SAVED:", getSession());
@@ -150,6 +158,7 @@ return {
   permissions,
   accessToken,
   refreshToken,
+  client,
   redirectTo: role ? "/admin" : "/"
 };
 
@@ -254,7 +263,9 @@ export const getProfile = async()=>{
 
       user,
       role,
-      permissions
+      permissions,
+      client,
+      requiresPasswordSetup
 
     }=response.data.data;
 
@@ -266,7 +277,11 @@ export const getProfile = async()=>{
 
       role,
 
-      permissions
+      permissions,
+
+      client,
+
+      requiresPasswordSetup
 
     };
 
@@ -395,7 +410,8 @@ export const updateProfile = async(
 
       user,
       role,
-      permissions
+      permissions,
+      client,
 
     }=response.data.data;
 
@@ -412,7 +428,10 @@ export const updateProfile = async(
 
       role,
 
-      permissions
+      permissions,
+
+      client: client ?? currentSession?.client ?? null,
+
 
     });
 
@@ -425,7 +444,9 @@ export const updateProfile = async(
 
       role,
 
-      permissions
+      permissions,
+
+      client: client ?? currentSession?.client ?? null
 
     };
 
@@ -618,4 +639,37 @@ export const googleLogin=(
 
   }
 
+};
+
+export const changePassword = async ({
+  currentPassword,
+  newPassword
+}) => {
+  try {
+
+    const response =
+      await apiClient.post(
+        "/auth/change-password",
+        {
+          currentPassword,
+          newPassword
+        }
+      );
+
+    return {
+      success: true,
+      message: response.data.message
+    };
+
+  } catch (error) {
+
+    return {
+      success: false,
+      error:
+        error.response?.data?.message
+        ||
+        "Error al cambiar contraseña"
+    };
+
+  }
 };

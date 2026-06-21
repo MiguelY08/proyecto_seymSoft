@@ -1,600 +1,394 @@
-import { ChevronRight, Upload, Package, CreditCard, MapPin, Calendar, Clock, X, ZoomIn } from 'lucide-react';
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import {
+  ChevronLeft,
+  CreditCard,
+  LoaderCircle,
+  MapPin,
+  Package,
+  Upload,
+  X,
+  ZoomIn,
+} from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import OrdersService, {
+  PaymentReceiptService,
+} from '../../administrtivePanel/sales/orders/services/ordersService';
+import { useAlert } from '../../shared/alerts/useAlert';
+import useAuthenticatedClient from '../../shared/hooks/useAuthenticatedClient';
 import ShopHero from '../shop/components/ShopHero';
 import BgPedidos from '../../../assets/BgPedidos.png';
-import qr from '../../../assets/QR_Magic.jpg';
-import { pedidos } from './Orders';
-
-/* ── Estilos inyectados (coherentes con Home/Favorites) ── */
-const ORDER_DETAIL_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito:wght@400;600;700;800;900&display=swap');
-
-  @keyframes detail-fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes modalFadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to   { opacity: 1; transform: scale(1); }
-  }
-
-  .order-detail-page {
-    background: #f6f9fc;
-    font-family: 'Nunito', sans-serif;
-    min-height: 100vh;
-  }
-
-  .order-detail-container {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: clamp(18px, 3vw, 30px) 18px;
-  }
-
-  .breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.76rem;
-    color: #64748b;
-    margin-bottom: 18px;
-  }
-  .breadcrumb a {
-    color: #004D77;
-    text-decoration: none;
-    font-weight: 600;
-  }
-  .breadcrumb a:hover {
-    text-decoration: underline;
-  }
-
-  .detail-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 18px;
-  }
-
-  @media (min-width: 1024px) {
-    .detail-grid {
-      grid-template-columns: 2fr 1fr;
-    }
-  }
-
-  /* Tarjetas */
-  .info-card {
-    background: #ffffff;
-    border: 1.5px solid #e4eff6;
-    border-radius: 18px;
-    padding: 18px;
-    margin-bottom: 18px;
-    box-shadow: 0 2px 12px rgba(0, 77, 119, 0.05);
-    transition: box-shadow 0.2s;
-  }
-  .info-card:hover {
-    box-shadow: 0 8px 24px rgba(0, 77, 119, 0.08);
-  }
-  .card-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.08rem;
-    font-weight: 700;
-    color: #0c2a3a;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .status-badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 40px;
-    font-size: 0.62rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .info-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 6px 0;
-    border-bottom: 1px solid #eef2f6;
-    font-size: 0.8rem;
-  }
-  .info-row:last-child {
-    border-bottom: none;
-  }
-  .info-label {
-    font-weight: 700;
-    color: #1e4060;
-  }
-  .info-value {
-    color: #334155;
-  }
-
-  /* Sección de pago */
-  .payment-section {
-    background: #ffffff;
-    border: 1.5px solid #e4eff6;
-    border-radius: 18px;
-    padding: 18px;
-    margin-top: 18px;
-  }
-  .amount-large {
-    font-size: 2rem;
-    font-weight: 900;
-    color: #e53e3e;
-    text-align: center;
-    margin: 12px 0;
-  }
-  .qr-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px;
-    margin: 16px 0;
-  }
-  .qr-box {
-    text-align: center;
-  }
-  .qr-image {
-    width: 132px;
-    height: 132px;
-    border-radius: 16px;
-    object-fit: cover;
-    margin: 0 auto 10px;
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  }
-  .qr-image:hover {
-    transform: scale(1.02);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-  }
-  .zoom-hint {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.64rem;
-    color: #9abcce;
-    cursor: pointer;
-    margin-top: 4px;
-  }
-
-  /* Modal del QR */
-  .qr-modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 20px;
-    animation: modalFadeIn 0.2s ease;
-  }
-  .qr-modal-content {
-    position: relative;
-    max-width: 90vw;
-    max-height: 90vh;
-    background: #ffffff;
-    border-radius: 22px;
-    padding: 16px;
-    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-  }
-  .qr-modal-close {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    background: #f1f5f9;
-    border: none;
-    border-radius: 50%;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    z-index: 10;
-  }
-  .qr-modal-close:hover {
-    background: #e2e8f0;
-    transform: scale(1.05);
-  }
-  .qr-modal-image {
-    max-width: 80vw;
-    max-height: 80vh;
-    object-fit: contain;
-    border-radius: 16px;
-  }
-
-  /* Área de subida corregida */
-  .upload-area {
-    width: 100%;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    border: 2px dashed #cbd5e1;
-    border-radius: 16px;
-    padding: 16px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .upload-area:hover {
-    border-color: #004D77;
-    background: #f0f8ff;
-  }
-
-  .btn-primary-full {
-    width: 100%;
-    background: #004D77;
-    border: none;
-    border-radius: 40px;
-    padding: 10px;
-    font-weight: 800;
-    font-size: 0.74rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: white;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-top: 14px;
-  }
-  .btn-primary-full:hover {
-    background: #0c5c88;
-    transform: translateY(-2px);
-  }
-
-  /* Lista de productos */
-  .product-list {
-    margin-top: 12px;
-  }
-  .product-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px;
-    border: 1px solid #eef2f6;
-    border-radius: 12px;
-    margin-bottom: 7px;
-    transition: all 0.2s;
-    cursor: pointer;
-  }
-  .product-item:hover {
-    background: #fafcff;
-    border-color: #afd0e6;
-    transform: translateX(4px);
-  }
-  .product-icon {
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(150deg, #eef6fb, #e0eef7);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .product-details {
-    flex: 1;
-  }
-  .product-name {
-    font-weight: 800;
-    font-size: 0.78rem;
-    color: #0c2a3a;
-  }
-  .product-meta {
-    font-size: 0.64rem;
-    color: #9abcce;
-  }
-  .product-price {
-    font-weight: 900;
-    font-size: 0.78rem;
-    color: #004D77;
-  }
-
-  /* Resumen de venta */
-  .summary-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 6px 0;
-    font-size: 0.78rem;
-  }
-  .total-row {
-    border-top: 1px solid #e2edf5;
-    margin-top: 6px;
-    padding-top: 10px;
-    font-weight: 900;
-    font-size: 0.95rem;
-  }
-
-  /* Margen para separar secciones */
-  .mt-6 {
-    margin-top: 18px;
-  }
-
-  @media (max-width: 768px) {
-    .qr-grid {
-      grid-template-columns: 1fr;
-      gap: 16px;
-    }
-    .qr-image {
-      width: 112px;
-      height: 112px;
-    }
-  }
-`;
-
-let orderDetailStylesInjected = false;
-function injectOrderDetailStyles() {
-  if (orderDetailStylesInjected) return;
-  const style = document.createElement('style');
-  style.textContent = ORDER_DETAIL_STYLES;
-  document.head.appendChild(style);
-  orderDetailStylesInjected = true;
-}
+import qrMagic from '../../../assets/QR_Magic.jpg';
+import {
+  formatMoney,
+  formatOrderDate,
+  getOrderStatusClasses,
+} from './helpers/customerOrderHelpers';
 
 function OrderDetail() {
-  injectOrderDetailStyles();
   const { id } = useParams();
   const navigate = useNavigate();
-  const [archivoComprobante, setArchivoComprobante] = useState(null);
-  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const {
+    clientId,
+    isAuthenticated,
+    loading: authLoading,
+  } = useAuthenticatedClient();
+  const { showError, showSuccess, showWarning } = useAlert();
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [receipt, setReceipt] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
 
-  const pedido = pedidos.find((p) => p.id === id);
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated || !clientId) {
+      setLoading(false);
+      return;
+    }
 
-  if (!pedido) {
+    let active = true;
+    const loadOrder = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const response = await OrdersService.findById(id);
+        if (!active) return;
+
+        if (!response || Number(response.clienteId) !== Number(clientId)) {
+          setError('El pedido no existe o no pertenece a tu cuenta.');
+          setOrder(null);
+          return;
+        }
+        setOrder(response);
+      } catch (requestError) {
+        if (!active) return;
+        setError(
+          requestError?.response?.data?.message ??
+          requestError?.message ??
+          'No fue posible cargar el pedido.'
+        );
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    loadOrder();
+    return () => {
+      active = false;
+    };
+  }, [authLoading, clientId, id, isAuthenticated]);
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      showError('Archivo demasiado grande', 'El comprobante no puede superar los 10 MB.');
+      event.target.value = '';
+      return;
+    }
+    if (!['image/png', 'image/jpeg'].includes(file.type)) {
+      showError('Formato no permitido', 'Solo se permiten imágenes PNG, JPG o JPEG.');
+      event.target.value = '';
+      return;
+    }
+    setReceipt(file);
+  };
+
+  const handleSendReceipt = async () => {
+    if (!receipt) {
+      showWarning('Falta el comprobante', 'Selecciona una imagen antes de enviarla.');
+      return;
+    }
+    if (!order?.saldoPendiente) return;
+
+    try {
+      setSubmitting(true);
+      await PaymentReceiptService.upload(
+        order.id,
+        receipt,
+        'Comprobante enviado desde el detalle del pedido web.'
+      );
+      const updatedOrder = await OrdersService.findById(order.id);
+      setOrder(updatedOrder);
+      setReceipt(null);
+      showSuccess(
+        'Comprobante enviado',
+        'El administrador verificará la imagen antes de registrar el valor pagado.'
+      );
+    } catch (requestError) {
+      showError(
+        'No se pudo registrar',
+        requestError?.response?.data?.message ??
+        requestError?.message ??
+        'Intenta nuevamente.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (authLoading || loading) {
     return (
-      <div className="order-detail-page">
-        <div className="order-detail-container text-center py-20">
-          <p className="text-lg font-semibold text-gray-700 mb-3">Pedido no encontrado</p>
-          <button
-            onClick={() => navigate('/orders-l')}
-            className="btn-primary-full"
-            style={{ width: 'auto', padding: '8px 20px' }}
-          >
-            Volver a pedidos
-          </button>
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-[#f6f9fc] text-[#004D77]">
+        <LoaderCircle size={34} className="animate-spin" />
       </div>
     );
   }
 
-  const subtotal = pedido.productos.reduce((s, p) => s + p.precioUnidad * p.cantidad, 0);
-  const total = subtotal;
-  const abonado = pedido.abonado;
-  const faltante = total - abonado;
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      alert('El archivo es demasiado grande. Máximo 10MB.');
-      return;
-    }
-    if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
-      alert('Solo se permiten archivos PNG, JPG o JPEG.');
-      return;
-    }
-    setArchivoComprobante(file);
-  };
-
-  const handleEnviarComprobante = () => {
-    if (!archivoComprobante) {
-      alert('Por favor selecciona un comprobante para enviar.');
-      return;
-    }
-    console.log('Enviando comprobante:', archivoComprobante);
-    alert('Comprobante enviado exitosamente!');
-    setArchivoComprobante(null);
-  };
+  if (!isAuthenticated || !clientId || error || !order) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#f6f9fc] p-6 text-center">
+        <Package size={40} className="mb-4 text-[#004D77]" />
+        <h1 className="text-xl font-black text-slate-800">
+          {!isAuthenticated ? 'Inicia sesión para ver el pedido' : 'Pedido no encontrado'}
+        </h1>
+        <p className="mt-2 text-sm text-slate-500">
+          {error || (!clientId ? 'Tu cuenta no tiene un cliente asociado.' : 'No encontramos este pedido.')}
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate(!isAuthenticated ? '/login' : '/orders-l')}
+          className="mt-5 rounded-full bg-[#004D77] px-6 py-3 text-xs font-black uppercase text-white"
+        >
+          {!isAuthenticated ? 'Iniciar sesión' : 'Volver a pedidos'}
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="order-detail-page">
+    <div className="min-h-screen bg-[#f6f9fc]">
       <ShopHero
         image={BgPedidos}
         title="Pedidos"
         tag="Detalle"
-        subtitle={`Pedido N.° ${pedido.id}`}
+        subtitle={`Pedido N.° ${order.numeroPedido || order.id}`}
       />
 
-      <div className="order-detail-container">
-        {/* Breadcrumb */}
-        <div className="breadcrumb">
-          <a href="/orders-l">Pedidos</a>
-          <ChevronRight size={12} />
-          <span>Detalles del pedido</span>
-        </div>
+      <main className="mx-auto max-w-7xl px-5 py-8">
+        <button
+          type="button"
+          onClick={() => navigate('/orders-l')}
+          className="mb-5 inline-flex items-center gap-2 text-sm font-bold text-[#004D77]"
+        >
+          <ChevronLeft size={17} /> Volver a pedidos
+        </button>
 
-        <div className="detail-grid">
-          {/* Columna izquierda */}
-          <div>
-            {/* Información del pedido */}
-            <div className="info-card">
-              <div className="card-title">
-                <Package size={18} color="#004D77" />
-                Información del pedido
-              </div>
-              <div className="flex justify-between items-center mb-3">
-                <h4 className="text-base font-bold text-gray-900">{pedido.titulo}</h4>
-                <span className={`status-badge ${pedido.estadoColor}`}>
-                  {pedido.estado}
+        <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+          <div className="space-y-6">
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="flex items-center gap-2 text-xl font-black text-slate-800">
+                  <Package size={21} className="text-[#004D77]" /> Información del pedido
+                </h2>
+                <span className={`rounded-full px-3 py-1 text-[11px] font-black uppercase ${getOrderStatusClasses(order.estadoLogistico)}`}>
+                  {order.estadoLogistico}
                 </span>
               </div>
-              <div className="info-row">
-                <span className="info-label">Venta realizada</span>
-                <span className="info-value">{pedido.fecha_corta}</span>
-              </div>
-              <div className="info-row">
-                <span className="info-label">Entrega</span>
-                <span className="info-value">{pedido.direccion}</span>
-              </div>
-              <div className="info-row">
-                <span className="info-label">Pedido número</span>
-                <span className="info-value">{pedido.id}</span>
-              </div>
-              <div className="info-row">
-                <span className="info-label">Método de pago</span>
-                <span className="info-value">{pedido.infoPago}</span>
-              </div>
-            </div>
 
-            {/* Sección de pago (si hay faltante) */}
-            {faltante > 0 && (
-              <div className="payment-section">
-                <div className="card-title">
-                  <CreditCard size={18} color="#004D77" />
-                  Abonar - Pagar
-                </div>
-                <div className="amount-large">
-                  $ {faltante.toLocaleString()} COP
-                </div>
+              <div className="grid gap-4 text-sm sm:grid-cols-2">
+                <Info label="Fecha" value={formatOrderDate(order.fechaPedido)} />
+                <Info label="Número" value={order.numeroPedido || order.id} />
+                <Info
+                  label="Entrega"
+                  value={order.tipoEntrega === 'recoge' ? 'Recoger en tienda' : order.direccionEntrega}
+                  icon={<MapPin size={15} />}
+                />
+                <Info
+                  label="Estado del pago"
+                  value={order.saldoPendiente > 0 ? 'Pendiente' : 'Pago registrado'}
+                  icon={<CreditCard size={15} />}
+                />
+              </div>
+            </section>
 
-                <div className="qr-grid">
-                  <div className="qr-box">
-                    <p className="text-xs font-medium text-gray-700 mb-2">
-                      Escanea el código QR para pagar
-                    </p>
+            {order.saldoPendiente > 0 && order.estadoLogistico !== 'cancelado' && (
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="flex items-center gap-2 text-xl font-black text-slate-800">
+                  <CreditCard size={21} className="text-[#004D77]" /> Completar pago
+                </h2>
+                <p className="mt-3 text-3xl font-black text-red-600">{formatMoney(order.saldoPendiente)}</p>
+
+                <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                  <div className="text-center">
                     <img
-                      src={qr}
-                      alt="Código QR para pago"
-                      className="qr-image"
-                      onClick={() => setQrModalOpen(true)}
+                      src={qrMagic}
+                      alt="Código QR de pago Magic"
+                      onClick={() => setQrOpen(true)}
+                      className="mx-auto h-44 w-44 cursor-pointer rounded-2xl border border-slate-200 object-contain p-1 shadow-sm"
                     />
-                    <div className="zoom-hint" onClick={() => setQrModalOpen(true)}>
-                      <ZoomIn size={12} /> Haz clic para ampliar
-                    </div>
-                    {pedido.metodoPagoDetalle.llave && (
-                      <p className="text-[0.68rem] text-gray-500 mt-2">
-                        Llave: {pedido.metodoPagoDetalle.llave}
-                      </p>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => setQrOpen(true)}
+                      className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[#004D77]"
+                    >
+                      <ZoomIn size={13} /> Ampliar QR
+                    </button>
                   </div>
 
                   <div>
-                    <p className="text-xs font-medium text-gray-700 mb-2">
-                      Comprobante de transferencia
-                    </p>
-                    <label className="upload-area">
+                    <label className="flex h-full min-h-44 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 p-4 text-center hover:border-[#004D77] hover:bg-blue-50">
                       <input
                         type="file"
-                        accept="image/png,image/jpeg,image/jpg"
+                        accept="image/png,image/jpeg"
                         onChange={handleFileChange}
+                        disabled={submitting}
                         className="hidden"
                       />
-                      <Upload size={24} className="text-gray-400 mx-auto mb-2" />
-                      <p className="text-xs text-gray-600">
-                        {archivoComprobante ? archivoComprobante.name : 'Haz clic para subir el comprobante'}
-                      </p>
-                      <p className="text-[0.68rem] text-gray-400 mt-1">
-                        PNG, JPG o JPEG (máx. 10MB)
-                      </p>
+                      <Upload size={28} className="mb-2 text-slate-400" />
+                      <span className="max-w-full break-all text-xs font-bold text-slate-700">
+                        {receipt?.name || 'Subir comprobante'}
+                      </span>
+                      <span className="mt-1 text-[11px] text-slate-400">PNG, JPG o JPEG · máximo 10 MB</span>
                     </label>
                   </div>
                 </div>
 
-                <button className="btn-primary-full" onClick={handleEnviarComprobante}>
-                  Enviar comprobante
+                <button
+                  type="button"
+                  onClick={handleSendReceipt}
+                  disabled={!receipt || submitting}
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-[#004D77] px-5 py-3 text-xs font-black uppercase text-white disabled:opacity-50"
+                >
+                  {submitting && <LoaderCircle size={16} className="animate-spin" />}
+                  {submitting ? 'Registrando...' : 'Enviar comprobante'}
                 </button>
-              </div>
+              </section>
             )}
 
-            {/* Ayuda - con margen superior para separar */}
-            <div className="info-card mt-6">
-              <div className="card-title">Ayuda con el pedido</div>
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="text-lg font-black text-slate-800">Ayuda con el pedido</h2>
               <button
-                onClick={() => navigate(`/registerReturn/${pedido.id}`)}
-                className="text-[#004D77] font-semibold text-xs hover:underline"
+                type="button"
+                onClick={() => navigate(`/registerReturn/${order.id}`)}
+                className="mt-2 text-sm font-bold text-[#004D77] hover:underline"
               >
                 Tengo un problema con el pedido
               </button>
-            </div>
+            </section>
           </div>
 
-          {/* Columna derecha - sidebar con productos clickeables */}
-          <div>
-            <div className="info-card sticky top-24">
-              <div className="card-title">
-                <Package size={18} color="#004D77" />
-                {pedido.productos.length} productos en tu pedido
-              </div>
+          <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:sticky lg:top-24">
+            <h2 className="text-lg font-black text-slate-800">
+              {order.productos.length} {order.productos.length === 1 ? 'producto' : 'productos'}
+            </h2>
 
-              <div className="product-list">
-                {pedido.productos.map((producto) => {
-                  const linea = producto.precioUnidad * producto.cantidad;
-                  return (
-                    <div
-                      key={producto.lineItemId}
-                      className="product-item"
-                      onClick={() => navigate(`/shop/detail/${producto.productId}`)}
+            <div className="mt-4 space-y-3">
+              {order.productos.map((product) => (
+                <button
+                  type="button"
+                  key={product.detalleId || `${product.id}-${product.codBarras}`}
+                  onClick={() => navigate(`/shop/detail/${product.id}`)}
+                  className="flex w-full items-center gap-3 rounded-2xl border border-slate-100 p-3 text-left transition hover:border-blue-200 hover:bg-blue-50"
+                >
+                  <span className="flex h-14 w-14 shrink-0 overflow-hidden items-center justify-center rounded-xl bg-blue-50 text-[#004D77]">
+                    {product.image ? (
+                      <img
+                        src={product.image}
+                        alt={product.nombre}
+                        className="h-full w-full object-contain p-1"
+                      />
+                    ) : (
+                      <Package size={20} />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <strong className="block truncate text-sm text-slate-800">{product.nombre}</strong>
+                    <small className="text-slate-500">
+                      {product.cantidad} und. × {formatMoney(product.precioUnitario)}
+                    </small>
+                  </span>
+                  <strong className="text-sm text-[#004D77]">{formatMoney(product.subtotal)}</strong>
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-5 space-y-2 border-t border-slate-200 pt-5 text-sm">
+              <Summary label="Subtotal" value={formatMoney(order.subtotal)} />
+              <Summary label="IVA incluido" value={formatMoney(order.iva)} />
+              <Summary label="Total" value={formatMoney(order.total)} strong />
+              <Summary label="Pagado" value={formatMoney(order.totalPagado)} className="text-green-600" />
+              <Summary label="Pendiente" value={formatMoney(order.saldoPendiente)} className="text-red-600" />
+            </div>
+
+            {!!order.comprobantesPago?.length && (
+              <div className="mt-5 border-t border-slate-200 pt-5">
+                <h3 className="text-sm font-black text-slate-800">Comprobantes enviados</h3>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  {order.comprobantesPago.map((proof) => (
+                    <a
+                      key={proof.id}
+                      href={proof.imageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
                     >
-                      <div className="product-icon">
-                        <span className="text-lg">📦</span>
-                      </div>
-                      <div className="product-details">
-                        <div className="product-name">{producto.nombre}</div>
-                        <div className="product-meta">
-                          {producto.cantidad} und. × $ {producto.precioUnidad.toLocaleString()}
-                        </div>
-                      </div>
-                      <div className="product-price">$ {linea.toLocaleString()}</div>
-                    </div>
-                  );
-                })}
+                      <img
+                        src={proof.imageUrl}
+                        alt={proof.fileName || 'Comprobante de pago'}
+                        className="h-28 w-full object-cover"
+                      />
+                      <p className="truncate px-2 py-2 text-[11px] font-bold text-slate-600">
+                        Pendiente de verificación
+                      </p>
+                    </a>
+                  ))}
+                </div>
               </div>
+            )}
 
-              <div className="mt-6 pt-4 border-t">
-                <h3 className="text-sm font-bold text-gray-900 mb-2">Detalle de la venta</h3>
-                <p className="text-[0.68rem] text-gray-500 mb-3">
-                  {pedido.fecha_corta} | {pedido.numeroOrden}
-                </p>
-
-                {pedido.productos.map((producto) => (
-                  <div key={producto.lineItemId} className="summary-row">
-                    <span className="truncate pr-2">{producto.nombre}</span>
-                    <span className="font-medium whitespace-nowrap">
-                      $ {(producto.precioUnidad * producto.cantidad).toLocaleString()}
-                    </span>
+            {!!order.pagos.length && (
+              <div className="mt-5 border-t border-slate-200 pt-5">
+                <h3 className="text-sm font-black text-slate-800">Comprobantes registrados</h3>
+                {order.pagos.map((payment) => (
+                  <div key={payment.id} className="mt-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
+                    <p className="font-bold text-slate-800">{payment.metodoPago} · {formatMoney(payment.monto)}</p>
+                    {payment.comprobante && <p className="mt-1 break-all">Referencia: {payment.comprobante}</p>}
                   </div>
                 ))}
-
-                <div className="summary-row border-t pt-2 mt-2">
-                  <span>Subtotal</span>
-                  <span className="font-medium">$ {subtotal.toLocaleString()}</span>
-                </div>
-
-                <div className="summary-row total-row">
-                  <span>Total</span>
-                  <span className="text-[#004D77]">$ {total.toLocaleString()}</span>
-                </div>
-
-                <div className="summary-row">
-                  <span className="font-medium text-green-700">Abonado</span>
-                  <span className="font-bold text-green-600">$ {abonado.toLocaleString()}</span>
-                </div>
-
-                <div className="summary-row">
-                  <span className="font-medium text-red-700">Faltante</span>
-                  <span className="font-bold text-red-600">$ {faltante.toLocaleString()}</span>
-                </div>
               </div>
-            </div>
-          </div>
+            )}
+          </aside>
         </div>
-      </div>
+      </main>
 
-      {/* Modal para ampliar el QR */}
-      {qrModalOpen && (
-        <div className="qr-modal-overlay" onClick={() => setQrModalOpen(false)}>
-          <div className="qr-modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="qr-modal-close" onClick={() => setQrModalOpen(false)}>
+      {qrOpen && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 p-5"
+          onClick={() => setQrOpen(false)}
+        >
+          <div className="relative rounded-3xl bg-white p-4" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setQrOpen(false)}
+              className="absolute right-3 top-3 rounded-full bg-slate-100 p-2"
+              aria-label="Cerrar QR"
+            >
               <X size={18} />
             </button>
-            <img src={qr} alt="QR ampliado" className="qr-modal-image" />
+            <img src={qrMagic} alt="Código QR de pago ampliado" className="max-h-[80vh] max-w-[80vw] rounded-2xl object-contain" />
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function Info({ label, value, icon }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 p-4">
+      <span className="flex items-center gap-1 text-xs font-black uppercase text-slate-400">{icon}{label}</span>
+      <p className="mt-1 font-bold text-slate-700">{value || 'No disponible'}</p>
+    </div>
+  );
+}
+
+function Summary({ label, value, strong = false, className = '' }) {
+  return (
+    <div className={`flex justify-between gap-3 ${strong ? 'border-t border-slate-200 pt-3 text-base font-black' : ''} ${className}`}>
+      <span>{label}</span>
+      <span className="font-bold">{value}</span>
     </div>
   );
 }

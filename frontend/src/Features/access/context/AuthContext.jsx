@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { getSession, clearSession } from "../helpers/authStorage.js";
 import { login as loginService, register as registerService, logout as logoutService, getProfile, updateProfile as updateProfileService } from "../services/authService.js";
-import { useAlert } from "../../shared/alerts/useAlert.js";
 
 const AuthContext = createContext();
 
@@ -9,11 +8,11 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
   const [permissions, setPermissions] = useState([]);
+  const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  const { showSuccess, showError, showWarning, showInfo } = useAlert();
+  const [requiresPasswordSetup, setRequiresPasswordSetup] = useState(false);
 
   // ═══════════════════════════════════════════════════════════
   // INICIALIZAR CONTEXTO
@@ -28,7 +27,9 @@ export const AuthProvider = ({ children }) => {
         if (session && session.user) {
           setUser(session.user);
           setRole(session.role || null);
+          setPermissions(session.permissions || []);
           setIsAuthenticated(true);
+          setClient(session.client || null);
 
           const profileResult = await getProfile();
           
@@ -36,14 +37,25 @@ export const AuthProvider = ({ children }) => {
             setUser(profileResult.user);
             setRole(profileResult.role);
             setPermissions(profileResult.permissions || []);
+            setClient(profileResult.client || null);
+            setRequiresPasswordSetup(profileResult.requiresPasswordSetup || false);
           } else {
             clearSession();
+            setUser(null);
+            setRole(null);
+            setPermissions([]);
+            setClient(null);
             setIsAuthenticated(false);
+            setRequiresPasswordSetup(false);
           }
         }
       } catch (err) {
         console.error("Error inicializando auth:", err);
         clearSession();
+        setUser(null);
+        setRole(null);
+        setPermissions([]);
+        setClient(null);
         setIsAuthenticated(false);
       } finally {
         setLoading(false);
@@ -51,6 +63,46 @@ export const AuthProvider = ({ children }) => {
     };
 
     initializeAuth();
+  }, []);
+
+  // Mantener sincronizada la identidad entre pestañas del mismo navegador.
+  // Evita que el panel conserve un usuario administrador en memoria mientras
+  // apiClient ya está enviando el token de una sesión de cliente más reciente.
+  useEffect(() => {
+    const synchronizeSession = (event) => {
+      if (event.key !== 'session') return;
+
+      if (!event.newValue) {
+        setUser(null);
+        setRole(null);
+        setPermissions([]);
+        setClient(null);
+        setIsAuthenticated(false);
+        return;
+      }
+
+      try {
+        const session = JSON.parse(event.newValue);
+        setUser(session.user ?? null);
+        setRole(session.role ?? null);
+        setPermissions(session.permissions ?? []);
+        setClient(session.client ?? null);
+        setIsAuthenticated(Boolean(session.user && session.accessToken));
+        setRequiresPasswordSetup(session.requiresPasswordSetup ?? false);
+      } catch (sessionError) {
+        console.error('Error sincronizando la sesión entre pestañas:', sessionError);
+        clearSession();
+        setUser(null);
+        setRole(null);
+        setPermissions([]);
+        setClient(null);
+        setIsAuthenticated(false);
+        setRequiresPasswordSetup(false);
+      }
+    };
+
+    window.addEventListener('storage', synchronizeSession);
+    return () => window.removeEventListener('storage', synchronizeSession);
   }, []);
 
   // ═══════════════════════════════════════════════════════════
@@ -71,8 +123,8 @@ const login = async (email, password) => {
       setRole(result.role);
       setPermissions(result.permissions || []);
       setIsAuthenticated(true);
-
-      showSuccess("¡Bienvenido!", `Hola ${result.user.fullName}`);
+      setClient(result.client || null);
+      setRequiresPasswordSetup(result.requiresPasswordSetup || false);
 
       return {
         success: true,
@@ -80,7 +132,6 @@ const login = async (email, password) => {
       };
     } else {
       setError(result.error);
-      showError("Error de autenticación", result.error);
 
       return {
         success: false,
@@ -91,7 +142,6 @@ const login = async (email, password) => {
   } catch (err) {
     const errorMessage = "Error al iniciar sesión";
     setError(errorMessage);
-    showError("Error", errorMessage);
 
     return {
       success: false,
@@ -118,11 +168,10 @@ const login = async (email, password) => {
 
       if (result.success) {
         setUser(result.user);
-        setRole(null); // Nuevo usuario sin rol
-        setPermissions([]);
+        setRole(result.role || null);
+        setPermissions(result.permissions || []);
         setIsAuthenticated(true);
-
-        showSuccess("¡Bienvenido!", "Cuenta creada exitosamente");
+        setClient(result.client || null);
 
         return {
           success: true,
@@ -130,7 +179,6 @@ const login = async (email, password) => {
         };
       } else {
         setError(result.error);
-        showError("Error en el registro", result.error);
 
         return {
           success: false,
@@ -141,7 +189,6 @@ const login = async (email, password) => {
     } catch (err) {
       const errorMessage = "Error al registrarse";
       setError(errorMessage);
-      showError("Error", errorMessage);
 
       return {
         success: false,
@@ -170,8 +217,8 @@ const logout = async () => {
     setPermissions([]);
     setIsAuthenticated(false);
     setError(null);
-
-    showSuccess("Sesión cerrada", "Hasta pronto");
+    setClient(null);
+    setRequiresPasswordSetup(false);
 
     return {
       success: true,
@@ -187,6 +234,8 @@ const logout = async () => {
     setRole(null);
     setPermissions([]);
     setIsAuthenticated(false);
+    setClient(null);
+    setRequiresPasswordSetup(false);
 
     return {
       success: true,
@@ -210,8 +259,9 @@ const logout = async () => {
         setUser(result.user);
         setRole(result.role);
         setPermissions(result.permissions || []);
-
-        showSuccess("Perfil actualizado", "Tus cambios se guardaron correctamente");
+        if (Object.prototype.hasOwnProperty.call(result, "client")) {
+          setClient(result.client);
+        }
 
         return {
           success: true,
@@ -219,7 +269,6 @@ const logout = async () => {
         };
       } else {
         setError(result.error);
-        showError("Error", result.error);
 
         return {
           success: false,
@@ -230,7 +279,6 @@ const logout = async () => {
     } catch (err) {
       const errorMessage = "Error al actualizar perfil";
       setError(errorMessage);
-      showError("Error", errorMessage);
 
       return {
         success: false,
@@ -245,13 +293,27 @@ const logout = async () => {
   // PROVIDER VALUE
   // ═══════════════════════════════════════════════════════════
 
+  const isEmployee = !!role;
+
+  const isClient = !!client;
+
+  const clientType =
+    client?.clientType || "Detal";
+
+
   const value = {
     user,
     role,
     permissions,
+    client,
     loading,
     error,
     isAuthenticated,
+    isEmployee,
+    isClient,
+    clientType,
+    requiresPasswordSetup,
+    setRequiresPasswordSetup,
     login,
     register,
     logout,
@@ -259,7 +321,8 @@ const logout = async () => {
     setUser,
     setRole,
     setPermissions,
-    setIsAuthenticated
+    setIsAuthenticated,
+    setClient
   };
 
   return (

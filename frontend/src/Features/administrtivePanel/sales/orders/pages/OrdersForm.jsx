@@ -19,6 +19,7 @@ import { useAuth } from '../../../../access/context/AuthContext';
 import LeftSectionForm from '../components/LeftSectionForm';
 import RightSectionForm from '../components/RightSectionForm';
 import PaymentsSection from '../components/PaymentsSection';
+import PaymentReceiptsSection from '../components/PaymentReceiptsSection';
 import FormClient from '../../clients/modals/FormClient';
 
 const toNumber = (value, fallback = 0) => {
@@ -149,12 +150,12 @@ function OrdersForm() {
 
   // Pagos existentes (solo en ediciÃ³n)
   const [pagos, setPagos] = useState([]);
+  const [paymentReceipts, setPaymentReceipts] = useState([]);
   const [totalPagado, setTotalPagado] = useState(0);
 
   const total = roundMoney(formData.productos.reduce((sum, p) => sum + toNumber(p.subtotal), 0));
   const iva = roundMoney(formData.productos.reduce((sum, p) => sum + toNumber(p.iva), 0));
   const subtotal = roundMoney(total - iva);
-  const saldoPendiente = Math.max(0, total - totalPagado);
   const selectedClient = clientes.find((cliente) => Number(cliente.id) === Number(formData.clienteId)) ?? null;
   const productosCatalogoConPrecio = productosCatalogo.map((product) => ({
     ...product,
@@ -252,6 +253,7 @@ function OrdersForm() {
             persisted: true,
           })));
           setTotalPagado(await PaymentService.getTotalPagado(order.id));
+          setPaymentReceipts(order.comprobantesPago || []);
 
           const productosNormalizados = (order.productos || []).map(p => {
             const catalogProduct = normalizedProductsList.find(product => product.id === p.id || product.idProduct === p.id);
@@ -822,6 +824,12 @@ function OrdersForm() {
       </div>
 
       {/* SecciÃ³n de pagos */}
+      {isEditMode && paymentReceipts.length > 0 && (
+        <div className="mt-5">
+          <PaymentReceiptsSection receipts={paymentReceipts} />
+        </div>
+      )}
+
       <div className="mt-5">
         <PaymentsSection
           pedidoId={id ? Number(id) : null}

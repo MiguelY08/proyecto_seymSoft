@@ -40,7 +40,7 @@ export const PRODUCT_TEST_IMAGES = [
 export function normalizeProduct(product = {}) {
   const images = normalizeProductImages(product);
 
-  const price = Number(
+  const retailPrice = Number(
     product.retailPrice ??
       product.detailPrice ??
       product.price ??
@@ -52,9 +52,7 @@ export function normalizeProduct(product = {}) {
     product.originalPrice ??
       product.original_price ??
       product.regular_price ??
-      product.retailPrice ??
-      product.detailPrice ??
-      product.price ??
+      retailPrice ??
       0
   );
 
@@ -70,6 +68,8 @@ export function normalizeProduct(product = {}) {
   );
 
   return {
+    ...product,
+
     id: product.id ?? product.id_product ?? product.product_id ?? null,
 
     name: product.name ?? product.product_name ?? 'Producto sin nombre',
@@ -78,13 +78,17 @@ export function normalizeProduct(product = {}) {
 
     brand: getSafeBrand(product),
 
-    price,
+    price: Number(product.price ?? retailPrice),
 
     originalPrice,
 
     stock,
 
+    totalStock: stock,
+
     status,
+
+    isActive: status === 'active',
 
     slug: product.slug ?? null,
 
@@ -94,11 +98,33 @@ export function normalizeProduct(product = {}) {
 
     mainImage: getMainImage(images),
 
+    image: getMainImage(images),
+
+    categories: Array.isArray(product.categories) ? product.categories : [],
+
+    subcategories: Array.isArray(product.subcategories)
+      ? product.subcategories
+      : [],
+
+    mainCategory:
+      product.mainCategory ??
+      (Array.isArray(product.categories) ? product.categories[0] : null) ??
+      null,
+
     /**
      * Campos útiles para futuras implementaciones.
      * No necesariamente se muestran en la card.
      */
     reference: product.reference ?? null,
+    retailPrice,
+    wholesalePrice: Number(product.wholesalePrice ?? retailPrice),
+    partnerPrice:
+      product.partnerPrice == null ? null : Number(product.partnerPrice),
+    bulkPrice: product.bulkPrice == null ? null : Number(product.bulkPrice),
+    retailDiscountPct: Number(product.retailDiscountPct ?? 0),
+    wholesaleDiscountPct: Number(product.wholesaleDiscountPct ?? 0),
+    partnerDiscountPct: Number(product.partnerDiscountPct ?? 0),
+    bulkDiscountPct: Number(product.bulkDiscountPct ?? 0),
     ivaPercentage: Number(product.ivaPercentage ?? product.iva_percentage ?? 0),
     unitMeasure: product.unitMeasure ?? product.unit_measure ?? null,
     barcodes: product.barcodes ?? [],
@@ -275,6 +301,8 @@ export function isProductAvailable(product = {}) {
  */
 export function getSafeCategory(product = {}) {
   return (
+    product.mainCategory?.name ??
+    product.categories?.[0]?.name ??
     product.category?.name ??
     product.category_name ??
     product.category ??
