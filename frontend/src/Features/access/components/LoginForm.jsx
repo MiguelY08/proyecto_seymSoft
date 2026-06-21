@@ -48,8 +48,7 @@ const handleSubmit = async (e) => {
     const result = await login(formData.email, formData.password);
 
     if (result.success) {
-      // ESPERA AQUÍ para que se vea el spinner
-      
+      showSuccess("¡Bienvenido!", "Inicio de sesión exitoso");
       navigate(result.redirectTo);
     } else {
       setErrors({ general: result.error });

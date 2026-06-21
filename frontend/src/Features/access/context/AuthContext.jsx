@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { getSession, clearSession } from "../helpers/authStorage.js";
 import { login as loginService, register as registerService, logout as logoutService, getProfile, updateProfile as updateProfileService } from "../services/authService.js";
-import { useAlert } from "../../shared/alerts/useAlert.js";
 
 const AuthContext = createContext();
 
@@ -14,8 +13,6 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [requiresPasswordSetup, setRequiresPasswordSetup] = useState(false);
-
-  const { showSuccess, showError, showWarning, showInfo } = useAlert();
 
   // ═══════════════════════════════════════════════════════════
   // INICIALIZAR CONTEXTO
@@ -129,15 +126,12 @@ const login = async (email, password) => {
       setClient(result.client || null);
       setRequiresPasswordSetup(result.requiresPasswordSetup || false);
 
-      showSuccess("¡Bienvenido!", `Hola ${result.user.fullName}`);
-
       return {
         success: true,
         redirectTo: result.redirectTo || "/",
       };
     } else {
       setError(result.error);
-      showError("Error de autenticación", result.error);
 
       return {
         success: false,
@@ -148,7 +142,6 @@ const login = async (email, password) => {
   } catch (err) {
     const errorMessage = "Error al iniciar sesión";
     setError(errorMessage);
-    showError("Error", errorMessage);
 
     return {
       success: false,
@@ -180,15 +173,12 @@ const login = async (email, password) => {
         setIsAuthenticated(true);
         setClient(result.client || null);
 
-        showSuccess("¡Bienvenido!", "Cuenta creada exitosamente");
-
         return {
           success: true,
           redirectTo: "/",
         };
       } else {
         setError(result.error);
-        showError("Error en el registro", result.error);
 
         return {
           success: false,
@@ -199,7 +189,6 @@ const login = async (email, password) => {
     } catch (err) {
       const errorMessage = "Error al registrarse";
       setError(errorMessage);
-      showError("Error", errorMessage);
 
       return {
         success: false,
@@ -230,8 +219,6 @@ const logout = async () => {
     setError(null);
     setClient(null);
     setRequiresPasswordSetup(false);
-
-    showSuccess("Sesión cerrada", "Hasta pronto");
 
     return {
       success: true,
@@ -276,15 +263,12 @@ const logout = async () => {
           setClient(result.client);
         }
 
-        showSuccess("Perfil actualizado", "Tus cambios se guardaron correctamente");
-
         return {
           success: true,
           user: result.user,
         };
       } else {
         setError(result.error);
-        showError("Error", result.error);
 
         return {
           success: false,
@@ -295,7 +279,6 @@ const logout = async () => {
     } catch (err) {
       const errorMessage = "Error al actualizar perfil";
       setError(errorMessage);
-      showError("Error", errorMessage);
 
       return {
         success: false,

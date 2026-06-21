@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { resetPassword as resetPasswordService, forgotPassword } from "../services/authService.js";
@@ -7,6 +7,7 @@ import { useAlert } from "../../shared/alerts/useAlert.js";
 
 export default function ResetPasswordForm() {
 
+  const missingEmailHandledRef = useRef(false);
   const navigate = useNavigate();
   const { showSuccess, showError, showWarning, showInfo } = useAlert();
 
@@ -45,6 +46,9 @@ export default function ResetPasswordForm() {
     const email = sessionStorage.getItem('recovery_email');
     
     if (!email) {
+      if (missingEmailHandledRef.current) return;
+      missingEmailHandledRef.current = true;
+
       showWarning("Email no encontrado", "Regresa a recuperar contraseña");
       setTimeout(() => {
         navigate("/forgotpassword");

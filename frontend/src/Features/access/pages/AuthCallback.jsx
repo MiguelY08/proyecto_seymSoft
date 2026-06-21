@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { saveSession } from "../helpers/authStorage.js";
@@ -7,12 +7,16 @@ import { useAlert } from "../../shared/alerts/useAlert.js";
 import Spinner from "../../shared/spinner/Spinner.jsx"; 
 
 const AuthCallback = () => {
+  const callbackProcessedRef = useRef(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { setUser, setRole, setPermissions, setIsAuthenticated,setClient, setRequiresPasswordSetup  } = useAuth();
   const { showSuccess, showError } = useAlert();
 
   useEffect(() => {
+    if (callbackProcessedRef.current) return;
+    callbackProcessedRef.current = true;
+
     const handleCallback = async () => {
       try {
         const accessToken = searchParams.get("accessToken");

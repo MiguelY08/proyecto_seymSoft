@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../../Features/access/context/AuthContext";
+import Spinner from "../../Features/shared/spinner/Spinner.jsx";
 
 export default function PublicRoute() {
 
@@ -14,7 +15,12 @@ export default function PublicRoute() {
   // Esperar inicialización
   if (loading) {
 
-    return null;
+    return (
+      <Spinner
+        message="Iniciando sesión..."
+        className="min-h-screen bg-gray-100"
+      />
+    );
 
   }
 

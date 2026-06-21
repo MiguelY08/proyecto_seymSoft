@@ -116,7 +116,10 @@ export default function GooglePasswordSetupModal() {
 
       const result =
         await changePassword(
-          formData.password
+          {
+            newPassword:
+              formData.password
+          }
         );
 
       if (!result.success) {
