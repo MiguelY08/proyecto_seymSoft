@@ -16,6 +16,7 @@ import {
  * - PUT /auth/profile
  * - POST /auth/forgot-password
  * - POST /auth/reset-password
+ * - PUT /auth/change-password
  */
 
 // ═══════════════════════════════════════════════════════════
@@ -263,7 +264,8 @@ export const getProfile = async()=>{
       user,
       role,
       permissions,
-      client
+      client,
+      requiresPasswordSetup
 
     }=response.data.data;
 
@@ -277,7 +279,9 @@ export const getProfile = async()=>{
 
       permissions,
 
-      client
+      client,
+
+      requiresPasswordSetup
 
     };
 
@@ -635,4 +639,37 @@ export const googleLogin=(
 
   }
 
+};
+
+export const changePassword = async ({
+  currentPassword,
+  newPassword
+}) => {
+  try {
+
+    const response =
+      await apiClient.post(
+        "/auth/change-password",
+        {
+          currentPassword,
+          newPassword
+        }
+      );
+
+    return {
+      success: true,
+      message: response.data.message
+    };
+
+  } catch (error) {
+
+    return {
+      success: false,
+      error:
+        error.response?.data?.message
+        ||
+        "Error al cambiar contraseña"
+    };
+
+  }
 };

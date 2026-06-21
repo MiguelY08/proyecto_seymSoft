@@ -221,7 +221,7 @@ export default function RegisterForm() {
             )}
           </div>
 
-          {/* Términos */}
+          {/* Términos
           <div className="flex items-center gap-2">
             <input
               id="terms"
@@ -234,7 +234,7 @@ export default function RegisterForm() {
             <label htmlFor="terms" className="text-sm text-gray-700 cursor-pointer">
               Aceptar términos y condiciones
             </label>
-          </div>
+          </div> */}
 
           {touched.terms && errors.terms && (
             <p className="text-red-500 text-xs">{errors.terms}</p>

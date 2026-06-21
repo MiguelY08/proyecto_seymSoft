@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { X, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useAlert } from "../../shared/alerts/useAlert.js";
+import { changePassword } from "../services/authService.js";
 
 const ErrorMsg = ({ field, touched, errors }) =>
   touched[field] && errors[field]
@@ -170,7 +171,7 @@ function EditProfileForm({ onClose, isModal = false }) {
     }, 1500);
   };
 
-  const handleSubmit = async () => {
+const handleSubmit = async () => {
 
   const requiredFields = [
     "fullName",
@@ -198,6 +199,7 @@ function EditProfileForm({ onClose, isModal = false }) {
   const newErrors = {};
 
   allFields.forEach((field) => {
+
     const error = validateField(
       field,
       form[field],
@@ -207,6 +209,7 @@ function EditProfileForm({ onClose, isModal = false }) {
     if (error) {
       newErrors[field] = error;
     }
+
   });
 
   if (
@@ -225,88 +228,127 @@ function EditProfileForm({ onClose, isModal = false }) {
 
   try {
 
-    const updateData = {
-      fullName:
-        form.fullName.trim(),
+    const profileChanged =
 
-      email:
-        form.email.trim(),
+      form.fullName.trim() !== (user?.fullName ?? "")
 
-      // mantener string
-      phone:
-        form.phone.trim(),
-    };
+      ||
 
-    // Si hay cambio de contraseña
-    if (
-      form.newPassword.trim()
-    ) {
+      form.email.trim() !== (user?.email ?? "")
 
-      updateData.currentPassword =
-        form.currentPassword.trim();
+      ||
 
-      updateData.newPassword =
-        form.newPassword.trim();
+      form.phone.trim() !== (user?.phone ?? "");
 
-      updateData.confirmPassword =
-        form.confirmPassword.trim();
+    const passwordChanged =
+      form.newPassword.trim() !== "";
+
+    // =====================================
+    // ACTUALIZAR PERFIL
+    // =====================================
+
+    if (profileChanged) {
+
+      const profileResult =
+        await updateProfile({
+
+          fullName:
+            form.fullName.trim(),
+
+          email:
+            form.email.trim(),
+
+          phone:
+            form.phone.trim(),
+
+        });
+
+      if (!profileResult.success) {
+
+        showError(
+          "Error",
+          profileResult.error
+        );
+
+        return;
+      }
     }
 
-    const result =
-      await updateProfile(
-        updateData
-      );
+    // =====================================
+    // CAMBIO DE CONTRASEÑA
+    // =====================================
 
-    if (result.success) {
+    if (passwordChanged) {
 
-      if (
-        form.newPassword.trim()
-      ) {
+      const passwordResult =
+        await changePassword({
 
-        showInfo(
-          "Cambio de contraseña",
-          "Debes iniciar sesión nuevamente"
+          currentPassword:
+            form.currentPassword.trim(),
+
+          newPassword:
+            form.newPassword.trim(),
+
+        });
+
+      if (!passwordResult.success) {
+
+        showError(
+          "Error",
+          passwordResult.error
         );
 
-        setTimeout(
-          async () => {
-
-            await logout();
-
-            navigate(
-              "/login"
-            );
-
-          },
-          2000
-        );
-
-      } else {
-
-        showSuccess(
-          "Perfil actualizado",
-          "Los cambios se guardaron correctamente"
-        );
-
-        setTimeout(
-          () => {
-
-            if (isModal || isAdminContext) {
-              onClose?.();
-            } else {
-              navigate(-1);
-            }
-
-          },
-          1500
-        );
+        return;
       }
 
-    } else {
+      showSuccess(
+        "Contraseña actualizada",
+        "Debes iniciar sesión nuevamente"
+      );
 
-      showError(
-        "Error",
-        result.error
+      setTimeout(
+        async () => {
+
+          await logout();
+
+          navigate("/login");
+
+        },
+        2000
+      );
+
+      return;
+    }
+
+    // =====================================
+    // SOLO PERFIL
+    // =====================================
+
+    if (profileChanged) {
+
+      showSuccess(
+        "Perfil actualizado",
+        "Los cambios se guardaron correctamente"
+      );
+
+      setTimeout(
+        () => {
+
+          if (
+            isModal ||
+            isAdminContext
+          ) {
+
+            onClose?.();
+
+          } else {
+
+            navigate(-1);
+
+          }
+
+        },
+        1500
       );
     }
 
