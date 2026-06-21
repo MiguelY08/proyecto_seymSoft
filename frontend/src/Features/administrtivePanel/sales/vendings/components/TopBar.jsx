@@ -14,24 +14,19 @@ import { useAlert } from '../../../../shared/alerts/useAlert';
 import ButtonComponent from '../../../../shared/ButtonComponent';
 import FormSelect from '../../../../shared/FormSelect';
 import { downloadSalesExcel } from '../helpers/salesHelpers';
-import { SalesServices } from '../services/salesServices';
 
 const SALES_TYPE_EXPORT_CONFIG = {
   all: {
     label: 'Todas',
-    service: (params) => SalesServices.getAll(params),
   },
   direct: {
     label: 'Directas',
-    service: (params) => SalesServices.getDirect(params),
   },
   web: {
     label: 'Web',
-    service: (params) => SalesServices.getWeb(params),
   },
   manual: {
     label: 'Manuales',
-    service: (params) => SalesServices.getManual(params),
   },
 };
 
@@ -41,36 +36,6 @@ const SALES_TYPE_OPTIONS = [
   { value: 'web', label: 'Web', icon: ShoppingCart, iconClassName: 'text-blue-600' },
   { value: 'manual', label: 'Manual', icon: ShoppingCart, iconClassName: 'text-amber-600' },
 ];
-
-const parseSaleDate = (value) => {
-  if (!value) return null;
-  const text = String(value);
-
-  if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10);
-
-  const colombianDate = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (colombianDate) {
-    const [, day, month, year] = colombianDate;
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-  }
-
-  const parsed = new Date(text);
-  if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
-
-  return null;
-};
-
-const filterSalesByDate = (sales, fechaInicial, fechaFinal) => {
-  if (!fechaInicial && !fechaFinal) return sales;
-
-  return sales.filter((sale) => {
-    const saleDate = parseSaleDate(sale.fecha ?? sale.saleDate ?? sale.createdAt);
-    if (!saleDate) return false;
-    if (fechaInicial && saleDate < fechaInicial) return false;
-    if (fechaFinal && saleDate > fechaFinal) return false;
-    return true;
-  });
-};
 
 function TopBar({
   search,
@@ -82,6 +47,7 @@ function TopBar({
   fechaFinal,
   setFechaFinal,
   setCurrentPage,
+  salesToExport = [],
 }) {
   const navigate = useNavigate();
   const { showConfirm, showTimer, showWarning, showError } = useAlert();
@@ -121,24 +87,10 @@ function TopBar({
     navigate('/admin/sales/form-sale', { state: { vendingType } });
   };
 
-  const loadAllSalesForExport = async () => {
-    const config = SALES_TYPE_EXPORT_CONFIG[activeType] ?? SALES_TYPE_EXPORT_CONFIG.all;
-    const firstPage = await config.service({ page: 1, limit: 100 });
-    const sales = [...(firstPage.sales ?? [])];
-    const totalPages = firstPage.pagination?.totalPages ?? 1;
-
-    for (let page = 2; page <= totalPages; page += 1) {
-      const response = await config.service({ page, limit: 100 });
-      sales.push(...(response.sales ?? []));
-    }
-
-    return sales;
-  };
-
   const handleDownload = async () => {
     try {
       setIsExporting(true);
-      const sales = filterSalesByDate(await loadAllSalesForExport(), fechaInicial, fechaFinal);
+      const sales = salesToExport;
       const exportConfig = SALES_TYPE_EXPORT_CONFIG[activeType] ?? SALES_TYPE_EXPORT_CONFIG.all;
 
       if (sales.length === 0) {

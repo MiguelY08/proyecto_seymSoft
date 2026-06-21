@@ -231,6 +231,8 @@ const buildCreateOrderPayload = (data = {}) => {
 
   return {
     idClient: data.clienteId,
+    idEmployee: data.asesorId,
+    idUser: data.usuarioId,
     idOrderStatus: ORDER_STATUS_IDS[data.estadoLogistico] ?? data.estadoLogistico ?? 1,
     deliveryType: isRecoge ? 'Recoge' : 'Domicilio',
     deliveryAddress: isRecoge ? null : data.direccionEntrega,
@@ -253,6 +255,18 @@ const PAYMENT_METHOD_IDS = {
   [METODOS_PAGO.TRANSFERENCIA]: 1,
   [METODOS_PAGO.EFECTIVO]: 2,
   [METODOS_PAGO.CREDITO]: 3,
+  [METODOS_PAGO.DEVOLUCION]: 4,
+};
+
+const resolvePaymentMethodId = (metodoPago) => {
+  const idPaymentMethod = PAYMENT_METHOD_IDS[metodoPago] ?? metodoPago;
+  const parsedId = Number(idPaymentMethod);
+
+  if (!Number.isInteger(parsedId) || parsedId <= 0) {
+    throw new Error(`Metodo de pago no valido: ${metodoPago}`);
+  }
+
+  return parsedId;
 };
 
 const buildUpdateOrderPayload = (data = {}) => {
@@ -398,7 +412,7 @@ export const PaymentService = {
     const paymentNumber = (order?.pagos?.length || 0) + 1;
     const pendingAfter = (order?.saldoPendiente ?? order?.total ?? 0) - amount;
     const response = await apiClient.post(`/orders/${pedidoId}/payments`, {
-      idPaymentMethod: PAYMENT_METHOD_IDS[metodoPago] ?? metodoPago,
+      idPaymentMethod: resolvePaymentMethodId(metodoPago),
       amount,
       reference: comprobante || `P${pedidoId}-${String(paymentNumber).padStart(3, '0')}`,
       observations: observations || `Abono ${paymentNumber} - ${pendingAfter <= 0 ? 'Pago completo' : 'Pago parcial'}`,
@@ -415,36 +429,6 @@ export const PaymentService = {
       monto: -Math.abs(monto),
       comprobante: null,
     });
-  },
-};
-
-export const SalesService = {
-  async list() {
-    const orders = await OrdersService.list();
-    return orders
-      .filter((order) => order.pagoEstado === ESTADOS_PAGO.PAGADO)
-      .map((order) => ({
-        id: order.id,
-        pedidoId: order.id,
-        fechaPago: order.fechaPedido,
-        metodoPago: 'Mixto',
-        comprobantePago: null,
-        montoPagado: order.total,
-      }));
-  },
-
-  async findById(id) {
-    const sales = await this.list();
-    return sales.find((sale) => sale.id === id) ?? null;
-  },
-
-  async findByPedidoId(pedidoId) {
-    const sales = await this.list();
-    return sales.find((sale) => sale.pedidoId === pedidoId) ?? null;
-  },
-
-  async createFromPedido(pedidoId) {
-    return this.findByPedidoId(pedidoId);
   },
 };
 

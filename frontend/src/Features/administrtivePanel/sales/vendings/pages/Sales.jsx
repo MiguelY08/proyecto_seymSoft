@@ -1,5 +1,5 @@
 // src/features/administrtivePanel/sales/pages/Sales.jsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 
 import TopBar          from '../components/TopBar';
@@ -7,43 +7,44 @@ import SalesMetricsCards from '../components/SalesMetricsCards';
 import SalesTable      from '../components/SalesTable';
 import PaginationAdmin from '../../../../shared/PaginationAdmin';
 import { SalesServices } from '../services/salesServices'; // ✅ importación corregida
-import Spinner from '../../../../shared/spinner';
 import { filterSales } from '../helpers/salesHelpers';
-
+import Spinner from '../../../../shared/spinner';
 const RECORDS_PER_PAGE = 13;
+const SALES_FETCH_LIMIT = 100;
 
-const parseSaleDate = (value) => {
-  if (!value) return null;
-  const text = String(value);
+const getSalesServiceByType = (type) => {
+  const servicesByType = {
+    all: (params) => SalesServices.getAll(params),
+    manual: (params) => SalesServices.getManual(params),
+    direct: (params) => SalesServices.getDirect(params),
+    web: (params) => SalesServices.getWeb(params),
+  };
 
-  if (/^\d{4}-\d{2}-\d{2}/.test(text)) {
-    return text.slice(0, 10);
+  return servicesByType[type] ?? servicesByType.all;
+};
+
+const getSaleDateValue = (sale = {}) => {
+  const rawDate =
+    sale.saleDate ??
+    sale.fechaPago ??
+    sale.createdAt ??
+    sale.creationDate ??
+    sale.date ??
+    '';
+
+  if (rawDate) {
+    const parsedDate = new Date(rawDate);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      return parsedDate.toISOString().split('T')[0];
+    }
   }
 
-  const colombianDate = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (colombianDate) {
-    const [, day, month, year] = colombianDate;
+  const [day, month, year] = String(sale.fecha ?? '').split('/');
+  if (day && month && year) {
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
 
-  const parsed = new Date(text);
-  if (!Number.isNaN(parsed.getTime())) {
-    return parsed.toISOString().slice(0, 10);
-  }
-
   return null;
-};
-
-const filterSalesByDate = (sales, fechaInicial, fechaFinal) => {
-  if (!fechaInicial && !fechaFinal) return sales;
-
-  return sales.filter((sale) => {
-    const saleDate = parseSaleDate(sale.fecha ?? sale.saleDate ?? sale.createdAt);
-    if (!saleDate) return false;
-    if (fechaInicial && saleDate < fechaInicial) return false;
-    if (fechaFinal && saleDate > fechaFinal) return false;
-    return true;
-  });
 };
 
 /**
@@ -56,21 +57,13 @@ const filterSalesByDate = (sales, fechaInicial, fechaFinal) => {
  */
 function Sales() {
   const location                     = useLocation();
-  const [data,        setData]        = useState([]);
+  const [sales,       setSales]       = useState([]);
   const [search,      setSearch]      = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [activeType,  setActiveType]  = useState('all');
   const [fechaInicial, setFechaInicial] = useState('');
   const [fechaFinal, setFechaFinal] = useState('');
   const [loading,     setLoading]     = useState(false);
-  const [salesPagination, setSalesPagination] = useState({
-    page: 1,
-    limit: RECORDS_PER_PAGE,
-    total: 0,
-    totalPages: 0,
-    hasNextPage: false,
-    hasPrevPage: false,
-  });
   const [metrics,     setMetrics]     = useState({
     totalSales: 0,
     byType: [],
@@ -90,58 +83,23 @@ function Sales() {
     }
   }, []);
 
-  const fetchSales = useCallback(async (page = 1) => {
+  const fetchSales = useCallback(async () => {
     setLoading(true);
     try {
-      if (activeType === 'all') {
-        const result = await SalesServices.getAll({
-          page,
-          limit: RECORDS_PER_PAGE,
-        });
-        setData(result.sales);
-        setSalesPagination(result.pagination);
-        return;
+      const service = getSalesServiceByType(activeType);
+      const firstPage = await service({ page: 1, limit: SALES_FETCH_LIMIT });
+      const allSales = [...(firstPage.sales ?? [])];
+      const totalPages = firstPage.pagination?.totalPages ?? 1;
+
+      for (let page = 2; page <= totalPages; page += 1) {
+        const response = await service({ page, limit: SALES_FETCH_LIMIT });
+        allSales.push(...(response.sales ?? []));
       }
 
-      if (activeType === 'manual') {
-        const result = await SalesServices.getManual({
-          page,
-          limit: RECORDS_PER_PAGE,
-        });
-        setData(result.sales);
-        setSalesPagination(result.pagination);
-        return;
-      }
-
-      if (activeType === 'direct') {
-        const result = await SalesServices.getDirect({
-          page,
-          limit: RECORDS_PER_PAGE,
-        });
-        setData(result.sales);
-        setSalesPagination(result.pagination);
-        return;
-      }
-
-      if (activeType === 'web') {
-        const result = await SalesServices.getWeb({
-          page,
-          limit: RECORDS_PER_PAGE,
-        });
-        setData(result.sales);
-        setSalesPagination(result.pagination);
-      }
+      setSales(allSales);
     } catch (error) {
       console.error('Error fetching sales:', error);
-      setData([]);
-      setSalesPagination({
-        page: 1,
-        limit: RECORDS_PER_PAGE,
-        total: 0,
-        totalPages: 0,
-        hasNextPage: false,
-        hasPrevPage: false,
-      });
+      setSales([]);
     } finally {
       setLoading(false);
     }
@@ -149,8 +107,8 @@ function Sales() {
 
   // Recargar datos al volver del formulario, cambiar ruta o cambiar seccion
   useEffect(() => {
-    fetchSales(currentPage);
-  }, [fetchSales, currentPage, location.pathname]);
+    fetchSales();
+  }, [fetchSales, location.pathname]);
 
   useEffect(() => {
     fetchMetrics();
@@ -175,15 +133,27 @@ function Sales() {
     setCurrentPage(1);
   };
 
-  // Filtrar datos según la búsqueda
-  const filteredBySearch = filterSales(data, search);
-  const filtered = filterSalesByDate(filteredBySearch, fechaInicial, fechaFinal);
+  const filteredSales = useMemo(() => {
+    const salesBySearch = filterSales(sales, search);
 
-  const paginatedData = filtered;
-  const hasLocalFilters = Boolean(search.trim() || fechaInicial || fechaFinal);
-  const totalRecords = hasLocalFilters ? filtered.length : (salesPagination.total || filtered.length);
+    return salesBySearch.filter((sale) => {
+      if (!fechaInicial && !fechaFinal) return true;
 
-  if (loading && data.length === 0) {
+      const saleDate = getSaleDateValue(sale);
+      if (!saleDate) return false;
+      if (fechaInicial && saleDate < fechaInicial) return false;
+      if (fechaFinal && saleDate > fechaFinal) return false;
+
+      return true;
+    });
+  }, [sales, search, fechaInicial, fechaFinal]);
+
+  const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
+  const endIndex = startIndex + RECORDS_PER_PAGE;
+  const visibleSales = filteredSales.slice(startIndex, endIndex);
+  const totalRecords = filteredSales.length;
+
+  if (loading && sales.length === 0) {
     return (
       <Spinner message="Cargando ventas..." />
     );
@@ -203,6 +173,7 @@ function Sales() {
         fechaFinal={fechaFinal}
         setFechaFinal={setFechaFinal}
         setCurrentPage={setCurrentPage}
+        salesToExport={filteredSales}
       />
 
       <SalesMetricsCards metrics={metrics} />
@@ -210,7 +181,7 @@ function Sales() {
       {/* Tabla de ventas */}
       <div className="bg-white rounded-xl shadow-md">
         <SalesTable
-          data={paginatedData}
+          data={visibleSales}
           search={search}
           totalData={totalRecords}
         />

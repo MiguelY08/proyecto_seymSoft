@@ -9,6 +9,11 @@ import {
 } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import { highlight } from "../helpers/salesHelpers";
+import {
+  ESTADO_LOGISTICO_LABELS,
+  getEstadoLogisticoBadgeClasses,
+  getEstadoLogisticoColor,
+} from "../../orders/helpers/ordersHelpers";
 import Spinner from "../../../../shared/spinner";
 
 const estadoVariants = {
@@ -41,53 +46,30 @@ const normalizeStatusText = (value = "") =>
     .toLowerCase()
     .trim();
 
-const pedidoStatusVariants = {
-  "en proceso": {
-    dot: "bg-orange-500",
-    text: "text-orange-700",
-    pulse: true,
-  },
-  listo: {
-    dot: "bg-green-500",
-    text: "text-green-700",
-    pulse: true,
-  },
-  entregado: {
-    dot: "bg-blue-500",
-    text: "text-blue-700",
-    pulse: false,
-  },
-  cancelado: {
-    dot: "bg-red-500",
-    text: "text-red-700",
-    pulse: false,
-  },
-};
+const PULSING_ORDER_STATUSES = new Set(["en proceso", "listo"]);
 
 function EstadoPedidoIndicator({ estado, term }) {
   const label = estado || "-";
   const normalized = normalizeStatusText(label);
-  const variant =
-    pedidoStatusVariants[normalized] ?? {
-      dot: "bg-gray-400",
-      text: "text-gray-600",
-      pulse: false,
-    };
-  const content = term?.trim() ? highlight(label, term) : label;
+  const shouldPulse = PULSING_ORDER_STATUSES.has(normalized);
+  const displayLabel = ESTADO_LOGISTICO_LABELS[normalized] || label;
+  const content = term?.trim() ? highlight(displayLabel, term) : displayLabel;
+  const classes = getEstadoLogisticoBadgeClasses(normalized);
+  const dotClass = getEstadoLogisticoColor(normalized);
 
   return (
     <span
-      className={`inline-flex items-center justify-center gap-1.5 text-xs font-semibold whitespace-nowrap ${variant.text}`}
-      title={`Pedido: ${label}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${classes}`}
+      title={`Pedido: ${displayLabel}`}
     >
-      <span className="relative inline-flex h-2.5 w-2.5 shrink-0">
-        {variant.pulse && (
+      <span className="relative inline-flex h-1.5 w-1.5 shrink-0">
+        {shouldPulse && (
           <span
-            className={`absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping ${variant.dot}`}
+            className={`absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping ${dotClass}`}
           />
         )}
         <span
-          className={`relative inline-flex h-2.5 w-2.5 rounded-full ${variant.dot}`}
+          className={`relative inline-flex h-1.5 w-1.5 rounded-full ${dotClass}`}
         />
       </span>
       {content}

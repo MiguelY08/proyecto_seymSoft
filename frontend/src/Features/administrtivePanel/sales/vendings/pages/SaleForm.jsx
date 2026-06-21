@@ -202,6 +202,7 @@ function SaleForm() {
   const saleToEdit = location.state?.sale ?? null;
   const isEditing = saleToEdit !== null;
   const vendingType = location.state?.vendingType ?? 'direct';
+  const isDirectSale = vendingType === 'direct';
   const vendingTypeLabel =
     vendingType === 'manual' ? 'Manual' :
     vendingType === 'web' ? 'Web' :
@@ -234,7 +235,7 @@ function SaleForm() {
     tipoEntrega: 'recoge',
     direccionEntrega: '',
     productos: [],
-    estadoLogistico: ESTADOS_LOGISTICOS.EN_PROCESO, // permitir que el usuario decida
+    estadoLogistico: isDirectSale ? ESTADOS_LOGISTICOS.ENTREGADO : ESTADOS_LOGISTICOS.EN_PROCESO,
     origen: ORIGENES.MANUAL,
     motivoCancelacion: '',
   });
@@ -309,6 +310,11 @@ function SaleForm() {
     }));
   }, [formData.clienteId, productosCatalogo, clientes]);
 
+  useEffect(() => {
+    if (!isDirectSale || formData.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO) return;
+    setFormData(prev => ({ ...prev, estadoLogistico: ESTADOS_LOGISTICOS.ENTREGADO }));
+  }, [isDirectSale, formData.estadoLogistico]);
+
   // ─── Manejadores para LeftSectionForm ─────────────────────────────────────
   const handleClienteChange = (e) => {
     const rawValue = e.target.value;
@@ -377,6 +383,7 @@ function SaleForm() {
   };
 
   const handleEstadoLogisticoChange = (e) => {
+    if (isDirectSale) return;
     const newEstado = e.target.value;
     setFormData(prev => ({ ...prev, estadoLogistico: newEstado }));
     if (errors.estadoLogistico) setErrors(prev => ({ ...prev, estadoLogistico: null }));
@@ -698,6 +705,7 @@ function SaleForm() {
           user={user}
           loading={loading}
           isEditMode={false}
+          estadoLogisticoOriginal={isDirectSale ? ESTADOS_LOGISTICOS.ENTREGADO : null}
           onClienteChange={handleClienteChange}
           onTipoEntregaChange={handleTipoEntregaChange}
           onDireccionManualChange={handleDireccionManualChange}

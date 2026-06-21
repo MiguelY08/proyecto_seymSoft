@@ -49,6 +49,7 @@ function RightSectionForm({
     return productosCatalogo.filter(prod => {
       if (String(prod.nombre || '').toLowerCase().includes(term)) return true;
       if (prod.proveedor && prod.proveedor.toLowerCase().includes(term)) return true;
+      if (String(prod.reference || prod.referencia || '').toLowerCase().includes(term)) return true;
       if (productMatchesBarcodeSearch(prod, term)) return true;
       if (prod.categorias && Array.isArray(prod.categorias)) {
         if (prod.categorias.some(cat => cat.toLowerCase().includes(term))) return true;
@@ -85,7 +86,7 @@ function RightSectionForm({
     maxLength: 20,
     scannerFields: [scannerField],
     duplicateDelayMs: 800,
-    preventDefault: true,
+    preventDefault: false,
     onScan: ({ code, scannerField: activeScannerField }) => {
       if (activeScannerField !== scannerField) return;
 
@@ -156,6 +157,7 @@ function RightSectionForm({
               onChange={(e) => {
                 setSearchTerm(e.target.value);
                 setIsDropdownOpen(true);
+                setScannerMessage(null);
               }}
               onFocus={handleInputFocus}
               disabled={isDisabled}
