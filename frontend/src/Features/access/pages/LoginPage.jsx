@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import LoginBanner from "../components/LoginBanner";
@@ -13,6 +13,7 @@ import { useAlert } from "../../shared/alerts/useAlert";
 
 export default function LoginPage() {
 
+  const handledErrorRef = useRef(null);
   const [searchParams] = useSearchParams();
 
   const { showError } = useAlert();
@@ -21,6 +22,12 @@ export default function LoginPage() {
 
     const error =
       searchParams.get("error");
+
+    if (!error || handledErrorRef.current === error) {
+      return;
+    }
+
+    handledErrorRef.current = error;
 
     if (
       error === "account_inactive"

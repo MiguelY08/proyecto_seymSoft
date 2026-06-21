@@ -67,7 +67,7 @@ export default function RegisterForm() {
       });
 
       if (result.success) {
-        // showSuccess ya se mostró en AuthContext
+        showSuccess("¡Bienvenido!", "Cuenta creada exitosamente");
         navigate(result.redirectTo);
       } else {
         setErrors({ general: result.error });
