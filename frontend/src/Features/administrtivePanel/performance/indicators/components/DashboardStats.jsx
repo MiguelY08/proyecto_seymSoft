@@ -1,4 +1,5 @@
 import { ShoppingCart, Users, Package } from "lucide-react";
+import { createElement } from "react";
 import useBreakpoint from "../hooks/useBreakpoint";
 
 const StatCard = ({
@@ -44,11 +45,11 @@ const StatCard = ({
           flexShrink: 0,
         }}
       >
-        <Icon
-          size={18}
-          color={iconColor}
-          strokeWidth={1.8}
-        />
+        {createElement(Icon, {
+          size: 18,
+          color: iconColor,
+          strokeWidth: 1.8,
+        })}
       </div>
 
       <span
@@ -110,6 +111,7 @@ const StatCard = ({
 function DashboardStats({
   monthlySales,
   stock,
+  activeClients = 0,
 }) {
   const { isMobile } = useBreakpoint();
 
@@ -140,14 +142,13 @@ function DashboardStats({
       trendUp: growth >= 0,
     },
 
-    // TEMPORAL
     {
       icon: Users,
-      value: "324",
+      value: activeClients.toLocaleString("es-CO"),
       label: "Clientes activos",
       iconColor: "#059669",
       iconBg: "rgba(5,150,105,0.1)",
-      trend: "+3.1%",
+      trend: null,
       trendUp: true,
     },
 

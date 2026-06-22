@@ -3,6 +3,7 @@ import MonthlySalesReturnsChart from "../components/MonthlySalesReturnsChart";
 import SalesPurchasesChart from "../components/SalesPurchasesChart";
 import CategoryDemandChart from "../components/CategoryDemandChart";
 import TopProductsChart from "../components/TopProductsChart";
+import TopClientsChart from "../components/TopClientsChart";
 
 import useBreakpoint from "../hooks/useBreakpoint";
 import useIndicators from "../hooks/useIndicators";
@@ -73,9 +74,12 @@ function IndicatorsPage() {
         stock={
           indicators?.stock
         }
+        activeClients={
+          indicators?.activeClients
+        }
       />
 
-      {/* Fila 2 – Datos temporales del compañero */}
+      {/* Fila 2 – Comparativos mensuales */}
       <div
         style={{
           display: "grid",
@@ -83,8 +87,12 @@ function IndicatorsPage() {
           gap: "12px",
         }}
       >
-        <SalesPurchasesChart />
-        <MonthlySalesReturnsChart />
+        <SalesPurchasesChart
+          data={indicators?.commercialTrends}
+        />
+        <MonthlySalesReturnsChart
+          data={indicators?.commercialTrends}
+        />
       </div>
 
       {/* Fila 3 */}
@@ -107,8 +115,14 @@ function IndicatorsPage() {
         />
 
         {/* Temporal hasta que el compañero conecte backend */}
-        <CategoryDemandChart />
+        <CategoryDemandChart
+          data={indicators?.categoryDemand}
+        />
       </div>
+
+      <TopClientsChart
+        clients={indicators?.topClients}
+      />
     </div>
   );
 }

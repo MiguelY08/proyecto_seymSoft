@@ -132,6 +132,10 @@ export const validateProviderForm = (formData) => {
 
   if (!formData.tipo?.trim()) {
     errors.tipo = 'Seleccione el tipo de documento';
+  } else if (formData.tipoPersona === 'juridica' && formData.tipo !== 'NIT') {
+    errors.tipo = 'Una persona jurídica debe usar NIT';
+  } else if (formData.tipoPersona === 'natural' && formData.tipo === 'NIT') {
+    errors.tipo = 'Una persona natural no puede usar NIT';
   }
 
   if (!formData.numero?.trim()) {
@@ -140,6 +144,8 @@ export const validateProviderForm = (formData) => {
     errors.numero = 'Solo se permiten números y guiones';
   } else if (formData.numero.length < 6) {
     errors.numero = 'Debe tener al menos 6 caracteres';
+  } else if (formData.numero.length > 20) {
+    errors.numero = 'No puede superar 20 caracteres';
   }
 
   if (!formData.nombres?.trim()) {
@@ -188,6 +194,10 @@ export const validateProviderForm = (formData) => {
   const plazoDevolucionesStr = toStr(formData.plazoDevoluciones);
   if (plazoDevolucionesStr && !isOnlyNumbers(plazoDevolucionesStr)) {
     errors.plazoDevoluciones = 'Solo números permitidos';
+  } else if (plazoDevolucionesStr && Number(plazoDevolucionesStr) <= 0) {
+    errors.plazoDevoluciones = 'El plazo debe ser mayor a 0 días';
+  } else if (plazoDevolucionesStr && Number(plazoDevolucionesStr) > 3650) {
+    errors.plazoDevoluciones = 'El plazo no puede superar 3650 días';
   }
 
   //  VALIDACIÓN CORREGIDA: Usar categoryIds en lugar de categorias
@@ -197,6 +207,16 @@ export const validateProviderForm = (formData) => {
 
   if (!formData.rut?.trim()) {
     errors.rut = 'Indique si tiene RUT';
+  }
+
+  if (formData.rut === 'si') {
+    if (!formData.codigoCIU?.trim()) {
+      errors.codigoCIU = 'El código CIU es obligatorio cuando tiene RUT';
+    } else if (formData.codigoCIU.trim().length < 3) {
+      errors.codigoCIU = 'Debe tener al menos 3 caracteres';
+    } else if (formData.codigoCIU.length > 30) {
+      errors.codigoCIU = 'No puede superar 30 caracteres';
+    }
   }
 
   if (formData.nombreContacto?.trim() && formData.nombreContacto.trim().length < 2) {

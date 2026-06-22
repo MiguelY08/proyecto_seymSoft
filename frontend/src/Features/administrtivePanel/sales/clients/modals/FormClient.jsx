@@ -381,23 +381,25 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
     setFormData(newFormData);
 
-    if (touched[name]) {
-      if (name === 'clientCredit' || name === 'saldoFavor') {
-        const numericError = validateNumeric10_2(newFormData[name], name === 'clientCredit' ? 'Crédito cliente' : 'Saldo a favor');
-        setErrors(prev => ({ ...prev, [name]: numericError }));
-      } else if (name === 'ciuCode') {
-        const ciuError = validateCiuCode(newFormData.ciuCode, newFormData.rut);
-        setErrors(prev => ({ ...prev, ciuCode: ciuError }));
-      } else {
-        const validationErrors = validateClientForm({ ...formData, [name]: value });
-        setErrors(prev => ({ ...prev, [name]: validationErrors[name] || '' }));
-      }
+    const validationErrors = validateClientForm(newFormData);
+    const fieldsToRefresh = [name];
+    if (name === 'personType') fieldsToRefresh.push('documentType');
+    if (name === 'rut') fieldsToRefresh.push('ciuCode');
+
+    if (fieldsToRefresh.some((field) => touched[field]) || name === 'personType' || name === 'rut') {
+      setErrors((prev) => {
+        const next = { ...prev };
+        fieldsToRefresh.forEach((field) => {
+          next[field] = validationErrors[field] || '';
+        });
+        return next;
+      });
     }
   };
 
   const handleSelectChange = (name, value) => {
-    handleChange({ target: { name, value } });
     setTouched(prev => ({ ...prev, [name]: true }));
+    handleChange({ target: { name, value } });
   };
 
   const handleBlur = (e) => {
@@ -479,6 +481,13 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     }
   };
 
+  const liveValidationErrors = validateClientForm(formData);
+  const hasLiveErrors =
+    Object.keys(liveValidationErrors).length > 0 ||
+    Boolean(validateNumeric10_2(formData.clientCredit, 'Crédito cliente')) ||
+    Boolean(validateNumeric10_2(formData.saldoFavor, 'Saldo a favor')) ||
+    Boolean(validateCiuCode(formData.ciuCode, formData.rut));
+
   if (!isOpen) return null;
 
   const inputClass = (field) =>
@@ -488,22 +497,8 @@ function FormClient({ isOpen, onClose, client, onSave }) {
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
 
-  const selectClass = (field) =>
-    `appearance-none w-full px-3 pr-8 py-2 text-sm border rounded-lg outline-none bg-white text-gray-700 cursor-pointer transition-colors duration-200 ${
-      errors[field] && touched[field]
-        ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-        : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
-    }`;
-
   const disabledInputClass = (field) =>
     `w-full px-3 py-2 text-sm border rounded-lg outline-none bg-gray-100 text-gray-500 cursor-not-allowed ${
-      errors[field] && touched[field]
-        ? 'border-red-500'
-        : 'border-gray-300'
-    }`;
-
-  const disabledSelectClass = (field) =>
-    `appearance-none w-full px-3 pr-8 py-2 text-sm border rounded-lg outline-none bg-gray-100 text-gray-500 cursor-not-allowed ${
       errors[field] && touched[field]
         ? 'border-red-500'
         : 'border-gray-300'
@@ -860,7 +855,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || hasLiveErrors}
                   className="px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}

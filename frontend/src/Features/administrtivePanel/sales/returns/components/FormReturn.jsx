@@ -10,28 +10,22 @@
  * Todos los demás campos están deshabilitados con mensaje informativo.
  */
 
-import React, { useState, useEffect } from 'react';
-import { X, ChevronDown, ChevronLeft, Minus, Plus, Image } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, ChevronDown, ChevronLeft, Minus, Plus, Image, Search, Loader } from 'lucide-react';
 import Evidence from './Evidence';
+import FormSelect from '../../../../shared/FormSelect';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import {
   getProductStatesForMethod,
   getInitialStateForMethod,
-  calculateGeneralStatus,
-  getStatusStyle,
-  isValidStateForMethod
+  calculateGeneralStatus
 } from '../utils/returnsHelpers';
+import { getAvailableInvoices, getReturnableSales } from '../data/returnsService';
 
 // ======================= DATOS DE REFERENCIA =======================
 
-const PRODUCTOS_VENTA = [
-  { id: 1, nombre: 'Libreta con lapicero',    cantidad: 1, precioUnit: 5000, imagen: null },
-  { id: 2, nombre: 'Pincel #10',              cantidad: 6, precioUnit: 1200, imagen: null },
-  { id: 3, nombre: 'Cosedora Xingli XL207 Y', cantidad: 3, precioUnit: 5000, imagen: null },
-  { id: 4, nombre: 'Silicona liquida ET131 X', cantidad: 8, precioUnit: 2900, imagen: null },
-];
+const PRODUCTOS_VENTA = [];
 
-// Motivos de devolución según especificaciones
 const MOTIVOS = [
   'DEFECTUOSO',
   'PRODUCTO_EQUIVOCADO',
@@ -41,14 +35,10 @@ const MOTIVOS = [
   'OTRO'
 ];
 
-// Métodos de devolución según especificaciones
 const METODOS = ['Reemplazo', 'Reembolso', 'Saldo a favor'];
 
-// Estados generales automáticos (no se seleccionan manualmente, se calculan)
-// Se muestran los estados posibles, pero en realidad se calculan basados en productos
 const ESTADOS_P = ['En Proceso', 'Procesada', 'Anulado'];
 
-// Mapa de etiquetas legibles para motivos
 const MOTIVOS_LABELS = {
   'DEFECTUOSO': 'Producto defectuoso',
   'PRODUCTO_EQUIVOCADO': 'Producto equivocado',
@@ -58,7 +48,48 @@ const MOTIVOS_LABELS = {
   'OTRO': 'Otro'
 };
 
+const MOTIVO_OPTIONS = MOTIVOS.map((value) => ({
+  value,
+  label: MOTIVOS_LABELS[value],
+}));
+const METODO_OPTIONS = METODOS.map((value) => ({ value, label: value }));
+const ESTADO_GENERAL_OPTIONS = ESTADOS_P.map((value) => ({ value, label: value }));
+
 const formatCOP = (v) => new Intl.NumberFormat('es-CO').format(v);
+
+const getReasonId = (reasonName) => {
+  const reasonMap = {
+    'DEFECTUOSO': 5,
+    'PRODUCTO_EQUIVOCADO': 6,
+    'PRODUCTO_INCOMPLETO': 7,
+    'MAL_ESTADO': 8,
+    'PRODUCTO_USADO': 9,
+    'OTRO': 4
+  };
+  return reasonMap[reasonName] || 4;
+};
+
+const getMethodId = (methodName) => {
+  const methodMap = {
+    'Reemplazo': 1,
+    'Reembolso': 2,
+    'Saldo a favor': 3
+  };
+  return methodMap[methodName] || 1;
+};
+
+const getStatusId = (statusName) => {
+  const statusMap = {
+    'Pend. envio': 1,
+    'Pend. reemplazo': 2,
+    'Pend. reembolso': 3,
+    'Listo': 4,
+    'Anulado': 5,
+    'En Proceso': 6,
+    'Procesada': 7
+  };
+  return statusMap[statusName] || 7;
+};
 
 // ======================= COMPONENTES AUXILIARES =======================
 
@@ -72,33 +103,86 @@ function ProductoImg({ src, size = 'md' }) {
   );
 }
 
-function EstadoBadgeSelect({ value, onChange, metodo }) {
+function EstadoBadgeSelect({ value, onChange, metodo, sharedStyle = true }) {
   const [open, setOpen] = useState(false);
+
+  if (sharedStyle) {
+    const options = metodo
+      ? getProductStatesForMethod(metodo).map((estado) => ({
+          value: estado,
+          label: estado,
+        }))
+      : [];
+
+    return (
+      <FormSelect
+        value={value || ''}
+        options={options}
+        onChange={onChange}
+        disabled={!metodo}
+        placeholder={metodo ? 'Selecciona un estado' : 'Selecciona método primero'}
+        ariaLabel="Estado del producto"
+        className="py-1.5 rounded-xl text-xs"
+      />
+    );
+  }
+
+  if (!metodo) {
+    return (
+      <div className="px-2.5 py-1.5 rounded-lg border text-xs font-semibold bg-gray-100 text-gray-400 border-gray-200">
+        Selecciona método primero
+      </div>
+    );
+  }
   
-  // Obtener estados válidos para el método seleccionado
-  const validStates = metodo ? getProductStatesForMethod(metodo) : [];
+  const validStates = getProductStatesForMethod(metodo);
   
-  // Mapear colores para los nuevos estados
   const colorMap = {
-    'Pend. Envío': 'bg-orange-100 text-orange-600 border-orange-300',
-    'Pend. Reemplazo': 'bg-yellow-100 text-yellow-700 border-yellow-300',
-    'Pend. Reembolso': 'bg-yellow-100 text-yellow-700 border-yellow-300',
-    'Entregado': 'bg-green-100 text-green-700 border-green-300',
+    'Pend. envio': 'bg-orange-100 text-orange-600 border-orange-300',
+    'Pend. reemplazo': 'bg-yellow-100 text-yellow-700 border-yellow-300',
+    'Pend. reembolso': 'bg-yellow-100 text-yellow-700 border-yellow-300',
+    'Listo': 'bg-green-100 text-green-700 border-green-300',
+    'Aprobada': 'bg-green-100 text-green-700 border-green-300',
   };
   
   const color = colorMap[value] ?? 'bg-orange-100 text-orange-600 border-orange-300';
   
   return (
-    <div className="relative">
-      <button type="button" onClick={() => setOpen((p) => !p)}
-        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer ${color}`}>
-        {value}<ChevronDown className="w-3 h-3" />
+    <div className="relative" style={{ position: 'relative', zIndex: 9999 }}>
+      <button 
+        type="button" 
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer transition hover:scale-105 ${color}`}
+      >
+        {value}
+        <ChevronDown className="w-3 h-3" />
       </button>
+      
       {open && (
-        <div className="absolute z-30 mt-1 left-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[140px]">
-          {validStates.map((e) => (
-            <button key={e} type="button" onClick={() => { onChange(e); setOpen(false); }}
-              className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 cursor-pointer">{e}</button>
+        <div 
+          className="absolute bg-white rounded-xl shadow-lg border border-gray-200 py-1 min-w-[140px]"
+          style={{ 
+            position: 'absolute',
+            zIndex: 99999,
+            top: '100%',
+            left: 0,
+            marginTop: '4px',
+            maxHeight: '200px',
+            overflowY: 'auto'
+          }}
+        >
+          {validStates.map((estado) => (
+            <button
+              key={estado}
+              type="button"
+              onClick={() => {
+                onChange(estado);
+                setOpen(false);
+              }}
+              className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-0 transition"
+            >
+              {estado}
+            </button>
           ))}
         </div>
       )}
@@ -113,10 +197,10 @@ function DisabledField({ label, value, required = false }) {
         {label}
         {required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
-      <div className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500">
+      <div className="w-full border border-dashed border-gray-300 rounded-xl px-3 py-2 text-sm bg-gray-50 text-gray-500">
         {value || '—'}
       </div>
-      <p className="text-xs text-gray-400 mt-1">
+      <p className="text-[10px] text-gray-400 mt-1">
         No se puede modificar en edición
       </p>
     </div>
@@ -131,9 +215,9 @@ function DisabledTextarea({ label, value }) {
         value={value || ''}
         disabled
         rows={4}
-        className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-xs bg-gray-50 text-gray-500 resize-none cursor-not-allowed"
+        className="w-full border border-dashed border-gray-300 rounded-xl px-3 py-2 text-xs bg-gray-50 text-gray-500 resize-none cursor-not-allowed"
       />
-      <p className="text-xs text-gray-400 mt-1">
+      <p className="text-[10px] text-gray-400 mt-1">
         No se puede modificar en edición
       </p>
     </div>
@@ -144,11 +228,11 @@ function DisabledEvidence({ count }) {
   return (
     <div>
       <label className="block text-xs font-bold text-gray-600 mb-1">Evidencias</label>
-      <div className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 flex items-center justify-between">
+      <div className="w-full border border-dashed border-gray-300 rounded-xl px-3 py-2 text-sm bg-gray-50 text-gray-500 flex items-center justify-between">
         <span>{count === 0 ? 'Sin evidencias' : `${count} archivo(s) adjunto(s)`}</span>
         <Image className="w-4 h-4 text-gray-400" />
       </div>
-      <p className="text-xs text-gray-400 mt-1">
+      <p className="text-[10px] text-gray-400 mt-1">
         No se puede modificar en edición
       </p>
     </div>
@@ -165,7 +249,7 @@ function DisabledDeliveryToggle({ isDelivery }) {
           {isDelivery && <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-white text-[9px] font-bold">✓</span>}
         </div>
       </div>
-      <p className="text-xs text-gray-400 mt-1">
+      <p className="text-[10px] text-gray-400 mt-1">
         No se puede modificar en edición
       </p>
     </div>
@@ -174,12 +258,12 @@ function DisabledDeliveryToggle({ isDelivery }) {
 
 const generateTempId = () => Date.now() + Math.random();
 
-// ======================= COMPONENTE: PRODUCTO SELECCIONADO (VERSIÓN EDICIÓN) =======================
+// ======================= COMPONENTE: PRODUCTO SELECCIONADO (EDICIÓN) =======================
 
-function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange, submitted }) {
+function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange }) {
   const [expanded, setExpanded] = useState(true);
-  const maxTotalQuantity = producto.cantidad;
-  const totalQuantityUsed = configs.reduce((sum, cfg) => sum + (cfg.cantidad || 0), 0);
+  const maxTotalQuantity = producto?.cantidad || 0;
+  const totalQuantityUsed = configs?.reduce((sum, cfg) => sum + (cfg.cantidad || 0), 0) || 0;
 
   const handleStatusChange = (index, newStatus) => {
     const newConfigs = [...configs];
@@ -187,10 +271,11 @@ function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange, submi
     onConfigChange(newConfigs);
   };
 
+  if (!producto) return null;
+
   return (
-    <div className="border rounded-xl overflow-hidden transition-colors border-gray-200">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2.5 bg-[#f1f1f1]">
+    <div className="border rounded-xl transition-colors border-gray-200 shadow-sm">
+      <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-t-xl">
         <button type="button" onClick={() => setExpanded((p) => !p)}
           className="text-[#004D77] hover:text-[#003d61] transition cursor-pointer flex-shrink-0">
           <ChevronLeft className="w-4 h-4 transition-transform duration-200"
@@ -200,50 +285,39 @@ function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange, submi
           className="accent-[#004D77] w-4 h-4 cursor-not-allowed flex-shrink-0 opacity-50" />
         <ProductoImg src={producto.imagen} size="sm" />
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-gray-800 truncate">{producto.nombre}</p>
+          <p className="text-xs font-semibold text-gray-800 truncate">{producto.nombre}</p>
           <p className="text-[11px] text-gray-500">
             Usados: {totalQuantityUsed} de {maxTotalQuantity} | {configs.length} config(s)
           </p>
         </div>
         <div className="text-right flex-shrink-0">
           <p className="text-[10px] text-gray-400">Total</p>
-          <p className="text-xs font-bold text-gray-700">${formatCOP(maxTotalQuantity * producto.precioUnit)}</p>
+          <p className="text-xs font-bold text-gray-700">${formatCOP(maxTotalQuantity * (producto.precioUnit || 0))}</p>
         </div>
       </div>
 
-      {/* Formulario expandido - SOLO ESTADO EDITABLE */}
       {expanded && (
-        <div className="bg-white px-3 py-3 border-t border-gray-100">
+        <div className="bg-white px-3 py-3 border-t border-gray-100 rounded-b-xl">
           {configs.map((config, index) => (
             <div key={config.id} className={index > 0 ? 'mt-4 pt-4 border-t border-gray-200' : ''}>
               {configs.length > 1 && (
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-semibold text-gray-600">Configuración {index + 1} de {configs.length}</span>
-                  <div className="text-gray-400 text-[10px]">
-                    Bloqueado
-                  </div>
+                  <div className="text-gray-400 text-[10px]">Bloqueado</div>
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                {/* Motivo - solo lectura */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Motivo
-                  </label>
-                  <div className="w-full px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Motivo</label>
+                  <div className="w-full px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-xl bg-gray-50 text-gray-500">
                     {MOTIVOS_LABELS[config.motivo] || config.motivo || '—'}
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    No se puede modificar en edición
-                  </p>
+                  <p className="text-[10px] text-gray-400 mt-1">No se puede modificar en edición</p>
                 </div>
 
-                {/* Estado - EDITABLE (sin candado) */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Estado<span className="text-red-500">*</span>
-                  </label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Estado<span className="text-red-500">*</span></label>
                   <EstadoBadgeSelect 
                     value={config.estado} 
                     onChange={(v) => handleStatusChange(index, v)}
@@ -251,30 +325,35 @@ function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange, submi
                   />
                 </div>
 
-                {/* Método - solo lectura */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Método devolución
-                  </label>
-                  <div className="w-full px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Método devolución</label>
+                  <div className="w-full px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-xl bg-gray-50 text-gray-500">
                     {config.metodo || '—'}
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    No se puede modificar en edición
-                  </p>
+                  <p className="text-[10px] text-gray-400 mt-1">No se puede modificar en edición</p>
+                  {config.metodo === 'Saldo a favor' && (
+                    <div className={`mt-2 rounded-xl border px-3 py-2 text-[11px] font-semibold ${
+                      config.creditApplied
+                        ? 'border-green-300 bg-green-50 text-green-800'
+                        : config.applyCredit
+                          ? 'border-amber-300 bg-amber-50 text-amber-800'
+                          : 'border-gray-200 bg-gray-50 text-gray-500'
+                    }`}>
+                      {config.creditApplied
+                        ? 'Saldo a favor aplicado al cliente'
+                        : config.applyCredit
+                          ? 'Se aplicará cuando el producto llegue a Listo'
+                          : 'No se solicitó aplicar saldo a favor'}
+                    </div>
+                  )}
                 </div>
 
-                {/* Cantidad - solo lectura */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Cantidad
-                  </label>
-                  <div className="w-full px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Cantidad</label>
+                  <div className="w-full px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-xl bg-gray-50 text-gray-500">
                     {config.cantidad || 1}
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    No se puede modificar en edición
-                  </p>
+                  <p className="text-[10px] text-gray-400 mt-1">No se puede modificar en edición</p>
                 </div>
               </div>
             </div>
@@ -285,30 +364,44 @@ function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange, submi
   );
 }
 
-// ======================= COMPONENTE: PRODUCTO SELECCIONADO (VERSIÓN CREACIÓN) =======================
+// ======================= COMPONENTE: PRODUCTO SELECCIONADO (CREACIÓN) =======================
 
 function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, onRemove, submitted }) {
   const [expanded, setExpanded] = useState(true);
   const [touched, setTouched] = useState({});
-  const maxTotalQuantity = producto.cantidad;
+  const maxTotalQuantity = producto?.cantidad || 0;
 
-  const totalQuantityUsed = configs.reduce((sum, cfg) => sum + (cfg.cantidad || 0), 0);
+  const totalQuantityUsed = configs?.reduce((sum, cfg) => sum + (cfg.cantidad || 0), 0) || 0;
   const remainingQuantity = maxTotalQuantity - totalQuantityUsed;
 
-  const validateField = (name, value) => {
+  if (!producto) return null;
+
+  const validateField = (name, value, config = {}) => {
     if (name === 'motivo' && (!value || !value.trim())) return 'Seleccione el motivo de la devolución';
     if (name === 'metodo' && (!value || !value.trim())) return 'Seleccione el método de devolución';
+    if (name === 'descripcionMotivo' && config.motivo === 'OTRO') {
+      if (!value?.trim()) return 'Describe el motivo de la devolución';
+      if (value.trim().length < 10) return 'La descripción debe tener al menos 10 caracteres';
+      if (value.length > 255) return 'La descripción no puede superar 255 caracteres';
+    }
+    if (name === 'cantidad') {
+      const quantity = Number(value);
+      if (!Number.isInteger(quantity) || quantity < 1) return 'La cantidad debe ser un número entero mayor a 0';
+      if (quantity > maxTotalQuantity) return `No puede superar ${maxTotalQuantity} unidades`;
+    }
     return '';
   };
 
   const handleMetodoChange = (index, newMetodo) => {
     const newConfigs = [...configs];
-    // Cambiar el método y resetear el estado al primero disponible para ese método
     const newState = getInitialStateForMethod(newMetodo);
-    newConfigs[index] = { 
-      ...newConfigs[index], 
+    newConfigs[index] = {
+      ...newConfigs[index],
       metodo: newMetodo,
-      estado: newState
+      estado: newState,
+      applyCredit: newMetodo === 'Saldo a favor'
+        ? newConfigs[index].applyCredit === true
+        : false
     };
     onConfigsChange(newConfigs);
   };
@@ -316,7 +409,11 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
   const handleConfigChange = (index, field, value) => {
     const newConfigs = [...configs];
     newConfigs[index] = { ...newConfigs[index], [field]: value };
+    if (field === 'motivo' && value !== 'OTRO') {
+      newConfigs[index].descripcionMotivo = '';
+    }
     onConfigsChange(newConfigs);
+    setTouched((prev) => ({ ...prev, [`${index}-${field}`]: true }));
   };
 
   const handleConfigBlur = (index, field) => {
@@ -329,8 +426,9 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
       id: generateTempId(),
       motivo: '',
       descripcionMotivo: '',
-      estado: 'Pend. Envío',
+      estado: 'Pend. envio',
       metodo: '',
+      applyCredit: false,
       cantidad: 1
     };
     onConfigsChange([...configs, newConfig]);
@@ -345,16 +443,16 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
     onConfigsChange(newConfigs);
   };
 
-  const renderConfigError = (configIndex, field, value) => {
-    if ((touched[`${configIndex}-${field}`] || submitted) && validateField(field, value)) {
-      return <p className="mt-0.5 text-xs text-red-600">{validateField(field, value)}</p>;
+  const renderConfigError = (configIndex, field, value, config) => {
+    if ((touched[`${configIndex}-${field}`] || submitted) && validateField(field, value, config)) {
+      return <p className="mt-0.5 text-xs text-red-600">{validateField(field, value, config)}</p>;
     }
     return null;
   };
 
-  const configFieldClass = (configIndex, field, value) => {
-    const hasError = (touched[`${configIndex}-${field}`] || submitted) && validateField(field, value);
-    return `w-full px-3 py-1.5 text-sm border rounded-lg outline-none bg-white text-gray-700 transition-colors cursor-pointer ${
+  const configFieldClass = (configIndex, field, value, config) => {
+    const hasError = (touched[`${configIndex}-${field}`] || submitted) && validateField(field, value, config);
+    return `w-full px-3 py-1.5 text-sm border rounded-xl outline-none bg-white text-gray-700 transition-colors cursor-pointer ${
       hasError
         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
@@ -362,9 +460,8 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
   };
 
   return (
-    <div className="border rounded-xl overflow-hidden transition-colors border-gray-300">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2.5 bg-[#f1f1f1]">
+    <div className="border rounded-xl transition-colors border-gray-300 shadow-sm">
+      <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-t-xl">
         <button type="button" onClick={() => setExpanded((p) => !p)}
           className="text-[#004D77] hover:text-[#003d61] transition cursor-pointer flex-shrink-0">
           <ChevronLeft className="w-4 h-4 transition-transform duration-200"
@@ -375,131 +472,145 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
           onClick={onRemove} />
         <ProductoImg src={producto.imagen} size="sm" />
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-gray-800 truncate">{producto.nombre}</p>
+          <p className="text-xs font-semibold text-gray-800 truncate">{producto.nombre}</p>
           <p className="text-[11px] text-gray-500">
             Usados: {totalQuantityUsed} de {maxTotalQuantity} | {configs.length} config(s)
           </p>
         </div>
         <div className="text-right flex-shrink-0">
           <p className="text-[10px] text-gray-400">Total</p>
-          <p className="text-xs font-bold text-gray-700">${formatCOP(maxTotalQuantity * producto.precioUnit)}</p>
+          <p className="text-xs font-bold text-gray-700">${formatCOP(maxTotalQuantity * (producto.precioUnit || 0))}</p>
         </div>
       </div>
 
-      {/* Formulario expandido */}
       {expanded && (
-        <div className="bg-white px-3 py-3 border-t border-gray-100">
+        <div className="bg-white px-3 py-3 border-t border-gray-100 rounded-b-xl">
           {configs.map((config, index) => (
             <div key={config.id} className={index > 0 ? 'mt-4 pt-4 border-t border-gray-200' : ''}>
               {configs.length > 1 && (
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-semibold text-gray-600">Configuración {index + 1} de {configs.length}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveConfig(index)}
-                    className="text-gray-400 hover:text-red-500 transition cursor-pointer"
-                    title="Eliminar configuración"
-                  >
+                  <button type="button" onClick={() => handleRemoveConfig(index)}
+                    className="text-gray-400 hover:text-red-500 transition cursor-pointer">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                {/* Motivo */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Motivo<span className="text-red-500">*</span>
-                  </label>
-                  <select 
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Motivo<span className="text-red-500">*</span></label>
+                  <FormSelect
                     value={config.motivo}
-                    onChange={(e) => handleConfigChange(index, 'motivo', e.target.value)}
-                    onBlur={() => handleConfigBlur(index, 'motivo')}
-                    className={configFieldClass(index, 'motivo', config.motivo)}>
-                    <option value="">Selecciona una opción</option>
-                    {MOTIVOS.map((m) => <option key={m} value={m}>{MOTIVOS_LABELS[m]}</option>)}
-                  </select>
-                  {renderConfigError(index, 'motivo', config.motivo)}
+                    options={MOTIVO_OPTIONS}
+                    onChange={(value) => {
+                      handleConfigBlur(index, 'motivo');
+                      handleConfigChange(index, 'motivo', value);
+                    }}
+                    error={Boolean((touched[`${index}-motivo`] || submitted) && validateField('motivo', config.motivo, config))}
+                    placeholder="Selecciona una opción"
+                    ariaLabel="Motivo de devolución"
+                    className="py-1.5 rounded-xl"
+                  />
+                  {renderConfigError(index, 'motivo', config.motivo, config)}
                 </div>
 
-                {/* Método devolución - IMPORTANTE: Cambio automático de estados */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Método devolución<span className="text-red-500">*</span>
-                  </label>
-                  <select 
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Método devolución<span className="text-red-500">*</span></label>
+                  <FormSelect
                     value={config.metodo}
-                    onChange={(e) => handleMetodoChange(index, e.target.value)}
-                    onBlur={() => handleConfigBlur(index, 'metodo')}
-                    className={configFieldClass(index, 'metodo', config.metodo)}>
-                    <option value="">Selecciona una opción</option>
-                    {METODOS.map((m) => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                  {renderConfigError(index, 'metodo', config.metodo)}
+                    options={METODO_OPTIONS}
+                    onChange={(value) => {
+                      handleConfigBlur(index, 'metodo');
+                      handleMetodoChange(index, value);
+                    }}
+                    error={Boolean((touched[`${index}-metodo`] || submitted) && validateField('metodo', config.metodo, config))}
+                    placeholder="Selecciona una opción"
+                    ariaLabel="Método de devolución"
+                    className="py-1.5 rounded-xl"
+                  />
+                  {renderConfigError(index, 'metodo', config.metodo, config)}
+                  {config.metodo === 'Saldo a favor' && (
+                    <label className="mt-2 flex cursor-pointer items-start gap-2 rounded-xl border border-green-200 bg-green-50 p-2.5">
+                      <input
+                        type="checkbox"
+                        checked={config.applyCredit === true}
+                        onChange={(event) => handleConfigChange(index, 'applyCredit', event.target.checked)}
+                        className="mt-0.5 h-4 w-4 accent-green-600"
+                      />
+                      <span>
+                        <span className="block text-xs font-bold text-green-800">
+                          Aplicar saldo a favor al cliente
+                        </span>
+                        <span className="block text-[10px] leading-snug text-green-700">
+                          Se acreditará automáticamente cuando el producto llegue a Listo.
+                        </span>
+                      </span>
+                    </label>
+                  )}
                 </div>
 
-                {/* Estado - Dinámico según el método */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Estado<span className="text-red-500">*</span>
-                  </label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Estado<span className="text-red-500">*</span></label>
                   <EstadoBadgeSelect 
                     value={config.estado} 
                     onChange={(v) => handleConfigChange(index, 'estado', v)}
                     metodo={config.metodo}
                   />
                   {config.metodo && (
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      Estados para {config.metodo}
-                    </p>
+                    <p className="text-[10px] text-gray-400 mt-1">Estados para {config.metodo}</p>
                   )}
                 </div>
 
-                {/* Cantidad */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Cantidad<span className="text-red-500">*</span>
-                  </label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Cantidad<span className="text-red-500">*</span></label>
                   <div className="flex items-center gap-1.5">
                     <button 
                       type="button" 
                       onClick={() => {
-                        const newValue = Math.max(1, config.cantidad - 1);
+                        const currentValue = Math.max(1, Number(config.cantidad) || 1);
+                        const newValue = Math.max(1, currentValue - 1);
                         handleConfigChange(index, 'cantidad', newValue);
                       }}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer transition">
+                      className="w-7 h-7 flex items-center justify-center rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer transition"
+                    >
                       <Minus className="w-3 h-3" />
                     </button>
                     <input 
                       type="number" 
-                      value={config.cantidad} 
+                      value={Math.max(1, Number(config.cantidad) || 1)}
                       min={1} 
-                      max={remainingQuantity + config.cantidad}
+                      max={remainingQuantity + Math.max(1, Number(config.cantidad) || 1)}
                       onChange={(e) => {
+                        const typedValue = e.target.value === '' ? 1 : Number(e.target.value);
+                        const currentValue = Math.max(1, Number(config.cantidad) || 1);
                         const newValue = Math.min(
-                          remainingQuantity + config.cantidad,
-                          Math.max(1, Number(e.target.value))
+                          remainingQuantity + currentValue,
+                          Math.max(1, Number.isFinite(typedValue) ? typedValue : 1)
                         );
                         handleConfigChange(index, 'cantidad', newValue);
                       }}
-                      className="w-10 text-center border border-gray-300 rounded-lg px-1 py-1.5 text-sm text-gray-700 outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20" />
+                      onBlur={() => handleConfigBlur(index, 'cantidad')}
+                      className={configFieldClass(index, 'cantidad', config.cantidad, config).replace('w-full', 'w-14 text-center')} />
                     <button 
                       type="button" 
                       onClick={() => {
-                        const newValue = Math.min(remainingQuantity + config.cantidad, config.cantidad + 1);
+                        const currentValue = Math.max(1, Number(config.cantidad) || 1);
+                        const newValue = Math.min(remainingQuantity + currentValue, currentValue + 1);
                         handleConfigChange(index, 'cantidad', newValue);
                       }}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer transition">
+                      className="w-7 h-7 flex items-center justify-center rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer transition"
+                    >
                       <Plus className="w-3 h-3" />
                     </button>
                   </div>
                   <span className="text-[10px] text-gray-400 mt-1 block">
-                    Max disponible: {remainingQuantity + config.cantidad}
+                    Max disponible: {remainingQuantity + Math.max(1, Number(config.cantidad) || 1)}
                   </span>
+                  {renderConfigError(index, 'cantidad', config.cantidad, config)}
                 </div>
               </div>
 
-              {/* Campo descriptivo - Solo si motivo es OTRO */}
               {config.motivo === 'OTRO' && (
                 <div className="mt-3 col-span-2">
                   <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -508,10 +619,18 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
                   <textarea
                     value={config.descripcionMotivo || ''}
                     onChange={(e) => handleConfigChange(index, 'descripcionMotivo', e.target.value)}
+                    onBlur={() => handleConfigBlur(index, 'descripcionMotivo')}
+                    maxLength={255}
                     placeholder="Explica brevemente el motivo de la devolución"
                     rows={3}
-                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 resize-none"
+                    className={`${configFieldClass(index, 'descripcionMotivo', config.descripcionMotivo || '', config)} resize-none`}
                   />
+                  <div className="mt-1 flex items-start justify-between gap-2">
+                    {renderConfigError(index, 'descripcionMotivo', config.descripcionMotivo || '', config)}
+                    <span className="ml-auto text-[10px] text-gray-400">
+                      {(config.descripcionMotivo || '').length}/255
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
@@ -521,7 +640,7 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
             <button
               type="button"
               onClick={handleAddConfig}
-              className="mt-4 w-full py-2 border border-dashed border-[#004D77] rounded-lg text-[#004D77] text-xs font-semibold hover:bg-[#004D77]/5 transition cursor-pointer"
+              className="mt-4 w-full py-2 border border-dashed border-[#004D77] rounded-xl text-[#004D77] text-xs font-semibold hover:bg-[#004D77]/5 transition cursor-pointer"
             >
               + Agregar otra configuración ({remainingQuantity} unidades restantes)
             </button>
@@ -536,19 +655,36 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
 
 function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
   const isEdit = Boolean(returnData);
+  const { showError, showSuccess } = useAlert();
 
-  const [noFactura,    setNoFactura]    = useState('');
-  const [cliente,      setCliente]      = useState('');
-  const [asesor,       setAsesor]       = useState('');
-  const [estadoGral,   setEstadoGral]   = useState('Pendiente');
-  const [evidencias,   setEvidencias]   = useState([]);
+  // ==================== ESTADOS ====================
+  const [noFactura, setNoFactura] = useState('');
+  const [cliente, setCliente] = useState('');
+  const [idVentaSeleccionada, setIdVentaSeleccionada] = useState(null);
+  const [asesor, setAsesor] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [estadoGral, setEstadoGral] = useState('Pendiente');
+  const [evidencias, setEvidencias] = useState([]);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
-  const [domicilio,    setDomicilio]    = useState(true);
-  const [direccion,    setDireccion]    = useState('');
-  const [descripcion,  setDescripcion]  = useState('');
+  const [evidenceDescription, setEvidenceDescription] = useState('');
+  const [deletedEvidenceIds, setDeletedEvidenceIds] = useState([]);
+  const [domicilio, setDomicilio] = useState(false);
+  const [direccion, setDireccion] = useState('');
+  const [descripcion, setDescripcion] = useState('');
   const [seleccionados, setSeleccionados] = useState({});
-  const [submitted,    setSubmitted]    = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  
+  const [productosDisponibles, setProductosDisponibles] = useState([]);
+  
+  // ==================== ESTADOS PARA BUSCADOR DE FACTURAS ====================
+  const [facturasDisponibles, setFacturasDisponibles] = useState([]);
+  const [searchTermFactura, setSearchTermFactura] = useState('');
+  const [showDropdownFactura, setShowDropdownFactura] = useState(false);
+  const [cargandoFacturas, setCargandoFacturas] = useState(false);
+  const facturaInputRef = useRef(null);
+  const dropdownRef = useRef(null);
 
+  // ==================== VALIDACIÓN ====================
   const [errors, setErrors] = useState({
     noFactura: '',
     cliente: '',
@@ -565,74 +701,181 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     evidencias: false
   });
 
-  const { showError } = useAlert();
+  // ==================== EFECTOS ====================
+useEffect(() => {
+  if (returnData) {
+    setNoFactura(returnData.invoiceNumber ?? returnData.numeroFactura ?? returnData.noFactura ?? '');
+    setCliente(returnData.clientName ?? returnData.cliente ?? '');
+    setIdVentaSeleccionada(returnData.idSale ?? returnData.id_sale ?? returnData.id);
+    setAsesor(returnData.employeeName ?? returnData.asesor ?? '');
+    setTelefono(returnData.clientPhone ?? returnData.telefono ?? '');
+    setEstadoGral(returnData.status ?? returnData.estado ?? 'En Proceso');
+    setDescripcion(returnData.description ?? returnData.descripcion ?? '');
+    setDomicilio(returnData.hasDelivery ?? returnData.domicilio ?? false);
+    setDireccion(returnData.deliveryAddress ?? returnData.direccion ?? '');
+    setEvidencias(returnData.evidences ?? returnData.evidencias ?? []);
+    setEvidenceDescription(returnData.evidenceDescription || '');
 
-  useEffect(() => {
-    if (returnData) {
-      setNoFactura(returnData.numeroFactura ?? returnData.noFactura ?? '');
-      setCliente(returnData.cliente ?? '');
-      setAsesor(returnData.asesor ?? '');
-      // Estado general se guarda como viene de la devolución
-      setEstadoGral(returnData.estado ?? 'En Proceso');
-      setDescripcion(returnData.descripcion ?? '');
-      setDomicilio(returnData.domicilio ?? true);
-      setDireccion(returnData.direccion ?? '');
-      setEvidencias(returnData.evidencias ?? []);
-      
-      const seleccionadosIniciales = {};
-      if (returnData.productosDevueltos) {
-        returnData.productosDevueltos.forEach(p => {
-          if (!seleccionadosIniciales[p.id]) {
-            seleccionadosIniciales[p.id] = [];
-          }
-          seleccionadosIniciales[p.id].push({
-            id: p.configId || generateTempId(),
-            motivo: p.motivo || '',
-            descripcionMotivo: p.descripcionMotivo || '',
-            estado: p.estado || 'Pend. Envío',
-            metodo: p.metodo || '',
-            cantidad: p.cantidad || 1
-          });
+    const productosDisponiblesList = [];
+    const seleccionadosIniciales = {};
+    const returnDetails = returnData.details || returnData.productosDevueltos || [];
+
+    if (returnDetails.length > 0) {
+      returnDetails.forEach(p => {
+        const detailId = p.idSaleReturnDetail || p.id;
+        if (!detailId) return;
+
+        productosDisponiblesList.push({
+          id: detailId,
+          nombre: p.productName || p.nombre,
+          cantidad: p.quantity || p.cantidad || 1,
+          precioUnit: p.unitPrice || p.precioUnit || 0,
+          imagen: p.imageUrl || p.imagen || null,
+          barcode: p.barcode,
+          idBarcode: p.idBarcode
         });
+
+        if (!seleccionadosIniciales[detailId]) {
+          seleccionadosIniciales[detailId] = [];
+        }
+
+        seleccionadosIniciales[detailId].push({
+          id: detailId,
+          motivo: p.reason || p.motivo || '',
+          descripcionMotivo: p.description || p.descripcionMotivo || '',
+          estado: p.status || p.estado || 'Pend. envio',
+          metodo: p.method || p.metodo || '',
+          applyCredit: p.applyCredit === true,
+          creditApplied: p.creditApplied === true,
+          cantidad: p.quantity || p.cantidad || 1
+        });
+      });
+    }
+
+    setProductosDisponibles(productosDisponiblesList);
+    setSeleccionados(seleccionadosIniciales);
+  } else {
+    setNoFactura(''); setCliente(''); setIdVentaSeleccionada(null);
+    setAsesor(''); setTelefono('');
+    setEstadoGral('En Proceso');
+    setEvidencias([]);
+    setEvidenceDescription('');
+    setDeletedEvidenceIds([]);
+    setDomicilio(false);
+    setDireccion('');
+    setDescripcion('');
+    setSeleccionados({});
+    setProductosDisponibles([]);
+    setFacturasDisponibles([]);
+    setSearchTermFactura('');
+    setShowDropdownFactura(false);
+  }
+  setSubmitted(false);
+  setErrors({
+    noFactura: '',
+    cliente: '',
+    asesor: '',
+    direccion: '',
+    evidencias: '',
+    productos: ''
+  });
+  setTouched({
+    noFactura: false,
+    cliente: false,
+    asesor: false,
+    direccion: false,
+    evidencias: false
+  });
+}, [returnData, isOpen]);
+
+  // ==================== CARGAR FACTURAS ====================
+  const cargarFacturas = async (search = '') => {
+    try {
+      setCargandoFacturas(true);
+      const facturas = await getAvailableInvoices(search);
+      setFacturasDisponibles(facturas || []);
+      setShowDropdownFactura(facturas && facturas.length > 0);
+    } catch (error) {
+      console.error('Error cargando facturas:', error);
+      setFacturasDisponibles([]);
+      setShowDropdownFactura(false);
+    } finally {
+      setCargandoFacturas(false);
+    }
+  };
+
+  // ==================== SELECCIONAR FACTURA ====================
+  const seleccionarFactura = async (factura) => {
+    if (!factura) return;
+
+    setProductosDisponibles([]);
+    setSeleccionados({});
+
+    setNoFactura(factura.invoiceNumber);
+    setCliente(factura.clientName);
+    setIdVentaSeleccionada(factura.idSale);
+    setAsesor(factura.employeeName || '');
+    setTelefono(factura.clientPhone || '');
+    setSearchTermFactura(`${factura.invoiceNumber} - ${factura.clientName}`);
+    setShowDropdownFactura(false);
+
+    try {
+      const saleDetails = await getReturnableSales(factura.clientId);
+      const sale = saleDetails.find(s => String(s.invoiceNumber) === String(factura.invoiceNumber));
+      
+      if (sale && sale.details && sale.details.length > 0) {
+        const productos = sale.details.map(detail => ({
+          id: detail.idProduct,
+          nombre: detail.productName,
+          cantidad: detail.quantity,
+          precioUnit: detail.unitPrice || 0,
+          imagen: detail.imageUrl || null,
+          barcode: detail.barcode,
+          idBarcode: detail.idBarcode
+        }));
+        
+        setProductosDisponibles(productos);
+        setSeleccionados({});
+        
+        if (productos.length === 0) {
+          showError('Sin productos', 'Esta factura no tiene productos disponibles');
+        }
+      } else {
+        setProductosDisponibles([]);
+        setSeleccionados({});
       }
-      setSeleccionados(seleccionadosIniciales);
-    } else {
-      setNoFactura(''); setCliente(''); setAsesor('');
-      setEstadoGral('En Proceso'); // Estado inicial automático para nuevas devoluciones
-      setEvidencias([]);
-      setDomicilio(true); setDireccion('');
-      setDescripcion(''); setSeleccionados({});
-    }
-    setSubmitted(false);
-    setErrors({
-      noFactura: '',
-      cliente: '',
-      asesor: '',
-      direccion: '',
-      evidencias: '',
-      productos: ''
-    });
-    setTouched({
-      noFactura: false,
-      cliente: false,
-      asesor: false,
-      direccion: false,
-      evidencias: false
-    });
-  }, [returnData, isOpen]);
 
+      showSuccess('Factura cargada', `Factura #${factura.invoiceNumber} cargada correctamente`);
+    } catch (error) {
+      console.error('Error cargando productos:', error);
+      setProductosDisponibles([]);
+      setSeleccionados({});
+    }
+  };
+  // ==================== FILTRAR FACTURAS ====================
+  const facturasFiltradas = facturasDisponibles.filter(factura => {
+    const term = searchTermFactura.toLowerCase();
+    return String(factura.invoiceNumber).includes(term) ||
+           factura.clientName?.toLowerCase().includes(term);
+  });
+
+  // ==================== EFECTO PARA CERRAR DROPDOWN ====================
   useEffect(() => {
-    if (!domicilio) {
-      setErrors(prev => ({ ...prev, direccion: '' }));
-      setTouched(prev => ({ ...prev, direccion: false }));
-    }
-  }, [domicilio]);
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
+          facturaInputRef.current && !facturaInputRef.current.contains(event.target)) {
+        setShowDropdownFactura(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  // Auto-calcular estado general cuando cambian los estados de productos
+  // ==================== AUTO-CALCULAR ESTADO GENERAL ====================
   useEffect(() => {
     const productosDevueltosData = Object.entries(seleccionados)
       .flatMap(([id, configs]) => {
-        const producto = PRODUCTOS_VENTA.find(p => p.id === Number(id));
+        const producto = productosDisponibles.find(p => p.id === Number(id));
         if (!producto || !configs) return [];
 
         return configs.map((config) => ({
@@ -650,80 +893,88 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     if (productosDevueltosData.length > 0) {
       const estadoCalculado = calculateGeneralStatus(productosDevueltosData, false);
       setEstadoGral(estadoCalculado);
+    } else {
+      setEstadoGral('En Proceso');
     }
-  }, [seleccionados]);
+  }, [seleccionados, productosDisponibles]);
 
+  // ==================== VALIDACIONES ====================
   const validateField = (name, value) => {
     if (isEdit) return '';
     
     switch (name) {
       case 'noFactura':
-        if (!value || !value.trim()) return 'El número de factura es obligatorio';
+        if (!value || !value.trim()) return 'Debe seleccionar una factura';
         return '';
       case 'cliente':
         if (!value || !value.trim()) return 'El nombre del cliente es obligatorio';
-        if (value.trim().length < 2) return 'Debe tener al menos 2 caracteres';
         return '';
       case 'asesor':
         if (!value || !value.trim()) return 'El nombre del asesor es obligatorio';
-        if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value)) return 'Solo se permiten letras';
         return '';
       case 'direccion':
         if (domicilio) {
           if (!value || !value.trim()) return 'La dirección es obligatoria';
-          if (value.trim().length < 5) return 'Debe tener al menos 5 caracteres';
         }
         return '';
       case 'evidencias':
-        // Las evidencias solo son obligatorias si domicilio es true
         if (domicilio) {
-          if (!value || value.length === 0) return 'Debe adjuntar al menos una evidencia cuando requiere domicilio';
+          if (!value || value.length === 0) return 'Debe adjuntar al menos una evidencia';
         }
+        return '';
+      case 'descripcion':
+        if (value && value.length > 500) return 'La descripción no puede superar 500 caracteres';
         return '';
       default:
         return '';
     }
   };
 
-  const validateProductos = () => {
+  const validateProductos = (selectedProducts = seleccionados) => {
     if (isEdit) return '';
     
-    const productosConConfigs = Object.entries(seleccionados)
-      .filter(([_, configs]) => configs && configs.length > 0)
-      .map(([id, configs]) => ({ id: Number(id), configs }));
+    const productosConConfigs = Object.entries(selectedProducts)
+      .filter(([, configs]) => configs && configs.length > 0);
 
     if (productosConConfigs.length === 0) {
-      return 'Debe seleccionar al menos un producto';
+      return 'Seleccione al menos un producto';
     }
     
-    for (const { id, configs } of productosConConfigs) {
-      const producto = PRODUCTOS_VENTA.find(p => p.id === id);
-      
+    for (const [productId, configs] of productosConConfigs) {
+      const product = productosDisponibles.find((item) => item.id === Number(productId));
+      const configuredQuantity = configs.reduce(
+        (total, config) => total + Number(config.cantidad || 0),
+        0
+      );
+
+      if (product && configuredQuantity > Number(product.cantidad || 0)) {
+        return `La cantidad configurada de ${product.nombre} supera la cantidad vendida`;
+      }
+
       for (const config of configs) {
-        if (!config.motivo) {
-          return `Falta motivo en una configuración de ${producto.nombre}`;
+        if (!config.motivo) return 'Falta motivo en una configuración';
+        if (!config.metodo) return 'Falta método en una configuración';
+        if (!Number.isInteger(Number(config.cantidad)) || Number(config.cantidad) < 1) {
+          return 'Todas las cantidades deben ser enteros mayores a 0';
         }
-        if (!config.metodo) {
-          return `Falta método en una configuración de ${producto.nombre}`;
+        if (config.motivo === 'OTRO' && (config.descripcionMotivo || '').trim().length < 10) {
+          return 'La descripción del motivo Otro debe tener al menos 10 caracteres';
         }
       }
     }
-    
     return '';
   };
 
+  // ==================== HANDLERS ====================
   const handleFieldChange = (field, value) => {
     if (isEdit) return;
-    
     switch (field) {
-      case 'noFactura': setNoFactura(value); break;
       case 'cliente': setCliente(value); break;
       case 'asesor': setAsesor(value); break;
       case 'direccion': setDireccion(value); break;
       case 'descripcion': setDescripcion(value); break;
       default: break;
     }
-    
     if (touched[field]) {
       const err = validateField(field, value);
       setErrors(prev => ({ ...prev, [field]: err }));
@@ -732,30 +983,17 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
 
   const handleBlur = (field) => {
     if (isEdit) return;
-    
     setTouched(prev => ({ ...prev, [field]: true }));
-    
     let value;
     switch (field) {
-      case 'noFactura': value = noFactura; break;
       case 'cliente': value = cliente; break;
       case 'asesor': value = asesor; break;
       case 'direccion': value = direccion; break;
+      case 'descripcion': value = descripcion; break;
       default: value = '';
     }
-    
     const err = validateField(field, value);
     setErrors(prev => ({ ...prev, [field]: err }));
-  };
-
-  const handleEvidenceChange = (files) => {
-    if (isEdit) return;
-    
-    setEvidencias(files);
-    if (touched.evidencias) {
-      const err = validateField('evidencias', files);
-      setErrors(prev => ({ ...prev, evidencias: err }));
-    }
   };
 
   const toggleProducto = (prod) => {
@@ -773,8 +1011,9 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
           {
             id: generateTempId(),
             motivo: '',
-            estado: 'Pendiente',
+            estado: 'Pend. envio',
             metodo: '',
+            applyCredit: false,
             cantidad: 1
           }
         ]
@@ -788,17 +1027,14 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
   };
 
   const updateConfigs = (id, nuevasConfigs) => {
-    if (isEdit) return;
-    
-    setSeleccionados((prev) => ({
-      ...prev,
-      [id]: nuevasConfigs
-    }));
-    
-    setTimeout(() => {
-      const prodError = validateProductos();
-      setErrors(prev => ({ ...prev, productos: prodError }));
-    }, 0);
+    setSeleccionados((prev) => {
+      const nuevo = { ...prev, [id]: nuevasConfigs };
+      setErrors((current) => ({
+        ...current,
+        productos: validateProductos(nuevo),
+      }));
+      return nuevo;
+    });
   };
 
   const updateConfigsEditMode = (id, nuevasConfigs) => {
@@ -811,17 +1047,21 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
   const toggleAll = () => {
     if (isEdit) return;
     
-    if (Object.keys(seleccionados).length === PRODUCTOS_VENTA.length) {
+    const totalProductos = productosDisponibles.length;
+    const seleccionadosCount = Object.keys(seleccionados).length;
+    
+    if (seleccionadosCount === totalProductos && totalProductos > 0) {
       setSeleccionados({});
     } else {
       const all = {};
-      PRODUCTOS_VENTA.forEach((p) => {
+      productosDisponibles.forEach((p) => {
         all[p.id] = seleccionados[p.id] || [
           {
             id: generateTempId(),
             motivo: '',
-            estado: 'Pendiente',
+            estado: 'Pend. envio',
             metodo: '',
+            applyCredit: false,
             cantidad: 1
           }
         ];
@@ -835,12 +1075,14 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     }, 0);
   };
 
+  // ==================== CALCULAR TOTALES ====================
   const productosDevueltos = Object.entries(seleccionados)
-    .filter(([_, configs]) => configs && configs.length > 0)
-    .map(([id, configs]) => ({
-      producto: PRODUCTOS_VENTA.find(p => p.id === Number(id)),
-      configs
-    }));
+    .filter((entry) => entry[1] && entry[1].length > 0)
+    .map(([id, configs]) => {
+      const producto = productosDisponibles.find(p => p.id === Number(id));
+      return { producto, configs };
+    })
+    .filter(item => item.producto !== undefined);
 
   const totalUnidades = productosDevueltos.reduce((acc, { configs }) => {
     return acc + configs.reduce((sum, cfg) => sum + (cfg.cantidad || 0), 0);
@@ -848,7 +1090,7 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
 
   const totalValor = productosDevueltos.reduce((acc, { producto, configs }) => {
     const productTotal = configs.reduce((sum, cfg) => {
-      return sum + (cfg.cantidad || 0) * producto.precioUnit;
+      return sum + (cfg.cantidad || 0) * (producto?.precioUnit || 0);
     }, 0);
     return acc + productTotal;
   }, 0);
@@ -865,54 +1107,82 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
       }
       newErrors.evidencias = validateField('evidencias', evidencias);
       newErrors.productos = validateProductos();
+      newErrors.descripcion = validateField('descripcion', descripcion);
     }
     
     return newErrors;
   };
 
+  const liveValidationErrors = validateForm();
+  const hasLiveErrors = !isEdit && Object.values(liveValidationErrors).some(Boolean);
+
+  // ==================== SUBMIT ====================
   const handleSubmit = () => {
     setSubmitted(true);
     
-    if (isEdit) {
-      const productosDevueltosData = [];
-      
-      Object.entries(seleccionados).forEach(([id, configs]) => {
-        const producto = PRODUCTOS_VENTA.find(p => p.id === Number(id));
-        configs.forEach((config, idx) => {
-          productosDevueltosData.push({
-            id: producto.id,
-            configId: config.id,
-            nombre: producto.nombre,
-            cantidad: config.cantidad,
-            precioUnit: producto.precioUnit,
-            motivo: config.motivo,
-            descripcionMotivo: config.descripcionMotivo || '',
-            metodo: config.metodo,
-            estado: config.estado
-          });
-        });
+   if (isEdit) {
+  const productosDevueltosData = [];
+  
+  Object.entries(seleccionados).forEach(([id, configs]) => {
+    const producto = productosDisponibles.find(p => p.id === Number(id));
+    if (!producto) return;
+    
+    configs.forEach((config) => {
+      productosDevueltosData.push({
+        id: config.id,
+        productName: producto.nombre,
+        quantity: config.cantidad || 1,
+        unitPrice: producto.precioUnit || 0,
+        reason: config.motivo,
+        description: config.descripcionMotivo || '',
+          method: config.metodo,
+          applyCredit: config.applyCredit === true,
+          status: config.estado,
+          barcode: producto.barcode || '',
+          idBarcode: producto.idBarcode || null,
+          imageUrl: producto.imagen || ''
       });
+    });
+  });
 
-      // En edición, el estado general se usa del selector, pero podría calcularse automáticamente
-      const updatedData = {
-        ...returnData,
-        estado: estadoGral,
-        estadoGral: estadoGral,
-        productosDevueltos: productosDevueltosData,
-        updatedAt: new Date().toISOString()
-      };
+  const updatedData = {
+    ...returnData,
+    idSale: returnData.idSale || returnData.id_sale || returnData.id,
+    status: estadoGral,
+    description: descripcion,
+    details: productosDevueltosData.map(d => ({
+      idSaleReturnDetail: d.id,
+      idReturnStatus: getStatusId(d.status) || 7,  
+      idReturnMethod: getMethodId(d.method) || 1
+    })),
+    updatedAt: new Date().toISOString()
+  };
       
-      onSave?.(updatedData);
-      onClose?.();
+      const evidenceFiles = evidencias
+        .filter(ev => ev instanceof File)
+        .map(ev => ev);
+
+      const existingEvidenceIds = evidencias
+        .filter(ev => ev.id && !(ev instanceof File))
+        .map(ev => ev.id);
+
+      onSave?.({
+        ...updatedData,
+        evidenceFiles: evidenceFiles,
+        evidenceDescription: evidenceDescription || descripcion || '',
+        deletedEvidenceIds: deletedEvidenceIds,
+        existingEvidenceIds: existingEvidenceIds
+      });
       return;
     }
     
+    // ==================== CREACIÓN ====================
     setTouched({
       noFactura: true,
       cliente: true,
       asesor: true,
       direccion: domicilio,
-      evidencias: domicilio // Solo validar evidencias si domicilio es true
+      evidencias: domicilio
     });
     
     const validationErrors = validateForm();
@@ -928,60 +1198,67 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
     const productosDevueltosData = [];
     
     Object.entries(seleccionados).forEach(([id, configs]) => {
-      const producto = PRODUCTOS_VENTA.find(p => p.id === Number(id));
-      configs.forEach((config, idx) => {
+      const producto = productosDisponibles.find(p => p.id === Number(id));
+      if (!producto) return;
+      
+      configs.forEach((config) => {
         productosDevueltosData.push({
-          id: producto.id,
-          configId: config.id,
-          nombre: producto.nombre,
-          cantidad: config.cantidad,
-          precioUnit: producto.precioUnit,
-          motivo: config.motivo,
-          descripcionMotivo: config.descripcionMotivo || '',
-          metodo: config.metodo,
-          estado: config.estado
+          idProduct: producto.id,
+          productName: producto.nombre,
+          quantity: config.cantidad || 1,
+          unitPrice: producto.precioUnit || 0,
+          reason: config.motivo,
+          description: config.descripcionMotivo || '',
+          method: config.metodo,
+          applyCredit: config.applyCredit === true,
+          status: config.estado,
+          barcode: producto.barcode || '',
+          idBarcode: producto.idBarcode || null,
+          imageUrl: producto.imagen || '',
+          reasonName: config.motivo,
+          isDefective: ['DEFECTUOSO', 'MAL_ESTADO', 'PRODUCTO_INCOMPLETO'].includes(config.motivo)
         });
       });
     });
 
-    const evidenciasLimpia = evidencias.map(ev => {
-      const { base64, ...evidenciaSinBase64 } = ev;
-      return evidenciaSinBase64;
-    });
-
-    // Calcular automáticamente el estado general basado en los estados de los productos
-    const estadoGeneralCalculado = calculateGeneralStatus(productosDevueltosData, false);
+    const evidenceFiles = evidencias
+      .filter(ev => ev instanceof File)
+      .map(ev => ev);
 
     const returnDataToSave = {
-      noFactura,
-      numeroFactura: noFactura,
-      cliente,
-      motivo: productosDevueltosData[0]?.motivo || '',
-      totalValor,
-      // Estado general automático - NO se permite edición manual
-      estadoGral: estadoGeneralCalculado,
-      estado: estadoGeneralCalculado,
-      asesor,
-      domicilio,
-      direccion: direccion || '',
-      telefono: '',
-      descripcion: descripcion || '',
-      evidencias: evidenciasLimpia,
-      productos: productosDevueltosData,
-      productosDevueltos: productosDevueltosData,
-      cantidadProductos: productosDevueltosData.length,
-      totalUnidades
-    };
+  idSale: idVentaSeleccionada,
+  description: descripcion || '',
+  hasDelivery: domicilio,
+  deliveryAddress: direccion || '',
+  details: productosDevueltosData.map(p => ({
+    idProduct: p.idProduct,
+    productName: p.productName || '',
+    imageUrl: p.imageUrl || '',
+    barcode: p.barcode || '',
+    quantity: p.quantity || 1,
+    unitPrice: p.unitPrice || 0,
+    idReturnReason: getReasonId(p.reason),
+    idReturnMethod: getMethodId(p.method),
+    idBarcode: p.idBarcode || null,
+    reasonName: p.reasonName || '',
+    isDefective: p.isDefective || false,
+    applyCredit: p.applyCredit === true,
+    descripcionMotivo: p.description || '',
+    status: p.status || 'En Proceso'  // ✅ DEBE ESTAR
+  })),
+  evidenceFiles: evidenceFiles,
+  evidenceDescription: evidenceDescription || descripcion || ''
+};
 
     onSave?.(returnDataToSave);
-    onClose?.();
   };
 
+  // ==================== FUNCIONES DE RENDERIZADO ====================
   const inputClass = (field) => {
     if (isEdit) return '';
     
     const hasError = errors[field] && (touched[field] || submitted);
-    return `w-full border rounded-lg px-3 py-2 text-sm text-gray-500 outline-none placeholder-gray-300 transition-colors ${
+    return `w-full border rounded-xl px-3 py-2 text-sm text-gray-500 outline-none placeholder-gray-300 transition-colors ${
       hasError
         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
@@ -999,28 +1276,22 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
 
   if (!isOpen) return null;
   
-  const estadoColor = { 
-    'En Proceso': '#b45309',
-    'Procesada': '#15803d', 
-    'Anulado': '#dc2626'
-  }[estadoGral] ?? '#b45309';
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full flex flex-col overflow-hidden"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-3xl shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] w-full flex flex-col overflow-hidden"
         style={{ maxWidth: 1060, maxHeight: '92vh' }}>
 
-        <div className="bg-[#004D77] px-6 py-3.5 flex items-center justify-between flex-shrink-0">
-          <h2 className="text-white font-bold text-[15px]">
-            {isEdit ? `Editar devolución — ${returnData?.numeroDevolucion || ''}` : 'Nueva devolución'}
+        <div className="bg-gradient-to-r from-[#004D77] to-[#006699] px-6 py-3.5 flex items-center justify-between flex-shrink-0 rounded-t-3xl">
+          <h2 className="text-white font-bold text-[15px] tracking-wide">
+            {isEdit ? `Editar devolución — ${returnData?.returnNumber || returnData?.numeroDevolucion || ''}` : 'Nueva devolución'}
           </h2>
           {isEdit && (
-            <div className="flex items-center gap-2 bg-white/20 rounded-lg px-3 py-1">
+            <div className="flex items-center gap-2 bg-white/20 rounded-xl px-3 py-1">
               <span className="text-white text-[10px] font-medium">Modo edición: solo estados</span>
             </div>
           )}
           <button type="button" onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 text-white transition cursor-pointer">
+            className="w-7 h-7 flex items-center justify-center rounded-xl bg-white/20 hover:bg-white/30 text-white transition cursor-pointer hover:scale-105">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -1037,28 +1308,27 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
                   <DisabledField label="Atendió" value={asesor} required />
                 </div>
                 
-                {/* Estado - READ ONLY en edición, se calcula automáticamente */}
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">
                     Estado<span className="text-red-500">*</span>
                   </label>
-                  <div className="relative">
-                    <select value={estadoGral} onChange={(e) => setEstadoGral(e.target.value)}
-                      className="w-full appearance-none border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#004D77] pr-8 font-semibold"
-                      style={{ color: estadoColor }}
-                      disabled={isEdit}>
-                      {ESTADOS_P.map((e) => <option key={e} className="text-gray-800 font-normal">{e}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                  </div>
+                  <FormSelect
+                    value={estadoGral}
+                    options={ESTADO_GENERAL_OPTIONS}
+                    onChange={setEstadoGral}
+                    disabled={isEdit}
+                    placeholder="Selecciona un estado"
+                    ariaLabel="Estado general de la devolución"
+                    className="rounded-xl font-semibold"
+                  />
                   {isEdit && (
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-[10px] text-gray-400 mt-1">
                       Estado calculado automáticamente
                     </p>
                   )}
                 </div>
                 
-                <DisabledEvidence count={evidencias.length} />
+                <DisabledEvidence count={evidencias.filter(ev => ev.id && !(ev instanceof File)).length + evidencias.filter(ev => ev instanceof File).length} />
                 <DisabledDeliveryToggle isDelivery={domicilio} />
                 {domicilio && <DisabledField label="Dirección" value={direccion} required />}
                 <DisabledTextarea label="Descripción" value={descripcion} />
@@ -1066,13 +1336,114 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
             ) : (
               <>
                 <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">
+                    Factura<span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1" ref={facturaInputRef}>
+                        <input
+                          ref={facturaInputRef}
+                          type="text"
+                          value={searchTermFactura}
+                          onChange={(e) => {
+                            setSearchTermFactura(e.target.value);
+                            if (e.target.value.length >= 1) {
+                              cargarFacturas(e.target.value);
+                            } else {
+                              setShowDropdownFactura(false);
+                              setFacturasDisponibles([]);
+                            }
+                          }}
+                          onFocus={() => {
+                            cargarFacturas('');
+                          }}
+                          placeholder="Buscar factura o cliente"
+                          className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-700 outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
+                          disabled={isEdit}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => cargarFacturas(searchTermFactura)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                        >
+                          {cargandoFacturas ? (
+                            <Loader className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Search className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {showDropdownFactura && facturasFiltradas.length > 0 && (
+                      <div ref={dropdownRef} className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                        {facturasFiltradas.map((factura) => {
+                          const isAnnulled = factura.isAnnulled || factura.statusId === 4;
+                          
+                          return (
+                            <button
+                              key={factura.idSale}
+                              type="button"
+                              onClick={() => {
+                                if (isAnnulled) {
+                                  showError('Venta anulada', 'Esta venta está anulada y no se puede generar una devolución');
+                                  return;
+                                }
+                                seleccionarFactura(factura);
+                              }}
+                              className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition flex justify-between items-center border-b border-gray-100 last:border-0 ${(factura.hasReturn || isAnnulled) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              disabled={factura.hasReturn || isAnnulled}
+                            >
+                              <div>
+                                <span className="font-medium text-gray-800">#{factura.invoiceNumber}</span>
+                                <span className="text-xs text-gray-500 ml-2">{factura.clientName}</span>
+                                {factura.hasReturn && (
+                                  <span className="text-xs text-red-400 ml-2">(Ya tiene devolución)</span>
+                                )}
+                                {isAnnulled && (
+                                  <span className="text-xs text-red-500 ml-2">(Venta anulada)</span>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <span className="text-xs text-gray-400 block">${formatCOP(factura.total || 0)}</span>
+                                <span className="text-[10px] text-gray-300">
+                                  {factura.saleDate ? new Date(factura.saleDate).toLocaleDateString('es-CO') : ''}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {showDropdownFactura && facturasFiltradas.length === 0 && !cargandoFacturas && (
+                      <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg py-4 text-center text-sm text-gray-400">
+                        No hay facturas disponibles
+                      </div>
+                    )}
+
+                    {cargandoFacturas && (
+                      <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg py-4 text-center text-sm text-gray-400">
+                        <Loader className="w-5 h-5 animate-spin mx-auto text-[#004D77]" />
+                        Cargando...
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    Escribe para buscar facturas
+                  </p>
+                </div>
+
+                <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">No. Factura<span className="text-red-500">*</span></label>
                   <input
                     value={noFactura}
                     onChange={(e) => handleFieldChange('noFactura', e.target.value)}
                     onBlur={() => handleBlur('noFactura')}
-                    placeholder="PMPE14988"
+                    placeholder="Seleccione una factura"
                     className={inputClass('noFactura')}
+                    disabled={true}
                   />
                   {renderError('noFactura')}
                 </div>
@@ -1082,33 +1453,49 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
                     <label className="block text-xs font-bold text-gray-600 mb-1">Cliente<span className="text-red-500">*</span></label>
                     <input
                       value={cliente}
-                      onChange={(e) => handleFieldChange('cliente', e.target.value)}
+                      onChange={(e) => {
+                        setCliente(e.target.value);
+                      }}
                       onBlur={() => handleBlur('cliente')}
-                      placeholder="Fernando Bustamante"
+                      placeholder="Nombre del cliente"
                       className={inputClass('cliente')}
+                      disabled={true}
                     />
                     {renderError('cliente')}
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1">Atendió<span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-bold text-gray-600 mb-1">Teléfono</label>
                     <input
                       type="text"
-                      value={asesor}
-                      onChange={(e) => handleFieldChange('asesor', e.target.value)}
-                      onBlur={() => handleBlur('asesor')}
-                      placeholder="Nombre del asesor"
-                      className={inputClass('asesor')}
+                      value={telefono}
+                      onChange={(e) => setTelefono(e.target.value)}
+                      placeholder="Teléfono del cliente"
+                      className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-500 outline-none bg-gray-50"
+                      disabled={true}
                     />
-                    {renderError('asesor')}
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">Atendió<span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    value={asesor}
+                    onChange={(e) => handleFieldChange('asesor', e.target.value)}
+                    onBlur={() => handleBlur('asesor')}
+                    placeholder="Nombre del asesor"
+                    className={inputClass('asesor')}
+                    disabled={true}
+                  />
+                  {renderError('asesor')}
                 </div>
                 
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">Estado<span className="text-red-500">*</span></label>
-                  <div className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm bg-yellow-50 text-yellow-700 font-semibold">
+                  <div className="w-full border border-dashed border-gray-300 rounded-xl px-3 py-2 text-sm bg-yellow-50 text-yellow-700 font-semibold">
                     En Proceso
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-[10px] text-gray-400 mt-1">
                     Se calcula automáticamente
                   </p>
                 </div>
@@ -1119,20 +1506,20 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
                     {domicilio && <span className="text-red-500 ml-0.5">*</span>}
                   </label>
                   <button type="button" onClick={() => setEvidenceOpen(true)}
-                    className={`w-full border rounded-lg px-3 py-2 text-sm flex items-center justify-between ${
+                    className={`w-full border rounded-xl px-3 py-2 text-sm flex items-center justify-between ${
                       errors.evidencias && (touched.evidencias || submitted)
                         ? 'border-red-500'
                         : 'border-gray-300 border-dashed hover:border-[#004D77]'
                     }`}>
                     <span className="text-xs text-gray-400">
-                      {evidencias.length === 0 ? 'Adjunta evidencias' : `${evidencias.length} archivo(s) adjunto(s)`}
+                      {evidencias.length === 0 ? 'Adjuntar evidencias' : `${evidencias.length} archivo(s)`}
                     </span>
                     <Image className="w-4 h-4 text-gray-400" />
                   </button>
                   {renderError('evidencias')}
                   {!domicilio && (
-                    <p className="text-xs text-gray-400 mt-1">
-                      Opcional cuando no requiere domicilio
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      Opcional sin domicilio
                     </p>
                   )}
                 </div>
@@ -1163,9 +1550,19 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
                 
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">Descripción</label>
-                  <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)}
-                    placeholder="Agrega una descripción" rows={4}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs text-gray-600 outline-none focus:border-[#004D77] resize-none placeholder-gray-300" />
+                  <textarea
+                    value={descripcion}
+                    onChange={(e) => handleFieldChange('descripcion', e.target.value)}
+                    onBlur={() => handleBlur('descripcion')}
+                    maxLength={500}
+                    placeholder="Agrega una descripción"
+                    rows={3}
+                    className={`${inputClass('descripcion')} resize-none`}
+                  />
+                  <div className="mt-1 flex justify-between gap-2">
+                    {renderError('descripcion')}
+                    <span className="ml-auto text-[10px] text-gray-400">{descripcion.length}/500</span>
+                  </div>
                 </div>
               </>
             )}
@@ -1174,11 +1571,29 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
           {/* COL 2 - Selección de productos */}
           <div className="flex-1 flex flex-col p-4 overflow-hidden min-w-0">
             <p className="text-sm font-bold text-gray-800 mb-0.5">1. Productos</p>
-            <p className="text-xs text-gray-400 mb-3">Seleccione los productos que va a devolver</p>
+            <p className="text-xs text-gray-400 mb-3">Selecciona los productos a devolver</p>
             
-            {!isEdit && (
+            {!isEdit && productosDisponibles.length === 0 && !noFactura && (
+  <div className="flex items-center justify-center bg-gray-50 rounded-xl border border-dashed border-gray-300 py-2 px-3">
+    <p className="text-[12px] text-gray-400 text-center">Selecciona una factura</p>
+  </div>
+)}
+            
+            {!isEdit && productosDisponibles.length === 0 && noFactura && (
+  <div className="flex items-center justify-center bg-gray-50 rounded-xl border border-dashed border-gray-300 py-2 px-3">
+    <p className="text-[12px] text-gray-400 text-center">Sin productos disponibles</p>
+  </div>
+)}
+            
+            {!isEdit && productosDisponibles.length > 0 && Object.keys(seleccionados).length === 0 && (
+  <div className="flex items-center justify-center bg-gray-50 rounded-xl border border-dashed border-gray-300 py-2 px-3">
+    <p className="text-[12px] text-gray-400 text-center">Haz clic en un producto</p>
+  </div>
+)}
+            
+            {!isEdit && Object.keys(seleccionados).length > 0 && (
               <label className="flex items-center gap-2 text-xs text-gray-600 font-medium mb-3 cursor-pointer">
-                <input type="checkbox" checked={Object.keys(seleccionados).length === PRODUCTOS_VENTA.length}
+                <input type="checkbox" checked={Object.keys(seleccionados).length === productosDisponibles.length}
                   onChange={toggleAll} className="accent-[#004D77] w-3.5 h-3.5" />
                 Seleccionar todos
               </label>
@@ -1189,7 +1604,7 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
             )}
             
             <div className="flex-1 overflow-y-auto pr-1 space-y-2">
-              {PRODUCTOS_VENTA.map((prod) => {
+              {productosDisponibles.map((prod) => {
                 const isSelected = Boolean(seleccionados[prod.id] && seleccionados[prod.id].length > 0);
                 return (
                   <div key={prod.id}>
@@ -1204,10 +1619,10 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
                         </div>
                         <div className="text-right flex-shrink-0">
                           <p className="text-[10px] text-gray-400">Total</p>
-                          <p className="text-xs font-bold text-gray-700">${formatCOP(prod.cantidad * prod.precioUnit)}</p>
+                          <p className="text-xs font-bold text-gray-700">${formatCOP(prod.cantidad * (prod.precioUnit || 0))}</p>
                         </div>
                         {isEdit && (
-                          <p className="text-xs text-gray-400 mt-1">
+                          <p className="text-[10px] text-gray-400 mt-1">
                             No se puede modificar en edición
                           </p>
                         )}
@@ -1217,7 +1632,6 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
                         producto={prod}
                         configs={seleccionados[prod.id]}
                         onConfigChange={(nuevasConfigs) => updateConfigsEditMode(prod.id, nuevasConfigs)}
-                        submitted={submitted}
                       />
                     ) : (
                       <ProductoSeleccionadoCreateMode
@@ -1241,7 +1655,9 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
             
             <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
               {productosDevueltos.length === 0 ? (
-                <p className="text-xs text-gray-300 italic">Sin productos seleccionados</p>
+                <p className="text-xs text-gray-300 italic text-center py-4">
+                  {!noFactura ? 'Selecciona una factura' : 'Sin productos seleccionados'}
+                </p>
               ) : (
                 productosDevueltos.flatMap(({ producto, configs }) => 
                   configs.map((config, idx) => (
@@ -1268,7 +1684,7 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
             
             <div className="flex-1 overflow-y-auto min-h-0 mb-2">
               {productosDevueltos.length === 0 ? (
-                <p className="text-xs text-gray-300 italic">—</p>
+                <p className="text-xs text-gray-300 italic text-center py-4">—</p>
               ) : (
                 <table className="w-full text-[11px]">
                   <thead>
@@ -1310,31 +1726,44 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
           </div>
         </div>
 
-        <div className="flex gap-3 px-4 py-3 border-t border-gray-200 flex-shrink-0">
+        <div className="flex gap-3 px-4 py-3 border-t border-gray-200 flex-shrink-0 bg-gray-50 rounded-b-3xl">
           <button type="button" onClick={handleSubmit}
-            className="flex-1 py-3 bg-[#004D77] hover:bg-[#003d61] text-white text-sm font-bold rounded-xl transition cursor-pointer">
-            {isEdit ? 'Guardar cambios' : 'Agregar a devoluciones'}
+            disabled={hasLiveErrors}
+            className="flex-1 py-2.5 bg-[#004D77] hover:bg-[#003d61] text-white text-sm font-bold rounded-xl transition cursor-pointer hover:shadow-lg hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100">
+            {isEdit ? 'Guardar cambios' : 'Crear devolución'}
           </button>
           <button type="button" onClick={onClose}
-            className="flex-1 py-3 bg-gray-200 hover:bg-gray-300 text-gray-600 text-sm font-bold rounded-xl transition cursor-pointer">
+            className="flex-1 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-600 text-sm font-bold rounded-xl transition cursor-pointer hover:shadow-md hover:scale-105 active:scale-95">
             Cancelar
           </button>
         </div>
       </div>
 
-      {!isEdit && (
-        <Evidence 
-          isOpen={evidenceOpen} 
-          onClose={() => setEvidenceOpen(false)}
-          files={evidencias} 
-          descripcion={descripcion}
-          onSave={({ files, descripcion: desc }) => {
-            setEvidencias(files);
-            setDescripcion(desc);
-            handleEvidenceChange(files);
-          }} 
-        />
-      )}
+     <Evidence 
+  isOpen={evidenceOpen} 
+  onClose={() => setEvidenceOpen(false)}
+  files={evidencias} 
+  descripcion={evidenceDescription || descripcion}
+  isEdit={isEdit}
+  existingEvidences={isEdit ? evidencias.filter(ev => ev.id && !(ev instanceof File)) : []}
+  returnId={returnData?.id}
+  onSave={({ files, descripcion, deletedIds, existingFiles }) => {
+    const nuevasEvidencias = [...(existingFiles || [])];
+    
+    if (files && files.length > 0) {
+      nuevasEvidencias.push(...files);
+    }
+    
+    setEvidencias(nuevasEvidencias);
+    
+    if (descripcion) {
+      setEvidenceDescription(descripcion);
+    }
+    if (deletedIds && deletedIds.length > 0) {
+      setDeletedEvidenceIds(prev => [...prev, ...deletedIds]);
+    }
+  }} 
+/>
     </div>
   );
 }

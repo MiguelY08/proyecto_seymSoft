@@ -110,6 +110,14 @@ export const clientsService = {
     return response.data.data;
   },
 
+  getCreditBalanceEvents: async ({ clientId = null, limit = 50 } = {}) => {
+    const params = new URLSearchParams();
+    if (clientId) params.append('clientId', clientId);
+    params.append('limit', limit);
+    const response = await apiClient.get(`/clients/credit-balance-events?${params.toString()}`);
+    return response.data.data || [];
+  },
+
   create: async (clientData) => {
     const formattedClientCredit = validateAndFormatNumber(clientData.clientCredit);
     
@@ -183,12 +191,8 @@ export const clientsService = {
   },
 
   delete: async (id) => {
-    try {
-      const response = await apiClient.delete(`/clients/${id}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await apiClient.delete(`/clients/${id}`);
+    return response.data;
   },
 
   toggleActive: async (id) => {
