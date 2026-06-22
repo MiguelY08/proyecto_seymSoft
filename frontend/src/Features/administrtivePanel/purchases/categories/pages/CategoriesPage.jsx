@@ -1,4 +1,4 @@
-// Features/categories/pages/CategoriesPage.jsx
+// features/categories/pages/CategoriesPage.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import CategoriesTable from "../components/CategoriesTable";

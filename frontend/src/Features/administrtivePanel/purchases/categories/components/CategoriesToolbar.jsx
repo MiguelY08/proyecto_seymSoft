@@ -1,4 +1,4 @@
-// Features/categories/components/CategoriesToolbar.jsx
+// features/categories/components/CategoriesToolbar.jsx
 import React from "react";
 import { Plus } from "lucide-react";
 import SearchInput from "./SearchInput";

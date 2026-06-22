@@ -1,4 +1,4 @@
-// Features/administrtivePanel/purchases/purchases/pages/Purchases.jsx
+// features/administrtivePanel/purchases/purchases/pages/Purchases.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PurchasesFilters } from "../../../../shared/DateFilter";

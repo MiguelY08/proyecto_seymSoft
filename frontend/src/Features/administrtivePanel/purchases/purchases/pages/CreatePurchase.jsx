@@ -1,4 +1,4 @@
-// Features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx
+// features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 

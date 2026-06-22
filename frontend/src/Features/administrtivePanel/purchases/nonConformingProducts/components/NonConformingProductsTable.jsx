@@ -1,4 +1,4 @@
-// Features/administrtivePanel/purchases/nonConformingProducts/components/NonConformingProductsTable.jsx
+// features/administrtivePanel/purchases/nonConformingProducts/components/NonConformingProductsTable.jsx
 import { Info, XCircle, Ban } from "lucide-react";
 import Pagination from "../../../../shared/PaginationAdmin";
 

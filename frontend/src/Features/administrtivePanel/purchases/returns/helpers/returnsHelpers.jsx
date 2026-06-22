@@ -10,6 +10,19 @@ export const MOTIVOS_DEVOLUCION = [
   "Otro motivo",
 ];
 
+export const RETURN_REASON_OPTIONS = [
+  { id: 1, label: "Prod. en mal estado" },
+  { id: 2, label: "Insatisfecho" },
+  { id: 3, label: "Prod. incorrecto" },
+  { id: 4, label: "Otro motivo" },
+];
+
+export const getReturnReasonIdByLabel = (label) =>
+  RETURN_REASON_OPTIONS.find((reason) => reason.label === label)?.id ?? null;
+
+export const getReturnReasonLabelById = (id) =>
+  RETURN_REASON_OPTIONS.find((reason) => reason.id === Number(id))?.label ?? "";
+
 // ─── Tipos de devolución ──────────────────────────────────────────────────────
 /**
  * Lista de tipos posibles de devolución.
@@ -17,53 +30,167 @@ export const MOTIVOS_DEVOLUCION = [
  */
 export const TIPOS_DEVOLUCION = [
   "Reemplazo",
-  "Sin reemplazo",
+  "Reembolso",
+  "Prod. no conforme",
 ];
 
+export const RETURN_METHOD_OPTIONS = [
+  { id: 1, label: "Reemplazo" },
+  { id: 2, label: "Reembolso" },
+  { id: 3, label: "Prod. no conforme" },
+];
+
+export const RETURN_METHOD_IDS = {
+  REPLACEMENT: 1,
+  REFUND: 2,
+  NON_CONFORMING_PRODUCT: 3,
+};
+
+export const LEGACY_RETURN_METHOD_LABELS = {
+  "Sin reemplazo": "Reembolso",
+};
+
+export const normalizeReturnMethod = (label) =>
+  LEGACY_RETURN_METHOD_LABELS[label] ?? label;
+
+export const getReturnMethodIdByLabel = (label) =>
+  RETURN_METHOD_OPTIONS.find((method) => method.label === normalizeReturnMethod(label))?.id ?? null;
+
+export const getReturnMethodLabelById = (id) =>
+  RETURN_METHOD_OPTIONS.find((method) => method.id === Number(id))?.label ?? "";
+
 // ─── Estados por tipo de devolución ──────────────────────────────────────────
+
+export const RETURN_STATUS_IDS = {
+  PENDING_SHIPMENT: 1,
+  PENDING_REPLACEMENT: 2,
+  PENDING_REFUND: 3,
+  READY: 4,
+  ANNULLED: 5,
+};
+
+export const RETURN_STATUS_OPTIONS = [
+  { id: RETURN_STATUS_IDS.PENDING_SHIPMENT, label: "Pend. envío", terminal: false },
+  { id: RETURN_STATUS_IDS.PENDING_REPLACEMENT, label: "Pend. reemplazo", terminal: false },
+  { id: RETURN_STATUS_IDS.PENDING_REFUND, label: "Pend. reembolso", terminal: false },
+  { id: RETURN_STATUS_IDS.READY, label: "Listo", terminal: true },
+  { id: RETURN_STATUS_IDS.ANNULLED, label: "Anulada", terminal: true },
+];
+
+export const getReturnStatusIdByLabel = (label) =>
+  RETURN_STATUS_OPTIONS.find((status) => status.label === label)?.id ?? null;
+
+export const getReturnStatusLabelById = (id) =>
+  RETURN_STATUS_OPTIONS.find((status) => status.id === Number(id))?.label ?? "";
+
+const getReturnMethodId = (method) => {
+  if (typeof method === "object" && method !== null) {
+    return Number(method.id ?? method.returnMethodId ?? method.idReturnMethod) || null;
+  }
+
+  const numericId = Number(method);
+  return Number.isInteger(numericId) && numericId > 0
+    ? numericId
+    : getReturnMethodIdByLabel(method);
+};
+
+const getReturnStatusId = (status) => {
+  if (typeof status === "object" && status !== null) {
+    return Number(status.id ?? status.returnStatusId ?? status.idReturnStatus) || null;
+  }
+
+  const numericId = Number(status);
+  return Number.isInteger(numericId) && numericId > 0
+    ? numericId
+    : getReturnStatusIdByLabel(status);
+};
+
+const RETURN_STATUS_FLOW_BY_METHOD = {
+  [RETURN_METHOD_IDS.REPLACEMENT]: {
+    [RETURN_STATUS_IDS.PENDING_SHIPMENT]: [RETURN_STATUS_IDS.PENDING_REPLACEMENT],
+    [RETURN_STATUS_IDS.PENDING_REPLACEMENT]: [RETURN_STATUS_IDS.READY],
+  },
+  [RETURN_METHOD_IDS.REFUND]: {
+    [RETURN_STATUS_IDS.PENDING_SHIPMENT]: [RETURN_STATUS_IDS.PENDING_REFUND],
+    [RETURN_STATUS_IDS.PENDING_REFUND]: [RETURN_STATUS_IDS.READY],
+  },
+  [RETURN_METHOD_IDS.NON_CONFORMING_PRODUCT]: {
+    [RETURN_STATUS_IDS.PENDING_SHIPMENT]: [RETURN_STATUS_IDS.READY],
+  },
+};
+
+export const getAllowedNextReturnStatusIds = (method, currentStatus) => {
+  const methodId = getReturnMethodId(method);
+  const currentStatusId = getReturnStatusId(currentStatus);
+
+  return RETURN_STATUS_FLOW_BY_METHOD[methodId]?.[currentStatusId] ?? [];
+};
+
+export const getAllowedNextReturnStatuses = (method, currentStatus) => {
+  const allowedIds = getAllowedNextReturnStatusIds(method, currentStatus);
+  return RETURN_STATUS_OPTIONS.filter((status) => allowedIds.includes(status.id));
+};
+
+export const isValidReturnStatusTransition = (method, currentStatus, nextStatus) => {
+  const nextStatusId = getReturnStatusId(nextStatus);
+  return getAllowedNextReturnStatusIds(method, currentStatus).includes(nextStatusId);
+};
 
 /**
  * Estados para devoluciones de tipo "Reemplazo".
  * @constant {string[]}
  */
 export const ESTADOS_REEMPLAZO = [
-  "Pend. envío",
-  "Pend. reemplazo",
-  "Recibido",
+  getReturnStatusLabelById(RETURN_STATUS_IDS.PENDING_SHIPMENT),
+  getReturnStatusLabelById(RETURN_STATUS_IDS.PENDING_REPLACEMENT),
+  getReturnStatusLabelById(RETURN_STATUS_IDS.READY),
 ];
 
 /**
- * Estados para devoluciones de tipo "Sin reemplazo".
+ * Estados para devoluciones de tipo "Reembolso".
  * @constant {string[]}
  */
-export const ESTADOS_SIN_REEMPLAZO = [
-  "Pend. envío",
-  "Pend. reembolso",
-  "Enviado",
+export const ESTADOS_REEMBOLSO = [
+  getReturnStatusLabelById(RETURN_STATUS_IDS.PENDING_SHIPMENT),
+  getReturnStatusLabelById(RETURN_STATUS_IDS.PENDING_REFUND),
+  getReturnStatusLabelById(RETURN_STATUS_IDS.READY),
+];
+
+export const ESTADOS_PRODUCTO_NO_CONFORME = [
+  getReturnStatusLabelById(RETURN_STATUS_IDS.PENDING_SHIPMENT),
+  getReturnStatusLabelById(RETURN_STATUS_IDS.READY),
 ];
 
 /**
  * Devuelve la lista de estados disponibles según el tipo de devolución.
- * @param {"Reemplazo"|"Sin reemplazo"} tipo - Tipo de devolución.
+ * @param {"Reemplazo"|"Reembolso"|"Prod. no conforme"} tipo - Tipo de devolución.
  * @returns {string[]} Lista de estados para el tipo dado.
  */
-export const getEstadosByTipo = (tipo) =>
-  tipo === "Reemplazo" ? ESTADOS_REEMPLAZO : ESTADOS_SIN_REEMPLAZO;
+export const getEstadosByTipo = (tipo) => {
+  const method = normalizeReturnMethod(tipo);
+
+  if (method === "Reemplazo") return ESTADOS_REEMPLAZO;
+  if (method === "Reembolso") return ESTADOS_REEMBOLSO;
+  if (method === "Prod. no conforme") return ESTADOS_PRODUCTO_NO_CONFORME;
+
+  return [];
+};
 
 /**
  * Devuelve el estado inicial de un producto recién agregado a una devolución.
  * Siempre es "Pend. envío" independientemente del tipo.
  * @returns {string} Estado inicial.
  */
-export const getEstadoInicial = () => "Pend. envío";
+export const getEstadoInicial = () =>
+  getReturnStatusLabelById(RETURN_STATUS_IDS.PENDING_SHIPMENT);
 
 /**
  * Devuelve el estado terminal de un producto según su tipo de devolución.
- * @param {"Reemplazo"|"Sin reemplazo"} tipo - Tipo de devolución.
+ * @param {"Reemplazo"|"Reembolso"|"Prod. no conforme"} tipo - Tipo de devolución.
  * @returns {string} Estado terminal.
  */
-export const getEstadoTerminal = (tipo) =>
-  tipo === "Reemplazo" ? "Recibido" : "Enviado";
+export const getEstadoTerminal = () =>
+  getReturnStatusLabelById(RETURN_STATUS_IDS.READY);
 
 /**
  * Indica si un producto ha completado su proceso de devolución.
@@ -80,7 +207,7 @@ export const isProductoTerminado = (producto) =>
  * @returns {boolean}
  */
 export const isEstadoTerminal = (estado) =>
-  estado === "Recibido" || estado === "Enviado";
+  getReturnStatusId(estado) === RETURN_STATUS_IDS.READY;
 
 // ─── Estilos de badge de estado (devolución general) ─────────────────────────
 
@@ -112,8 +239,7 @@ export const getBadgeEstadoDevolucion = (estado = "") => {
  */
 export const getBadgeEstadoProducto = (estado = "") => {
   switch (estado) {
-    case "Recibido":
-    case "Enviado":
+    case "Listo":
       return { background: "#dcfce7", color: "#15803d" };    // verde — terminal
     case "Pend. reemplazo":
     case "Pend. reembolso":

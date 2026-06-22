@@ -12,18 +12,32 @@ import {
   getEstadoInicial,
   formatCurrency,
   getBadgeEstadoProducto,
+  getAllowedNextReturnStatuses,
   isEstadoTerminal,
 } from '../helpers/returnsHelpers';
 import {
   validateReturnFormConLineas,
+  validateReturnUpdateForm,
   productoTieneErrorConLineas,
 } from '../validators/returnsValidators';
 import { useAlert } from '../../../../shared/alerts/useAlert';
-import ReturnsDB from '../services/returnsServices';
+import {
+  PurchaseReturnsService,
+  mapReturnFormToCreatePayload,
+  mapReturnFormToUpdatePayload,
+} from '../services/returnsServices';
 
 // ─── ID único para líneas ─────────────────────────────────────────────────────
 const newLineaId = () =>
   `linea-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+const isExistingReturnLine = (linea) =>
+  linea?.idPurchaseReturnDetail !== undefined ||
+  linea?.purchaseReturnDetailId !== undefined ||
+  linea?.lineaId?.startsWith('existing-');
+
+const hasExistingReturnLines = (producto) =>
+  (producto?.lineas ?? []).some(isExistingReturnLine);
 
 // ─── useLongPress ─────────────────────────────────────────────────────────────
 function useLongPress(callback, { delay = 380, interval = 75 } = {}) {
@@ -51,7 +65,7 @@ function useLongPress(callback, { delay = 380, interval = 75 } = {}) {
 }
 
 // ─── EstadoDropdown (portal fixed) ────────────────────────────────────────────
-function EstadoDropdown({ value, disabled, estados, onChange, hasError }) {
+function EstadoDropdown({ value, disabled, estados, onChange, hasError, allowEmpty = true }) {
   const [open, setOpen] = useState(false);
   const [pos,  setPos]  = useState(null);
   const btnRef          = useRef(null);
@@ -118,13 +132,15 @@ function EstadoDropdown({ value, disabled, estados, onChange, hasError }) {
           className="fixed z-[9999] bg-white border border-gray-200 rounded-lg shadow-2xl overflow-hidden py-1"
           style={{ left: pos.left, width: pos.width, top: pos.top, bottom: pos.bottom }}
         >
-          <button
-            type="button"
-            onClick={() => { onChange(''); setOpen(false); }}
-            className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:bg-gray-50 transition-colors"
-          >
-            Seleccionar...
-          </button>
+          {allowEmpty && (
+            <button
+              type="button"
+              onClick={() => { onChange(''); setOpen(false); }}
+              className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:bg-gray-50 transition-colors"
+            >
+              Seleccionar...
+            </button>
+          )}
           {estados.map((estado) => {
             const style    = getBadgeEstadoProducto(estado);
             const isActive = value === estado;
@@ -154,12 +170,6 @@ function EstadoDropdown({ value, disabled, estados, onChange, hasError }) {
 
 // ─── Clases base de inputs ────────────────────────────────────────────────────
 const inputBase = 'w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200';
-const selectClass = (hasError) =>
-  `appearance-none ${inputBase} cursor-pointer ${
-    hasError
-      ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-      : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
-  }`;
 
 // ─── Selector de motivo (editable) ───────────────────────────────────────────
 const MotivoSelect = ({ value, onChange, hasError }) => (
@@ -261,7 +271,22 @@ const ReadonlyField = ({ value, placeholder = '—' }) => (
 const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errores, editableCompleto, isEditMode }) => {
   const esTerminal     = isEstadoTerminal(linea.estado);
   const badgeStyle     = getBadgeEstadoProducto(linea.estado);
-  const estadosDisp    = linea.tipoDevolucion ? getEstadosByTipo(linea.tipoDevolucion) : [];
+  const esExistente    = isExistingReturnLine(linea);
+  const estadoBase     = linea.estadoOriginal || linea.estado;
+  const estadosDisp    = !isEditMode
+    ? (linea.tipoDevolucion ? getEstadosByTipo(linea.tipoDevolucion) : [])
+    : esExistente
+      ? [
+          estadoBase,
+          ...getAllowedNextReturnStatuses(
+            linea.idReturnMethod ?? linea.returnMethodId ?? linea.tipoDevolucion,
+            linea.originalReturnStatusId ??
+              linea.idReturnStatus ??
+              linea.returnStatusId ??
+              estadoBase
+          ).map((estado) => estado.label),
+        ].filter((estado, index, estados) => estado && estados.indexOf(estado) === index)
+      : [getEstadoInicial()];
   const fieldError     = (campo) => errores?.[campo];
 
   // Caso terminal: todo solo lectura (no editable)
@@ -366,6 +391,7 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
             estados={estadosDisp}
             onChange={(val) => onChange({ estado: val })}
             hasError={!!fieldError('estado')}
+            allowEmpty={!isEditMode}
           />
           {fieldError('estado') && (
             <p className="text-xs text-red-500 flex items-center gap-1">
@@ -448,8 +474,8 @@ const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, err
                   .reduce((sum, l) => sum + (Number(l.cantidadDevolver) || 0), 0);
                 const maxParaEstaLinea = producto.cantidadComprada - usadoOtras;
                 const erroresLinea     = errores?.lineas?.[idx] ?? {};
-                const canRemove        = !isEstadoTerminal(linea.estado) && (producto.lineas ?? []).length > 1;
-                const esNueva = !linea.lineaId?.startsWith('existing-');
+                const esNueva = !isExistingReturnLine(linea);
+                const canRemove = esNueva && !isEstadoTerminal(linea.estado);
                 const editableCompleto = !isEditMode || esNueva;
 
                 return (
@@ -492,20 +518,29 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
   const { showConfirm, showSuccess, showError, showWarning } = useAlert();
   const navigate = useNavigate();
   const isEdit   = mode === 'edit';
+  const purchaseId = purchase?.idPurchase ?? purchase?.purchaseId ?? purchase?.id;
 
   // Estado para controlar qué card está expandida (solo una a la vez)
   const [expandedProductId, setExpandedProductId] = useState(null);
 
-  // ── Productos de la compra (solo se usan en modo creación) ──────────────────
+  // ── Productos completos de la compra ────────────────────────────────────────
   const productosCompra = useMemo(() =>
     (purchase?.productos ?? []).map((p) => ({
+      id:               p.id,
+      idPurchase:       p.idPurchase ?? purchaseId,
+      idPurchaseDetail: p.idPurchaseDetail ?? p.purchaseDetailId ?? p.id,
+      purchaseDetailId: p.purchaseDetailId ?? p.idPurchaseDetail ?? p.id,
+      idBarcode:        p.idBarcode ?? p.barcodeId,
+      barcodeId:        p.barcodeId ?? p.idBarcode,
+      idProduct:        p.idProduct ?? p.productId,
+      productId:        p.productId ?? p.idProduct,
       nombre:           p.nombre       ?? p.producto ?? 'Producto',
       codigoBarras:     p.codigoBarras,
       valorUnit:        p.valorUnit,
       iva:              p.iva          ?? 0,
       cantidadComprada: p.cantidad     ?? p.cantidadProductos ?? 1,
     })),
-    [purchase]
+    [purchase, purchaseId]
   );
 
   // ── Inicialización de estados ──────────────────────────────────────────────
@@ -516,6 +551,14 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
         const original = productosCompra.find((o) => o.codigoBarras === p.codigoBarras);
         if (!datosProducto[p.codigoBarras]) {
           datosProducto[p.codigoBarras] = {
+            id:               original?.id ?? p.purchaseDetailId ?? p.idPurchaseDetail,
+            idPurchase:       original?.idPurchase ?? purchaseId,
+            idPurchaseDetail: p.idPurchaseDetail ?? p.purchaseDetailId ?? original?.idPurchaseDetail,
+            purchaseDetailId: p.purchaseDetailId ?? p.idPurchaseDetail ?? original?.purchaseDetailId,
+            idBarcode:        p.idBarcode ?? p.barcodeId ?? original?.idBarcode,
+            barcodeId:        p.barcodeId ?? p.idBarcode ?? original?.barcodeId,
+            idProduct:        p.idProduct ?? p.productId ?? original?.idProduct,
+            productId:        p.productId ?? p.idProduct ?? original?.productId,
             nombre:           p.nombre,
             codigoBarras:     p.codigoBarras,
             valorUnit:        p.valorUnit,
@@ -524,52 +567,75 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
             lineas:           [],
           };
         }
+        const idPurchaseReturnDetail = p.idPurchaseReturnDetail ?? p.id;
+        const purchaseDetailId = p.purchaseDetailId ?? p.idPurchaseDetail ?? original?.purchaseDetailId;
+        const returnReasonId = p.returnReasonId ?? p.idReturnReason;
+        const returnMethodId = p.returnMethodId ?? p.idReturnMethod;
+        const returnStatusId = p.returnStatusId ?? p.idReturnStatus;
+        const estado = p.estado ?? getEstadoInicial();
+
         datosProducto[p.codigoBarras].lineas.push({
-          lineaId:         `existing-${p.codigoBarras}-${idx}`,
-          motivo:          p.motivo          ?? '',
-          tipoDevolucion:  p.tipoDevolucion  ?? '',
-          estado:          p.estado          ?? getEstadoInicial(),
+          lineaId:                 `existing-${idPurchaseReturnDetail ?? `${p.codigoBarras}-${idx}`}`,
+          idPurchaseReturnDetail,
+          purchaseReturnDetailId:  idPurchaseReturnDetail,
+          idPurchaseDetail:        purchaseDetailId,
+          purchaseDetailId,
+          idReturnReason:          returnReasonId,
+          returnReasonId,
+          idReturnMethod:          returnMethodId,
+          returnMethodId,
+          idReturnStatus:          returnStatusId,
+          returnStatusId,
+          originalReturnStatusId:  returnStatusId,
+          estadoOriginal:          estado,
+          supplierDate:            p.supplierDate ?? null,
+          motivo:                  p.motivo          ?? '',
+          tipoDevolucion:          p.tipoDevolucion  ?? '',
+          estado,
           cantidadDevolver: p.cantidadDevolver ?? 1,
         });
       });
       return { datosProducto, seleccionados: new Set(Object.keys(datosProducto)) };
     }
     return { datosProducto: {}, seleccionados: new Set() };
-  }, [isEdit, devolucion, productosCompra]);
+  }, [isEdit, devolucion, productosCompra, purchaseId]);
 
   const [datosProducto, setDatosProducto] = useState(initState.datosProducto);
   const [seleccionados, setSeleccionados] = useState(initState.seleccionados);
   const [erroresProducto, setErroresProducto] = useState({});
   const [erroresGenerales, setErroresGenerales] = useState([]);
   const [touched, setTouched] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // En modo edición, los productos seleccionados son todos los que ya están en datosProducto
-  let productosSeleccionadosArray = useMemo(() => {
-    if (isEdit) return Object.values(datosProducto);
-    return [...seleccionados].map((cod) => datosProducto[cod]).filter(Boolean);
-  }, [isEdit, datosProducto, seleccionados]);
+  const productosSeleccionadosArray = useMemo(() => {
+    const productos = isEdit
+      ? Object.values(datosProducto)
+      : [...seleccionados].map((cod) => datosProducto[cod]).filter(Boolean);
 
-  // Ordenar cards en modo edición: primero los que tienen estado "Enviado" o "Recibido"
-  if (isEdit) {
-    productosSeleccionadosArray = [...productosSeleccionadosArray].sort((a, b) => {
+    if (!isEdit) return productos;
+
+    return [...productos].sort((a, b) => {
       const estadoA = a.lineas?.[0]?.estado || '';
       const estadoB = b.lineas?.[0]?.estado || '';
-      const esTerminalA = estadoA === 'Enviado' || estadoA === 'Recibido';
-      const esTerminalB = estadoB === 'Enviado' || estadoB === 'Recibido';
+      const esTerminalA = isEstadoTerminal(estadoA);
+      const esTerminalB = isEstadoTerminal(estadoB);
       if (esTerminalA && !esTerminalB) return -1;
       if (!esTerminalA && esTerminalB) return 1;
       return 0;
     });
-  }
+  }, [isEdit, datosProducto, seleccionados]);
 
-  // ── Handlers de selección (solo para modo creación) ─────────────────────────
+  // ── Handlers de selección ───────────────────────────────────────────────────
   const totalOriginal = (p) => Math.round(p.valorUnit * p.cantidadComprada * (1 + p.iva / 100));
 
   const toggleSeleccion = (codigoBarras) => {
-    if (isEdit) return;
     setSeleccionados((prev) => {
       const next = new Set(prev);
       if (next.has(codigoBarras)) {
+        if (isEdit && hasExistingReturnLines(datosProducto[codigoBarras])) {
+          return prev;
+        }
         next.delete(codigoBarras);
         setDatosProducto((d) => { const n = { ...d }; delete n[codigoBarras]; return n; });
         setErroresProducto((e) => { const n = { ...e }; delete n[codigoBarras]; return n; });
@@ -589,13 +655,26 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
   };
 
   const toggleTodos = () => {
-    if (isEdit) return;
-    const nonLocked = productosCompra.filter((p) => true);
+    const nonLocked = productosCompra;
     const allSelected = nonLocked.every((p) => seleccionados.has(p.codigoBarras));
     if (allSelected && nonLocked.length > 0) {
-      setSeleccionados(new Set());
-      setDatosProducto({});
-      setErroresProducto({});
+      if (isEdit) {
+        const existingEntries = Object.entries(datosProducto)
+          .filter(([, producto]) => hasExistingReturnLines(producto));
+        const existingCodes = new Set(existingEntries.map(([codigoBarras]) => codigoBarras));
+
+        setSeleccionados(existingCodes);
+        setDatosProducto(Object.fromEntries(existingEntries));
+        setErroresProducto((prev) =>
+          Object.fromEntries(
+            Object.entries(prev).filter(([codigoBarras]) => existingCodes.has(codigoBarras))
+          )
+        );
+      } else {
+        setSeleccionados(new Set());
+        setDatosProducto({});
+        setErroresProducto({});
+      }
     } else {
       const newSel = new Set(seleccionados);
       const newDatos = { ...datosProducto };
@@ -681,16 +760,26 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
 
   // ── Guardar ────────────────────────────────────────────────────────────────
   const handleGuardar = async () => {
+    if (isSaving) return;
     setTouched(true);
     const productosParaValidar = productosSeleccionadosArray;
-    const { valid, erroresGenerales: eg, erroresProducto: ep } =
-      validateReturnFormConLineas(productosParaValidar);
+    const {
+      valid,
+      hasChanges = true,
+      erroresGenerales: eg,
+      erroresProducto: ep,
+    } = isEdit
+      ? validateReturnUpdateForm(productosParaValidar)
+      : validateReturnFormConLineas(productosParaValidar, purchase);
 
     setErroresGenerales(eg);
     setErroresProducto(ep);
 
     if (!valid) {
-      showWarning('Formulario incompleto', 'Por favor revisa los campos marcados en rojo antes de continuar.');
+      showWarning(
+        isEdit && !hasChanges ? 'Sin cambios' : 'Formulario incompleto',
+        eg?.[0] || 'Por favor revisa los campos marcados en rojo antes de continuar.'
+      );
       return;
     }
 
@@ -704,41 +793,37 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
     );
     if (!result?.isConfirmed) return;
 
-    const productosAGuardar = productosSeleccionadosArray.flatMap((prod) =>
-      (prod.lineas ?? []).map((linea) => ({
-        nombre:           prod.nombre,
-        codigoBarras:     prod.codigoBarras,
-        valorUnit:        prod.valorUnit,
-        iva:              prod.iva,
-        cantidadComprada: prod.cantidadComprada,
-        cantidadDevolver: linea.cantidadDevolver,
-        motivo:           linea.motivo,
-        tipoDevolucion:   linea.tipoDevolucion,
-        estado:           linea.estado,
-      }))
-    );
-
     try {
+      setIsSaving(true);
+      let devolucionGuardada;
+
       if (isEdit) {
-        ReturnsDB.update(devolucion.id, productosAGuardar);
+        const payload = mapReturnFormToUpdatePayload(productosSeleccionadosArray);
+        devolucionGuardada = await PurchaseReturnsService.update(devolucion.id, payload);
         showSuccess('Devolución actualizada', `Los cambios en ${devolucion.id} se guardaron correctamente.`);
       } else {
-        const nueva = ReturnsDB.create(purchase.numeroFacturacion, productosAGuardar);
-        showSuccess('Devolución registrada', `Se creó la devolución ${nueva.id} correctamente.`);
+        const payload = mapReturnFormToCreatePayload(purchase, productosSeleccionadosArray);
+        devolucionGuardada = await PurchaseReturnsService.create(payload);
+        showSuccess('Devolución registrada', `Se creó la devolución ${devolucionGuardada.id} correctamente.`);
       }
-      onSaved?.();
+      await onSaved?.(devolucionGuardada);
       cerrarYNavegar();
-    } catch {
-      showError('Error', `No se pudo ${isEdit ? 'actualizar' : 'registrar'} la devolución.`);
+    } catch (error) {
+      setIsSaving(false);
+      showError('Error', error.message || `No se pudo ${isEdit ? 'actualizar' : 'registrar'} la devolución.`);
     }
   };
 
   const cerrarYNavegar = useCallback(() => {
+    if (onClose) {
+      onClose();
+      return;
+    }
     if (!isEdit) navigate('/admin/purchases');
-    else onClose();
   }, [isEdit, navigate, onClose]);
 
   const handleCerrar = async () => {
+    if (isSaving) return;
     if (productosSeleccionadosArray.length === 0) { cerrarYNavegar(); return; }
     const result = await showConfirm(
       'warning',
@@ -782,16 +867,20 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
           </button>
         </div>
 
-        {/* Body: dos columnas solo en creación; una columna en edición */}
+        {/* Body */}
         <div className="flex flex-1 overflow-hidden divide-x divide-gray-200">
-          {!isEdit && (
-            <div className="w-[40%] shrink-0 flex flex-col overflow-hidden">
+          <div className="w-[40%] shrink-0 flex flex-col overflow-hidden">
               <div className="px-5 pt-4 pb-2 shrink-0">
-                <p className="text-sm font-medium text-gray-700 mb-0.5">Productos a devolver</p>
+                <p className="text-sm font-medium text-gray-700 mb-0.5">
+                  {isEdit ? 'Productos de la compra' : 'Productos a devolver'}
+                </p>
                 <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer mb-2 select-none">
                   <input
                     type="checkbox"
-                    checked={productosCompra.length > 0 && seleccionados.size === productosCompra.length}
+                    checked={
+                      productosCompra.length > 0 &&
+                      productosCompra.every((p) => seleccionados.has(p.codigoBarras))
+                    }
                     onChange={toggleTodos}
                     className="accent-[#004D77] w-3.5 h-3.5"
                     disabled={productosCompra.length === 0}
@@ -803,12 +892,15 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
                 {productosCompra.map((p) => {
                   const isSelected = seleccionados.has(p.codigoBarras);
                   const tieneError = productoTieneErrorConLineas(p.codigoBarras, erroresProducto);
+                  const isPersisted = isEdit && hasExistingReturnLines(datosProducto[p.codigoBarras]);
                   const total = totalOriginal(p);
                   return (
                     <div
                       key={p.codigoBarras}
                       onClick={() => toggleSeleccion(p.codigoBarras)}
-                      className={`border rounded-lg p-2.5 transition-colors duration-150 cursor-pointer ${
+                      className={`border rounded-lg p-2.5 transition-colors duration-150 ${
+                        isPersisted ? 'cursor-not-allowed' : 'cursor-pointer'
+                      } ${
                         isSelected
                           ? tieneError
                             ? 'border-red-400 bg-red-50'
@@ -821,7 +913,8 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => {}}
-                          className="accent-[#004D77] w-3.5 h-3.5 mt-0.5 shrink-0"
+                          disabled={isPersisted}
+                          className="accent-[#004D77] w-3.5 h-3.5 mt-0.5 shrink-0 disabled:opacity-60"
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-1 mb-1">
@@ -842,7 +935,6 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
                 })}
               </div>
             </div>
-          )}
 
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="px-5 pt-4 pb-2 shrink-0">
@@ -888,15 +980,17 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
         <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
           <button
             onClick={handleCerrar}
-            className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+            disabled={isSaving}
+            className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
             Cancelar
           </button>
           <button
             onClick={handleGuardar}
-            className="px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"
+            disabled={isSaving}
+            className="px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isEdit ? 'Guardar cambios' : 'Guardar'}
+            {isSaving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Guardar'}
           </button>
         </div>
       </div>

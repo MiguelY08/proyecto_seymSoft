@@ -130,6 +130,7 @@ const MODULE_RULES = {
   ],
 
   devoluciones_en_compras: [
+    "CREATE",
     "READ",
     "READ_DETAIL",
     "UPDATE",

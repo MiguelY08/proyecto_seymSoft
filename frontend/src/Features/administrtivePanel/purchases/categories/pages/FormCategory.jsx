@@ -1,4 +1,4 @@
-// Features/categories/pages/FormCategory.jsx
+// features/categories/pages/FormCategory.jsx
 import React, { useState } from "react";
 import { X, AlertCircle, Plus, Trash2, ChevronRight, ChevronLeft, Tag, Layers } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";

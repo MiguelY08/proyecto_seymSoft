@@ -1,4 +1,4 @@
-// Features/administrtivePanel/purchases/purchases/components/TableCreate.jsx
+// features/administrtivePanel/purchases/purchases/components/TableCreate.jsx
 import React from "react";
 import { Trash2 } from "lucide-react";
 

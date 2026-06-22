@@ -1,4 +1,4 @@
-// Features/administrtivePanel/purchases/nonConformingProducts/pages/NonConformingProducts.jsx
+// features/administrtivePanel/purchases/nonConformingProducts/pages/NonConformingProducts.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import NonConformingProductsTable from "../components/NonConformingProductsTable";

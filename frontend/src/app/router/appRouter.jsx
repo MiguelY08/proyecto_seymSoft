@@ -42,7 +42,7 @@ import ProvidersPage from "../../Features/administrtivePanel/purchases/providers
 import Purchases from "../../Features/administrtivePanel/purchases/purchases/pages/Purchases.jsx";
 // import CreatePurchase from "../../Features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx";
 import CreatePurchase from "../../Features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx";
-// import ReturnsP from "../../Features/administrtivePanel/purchases/returns/pages/Returns.jsx";
+import ReturnsP from "../../Features/administrtivePanel/purchases/returns/pages/Returns.jsx";
 // import ReturnForm from "../../Features/administrtivePanel/purchases/returns/modals/ReturnForm.jsx";
 // import ReturnInfo from "../../Features/administrtivePanel/purchases/returns/modals/ReturnInfo.jsx";
 import NonConformingProducts from "../../Features/administrtivePanel/purchases/nonConformingProducts/pages/NonConformingProducts.jsx";
@@ -56,7 +56,7 @@ import OrderForm from "../../Features/administrtivePanel/sales/orders/pages/Orde
 
 import Sales from "../../Features/administrtivePanel/sales/vendings/pages/Sales.jsx";
 import SaleForm from "../../Features/administrtivePanel/sales/vendings/pages/SaleForm.jsx";
-import SaleEditForm from "../../features/administrtivePanel/sales/vendings/pages/SaleEditForm.jsx";
+import SaleEditForm from "../../Features/administrtivePanel/sales/vendings/pages/SaleEditForm.jsx";
 import SaleInfo from "../../Features/administrtivePanel/sales/vendings/modals/SaleInfo.jsx";
 import AnnularSale from "../../Features/administrtivePanel/sales/vendings/modals/AnnularSale.jsx";
 
@@ -68,6 +68,7 @@ import AccountDetailsPage from "../../Features/administrtivePanel/sales/payments
 /* CONFIGURATION */
 import RolesPage from "../../Features/administrtivePanel/configuration/roles/page/RolesPage.jsx";
 import Banners from "../../Features/administrtivePanel/configuration/carousel/pages/Banner.jsx";
+import PermissionGuard from "../../Features/administrtivePanel/configuration/roles/guards/PermissionGuard.jsx";
 
 /* PRODUCTS */
 import FormProduct from "../../Features/administrtivePanel/purchases/products/modals/CreateProduct.jsx";
@@ -128,7 +129,17 @@ const AppRouter = () => {
           <Route path="purchases/providers" element={<ProvidersPage />} />
           <Route path="purchases" element={<Purchases />} />
           <Route path="purchases/create" element={<CreatePurchase />} />
-          {/* <Route path="purchases/returns-p" element={<ReturnsP />} /> */}
+          <Route
+            path="purchases/returns-p"
+            element={
+              <PermissionGuard
+                permission="devoluciones_en_compras.ver"
+                fallback={<Navigate to="/admin" replace />}
+              >
+                <ReturnsP />
+              </PermissionGuard>
+            }
+          />
           {/* <Route
             path="purchases/return-form"
             element={

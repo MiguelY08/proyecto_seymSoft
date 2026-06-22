@@ -1,4 +1,4 @@
-// Features/administrtivePanel/purchases/purchases/components/CreatePagination.jsx
+// features/administrtivePanel/purchases/purchases/components/CreatePagination.jsx
 import React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 

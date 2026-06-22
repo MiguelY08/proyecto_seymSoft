@@ -1,4 +1,4 @@
-// Features/administrtivePanel/purchases/nonConformingProducts/pages/FormNonConformingProduct.jsx
+// features/administrtivePanel/purchases/nonConformingProducts/pages/FormNonConformingProduct.jsx
 import { X, AlertCircle, Search, Check } from "lucide-react";
 import { useState } from "react";
 import { useAlert } from "../../../../shared/alerts/useAlert";

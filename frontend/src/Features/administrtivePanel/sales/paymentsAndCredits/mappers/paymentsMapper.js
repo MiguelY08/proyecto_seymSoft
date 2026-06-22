@@ -1,4 +1,4 @@
-// src/Features/sales/paymentsAndCredits/mappers/paymentsMapper.js
+// src/features/sales/paymentsAndCredits/mappers/paymentsMapper.js
 
 /**
  * =====================================================

@@ -1,4 +1,4 @@
-// Features/administrtivePanel/purchases/purchases/data/purchasesApi.js
+// features/administrtivePanel/purchases/purchases/data/purchasesApi.js
 import apiClient from '../../../../../setting/apiClient.js';
 
 // ==========================================
@@ -62,6 +62,13 @@ export const mapPurchaseToFrontend = (purchase) => {
 
   const productos = details.map(detail => ({
     id: detail.id,
+    idPurchase: purchase.id,
+    idPurchaseDetail: detail.id,
+    purchaseDetailId: detail.id,
+    idBarcode: detail.idBarcode,
+    barcodeId: detail.idBarcode,
+    idProduct: detail.productId,
+    productId: detail.productId,
     nombre: detail.productName || 'Producto sin nombre',
     codigoBarras: detail.barcode || '',
     cantidad: detail.quantity || 0,
