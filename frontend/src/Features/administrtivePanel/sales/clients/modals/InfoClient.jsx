@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { createElement, useState, useEffect } from 'react';
 import {
   X, IdCard, User, Mail, Phone,
   MapPin, UserCheck, CreditCard,
@@ -13,11 +13,14 @@ import {
 } from '../helpers/clientHelpers';
 import { clientsService } from '../services/clientsService';
 
-function DetailRow({ icon: Icon, label, value, fullWidth = false }) {
+function DetailRow({ icon, label, value, fullWidth = false }) {
   return (
     <div className={`flex items-start gap-3 ${fullWidth ? 'col-span-2' : ''}`}>
       <div className="w-8 h-8 rounded-lg bg-[#004D77]/8 flex items-center justify-center shrink-0 mt-0.5">
-        <Icon className="w-4 h-4 text-[#004D77]/60" strokeWidth={1.8} />
+        {createElement(icon, {
+          className: 'w-4 h-4 text-[#004D77]/60',
+          strokeWidth: 1.8
+        })}
       </div>
       <div className="flex flex-col gap-0.5 min-w-0">
         <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide leading-none">
@@ -183,27 +186,39 @@ function InfoClient({ isOpen, onClose, client }) {
   
   // ✅ Estados para datos financieros (vienen del módulo de pagos)
   const [financialData, setFinancialData] = useState(null);
-  const [loadingFinancial, setLoadingFinancial] = useState(true);
+  const [creditBalanceEvents, setCreditBalanceEvents] = useState([]);
+  const [dismissedCreditEvents, setDismissedCreditEvents] = useState([]);
 
   // Cargar datos financieros al abrir el modal
   useEffect(() => {
-    if (client && isOpen) {
-      loadFinancialSummary(client.id);
-    }
-  }, [client, isOpen]);
+    if (!client || !isOpen) return undefined;
 
-  const loadFinancialSummary = async (clientId) => {
-    setLoadingFinancial(true);
-    try {
-      const data = await clientsService.getClientFinancialSummary(clientId);
-      setFinancialData(data);
-    } catch (error) {
-      console.error('Error al cargar resumen financiero:', error);
-      setFinancialData(null);
-    } finally {
-      setLoadingFinancial(false);
-    }
-  };
+    let active = true;
+
+    const loadClientDetails = async () => {
+      const [financialResult, eventsResult] = await Promise.allSettled([
+        clientsService.getClientFinancialSummary(client.id),
+        clientsService.getCreditBalanceEvents({ clientId: client.id, limit: 20 }),
+      ]);
+
+      if (!active) return;
+
+      setFinancialData(financialResult.status === 'fulfilled' ? financialResult.value : null);
+      setCreditBalanceEvents(eventsResult.status === 'fulfilled' ? eventsResult.value : []);
+      const dismissedKey = `client_dismissed_credit_events_${client.id}`;
+      try {
+        setDismissedCreditEvents(JSON.parse(localStorage.getItem(dismissedKey) || '[]'));
+      } catch {
+        setDismissedCreditEvents([]);
+      }
+    };
+
+    void loadClientDetails();
+
+    return () => {
+      active = false;
+    };
+  }, [client, isOpen]);
 
   if (!isOpen || !client) return null;
 
@@ -226,12 +241,23 @@ function InfoClient({ isOpen, onClose, client }) {
   const creditoTotal = financialData?.assignedCredit ?? 0;
   const montoOcupado = financialData?.usedCredit ?? 0;
   const disponible = financialData?.availableCredit ?? 0;
-  const deudaTotal = financialData?.totalDebt ?? 0;
   const creditosActivos = financialData?.activeCreditsCount ?? 0;
   
   // ✅ SALDO A FAVOR: viene DIRECTAMENTE del cliente (tabla clients)
   // ⚠️ NO viene de financialData, sino de client.credit_balance
   const saldoFavor = client.credit_balance ?? 0;
+  const visibleCreditEvents = creditBalanceEvents.filter(
+    (event) => !dismissedCreditEvents.includes(event.id)
+  );
+
+  const dismissCreditEvent = (eventId) => {
+    const next = [...new Set([...dismissedCreditEvents, eventId])];
+    setDismissedCreditEvents(next);
+    localStorage.setItem(
+      `client_dismissed_credit_events_${client.id}`,
+      JSON.stringify(next)
+    );
+  };
   
   const identificacionCompleta = `${client.documentType || 'N/A'} ${client.document || '—'}`;
 
@@ -252,11 +278,11 @@ function InfoClient({ isOpen, onClose, client }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
-      <div className={`relative bg-white rounded-2xl shadow-2xl overflow-hidden flex transition-all duration-500 ease-in-out ${
+      <div className={`relative max-h-[92vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex transition-all duration-500 ease-in-out ${
         showGraph ? 'w-[95vw] max-w-350' : 'w-full max-w-xl'
       }`}>
 
-        <div className="flex flex-col w-full min-w-360px shrink-0" style={{ width: showGraph ? '50%' : '100%', transition: 'width 500ms ease-in-out' }}>
+        <div className="flex min-h-0 flex-col w-full min-w-360px shrink-0" style={{ width: showGraph ? '50%' : '100%', transition: 'width 500ms ease-in-out' }}>
 
           {/* CABECERA */}
           <div className="relative bg-[#004D77] px-6 py-4 shrink-0">
@@ -383,7 +409,7 @@ function InfoClient({ isOpen, onClose, client }) {
           </div>
 
           {/* CONTENIDO PRINCIPAL */}
-          <div className="px-5 py-4 flex-1">
+          <div className="px-5 py-4 flex-1 min-h-0 overflow-y-auto">
             
             <div className="flex items-center gap-2 mb-3">
               <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Datos personales</span>
@@ -403,6 +429,57 @@ function InfoClient({ isOpen, onClose, client }) {
                 onExpand={() => setShowGraph(!showGraph)}
               />
             </div>
+
+            {visibleCreditEvents.length > 0 && (
+              <div className="mt-4">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-green-700">
+                    Historial de saldo a favor
+                  </span>
+                  <div className="h-px flex-1 bg-green-200" />
+                </div>
+                <div className="max-h-36 space-y-2 overflow-y-auto pr-1">
+                  {visibleCreditEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      className={`rounded-xl border px-3 py-2 ${
+                        event.type === 'REVERSAL'
+                          ? 'border-red-200 bg-red-50'
+                          : 'border-green-200 bg-green-50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="text-xs font-bold text-gray-800">
+                          {event.type === 'REVERSAL' ? 'Saldo revertido' : 'Saldo aplicado'}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-black ${
+                            event.type === 'REVERSAL' ? 'text-red-600' : 'text-green-700'
+                          }`}>
+                            {event.type === 'REVERSAL' ? '-' : '+'}{formatCurrency(event.amount || 0)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => dismissCreditEvent(event.id)}
+                            aria-label="Ocultar movimiento de saldo a favor"
+                            title="Ocultar mensaje"
+                            className="rounded-full p-0.5 text-gray-400 transition hover:bg-white/70 hover:text-gray-700"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <p className="mt-0.5 text-[10px] text-gray-600">
+                        {event.returnNumber} · {event.productName} · {event.quantity} unidad(es)
+                      </p>
+                      <p className="text-[10px] text-gray-400">
+                        {new Date(event.createdAt).toLocaleString('es-CO')} · {event.processedBy || 'Sistema'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 mt-4 mb-3">
               <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Contacto y registro</span>

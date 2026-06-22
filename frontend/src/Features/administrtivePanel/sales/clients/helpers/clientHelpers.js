@@ -176,12 +176,18 @@ export const validateClientForm = (formData) => {
 
   if (!formData.documentType?.trim()) {
     errors.documentType = 'Seleccione el tipo de documento';
+  } else if (formData.personType === 'juridica' && formData.documentType !== 'NIT') {
+    errors.documentType = 'Una persona jurídica debe usar NIT';
+  } else if (formData.personType === 'natural' && formData.documentType === 'NIT') {
+    errors.documentType = 'Una persona natural no puede usar NIT';
   }
 
   if (!formData.document || String(formData.document).trim() === '') {
     errors.document = 'El número es obligatorio';
   } else if (!isOnlyNumbers(String(formData.document))) {
-    errors.document = 'Solo números permitidos';
+    errors.document = 'Solo se permiten números y guiones';
+  } else if (String(formData.document).length < 6) {
+    errors.document = 'Debe tener al menos 6 caracteres';
   } else if (String(formData.document).replace(/\D/g, '').length > 19) {
     errors.document = 'Máximo 19 dígitos permitidos';
   }
@@ -204,6 +210,8 @@ export const validateClientForm = (formData) => {
 
   if (!formData.address?.trim()) {
     errors.address = 'La dirección es obligatoria';
+  } else if (formData.address.trim().length < 5) {
+    errors.address = 'Debe tener al menos 5 caracteres';
   }
 
   if (!formData.phone?.trim()) {
@@ -222,16 +230,16 @@ export const validateClientForm = (formData) => {
     errors.contactName = 'Debe tener mínimo 3 caracteres';
   }
 
-  if (formData.contactPhone && !isOnlyNumbers(formData.contactPhone)) {
-    errors.contactPhone = 'Solo números permitidos';
+  if (formData.contactPhone && !isValidPhone(formData.contactPhone)) {
+    errors.contactPhone = 'Teléfono inválido (7-10 dígitos)';
   }
 
-  if (formData.clientCredit?.trim() && !isOnlyNumbers(formData.clientCredit)) {
-    errors.clientCredit = 'Solo números permitidos';
+  if (formData.clientCredit?.trim() && !/^\d+([.,]\d{0,2})?$/.test(formData.clientCredit)) {
+    errors.clientCredit = 'Ingrese un valor positivo con máximo 2 decimales';
   }
 
-  if (formData.saldoFavor?.trim() && !isOnlyNumbers(formData.saldoFavor)) {
-    errors.saldoFavor = 'Solo números permitidos';
+  if (formData.saldoFavor?.trim() && !/^\d+([.,]\d{0,2})?$/.test(formData.saldoFavor)) {
+    errors.saldoFavor = 'Ingrese un valor positivo con máximo 2 decimales';
   }
 
   if (!formData.clientType?.trim()) {
@@ -240,6 +248,16 @@ export const validateClientForm = (formData) => {
 
   if (!formData.rut?.trim()) {
     errors.rut = 'Indique si tiene RUT';
+  }
+
+  if (formData.rut === 'si') {
+    if (!formData.ciuCode?.trim()) {
+      errors.ciuCode = 'El código CIU es obligatorio cuando tiene RUT';
+    } else if (formData.ciuCode.trim().length < 3) {
+      errors.ciuCode = 'Debe tener al menos 3 caracteres';
+    } else if (formData.ciuCode.length > 25) {
+      errors.ciuCode = 'No puede superar 25 caracteres';
+    }
   }
 
   return errors;

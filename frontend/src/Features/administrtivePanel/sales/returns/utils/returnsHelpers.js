@@ -1,5 +1,3 @@
-// utils/returnsHelpers.js
-
 // ======================= FUNCIONALIDAD: FORMATEO =======================
 
 /**
@@ -25,6 +23,7 @@ export const formatCurrency = (value) => {
  * @returns {string} Fecha formateada en formato local (DD/MM/YYYY)
  */
 export const formatDate = (date) => {
+  if (!date) return 'N/A';
   return new Date(date).toLocaleDateString('es-CO', {
     year: 'numeric',
     month: '2-digit',
@@ -85,20 +84,23 @@ export const getStatusText = (status) => {
 export const getProductStatesForMethod = (metodo) => {
   const statesMap = {
     'Reemplazo': [
-      'Pend. Envío',
-      'Pend. Reemplazo',
-      'Entregado'
+      'Pend. envio',
+      'Pend. reemplazo',
+      'Listo'
     ],
     'Reembolso': [
-      'Pend. Envío',
-      'Pend. Reembolso',
-      'Entregado'
+      'Pend. envio',
+      'Pend. reembolso',
+      'Listo'
     ],
     'Saldo a favor': [
-      'Pend. Envío',
-      'Entregado'
+      'Pend. envio',
+      'Listo'
     ]
   };
+
+
+
   return statesMap[metodo] || [];
 };
 
@@ -120,8 +122,8 @@ export const isValidStateForMethod = (estado, metodo) => {
  * 
  * Reglas:
  * - Si está anulada: devuelve 'Anulado'
- * - Si todos los productos están en 'Entregado': devuelve 'Procesada'
- * - Si al menos un producto NO está en 'Entregado': devuelve 'En Proceso'
+ * - Si todos los productos están en 'Entregado' o 'Listo' o 'Aprobada': devuelve 'Procesada'
+ * - Si al menos un producto NO está completado: devuelve 'En Proceso'
  * 
  * @param {Array<Object>} productosDevueltos - Array de productos devueltos con su estado
  * @param {boolean} isAnulada - Si la devolución está anulada
@@ -134,12 +136,15 @@ export const calculateGeneralStatus = (productosDevueltos = [], isAnulada = fals
     return 'En Proceso';
   }
   
-  // Obtener todos los estados de los productos
-  const allStates = productosDevueltos.every(prod => 
-    prod.estado === 'Entregado'
+  // Estados que se consideran "completados"
+  const completedStatuses = ['Listo'];
+  
+  // Verificar si todos los productos están completados
+  const allCompleted = productosDevueltos.every(prod => 
+    completedStatuses.includes(prod.estado)
   );
   
-  return allStates ? 'Procesada' : 'En Proceso';
+  return allCompleted ? 'Procesada' : 'En Proceso';
 };
 
 /**
@@ -151,7 +156,7 @@ export const calculateGeneralStatus = (productosDevueltos = [], isAnulada = fals
  */
 export const getInitialStateForMethod = (metodo) => {
   const states = getProductStatesForMethod(metodo);
-  return states[0] || 'Pend. Envío';
+  return states[0] || 'Pend. envio';
 };
 
 /**
@@ -192,6 +197,7 @@ export const generateReturnNumber = () => {
  */
 export const filterReturns = (returns, searchTerm) => {
   if (!searchTerm) return returns;
+  if (!returns || !Array.isArray(returns)) return [];
   
   const term = searchTerm.toLowerCase().trim();
   return returns.filter(r => 
@@ -213,7 +219,8 @@ export const filterReturns = (returns, searchTerm) => {
  * @returns {Array} Devoluciones filtradas
  */
 export const filterReturnsByDateAndSearch = (returns, searchTerm, startDate, endDate) => {
-  if (!returns || returns.length === 0) return [];
+  if (!returns || !Array.isArray(returns)) return [];
+  if (returns.length === 0) return [];
   
   let filtered = [...returns];
   
@@ -261,12 +268,17 @@ export const filterReturnsByDateAndSearch = (returns, searchTerm, startDate, end
  * @param {number} currentPage - Número de página actual (1-indexed)
  * @param {number} recordsPerPage - Cantidad de registros por página
  * @returns {Object} Objeto con currentData, totalPages, startIndex y safeCurrentPage
- * @returns {Array} return.currentData - Datos de la página actual
- * @returns {number} return.totalPages - Total de páginas disponibles
- * @returns {number} return.startIndex - Índice de inicio en el array original
- * @returns {number} return.safeCurrentPage - Página segura (ajustada si es necesario)
  */
 export const paginateData = (data, currentPage, recordsPerPage) => {
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return {
+      currentData: [],
+      totalPages: 1,
+      startIndex: 0,
+      safeCurrentPage: 1
+    };
+  }
+  
   const totalPages = Math.max(1, Math.ceil(data.length / recordsPerPage));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const startIndex = (safeCurrentPage - 1) * recordsPerPage;
@@ -288,10 +300,12 @@ export const paginateData = (data, currentPage, recordsPerPage) => {
  * 
  * @param {Array} returns - Array de devoluciones a exportar
  * @returns {Object} Objeto con estructura para librería XLSX
- * @returns {Array} return.headers - Encabezados de columnas
- * @returns {Array} return.data - Datos formateados para Excel
  */
 export const exportToExcel = (returns) => {
+  if (!returns || !Array.isArray(returns)) {
+    return { headers: [], data: [] };
+  }
+  
   const headers = [
     'Número Devolución',
     'Factura',
@@ -303,13 +317,13 @@ export const exportToExcel = (returns) => {
   ];
   
   const data = returns.map(r => [
-    r.numeroDevolucion,
-    r.numeroFactura,
-    r.cliente,
-    r.motivo,
+    r.numeroDevolucion || '',
+    r.numeroFactura || '',
+    r.cliente || '',
+    r.motivo || '',
     formatDate(r.fechaCreacion),
-    `$${formatCurrency(r.totalValor)}`,
-    r.estado
+    `$${formatCurrency(r.totalValor || 0)}`,
+    r.estado || ''
   ]);
   
   return { headers, data };
