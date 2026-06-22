@@ -7,7 +7,11 @@ import Spinner from "../../../../shared/spinner/Spinner";
 
 import PermissionsGrid from "./PermissionsGrid";
 
-import { validateRole } from "../validators/rolesValidators";
+import { validateRole } from "../validators/roleValidation";
+import {
+  getFirstValidationError,
+  getRoleErrorInfo
+} from "../helpers/roleErrorMapper";
 
 import { useAlert } from "../../../../shared/alerts/useAlert";
 
@@ -29,7 +33,8 @@ export default function RoleModal({
   const {
 
     showSuccess,
-    showWarning
+    showWarning,
+    showError
 
   } = useAlert();
 
@@ -37,20 +42,27 @@ export default function RoleModal({
     mode === "view";
 
   const today =
-    new Date().toLocaleDateString();
-    const formatDate = (dateString) => {
-      if (!dateString) return "";
+    new Date().toISOString();
 
-      return new Date(dateString).toLocaleDateString(
-        "es-CO",
-        {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          timeZone: "UTC",
-        }
-      );
-    };
+  const formatDate = (dateValue) => {
+    if (!dateValue) return "";
+
+    const date =
+      dateValue instanceof Date
+        ? dateValue
+        : new Date(dateValue);
+
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+
+    return date.toLocaleDateString("es-CO", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  };
 
   const [nombre,setNombre] =
     useState("");
@@ -69,6 +81,12 @@ export default function RoleModal({
 
   const [loadingPermissions,setLoadingPermissions] =
     useState(false);
+
+  const [saving,setSaving] =
+    useState(false);
+
+  const validateCurrentRole = (data) =>
+    validateRole(data, { mode });
 
   // ─────────────────────────────
   // CARGAR MÓDULOS Y PRIVILEGIOS
@@ -101,6 +119,14 @@ export default function RoleModal({
 
         setPermisosSistema([]);
 
+        const errorInfo =
+          getRoleErrorInfo(error, "permissions");
+
+        showError(
+          errorInfo.title,
+          errorInfo.message
+        );
+
       }finally{
 
         setLoadingPermissions(false);
@@ -115,7 +141,7 @@ export default function RoleModal({
 
     }
 
-  },[isOpen]);
+  },[isOpen, showError]);
 
 
 
@@ -286,7 +312,7 @@ useEffect(() => {
     setNombre(value);
 
     const validation =
-      validateRole({
+      validateCurrentRole({
 
         name:
           value,
@@ -316,7 +342,7 @@ useEffect(() => {
     setDescripcion(value);
 
     const validation =
-      validateRole({
+      validateCurrentRole({
 
         name:
           nombre,
@@ -348,7 +374,7 @@ useEffect(() => {
     );
 
     const validation =
-      validateRole({
+      validateCurrentRole({
 
         name:
           nombre,
@@ -378,11 +404,11 @@ useEffect(() => {
 
   const handleSubmit = async () => {
 
-    if (isView)
+    if (isView || saving)
       return;
 
     const validationErrors =
-      validateRole({
+      validateCurrentRole({
 
         name:
           nombre,
@@ -407,12 +433,12 @@ useEffect(() => {
         validationErrors
       );
 
+      const validationAlert =
+        getFirstValidationError(validationErrors);
+
       showWarning(
-
-        "Campos incompletos",
-
-        "Revisa la información del rol"
-
+        validationAlert.title,
+        validationAlert.message
       );
 
       return;
@@ -442,6 +468,8 @@ useEffect(() => {
     };
 
     try {
+
+      setSaving(true);
 
       const response =
         await onSave(
@@ -491,15 +519,30 @@ useEffect(() => {
         error
       );
 
-      showWarning(
+      const errorInfo =
+        getRoleErrorInfo(
+          error,
+          mode === "edit" ? "update" : "create"
+        );
 
-        "Error",
+      setErrors((previous) => ({
+        ...previous,
+        ...errorInfo.fieldErrors
+      }));
 
-        error?.response?.data?.message ||
+      const showAlert =
+        errorInfo.type === "error"
+          ? showError
+          : showWarning;
 
-        "Hubo un problema al guardar el rol"
-
+      showAlert(
+        errorInfo.title,
+        errorInfo.message
       );
+
+    } finally {
+
+      setSaving(false);
 
     }
 
@@ -548,7 +591,8 @@ Nombre del Rol
 
 <input
 value={nombre}
-disabled={isView}
+disabled={isView || saving}
+maxLength={20}
 onChange={(e)=>
 handleNombreChange(
 e.target.value
@@ -589,14 +633,15 @@ Fecha de Creación
 
 <label className="text-sm font-medium">
 
-Descripción
+Descripción (opcional)
 
 </label>
 
 <textarea
 rows="4"
 value={descripcion}
-disabled={isView}
+disabled={isView || saving}
+maxLength={100}
 onChange={(e)=>
 handleDescripcionChange(
 e.target.value
@@ -673,6 +718,7 @@ Permisos y Privilegios
 
 <button
 onClick={onClose}
+disabled={saving}
 className="w-1/3 bg-gray-400 text-white py-2 rounded-lg hover:bg-gray-500 transition"
 >
 
@@ -682,10 +728,11 @@ Cancelar
 
 <button
 onClick={handleSubmit}
-className="w-1/3 bg-[#004D77] text-white py-2 rounded-lg hover:bg-[#003b5c] transition"
+disabled={saving || loadingPermissions || permisosSistema.length === 0}
+className="w-1/3 bg-[#004D77] text-white py-2 rounded-lg hover:bg-[#003b5c] transition disabled:opacity-60 disabled:cursor-not-allowed"
 >
 
-Guardar
+{saving ? "Guardando..." : "Guardar"}
 
 </button>
 
