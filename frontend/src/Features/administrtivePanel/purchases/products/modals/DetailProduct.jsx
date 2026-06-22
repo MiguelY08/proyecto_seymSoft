@@ -20,7 +20,8 @@ function DetailProduct({ producto, isOpen, onClose }) {
 
       <div className="bg-white rounded-xl max-w-3xl w-full shadow-2xl relative z-10 max-h-[90vh] overflow-hidden">
         <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b" style={{ backgroundColor: '#004D77' }}>
-          <h3 className="text-lg font-bold text-white">Detalles del producto</h3>
+          <h3 className="text-lg font-bold text-white">
+            detalles del producto</h3>
           <button onClick={onClose} className="text-white hover:text-gray-200 transition-colors">
             <X className="w-6 h-6" />
           </button>
@@ -163,7 +164,7 @@ function DetailProduct({ producto, isOpen, onClose }) {
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Informacion de precios</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <p className="text-xs text-gray-600 mb-1">Precio detalle</p>
+                <p className="text-xs text-gray-600 mb-1">Precio detal</p>
                 <p className="text-lg font-bold text-blue-700">${producto.retailPrice?.toLocaleString() || 0}</p>
               </div>
               <div className="bg-green-50 p-4 rounded-lg border border-green-200">
@@ -179,12 +180,6 @@ function DetailProduct({ producto, isOpen, onClose }) {
                 <p className="text-lg font-bold text-orange-700">${producto.bulkPrice?.toLocaleString() || 0}</p>
               </div>
             </div>
-          </div>
-
-          <div className="flex gap-3 mt-6 pt-4 border-t">
-            <button className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors">
-              Reportar producto no conforme
-            </button>
           </div>
         </div>
       </div>
