@@ -484,8 +484,6 @@ export const PaymentService = {
   },
 };
 
-<<<<<<< HEAD
-=======
 export const PaymentReceiptService = {
   async getByPedidoId(pedidoId) {
     const order = await OrdersService.findById(pedidoId);
@@ -539,5 +537,4 @@ export const SalesService = {
   },
 };
 
->>>>>>> 2b53f61b7c937c96cdd1fc224e33dd0432c2e5ff
 export default OrdersService;

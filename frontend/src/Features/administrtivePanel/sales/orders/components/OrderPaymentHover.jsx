@@ -1,0 +1,161 @@
+import React from 'react';
+
+const toNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const currencyFormatter = new Intl.NumberFormat('es-CO', {
+  style: 'currency',
+  currency: 'COP',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
+const formatCurrency = (value) =>
+  currencyFormatter.format(toNumber(value));
+
+const formatDate = (value) => {
+  if (!value) return 'Sin fecha';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('es-CO');
+};
+
+const SummaryRow = ({ colorClass, label, value }) => (
+  <div className="flex items-center justify-between gap-3 text-xs" style={{ color: '#f1f5f9' }}>
+    <span className="inline-flex items-center gap-2 min-w-0">
+      <span className={`h-2 w-2 rounded-full shrink-0 ${colorClass}`} />
+      <span className="truncate">{label}</span>
+    </span>
+    <span className="font-semibold tabular-nums shrink-0" style={{ color: '#e2e8f0' }}>
+      {formatCurrency(value)}
+    </span>
+  </div>
+);
+
+const TotalRow = ({ label, value }) => (
+  <div className="flex items-center justify-between gap-3 text-xs" style={{ color: '#f1f5f9' }}>
+    <span className="truncate">{label}</span>
+    <span className="font-semibold tabular-nums shrink-0" style={{ color: '#e2e8f0' }}>
+      {formatCurrency(value)}
+    </span>
+  </div>
+);
+
+const PaymentRow = ({ payment }) => (
+  <div className="rounded-lg px-2 py-1.5" style={{ background: 'rgba(15, 23, 42, 0.72)' }}>
+    <div className="flex items-center justify-between gap-3">
+      <span className="truncate text-xs font-medium" style={{ color: '#f8fafc' }}>
+        {payment.metodoPago || 'Metodo sin registrar'}
+      </span>
+      <span className="text-xs font-semibold tabular-nums shrink-0" style={{ color: '#93c5fd' }}>
+        {formatCurrency(payment.monto)}
+      </span>
+    </div>
+    <p className="mt-0.5 text-[11px]" style={{ color: '#94a3b8' }}>
+      {formatDate(payment.fechaPago)}
+    </p>
+  </div>
+);
+
+const LoadingRows = () => (
+  <div className="flex flex-col gap-1.5">
+    {[0, 1].map((item) => (
+      <div
+        key={item}
+        className="h-[42px] animate-pulse rounded-lg"
+        style={{ background: 'rgba(148, 163, 184, 0.16)' }}
+      />
+    ))}
+  </div>
+);
+
+function OrderPaymentHover({
+  order,
+  payments,
+  loading = false,
+  error = null,
+  position = null,
+  className = '',
+}) {
+  const paymentList = Array.isArray(payments)
+    ? payments
+    : Array.isArray(order?.pagos)
+      ? order.pagos
+      : [];
+  const total = toNumber(order?.total);
+  const paid = Number.isFinite(Number(order?.totalPagado))
+    ? toNumber(order.totalPagado)
+    : paymentList.reduce((sum, payment) => sum + toNumber(payment.monto), 0);
+  const pending = Number.isFinite(Number(order?.saldoPendiente))
+    ? Math.max(0, toNumber(order.saldoPendiente))
+    : Math.max(0, total - paid);
+  const isPaid = total > 0 && pending <= 0;
+
+  const positionStyle = position
+    ? { left: `${position.left}px`, top: `${position.top}px` }
+    : {};
+
+  return (
+    <div
+      className={`pointer-events-none fixed z-[9999] min-w-[260px] max-w-[320px] -translate-x-1/2 translate-y-1 rounded-xl p-3 opacity-0 shadow-2xl transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 ${className}`}
+      style={{ background: '#1e293b', ...positionStyle }}
+    >
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#94a3b8' }}>
+          Pagos del pedido
+        </p>
+        <span
+          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+            isPaid ? 'bg-emerald-400/15 text-emerald-200' : 'bg-amber-400/15 text-amber-200'
+          }`}
+        >
+          {isPaid ? 'Completo' : 'Pendiente'}
+        </span>
+      </div>
+
+      <div className="flex flex-col gap-1.5 border-b border-slate-600/70 pb-2">
+        <TotalRow label="Total del pedido" value={total} />
+        <SummaryRow colorClass="bg-emerald-400" label="Total pagado" value={paid} />
+        <SummaryRow colorClass="bg-amber-400" label="Pendiente" value={pending} />
+      </div>
+
+      <div className="mt-2">
+        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94a3b8' }}>
+          Historial de pagos
+        </p>
+
+        {loading && <LoadingRows />}
+
+        {!loading && error && (
+          <div className="rounded-lg px-2 py-2" style={{ background: 'rgba(127, 29, 29, 0.28)' }}>
+            <p className="text-xs font-medium" style={{ color: '#fecaca' }}>
+              Historial no disponible
+            </p>
+            <p className="mt-0.5 text-[11px]" style={{ color: '#fca5a5' }}>
+              Intenta de nuevo pasando el cursor más tarde.
+            </p>
+          </div>
+        )}
+
+        {!loading && !error && paymentList.length === 0 && (
+          <div className="rounded-lg px-2 py-2" style={{ background: 'rgba(15, 23, 42, 0.72)' }}>
+            <p className="text-xs italic" style={{ color: '#cbd5e1' }}>
+              No hay pagos registrados.
+            </p>
+          </div>
+        )}
+
+        {!loading && !error && paymentList.length > 0 && (
+          <div className="flex max-h-40 flex-col gap-1.5 overflow-hidden">
+            {paymentList.map((payment, index) => (
+              <PaymentRow key={payment.id ?? `${payment.fechaPago ?? 'payment'}-${index}`} payment={payment} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default OrderPaymentHover;

@@ -7,7 +7,8 @@ import {
   EstadoPagoBadgeTable,
   getPermisos
 } from '../helpers/ordersHelpers';
-import { ESTADOS_LOGISTICOS } from '../services/ordersService';
+import { ESTADOS_LOGISTICOS, PaymentService } from '../services/ordersService';
+import OrderPaymentHover from './OrderPaymentHover';
 
 // ─── Empty State ─────────────────────────────────────────────────────────────
 function EmptyState({ isSearching }) {
@@ -38,6 +39,66 @@ function EmptyState({ isSearching }) {
 // ─── OrdersTable ─────────────────────────────────────────────────────────────
 function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offset = 0, totalOrders = 0 }) {
   const isSearching = totalOrders > 0 && search.trim().length > 0;
+  const [paymentCache, setPaymentCache] = React.useState({});
+  const [paymentHoverPositions, setPaymentHoverPositions] = React.useState({});
+
+  const updatePaymentHoverPosition = React.useCallback((orderId, target) => {
+    const rect = target.getBoundingClientRect();
+    const tooltipWidth = 320;
+    const margin = 12;
+    const centeredLeft = rect.left + rect.width / 2;
+    const minLeft = tooltipWidth / 2 + margin;
+    const maxLeft = window.innerWidth - tooltipWidth / 2 - margin;
+
+    setPaymentHoverPositions((prev) => ({
+      ...prev,
+      [orderId]: {
+        left: Math.min(Math.max(centeredLeft, minLeft), maxLeft),
+        top: rect.bottom + 8,
+      },
+    }));
+  }, []);
+
+  const loadPaymentsOnHover = React.useCallback(async (order) => {
+    if (!order?.id) return;
+    if (Array.isArray(order.pagos) && order.pagos.length > 0) return;
+
+    const cacheItem = paymentCache[order.id];
+    if (cacheItem?.loading || cacheItem?.loaded) return;
+
+    setPaymentCache((prev) => ({
+      ...prev,
+      [order.id]: {
+        payments: prev[order.id]?.payments || [],
+        loading: true,
+        loaded: false,
+        error: null,
+      },
+    }));
+
+    try {
+      const payments = await PaymentService.getByPedidoId(order.id);
+      setPaymentCache((prev) => ({
+        ...prev,
+        [order.id]: {
+          payments,
+          loading: false,
+          loaded: true,
+          error: null,
+        },
+      }));
+    } catch (error) {
+      setPaymentCache((prev) => ({
+        ...prev,
+        [order.id]: {
+          payments: prev[order.id]?.payments || [],
+          loading: false,
+          loaded: false,
+          error,
+        },
+      }));
+    }
+  }, [paymentCache]);
 
   if (orders.length === 0) {
     return <EmptyState isSearching={isSearching} />;
@@ -65,6 +126,8 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
             const { deshabilitado } = getPermisos(order.estadoLogistico, order.pagoEstado);
             const direccionMostrar = order.direccionEntrega || '';
             const clienteMostrar = order.clienteNombre || 'Cliente no especificado';
+            const cachedPayments = paymentCache[order.id];
+            const hoverPosition = paymentHoverPositions[order.id];
 
             // Mensaje de tooltip según la razón del deshabilitado
             let disabledTitle = '';
@@ -97,7 +160,22 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
                   <EstadoLogisticoBadgeTable estado={order.estadoLogistico} term={search} />
                 </td>
                 <td className="px-3 py-2 text-center whitespace-nowrap">
-                  <EstadoPagoBadgeTable estado={order.pagoEstado} term={search} />
+                  <div
+                    className="group relative inline-flex justify-center"
+                    onMouseEnter={(event) => {
+                      updatePaymentHoverPosition(order.id, event.currentTarget);
+                      loadPaymentsOnHover(order);
+                    }}
+                  >
+                    <EstadoPagoBadgeTable estado={order.pagoEstado} term={search} />
+                    <OrderPaymentHover
+                      order={order}
+                      payments={cachedPayments?.payments}
+                      loading={cachedPayments?.loading}
+                      error={cachedPayments?.error}
+                      position={hoverPosition}
+                    />
+                  </div>
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex items-center justify-center gap-1.5">

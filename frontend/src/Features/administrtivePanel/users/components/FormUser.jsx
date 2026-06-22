@@ -3,9 +3,14 @@ import { X, User, Mail, Phone, ShieldCheck, Loader2 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { useAlert } from '../../../shared/alerts/useAlert';
 import { useModalAnimation } from '../../../shared/useModalAnimation';
+import { useAuth } from '../../../access/context/AuthContext';
 import FormSelect from '../../../shared/FormSelect';
-import { UserService } from '../services/userService';
+import {
+  UserService,
+  getUserActionErrorMessage,
+} from '../services/userService';
 import { listRoles } from '../services/listRoles.service'
+import { isSelfUser } from '../helpers/selfUser';
 import {
   PHONE_MIN,
   PHONE_MAX,
@@ -47,9 +52,11 @@ function FormUser() {
   const navigate = useNavigate();
   const location = useLocation();
   const { showWarning, showSuccess, showConfirm } = useAlert();
+  const { user: authUser } = useAuth();
 
   const userToEdit = location.state?.user ?? null;
   const isEditing = userToEdit !== null;
+  const isSelfEdit = isEditing && isSelfUser(userToEdit, authUser);
   const returnTo = location.state?.returnTo ?? '/admin/users';
   const origin = location.state?.origin ?? null;
 
@@ -113,6 +120,14 @@ function FormUser() {
     // Evitar múltiples envíos
     if (isSubmitting) return;
 
+    if (isSelfEdit) {
+      showWarning(
+        'Acción no permitida',
+        'No puedes editar tu propio usuario desde este módulo. Usa la sección de perfil.'
+      );
+      return;
+    }
+
     // Validar campos
     const allTouched = Object.keys(form).reduce((acc, k) => ({ ...acc, [k]: true }), {});
     setTouched(allTouched);
@@ -149,7 +164,7 @@ function FormUser() {
         state: returnTo !== '/admin/users' ? { newUserId: isEditing ? String(userToEdit.id) : undefined } : undefined,
       });
     } catch (error) {
-      const mensaje = error.response?.data?.message || 'Ocurrió un error. Intenta de nuevo.';
+      const mensaje = getUserActionErrorMessage(error);
       showWarning('Error', mensaje);
     } finally {
       setIsSubmitting(false);
