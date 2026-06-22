@@ -12,6 +12,7 @@ import { downloadClientsExcel } from '../helpers/excelHelper';
 
 
 const RECORDS_PER_PAGE = 13;
+const CREDIT_EVENTS_SEEN_KEY = 'clients_seen_credit_balance_events';
 
 function ClientsPage() {
   const [clients,         setClients]         = useState([]);
@@ -28,6 +29,39 @@ function ClientsPage() {
   useEffect(() => {
     loadClients();
   }, [currentPage, searchTerm]);
+
+  useEffect(() => {
+    const notifyCreditEvents = async () => {
+      try {
+        const events = await clientsService.getCreditBalanceEvents({ limit: 20 });
+        const seen = new Set(JSON.parse(localStorage.getItem(CREDIT_EVENTS_SEEN_KEY) || '[]'));
+        const unseen = events.filter((event) => !seen.has(event.id));
+        if (unseen.length === 0) return;
+
+        localStorage.setItem(
+          CREDIT_EVENTS_SEEN_KEY,
+          JSON.stringify([...seen, ...unseen.map((event) => event.id)].slice(-200))
+        );
+
+        const latest = unseen[0];
+        const action = latest.type === 'REVERSAL' ? 'revertido' : 'aplicado';
+        const value = new Intl.NumberFormat('es-CO', {
+          style: 'currency',
+          currency: 'COP',
+          maximumFractionDigits: 0
+        }).format(latest.amount || 0);
+
+        showWarning(
+          `Saldo a favor ${action}`,
+          `${latest.clientName}: ${value}. ${latest.reason}. Devolución ${latest.returnNumber}, producto ${latest.productName}. Procesado por: ${latest.processedBy || 'Sistema'}.`
+        );
+      } catch (error) {
+        console.error('No se pudieron consultar los movimientos de saldo a favor:', error);
+      }
+    };
+
+    notifyCreditEvents();
+  }, [showWarning]);
 
   const loadClients = async () => {
     setLoading(true);

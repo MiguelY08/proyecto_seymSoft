@@ -1,407 +1,340 @@
-import { ChevronLeft, Package, Building2, Truck, RotateCcw, CheckCircle, Check } from 'lucide-react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { devoluciones } from './Returns_On_Orders';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  Banknote,
+  Check,
+  CheckCircle,
+  ChevronLeft,
+  Clock3,
+  LoaderCircle,
+  Package,
+  RefreshCw,
+  Send,
+  WalletCards,
+  XCircle,
+} from 'lucide-react';
+import { useAlert } from '../../shared/alerts/useAlert';
+import useAuthenticatedClient from '../../shared/hooks/useAuthenticatedClient';
+import { getMySalesReturnById } from './salesReturnsService';
+import {
+  buildProductTracking,
+  formatCurrency,
+  formatReturnDate,
+  getReturnSignature,
+  getStatusClasses,
+} from './salesReturnTracking';
 
-/* ── Estilos inyectados (coherentes con Home/Favorites) ── */
-const DETAIL_RETURN_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito:wght@400;600;700;800;900&display=swap');
+const POLL_INTERVAL = 30000;
 
-  @keyframes returnDetail-fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
+const TRACKING_ICONS = {
+  registered: Package,
+  shipping: Send,
+  replacement: RefreshCw,
+  refund: Banknote,
+  credit: WalletCards,
+  processing: Clock3,
+  ready: CheckCircle,
+};
 
-  .return-detail-page {
-    background: #f6f9fc;
-    font-family: 'Nunito', sans-serif;
-    min-height: 100vh;
-  }
-
-  .return-detail-container {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: clamp(24px, 4vw, 40px) 20px;
-  }
-
-  /* Botón volver */
-  .nav-header {
-    margin-bottom: 24px;
-  }
-  .btn-back {
-    background: transparent;
-    border: 1.5px solid #e2edf5;
-    border-radius: 40px;
-    padding: 8px 16px;
-    font-weight: 700;
-    font-size: 0.75rem;
-    color: #1e4060;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .btn-back:hover {
-    background: #f0f8ff;
-    border-color: #afd0e6;
-    transform: translateY(-1px);
-  }
-
-  /* Tarjeta principal */
-  .detail-card {
-    background: #ffffff;
-    border: 1.5px solid #e4eff6;
-    border-radius: 28px;
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 77, 119, 0.06);
-    animation: returnDetail-fadeUp 0.4s ease;
-  }
-  .detail-header {
-    padding: 16px 24px;
-    background: #fefcf5;
-    border-bottom: 1px solid #eef2f6;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-  }
-  .detail-title-section {
-    flex: 1;
-  }
-  .detail-id {
-    font-size: 0.7rem;
-    font-weight: 800;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #9abcce;
-    margin-bottom: 4px;
-  }
-  .detail-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #0c2a3a;
-    margin: 0;
-  }
-  .detail-date {
-    font-size: 0.7rem;
-    color: #64748b;
-    margin-top: 4px;
-  }
-  .detail-badges {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .badge {
-    padding: 4px 12px;
-    border-radius: 40px;
-    font-size: 0.65rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  /* Cuerpo compacto */
-  .detail-body {
-    padding: 20px 24px;
-  }
-  .info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 20px;
-    margin-bottom: 28px;
-  }
-  .info-panel {
-    background: #f8fafc;
-    border-radius: 20px;
-    padding: 16px;
-    border: 1px solid #eef2f6;
-  }
-  .panel-title {
-    font-weight: 800;
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #9abcce;
-    margin-bottom: 12px;
-  }
-  .product-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid #eef2f6;
-    gap: 12px;
-  }
-  .product-item:last-child {
-    border-bottom: none;
-  }
-  .product-info {
-    flex: 1;
-  }
-  .product-name {
-    font-weight: 800;
-    font-size: 0.8rem;
-    color: #0c2a3a;
-  }
-  .product-quantity {
-    font-size: 0.65rem;
-    color: #64748b;
-  }
-  .product-subtotal {
-    font-weight: 900;
-    font-size: 0.85rem;
-    color: #004D77;
-    white-space: nowrap;
-  }
-  .total-amount {
-    margin-top: 12px;
-    padding-top: 10px;
-    border-top: 2px solid #e2edf5;
-    display: flex;
-    justify-content: space-between;
-    font-weight: 900;
-    font-size: 0.95rem;
-  }
-  .detail-text {
-    font-size: 0.8rem;
-    color: #334155;
-    margin-bottom: 6px;
-  }
-  .detail-text strong {
-    color: #1e4060;
-    font-weight: 800;
-  }
-
-  /* Timeline horizontal (restaurado) */
-  .timeline-section {
-    margin-top: 8px;
-  }
-  .timeline-title {
-    font-weight: 800;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #9abcce;
-    margin-bottom: 24px;
-  }
-  .timeline-horizontal {
-    position: relative;
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 16px;
-  }
-  .timeline-step {
-    flex: 1;
-    min-width: 100px;
-    text-align: center;
-    position: relative;
-    z-index: 1;
-  }
-  .timeline-icon {
-    width: 48px;
-    height: 48px;
-    margin: 0 auto 12px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-  }
-  .timeline-icon.completed {
-    background: #c6f0d0;
-    border: 2px solid #38a169;
-  }
-  .timeline-icon.active {
-    background: #d4e8ff;
-    border: 2px solid #004D77;
-  }
-  .timeline-icon.pending {
-    background: #f1f5f9;
-    border: 2px solid #e2edf5;
-  }
-  .timeline-label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: #334155;
-    line-height: 1.3;
-  }
-  .timeline-step.completed .timeline-label {
-    color: #38a169;
-  }
-  .timeline-step.active .timeline-label {
-    color: #004D77;
-  }
-  .timeline-progress {
-    position: absolute;
-    top: 24px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: #e2edf5;
-    z-index: 0;
-  }
-  .timeline-progress-bar {
-    height: 100%;
-    background: #004D77;
-    transition: width 0.3s;
-  }
-
-  @media (max-width: 768px) {
-    .detail-header {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-    .info-grid {
-      grid-template-columns: 1fr;
-    }
-    .timeline-horizontal {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 20px;
-    }
-    .timeline-step {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      text-align: left;
-      width: 100%;
-    }
-    .timeline-icon {
-      margin: 0;
-    }
-    .timeline-progress {
-      display: none;
-    }
-  }
-`;
-
-let detailReturnStylesInjected = false;
-function injectDetailReturnStyles() {
-  if (detailReturnStylesInjected) return;
-  const style = document.createElement('style');
-  style.textContent = DETAIL_RETURN_STYLES;
-  document.head.appendChild(style);
-  detailReturnStylesInjected = true;
-}
-
-const ICONOS_SEGUIMIENTO = [Package, Building2, Truck, RotateCcw, CheckCircle];
+const stepClasses = {
+  completed: 'border-emerald-500 bg-emerald-100 text-emerald-700',
+  active: 'border-[#004D77] bg-blue-100 text-[#004D77]',
+  pending: 'border-slate-200 bg-slate-100 text-slate-400',
+  cancelled: 'border-red-300 bg-red-100 text-red-600',
+};
 
 function DetailReturnsOnOrders() {
-  injectDetailReturnStyles();
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated, loading: authLoading } = useAuthenticatedClient();
+  const { showTimer } = useAlert();
+  const [saleReturn, setSaleReturn] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const previousSignature = useRef(null);
 
-  const dev = devoluciones.find((d) => d.id === id);
+  const loadReturn = useCallback(async ({ silent = false } = {}) => {
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
 
-  if (!dev) {
+    try {
+      if (!silent) setLoading(true);
+      setError('');
+      const data = await getMySalesReturnById(id);
+      const signature = getReturnSignature(data);
+
+      if (
+        silent &&
+        previousSignature.current &&
+        previousSignature.current !== signature
+      ) {
+        void showTimer(
+          data.status === 'Anulado' ? 'warning' : 'info',
+          'Tu devolución fue actualizada',
+          data.status === 'Anulado'
+            ? `La devolución fue anulada. ${data.cancellationReason || ''}`.trim()
+            : `El nuevo estado general es ${data.status}.`,
+          7000
+        );
+      }
+
+      previousSignature.current = signature;
+      setSaleReturn(data);
+    } catch (requestError) {
+      if (!silent) {
+        setError(
+          requestError?.response?.data?.message ||
+          requestError?.message ||
+          'No fue posible cargar la devolución.'
+        );
+      }
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, [id, isAuthenticated, showTimer]);
+
+  useEffect(() => {
+    if (authLoading) return undefined;
+
+    void loadReturn();
+    const interval = window.setInterval(
+      () => void loadReturn({ silent: true }),
+      POLL_INTERVAL
+    );
+
+    return () => window.clearInterval(interval);
+  }, [authLoading, loadReturn]);
+
+  if (authLoading || loading) {
     return (
-      <div className="return-detail-page">
-        <div className="return-detail-container text-center py-20">
-          <p className="text-xl font-semibold text-gray-700 mb-4">Devolución no encontrada</p>
-          <button
-            onClick={() => navigate('/returnsOnOrders')}
-            className="btn-back"
-            style={{ margin: '0 auto' }}
-          >
-            <ChevronLeft size={14} /> Volver
-          </button>
+      <PageShell>
+        <div className="flex min-h-96 items-center justify-center text-[#004D77]">
+          <LoaderCircle className="animate-spin" size={36} />
         </div>
-      </div>
+      </PageShell>
     );
   }
 
-  const totalMonto = dev.productos.reduce((s, p) => s + p.precioUnidad * p.cantidad, 0);
-  const pasosCompletados = dev.seguimiento.filter(p => p.completado).length;
-  const totalPasos = dev.seguimiento.length;
-  const progreso = totalPasos > 1 ? ((pasosCompletados) / (totalPasos - 1)) * 100 : 0;
-
-  return (
-    <div className="return-detail-page">
-      <div className="return-detail-container">
-        <div className="nav-header">
-          <button onClick={() => navigate('/returnsOnOrders')} className="btn-back">
-            <ChevronLeft size={14} /> Volver
+  if (!isAuthenticated || error || !saleReturn) {
+    return (
+      <PageShell>
+        <div className="flex min-h-96 flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white p-8 text-center">
+          <Package size={42} className="mb-4 text-[#004D77]" />
+          <h2 className="text-xl font-black text-slate-800">
+            {!isAuthenticated ? 'Inicia sesión para consultar la devolución' : 'Devolución no encontrada'}
+          </h2>
+          <p className="mt-2 text-sm text-slate-500">{error}</p>
+          <button
+            type="button"
+            onClick={() => navigate(!isAuthenticated ? '/login' : '/returnsOnOrders')}
+            className="mt-5 rounded-full bg-[#004D77] px-6 py-3 text-xs font-black uppercase text-white"
+          >
+            {!isAuthenticated ? 'Iniciar sesión' : 'Volver'}
           </button>
         </div>
+      </PageShell>
+    );
+  }
 
-        <div className="detail-card">
-          <div className="detail-header">
-            <div className="detail-title-section">
-              <div className="detail-id">Devolución No. {dev.id}</div>
-              <h2 className="detail-title">{dev.titulo}</h2>
-              <div className="detail-date">{dev.fecha}</div>
+  return (
+    <PageShell>
+      <button
+        type="button"
+        onClick={() => navigate('/returnsOnOrders')}
+        className="mb-5 flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600"
+      >
+        <ChevronLeft size={14} /> Volver a devoluciones
+      </button>
+
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 bg-amber-50/60 px-6 py-5">
+          <div>
+            <p className="text-xs font-black uppercase tracking-widest text-slate-400">
+              {saleReturn.returnNumber || `Devolución No. ${saleReturn.id}`}
+            </p>
+            <h1 className="mt-1 text-2xl font-black text-slate-800">
+              Seguimiento de devolución
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Creada el {formatReturnDate(saleReturn.createdAt)}
+            </p>
+          </div>
+          <span className={`rounded-full px-4 py-2 text-xs font-black uppercase ${getStatusClasses(saleReturn.status)}`}>
+            {saleReturn.status}
+          </span>
+        </header>
+
+        <div className="space-y-8 p-6">
+          {saleReturn.status === 'Anulado' && (
+            <div className="flex gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
+              <XCircle className="shrink-0" size={22} />
+              <div>
+                <p className="font-black">Devolución anulada</p>
+                <p className="mt-1 text-sm">
+                  {saleReturn.cancellationReason || 'No se registró un motivo de anulación.'}
+                </p>
+              </div>
             </div>
-            <div className="detail-badges">
-              <span className={`badge ${dev.estadoColor}`}>{dev.estado}</span>
-              <span className={`badge ${dev.procesoColor}`}>{dev.proceso}</span>
+          )}
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <InfoCard label="Factura" value={saleReturn.invoiceNumber || 'Sin número'} />
+            <InfoCard label="Valor devuelto" value={formatCurrency(saleReturn.totalAmount)} />
+            <InfoCard label="Última actualización" value={formatReturnDate(saleReturn.updatedAt)} />
+          </div>
+
+          {saleReturn.description && (
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <p className="text-xs font-black uppercase text-slate-400">Descripción</p>
+              <p className="mt-2 text-sm text-slate-700">{saleReturn.description}</p>
+            </div>
+          )}
+
+          <div>
+            <h2 className="mb-4 text-lg font-black text-slate-800">
+              Seguimiento por producto
+            </h2>
+
+            <div className="space-y-5">
+              {(saleReturn.details ?? []).map((detail) => (
+                <ProductTracking key={detail.id} detail={detail} />
+              ))}
             </div>
           </div>
 
-          <div className="detail-body">
-            <div className="info-grid">
-              {/* Productos devueltos */}
-              <div className="info-panel">
-                <div className="panel-title">Productos devueltos</div>
-                {dev.productos.map((producto) => (
-                  <div key={producto.id} className="product-item">
-                    <div className="product-info">
-                      <div className="product-name">{producto.nombre}</div>
-                      <div className="product-quantity">{producto.cantidad} und. × $ {producto.precioUnidad.toLocaleString()}</div>
-                    </div>
-                    <div className="product-subtotal">
-                      $ {(producto.precioUnidad * producto.cantidad).toLocaleString()}
-                    </div>
-                  </div>
+          {!!saleReturn.evidences?.length && (
+            <div>
+              <h2 className="mb-4 text-lg font-black text-slate-800">Evidencias</h2>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {saleReturn.evidences.map((evidence) => (
+                  <a
+                    key={evidence.id}
+                    href={evidence.imageUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+                  >
+                    <img
+                      src={evidence.imageUrl}
+                      alt={evidence.image_description || 'Evidencia de devolución'}
+                      className="h-32 w-full object-cover"
+                    />
+                  </a>
                 ))}
-                <div className="total-amount">
-                  <span>Monto de devolución</span>
-                  <span>$ {totalMonto.toLocaleString()}</span>
-                </div>
-              </div>
-
-              {/* Detalle de la solicitud */}
-              <div className="info-panel">
-                <div className="panel-title">Detalle de la solicitud</div>
-                <div className="detail-text"><strong>Motivo:</strong> {dev.motivoDevolucion}</div>
-                <div className="detail-text"><strong>Resolución solicitada:</strong> {dev.resolucion}</div>
-                <div className="detail-text"><strong>Fecha de solicitud:</strong> {dev.fecha}</div>
               </div>
             </div>
+          )}
+        </div>
+      </section>
+    </PageShell>
+  );
+}
 
-            {/* Timeline horizontal */}
-            <div className="timeline-section">
-              <div className="timeline-title">Seguimiento</div>
-              <div className="timeline-horizontal">
-                <div className="timeline-progress">
-                  <div className="timeline-progress-bar" style={{ width: `${progreso}%` }} />
-                </div>
-                {dev.seguimiento.map((paso, i) => {
-                  const Icono = ICONOS_SEGUIMIENTO[i];
-                  let statusClass = 'pending';
-                  if (paso.completado) statusClass = 'completed';
-                  else if (paso.activo) statusClass = 'active';
-                  return (
-                    <div key={paso.id} className={`timeline-step ${statusClass}`}>
-                      <div className={`timeline-icon ${statusClass}`}>
-                        {paso.completado ? (
-                          <Check size={20} className="text-green-600" />
-                        ) : (
-                          <Icono size={20} className={paso.activo ? 'text-[#004D77]' : 'text-gray-400'} />
-                        )}
-                      </div>
-                      <div className="timeline-label">{paso.nombre}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+function ProductTracking({ detail }) {
+  const tracking = buildProductTracking(detail);
+
+  return (
+    <article className="rounded-3xl border border-slate-200 p-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-14 w-14 shrink-0 overflow-hidden items-center justify-center rounded-2xl bg-blue-50 text-[#004D77]">
+            {detail.imageUrl ? (
+              <img
+                src={detail.imageUrl}
+                alt={detail.productName}
+                className="h-full w-full object-contain p-1"
+              />
+            ) : (
+              <Package size={26} />
+            )}
+          </div>
+          <div className="min-w-0">
+            <h3 className="truncate font-black text-slate-800">{detail.productName}</h3>
+            <p className="text-sm text-slate-500">
+              {detail.quantity} und. · {formatCurrency(detail.unitPrice)} c/u
+            </p>
           </div>
         </div>
+
+        <div className="text-right">
+          <span className={`rounded-full px-3 py-1 text-[11px] font-black uppercase ${getStatusClasses(detail.status)}`}>
+            {detail.status}
+          </span>
+          <p className="mt-2 text-sm font-black text-[#004D77]">{detail.method}</p>
+        </div>
       </div>
+
+      <div className="mt-4 grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm sm:grid-cols-2">
+        <p><strong>Motivo:</strong> {detail.reason || 'Sin motivo'}</p>
+        <p><strong>Subtotal:</strong> {formatCurrency(detail.unitPrice * detail.quantity)}</p>
+        {detail.description && (
+          <p className="sm:col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-900">
+            <strong>Descripción del motivo:</strong> {detail.description}
+          </p>
+        )}
+      </div>
+
+      <div className="mt-6">
+        <div className="mb-3 flex items-center justify-between text-xs font-bold text-slate-500">
+          <span>{tracking.cancelled ? 'Proceso detenido' : 'Progreso'}</span>
+          <span>{tracking.progress}%</span>
+        </div>
+        <div className="mb-6 h-2 overflow-hidden rounded-full bg-slate-100">
+          <div
+            className={`h-full rounded-full ${tracking.cancelled ? 'bg-red-500' : 'bg-[#004D77]'}`}
+            style={{ width: `${tracking.progress}%` }}
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {tracking.steps.map((step) => {
+            const Icon = tracking.cancelled
+              ? XCircle
+              : step.state === 'completed'
+                ? Check
+                : TRACKING_ICONS[step.key] || Clock3;
+
+            return (
+              <div key={step.key} className="flex items-center gap-3">
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 ${stepClasses[step.state]}`}>
+                  <Icon size={19} />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-slate-700">{step.label}</p>
+                  <p className="text-[11px] text-slate-400">
+                    {step.state === 'completed'
+                      ? 'Completado'
+                      : step.state === 'active'
+                        ? 'Estado actual'
+                        : step.state === 'cancelled'
+                          ? 'Anulado'
+                          : 'Pendiente'}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function InfoCard({ label, value }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 p-4">
+      <p className="text-xs font-black uppercase text-slate-400">{label}</p>
+      <p className="mt-2 font-black text-slate-800">{value}</p>
+    </div>
+  );
+}
+
+function PageShell({ children }) {
+  return (
+    <div className="min-h-screen bg-[#f6f9fc]">
+      <main className="mx-auto max-w-7xl px-5 py-8">{children}</main>
     </div>
   );
 }

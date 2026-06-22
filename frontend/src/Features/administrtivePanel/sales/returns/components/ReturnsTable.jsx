@@ -2,7 +2,7 @@
  * Archivo: ReturnsTable.jsx
  *
  * Componente que renderiza la tabla principal de devoluciones. Muestra todos
- * los registros de devoluciones con su informaci\u00f3n detallada (número, factura,
+ * los registros de devoluciones con su información detallada (número, factura,
  * cliente, motivo, fecha, valor, estado) y botones de acción.
  *
  * Responsabilidades:
@@ -23,12 +23,19 @@ import {
 } from "../utils/returnsHelpers";
 
 /**
+ * Función auxiliar: Obtiene un valor del objeto con múltiples nombres de campo posibles
+ */
+const getField = (obj, fieldNames, defaultValue = '') => {
+  for (const name of fieldNames) {
+    if (obj?.[name] !== undefined && obj?.[name] !== null) {
+      return obj[name];
+    }
+  }
+  return defaultValue;
+};
+
+/**
  * Función auxiliar: Resalta fragmentos de texto que coinciden con la búsqueda.
- * Se usa para enfatizar resultados dentro de celdas de la tabla.
- *
- * @param {string|number} text Texto original a evaluar
- * @param {string} search Término de búsqueda
- * @returns {string|JSX[]} Texto con fragmentos resaltados o el texto original
  */
 const highlightText = (text, search) => {
   if (!search || !text) return text;
@@ -153,9 +160,18 @@ function ReturnsTable({
             const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-100";
             const recordNumber = startIndex + index + 1;
 
+            // 🔴 EXTRAER DATOS CON MÚLTIPLES NOMBRES DE CAMPO POSIBLES
+            const numeroDevolucion = getField(row, ['numeroDevolucion', 'returnNumber'], '');
+            const numeroFactura = getField(row, ['numeroFactura', 'invoiceNumber'], '');
+            const cliente = getField(row, ['cliente', 'clientName'], '');
+            const motivo = getField(row, ['motivo', 'reason'], '');
+            const fechaCreacion = getField(row, ['fechaCreacion', 'createdAt', 'creationDate'], new Date().toISOString());
+            const totalValor = getField(row, ['totalValor', 'totalAmount'], 0);
+            const estado = getField(row, ['estado', 'status'], 'En Proceso');
+
             return (
               <tr
-                key={row.id}
+                key={row.id || index}
                 className={`transition-colors duration-150 ${rowBg}`}
               >
                 <td
@@ -164,28 +180,28 @@ function ReturnsTable({
                   {recordNumber}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlightText(row.numeroDevolucion, searchTerm)}
+                  {highlightText(numeroDevolucion, searchTerm)}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlightText(row.numeroFactura, searchTerm)}
+                  {highlightText(numeroFactura, searchTerm)}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-800 font-medium whitespace-nowrap">
-                  {highlightText(row.cliente, searchTerm)}
+                  {highlightText(cliente, searchTerm)}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 max-w-[150px] truncate">
-                  {highlightText(row.motivo, searchTerm)}
+                  {highlightText(motivo, searchTerm)}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {formatDate(row.fechaCreacion)}
+                  {formatDate(fechaCreacion)}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  ${highlightText(formatCurrency(row.totalValor), searchTerm)}
+                  ${highlightText(formatCurrency(totalValor), searchTerm)}
                 </td>
                 <td className="px-3 py-2 text-center">
                   <span
-                    className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${getStatusStyle(row.estado)}`}
+                    className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${getStatusStyle(estado)}`}
                   >
-                    {getStatusText(row.estado)}
+                    {getStatusText(estado)}
                   </span>
                 </td>
                 <td className="px-3 py-2">
@@ -204,12 +220,12 @@ function ReturnsTable({
                       <button
                         onClick={() => onEdit(row)}
                         className={`text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer ${
-                          row.estado === "Anulado"
+                          estado === "Anulado"
                             ? "opacity-30 cursor-not-allowed"
                             : ""
                         }`}
                         title="Editar"
-                        disabled={row.estado === "Anulado"}
+                        disabled={estado === "Anulado"}
                       >
                         <SquarePen className="w-4 h-4" strokeWidth={1.5} />
                       </button>
@@ -219,16 +235,16 @@ function ReturnsTable({
                       <button
                         onClick={() => onCancel(row)}
                         className={`transition cursor-pointer ${
-                          row.estado === "Anulado"
+                          estado === "Anulado"
                             ? "text-gray-300 cursor-not-allowed"
                             : "text-gray-400 hover:scale-110 hover:text-red-500"
                         }`}
                         title={
-                          row.estado === "Anulado"
+                          estado === "Anulado"
                             ? "Ya está anulada"
                             : "Anular devolución"
                         }
-                        disabled={row.estado === "Anulado"}
+                        disabled={estado === "Anulado"}
                       >
                         <XCircle className="w-4 h-4" strokeWidth={1.5} />
                       </button>

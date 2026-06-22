@@ -198,18 +198,25 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     
     setFormData(newFormData);
 
-    if (touched[name]) {
-      const validationErrors = validateProviderForm({ ...formData, [name]: value });
-      setErrors((prev) => ({
-        ...prev,
-        [name]: validationErrors[name] || '',
-      }));
+    const validationErrors = validateProviderForm(newFormData);
+    const fieldsToRefresh = [name];
+    if (name === 'tipoPersona') fieldsToRefresh.push('tipo');
+    if (name === 'rut') fieldsToRefresh.push('codigoCIU');
+
+    if (fieldsToRefresh.some((field) => touched[field]) || name === 'tipoPersona' || name === 'rut') {
+      setErrors((prev) => {
+        const next = { ...prev };
+        fieldsToRefresh.forEach((field) => {
+          next[field] = validationErrors[field] || '';
+        });
+        return next;
+      });
     }
   };
 
   const handleSelectChange = (name, value) => {
-    handleChange({ target: { name, value } });
     setTouched((prev) => ({ ...prev, [name]: true }));
+    handleChange({ target: { name, value } });
   };
 
   const handleCategoriaChange = (categoryId) => {
@@ -227,19 +234,15 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       categoryIds: updatedCategoryIds,
     }));
 
-    if (touched.categoryIds) {
-      if (updatedCategoryIds.length === 0) {
-        setErrors((prev) => ({
-          ...prev,
-          categoryIds: 'Seleccione al menos una categoría',
-        }));
-      } else {
-        setErrors((prev) => ({
-          ...prev,
-          categoryIds: '',
-        }));
-      }
-    }
+    setTouched((prev) => ({ ...prev, categoryIds: true }));
+    const validationErrors = validateProviderForm({
+      ...formData,
+      categoryIds: updatedCategoryIds,
+    });
+    setErrors((prev) => ({
+      ...prev,
+      categoryIds: validationErrors.categoryIds || '',
+    }));
   };
 
   const handleBlur = (e) => {
@@ -340,12 +343,15 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       //  El éxito ya se muestra en ProvidersPage, no aquí
       resetForm();
       onClose();
-    } catch (error) {
+    } catch {
       // No hacer nada, el error ya se muestra en ProvidersPage
     } finally {
       setSaving(false);
     }
 };
+
+  const liveValidationErrors = validateProviderForm(formData);
+  const hasLiveErrors = Object.keys(liveValidationErrors).length > 0;
 
   const inputClass = (field) =>
     `w-full px-3 py-1.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors ${
@@ -359,20 +365,6 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       errors[field] && touched[field]
         ? 'border-red-500'
         : 'border-gray-300'
-    }`;
-
-  const disabledSelectClass = (field) =>
-    `appearance-none w-full px-3 pr-8 py-1.5 text-sm border rounded-lg outline-none bg-gray-100 text-gray-500 cursor-not-allowed ${
-      errors[field] && touched[field]
-        ? 'border-red-500'
-        : 'border-gray-300'
-    }`;
-
-  const selectClass = (field) =>
-    `appearance-none w-full px-3 pr-8 py-1.5 text-sm border rounded-lg outline-none bg-white text-gray-700 cursor-pointer transition-colors ${
-      errors[field] && touched[field]
-        ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-        : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
 
   const renderError = (field) =>
@@ -754,7 +746,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || hasLiveErrors}
               className="px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
