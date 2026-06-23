@@ -2,14 +2,77 @@
  * Archivo: DetailReturn.jsx
  * Modal para visualizar los detalles completos de una devolución.
  */
-import React, { useState } from 'react';
-import { X, Download, AlertTriangle, Image } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, Download, AlertTriangle, Image, PackageSearch } from 'lucide-react';
 import ViewEvidence from './ViewEvidence';
+import PurchaseReturnModal from './PurchaseReturnModal';
 import { formatDate } from '../utils/returnsHelpers';
 import { exportReturnToPDF } from '../utils/pdfExporter';
+import {
+  getPurchaseReturnInfo,
+  resolveDefectiveProduct,
+} from '../data/returnsService';
+import { useAlert } from '../../../../shared/alerts/useAlert';
+
+const isDefectiveDetail = (detail = {}) => {
+  const reason = String(detail.reason || detail.motivo || '').toUpperCase();
+  return Number(detail.reasonId || detail.idReturnReason) === 5
+    || reason === 'DEFECTUOSO'
+    || reason.includes('PRODUCTO DEFECTUOSO');
+};
 
 function DetailReturn({ isOpen, onClose, devolucion = null }) {
   const [evidenceOpen, setEvidenceOpen] = useState(false);
+  const [purchaseInfoByDetail, setPurchaseInfoByDetail] = useState({});
+  const [selectedDefectiveProduct, setSelectedDefectiveProduct] = useState(null);
+  const [resolvingDetailId, setResolvingDetailId] = useState(null);
+  const { showConfirm, showError, showSuccess } = useAlert();
+
+  useEffect(() => {
+    if (!isOpen || !devolucion?.id) {
+      const timer = window.setTimeout(() => setPurchaseInfoByDetail({}), 0);
+      return () => window.clearTimeout(timer);
+    }
+
+    const eligibleDetails = (devolucion.details || []).filter((detail) => (
+      isDefectiveDetail(detail) && detail.status === 'Listo' && detail.idBarcode
+    ));
+    if (!eligibleDetails.length) {
+      const timer = window.setTimeout(() => setPurchaseInfoByDetail({}), 0);
+      return () => window.clearTimeout(timer);
+    }
+
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setPurchaseInfoByDetail(
+        Object.fromEntries(eligibleDetails.map((detail) => [
+          detail.idSaleReturnDetail || detail.id,
+          { loading: true },
+        ]))
+      );
+
+      Promise.all(eligibleDetails.map(async (detail) => {
+        const detailId = detail.idSaleReturnDetail || detail.id;
+        try {
+          const info = await getPurchaseReturnInfo(
+            detail.idBarcode,
+            devolucion.id,
+            detailId
+          );
+          return [detailId, { loading: false, data: info }];
+        } catch (error) {
+          return [detailId, { loading: false, error: error.message }];
+        }
+      })).then((entries) => {
+        if (active) setPurchaseInfoByDetail(Object.fromEntries(entries));
+      });
+    }, 0);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [devolucion, isOpen]);
 
   if (!isOpen || !devolucion) return null;
 
@@ -75,6 +138,124 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
 
   const handleExportPDF = () => {
     exportReturnToPDF(devolucion);
+  };
+
+  const refreshPurchaseInfo = async (detail) => {
+    const detailId = detail.idSaleReturnDetail || detail.id;
+    const info = await getPurchaseReturnInfo(
+      detail.idBarcode,
+      devolucion.id,
+      detailId
+    );
+    setPurchaseInfoByDetail((current) => ({
+      ...current,
+      [detailId]: { loading: false, data: info },
+    }));
+  };
+
+  const handleNonConforming = async (detail, info) => {
+    const detailId = detail.idSaleReturnDetail || detail.id;
+    const confirmation = await showConfirm(
+      'warning',
+      'Enviar a producto no conforme',
+      `${detail.productName || 'Este producto'} no tiene una compra vigente con cantidad disponible. Si confirmas, será registrado como producto no conforme. Motivo: ${info.reason || 'No es posible generar la devolución de compra.'}`,
+      {
+        confirmButtonText: 'Sí, enviar',
+        cancelButtonText: 'Cancelar',
+      }
+    );
+    if (!confirmation?.isConfirmed) return;
+
+    try {
+      setResolvingDetailId(detailId);
+      await resolveDefectiveProduct(devolucion.id, detailId, {
+        action: 'NON_CONFORMING',
+      });
+      showSuccess(
+        'Producto no conforme registrado',
+        'El producto quedó enviado a producto no conforme.'
+      );
+      await refreshPurchaseInfo(detail);
+    } catch (error) {
+      showError('No se pudo registrar', error.message);
+    } finally {
+      setResolvingDetailId(null);
+    }
+  };
+
+  const renderDefectiveAction = (detail) => {
+    const detailId = detail.idSaleReturnDetail || detail.id;
+    const state = purchaseInfoByDetail[detailId];
+
+    if (!isDefectiveDetail(detail) || detail.status !== 'Listo') return null;
+    if (!detail.idBarcode) {
+      return (
+        <p className="mt-1 text-[10px] font-medium text-red-600">
+          Sin código de barras para determinar la compra.
+        </p>
+      );
+    }
+    if (!state || state.loading) {
+      return <p className="mt-1 text-[10px] text-gray-400">Verificando compra...</p>;
+    }
+    if (state.error) {
+      return (
+        <button
+          type="button"
+          onClick={() => refreshPurchaseInfo(detail).catch((error) => {
+            showError('No se pudo verificar', error.message);
+          })}
+          className="mt-1 text-[10px] font-semibold text-red-600 underline"
+        >
+          Reintentar verificación
+        </button>
+      );
+    }
+
+    const info = state.data;
+    if (info?.resolution?.type === 'PURCHASE_RETURN') {
+      return (
+        <p className="mt-1 text-[10px] font-semibold text-green-700">
+          Devolución de compra #{info.resolution.referenceId || 'generada'}
+        </p>
+      );
+    }
+    if (info?.resolution?.type === 'NON_CONFORMING') {
+      return (
+        <p className="mt-1 text-[10px] font-semibold text-amber-700">
+          Enviado a producto no conforme
+        </p>
+      );
+    }
+    if (info?.canReturn) {
+      return (
+        <button
+          type="button"
+          onClick={() => setSelectedDefectiveProduct({
+            ...detail,
+            saleReturnId: devolucion.id,
+            saleReturnDetailId: detailId,
+            purchaseInfo: info,
+          })}
+          className="mt-1 inline-flex items-center gap-1 rounded-lg bg-[#004D77] px-2 py-1 text-[10px] font-semibold text-white transition hover:bg-[#003d61]"
+        >
+          <PackageSearch className="h-3 w-3" />
+          Generar devolución de compra
+        </button>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        disabled={resolvingDetailId === detailId}
+        onClick={() => handleNonConforming(detail, info)}
+        className="mt-1 inline-flex items-center gap-1 rounded-lg bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-800 transition hover:bg-amber-200 disabled:opacity-60"
+      >
+        <AlertTriangle className="h-3 w-3" />
+        {resolvingDetailId === detailId ? 'Registrando...' : 'Enviar a no conforme'}
+      </button>
+    );
   };
 
   return (
@@ -209,6 +390,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
                               <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${isAnulado ? 'text-red-600 bg-red-100' : getStatusColor(estadoProducto)}`}>
                                 {estadoProducto}
                               </span>
+                              {renderDefectiveAction(p)}
                             </td>
                             <td className="px-3 py-2.5 text-center text-gray-700 font-medium">{cantidad}</td>
                             <td className="px-3 py-2.5 text-right text-gray-700 font-medium">
@@ -255,6 +437,17 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
         onClose={() => setEvidenceOpen(false)}
         evidences={evidenciasMapeadas}
         title={`Evidencias - ${returnNumber}`}
+      />
+
+      <PurchaseReturnModal
+        isOpen={Boolean(selectedDefectiveProduct)}
+        productData={selectedDefectiveProduct}
+        onClose={() => setSelectedDefectiveProduct(null)}
+        onSuccess={async () => {
+          if (selectedDefectiveProduct) {
+            await refreshPurchaseInfo(selectedDefectiveProduct);
+          }
+        }}
       />
     </>
   );

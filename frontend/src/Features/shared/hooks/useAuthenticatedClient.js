@@ -9,7 +9,7 @@ export const useAuthenticatedClient = () => {
 
   return {
     client,
-    clientId: client?.idClient ?? null,
+    clientId: client?.idClient ?? client?.id_client ?? client?.id ?? null,
     clientType: client?.clientType ?? null,
     loading,
     error: null,
