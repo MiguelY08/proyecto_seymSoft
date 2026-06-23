@@ -101,7 +101,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
                 <div className="flex items-start gap-2.5">
                   <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
                   <div className="w-full">
-                    <p className="text-xs font-bold text-red-700 mb-1">⚠️ DEVOLUCIÓN ANULADA</p>
+                    <p className="text-xs font-bold text-red-700 mb-1">DEVOLUCIÓN ANULADA</p>
                     {cancellationReason && (
                       <p className="text-xs text-red-600">
                         <span className="font-semibold">Motivo:</span> {cancellationReason}

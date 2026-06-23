@@ -41,7 +41,7 @@ export const useCart = () => {
 };
 
 export const CartProvider = ({ children }) => {
-  const { client, isAuthenticated, loading: authLoading } = useAuth();
+  const { client, loading: authLoading } = useAuth();
   const clientId = client?.idClient ?? null;
   const [cartItems, setCartItems] = useState(readGuestCart);
   const [loading, setLoading] = useState(false);
@@ -58,7 +58,7 @@ export const CartProvider = ({ children }) => {
     if (!clientId) {
       synchronizationRef.current = null;
       activeClientRef.current = null;
-      setCartItems(isAuthenticated ? [] : readGuestCart());
+      setCartItems(readGuestCart());
       setLoading(false);
       setError(null);
       return undefined;
@@ -119,10 +119,10 @@ export const CartProvider = ({ children }) => {
     return () => {
       active = false;
     };
-  }, [authLoading, clientId, isAuthenticated]);
+  }, [authLoading, clientId]);
 
   useEffect(() => {
-    if (isAuthenticated || clientId) return undefined;
+    if (clientId) return undefined;
 
     const synchronizeGuestCart = (event) => {
       if (event.key === GUEST_CART_KEY) {
@@ -132,7 +132,7 @@ export const CartProvider = ({ children }) => {
 
     window.addEventListener('storage', synchronizeGuestCart);
     return () => window.removeEventListener('storage', synchronizeGuestCart);
-  }, [clientId, isAuthenticated]);
+  }, [clientId]);
 
   const commitCartItem = useCallback((productId, quantity, previousItems) => {
     storefrontService.setCartItem(productId, quantity).catch((requestError) => {
@@ -150,7 +150,7 @@ export const CartProvider = ({ children }) => {
         const nextItems = updater(previousItems);
         setError(null);
 
-        if (!isAuthenticated) {
+        if (!clientId) {
           writeGuestCart(nextItems);
         } else if (clientId) {
           remoteChange?.(nextItems, previousItems);
@@ -159,7 +159,7 @@ export const CartProvider = ({ children }) => {
         return nextItems;
       });
     },
-    [clientId, isAuthenticated],
+    [clientId],
   );
 
   const addToCart = useCallback((product, quantity = 1) => {
@@ -233,12 +233,10 @@ export const CartProvider = ({ children }) => {
     setCartItems([]);
     setError(null);
 
-    if (!isAuthenticated) {
+    if (!clientId) {
       writeGuestCart([]);
       return true;
     }
-
-    if (!clientId) return true;
 
     try {
       await storefrontService.clearCart();
@@ -251,7 +249,7 @@ export const CartProvider = ({ children }) => {
       );
       return false;
     }
-  }, [cartItems, clientId, isAuthenticated]);
+  }, [cartItems, clientId]);
 
   const getSubtotal = () => cartItems.reduce(
     (total, item) => total + (item.price * item.quantity),

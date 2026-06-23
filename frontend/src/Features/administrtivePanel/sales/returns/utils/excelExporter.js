@@ -1,370 +1,198 @@
-/**
- * Archivo: excelExporter.js
- * 
- * Utilidad especializada para exportar devoluciones a formato Excel (.xlsx).
- * Utiliza la librería XLSX para crear y descargar archivos con formato profesional.
- * 
- * Responsabilidades principales:
- * - Formatear datos de devoluciones para Excel
- * - Incluir productos devueltos con todos sus detalles
- * - Crear hoja resumen y hoja de detalles de productos
- * - Generar descarga automática del archivo
- * - Incluir fecha de generación en el nombre del archivo
- */
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
+import { formatDate } from './returnsHelpers';
 
-import * as XLSX from 'xlsx';
-import { formatCurrency, formatDate } from './returnsHelpers';
+const BLUE = '004D77';
+const LIGHT_BLUE = 'DCEBF3';
+const LIGHT_GRAY = 'F3F4F6';
+const WHITE = 'FFFFFF';
 
-// ======================= FUNCIONALIDAD: DESCARGAR COMPLETO =======================
+const detailsOf = (item) => item.details || item.productosDevueltos || [];
+const valueOf = (item, ...keys) => {
+  for (const key of keys) {
+    if (item?.[key] !== undefined && item?.[key] !== null) return item[key];
+  }
+  return '';
+};
 
-/**
- * Exporta un array de devoluciones a un archivo Excel descargable.
- * Crea dos hojas: una con el resumen de devoluciones y otra con el detalle de productos.
- * 
- * @param {Array} returns - Array de devoluciones a exportar
- * @returns {void} Descarga el archivo automáticamente
- */
-export const exportReturnsToExcel = (returns) => {
-  // Fecha actual para el encabezado
-  const currentDate = new Date();
-  const formattedDate = currentDate.toLocaleDateString('es-CO', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+const styleTitle = (worksheet, range, title) => {
+  worksheet.mergeCells(range);
+  const cell = worksheet.getCell(range.split(':')[0]);
+  cell.value = title;
+  cell.font = { bold: true, size: 18, color: { argb: WHITE } };
+  cell.alignment = { horizontal: 'center', vertical: 'middle' };
+  cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BLUE } };
+};
+
+const styleHeader = (row) => {
+  row.height = 24;
+  row.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: WHITE } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BLUE } };
+    cell.border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' },
+    };
   });
-  const formattedDateTime = currentDate.toLocaleString('es-CO', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
+};
+
+const styleDataRow = (row, index) => {
+  row.eachCell((cell) => {
+    cell.alignment = { vertical: 'middle', wrapText: true };
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: index % 2 === 0 ? WHITE : LIGHT_GRAY },
+    };
+    cell.border = {
+      top: { style: 'thin', color: { argb: LIGHT_BLUE } },
+      left: { style: 'thin', color: { argb: LIGHT_BLUE } },
+      bottom: { style: 'thin', color: { argb: LIGHT_BLUE } },
+      right: { style: 'thin', color: { argb: LIGHT_BLUE } },
+    };
   });
+};
 
-  // ======================= TÍTULO PRINCIPAL =======================
-  const titleRow = [['DEVOLUCIÓN DE VENTAS']];
-  const dateRow = [[`Fecha de exportación: ${formattedDate} - ${formattedDateTime}`]];
-  const emptyRow = [['']];
+const prepareSheet = (worksheet, title, columnCount) => {
+  const lastColumn = worksheet.getColumn(columnCount).letter;
+  styleTitle(worksheet, `A1:${lastColumn}1`, title);
+  worksheet.mergeCells(`A2:${lastColumn}2`);
+  worksheet.getCell('A2').value =
+    `Fecha de exportación: ${new Date().toLocaleString('es-CO')}`;
+  worksheet.getCell('A2').alignment = { horizontal: 'center' };
+  worksheet.getCell('A2').font = { italic: true, color: { argb: BLUE } };
+  worksheet.addRow([]);
+};
 
-  // ======================= HOJA 1: RESUMEN DE DEVOLUCIONES =======================
-  
+export const exportReturnsToExcel = async (returns = []) => {
+  if (!Array.isArray(returns) || returns.length === 0) return false;
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Papelería Magic';
+  workbook.created = new Date();
+
+  const summary = workbook.addWorksheet('Devoluciones');
   const summaryHeaders = [
-    'Número Devolución',
+    'N.º devolución',
     'Factura',
     'Cliente',
-    'Motivo',
     'Fecha',
-    'Valor',
     'Estado',
+    'Productos',
+    'Unidades',
+    'Valor total',
     'Asesor',
-    'Teléfono',
-    'Dirección',
-    'Cantidad Productos',
-    'Total Unidades'
+    'Descripción',
   ];
-  
-  const summaryData = returns.map(r => [
-    r.numeroDevolucion || '',
-    r.numeroFactura || '',
-    r.cliente || '',
-    r.motivo || '',
-    formatDate(r.fechaCreacion),
-    `$${formatCurrency(r.totalValor || 0)}`,
-    r.estado || 'Pendiente',
-    r.asesor || '',
-    r.telefono || '',
-    r.direccion || '',
-    r.cantidadProductos || (r.productosDevueltos?.length || 0),
-    r.totalUnidades || (r.productosDevueltos?.reduce((sum, p) => sum + (p.cantidad || 0), 0) || 0)
-  ]);
-  
-  // ======================= HOJA 2: DETALLE DE PRODUCTOS DEVUELTOS =======================
-  
+  prepareSheet(summary, 'DEVOLUCIONES DE VENTAS', summaryHeaders.length);
+  styleHeader(summary.addRow(summaryHeaders));
+
+  returns.forEach((item, index) => {
+    const details = detailsOf(item);
+    const row = summary.addRow([
+      valueOf(item, 'returnNumber', 'numeroDevolucion'),
+      valueOf(item, 'invoiceNumber', 'numeroFactura'),
+      valueOf(item, 'clientName', 'cliente'),
+      formatDate(valueOf(item, 'createdAt', 'fechaCreacion')),
+      valueOf(item, 'status', 'estado') || 'En Proceso',
+      details.length,
+      details.reduce(
+        (sum, detail) => sum + Number(valueOf(detail, 'quantity', 'cantidad') || 0),
+        0,
+      ),
+      Number(valueOf(item, 'totalAmount', 'totalValor')) || 0,
+      valueOf(item, 'employeeName', 'asesor'),
+      valueOf(item, 'description', 'descripcion'),
+    ]);
+    row.getCell(8).numFmt = '$ #,##0';
+    styleDataRow(row, index);
+  });
+
+  summary.columns = [
+    { width: 20 },
+    { width: 17 },
+    { width: 31 },
+    { width: 15 },
+    { width: 17 },
+    { width: 12 },
+    { width: 12 },
+    { width: 18 },
+    { width: 25 },
+    { width: 42 },
+  ];
+  summary.views = [{ state: 'frozen', ySplit: 4 }];
+  summary.autoFilter = { from: 'A4', to: 'J4' };
+
+  const products = workbook.addWorksheet('Productos devueltos');
   const productHeaders = [
-    'Número Devolución',
+    'N.º devolución',
     'Factura',
     'Cliente',
-    'Fecha Devolución',
     'Producto',
-    'Cantidad Devuelta',
-    'Precio Unitario',
-    'Total Producto',
-    'Motivo de Devolución',
-    'Método de Devolución',
-    'Estado del Producto'
-  ];
-  
-  const productData = [];
-  
-  // Iterar cada devolución y extraer sus productos
-  returns.forEach(returnItem => {
-    const productos = returnItem.productosDevueltos || [];
-    
-    if (productos.length === 0) {
-      // Si no hay productos, agregar una fila con datos básicos
-      productData.push([
-        returnItem.numeroDevolucion || '',
-        returnItem.numeroFactura || '',
-        returnItem.cliente || '',
-        formatDate(returnItem.fechaCreacion),
-        'Sin productos registrados',
-        '',
-        '',
-        '',
-        returnItem.motivo || '',
-        '',
-        returnItem.estado || 'Pendiente'
-      ]);
-    } else {
-      // Por cada producto, crear una fila detallada
-      productos.forEach(producto => {
-        const cantidad = producto.cantidad || 1;
-        const precioUnit = producto.precioUnit || 0;
-        const totalProducto = cantidad * precioUnit;
-        
-        productData.push([
-          returnItem.numeroDevolucion || '',
-          returnItem.numeroFactura || '',
-          returnItem.cliente || '',
-          formatDate(returnItem.fechaCreacion),
-          producto.nombre || 'Producto sin nombre',
-          cantidad,
-          `$${formatCurrency(precioUnit)}`,
-          `$${formatCurrency(totalProducto)}`,
-          producto.motivo || returnItem.motivo || '',
-          producto.metodo || '',
-          producto.estado || returnItem.estado || 'Pendiente'
-        ]);
-      });
-    }
-  });
-  
-  // ======================= HOJA 3: ESTADÍSTICAS =======================
-  
-  const statsHeaders = [
-    'Métrica',
-    'Valor'
-  ];
-  
-  // Calcular estadísticas básicas
-  const totalReturns = returns.length;
-  const totalValue = returns.reduce((sum, r) => sum + (r.totalValor || 0), 0);
-  const totalUnits = returns.reduce((sum, r) => sum + (r.totalUnidades || 0), 0);
-  const totalProducts = returns.reduce((sum, r) => sum + (r.cantidadProductos || 0), 0);
-  
-  const pendingReturns = returns.filter(r => r.estado === 'Pendiente').length;
-  const approvedReturns = returns.filter(r => r.estado === 'Aprobada').length;
-  const cancelledReturns = returns.filter(r => r.estado === 'Anulada').length;
-  
-  const statsData = [
-    ['Total Devoluciones', totalReturns],
-    ['Total Valor Devuelto', `$${formatCurrency(totalValue)}`],
-    ['Total Unidades Devueltas', totalUnits],
-    ['Total Productos Devueltos', totalProducts],
-    ['Promedio por Devolución', `$${formatCurrency(totalReturns > 0 ? totalValue / totalReturns : 0)}`],
-    [''],
-    ['Devoluciones Pendientes', pendingReturns],
-    ['Devoluciones Aprobadas', approvedReturns],
-    ['Devoluciones Anuladas', cancelledReturns],
-    [''],
-    ['Fecha de Exportación', formattedDateTime]
-  ];
-  
-  // ======================= CREAR LIBRO DE TRABAJO =======================
-  
-  const wb = XLSX.utils.book_new();
-  
-  // ======================= HOJA 1: RESUMEN =======================
-  const summarySheetData = [
-    ...titleRow,
-    ...dateRow,
-    ...emptyRow,
-    [['RESUMEN DE DEVOLUCIONES']],
-    ...emptyRow,
-    summaryHeaders,
-    ...summaryData
-  ];
-  
-  const summaryWs = XLSX.utils.aoa_to_sheet(summarySheetData);
-  
-  // Combinar celdas para el título
-  if (!summaryWs['!merges']) summaryWs['!merges'] = [];
-  summaryWs['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: summaryHeaders.length - 1 } });
-  summaryWs['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: summaryHeaders.length - 1 } });
-  summaryWs['!merges'].push({ s: { r: 3, c: 0 }, e: { r: 3, c: summaryHeaders.length - 1 } });
-  
-  // Estilos para el título (opcional - usando propiedades)
-  summaryWs['A1'] = { v: 'DEVOLUCIÓN DE VENTAS', t: 's' };
-  summaryWs['A2'] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: 's' };
-  summaryWs['A4'] = { v: 'RESUMEN DE DEVOLUCIONES', t: 's' };
-  
-  // Ajustar ancho de columnas para resumen
-  const summaryColWidths = [
-    { wch: 18 }, // Número Devolución
-    { wch: 15 }, // Factura
-    { wch: 30 }, // Cliente
-    { wch: 25 }, // Motivo
-    { wch: 12 }, // Fecha
-    { wch: 15 }, // Valor
-    { wch: 12 }, // Estado
-    { wch: 20 }, // Asesor
-    { wch: 15 }, // Teléfono
-    { wch: 35 }, // Dirección
-    { wch: 12 }, // Cantidad Productos
-    { wch: 12 }  // Total Unidades
-  ];
-  summaryWs['!cols'] = summaryColWidths;
-  
-  // ======================= HOJA 2: DETALLE DE PRODUCTOS =======================
-  const productSheetData = [
-    ...titleRow,
-    ...dateRow,
-    ...emptyRow,
-    [['DETALLE DE PRODUCTOS DEVUELTOS']],
-    ...emptyRow,
-    productHeaders,
-    ...productData
-  ];
-  
-  const productWs = XLSX.utils.aoa_to_sheet(productSheetData);
-  
-  // Combinar celdas para el título
-  if (!productWs['!merges']) productWs['!merges'] = [];
-  productWs['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: productHeaders.length - 1 } });
-  productWs['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: productHeaders.length - 1 } });
-  productWs['!merges'].push({ s: { r: 3, c: 0 }, e: { r: 3, c: productHeaders.length - 1 } });
-  
-  productWs['A1'] = { v: 'DEVOLUCIÓN DE VENTAS', t: 's' };
-  productWs['A2'] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: 's' };
-  productWs['A4'] = { v: 'DETALLE DE PRODUCTOS DEVUELTOS', t: 's' };
-  
-  // Ajustar ancho de columnas para productos
-  const productColWidths = [
-    { wch: 18 }, // Número Devolución
-    { wch: 15 }, // Factura
-    { wch: 30 }, // Cliente
-    { wch: 12 }, // Fecha Devolución
-    { wch: 35 }, // Producto
-    { wch: 10 }, // Cantidad Devuelta
-    { wch: 15 }, // Precio Unitario
-    { wch: 15 }, // Total Producto
-    { wch: 30 }, // Motivo de Devolución
-    { wch: 20 }, // Método de Devolución
-    { wch: 12 }  // Estado del Producto
-  ];
-  productWs['!cols'] = productColWidths;
-  
-  // ======================= HOJA 3: ESTADÍSTICAS =======================
-  const statsSheetData = [
-    ...titleRow,
-    ...dateRow,
-    ...emptyRow,
-    [['ESTADÍSTICAS']],
-    ...emptyRow,
-    statsHeaders,
-    ...statsData
-  ];
-  
-  const statsWs = XLSX.utils.aoa_to_sheet(statsSheetData);
-  
-  // Combinar celdas para el título
-  if (!statsWs['!merges']) statsWs['!merges'] = [];
-  statsWs['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } });
-  statsWs['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 1 } });
-  statsWs['!merges'].push({ s: { r: 3, c: 0 }, e: { r: 3, c: 1 } });
-  
-  statsWs['A1'] = { v: 'DEVOLUCIÓN DE VENTAS', t: 's' };
-  statsWs['A2'] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: 's' };
-  statsWs['A4'] = { v: 'ESTADÍSTICAS', t: 's' };
-  
-  // Agregar hojas al libro
-  XLSX.utils.book_append_sheet(wb, summaryWs, 'Resumen Devoluciones');
-  XLSX.utils.book_append_sheet(wb, productWs, 'Detalle Productos');
-  XLSX.utils.book_append_sheet(wb, statsWs, 'Estadísticas');
-  
-  // Descargar el archivo
-  const fileName = `devolucion_ventas_${new Date().toISOString().split('T')[0]}.xlsx`;
-  XLSX.writeFile(wb, fileName);
-};
-
-// ======================= FUNCIONALIDAD: EXPORTAR SOLO RESUMEN =======================
-
-/**
- * Exporta un resumen rápido de devoluciones (solo la hoja de resumen).
- * Útil para cuando no se necesita el detalle de productos.
- * 
- * @param {Array} returns - Array de devoluciones a exportar
- * @returns {void} Descarga el archivo automáticamente
- */
-export const exportReturnsSummaryToExcel = (returns) => {
-  // Fecha actual para el encabezado
-  const currentDate = new Date();
-  const formattedDate = currentDate.toLocaleDateString('es-CO', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-  const formattedDateTime = currentDate.toLocaleString('es-CO', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
-
-  const headers = [
-    'Número Devolución',
-    'Factura',
-    'Cliente',
+    'Cantidad',
+    'Precio unitario',
+    'Total',
     'Motivo',
-    'Fecha',
-    'Valor',
-    'Estado',
-    'Asesor'
+    'Descripción motivo',
+    'Método',
+    'Estado producto',
   ];
-  
-  const data = returns.map(r => [
-    r.numeroDevolucion || '',
-    r.numeroFactura || '',
-    r.cliente || '',
-    r.motivo || '',
-    formatDate(r.fechaCreacion),
-    `$${formatCurrency(r.totalValor || 0)}`,
-    r.estado || 'Pendiente',
-    r.asesor || ''
-  ]);
-  
-  // Crear hoja con título
-  const sheetData = [
-    ['DEVOLUCIÓN DE VENTAS'],
-    [`Fecha de exportación: ${formattedDate} - ${formattedDateTime}`],
-    [''],
-    ['RESUMEN DE DEVOLUCIONES'],
-    [''],
-    headers,
-    ...data
+  prepareSheet(products, 'DETALLE DE PRODUCTOS DEVUELTOS', productHeaders.length);
+  styleHeader(products.addRow(productHeaders));
+
+  let productIndex = 0;
+  returns.forEach((item) => {
+    detailsOf(item).forEach((detail) => {
+      const quantity = Number(valueOf(detail, 'quantity', 'cantidad')) || 1;
+      const unitPrice =
+        Number(valueOf(detail, 'unitPrice', 'precioUnit', 'valor')) || 0;
+      const row = products.addRow([
+        valueOf(item, 'returnNumber', 'numeroDevolucion'),
+        valueOf(item, 'invoiceNumber', 'numeroFactura'),
+        valueOf(item, 'clientName', 'cliente'),
+        valueOf(detail, 'productName', 'nombre') || 'Producto',
+        quantity,
+        unitPrice,
+        quantity * unitPrice,
+        valueOf(detail, 'reason', 'motivo'),
+        valueOf(detail, 'description', 'descripcionMotivo'),
+        valueOf(detail, 'method', 'metodo'),
+        valueOf(detail, 'status', 'estado') || 'En Proceso',
+      ]);
+      row.getCell(6).numFmt = '$ #,##0';
+      row.getCell(7).numFmt = '$ #,##0';
+      styleDataRow(row, productIndex);
+      productIndex += 1;
+    });
+  });
+
+  products.columns = [
+    { width: 20 },
+    { width: 17 },
+    { width: 30 },
+    { width: 38 },
+    { width: 11 },
+    { width: 18 },
+    { width: 18 },
+    { width: 28 },
+    { width: 36 },
+    { width: 22 },
+    { width: 20 },
   ];
-  
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(sheetData);
-  
-  // Combinar celdas para el título
-  if (!ws['!merges']) ws['!merges'] = [];
-  ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } });
-  ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } });
-  ws['!merges'].push({ s: { r: 3, c: 0 }, e: { r: 3, c: headers.length - 1 } });
-  
-  ws['A1'] = { v: 'DEVOLUCIÓN DE VENTAS', t: 's' };
-  ws['A2'] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: 's' };
-  ws['A4'] = { v: 'RESUMEN DE DEVOLUCIONES', t: 's' };
-  
-  const colWidths = [
-    { wch: 18 }, { wch: 15 }, { wch: 30 }, { wch: 25 },
-    { wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 20 }
-  ];
-  ws['!cols'] = colWidths;
-  
-  XLSX.utils.book_append_sheet(wb, ws, 'Devoluciones');
-  XLSX.writeFile(wb, `devolucion_ventas_resumen_${new Date().toISOString().split('T')[0]}.xlsx`);
+  products.views = [{ state: 'frozen', ySplit: 4 }];
+  products.autoFilter = { from: 'A4', to: 'K4' };
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  saveAs(
+    new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    }),
+    `devoluciones_ventas_${new Date().toISOString().split('T')[0]}.xlsx`,
+  );
+  return true;
 };
+
+export const exportReturnsSummaryToExcel = exportReturnsToExcel;
