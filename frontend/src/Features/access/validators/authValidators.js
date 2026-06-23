@@ -48,9 +48,9 @@ export const validateRegister = (formData) => {
   }
 
   // Términos
-  if (!formData.terms) {
-    errors.terms = "Debe aceptar términos y condiciones";
-  }
+  // if (!formData.terms) {
+  //   errors.terms = "Debe aceptar términos y condiciones";
+  // }
 
   return errors;
 };
