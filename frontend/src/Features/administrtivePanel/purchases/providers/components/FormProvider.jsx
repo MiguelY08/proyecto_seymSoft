@@ -197,21 +197,25 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     }
     
     setFormData(newFormData);
+    setTouched((prev) => {
+      const next = { ...prev, [name]: true };
+      if (name === 'tipoPersona') next.tipo = true;
+      if (name === 'rut') next.codigoCIU = true;
+      return next;
+    });
 
     const validationErrors = validateProviderForm(newFormData);
     const fieldsToRefresh = [name];
     if (name === 'tipoPersona') fieldsToRefresh.push('tipo');
     if (name === 'rut') fieldsToRefresh.push('codigoCIU');
 
-    if (fieldsToRefresh.some((field) => touched[field]) || name === 'tipoPersona' || name === 'rut') {
-      setErrors((prev) => {
-        const next = { ...prev };
-        fieldsToRefresh.forEach((field) => {
-          next[field] = validationErrors[field] || '';
-        });
-        return next;
+    setErrors((prev) => {
+      const next = { ...prev };
+      fieldsToRefresh.forEach((field) => {
+        next[field] = validationErrors[field] || '';
       });
-    }
+      return next;
+    });
   };
 
   const handleSelectChange = (name, value) => {

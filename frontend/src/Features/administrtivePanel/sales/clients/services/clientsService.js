@@ -147,6 +147,11 @@ export const clientsService = {
     return response.data.data;
   },
 
+  createOwnProfile: async (clientData) => {
+    const response = await apiClient.post('/clients/me/profile', clientData);
+    return response.data.data;
+  },
+
   update: async (id, clientData) => {
     console.log('🔍 EDITANDO CLIENTE ID:', id);
     console.log('📦 Datos recibidos del formulario:', JSON.stringify(clientData, null, 2));
