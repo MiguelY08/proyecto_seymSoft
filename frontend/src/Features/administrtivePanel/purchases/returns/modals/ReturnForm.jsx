@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+﻿import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -27,7 +27,7 @@ import {
   mapReturnFormToUpdatePayload,
 } from '../services/returnsServices';
 
-// ─── ID único para líneas ─────────────────────────────────────────────────────
+// â”€â”€â”€ ID Ãºnico para lÃ­neas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const newLineaId = () =>
   `linea-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -38,8 +38,28 @@ const isExistingReturnLine = (linea) =>
 
 const hasExistingReturnLines = (producto) =>
   (producto?.lineas ?? []).some(isExistingReturnLine);
+const toSafeNumber = (value, fallback = 0) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+};
 
-// ─── useLongPress ─────────────────────────────────────────────────────────────
+const getReturnAvailableQuantity = (producto) =>
+  Math.max(0, toSafeNumber(
+    producto?.cantidadDisponibleDevolucion ??
+    producto?.returnAvailability?.availableQuantity ??
+    producto?.cantidadComprada,
+    0
+  ));
+
+const getExistingReturnQuantity = (producto) =>
+  (producto?.lineas ?? [])
+    .filter(isExistingReturnLine)
+    .reduce((sum, linea) => sum + (Number(linea?.cantidadDevolver) || 0), 0);
+
+const getReturnQuantityLimit = (producto) =>
+  getReturnAvailableQuantity(producto) + getExistingReturnQuantity(producto);
+
+// â”€â”€â”€ useLongPress â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function useLongPress(callback, { delay = 380, interval = 75 } = {}) {
   const timerRef    = useRef(null);
   const intervalRef = useRef(null);
@@ -64,7 +84,7 @@ function useLongPress(callback, { delay = 380, interval = 75 } = {}) {
   };
 }
 
-// ─── EstadoDropdown (portal fixed) ────────────────────────────────────────────
+// â”€â”€â”€ EstadoDropdown (portal fixed) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function EstadoDropdown({ value, disabled, estados, onChange, hasError, allowEmpty = true }) {
   const [open, setOpen] = useState(false);
   const [pos,  setPos]  = useState(null);
@@ -168,10 +188,10 @@ function EstadoDropdown({ value, disabled, estados, onChange, hasError, allowEmp
   );
 }
 
-// ─── Clases base de inputs ────────────────────────────────────────────────────
+// â”€â”€â”€ Clases base de inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const inputBase = 'w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200';
 
-// ─── Selector de motivo (editable) ───────────────────────────────────────────
+// â”€â”€â”€ Selector de motivo (editable) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const MotivoSelect = ({ value, onChange, hasError }) => (
   <div className="relative">
     <select
@@ -192,7 +212,7 @@ const MotivoSelect = ({ value, onChange, hasError }) => (
   </div>
 );
 
-// ─── Selector de tipo (editable) ─────────────────────────────────────────────
+// â”€â”€â”€ Selector de tipo (editable) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TipoSelect = ({ value, onChange, hasError }) => (
   <div className="relative">
     <select
@@ -213,7 +233,7 @@ const TipoSelect = ({ value, onChange, hasError }) => (
   </div>
 );
 
-// ─── Campo cantidad editable con botones (+/-) (mejorado) ─────────────────────
+// â”€â”€â”€ Campo cantidad editable con botones (+/-) (mejorado) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CantidadInput = ({ value, max, onChange, hasError }) => {
   const cantidad = value ?? 1;
   const decCb = useCallback(() => onChange(Math.max(1, cantidad - 1)), [cantidad, onChange]);
@@ -255,19 +275,19 @@ const CantidadInput = ({ value, max, onChange, hasError }) => {
           <Plus className="w-2.5 h-2.5" strokeWidth={2.5} />
         </button>
       </div>
-      <span className="text-[9px] text-gray-400 leading-tight">Máx: {max}</span>
+      <span className="text-[9px] text-gray-400 leading-tight">MÃ¡x: {max}</span>
     </div>
   );
 };
 
-// ─── Campo de solo lectura ───────────────────────────────────────────────────
-const ReadonlyField = ({ value, placeholder = '—' }) => (
+// â”€â”€â”€ Campo de solo lectura â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const ReadonlyField = ({ value, placeholder = 'â€”' }) => (
   <div className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed select-none">
     {value || placeholder}
   </div>
 );
 
-// ─── LineaConfig — una fila de devolución por producto (con editable condicional) ──
+// â”€â”€â”€ LineaConfig â€” una fila de devoluciÃ³n por producto (con editable condicional) â”€â”€
 const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errores, editableCompleto, isEditMode }) => {
   const esTerminal     = isEstadoTerminal(linea.estado);
   const badgeStyle     = getBadgeEstadoProducto(linea.estado);
@@ -299,17 +319,17 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
           </span>
           <span className="text-[9px] text-emerald-600 flex items-center gap-0.5 italic">
             <Lock className="w-2.5 h-2.5" strokeWidth={2} />
-            Proceso completado — inmutable
+            Proceso completado â€” inmutable
           </span>
         </div>
         <div className="grid grid-cols-3 gap-x-3 text-[10px]">
           <div>
             <span className="font-medium text-gray-500">Motivo</span>
-            <p className="text-gray-700 mt-0.5">{linea.motivo || '—'}</p>
+            <p className="text-gray-700 mt-0.5">{linea.motivo || 'â€”'}</p>
           </div>
           <div>
             <span className="font-medium text-gray-500">Tipo</span>
-            <p className="text-gray-700 mt-0.5">{linea.tipoDevolucion || '—'}</p>
+            <p className="text-gray-700 mt-0.5">{linea.tipoDevolucion || 'â€”'}</p>
           </div>
           <div>
             <span className="font-medium text-gray-500">Cantidad</span>
@@ -320,20 +340,20 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
     );
   }
 
-  // Caso no terminal: según editableCompleto se muestran inputs o solo lectura
+  // Caso no terminal: segÃºn editableCompleto se muestran inputs o solo lectura
   const mostrarInputs = editableCompleto;
 
   return (
     <div className="border border-gray-200 rounded-lg p-2.5 bg-white">
       <div className="flex items-center justify-between mb-2">
         <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={badgeStyle}>
-          {linea.estado || '—'}
+          {linea.estado || 'â€”'}
         </span>
         {canRemove && (
           <button
             type="button"
             onClick={onRemove}
-            title="Eliminar esta línea"
+            title="Eliminar esta lÃ­nea"
             className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
           >
             <Trash2 className="w-3 h-3" strokeWidth={2} />
@@ -424,10 +444,11 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
   );
 };
 
-// ─── ProductConfig — panel de un producto con sus líneas (colapsable con animación) ──
+// â”€â”€â”€ ProductConfig â€” panel de un producto con sus lÃ­neas (colapsable con animaciÃ³n) â”€â”€
 const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, errores, isExpanded, onToggleExpand, isEditMode }) => {
   const totalUsado       = (producto.lineas ?? []).reduce((sum, l) => sum + (Number(l.cantidadDevolver) || 0), 0);
-  const cantidadRestante = producto.cantidadComprada - totalUsado;
+  const cantidadLimite   = getReturnQuantityLimit(producto);
+  const cantidadRestante = cantidadLimite - totalUsado;
   const puedeAgregar     = cantidadRestante > 0;
 
   const estadoPrincipal = producto.lineas?.[0]?.estado || getEstadoInicial();
@@ -447,8 +468,9 @@ const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, err
             </span>
           </div>
           <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-            <span>Devolución: {totalUsado}/{producto.cantidadComprada} u.</span>
-            <span>Tipo: {producto.lineas?.[0]?.tipoDevolucion || '—'}</span>
+            <span>DevoluciÃ³n: {totalUsado}/{cantidadLimite} u.</span>
+            <span>Disponible: {getReturnAvailableQuantity(producto)} u.</span>
+            <span>Tipo: {producto.lineas?.[0]?.tipoDevolucion || 'â€”'}</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -460,7 +482,7 @@ const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, err
         </div>
       </div>
 
-      {/* Contenido expandible con animación de altura usando grid */}
+      {/* Contenido expandible con animaciÃ³n de altura usando grid */}
       <div
         className="grid transition-all duration-300 ease-in-out"
         style={{ gridTemplateRows: isExpanded ? '1fr' : '0fr' }}
@@ -472,7 +494,7 @@ const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, err
                 const usadoOtras = (producto.lineas ?? [])
                   .filter((_, i) => i !== idx)
                   .reduce((sum, l) => sum + (Number(l.cantidadDevolver) || 0), 0);
-                const maxParaEstaLinea = producto.cantidadComprada - usadoOtras;
+                const maxParaEstaLinea = Math.max(cantidadLimite - usadoOtras, 0);
                 const erroresLinea     = errores?.lineas?.[idx] ?? {};
                 const esNueva = !isExistingReturnLine(linea);
                 const canRemove = esNueva && !isEstadoTerminal(linea.estado);
@@ -503,7 +525,7 @@ const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, err
                            hover:bg-[#004D77]/5 hover:border-[#004D77] transition-colors cursor-pointer"
               >
                 <Plus className="w-3 h-3" strokeWidth={2.5} />
-                Agregar línea ({cantidadRestante} u. disponibles)
+                Agregar lÃ­nea ({cantidadRestante} u. disponibles)
               </button>
             )}
           </div>
@@ -513,17 +535,17 @@ const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, err
   );
 };
 
-// ─── ReturnForm — componente principal ────────────────────────────────────────
+// â”€â”€â”€ ReturnForm â€” componente principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved }) => {
   const { showConfirm, showSuccess, showError, showWarning } = useAlert();
   const navigate = useNavigate();
   const isEdit   = mode === 'edit';
   const purchaseId = purchase?.idPurchase ?? purchase?.purchaseId ?? purchase?.id;
 
-  // Estado para controlar qué card está expandida (solo una a la vez)
+  // Estado para controlar quÃ© card estÃ¡ expandida (solo una a la vez)
   const [expandedProductId, setExpandedProductId] = useState(null);
 
-  // ── Productos completos de la compra ────────────────────────────────────────
+  // â”€â”€ Productos completos de la compra â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const productosCompra = useMemo(() =>
     (purchase?.productos ?? []).map((p) => ({
       id:               p.id,
@@ -539,11 +561,26 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
       valorUnit:        p.valorUnit,
       iva:              p.iva          ?? 0,
       cantidadComprada: p.cantidad     ?? p.cantidadProductos ?? 1,
+      cantidadDisponibleDevolucion:
+        p.cantidadDisponibleDevolucion ??
+        p.returnAvailability?.availableQuantity ??
+        p.cantidad ??
+        p.cantidadProductos ??
+        1,
+      cantidadDevueltaDefinitiva:
+        p.cantidadDevueltaDefinitiva ??
+        p.returnAvailability?.finalReturnedQuantity ??
+        0,
+      cantidadReservadaDevolucion:
+        p.cantidadReservadaDevolucion ??
+        p.returnAvailability?.reservedQuantity ??
+        0,
+      returnAvailability: p.returnAvailability,
     })),
     [purchase, purchaseId]
   );
 
-  // ── Inicialización de estados ──────────────────────────────────────────────
+  // â”€â”€ InicializaciÃ³n de estados â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const initState = useMemo(() => {
     if (isEdit && devolucion?.productos?.length) {
       const datosProducto = {};
@@ -564,6 +601,21 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
             valorUnit:        p.valorUnit,
             iva:              p.iva ?? 0,
             cantidadComprada: original?.cantidadComprada ?? p.cantidadComprada ?? 1,
+            cantidadDisponibleDevolucion:
+              original?.cantidadDisponibleDevolucion ??
+              p.cantidadDisponibleDevolucion ??
+              original?.cantidadComprada ??
+              p.cantidadComprada ??
+              1,
+            cantidadDevueltaDefinitiva:
+              original?.cantidadDevueltaDefinitiva ??
+              p.cantidadDevueltaDefinitiva ??
+              0,
+            cantidadReservadaDevolucion:
+              original?.cantidadReservadaDevolucion ??
+              p.cantidadReservadaDevolucion ??
+              0,
+            returnAvailability: original?.returnAvailability ?? p.returnAvailability,
             lineas:           [],
           };
         }
@@ -607,7 +659,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
   const [touched, setTouched] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // En modo edición, los productos seleccionados son todos los que ya están en datosProducto
+  // En modo ediciÃ³n, los productos seleccionados son todos los que ya estÃ¡n en datosProducto
   const productosSeleccionadosArray = useMemo(() => {
     const productos = isEdit
       ? Object.values(datosProducto)
@@ -626,7 +678,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
     });
   }, [isEdit, datosProducto, seleccionados]);
 
-  // ── Handlers de selección ───────────────────────────────────────────────────
+  // â”€â”€ Handlers de selecciÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const totalOriginal = (p) => Math.round(p.valorUnit * p.cantidadComprada * (1 + p.iva / 100));
 
   const toggleSeleccion = (codigoBarras) => {
@@ -640,8 +692,11 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
         setDatosProducto((d) => { const n = { ...d }; delete n[codigoBarras]; return n; });
         setErroresProducto((e) => { const n = { ...e }; delete n[codigoBarras]; return n; });
       } else {
-        next.add(codigoBarras);
         const prod = productosCompra.find((p) => p.codigoBarras === codigoBarras);
+        if (!prod || (!isEdit && getReturnAvailableQuantity(prod) <= 0)) {
+          return prev;
+        }
+        next.add(codigoBarras);
         setDatosProducto((d) => ({
           ...d,
           [codigoBarras]: {
@@ -655,7 +710,9 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
   };
 
   const toggleTodos = () => {
-    const nonLocked = productosCompra;
+    const nonLocked = isEdit
+      ? productosCompra
+      : productosCompra.filter((p) => getReturnAvailableQuantity(p) > 0);
     const allSelected = nonLocked.every((p) => seleccionados.has(p.codigoBarras));
     if (allSelected && nonLocked.length > 0) {
       if (isEdit) {
@@ -692,7 +749,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
     }
   };
 
-  // ── Handlers de líneas ─────────────────────────────────────────────────────
+  // â”€â”€ Handlers de lÃ­neas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleAddLinea = useCallback((codigoBarras) => {
     setDatosProducto((prev) => {
       const prod = prev[codigoBarras];
@@ -758,7 +815,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
     }
   }, [touched]);
 
-  // ── Guardar ────────────────────────────────────────────────────────────────
+  // â”€â”€ Guardar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleGuardar = async () => {
     if (isSaving) return;
     setTouched(true);
@@ -785,11 +842,11 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
 
     const result = await showConfirm(
       'info',
-      isEdit ? 'Confirmar edición' : 'Confirmar devolución',
+      isEdit ? 'Confirmar ediciÃ³n' : 'Confirmar devoluciÃ³n',
       isEdit
-        ? `¿Deseas guardar los cambios en la devolución ${devolucion.id}?`
-        : `¿Deseas registrar esta devolución para la compra ${purchase?.numeroFacturacion}?`,
-      { confirmButtonText: 'Sí, guardar', cancelButtonText: 'Cancelar' }
+        ? `Â¿Deseas guardar los cambios en la devoluciÃ³n ${devolucion.id}?`
+        : `Â¿Deseas registrar esta devoluciÃ³n para la compra ${purchase?.numeroFacturacion}?`,
+      { confirmButtonText: 'SÃ­, guardar', cancelButtonText: 'Cancelar' }
     );
     if (!result?.isConfirmed) return;
 
@@ -800,17 +857,17 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
       if (isEdit) {
         const payload = mapReturnFormToUpdatePayload(productosSeleccionadosArray);
         devolucionGuardada = await PurchaseReturnsService.update(devolucion.id, payload);
-        showSuccess('Devolución actualizada', `Los cambios en ${devolucion.id} se guardaron correctamente.`);
+        showSuccess('DevoluciÃ³n actualizada', `Los cambios en ${devolucion.id} se guardaron correctamente.`);
       } else {
         const payload = mapReturnFormToCreatePayload(purchase, productosSeleccionadosArray);
         devolucionGuardada = await PurchaseReturnsService.create(payload);
-        showSuccess('Devolución registrada', `Se creó la devolución ${devolucionGuardada.id} correctamente.`);
+        showSuccess('DevoluciÃ³n registrada', `Se creÃ³ la devoluciÃ³n ${devolucionGuardada.id} correctamente.`);
       }
       await onSaved?.(devolucionGuardada);
       cerrarYNavegar();
     } catch (error) {
       setIsSaving(false);
-      showError('Error', error.message || `No se pudo ${isEdit ? 'actualizar' : 'registrar'} la devolución.`);
+      showError('Error', error.message || `No se pudo ${isEdit ? 'actualizar' : 'registrar'} la devoluciÃ³n.`);
     }
   };
 
@@ -827,16 +884,16 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
     if (productosSeleccionadosArray.length === 0) { cerrarYNavegar(); return; }
     const result = await showConfirm(
       'warning',
-      '¿Salir sin guardar?',
+      'Â¿Salir sin guardar?',
       isEdit
-        ? 'Tienes cambios sin guardar. Si sales ahora perderás todo lo que has modificado.'
-        : 'Tienes información ingresada. Si sales ahora perderás todo lo que has ingresado.',
-      { confirmButtonText: 'Sí, salir', cancelButtonText: 'Seguir editando' }
+        ? 'Tienes cambios sin guardar. Si sales ahora perderÃ¡s todo lo que has modificado.'
+        : 'Tienes informaciÃ³n ingresada. Si sales ahora perderÃ¡s todo lo que has ingresado.',
+      { confirmButtonText: 'SÃ­, salir', cancelButtonText: 'Seguir editando' }
     );
     if (result?.isConfirmed) cerrarYNavegar();
   };
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
     <div
       onClick={handleCerrar}
@@ -852,8 +909,8 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
           <div>
             <h2 className="text-white font-semibold text-lg leading-tight">
               {isEdit
-                ? `Editando devolución ${devolucion?.id}`
-                : `Nueva devolución — ${purchase?.numeroFacturacion ?? ''}`}
+                ? `Editando devoluciÃ³n ${devolucion?.id}`
+                : `Nueva devoluciÃ³n â€” ${purchase?.numeroFacturacion ?? ''}`}
             </h2>
             {isEdit && (
               <span className="text-white/60 text-xs">Compra: {devolucion?.idCompra}</span>
@@ -954,8 +1011,8 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
             <div className="flex-1 overflow-y-auto px-5 pb-4 flex flex-col gap-3">
               {productosSeleccionadosArray.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 gap-2">
-                  <p className="text-sm">Ningún producto seleccionado</p>
-                  <p className="text-xs">Selecciona productos del panel izquierdo para configurar su devolución</p>
+                  <p className="text-sm">NingÃºn producto seleccionado</p>
+                  <p className="text-xs">Selecciona productos del panel izquierdo para configurar su devoluciÃ³n</p>
                 </div>
               ) : (
                 productosSeleccionadosArray.map((prod) => (
@@ -999,3 +1056,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
 };
 
 export default ReturnForm;
+
+
+
+

@@ -241,7 +241,7 @@ function TopBar({
           onClick={handleDownload}
         >
           <FileSpreadsheet className="w-4 h-4" />
-          Exportar resumen
+          Exportar Excel
         </ButtonComponent>
       )}
     </div>

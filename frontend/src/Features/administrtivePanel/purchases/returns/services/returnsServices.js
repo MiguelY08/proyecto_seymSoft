@@ -2,6 +2,8 @@ import apiClient from "../../../../../setting/apiClient";
 import {
   getReturnMethodIdByLabel,
   getReturnReasonIdByLabel,
+  getReturnReasonLabelByCode,
+  getReturnReasonLabelById,
   getReturnStatusIdByLabel,
 } from "../helpers/returnsHelpers";
 
@@ -43,6 +45,20 @@ const getLabel = (value, fallback = "") => {
   if (!value) return fallback;
   if (typeof value === "string") return value;
   return value.name ?? value.description ?? fallback;
+};
+
+const getReasonLabel = (reason, fallback = "") => {
+  if (!reason) return fallback;
+
+  const reasonId = reason?.id ?? reason?.returnReasonId ?? reason?.idReturnReason;
+  const labelById = getReturnReasonLabelById(reasonId);
+  if (labelById) return labelById;
+
+  const reasonCode = typeof reason === "string" ? reason : reason?.code ?? reason?.description;
+  const labelByCode = getReturnReasonLabelByCode(reasonCode);
+  if (labelByCode) return labelByCode;
+
+  return getLabel(reason, fallback);
 };
 
 const getProductFromDetail = (detail) =>
@@ -246,7 +262,7 @@ export const mapPurchaseReturnToDetail = (purchaseReturn) => {
     productos: details.map((detail) => {
       const product = getProductFromDetail(detail);
       const barcode = getBarcodeFromDetail(detail);
-      const reason = getLabel(detail.reason);
+      const reason = getReasonLabel(detail.reason);
       const method = getLabel(detail.method);
       const detailStatus = getLabel(detail.status);
 

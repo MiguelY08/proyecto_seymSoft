@@ -60,25 +60,59 @@ export const mapPurchaseToFrontend = (purchase) => {
   const details = purchase.details || [];
   const cantidadProductos = details.reduce((sum, d) => sum + (d.quantity || 0), 0);
 
-  const productos = details.map(detail => ({
-    id: detail.id,
-    idPurchase: purchase.id,
-    idPurchaseDetail: detail.id,
-    purchaseDetailId: detail.id,
-    idBarcode: detail.idBarcode,
-    barcodeId: detail.idBarcode,
-    idProduct: detail.productId,
-    productId: detail.productId,
-    nombre: detail.productName || 'Producto sin nombre',
-    codigoBarras: detail.barcode || '',
-    cantidad: detail.quantity || 0,
-    valorUnit: detail.netUnitPrice || detail.grossUnitPrice || 0,
-    iva: detail.taxPercentage || 0,
-    ivaValor: detail.ivaSubtotal || 0,
-    subtotal: detail.netSubtotal || detail.grossSubtotal || 0,
-    total: detail.netSubtotal || detail.grossSubtotal || 0,
-    codigosExtra: detail.extraBarcodes || [],
-  }));
+  const productos = details.map(detail => {
+    const cantidadComprada = Number(
+      detail.purchasedQuantity ??
+      detail.returnAvailability?.purchasedQuantity ??
+      detail.quantity ??
+      0
+    );
+    const cantidadReservadaDevolucion = Number(
+      detail.returnReservedQuantity ??
+      detail.returnAvailability?.reservedQuantity ??
+      0
+    );
+    const cantidadDevueltaDefinitiva = Number(
+      detail.finalReturnedQuantity ??
+      detail.returnAvailability?.finalReturnedQuantity ??
+      0
+    );
+    const cantidadDisponibleDevolucion = Number(
+      detail.returnAvailableQuantity ??
+      detail.returnAvailability?.availableQuantity ??
+      cantidadComprada
+    );
+
+    return {
+      id: detail.id,
+      idPurchase: purchase.id,
+      idPurchaseDetail: detail.id,
+      purchaseDetailId: detail.id,
+      idBarcode: detail.idBarcode,
+      barcodeId: detail.idBarcode,
+      idProduct: detail.productId,
+      productId: detail.productId,
+      nombre: detail.productName || 'Producto sin nombre',
+      codigoBarras: detail.barcode || '',
+      cantidad: cantidadComprada,
+      cantidadComprada,
+      cantidadDisponibleDevolucion,
+      cantidadDevueltaDefinitiva,
+      cantidadReservadaDevolucion,
+      returnAvailability: {
+        purchasedQuantity: cantidadComprada,
+        reservedQuantity: cantidadReservadaDevolucion,
+        finalReturnedQuantity: cantidadDevueltaDefinitiva,
+        availableQuantity: cantidadDisponibleDevolucion,
+      },
+      valorUnit: detail.netUnitPrice || detail.grossUnitPrice || 0,
+      iva: detail.taxPercentage || 0,
+      ivaValor: detail.ivaSubtotal || 0,
+      subtotal: detail.netSubtotal || detail.grossSubtotal || 0,
+      total: detail.netSubtotal || detail.grossSubtotal || 0,
+      codigosExtra: detail.extraBarcodes || [],
+    };
+  });
 
   return {
     id: purchase.id,

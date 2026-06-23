@@ -3,19 +3,14 @@
  * Lista de motivos posibles para una devolución.
  * @constant {string[]}
  */
-export const MOTIVOS_DEVOLUCION = [
-  "Prod. en mal estado",
-  "Insatisfecho",
-  "Prod. incorrecto",
-  "Otro motivo",
+export const RETURN_REASON_OPTIONS = [
+  { id: 8, label: "Prod. en mal estado", code: "MAL_ESTADO" },
+  { id: 5, label: "Insatisfecho", code: "DEFECTUOSO" },
+  { id: 11, label: "Prod. incorrecto", code: "PROD._INCORRECTO" },
+  { id: 10, label: "Otro motivo", code: "OTRO" },
 ];
 
-export const RETURN_REASON_OPTIONS = [
-  { id: 1, label: "Prod. en mal estado" },
-  { id: 2, label: "Insatisfecho" },
-  { id: 3, label: "Prod. incorrecto" },
-  { id: 4, label: "Otro motivo" },
-];
+export const MOTIVOS_DEVOLUCION = RETURN_REASON_OPTIONS.map((reason) => reason.label);
 
 export const getReturnReasonIdByLabel = (label) =>
   RETURN_REASON_OPTIONS.find((reason) => reason.label === label)?.id ?? null;
@@ -23,27 +18,26 @@ export const getReturnReasonIdByLabel = (label) =>
 export const getReturnReasonLabelById = (id) =>
   RETURN_REASON_OPTIONS.find((reason) => reason.id === Number(id))?.label ?? "";
 
+export const getReturnReasonLabelByCode = (code) =>
+  RETURN_REASON_OPTIONS.find((reason) => reason.code === code)?.label ?? "";
+
 // ─── Tipos de devolución ──────────────────────────────────────────────────────
 /**
  * Lista de tipos posibles de devolución.
  * @constant {string[]}
  */
-export const TIPOS_DEVOLUCION = [
-  "Reemplazo",
-  "Reembolso",
-  "Prod. no conforme",
-];
-
 export const RETURN_METHOD_OPTIONS = [
   { id: 1, label: "Reemplazo" },
   { id: 2, label: "Reembolso" },
-  { id: 3, label: "Prod. no conforme" },
+  { id: 3, label: "Saldo a favor" },
 ];
+
+export const TIPOS_DEVOLUCION = RETURN_METHOD_OPTIONS.map((method) => method.label);
 
 export const RETURN_METHOD_IDS = {
   REPLACEMENT: 1,
   REFUND: 2,
-  NON_CONFORMING_PRODUCT: 3,
+  CREDIT_BALANCE: 3,
 };
 
 export const LEGACY_RETURN_METHOD_LABELS = {
@@ -114,8 +108,9 @@ const RETURN_STATUS_FLOW_BY_METHOD = {
     [RETURN_STATUS_IDS.PENDING_SHIPMENT]: [RETURN_STATUS_IDS.PENDING_REFUND],
     [RETURN_STATUS_IDS.PENDING_REFUND]: [RETURN_STATUS_IDS.READY],
   },
-  [RETURN_METHOD_IDS.NON_CONFORMING_PRODUCT]: {
-    [RETURN_STATUS_IDS.PENDING_SHIPMENT]: [RETURN_STATUS_IDS.READY],
+  [RETURN_METHOD_IDS.CREDIT_BALANCE]: {
+    [RETURN_STATUS_IDS.PENDING_SHIPMENT]: [RETURN_STATUS_IDS.PENDING_REFUND],
+    [RETURN_STATUS_IDS.PENDING_REFUND]: [RETURN_STATUS_IDS.READY],
   },
 };
 
@@ -156,14 +151,15 @@ export const ESTADOS_REEMBOLSO = [
   getReturnStatusLabelById(RETURN_STATUS_IDS.READY),
 ];
 
-export const ESTADOS_PRODUCTO_NO_CONFORME = [
+export const ESTADOS_SALDO_A_FAVOR = [
   getReturnStatusLabelById(RETURN_STATUS_IDS.PENDING_SHIPMENT),
+  getReturnStatusLabelById(RETURN_STATUS_IDS.PENDING_REFUND),
   getReturnStatusLabelById(RETURN_STATUS_IDS.READY),
 ];
 
 /**
  * Devuelve la lista de estados disponibles según el tipo de devolución.
- * @param {"Reemplazo"|"Reembolso"|"Prod. no conforme"} tipo - Tipo de devolución.
+ * @param {"Reemplazo"|"Reembolso"|"Saldo a favor"} tipo - Tipo de devolución.
  * @returns {string[]} Lista de estados para el tipo dado.
  */
 export const getEstadosByTipo = (tipo) => {
@@ -171,7 +167,7 @@ export const getEstadosByTipo = (tipo) => {
 
   if (method === "Reemplazo") return ESTADOS_REEMPLAZO;
   if (method === "Reembolso") return ESTADOS_REEMBOLSO;
-  if (method === "Prod. no conforme") return ESTADOS_PRODUCTO_NO_CONFORME;
+  if (method === "Saldo a favor") return ESTADOS_SALDO_A_FAVOR;
 
   return [];
 };
@@ -186,7 +182,7 @@ export const getEstadoInicial = () =>
 
 /**
  * Devuelve el estado terminal de un producto según su tipo de devolución.
- * @param {"Reemplazo"|"Reembolso"|"Prod. no conforme"} tipo - Tipo de devolución.
+ * @param {"Reemplazo"|"Reembolso"|"Saldo a favor"} tipo - Tipo de devolución.
  * @returns {string} Estado terminal.
  */
 export const getEstadoTerminal = () =>
