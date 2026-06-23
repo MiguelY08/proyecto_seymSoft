@@ -1033,7 +1033,12 @@ function ShoppingCart() {
       )}
 
       <CompleteClientProfile
-        isOpen={showClientModal}
+        isOpen={
+          showClientModal
+          && isAuthenticated
+          && !clientLoading
+          && !clientId
+        }
         user={user}
         onClose={() => setShowClientModal(false)}
         onCreated={(createdClient) => {

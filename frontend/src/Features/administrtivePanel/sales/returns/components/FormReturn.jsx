@@ -45,7 +45,7 @@ const MOTIVOS_LABELS = {
   'PRODUCTO_INCOMPLETO': 'Producto incompleto',
   'MAL_ESTADO': 'Producto en mal estado',
   'PRODUCTO_USADO': 'Producto usado',
-  'OTRO': 'Otro'
+  'OTRO': 'Otro motivo'
 };
 
 const MOTIVO_OPTIONS = MOTIVOS.map((value) => ({
@@ -56,6 +56,13 @@ const METODO_OPTIONS = METODOS.map((value) => ({ value, label: value }));
 const ESTADO_GENERAL_OPTIONS = ESTADOS_P.map((value) => ({ value, label: value }));
 
 const formatCOP = (v) => new Intl.NumberFormat('es-CO').format(v);
+
+const formatReasonLabel = (reason) => {
+  if (!reason) return 'Sin motivo';
+  const label = MOTIVOS_LABELS[reason] || String(reason).replace(/[_-]+/g, ' ');
+  const normalized = label.trim().toLocaleLowerCase('es-CO');
+  return normalized.charAt(0).toLocaleUpperCase('es-CO') + normalized.slice(1);
+};
 
 const getReasonId = (reasonName) => {
   const reasonMap = {
@@ -311,7 +318,7 @@ function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange }) {
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Motivo</label>
                   <div className="w-full px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-xl bg-gray-50 text-gray-500">
-                    {MOTIVOS_LABELS[config.motivo] || config.motivo || '—'}
+                    {formatReasonLabel(config.motivo)}
                   </div>
                   <p className="text-[10px] text-gray-400 mt-1">No se puede modificar en edición</p>
                 </div>
@@ -1704,12 +1711,19 @@ useEffect(() => {
               ) : (
                 productosDevueltos.flatMap(({ producto, configs }) => 
                   configs.map((config, idx) => (
-                    <div key={`${producto.id}-${idx}`} className="flex items-center justify-between border border-gray-200 rounded-xl px-3 py-2">
-                      <div className="flex items-center gap-2 min-w-0">
+                    <div key={`${producto.id}-${idx}`} className="flex min-w-0 items-center justify-between overflow-hidden border border-gray-200 rounded-xl px-3 py-2">
+                      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
                         <ProductoImg src={producto.imagen} size="sm" />
-                        <div>
-                          <span className="text-xs font-semibold text-gray-800 block truncate">{producto.nombre}</span>
-                          <span className="text-[10px] text-gray-500">{config.motivo || 'Sin motivo'}</span>
+                        <div className="min-w-0 flex-1 overflow-hidden">
+                          <span
+                            className="block truncate text-xs font-semibold text-gray-800"
+                            title={producto.nombre}
+                          >
+                            {producto.nombre}
+                          </span>
+                          <span className="block truncate text-[10px] text-gray-500">
+                            {formatReasonLabel(config.motivo)}
+                          </span>
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-0.5 flex-shrink-0 ml-2">
@@ -1729,23 +1743,36 @@ useEffect(() => {
               {productosDevueltos.length === 0 ? (
                 <p className="text-xs text-gray-300 italic text-center py-4">—</p>
               ) : (
-                <table className="w-full text-[11px]">
+                <table className="w-full table-fixed text-[10px]">
+                  <colgroup>
+                    <col className="w-[46%]" />
+                    <col className="w-[10%]" />
+                    <col className="w-[21%]" />
+                    <col className="w-[23%]" />
+                  </colgroup>
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left pb-1 text-gray-500 font-semibold">Producto</th>
-                      <th className="text-center pb-1 text-gray-500 font-semibold">Cant</th>
-                      <th className="text-center pb-1 text-gray-500 font-semibold">V Unit</th>
-                      <th className="text-right pb-1 text-gray-500 font-semibold">Total</th>
+                      <th className="pb-1 pr-1 text-left font-semibold text-gray-500">Producto</th>
+                      <th className="pb-1 text-center font-semibold text-gray-500">Cant.</th>
+                      <th className="pb-1 text-right font-semibold text-gray-500">V. unit.</th>
+                      <th className="pb-1 text-right font-semibold text-gray-500">Total</th>
                     </tr>
                   </thead>
                   <tbody>
                     {productosDevueltos.flatMap(({ producto, configs }) => 
                       configs.map((config, idx) => (
                         <tr key={`${producto.id}-${idx}`} className="border-b border-gray-100">
-                          <td className="py-1 text-gray-700 font-medium">{producto.nombre}</td>
-                          <td className="py-1 text-center text-gray-600">{config.cantidad}</td>
-                          <td className="py-1 text-center text-gray-600">{formatCOP(producto.precioUnit)}</td>
-                          <td className="py-1 text-right text-gray-700 font-semibold">{formatCOP(config.cantidad * producto.precioUnit)}</td>
+                          <td className="py-1.5 pr-1 align-top font-medium text-gray-700">
+                            <span
+                              className="block overflow-hidden text-ellipsis whitespace-nowrap"
+                              title={producto.nombre}
+                            >
+                              {producto.nombre}
+                            </span>
+                          </td>
+                          <td className="py-1.5 text-center align-top text-gray-600">{config.cantidad}</td>
+                          <td className="py-1.5 text-right align-top text-gray-600">{formatCOP(producto.precioUnit)}</td>
+                          <td className="py-1.5 text-right align-top font-semibold text-gray-700">{formatCOP(config.cantidad * producto.precioUnit)}</td>
                         </tr>
                       ))
                     )}
