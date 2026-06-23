@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ShoppingCart as CartIcon,
   Minus,
@@ -21,6 +21,9 @@ import { useAlert } from '../../shared/alerts/useAlert';
 import useAuthenticatedClient from '../../shared/hooks/useAuthenticatedClient';
 import { getDisplayPricing, normalizeClientType } from '../../shared/utils/shopPricingHelper';
 import CompletePay from './modals/CompletePay.jsx';
+import CompleteClientProfile from './modals/CompleteClientProfile.jsx';
+import { useAuth } from '../../access/context/AuthContext';
+import { getSession, saveSession } from '../../access/helpers/authStorage';
 
 /* ── Estilos (coherentes con Home/Favorites) ── */
 const STYLES = `
@@ -463,12 +466,12 @@ function ShoppingCart() {
   injectStyles();
   const navigate = useNavigate();
   const { showConfirm, showError } = useAlert();
+  const { user, setClient } = useAuth();
   const {
     clientId,
     clientType: resolvedClientType,
     isAuthenticated,
     loading: clientLoading,
-    error: clientError,
   } = useAuthenticatedClient();
   const clientType = normalizeClientType(resolvedClientType);
   const {
@@ -478,10 +481,13 @@ function ShoppingCart() {
     updateQuantity,
     removeFromCart,
     clearCart,
+    loading: cartLoading,
   } = useCart();
 
   const [deliveryMethod, setDeliveryMethod] = useState('tienda');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showClientModal, setShowClientModal] = useState(false);
+  const [resumeCheckout, setResumeCheckout] = useState(false);
   const [formData, setFormData] = useState({
     nombreCompleto: '',
     correo: '',
@@ -507,6 +513,15 @@ function ShoppingCart() {
     barrio: false,
     direccion: false,
   });
+
+  useEffect(() => {
+    if (!resumeCheckout || !clientId || cartLoading || cartItems.length === 0) return;
+    const timer = window.setTimeout(() => {
+      setResumeCheckout(false);
+      setShowPaymentModal(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [cartItems.length, cartLoading, clientId, resumeCheckout]);
 
   // Validaciones (idénticas al original)
   const validateNombreCompleto = (value) => {
@@ -663,20 +678,18 @@ function ShoppingCart() {
       return;
     }
 
-    if (!clientId) {
-      showError(
-        'Cuenta sin cliente asociado',
-        clientError || 'No encontramos el perfil de cliente vinculado a tu cuenta. Contacta a un asesor antes de finalizar la compra.'
-      );
-      return;
-    }
-
     if (deliveryMethod === 'domicilio') {
       if (!validateForm()) {
         showError('Formulario incompleto', 'Por favor completa todos los campos correctamente.');
         return;
       }
     }
+
+    if (!clientId) {
+      setShowClientModal(true);
+      return;
+    }
+
     setShowPaymentModal(true);
   };
 
@@ -1018,6 +1031,19 @@ function ShoppingCart() {
           clientId={clientId}
         />
       )}
+
+      <CompleteClientProfile
+        isOpen={showClientModal}
+        user={user}
+        onClose={() => setShowClientModal(false)}
+        onCreated={(createdClient) => {
+          setClient(createdClient);
+          const session = getSession();
+          if (session) saveSession({ ...session, client: createdClient });
+          setShowClientModal(false);
+          setResumeCheckout(true);
+        }}
+      />
     </div>
   );
 }

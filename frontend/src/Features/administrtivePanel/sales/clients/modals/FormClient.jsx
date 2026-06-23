@@ -380,21 +380,34 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     }
 
     setFormData(newFormData);
+    setTouched((prev) => {
+      const next = { ...prev, [name]: true };
+      if (name === 'personType') next.documentType = true;
+      if (name === 'rut') next.ciuCode = true;
+      return next;
+    });
 
     const validationErrors = validateClientForm(newFormData);
     const fieldsToRefresh = [name];
     if (name === 'personType') fieldsToRefresh.push('documentType');
     if (name === 'rut') fieldsToRefresh.push('ciuCode');
 
-    if (fieldsToRefresh.some((field) => touched[field]) || name === 'personType' || name === 'rut') {
-      setErrors((prev) => {
-        const next = { ...prev };
-        fieldsToRefresh.forEach((field) => {
-          next[field] = validationErrors[field] || '';
-        });
-        return next;
+    setErrors((prev) => {
+      const next = { ...prev };
+      fieldsToRefresh.forEach((field) => {
+        next[field] = validationErrors[field] || '';
       });
-    }
+      if (name === 'clientCredit' || name === 'saldoFavor') {
+        next[name] = validateNumeric10_2(
+          newFormData[name],
+          name === 'clientCredit' ? 'Crédito cliente' : 'Saldo a favor'
+        );
+      }
+      if (name === 'ciuCode') {
+        next.ciuCode = validateCiuCode(newFormData.ciuCode, newFormData.rut);
+      }
+      return next;
+    });
   };
 
   const handleSelectChange = (name, value) => {

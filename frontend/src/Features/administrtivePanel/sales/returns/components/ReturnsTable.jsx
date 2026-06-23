@@ -1,54 +1,28 @@
-/**
- * Archivo: ReturnsTable.jsx
- *
- * Componente que renderiza la tabla principal de devoluciones. Muestra todos
- * los registros de devoluciones con su información detallada (número, factura,
- * cliente, motivo, fecha, valor, estado) y botones de acción.
- *
- * Responsabilidades:
- * - Mostrar lista de devoluciones en formato tabla
- * - Resaltar términos de búsqueda en los datos
- * - Alternar colores de fila para mejor legibilidad
- * - Mostrar mensajes cuando no hay registros
- * - Proveer botones de acción (ver, editar, anular)
- */
-import React from "react";
-import { Info, SquarePen, XCircle } from "lucide-react";
-import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
+import React from 'react';
+import { Info, SquarePen, XCircle } from 'lucide-react';
+import { usePermissions } from '../../../configuration/roles/hooks/usePermissions';
 import {
   formatCurrency,
   formatDate,
   getStatusStyle,
   getStatusText,
-} from "../utils/returnsHelpers";
+} from '../utils/returnsHelpers';
 
-/**
- * Función auxiliar: Obtiene un valor del objeto con múltiples nombres de campo posibles
- */
-const getField = (obj, fieldNames, defaultValue = '') => {
-  for (const name of fieldNames) {
-    if (obj?.[name] !== undefined && obj?.[name] !== null) {
-      return obj[name];
-    }
+const getField = (object, names, fallback = '') => {
+  for (const name of names) {
+    if (object?.[name] !== undefined && object?.[name] !== null) return object[name];
   }
-  return defaultValue;
+  return fallback;
 };
 
-/**
- * Función auxiliar: Resalta fragmentos de texto que coinciden con la búsqueda.
- */
 const highlightText = (text, search) => {
-  if (!search || !text) return text;
-
-  const regex = new RegExp(`(${search})`, "gi");
-  const parts = text.toString().split(regex);
+  if (!search || text === null || text === undefined) return text;
+  const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = String(text).split(new RegExp(`(${escaped})`, 'gi'));
 
   return parts.map((part, index) =>
     part.toLowerCase() === search.toLowerCase() ? (
-      <span
-        key={index}
-        className="bg-[#004d7726] text-[#004D77] rounded px-0.5"
-      >
+      <span key={`${part}-${index}`} className="rounded bg-[#004d7726] px-0.5 text-[#004D77]">
         {part}
       </span>
     ) : (
@@ -57,203 +31,133 @@ const highlightText = (text, search) => {
   );
 };
 
-function ReturnsTable({
-  data,
-  startIndex,
-  searchTerm,
-  onInfo,
-  onEdit,
-  onCancel,
-}) {
-  const { hasPermission } = usePermissions();
-  const canView = hasPermission("devoluciones_en_ventas.ver");
-  const canEditGlobal = hasPermission("devoluciones_en_ventas.editar");
-  const canAnnulGlobal = hasPermission("devoluciones_en_ventas.anular");
+const HEADERS = ['#', 'Número', 'Factura', 'Cliente', 'Motivo', 'Fecha', 'Valor', 'Estado', 'Acciones'];
 
-  if (!data || data.length === 0) {
-    return (
-      <div className="overflow-x-auto rounded-xl shadow-md">
-        <table className="min-w-max w-full">
-          <thead className="bg-[#004D77] text-white">
-            <tr>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">
-                #
-              </th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">
-                Número
-              </th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">
-                Factura
-              </th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">
-                Cliente
-              </th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">
-                Motivo
-              </th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">
-                Fecha
-              </th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">
-                Valor
-              </th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">
-                Estado
-              </th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td
-                colSpan={9}
-                className="py-8 text-center text-sm text-gray-400"
-              >
-                No se encontraron devoluciones.
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    );
-  }
+function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }) {
+  const { hasPermission } = usePermissions();
+  const canView = hasPermission('devoluciones_en_ventas.ver');
+  const canEdit = hasPermission('devoluciones_en_ventas.editar');
+  const canAnnul = hasPermission('devoluciones_en_ventas.anular');
 
   return (
-    <div className="overflow-x-auto rounded-xl shadow-md min-h-0">
-      <table className="min-w-max w-full">
+    <div className="w-full overflow-hidden rounded-xl shadow-md">
+      <table className="w-full table-fixed">
+        <colgroup>
+          <col className="w-[4%]" />
+          <col className="w-[13%]" />
+          <col className="w-[10%]" />
+          <col className="w-[18%]" />
+          <col className="w-[17%]" />
+          <col className="w-[10%]" />
+          <col className="w-[11%]" />
+          <col className="w-[10%]" />
+          <col className="w-[7%]" />
+        </colgroup>
+
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="sticky left-0 z-10 bg-[#004D77] px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">
-              #
-            </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">
-              Número
-            </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">
-              Factura
-            </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">
-              Cliente
-            </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">
-              Motivo
-            </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">
-              Fecha
-            </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">
-              Valor
-            </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">
-              Estado
-            </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">
-              Acciones
-            </th>
+            {HEADERS.map((header) => (
+              <th
+                key={header}
+                className="truncate px-1 py-2 text-center text-[10px] font-semibold"
+                title={header}
+              >
+                {header}
+              </th>
+            ))}
           </tr>
         </thead>
 
         <tbody>
-          {data.map((row, index) => {
-            const rowBg = index % 2 === 0 ? "bg-white" : "bg-gray-100";
-            const recordNumber = startIndex + index + 1;
+          {!data?.length ? (
+            <tr>
+              <td colSpan={9} className="py-8 text-center text-xs text-gray-400">
+                No se encontraron devoluciones.
+              </td>
+            </tr>
+          ) : (
+            data.map((row, index) => {
+              const rowBg = index % 2 === 0 ? 'bg-white' : 'bg-gray-100';
+              const returnNumber = getField(row, ['numeroDevolucion', 'returnNumber']);
+              const invoiceNumber = getField(row, ['numeroFactura', 'invoiceNumber']);
+              const client = getField(row, ['cliente', 'clientName']);
+              const reason = getField(row, ['motivo', 'reason'], 'Varios motivos');
+              const createdAt = getField(row, ['fechaCreacion', 'createdAt', 'creationDate']);
+              const total = getField(row, ['totalValor', 'totalAmount'], 0);
+              const status = getField(row, ['estado', 'status'], 'En Proceso');
+              const cancelled = status === 'Anulado';
 
-            // 🔴 EXTRAER DATOS CON MÚLTIPLES NOMBRES DE CAMPO POSIBLES
-            const numeroDevolucion = getField(row, ['numeroDevolucion', 'returnNumber'], '');
-            const numeroFactura = getField(row, ['numeroFactura', 'invoiceNumber'], '');
-            const cliente = getField(row, ['cliente', 'clientName'], '');
-            const motivo = getField(row, ['motivo', 'reason'], '');
-            const fechaCreacion = getField(row, ['fechaCreacion', 'createdAt', 'creationDate'], new Date().toISOString());
-            const totalValor = getField(row, ['totalValor', 'totalAmount'], 0);
-            const estado = getField(row, ['estado', 'status'], 'En Proceso');
-
-            return (
-              <tr
-                key={row.id || index}
-                className={`transition-colors duration-150 ${rowBg}`}
-              >
-                <td
-                  className={`sticky left-0 z-10 ${rowBg} px-3 py-2 text-center text-xs text-gray-500 font-medium whitespace-nowrap`}
-                >
-                  {recordNumber}
-                </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlightText(numeroDevolucion, searchTerm)}
-                </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlightText(numeroFactura, searchTerm)}
-                </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-800 font-medium whitespace-nowrap">
-                  {highlightText(cliente, searchTerm)}
-                </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-700 max-w-[150px] truncate">
-                  {highlightText(motivo, searchTerm)}
-                </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {formatDate(fechaCreacion)}
-                </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  ${highlightText(formatCurrency(totalValor), searchTerm)}
-                </td>
-                <td className="px-3 py-2 text-center">
-                  <span
-                    className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${getStatusStyle(estado)}`}
-                  >
-                    {getStatusText(estado)}
-                  </span>
-                </td>
-                <td className="px-3 py-2">
-                  <div className="flex items-center justify-center gap-1.5">
-                    {canView && (
-                      <button
-                        onClick={() => onInfo(row)}
-                        className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
-                        title="Ver detalle"
-                      >
-                        <Info className="w-4 h-4" strokeWidth={1.5} />
-                      </button>
-                    )}
-
-                    {canEditGlobal && (
-                      <button
-                        onClick={() => onEdit(row)}
-                        className={`text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer ${
-                          estado === "Anulado"
-                            ? "opacity-30 cursor-not-allowed"
-                            : ""
-                        }`}
-                        title="Editar"
-                        disabled={estado === "Anulado"}
-                      >
-                        <SquarePen className="w-4 h-4" strokeWidth={1.5} />
-                      </button>
-                    )}
-
-                    {canAnnulGlobal && (
-                      <button
-                        onClick={() => onCancel(row)}
-                        className={`transition cursor-pointer ${
-                          estado === "Anulado"
-                            ? "text-gray-300 cursor-not-allowed"
-                            : "text-gray-400 hover:scale-110 hover:text-red-500"
-                        }`}
-                        title={
-                          estado === "Anulado"
-                            ? "Ya está anulada"
-                            : "Anular devolución"
-                        }
-                        disabled={estado === "Anulado"}
-                      >
-                        <XCircle className="w-4 h-4" strokeWidth={1.5} />
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
+              return (
+                <tr key={row.id || returnNumber || index} className={`${rowBg} transition-colors`}>
+                  <td className="px-1 py-1.5 text-center text-[10px] font-medium text-gray-500">
+                    {startIndex + index + 1}
+                  </td>
+                  <td className="truncate px-1 py-1.5 text-center text-[10px] text-gray-700" title={returnNumber}>
+                    {highlightText(returnNumber, searchTerm)}
+                  </td>
+                  <td className="truncate px-1 py-1.5 text-center text-[10px] text-gray-700" title={invoiceNumber}>
+                    {highlightText(invoiceNumber, searchTerm)}
+                  </td>
+                  <td className="truncate px-1 py-1.5 text-center text-[10px] font-medium text-gray-800" title={client}>
+                    {highlightText(client, searchTerm)}
+                  </td>
+                  <td className="truncate px-1 py-1.5 text-center text-[10px] text-gray-700" title={reason}>
+                    {highlightText(reason, searchTerm)}
+                  </td>
+                  <td className="truncate px-1 py-1.5 text-center text-[10px] text-gray-700">
+                    {formatDate(createdAt)}
+                  </td>
+                  <td className="truncate px-1 py-1.5 text-center text-[10px] text-gray-700" title={`$${formatCurrency(total)}`}>
+                    ${formatCurrency(total)}
+                  </td>
+                  <td className="px-1 py-1.5 text-center">
+                    <span
+                      className={`inline-block max-w-full truncate rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${getStatusStyle(status)}`}
+                      title={getStatusText(status)}
+                    >
+                      {getStatusText(status)}
+                    </span>
+                  </td>
+                  <td className="px-0.5 py-1.5">
+                    <div className="flex items-center justify-center gap-1">
+                      {canView && (
+                        <button
+                          type="button"
+                          onClick={() => onInfo(row)}
+                          className="text-gray-400 transition hover:text-[#004D77]"
+                          title="Ver detalle"
+                        >
+                          <Info className="h-3.5 w-3.5" strokeWidth={1.6} />
+                        </button>
+                      )}
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => onEdit(row)}
+                          disabled={cancelled}
+                          className="text-gray-400 transition hover:text-[#004D77] disabled:cursor-not-allowed disabled:opacity-30"
+                          title={cancelled ? 'No se puede editar una devolución anulada' : 'Editar'}
+                        >
+                          <SquarePen className="h-3.5 w-3.5" strokeWidth={1.6} />
+                        </button>
+                      )}
+                      {canAnnul && (
+                        <button
+                          type="button"
+                          onClick={() => onCancel(row)}
+                          disabled={cancelled}
+                          className="text-gray-400 transition hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30"
+                          title={cancelled ? 'Ya está anulada' : 'Anular devolución'}
+                        >
+                          <XCircle className="h-3.5 w-3.5" strokeWidth={1.6} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
+          )}
         </tbody>
       </table>
     </div>
