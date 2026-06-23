@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 
 import ButtonComponent from "../../../../shared/ButtonComponent";
 import TableFilters from "../../../../shared/TableFilters";
@@ -8,6 +8,8 @@ import RoleModal from "../components/RoleModal";
 import Permission from "../components/Permission";
 import PaginationAdmin from "../../../../shared/PaginationAdmin";
 import Spinner from "../../../../shared/spinner/Spinner";
+import { useAlert } from "../../../../shared/alerts/useAlert";
+import { getRoleErrorInfo } from "../helpers/roleErrorMapper";
 
 import {
   getRoles,
@@ -18,6 +20,9 @@ import {
 } from "../services/rolesServices";
 
 export default function RolesPage() {
+
+  const { showError, showWarning } =
+    useAlert();
 
   const [search, setSearch] =
     useState("");
@@ -46,11 +51,13 @@ export default function RolesPage() {
   // CARGAR ROLES
   // ─────────────────────────────
 
-  const loadRoles = async () => {
+  const loadRoles = useCallback(async ({ showSpinner = true } = {}) => {
 
     try {
 
-      setLoading(true);
+      if (showSpinner) {
+        setLoading(true);
+      }
 
       const response =
         await getRoles();
@@ -72,19 +79,34 @@ export default function RolesPage() {
 
       setRoles([]);
 
+      const errorInfo =
+        getRoleErrorInfo(error, "load");
+
+      const showAlert =
+        errorInfo.type === "error"
+          ? showError
+          : showWarning;
+
+      showAlert(
+        errorInfo.title,
+        errorInfo.message
+      );
+
     } finally {
 
-      setLoading(false);
+      if (showSpinner) {
+        setLoading(false);
+      }
 
     }
 
-  };
+  }, [showError, showWarning]);
 
   useEffect(() => {
 
     loadRoles();
 
-  }, []);
+  }, [loadRoles]);
 
   useEffect(() => {
 
@@ -218,6 +240,14 @@ export default function RolesPage() {
         error
       );
 
+      const errorInfo =
+        getRoleErrorInfo(error, "detail");
+
+      showError(
+        errorInfo.title,
+        errorInfo.message
+      );
+
     }
 
   };
@@ -250,6 +280,14 @@ export default function RolesPage() {
       console.error(
         "Error obteniendo rol:",
         error
+      );
+
+      const errorInfo =
+        getRoleErrorInfo(error, "detail");
+
+      showError(
+        errorInfo.title,
+        errorInfo.message
       );
 
     }

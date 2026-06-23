@@ -1,485 +1,225 @@
-/**
- * Archivo: pdfExporter.js
- * 
- * Utilidad especializada para exportar una devolución a PDF con descarga automática.
- * Genera un documento HTML profesional que se descarga automáticamente como PDF.
- * El documento incluye todos los detalles de la devolución con estilos profesionales.
- * 
- * Responsabilidades principales:
- * - Generar HTML profesional de la devolución
- * - Incluir estilos CSS integrados
- * - Mostrar información formatada de cliente, productos y totales
- * - Descargar automáticamente el PDF sin ventanas emergentes
- * - Mostrar motivo de anulación si la devolución está anulada
- * - Mostrar estados con colores diferenciados
- */
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { formatDate } from './returnsHelpers';
 
-import { formatCurrency, formatDate } from './returnsHelpers';
+const BLUE = [0, 77, 119];
+const LIGHT_BLUE = [232, 242, 248];
+const RED = [185, 28, 28];
 
-// ======================= FUNCIONALIDAD: DESCARGAR PDF AUTOMÁTICO =======================
+const money = (value) =>
+  new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    maximumFractionDigits: 0,
+  }).format(Number(value) || 0);
 
-/**
- * Exporta una devolución a un documento PDF con descarga automática.
- * Genera un contenido HTML profesional con estilos integrados.
- * Abre el diálogo de impresión del navegador para guardar como PDF.
- * 
- * @param {Object} devolucion - Objeto de devolución a exportar
- * @param {string} devolucion.numeroDevolucion - Número único de devolución
- * @param {string} devolucion.numeroFactura - Número de factura
- * @param {string} devolucion.cliente - Nombre del cliente
- * @param {string} devolucion.asesor - Nombre del asesor
- * @param {string} devolucion.telefono - Teléfono de contacto
- * @param {string} devolucion.direccion - Dirección de entrega
- * @param {string} devolucion.estado - Estado actual
- * @param {string} devolucion.descripcion - Descripción detallada
- * @param {number} devolucion.totalValor - Valor total
- * @param {number} devolucion.cantidadProductos - Cantidad total de productos
- * @param {number} devolucion.totalUnidades - Total de unidades
- * @param {Array} devolucion.productosDevueltos - Array de productos devueltos
- * @param {string|Date} devolucion.fechaCreacion - Fecha de creación
- * @param {string} devolucion.cancelReason - Motivo de anulación (si aplica)
- * @param {string} devolucion.cancelledAt - Fecha de anulación (si aplica)
- * @returns {void} Abre diálogo de impresión para guardar como PDF
- */
-export const exportReturnToPDF = (devolucion) => {
-  // ======================= Cálculos preliminares =======================
-  const productos = devolucion.productosDevueltos || [];
-  const totalGeneral = devolucion.totalValor || productos.reduce((a, p) => a + ((p.cantidad || 1) * (p.precioUnit || 0)), 0);
-  const isAnulada = devolucion.estado === 'Anulada';
-  
-  // Generar HTML para el PDF
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Devolución ${devolucion.numeroDevolucion}</title>
-      <meta charset="UTF-8">
-      <style>
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-        }
-        
-        body {
-          font-family: 'Segoe UI', 'Arial', sans-serif;
-          background: #f5f5f5;
-          padding: 40px;
-        }
-        
-        .document {
-          max-width: 1100px;
-          margin: 0 auto;
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-          overflow: hidden;
-        }
-        
-        .header {
-          background: #004D77;
-          padding: 25px 30px;
-          color: white;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        
-        .title h1 {
-          font-size: 26px;
-          font-weight: bold;
-          margin-bottom: 4px;
-        }
-        
-        .title p {
-          font-size: 11px;
-          opacity: 0.8;
-        }
-        
-        .badge {
-          border: 2px solid rgba(255,255,255,0.3);
-          border-radius: 10px;
-          padding: 8px 18px;
-          text-align: center;
-          background: rgba(255,255,255,0.1);
-        }
-        
-        .badge small {
-          font-size: 10px;
-          opacity: 0.8;
-          display: block;
-        }
-        
-        .badge strong {
-          font-size: 16px;
-          font-weight: bold;
-          display: block;
-          margin-top: 4px;
-        }
-        
-        .content {
-          padding: 30px;
-        }
-        
-        hr {
-          border: none;
-          border-top: 1px solid #e0e0e0;
-          margin: 20px 0;
-        }
-        
-        .section-title {
-          font-size: 16px;
-          font-weight: bold;
-          color: #004D77;
-          margin-bottom: 15px;
-          padding-bottom: 8px;
-          border-bottom: 2px solid #e0e0e0;
-        }
-        
-        .cancel-box {
-          background: #fff5f5;
-          border-left: 4px solid #dc2626;
-          padding: 12px 16px;
-          margin-bottom: 20px;
-          border-radius: 8px;
-        }
-        
-        .cancel-box p {
-          margin: 0;
-          font-size: 12px;
-          color: #991b1b;
-        }
-        
-        .cancel-box strong {
-          font-weight: bold;
-          display: block;
-          margin-bottom: 5px;
-          font-size: 12px;
-        }
-        
-        .info-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-          margin-bottom: 20px;
-        }
-        
-        .info-card {
-          background: #f8f9fa;
-          border-radius: 10px;
-          padding: 15px;
-        }
-        
-        .info-item {
-          margin-bottom: 12px;
-        }
-        
-        .info-item:last-child {
-          margin-bottom: 0;
-        }
-        
-        .info-label {
-          font-weight: bold;
-          color: #666;
-          font-size: 10px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          display: block;
-          margin-bottom: 4px;
-        }
-        
-        .info-value {
-          color: #333;
-          font-size: 13px;
-          font-weight: 500;
-        }
-        
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 20px;
-        }
-        
-        th {
-          background-color: #004D77;
-          color: white;
-          padding: 10px 8px;
-          text-align: left;
-          font-size: 11px;
-          font-weight: 600;
-        }
-        
-        td {
-          padding: 8px;
-          border-bottom: 1px solid #e0e0e0;
-          font-size: 11px;
-          color: #555;
-        }
-        
-        .text-center {
-          text-align: center;
-        }
-        
-        .text-right {
-          text-align: right;
-        }
-        
-        .estado-pendiente {
-          color: #dc2626;
-          font-weight: 600;
-        }
-        
-        .estado-aprobada {
-          color: #16a34a;
-          font-weight: 600;
-        }
-        
-        .estado-anulada {
-          color: #6b7280;
-          font-weight: 600;
-        }
-        
-        .desc-box {
-          background: #f8f9fa;
-          border-radius: 10px;
-          padding: 15px;
-          margin-bottom: 20px;
-        }
-        
-        .desc-box p {
-          margin: 0;
-          font-size: 12px;
-          color: #666;
-          line-height: 1.5;
-        }
-        
-        .totals {
-          display: flex;
-          justify-content: flex-end;
-          margin-top: 20px;
-        }
-        
-        .totals-box {
-          border: 2px solid #004D77;
-          border-radius: 10px;
-          width: 260px;
-          overflow: hidden;
-        }
-        
-        .totals-row {
-          display: flex;
-          justify-content: space-between;
-          padding: 10px 15px;
-          border-bottom: 1px solid #e0e0e0;
-        }
-        
-        .totals-row:last-child {
-          border-bottom: none;
-          background: #f0f7fc;
-        }
-        
-        .totals-label {
-          font-weight: bold;
-          color: #555;
-          font-size: 12px;
-        }
-        
-        .totals-value {
-          font-weight: bold;
-          color: #004D77;
-          font-size: 13px;
-        }
-        
-        .footer {
-          margin-top: 30px;
-          padding-top: 15px;
-          border-top: 1px solid #e0e0e0;
-          text-align: center;
-          font-size: 10px;
-          color: #999;
-        }
-        
-        @media print {
-          body {
-            background: white;
-            padding: 0;
-          }
-          .document {
-            box-shadow: none;
-            max-width: 100%;
-          }
-          .header {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .cancel-box {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-        }
-      </style>
-    </head>
-    <body>
-      <div class="document">
-        <div class="header">
-          <div class="title">
-            <h1>Devolución</h1>
-            <p>Documento de devolución de productos</p>
-          </div>
-          <div class="badge">
-            <small>Número de Devolución</small>
-            <strong>${devolucion.numeroDevolucion || 'N/A'}</strong>
-          </div>
-        </div>
-        
-        <div class="content">
-          
-          ${isAnulada && devolucion.cancelReason ? `
-          <div class="cancel-box">
-            <strong>x  DEVOLUCIÓN ANULADA</strong>
-            <p>Motivo: ${devolucion.cancelReason}</p>
-            ${devolucion.cancelledAt ? `<p>Fecha de anulación: ${formatDate(devolucion.cancelledAt)}</p>` : ''}
-          </div>
-          ` : ''}
-          
-          <div class="section-title"> Datos de la devolución</div>
-          <div class="info-grid">
-            <div class="info-card">
-              <div class="info-item">
-                <span class="info-label">No. Factura</span>
-                <div class="info-value">${devolucion.numeroFactura || 'N/A'}</div>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Cliente</span>
-                <div class="info-value">${devolucion.cliente || 'N/A'}</div>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Atendió</span>
-                <div class="info-value">${devolucion.asesor || 'N/A'}</div>
-              </div>
-            </div>
-            <div class="info-card">
-              <div class="info-item">
-                <span class="info-label">Teléfono</span>
-                <div class="info-value">${devolucion.telefono || 'N/A'}</div>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Dirección</span>
-                <div class="info-value">${devolucion.direccion || 'N/A'}</div>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Fecha</span>
-                <div class="info-value">${formatDate(devolucion.fechaCreacion || new Date())}</div>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Estado</span>
-                <div class="info-value ${devolucion.estado === 'Pendiente' ? 'estado-pendiente' : devolucion.estado === 'Aprobada' ? 'estado-aprobada' : 'estado-anulada'}">
-                  ${devolucion.estado || 'Pendiente'}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <hr />
-          
-          <div class="section-title"> Productos devueltos</div>
-          <table>
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th>Motivo</th>
-                <th>Método</th>
-                <th>Estado</th>
-                <th class="text-center">Cant.</th>
-                <th class="text-right">Valor</th>
-                <th class="text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${productos.map(p => {
-                const cantidad = p.cantidad || 1;
-                const precioUnit = p.precioUnit || p.valor || 0;
-                const total = cantidad * precioUnit;
-                const estadoClass = p.estado === 'Pendiente' ? 'estado-pendiente' : p.estado === 'Aprobada' ? 'estado-aprobada' : 'estado-anulada';
-                
-                return `
-                  <tr>
-                    <td>${p.nombre}</td>
-                    <td>${p.motivo || '-'}</td>
-                    <td>${p.metodo || '-'}</td>
-                    <td class="${estadoClass}">${p.estado || 'Pendiente'}</td>
-                    <td class="text-center">${cantidad}</td>
-                    <td class="text-right">$${formatCurrency(precioUnit)}</td>
-                    <td class="text-right">$${formatCurrency(total)}</td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
-          
-          <div class="desc-box">
-            <div class="section-title" style="margin-bottom: 10px;"> Descripción</div>
-            <p>${devolucion.descripcion || 'Sin descripción adicional'}</p>
-          </div>
-          
-          <div class="totals">
-            <div class="totals-box">
-              <div class="totals-row">
-                <span class="totals-label">No. Productos</span>
-                <span class="totals-value">${devolucion.cantidadProductos || productos.length}</span>
-              </div>
-              <div class="totals-row">
-                <span class="totals-label">Can. Unidades</span>
-                <span class="totals-value">${devolucion.totalUnidades || productos.reduce((a, p) => a + (p.cantidad || 1), 0)}</span>
-              </div>
-              <div class="totals-row">
-                <span class="totals-label">Total Devolución</span>
-                <span class="totals-value">$${formatCurrency(totalGeneral)}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div class="footer">
-            Documento generado el ${new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })} - Papelería Magic
-          </div>
-        </div>
-      </div>
-      
-      <script>
-        window.onload = function() {
-          setTimeout(function() {
-            window.print();
-          }, 300);
-        }
-      </script>
-    </body>
-    </html>
-  `;
+const text = (value, fallback = 'No registrado') => {
+  const normalized = String(value ?? '').trim();
+  return normalized || fallback;
+};
 
-  // Crear un iframe oculto para la impresión automática
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'absolute';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = 'none';
-  document.body.appendChild(iframe);
-  
-  // Escribir el contenido en el iframe
-  const iframeDoc = iframe.contentWindow.document;
-  iframeDoc.open();
-  iframeDoc.write(htmlContent);
-  iframeDoc.close();
-  
-  // Esperar a que cargue y abrir diálogo de impresión
-  iframe.onload = () => {
-    setTimeout(() => {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-      
-      // Remover el iframe después de un tiempo
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-      }, 2000);
-    }, 300);
-  };
+const normalizeProducts = (saleReturn = {}) =>
+  (saleReturn.details || saleReturn.productosDevueltos || []).map((product) => {
+    const quantity = Number(product.quantity ?? product.cantidad ?? 1) || 1;
+    const unitPrice = Number(
+      product.unitPrice ?? product.precioUnit ?? product.valor ?? 0,
+    ) || 0;
+
+    return {
+      name: text(product.productName ?? product.nombre, 'Producto'),
+      reason: text(product.reason ?? product.motivo, '-'),
+      description: text(product.description ?? product.descripcionMotivo, ''),
+      method: text(product.method ?? product.metodo, '-'),
+      status: text(product.status ?? product.estado, 'En Proceso'),
+      quantity,
+      unitPrice,
+      total: quantity * unitPrice,
+    };
+  });
+
+const addLabelValue = (doc, label, value, x, y, maxWidth = 78) => {
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(100, 116, 139);
+  doc.text(label.toUpperCase(), x, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(30, 41, 59);
+  doc.text(doc.splitTextToSize(text(value), maxWidth), x, y + 5);
+};
+
+export const exportReturnToPDF = (saleReturn = {}) => {
+  const products = normalizeProducts(saleReturn);
+  const returnNumber = text(
+    saleReturn.returnNumber ?? saleReturn.numeroDevolucion,
+    'Sin número',
+  );
+  const invoiceNumber = text(
+    saleReturn.invoiceNumber ?? saleReturn.numeroFactura,
+    'Sin factura',
+  );
+  const status = text(saleReturn.status ?? saleReturn.estado, 'En Proceso');
+  const total =
+    Number(saleReturn.totalAmount ?? saleReturn.totalValor) ||
+    products.reduce((sum, product) => sum + product.total, 0);
+  const units = products.reduce((sum, product) => sum + product.quantity, 0);
+  const isCancelled = status.toLowerCase().includes('anulad');
+
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  doc.setFillColor(...BLUE);
+  doc.rect(0, 0, pageWidth, 31, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(19);
+  doc.text('DEVOLUCIÓN DE VENTA', 14, 14);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text('Papelería Magic · Comprobante de devolución', 14, 21);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text(returnNumber, pageWidth - 14, 17, { align: 'right' });
+
+  let y = 41;
+  if (isCancelled) {
+    doc.setFillColor(254, 242, 242);
+    doc.setDrawColor(254, 202, 202);
+    doc.roundedRect(14, y, pageWidth - 28, 18, 2, 2, 'FD');
+    doc.setTextColor(...RED);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text('DEVOLUCIÓN ANULADA', 18, y + 6);
+    doc.setFont('helvetica', 'normal');
+    doc.text(
+      doc.splitTextToSize(
+        `Motivo: ${text(
+          saleReturn.cancellationReason ?? saleReturn.cancelReason,
+        )}`,
+        pageWidth - 38,
+      ),
+      18,
+      y + 12,
+    );
+    y += 25;
+  }
+
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(14, y, pageWidth - 28, 39, 2, 2, 'F');
+  addLabelValue(doc, 'Factura', invoiceNumber, 19, y + 8);
+  addLabelValue(doc, 'Cliente', saleReturn.clientName ?? saleReturn.cliente, 19, y + 23);
+  addLabelValue(
+    doc,
+    'Fecha',
+    formatDate(saleReturn.createdAt ?? saleReturn.fechaCreacion),
+    108,
+    y + 8,
+  );
+  addLabelValue(doc, 'Estado', status, 108, y + 23);
+  y += 47;
+
+  addLabelValue(doc, 'Asesor', saleReturn.employeeName ?? saleReturn.asesor, 14, y);
+  addLabelValue(doc, 'Teléfono', saleReturn.clientPhone ?? saleReturn.telefono, 78, y, 50);
+  addLabelValue(
+    doc,
+    'Dirección',
+    saleReturn.deliveryAddress ?? saleReturn.clientAddress ?? saleReturn.direccion,
+    135,
+    y,
+    58,
+  );
+  y += 17;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...BLUE);
+  doc.text('Productos devueltos', 14, y);
+
+  autoTable(doc, {
+    startY: y + 4,
+    margin: { left: 14, right: 14 },
+    head: [['Producto', 'Motivo / detalle', 'Método', 'Estado', 'Cant.', 'Valor', 'Total']],
+    body: products.length
+      ? products.map((product) => [
+          product.name,
+          product.description ? `${product.reason}\n${product.description}` : product.reason,
+          product.method,
+          product.status,
+          product.quantity,
+          money(product.unitPrice),
+          money(product.total),
+        ])
+      : [['Sin productos registrados', '-', '-', '-', 0, money(0), money(0)]],
+    theme: 'grid',
+    styles: {
+      font: 'helvetica',
+      fontSize: 7.5,
+      cellPadding: 2.2,
+      lineColor: [220, 230, 236],
+      lineWidth: 0.2,
+      valign: 'middle',
+    },
+    headStyles: {
+      fillColor: BLUE,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      halign: 'center',
+    },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    columnStyles: {
+      0: { cellWidth: 35 },
+      1: { cellWidth: 39 },
+      2: { cellWidth: 26 },
+      3: { cellWidth: 23 },
+      4: { cellWidth: 12, halign: 'center' },
+      5: { cellWidth: 25, halign: 'right' },
+      6: { cellWidth: 25, halign: 'right' },
+    },
+    didDrawPage: () => {
+      const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setFontSize(7);
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Generado el ${new Date().toLocaleString('es-CO')}`, 14, pageHeight - 7);
+      doc.text(`Página ${doc.internal.getNumberOfPages()}`, pageWidth - 14, pageHeight - 7, {
+        align: 'right',
+      });
+    },
+  });
+
+  y = doc.lastAutoTable.finalY + 9;
+  if (y > 245) {
+    doc.addPage();
+    y = 20;
+  }
+
+  doc.setFillColor(...LIGHT_BLUE);
+  doc.roundedRect(14, y, 112, 28, 2, 2, 'F');
+  doc.setTextColor(...BLUE);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('DESCRIPCIÓN GENERAL', 18, y + 7);
+  doc.setTextColor(51, 65, 85);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text(
+    doc.splitTextToSize(
+      text(saleReturn.description ?? saleReturn.descripcion, 'Sin descripción adicional'),
+      104,
+    ),
+    18,
+    y + 13,
+  );
+
+  doc.setDrawColor(...BLUE);
+  doc.roundedRect(132, y, pageWidth - 146, 28, 2, 2, 'S');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(71, 85, 105);
+  doc.text(`${products.length} productos · ${units} unidades`, 137, y + 8);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...BLUE);
+  doc.text(money(total), pageWidth - 19, y + 20, { align: 'right' });
+
+  doc.save(`devolucion_${returnNumber.replace(/[^a-z0-9_-]/gi, '_')}.pdf`);
 };

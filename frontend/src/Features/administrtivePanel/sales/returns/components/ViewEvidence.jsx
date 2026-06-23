@@ -148,12 +148,12 @@ const ViewEvidence = ({
           <div className="flex-1 min-w-0">
             {currentDescription ? (
               <p className="text-xs text-gray-600 truncate flex items-center gap-1.5">
-                <span className="text-[#004D77]">📝</span>
+                <span className="text-[#004D77]"></span>
                 <span>{currentDescription}</span>
               </p>
             ) : (
               <p className="text-xs text-gray-400 italic flex items-center gap-1.5">
-                <span>📝</span>
+                <span></span>
                 <span>Sin descripción</span>
               </p>
             )}

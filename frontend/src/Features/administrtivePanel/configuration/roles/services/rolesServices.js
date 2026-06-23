@@ -36,7 +36,7 @@ export const getRoles = async () => {
       error
     );
 
-    return [];
+    throw error;
 
   }
 
@@ -98,7 +98,7 @@ export const getPermissions = async () => {
       error
     );
 
-    return [];
+    throw error;
 
   }
 
@@ -175,10 +175,7 @@ const mapearPermisosParaApi = (
   const payload = {
 
     name_role:
-      roleData.name,
-
-    description:
-      roleData.description,
+      roleData.name.trim(),
 
     permissions
 
@@ -188,6 +185,14 @@ const mapearPermisosParaApi = (
     "📤 PAYLOAD FINAL:",
     payload
   );
+
+  const description =
+    roleData.description?.trim();
+
+  if (description) {
+    payload.description =
+      description;
+  }
 
   return payload;
 

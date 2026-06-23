@@ -236,9 +236,9 @@ export default function RegisterForm() {
             </label>
           </div> */}
 
-          {touched.terms && errors.terms && (
+          {/* {touched.terms && errors.terms && (
             <p className="text-red-500 text-xs">{errors.terms}</p>
-          )}
+          )} */}
 
           {errors.general && (
             <p className="text-red-500 text-xs text-center bg-red-50 p-2 rounded">

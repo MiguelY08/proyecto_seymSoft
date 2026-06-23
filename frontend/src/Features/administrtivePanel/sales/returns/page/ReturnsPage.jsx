@@ -146,10 +146,14 @@ function ReturnsPage() {
     showSuccess('Filtros limpiados', 'Todos los filtros han sido eliminados');
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     try {
       const filtered = filterReturnsByDateAndSearch(returns, searchTerm, startDate, endDate);
-      exportReturnsToExcel(filtered);
+      if (filtered.length === 0) {
+        showError('Sin datos', 'No hay devoluciones para exportar');
+        return;
+      }
+      await exportReturnsToExcel(filtered);
       showSuccess('Exportación exitosa', 'El archivo Excel se generó correctamente');
     } catch (error) {
       console.error('Error en exportación:', error);
@@ -292,7 +296,7 @@ function ReturnsPage() {
   }
 
   return (
-    <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
+    <div className="flex min-h-0 flex-col gap-3 p-3 sm:p-4">
       <ReturnsToolbar
         search={searchTerm}
         onSearchChange={handleSearchChange}

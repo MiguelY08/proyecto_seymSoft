@@ -533,7 +533,7 @@ function Products() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex h-full min-h-0 flex-col bg-white">
       {screenLoadingMessage && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-white/80 backdrop-blur-sm">
           <Spinner message={screenLoadingMessage} className="min-h-0" />
@@ -541,7 +541,7 @@ function Products() {
       )}
 
       <div
-        className={`h-full flex flex-col gap-3 p-3 sm:p-4 ${showModal || showFormModal || showEditModal ? "blur-sm" : ""}`}
+        className={`flex min-h-0 flex-1 flex-col gap-3 bg-white p-3 sm:p-4 ${showModal || showFormModal || showEditModal ? "blur-sm" : ""}`}
       >
         {/* Toolbar con búsqueda y botón crear */}
         {!loading && canView && data.length > 0 && (
@@ -651,7 +651,12 @@ function Products() {
           )}
 
         {loading ? (
-          <Spinner message="Cargando productos..." />
+          <div className="flex min-h-0 flex-1 items-center justify-center bg-white">
+            <Spinner
+              message="Cargando productos..."
+              className="min-h-0"
+            />
+          </div>
         ) : !canView ? (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
@@ -695,7 +700,7 @@ function Products() {
           </div>
         ) : (
           <>
-            <div className="flex-1 overflow-x-auto rounded-xl shadow-md min-h-0">
+            <div className="flex-1 overflow-x-auto rounded-xl bg-white shadow-md min-h-0">
               <table className="min-w-max w-full">
                 <thead className="bg-[#004D77] text-white">
                   <tr>

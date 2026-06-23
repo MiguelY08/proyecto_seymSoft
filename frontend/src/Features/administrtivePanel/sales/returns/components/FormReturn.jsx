@@ -818,6 +818,13 @@ useEffect(() => {
     setTelefono(factura.clientPhone || '');
     setSearchTermFactura(`${factura.invoiceNumber} - ${factura.clientName}`);
     setShowDropdownFactura(false);
+    setTouched(prev => ({ ...prev, noFactura: true, cliente: true, asesor: true }));
+    setErrors(prev => ({
+      ...prev,
+      noFactura: '',
+      cliente: validateField('cliente', factura.clientName || ''),
+      asesor: validateField('asesor', factura.employeeName || ''),
+    }));
 
     try {
       const saleDetails = await getReturnableSales(factura.clientId);
@@ -975,10 +982,9 @@ useEffect(() => {
       case 'descripcion': setDescripcion(value); break;
       default: break;
     }
-    if (touched[field]) {
-      const err = validateField(field, value);
-      setErrors(prev => ({ ...prev, [field]: err }));
-    }
+    setTouched(prev => ({ ...prev, [field]: true }));
+    const err = validateField(field, value);
+    setErrors(prev => ({ ...prev, [field]: err }));
   };
 
   const handleBlur = (field) => {
@@ -1348,6 +1354,13 @@ useEffect(() => {
                           value={searchTermFactura}
                           onChange={(e) => {
                             setSearchTermFactura(e.target.value);
+                            setTouched(prev => ({ ...prev, noFactura: true }));
+                            setErrors(prev => ({
+                              ...prev,
+                              noFactura: idVentaSeleccionada
+                                ? ''
+                                : 'Debe seleccionar una factura de la lista',
+                            }));
                             if (e.target.value.length >= 1) {
                               cargarFacturas(e.target.value);
                             } else {
@@ -1380,6 +1393,7 @@ useEffect(() => {
                       <div ref={dropdownRef} className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
                         {facturasFiltradas.map((factura) => {
                           const isAnnulled = factura.isAnnulled || factura.statusId === 4;
+                          const isUnavailable = factura.canReturn === false;
                           
                           return (
                             <button
@@ -1390,10 +1404,17 @@ useEffect(() => {
                                   showError('Venta anulada', 'Esta venta está anulada y no se puede generar una devolución');
                                   return;
                                 }
+                                if (isUnavailable) {
+                                  showError(
+                                    'Venta no disponible',
+                                    factura.returnBlockReason || 'Esta venta no cumple las condiciones para devolución'
+                                  );
+                                  return;
+                                }
                                 seleccionarFactura(factura);
                               }}
-                              className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition flex justify-between items-center border-b border-gray-100 last:border-0 ${(factura.hasReturn || isAnnulled) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                              disabled={factura.hasReturn || isAnnulled}
+                              className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition flex justify-between items-center border-b border-gray-100 last:border-0 ${(factura.hasReturn || isAnnulled || isUnavailable) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              disabled={factura.hasReturn || isAnnulled || isUnavailable}
                             >
                               <div>
                                 <span className="font-medium text-gray-800">#{factura.invoiceNumber}</span>
@@ -1403,6 +1424,11 @@ useEffect(() => {
                                 )}
                                 {isAnnulled && (
                                   <span className="text-xs text-red-500 ml-2">(Venta anulada)</span>
+                                )}
+                                {!isAnnulled && isUnavailable && (
+                                  <span className="text-xs text-amber-600 ml-2">
+                                    ({factura.returnBlockReason || 'No disponible'})
+                                  </span>
                                 )}
                               </div>
                               <div className="text-right">
@@ -1526,7 +1552,24 @@ useEffect(() => {
                 
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-gray-700">Domicilio</span>
-                  <button type="button" onClick={() => setDomicilio((p) => !p)}
+                  <button type="button" onClick={() => {
+                    const nextDelivery = !domicilio;
+                    setDomicilio(nextDelivery);
+                    setTouched(prev => ({
+                      ...prev,
+                      direccion: nextDelivery,
+                      evidencias: nextDelivery,
+                    }));
+                    setErrors(prev => ({
+                      ...prev,
+                      direccion: nextDelivery && !direccion.trim()
+                        ? 'La dirección es obligatoria'
+                        : '',
+                      evidencias: nextDelivery && evidencias.length === 0
+                        ? 'Debe adjuntar al menos una evidencia'
+                        : '',
+                    }));
+                  }}
                     className={`relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer flex-shrink-0 ${domicilio ? 'bg-green-500' : 'bg-gray-300'}`}>
                     <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${domicilio ? 'left-[26px]' : 'left-0.5'}`} />
                     {domicilio && <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-white text-[9px] font-bold">✓</span>}
@@ -1755,6 +1798,13 @@ useEffect(() => {
     }
     
     setEvidencias(nuevasEvidencias);
+    setTouched(prev => ({ ...prev, evidencias: true }));
+    setErrors(prev => ({
+      ...prev,
+      evidencias: domicilio && nuevasEvidencias.length === 0
+        ? 'Debe adjuntar al menos una evidencia'
+        : '',
+    }));
     
     if (descripcion) {
       setEvidenceDescription(descripcion);

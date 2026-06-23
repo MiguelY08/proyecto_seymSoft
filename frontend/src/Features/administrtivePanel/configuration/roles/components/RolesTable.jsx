@@ -3,6 +3,7 @@ import { Info, SquarePen, Trash2 } from "lucide-react";
 
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import { usePermissions } from "../hooks/usePermissions";
+import { getRoleErrorInfo } from "../helpers/roleErrorMapper";
 
 import {
   deleteRole,
@@ -14,9 +15,12 @@ import {
 // ─────────────────────────────────────────────────────
 // Soporta "Administrador" y "Administrator" (case-insensitive)
 
-const isProtectedRole = (roleName) => {
+const isProtectedRole = (role) => {
   const protectedRoles = ["administrador", "administrator"];
-  return protectedRoles.includes(roleName?.toLowerCase());
+  return Boolean(
+    role?.isAdmin ||
+    protectedRoles.includes(role?.name?.toLowerCase())
+  );
 };
 
 const highlight = (text, term) => {
@@ -96,7 +100,7 @@ export default function RolesTable({
 
   const handleEditRole = (role) => {
 
-    if (isProtectedRole(role.name)) {
+    if (isProtectedRole(role)) {
 
       showWarning(
         "Rol protegido",
@@ -117,7 +121,7 @@ export default function RolesTable({
 
     try {
 
-      if (isProtectedRole(role.name)) {
+      if (isProtectedRole(role)) {
 
         showWarning(
           "Rol protegido",
@@ -166,7 +170,9 @@ export default function RolesTable({
       );
 
       // ✅ RECARGAR TABLA
-      await reloadRoles();
+      await reloadRoles({
+        showSpinner: false
+      });
 
       showSuccess(
 
@@ -188,12 +194,17 @@ export default function RolesTable({
 
       console.error(error);
 
-      showError(
+      const errorInfo =
+        getRoleErrorInfo(error, "status");
 
-        "Error",
+      const showAlert =
+        errorInfo.type === "error"
+          ? showError
+          : showWarning;
 
-        "No fue posible actualizar el estado del rol"
-
+      showAlert(
+        errorInfo.title,
+        errorInfo.message
       );
 
     }
@@ -208,22 +219,11 @@ export default function RolesTable({
 
     try {
 
-      if (isProtectedRole(role.name)) {
+      if (isProtectedRole(role)) {
 
         showWarning(
           "Rol protegido",
           "Este rol no puede eliminarse"
-        );
-
-        return;
-
-      }
-
-      if (role.active) {
-
-        showWarning(
-          "Rol activo",
-          "Debes desactivar el rol antes de eliminarlo"
         );
 
         return;
@@ -264,14 +264,17 @@ export default function RolesTable({
 
       console.error(error);
 
-      showError(
+      const errorInfo =
+        getRoleErrorInfo(error, "delete");
 
-        "Error",
+      const showAlert =
+        errorInfo.type === "error"
+          ? showError
+          : showWarning;
 
-        error.response?.data?.message
-        ||
-        "No fue posible eliminar el rol"
-
+      showAlert(
+        errorInfo.title,
+        errorInfo.message
       );
 
     }
