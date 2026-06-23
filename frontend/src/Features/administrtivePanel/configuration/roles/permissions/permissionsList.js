@@ -170,10 +170,12 @@ export const permissionsList = [
     id:14,
     modulo:"devoluciones_en_compras",
     acciones:[
+      {key:"crear", backend:"CREATE", label:"Crear"},
       {key:"ver", backend:"READ", label:"Ver"},
       {key:"ver_informacion", backend:"READ_DETAIL", label:"Ver información"},
       {key:"editar", backend:"UPDATE", label:"Editar"},
-      {key:"anular", backend:"ANULAR", label:"Anular"}
+      {key:"anular", backend:"ANULAR", label:"Anular"},
+      {key:"exportar", backend:"EXPORT", label:"Exportar"}
     ]
   },
 

@@ -283,6 +283,8 @@ const buildCreateOrderPayload = (data = {}) => {
 
   return {
     idClient: data.clienteId,
+    idEmployee: data.asesorId,
+    idUser: data.usuarioId,
     idOrderStatus: ORDER_STATUS_IDS[data.estadoLogistico] ?? data.estadoLogistico ?? 1,
     deliveryType: isRecoge ? 'Recoge' : 'Domicilio',
     deliveryAddress: isRecoge ? null : data.direccionEntrega,
@@ -305,6 +307,18 @@ const PAYMENT_METHOD_IDS = {
   [METODOS_PAGO.TRANSFERENCIA]: 1,
   [METODOS_PAGO.EFECTIVO]: 2,
   [METODOS_PAGO.CREDITO]: 3,
+  [METODOS_PAGO.DEVOLUCION]: 4,
+};
+
+const resolvePaymentMethodId = (metodoPago) => {
+  const idPaymentMethod = PAYMENT_METHOD_IDS[metodoPago] ?? metodoPago;
+  const parsedId = Number(idPaymentMethod);
+
+  if (!Number.isInteger(parsedId) || parsedId <= 0) {
+    throw new Error(`Metodo de pago no valido: ${metodoPago}`);
+  }
+
+  return parsedId;
 };
 
 const buildUpdateOrderPayload = (data = {}) => {
@@ -450,7 +464,7 @@ export const PaymentService = {
     const paymentNumber = (order?.pagos?.length || 0) + 1;
     const pendingAfter = (order?.saldoPendiente ?? order?.total ?? 0) - amount;
     const response = await apiClient.post(`/orders/${pedidoId}/payments`, {
-      idPaymentMethod: PAYMENT_METHOD_IDS[metodoPago] ?? metodoPago,
+      idPaymentMethod: resolvePaymentMethodId(metodoPago),
       amount,
       reference: comprobante || `P${pedidoId}-${String(paymentNumber).padStart(3, '0')}`,
       observations: observations || `Abono ${paymentNumber} - ${pendingAfter <= 0 ? 'Pago completo' : 'Pago parcial'}`,

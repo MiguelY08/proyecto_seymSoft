@@ -1,8 +1,11 @@
-// Features/administrtivePanel/purchases/nonConformingProducts/pages/FormNonConformingProduct.jsx
+// features/administrtivePanel/purchases/nonConformingProducts/pages/FormNonConformingProduct.jsx
 import { X, AlertCircle, Search, Check } from "lucide-react";
 import { useState } from "react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import { createNonConforming, getProductByBarcode } from "../data/nonConformingService";
+import { normalizeBarcode, useBarcodeScanner } from "../../../../shared/scanner";
+
+const NON_CONFORMING_FORM_SCANNER_FIELD = "non-conforming-product-form-search";
 
 function FormNonConformingProduct({ onClose, onSuccess }) {
   const { showWarning, showSuccess, showError } = useAlert();
@@ -52,15 +55,19 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
   const hasErrors = codigoError || cantidadError || motivoError;
 
   // Buscar producto por código de barras
-  const handleSearchProduct = async () => {
-    if (!form.codigo.trim()) {
+  const handleSearchProduct = async (barcode = form.codigo) => {
+    const normalizedCode = normalizeBarcode(barcode, { numericOnly: true });
+
+    if (!normalizedCode) {
       showWarning("Campo vacío", "Ingresa un código de barras para buscar.");
       return;
     }
 
+    setCodigoTouched(true);
+    setForm((prev) => ({ ...prev, codigo: normalizedCode }));
     setLoadingProduct(true);
     try {
-      const product = await getProductByBarcode(form.codigo.trim());
+      const product = await getProductByBarcode(normalizedCode);
       if (product) {
         setProductInfo(product);
         // Re-validar la cantidad ya ingresada contra el nuevo stock encontrado
@@ -77,6 +84,21 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
       setLoadingProduct(false);
     }
   };
+
+  useBarcodeScanner({
+    enabled: !submitting && !loadingProduct,
+    numericOnly: true,
+    minLength: 6,
+    maxLength: 20,
+    scannerFields: [NON_CONFORMING_FORM_SCANNER_FIELD],
+    duplicateDelayMs: 800,
+    preventDefault: false,
+    onScan: ({ code, scannerField }) => {
+      if (scannerField !== NON_CONFORMING_FORM_SCANNER_FIELD) return;
+      setProductInfo(null);
+      handleSearchProduct(code);
+    },
+  });
 
   const handleSubmit = async () => {
     // Evita doble envío si ya hay una petición en curso
@@ -160,6 +182,7 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
                 <input
                   type="text"
                   value={form.codigo}
+                  data-scanner-field={NON_CONFORMING_FORM_SCANNER_FIELD}
                   onChange={(e) => {
                     setForm({ ...form, codigo: e.target.value });
                     setProductInfo(null);
@@ -178,7 +201,7 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
               </div>
               <button
                 type="button"
-                onClick={handleSearchProduct}
+                onClick={() => handleSearchProduct()}
                 disabled={loadingProduct || submitting}
                 className="px-4 py-2 bg-[#0E5679] text-white rounded-xl hover:bg-[#0a435c] transition disabled:opacity-50"
               >

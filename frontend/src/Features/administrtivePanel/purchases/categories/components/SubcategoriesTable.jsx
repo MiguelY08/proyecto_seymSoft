@@ -1,4 +1,4 @@
-// Features/categories/components/SubcategoriesTable.jsx
+// features/categories/components/SubcategoriesTable.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import { Trash2, SquarePen } from "lucide-react";
 import Pagination from "../../../../shared/PaginationLanding";

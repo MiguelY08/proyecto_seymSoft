@@ -1,4 +1,4 @@
-// Features/administrtivePanel/purchases/nonConformingProducts/pages/NonConformingProducts.jsx
+// features/administrtivePanel/purchases/nonConformingProducts/pages/NonConformingProducts.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import NonConformingProductsTable from "../components/NonConformingProductsTable";
@@ -9,6 +9,14 @@ import { Plus, FileSpreadsheet } from "lucide-react";
 import { getNonConforming, cancelNonConforming } from "../data/nonConformingService";
 import Spinner from "../../../../shared/spinner"; // ← IMPORTAR SPINNER
 import * as XLSX from "xlsx";
+import { normalizeBarcode, useBarcodeScanner } from "../../../../shared/scanner";
+
+const NON_CONFORMING_SEARCH_SCANNER_FIELD = "non-conforming-product-search";
+
+const findReportByBarcode = (reports, barcode) =>
+  reports.find(
+    (report) => normalizeBarcode(report.codigoBarras, { numericOnly: true }) === barcode
+  );
 
 export const NonConformingProducts = () => {
   const [reports, setReports] = useState([]);
@@ -23,6 +31,58 @@ export const NonConformingProducts = () => {
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
 
   const { showConfirm, showSuccess, showError, showInfo } = useAlert();
+
+  const handleScannedReportSearch = useCallback(async (code) => {
+    const normalizedCode = normalizeBarcode(code, { numericOnly: true });
+    setSearch(normalizedCode);
+    setCurrentPage(1);
+
+    const localReport = findReportByBarcode(reports, normalizedCode);
+    if (localReport) {
+      setSelectedReport(localReport);
+      return;
+    }
+
+    try {
+      const result = await getNonConforming({
+        page: 1,
+        limit: 13,
+        search: normalizedCode,
+        startDate: fechaInicial,
+        endDate: fechaFinal,
+      });
+
+      setReports(result.data);
+      setPagination(result.pagination);
+
+      const matchedReport = findReportByBarcode(result.data, normalizedCode);
+      if (matchedReport) {
+        setSelectedReport(matchedReport);
+        return;
+      }
+
+      showError(
+        "Codigo no registrado",
+        `No se encontro ningun reporte con el codigo de barras ${normalizedCode}.`
+      );
+    } catch (err) {
+      showError("Error", err.message || "No se pudo buscar el reporte.");
+    }
+  }, [fechaFinal, fechaInicial, reports, showError]);
+
+  useBarcodeScanner({
+    enabled: !showModal,
+    numericOnly: true,
+    minLength: 6,
+    maxLength: 20,
+    scannerFields: [NON_CONFORMING_SEARCH_SCANNER_FIELD],
+    duplicateDelayMs: 800,
+    preventDefault: false,
+    onScan: ({ code, scannerField }) => {
+      if (scannerField !== NON_CONFORMING_SEARCH_SCANNER_FIELD) return;
+      handleScannedReportSearch(code);
+    },
+  });
 
   const fetchReports = useCallback(async () => {
     try {
@@ -208,6 +268,7 @@ export const NonConformingProducts = () => {
             setFechaFinal={setFechaFinal}
             setCurrentPage={setCurrentPage}
             onClearFilters={handleClearFilters}
+            searchScannerField={NON_CONFORMING_SEARCH_SCANNER_FIELD}
           />
           <div className="flex-1" />
           <div className="flex items-center gap-2">

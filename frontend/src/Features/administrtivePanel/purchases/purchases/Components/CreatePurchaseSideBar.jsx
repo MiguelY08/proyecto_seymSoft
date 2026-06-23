@@ -1,4 +1,4 @@
-// Features/administrtivePanel/purchases/purchases/components/CreatePurchaseSideBar.jsx
+// features/administrtivePanel/purchases/purchases/components/CreatePurchaseSideBar.jsx
 import { useEffect, useState } from "react";
 import { Search, Plus, Minus, AlertCircle, Barcode, ChevronDown, ChevronUp, Check } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";

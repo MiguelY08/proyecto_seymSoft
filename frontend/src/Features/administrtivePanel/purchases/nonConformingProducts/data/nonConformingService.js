@@ -1,4 +1,4 @@
-// Features/administrtivePanel/purchases/nonConformingProducts/components/data/nonConformingService.js
+// features/administrtivePanel/purchases/nonConformingProducts/components/data/nonConformingService.js
 import apiClient from '../../../../../setting/apiClient.js';
 
 // ==========================================

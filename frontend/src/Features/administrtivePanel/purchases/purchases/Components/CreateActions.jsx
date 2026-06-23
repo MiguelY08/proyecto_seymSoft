@@ -1,4 +1,4 @@
-// Features/administrtivePanel/purchases/purchases/components/CreateActions.jsx
+// features/administrtivePanel/purchases/purchases/components/CreateActions.jsx
 const CreateActions = ({ handleCancel, handleSave }) => {
   return (
     <div className="flex justify-end gap-4 mt-6">

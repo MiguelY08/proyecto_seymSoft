@@ -4,8 +4,6 @@ import { usePermissions } from "../../../configuration/roles/hooks/usePermission
 import {
   getBadgeEstadoDevolucion,
   getBadgeEstadoProducto,
-  calcularTotalesProducto,
-  formatCurrency,
 } from "../helpers/returnsHelpers";
 
 // ─── Highlight ────────────────────────────────────────────────────────────────
@@ -80,11 +78,52 @@ const FloatingTooltip = ({ pos, children }) => {
 };
 
 // ─── Tooltip Productos ────────────────────────────────────────────────────────
-const ProductosTooltip = ({ productos, search }) => {
+const ProductosTooltip = ({ productos, search, totalDetails = 0, completedDetails = 0, progress }) => {
   const { ref, pos, show, hide } = useTooltipPos();
 
-  if (!productos?.length)
-    return <span className="text-gray-400 text-xs">—</span>;
+  if (!productos?.length) {
+    const total = totalDetails ?? progress?.total ?? 0;
+    const completed = completedDetails ?? progress?.completed ?? 0;
+    const label = progress?.label ?? `${completed}/${total}`;
+
+    if (!total) return <span className="text-gray-400 text-xs">-</span>;
+
+    return (
+      <>
+        <div
+          ref={ref}
+          className="flex items-center gap-1.5 cursor-default justify-center"
+          onMouseEnter={show}
+          onMouseLeave={hide}
+        >
+          <span className="text-xs text-gray-700 max-w-[160px] truncate">
+            {highlight(`${total} producto${total !== 1 ? "s" : ""}`, search)}
+          </span>
+          <Info className="w-3 h-3 text-gray-400 shrink-0" strokeWidth={1.5} />
+        </div>
+
+        <FloatingTooltip pos={pos}>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#94a3b8" }}>
+            Resumen de productos
+          </p>
+          <div className="flex flex-col gap-1.5 text-xs" style={{ color: "#f1f5f9" }}>
+            <div className="flex items-center justify-between gap-3">
+              <span>Total de detalles</span>
+              <span className="font-semibold tabular-nums" style={{ color: "#93c5fd" }}>{total}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span>Listos</span>
+              <span className="font-semibold tabular-nums" style={{ color: "#93c5fd" }}>{completed}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span>Progreso</span>
+              <span className="font-semibold tabular-nums" style={{ color: "#93c5fd" }}>{label}</span>
+            </div>
+          </div>
+        </FloatingTooltip>
+      </>
+    );
+  }
 
   const names   = productos.map((p) => p.nombre);
   const preview = names.slice(0, 2).join(", ") + (productos.length > 2 ? "..." : "");
@@ -127,7 +166,46 @@ const EstadoTooltip = ({ devolucion }) => {
   const { ref, pos, show, hide } = useTooltipPos();
 
   const productos = devolucion?.productos ?? [];
-  if (!productos.length) return <EstadoBadge estado={devolucion?.estado} />;
+  if (!productos.length) {
+    const progress = devolucion?.progress;
+    const total = devolucion?.totalDetails ?? progress?.total ?? 0;
+    const completed = devolucion?.completedDetails ?? progress?.completed ?? 0;
+
+    if (!total) return <EstadoBadge estado={devolucion?.estado} />;
+
+    return (
+      <>
+        <div
+          ref={ref}
+          className="inline-flex items-center gap-1 cursor-default justify-center"
+          onMouseEnter={show}
+          onMouseLeave={hide}
+        >
+          <EstadoBadge estado={devolucion?.estado} />
+        </div>
+
+        <FloatingTooltip pos={pos}>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#94a3b8" }}>
+            Progreso de devolución
+          </p>
+          <div className="flex flex-col gap-1.5 text-xs" style={{ color: "#f1f5f9" }}>
+            <div className="flex items-center justify-between gap-3">
+              <span>Listos</span>
+              <span className="font-semibold tabular-nums" style={{ color: "#93c5fd" }}>
+                {completed} de {total}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span>Pendientes</span>
+              <span className="font-semibold tabular-nums" style={{ color: "#93c5fd" }}>
+                {Math.max(total - completed, 0)}
+              </span>
+            </div>
+          </div>
+        </FloatingTooltip>
+      </>
+    );
+  }
 
   const conteos = productos.reduce((acc, p) => {
     const e = p.estado ?? "Sin estado";
@@ -135,7 +213,7 @@ const EstadoTooltip = ({ devolucion }) => {
     return acc;
   }, {});
 
-  const ORDEN = ["Pend. envío", "Pend. reemplazo", "Pend. reembolso", "Recibido", "Enviado"];
+  const ORDEN = ["Pend. envío", "Pend. reemplazo", "Pend. reembolso", "Listo"];
   const entriesOrdenadas = [
     ...ORDEN.filter((e) => conteos[e]).map((e) => [e, conteos[e]]),
     ...Object.entries(conteos).filter(([e]) => !ORDEN.includes(e)),
@@ -217,9 +295,11 @@ function ReturnsTable({
   const { hasPermission } = usePermissions();
   const canViewInfo   = hasPermission("devoluciones_en_compras.ver_informacion");
   const canEditGlobal = hasPermission("devoluciones_en_compras.editar");
+  const canAnnulGlobal = hasPermission("devoluciones_en_compras.anular");
 
-  const canEdit  = (d) => canEditGlobal && d.estado !== "Anulada" && !d.estado?.startsWith("Procesada");
-  const canAnnul = (d) => canEditGlobal && d.estado !== "Anulada" && !d.estado?.startsWith("Procesada");
+  const isClosed = (d) => d.estado === "Anulada" || d.estado === "Listo" || d.estado?.startsWith("Procesada");
+  const canEdit  = (d) => canEditGlobal && !isClosed(d);
+  const canAnnul = (d) => canAnnulGlobal && !isClosed(d);
 
   if (currentData.length === 0) {
     return <EmptyState isSearching={isSearching} />;
@@ -245,10 +325,12 @@ function ReturnsTable({
         <tbody>
           {currentData.map((devolucion, index) => {
             const rowBg         = index % 2 === 0 ? "bg-gray-100 hover:bg-blue-50" : "bg-white hover:bg-blue-50";
-            const proveedor     = proveedorMap[devolucion.idCompra] ?? "—";
+            const proveedor     = devolucion.proveedor ?? devolucion.provider?.name ?? proveedorMap[devolucion.idCompra] ?? "—";
+            const progress      = devolucion.progress ?? {};
             const totalUnidades = (devolucion.productos ?? []).reduce(
               (sum, p) => sum + (p.cantidadDevolver ?? 0), 0
-            );
+            ) || devolucion.totalDetails || progress.total || 0;
+            const progressLabel = progress.label ?? `${devolucion.completedDetails ?? progress.completed ?? 0}/${devolucion.totalDetails ?? progress.total ?? 0}`;
 
             return (
               <tr key={devolucion.id} className={`transition-colors duration-150 ${rowBg}`}>
@@ -275,12 +357,20 @@ function ReturnsTable({
 
                 {/* Productos con tooltip */}
                 <td className="px-3 py-1.5 text-xs">
-                  <ProductosTooltip productos={devolucion.productos} search={search} />
+                  <ProductosTooltip
+                    productos={devolucion.productos}
+                    search={search}
+                    totalDetails={devolucion.totalDetails}
+                    completedDetails={devolucion.completedDetails}
+                    progress={progress}
+                  />
                 </td>
 
                 {/* Total unidades a devolver */}
                 <td className="px-3 py-1.5 text-center text-xs text-gray-700 font-semibold whitespace-nowrap">
-                  {highlight(String(totalUnidades), search)}
+                  {devolucion.productos?.length
+                    ? highlight(String(totalUnidades), search)
+                    : highlight(progressLabel, search)}
                 </td>
 
                 {/* Estado con tooltip */}

@@ -1,4 +1,4 @@
-// Features/administrtivePanel/purchases/purchases/components/Anulatepurchase.jsx
+// features/administrtivePanel/purchases/purchases/components/Anulatepurchase.jsx
 import React, { useState } from "react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import { X, AlertCircle, FileText } from "lucide-react";

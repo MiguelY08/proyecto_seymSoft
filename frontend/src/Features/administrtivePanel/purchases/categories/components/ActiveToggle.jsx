@@ -1,4 +1,4 @@
-// Features/categories/components/ActiveToggle.jsx
+// features/categories/components/ActiveToggle.jsx
 import React from 'react';
 
 function ActiveToggle({ activo, onChange }) {

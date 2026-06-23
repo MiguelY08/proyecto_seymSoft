@@ -1,4 +1,4 @@
-// Features/categories/data/categoriesApi.js
+// features/categories/data/categoriesApi.js
 import apiClient from '../../../../../setting/apiClient.js';
 
 // ==========================================

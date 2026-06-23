@@ -7,7 +7,10 @@ import UserMetricsCards from '../components/UserMetricsCards';
 import UsersTable      from '../components/UsersTable';
 import PaginationAdmin from '../../../shared/PaginationAdmin';
 import Spinner from '../../../shared/spinner';
-import { UserService } from '../services/userService';
+import {
+  UserService,
+  getUserActionErrorMessage,
+} from '../services/userService';
 import { useAlert }    from '../../../shared/alerts/useAlert';
 import { downloadUsersExcel } from '../helpers/excelHelper';
 import Permission from "../../configuration/roles/components/Permission";
@@ -124,7 +127,10 @@ function Users() {
       // Recargar métricas
       await fetchMetrics();
     } catch (err) {
-      const msg = err.response?.data?.message || 'Error al cambiar el estado del usuario.';
+      const msg = getUserActionErrorMessage(
+        err,
+        'Error al cambiar el estado del usuario.'
+      );
       showError('Error', msg);
     }
   };
@@ -145,9 +151,10 @@ function Users() {
         "El usuario ha sido eliminado exitosamente."
       );
     } catch (err) {
-      const msg =
-        err.response?.data?.message ||
-        'Error al eliminar el usuario.';
+      const msg = getUserActionErrorMessage(
+        err,
+        'Error al eliminar el usuario.'
+      );
       showError('Error', msg);
       throw err;
     }

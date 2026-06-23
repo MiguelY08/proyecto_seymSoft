@@ -1,4 +1,4 @@
-// Features/administrtivePanel/purchases/purchases/components/DetailPurchases.jsx
+// features/administrtivePanel/purchases/purchases/components/DetailPurchases.jsx
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
@@ -171,7 +171,12 @@ const DetailPurchases = ({ purchase, onClose, loading = false }) => {
               <p style={{ color: "#854d0e" }}>
                 Esta compra tiene un proceso de devolución en curso.{" "}
                 <button
-                  onClick={() => { onClose(); navigate("/admin/purchases/returns-p"); }}
+                  onClick={() => {
+                    onClose();
+                    navigate("/admin/purchases/returns-p", {
+                      state: { openReturnForm: true, purchase },
+                    });
+                  }}
                   className="font-semibold underline underline-offset-2 cursor-pointer transition-opacity hover:opacity-75"
                   style={{ color: "#a16207" }}
                 >

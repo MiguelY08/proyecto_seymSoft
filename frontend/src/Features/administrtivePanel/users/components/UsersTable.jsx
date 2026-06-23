@@ -20,6 +20,7 @@ import {
   highlightEstado,
   formatDate
 } from "../helpers/usersHelpers";
+import { isSelfUser } from "../helpers/selfUser";
 
 import Permission from "../../configuration/roles/components/Permission";
 
@@ -106,7 +107,9 @@ function ActiveToggle({
 
   activo,
   onChange,
-  search
+  search,
+  disabled = false,
+  disabledMessage = "No puedes cambiar el estado de este usuario."
 
 }) {
 
@@ -128,6 +131,14 @@ function ActiveToggle({
     );
 
   const handleClick = async () => {
+
+    if (disabled) {
+      showWarning(
+        "Acción no permitida",
+        disabledMessage
+      );
+      return;
+    }
 
     if (isLoading) return;
 
@@ -226,15 +237,16 @@ function ActiveToggle({
 
       <button
         onClick={handleClick}
-        disabled={isLoading}
+        disabled={isLoading || disabled}
+        title={disabled ? disabledMessage : undefined}
         className={`relative w-11 h-5 rounded-full transition-colors duration-300 cursor-pointer shrink-0 ${
           activo
             ? "bg-green-500"
             : "bg-red-400"
         } ${
 
-          isLoading
-            ? "opacity-50 cursor-wait"
+          isLoading || disabled
+            ? `opacity-50 ${isLoading ? "cursor-wait" : "cursor-not-allowed"}`
             : ""
 
         }`}
@@ -429,6 +441,14 @@ function UsersTable({
       deletingId === row.id
     ) return;
 
+    if (isSelfUser(row)) {
+      showWarning(
+        "Acción no permitida",
+        "No puedes eliminar tu propio usuario."
+      );
+      return;
+    }
+
     if (row.active) {
 
       showWarning(
@@ -614,6 +634,9 @@ function UsersTable({
               const isSystemUser =
                 row.id === SYSTEM_ID_USER;
 
+              const isSelf =
+                isSelfUser(row);
+
               const formattedDate =
                 formatDate(
                   row.createdAt
@@ -737,6 +760,8 @@ function UsersTable({
                                 onToggle(row.id)
                               }
                               search={search}
+                              disabled={isSelf}
+                              disabledMessage="No puedes activar o desactivar tu propio usuario desde este módulo."
                             />
 
                           </Permission>
@@ -803,6 +828,14 @@ function UsersTable({
                             <button
                               onClick={(e)=>{
 
+                                if (isSelf) {
+                                  showWarning(
+                                    "Acción no permitida",
+                                    "No puedes editar tu propio usuario desde este módulo. Usa la sección de perfil."
+                                  );
+                                  return;
+                                }
+
                                 const rect =
                                   e.currentTarget.getBoundingClientRect();
 
@@ -838,8 +871,17 @@ function UsersTable({
 
                               }}
 
-                              className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
-                              title="Editar"
+                              disabled={isSelf}
+                              className={`text-gray-400 transition ${
+                                isSelf
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : "hover:scale-110 hover:text-[#004D77] cursor-pointer"
+                              }`}
+                              title={
+                                isSelf
+                                  ? "Edita tu cuenta desde la sección de perfil"
+                                  : "Editar"
+                              }
                             >
 
                               <SquarePen
@@ -860,15 +902,19 @@ function UsersTable({
                                 handleDelete(row)
                               }
 
-                              disabled={isDeleting}
+                              disabled={isDeleting || isSelf}
 
                               className={`text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer ${
-                                isDeleting
-                                  ? "opacity-50 cursor-wait"
+                                isDeleting || isSelf
+                                  ? `opacity-50 ${isDeleting ? "cursor-wait" : "cursor-not-allowed"}`
                                   : ""
                               }`}
 
-                              title="Eliminar"
+                              title={
+                                isSelf
+                                  ? "No puedes eliminar tu propio usuario"
+                                  : "Eliminar"
+                              }
                             >
 
                               {

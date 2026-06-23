@@ -69,20 +69,43 @@ export function highlight(text, term) {
 
 // ─── Filtro global para la tabla de ventas (simplificado) ─────────────────────
 export const filterSales = (data, search) => {
-  const term = search.toLowerCase().trim();
+  const normalizeSearchText = (value) =>
+    String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+
+  const term = normalizeSearchText(search);
   if (!term) return data;
 
   return data.filter((row) => {
-    const cliente = (row.cliente || '').toLowerCase();
-    const vendedor = (row.vendedor || '').toLowerCase();
-    return (
-      cliente.includes(term) ||
-      vendedor.includes(term) ||
-      String(row.factura).toLowerCase().includes(term) ||
-      (row.fecha || '').toLowerCase().includes(term) ||
-      (row.metodoPago || '').toLowerCase().includes(term) ||
-      String(row.total).toLowerCase().includes(term) ||
-      (row.estado || '').toLowerCase().includes(term)
+    const searchableFields = [
+      row.factura,
+      row.id,
+      row.idSale,
+      row.cliente,
+      row.clienteId,
+      row.clienteDireccion,
+      row.vendedor,
+      row.vendedorId,
+      row.fecha,
+      row.metodoPago,
+      row.total,
+      row.totalNumerico,
+      row.estado,
+      row.estadoPedido,
+      row.estadoPedidoId,
+      row.tipoVenta,
+      row.entrega,
+      row.direccion,
+      row.pedidoId,
+      row.numeroPedido,
+      row.registradoDesde,
+    ];
+
+    return searchableFields.some((field) =>
+      normalizeSearchText(field).includes(term)
     );
   });
 };

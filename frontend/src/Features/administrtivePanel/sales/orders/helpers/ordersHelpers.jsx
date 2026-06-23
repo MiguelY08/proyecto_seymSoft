@@ -7,7 +7,7 @@ import autoTable from 'jspdf-autotable';
 import { ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES } from '../services/ordersService';
 
 // ─── Textos capitalizados para mostrar ───────────────────────────────────────
-const ESTADO_LOGISTICO_LABELS = {
+export const ESTADO_LOGISTICO_LABELS = {
   [ESTADOS_LOGISTICOS.EN_PROCESO]: 'En proceso',
   [ESTADOS_LOGISTICOS.LISTO]:      'Listo',
   [ESTADOS_LOGISTICOS.ENTREGADO]:  'Entregado',

@@ -107,7 +107,15 @@ const buildDirectSalePaymentMethods = (payments = []) =>
   }));
 
 const getSessionUserId = (user) =>
-  user?.idUser ?? user?.id ?? null;
+  user?.idUser ?? user?.id_user ?? user?.id ?? null;
+
+const getSessionEmployeeId = (user) =>
+  user?.idEmployee ??
+  user?.id_employee ??
+  user?.employee?.idEmployee ??
+  user?.employee?.id_employee ??
+  user?.employeeId ??
+  null;
 
 function OrdersForm() {
   const { id } = useParams();
@@ -201,7 +209,7 @@ function OrdersForm() {
   // Actualizar asesorId cuando el usuario estÃ© disponible
   useEffect(() => {
     if (user) {
-      setFormData(prev => ({ ...prev, asesorId: user.id }));
+      setFormData(prev => ({ ...prev, asesorId: getSessionEmployeeId(user) ?? getSessionUserId(user) }));
     }
   }, [user]);
 
@@ -481,6 +489,13 @@ function OrdersForm() {
     }));
   };
 
+  const handleScannerProductNotFound = (code) => {
+    showError(
+      'Codigo no registrado',
+      `No se encontro ningun producto con el codigo de barras ${code}.`
+    );
+  };
+
   // --- Manejador para PaymentsSection ---
   const handleAddPayment = async (paymentData) => {
     if (pedidoInmutable) return;
@@ -581,7 +596,8 @@ function OrdersForm() {
     try {
       const payload = {
         clienteId: formData.clienteId,
-        asesorId: formData.asesorId,
+        asesorId: getSessionEmployeeId(user) ?? formData.asesorId,
+        usuarioId: getSessionUserId(user),
         tipoEntrega: formData.tipoEntrega,
         direccionEntrega: formData.direccionEntrega.trim(),
         productos: formData.productos,
@@ -664,7 +680,8 @@ function OrdersForm() {
           const paymentMethods = buildDirectSalePaymentMethods(pagos);
 
           await SalesServices.create('direct', {
-            idEmployee: getSessionUserId(user),
+            idEmployee: getSessionEmployeeId(user) ?? getSessionUserId(user),
+            idUser: getSessionUserId(user),
             idSaleStatus: 1,
             order: {
               idClient: payload.clienteId,
@@ -801,6 +818,8 @@ function OrdersForm() {
           onAddProduct={handleAddProduct}
           onUpdateCantidad={handleUpdateCantidad}
           onRemoveProduct={handleRemoveProduct}
+          scannerField="order-product-search"
+          onScannerProductNotFound={handleScannerProductNotFound}
         />
       </div>
 

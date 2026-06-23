@@ -1,298 +1,379 @@
-import { PurchasesDB } from "../../purchases/services/Purchases.service";
+import apiClient from "../../../../../setting/apiClient";
+import {
+  getReturnMethodIdByLabel,
+  getReturnReasonIdByLabel,
+  getReturnReasonLabelByCode,
+  getReturnReasonLabelById,
+  getReturnStatusIdByLabel,
+} from "../helpers/returnsHelpers";
 
-const STORAGE_KEY  = "pm_returns";
-const SEED_VERSION = "returns_v2"; // ← bumped: codBarras alineados con ProductsService
-
-// ─── Seed de devoluciones de ejemplo ─────────────────────────────────────────
-// Productos alineados con Purchases.service.js (purchases_v3):
-//   FAC-001 tiene: Libreta (7701234000011), Bolígrafo (7701234000044), Corrector (7701234000066)
-//   FAC-003 tiene: Bolígrafo (7701234000044), Block (7701234000100), Resma (7701234000033), Silicona (7701234000022)
-const SEED_RETURNS = [
-  {
-    id:              "FAC-001-1",
-    idCompra:        "FAC-001",
-    fechaDevolucion: "2026-01-10",
-    productos: [
-      {
-        nombre:           "Libreta con Lapicero",
-        codigoBarras:     "7701234000011",
-        valorUnit:        4200,
-        iva:              19,
-        cantidadComprada: 12,
-        cantidadDevolver: 4,
-        motivo:           "Prod. en mal estado",
-        tipoDevolucion:   "Reemplazo",
-        estado:           "Recibido",
-      },
-    ],
-  },
-  {
-    id:              "FAC-003-1",
-    idCompra:        "FAC-003",
-    fechaDevolucion: "2026-01-15",
-    productos: [
-      {
-        nombre:           "Bolígrafo Kilométrico x12",
-        codigoBarras:     "7701234000044",
-        valorUnit:        6900,
-        iva:              19,
-        cantidadComprada: 10,
-        cantidadDevolver: 5,
-        motivo:           "Prod. incorrecto",
-        tipoDevolucion:   "Sin reemplazo",
-        estado:           "Pend. envío",
-      },
-      {
-        nombre:           "Block Cuadriculado 50 Hojas",
-        codigoBarras:     "7701234000100",
-        valorUnit:        3100,
-        iva:              19,
-        cantidadComprada: 8,
-        cantidadDevolver: 3,
-        motivo:           "Insatisfecho",
-        tipoDevolucion:   "Sin reemplazo",
-        estado:           "Enviado",
-      },
-    ],
-  },
-];
-
-// ─── Sembrar con control de versión ───────────────────────────────────────────
-const seedReturns = () => {
-  try {
-    const currentVersion = localStorage.getItem(`${STORAGE_KEY}_seed_version`);
-    const stored         = localStorage.getItem(STORAGE_KEY);
-    const parsed         = stored ? JSON.parse(stored) : [];
-
-    if (parsed.length === 0 || currentVersion !== SEED_VERSION) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_RETURNS));
-      localStorage.setItem(`${STORAGE_KEY}_seed_version`, SEED_VERSION);
-
-      // Sincronizar estados de las compras del seed
-      SEED_RETURNS.forEach((ret) => {
-        ReturnsDB._syncPurchaseState(ret.idCompra);
-      });
-    }
-  } catch {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_RETURNS));
-    localStorage.setItem(`${STORAGE_KEY}_seed_version`, SEED_VERSION);
+const formatErrorDetail = (detail) => {
+  if (!detail) return "";
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => item?.message ?? item?.msg ?? item)
+      .filter(Boolean)
+      .join(" ");
   }
+  if (typeof detail === "object") {
+    return Object.values(detail)
+      .flat()
+      .map((item) => item?.message ?? item?.msg ?? item)
+      .filter(Boolean)
+      .join(" ");
+  }
+  return "";
 };
 
-// ─── Servicio de Devoluciones ─────────────────────────────────────────────────
-export const ReturnsDB = {
+const getErrorMessage = (error, fallback) => {
+  const responseData = error?.response?.data;
+  const detail =
+    formatErrorDetail(responseData?.errors) ||
+    formatErrorDetail(responseData?.details) ||
+    formatErrorDetail(responseData?.data);
 
-  // ── Lectura ────────────────────────────────────────────────────────────────
+  return [responseData?.message, detail].filter(Boolean).join(" ") || error?.message || fallback;
+};
 
-  list() {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch { return []; }
-  },
+const formatDateOnly = (date) => {
+  if (!date) return "";
+  return String(date).split("T")[0];
+};
 
-  findById(id) {
-    return this.list().find((r) => r.id === id) ?? null;
-  },
+const getLabel = (value, fallback = "") => {
+  if (!value) return fallback;
+  if (typeof value === "string") return value;
+  return value.name ?? value.description ?? fallback;
+};
 
-  /** Devuelve todas las devoluciones que pertenecen a una compra */
-  findByPurchase(idCompra) {
-    return this.list().filter((r) => r.idCompra === idCompra);
-  },
+const getReasonLabel = (reason, fallback = "") => {
+  if (!reason) return fallback;
 
-  // ── Persistencia ───────────────────────────────────────────────────────────
+  const reasonId = reason?.id ?? reason?.returnReasonId ?? reason?.idReturnReason;
+  const labelById = getReturnReasonLabelById(reasonId);
+  if (labelById) return labelById;
 
-  _save(returns) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(returns));
-  },
+  const reasonCode = typeof reason === "string" ? reason : reason?.code ?? reason?.description;
+  const labelByCode = getReturnReasonLabelByCode(reasonCode);
+  if (labelByCode) return labelByCode;
 
-  // ── Generación de ID ───────────────────────────────────────────────────────
+  return getLabel(reason, fallback);
+};
 
-  /**
-   * Genera el próximo id para una devolución de una compra.
-   * Si FAC-001 ya tiene FAC-001-1 y FAC-001-2, el siguiente es FAC-001-3.
-   */
-  _nextId(idCompra) {
-    const existing = this.findByPurchase(idCompra);
-    const max = existing.reduce((acc, r) => {
-      const parts = r.id.split("-");
-      const num   = parseInt(parts[parts.length - 1], 10);
-      return isNaN(num) ? acc : Math.max(acc, num);
-    }, 0);
-    return `${idCompra}-${max + 1}`;
-  },
+const getProductFromDetail = (detail) =>
+  detail?.product ?? detail?.purchaseDetail?.barcode?.product ?? null;
 
-  // ── Cálculo de estado general ──────────────────────────────────────────────
+const getBarcodeFromDetail = (detail) =>
+  detail?.purchaseDetail?.barcode ?? null;
 
-  /**
-   * Calcula el estado general de una devolución a partir de sus productos.
-   *
-   * Estados terminales por tipo:
-   *   Reemplazo     → "Recibido"
-   *   Sin reemplazo → "Enviado"
-   *
-   * Resultado:
-   *   - "Procesada x/x"  si todos los productos están en estado terminal
-   *   - "Aprobada  x/y"  si al menos uno no ha terminado
-   *   - "Anulada"        si la devolución fue anulada manualmente
-   */
-  _calculateState(devolucion) {
-    if (devolucion.estado === "Anulada") return "Anulada";
+const getCancellationReason = (purchaseReturn) =>
+  purchaseReturn?.cancellationReason ??
+  purchaseReturn?.annulmentReason ??
+  purchaseReturn?.motivoAnulacion ??
+  null;
 
-    const productos = devolucion.productos ?? [];
-    const total     = productos.length;
+const getCancellationDate = (purchaseReturn) =>
+  purchaseReturn?.cancelledAt ??
+  purchaseReturn?.annulledAt ??
+  purchaseReturn?.cancellationDate ??
+  purchaseReturn?.fechaAnulacion ??
+  null;
 
-    if (total === 0) return "Aprobada 0/0";
+const toPositiveIntegerOrNull = (value) => {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : null;
+};
 
-    const terminados = productos.filter((p) =>
-      p.tipoDevolucion === "Reemplazo"
-        ? p.estado === "Recibido"
-        : p.estado === "Enviado"
-    ).length;
+const toOptionalDate = (value) => {
+  if (!value) return null;
+  const date = String(value).split("T")[0];
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
+};
 
-    const prefix = terminados === total ? "Procesada" : "Aprobada";
-    return `${prefix} ${terminados}/${total}`;
-  },
+const mapReturnLineToNewDetail = (product, line) => {
+  const detail = {
+    idPurchaseDetail: toPositiveIntegerOrNull(
+      line?.idPurchaseDetail ??
+      line?.purchaseDetailId ??
+      product?.idPurchaseDetail ??
+      product?.purchaseDetailId ??
+      product?.id
+    ),
+    quantity: toPositiveIntegerOrNull(line?.cantidadDevolver),
+    idReturnReason: toPositiveIntegerOrNull(
+      line?.idReturnReason ??
+      line?.returnReasonId ??
+      getReturnReasonIdByLabel(line?.motivo)
+    ),
+    idReturnMethod: toPositiveIntegerOrNull(
+      line?.idReturnMethod ??
+      line?.returnMethodId ??
+      getReturnMethodIdByLabel(line?.tipoDevolucion)
+    ),
+  };
 
-  // ── Sincronización del estado de la compra original ────────────────────────
+  const supplierDate = toOptionalDate(line?.supplierDate);
+  return supplierDate ? { ...detail, supplierDate } : detail;
+};
 
-  /**
-   * Revisa todas las devoluciones de una compra y actualiza su estado:
-   *   - Si alguna devolución NO es "Procesada" ni "Anulada" → "Proc. devolución"
-   *   - Si todas son "Procesada" o "Anulada"               → "Completada*"
-   */
-  _syncPurchaseState(idCompra) {
-    const devoluciones = this.findByPurchase(idCompra);
+export const mapReturnFormToCreatePayload = (purchase, selectedProducts = []) => {
+  const idPurchase = toPositiveIntegerOrNull(
+    purchase?.idPurchase ?? purchase?.purchaseId ?? purchase?.id
+  );
 
-    if (devoluciones.length === 0) return;
+  const details = (selectedProducts ?? []).flatMap((product) =>
+    (product?.lineas ?? []).map((line) => mapReturnLineToNewDetail(product, line))
+  );
 
-    const activas = devoluciones.filter(
-      (r) => r.estado !== "Anulada" && !r.estado?.startsWith("Procesada")
-    );
+  return { idPurchase, details };
+};
 
-    const nuevoEstado = activas.length > 0 ? "Proc. devolución" : "Completada*";
+export const mapReturnFormToUpdatePayload = (selectedProducts = []) => {
+  const detailsToUpdate = [];
+  const detailsToAdd = [];
 
-    const purchases = PurchasesDB.list();
-    const updated   = purchases.map((p) =>
-      p.numeroFacturacion === idCompra ? { ...p, estado: nuevoEstado } : p
-    );
-    PurchasesDB._save(updated);
-  },
-
-  // ── CRUD ───────────────────────────────────────────────────────────────────
-
-  /**
-   * Actualiza los productos de una devolución existente.
-   * Recalcula el estado general y sincroniza la compra original.
-   * @param {string} idDevolucion - id de la devolución (ej. "FAC-001-1")
-   * @param {Array}  productos    - lista actualizada de productos con sus datos
-   * @returns {Object} devolución actualizada
-   */
-  update(idDevolucion, productos) {
-    const returns = this.list();
-    const updated = returns.map((r) => {
-      if (r.id !== idDevolucion) return r;
-      const devolucionActualizada = { ...r, productos };
-      devolucionActualizada.estado = this._calculateState(devolucionActualizada);
-      return devolucionActualizada;
-    });
-    this._save(updated);
-    const devolucion = updated.find((r) => r.id === idDevolucion);
-    if (devolucion) this._syncPurchaseState(devolucion.idCompra);
-    return devolucion;
-  },
-
-
-  /**
-   * Crea una nueva devolución.
-   * @param {string} idCompra   - numeroFacturacion de la compra
-   * @param {Array}  productos  - productos seleccionados con sus datos
-   * @returns {Object} devolución creada con id y estado calculados
-   */
-  create(idCompra, productos) {
-    const returns = this.list();
-
-    const nuevaDevolucion = {
-      id:              this._nextId(idCompra),
-      idCompra,
-      fechaDevolucion: new Date().toISOString().split("T")[0],
-      productos,
-    };
-
-    // Calcular estado inicial (siempre "Aprobada 0/n" al crear)
-    nuevaDevolucion.estado = this._calculateState(nuevaDevolucion);
-
-    this._save([...returns, nuevaDevolucion]);
-    this._syncPurchaseState(idCompra);
-
-    return nuevaDevolucion;
-  },
-
-  /**
-   * Actualiza el estado de un producto dentro de una devolución.
-   * Recalcula el estado general de la devolución y sincroniza la compra.
-   *
-   * @param {string} idDevolucion  - id de la devolución (ej. "FAC-001-1")
-   * @param {string} codigoBarras  - identificador del producto
-   * @param {string} nuevoEstado   - nuevo estado del producto
-   */
-  updateProductState(idDevolucion, codigoBarras, nuevoEstado) {
-    const returns = this.list();
-
-    const updated = returns.map((r) => {
-      if (r.id !== idDevolucion) return r;
-
-      const productosActualizados = r.productos.map((p) =>
-        p.codigoBarras === codigoBarras ? { ...p, estado: nuevoEstado } : p
+  (selectedProducts ?? []).forEach((product) => {
+    (product?.lineas ?? []).forEach((line) => {
+      const idPurchaseReturnDetail = toPositiveIntegerOrNull(
+        line?.idPurchaseReturnDetail ?? line?.purchaseReturnDetailId
       );
 
-      const devolucionActualizada = {
-        ...r,
-        productos: productosActualizados,
-      };
+      if (!idPurchaseReturnDetail) {
+        detailsToAdd.push(mapReturnLineToNewDetail(product, line));
+        return;
+      }
 
-      devolucionActualizada.estado = this._calculateState(devolucionActualizada);
-      return devolucionActualizada;
+      const originalStatusId = toPositiveIntegerOrNull(
+        line?.originalReturnStatusId ??
+        getReturnStatusIdByLabel(line?.estadoOriginal)
+      );
+      const currentStatusId = toPositiveIntegerOrNull(
+        getReturnStatusIdByLabel(line?.estado) ??
+        line?.idReturnStatus ??
+        line?.returnStatusId
+      );
+
+      if (currentStatusId && currentStatusId !== originalStatusId) {
+        detailsToUpdate.push({
+          idPurchaseReturnDetail,
+          idReturnStatus: currentStatusId,
+        });
+      }
     });
+  });
 
-    this._save(updated);
-
-    const devolucion = updated.find((r) => r.id === idDevolucion);
-    if (devolucion) this._syncPurchaseState(devolucion.idCompra);
-
-    return updated;
-  },
-
-  /**
-   * Anula una devolución completa.
-   * Sincroniza el estado de la compra original tras la anulación.
-   *
-   * @param {string} idDevolucion - id de la devolución a anular
-   * @param {string} motivo       - motivo de la anulación
-   */
-  annul(idDevolucion, motivo) {
-    const returns = this.list();
-
-    const updated = returns.map((r) =>
-      r.id === idDevolucion
-        ? {
-            ...r,
-            estado:          "Anulada",
-            motivoAnulacion: motivo,
-            fechaAnulacion:  new Date().toISOString().split("T")[0],
-          }
-        : r
-    );
-
-    this._save(updated);
-
-    const devolucion = updated.find((r) => r.id === idDevolucion);
-    if (devolucion) this._syncPurchaseState(devolucion.idCompra);
-
-    return updated;
-  },
+  return {
+    detailsToUpdate,
+    detailsToAdd,
+  };
 };
 
-seedReturns();
+export const mapPurchaseReturnToList = (purchaseReturn) => {
+  if (!purchaseReturn) return null;
 
-export default ReturnsDB;
+  return {
+    id: purchaseReturn.id,
+    purchaseId: purchaseReturn.purchaseId,
+    idCompra: purchaseReturn.invoiceNumber,
+    invoiceNumber: purchaseReturn.invoiceNumber,
+    fechaDevolucion: formatDateOnly(purchaseReturn.creationDate),
+    creationDate: purchaseReturn.creationDate,
+    statusId: purchaseReturn.statusId,
+    estado: purchaseReturn.status,
+    status: purchaseReturn.status,
+    progress: purchaseReturn.progress ?? {
+      completed: purchaseReturn.completedDetails ?? 0,
+      total: purchaseReturn.totalDetails ?? 0,
+      label: `${purchaseReturn.completedDetails ?? 0}/${purchaseReturn.totalDetails ?? 0}`,
+    },
+    provider: purchaseReturn.provider ?? null,
+    proveedor: purchaseReturn.provider?.name ?? "-",
+    totalDetails: purchaseReturn.totalDetails ?? purchaseReturn.progress?.total ?? 0,
+    completedDetails: purchaseReturn.completedDetails ?? purchaseReturn.progress?.completed ?? 0,
+    productos: [],
+  };
+};
+
+const getDetailUnitPrice = (detail) =>
+  Number(
+    detail?.purchaseDetail?.netUnitPrice ??
+    detail?.purchaseDetail?.grossUnitPrice ??
+    detail?.netUnitPrice ??
+    detail?.grossUnitPrice ??
+    detail?.unitPrice ??
+    0
+  );
+
+const getDetailTaxPercentage = (detail) =>
+  Number(detail?.purchaseDetail?.taxPercentage ?? detail?.taxPercentage ?? 0);
+
+export const mapPurchaseReturnToDetail = (purchaseReturn) => {
+  if (!purchaseReturn) return null;
+
+  const details = purchaseReturn.details ?? [];
+  const progress = purchaseReturn.progress ?? {
+    completed: 0,
+    total: details.length,
+    label: `0/${details.length}`,
+  };
+  const invoiceNumber =
+    purchaseReturn.purchase?.invoiceNumber ??
+    purchaseReturn.invoiceNumber ??
+    purchaseReturn.purchaseId;
+  const statusName = getLabel(purchaseReturn.status);
+  const provider = purchaseReturn.purchase?.provider ?? purchaseReturn.provider ?? null;
+  const cancellationReason = getCancellationReason(purchaseReturn);
+  const cancellationDate = getCancellationDate(purchaseReturn);
+
+  return {
+    id: purchaseReturn.id,
+    purchaseId: purchaseReturn.purchaseId,
+    idCompra: invoiceNumber,
+    invoiceNumber,
+    fechaDevolucion: formatDateOnly(purchaseReturn.creationDate),
+    creationDate: purchaseReturn.creationDate,
+    returnStatusId: purchaseReturn.returnStatusId,
+    statusId: purchaseReturn.returnStatusId,
+    estado: statusName,
+    status: statusName,
+    statusData: purchaseReturn.status ?? null,
+    cancellationReason,
+    annulmentReason: cancellationReason,
+    motivoAnulacion: cancellationReason,
+    cancelledAt: cancellationDate,
+    annulledAt: cancellationDate,
+    fechaAnulacion: formatDateOnly(cancellationDate),
+    progress,
+    totalDetails: progress.total,
+    completedDetails: progress.completed,
+    purchase: purchaseReturn.purchase ?? null,
+    purchaseDate: purchaseReturn.purchase?.purchaseDate ?? null,
+    maxReturnDate: purchaseReturn.purchase?.maxReturnDate ?? null,
+    canRegisterReturns: purchaseReturn.purchase?.canRegisterReturns ?? false,
+    returnPeriodStatus: purchaseReturn.purchase?.returnPeriodStatus ?? null,
+    purchaseStatus: purchaseReturn.purchase?.status ?? null,
+    totalAmount: purchaseReturn.purchase?.totalAmount ?? 0,
+    provider,
+    providerId: provider?.id ?? purchaseReturn.purchase?.providerId ?? null,
+    proveedor: provider?.name ?? "-",
+    details,
+    statusHistory: purchaseReturn.statusHistory ?? [],
+    productos: details.map((detail) => {
+      const product = getProductFromDetail(detail);
+      const barcode = getBarcodeFromDetail(detail);
+      const reason = getReasonLabel(detail.reason);
+      const method = getLabel(detail.method);
+      const detailStatus = getLabel(detail.status);
+
+      return {
+        id: detail.id,
+        idPurchaseReturnDetail: detail.id,
+        purchaseReturnId: detail.purchaseReturnId,
+        idPurchaseDetail: detail.purchaseDetailId,
+        purchaseDetailId: detail.purchaseDetailId,
+        nombre: product?.name ?? "Producto",
+        idProduct: product?.id ?? detail.productId ?? null,
+        productId: product?.id ?? detail.productId ?? null,
+        referencia: product?.reference ?? "",
+        codigoBarras: detail.barcode ?? barcode?.code ?? "",
+        idBarcode: detail.barcodeId ?? detail.purchaseDetail?.barcodeId ?? barcode?.id ?? null,
+        barcodeId: detail.barcodeId ?? detail.purchaseDetail?.barcodeId ?? barcode?.id ?? null,
+        valorUnit: getDetailUnitPrice(detail),
+        iva: getDetailTaxPercentage(detail),
+        cantidadComprada: Number(detail.purchaseDetail?.quantity ?? detail.quantity ?? 0),
+        cantidadDevolver: Number(detail.quantity ?? 0),
+        supplierDate: detail.supplierDate ?? null,
+        motivo: reason,
+        reason,
+        reasonData: detail.reason ?? null,
+        idReturnReason: detail.returnReasonId ?? detail.reason?.id ?? null,
+        returnReasonId: detail.returnReasonId ?? detail.reason?.id ?? null,
+        tipoDevolucion: method,
+        method,
+        methodData: detail.method ?? null,
+        idReturnMethod: detail.returnMethodId ?? detail.method?.id ?? null,
+        returnMethodId: detail.returnMethodId ?? detail.method?.id ?? null,
+        estado: detailStatus,
+        status: detailStatus,
+        statusData: detail.status ?? null,
+        idReturnStatus: detail.returnStatusId ?? detail.status?.id ?? null,
+        returnStatusId: detail.returnStatusId ?? detail.status?.id ?? null,
+        stock: detail.stock ?? barcode?.stock ?? null,
+        statusHistory: detail.statusHistory ?? [],
+        raw: detail,
+      };
+    }),
+  };
+};
+
+export const PurchaseReturnsService = {
+  async getMetrics() {
+    try {
+      const response = await apiClient.get("/purchase-returns/metrics");
+      return response.data.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "No se pudieron obtener las metricas de devoluciones de compras."));
+    }
+  },
+
+  async getAll(params = {}) {
+    try {
+      const response = await apiClient.get("/purchase-returns", { params });
+      const { data = [], pagination = {} } = response.data ?? {};
+
+      return {
+        data: data.map(mapPurchaseReturnToList).filter(Boolean),
+        pagination: {
+          page: pagination.page ?? 1,
+          limit: pagination.limit ?? params.limit ?? 10,
+          total: pagination.total ?? 0,
+          totalPages: pagination.totalPages ?? 1,
+          hasNextPage: pagination.hasNextPage ?? false,
+          hasPrevPage: pagination.hasPrevPage ?? false,
+        },
+      };
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "No se pudieron obtener las devoluciones de compras."));
+    }
+  },
+
+  async getById(id) {
+    try {
+      const response = await apiClient.get(`/purchase-returns/${id}`);
+      return mapPurchaseReturnToDetail(response.data.data);
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "No se pudo obtener el detalle de la devolucion de compra."));
+    }
+  },
+
+  async create(payload) {
+    try {
+      const response = await apiClient.post("/purchase-returns", payload);
+      return mapPurchaseReturnToDetail(response.data.data);
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "No se pudo registrar la devolucion de compra."));
+    }
+  },
+
+  async update(id, payload) {
+    try {
+      const response = await apiClient.put(`/purchase-returns/${id}`, payload);
+      return mapPurchaseReturnToDetail(response.data.data);
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "No se pudo actualizar la devolucion de compra."));
+    }
+  },
+
+  async annul(id, cancellationReason) {
+    try {
+      const response = await apiClient.patch(`/purchase-returns/${id}/annul`, {
+        cancellationReason,
+      });
+
+      return mapPurchaseReturnToDetail(response.data.data);
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "No se pudo anular la devolucion de compra."));
+    }
+  },
+};

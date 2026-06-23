@@ -1,4 +1,4 @@
-// Features/categories/pages/CategoryDetail.jsx
+// features/categories/pages/CategoryDetail.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import { X } from "lucide-react";
 import Pagination from "../../../../shared/PaginationLanding";

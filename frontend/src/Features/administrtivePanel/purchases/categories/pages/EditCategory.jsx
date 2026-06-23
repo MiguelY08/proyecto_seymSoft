@@ -1,4 +1,4 @@
-// Features/categories/pages/EditCategory.jsx
+// features/categories/pages/EditCategory.jsx
 import React, { useState, useEffect } from "react";
 import { X, Plus, AlertCircle, Layers } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";

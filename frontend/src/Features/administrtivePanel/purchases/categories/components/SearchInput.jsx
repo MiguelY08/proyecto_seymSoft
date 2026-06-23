@@ -1,4 +1,4 @@
-// Features/categories/components/SearchInput.jsx
+// features/categories/components/SearchInput.jsx
 import React from "react";
 import { Search } from "lucide-react";
 

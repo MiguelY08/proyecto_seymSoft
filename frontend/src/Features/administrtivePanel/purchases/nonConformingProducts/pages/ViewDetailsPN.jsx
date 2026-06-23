@@ -1,4 +1,4 @@
-// Features/administrtivePanel/purchases/nonConformingProducts/pages/ViewDetailsPN.jsx
+// features/administrtivePanel/purchases/nonConformingProducts/pages/ViewDetailsPN.jsx
 import { Calendar, Layers, Package, AlertCircle } from "lucide-react";
 
 const ViewDetailsPN = ({ report, onClose }) => {

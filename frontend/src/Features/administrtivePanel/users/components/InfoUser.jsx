@@ -1,6 +1,8 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { X, SquarePen, User, Mail, Phone, ShieldCheck, CalendarDays } from 'lucide-react';
 import { useModalAnimation } from '../../../shared/useModalAnimation';
+import { useAuth } from '../../../access/context/AuthContext';
+import { isSelfUser } from '../helpers/selfUser';
 
 /**
  * Componente InfoUser.
@@ -16,8 +18,10 @@ function InfoUser() {
   const origin   = location.state?.origin ?? null;
 
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   const SYSTEM_ID_USER = 999999999;
   const isSystemUser = user?.id === SYSTEM_ID_USER;
+  const isSelf = isSelfUser(user, authUser);
   const { visible, handleClose } = useModalAnimation('/admin/users');
 
   /**
@@ -142,7 +146,7 @@ function InfoUser() {
             Cerrar
           </button>
 
-          {!isSystemUser && (
+          {!isSystemUser && !isSelf && (
             <button
               onClick={handleEdit}
               className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"

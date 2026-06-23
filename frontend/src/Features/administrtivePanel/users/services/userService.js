@@ -35,6 +35,29 @@ const normalizeRole = (role) => {
   };
 };
 
+const USER_ACTION_ERROR_MESSAGES = {
+  SELF_USER_UPDATE_NOT_ALLOWED:
+    'No puedes editar tu propio usuario desde este módulo. Usa la sección de perfil.',
+  SELF_USER_STATUS_UPDATE_NOT_ALLOWED:
+    'No puedes activar o desactivar tu propio usuario desde este módulo.',
+  SELF_USER_DELETE_NOT_ALLOWED:
+    'No puedes eliminar tu propio usuario.',
+};
+
+export const getUserActionErrorMessage = (
+  error,
+  fallback = 'Ocurrió un error. Intenta de nuevo.'
+) => {
+  const errorCode = error.response?.data?.errorCode;
+
+  return (
+    USER_ACTION_ERROR_MESSAGES[errorCode] ||
+    error.response?.data?.message ||
+    error.message ||
+    fallback
+  );
+};
+
 // Normaliza un usuario proveniente de la API al formato interno del frontend
 const mapUserFromApi = (apiUser) => ({
   ...apiUser,

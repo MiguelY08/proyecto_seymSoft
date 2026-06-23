@@ -1,4 +1,4 @@
-// Features/categories/pages/CategoriesPage.jsx
+// features/categories/pages/CategoriesPage.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import CategoriesTable from "../components/CategoriesTable";
@@ -199,7 +199,7 @@ const CategoriesPage = () => {
   }
 
   return (
-    <div className="h-full flex flex-col gap-1 p-3 sm:p-4">
+    <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
       <CategoriesToolbar
         search={search}
         setSearch={setSearch}
@@ -209,26 +209,20 @@ const CategoriesPage = () => {
         }}
       />
 
-      {filteredCategories.length > 0 && (
-        <CategoriesTable
-          currentData={currentData}
-          filteredCategories={filteredCategories}
-          currentPage={currentPage}
-          setCurrentPage={setCurrentPage}
-          totalPages={totalPages}
-          startIndex={startIndex}
-          endIndex={startIndex + RECORDS_PER_PAGE}
-          handleToggleStatus={handleToggleStatus}
-          handleDelete={handleDelete}
-          handleEdit={handleEdit}
-          handleViewDetail={handleViewDetail}
-          highlightText={highlightText}
-        />
-      )}
-
-      {filteredCategories.length === 0 && !loading && (
-        <div className="text-center py-8 text-gray-500">No se encontraron categorías.</div>
-      )}
+      <CategoriesTable
+        currentData={currentData}
+        filteredCategories={filteredCategories}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        totalPages={totalPages}
+        startIndex={startIndex}
+        endIndex={Math.min(startIndex + RECORDS_PER_PAGE, filteredCategories.length)}
+        handleToggleStatus={handleToggleStatus}
+        handleDelete={handleDelete}
+        handleEdit={handleEdit}
+        handleViewDetail={handleViewDetail}
+        highlightText={highlightText}
+      />
 
       {showForm &&
         (categoryToEdit ? (

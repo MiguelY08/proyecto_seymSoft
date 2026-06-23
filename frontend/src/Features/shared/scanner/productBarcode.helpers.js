@@ -13,8 +13,6 @@ export const getProductBarcodeValues = (product = {}) => {
     product.codigoBarras,
     product.barcode,
     product.mainBarcode,
-    product.reference,
-    product.referencia,
   ];
   const barcodeCollections = [
     product.barcodes,

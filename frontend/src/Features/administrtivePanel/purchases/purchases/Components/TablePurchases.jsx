@@ -1,6 +1,7 @@
-// Features/administrtivePanel/purchases/purchases/components/TablePurchases.jsx
+// features/administrtivePanel/purchases/purchases/components/TablePurchases.jsx
 import React from "react";
 import { Info, RefreshCw, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 
 const highlightText = (text, search) => {
   if (!search || !text) return text;
@@ -53,6 +54,9 @@ export const PurchasesTable = ({
   handleReturn,
   search,
 }) => {
+  const { hasPermission } = usePermissions();
+  const canCreateReturn = hasPermission("devoluciones_en_compras.crear");
+
   return (
     <>
       <div className="bg-white rounded-xl shadow-2xs overflow-hidden">
@@ -82,12 +86,16 @@ export const PurchasesTable = ({
               ) : (
                 currentData.map((compra, index) => {
                   const recordNumber = startIndex + index + 1;
-                  const canReturn = isWithinReturnPeriod(compra.fechaCompra, compra.maxReturnDate);
+                  const canReturn =
+                    canCreateReturn &&
+                    isWithinReturnPeriod(compra.fechaCompra, compra.maxReturnDate);
                   const isAnnulled = compra.estado === "Anulada";
 
                   let returnTitle = "Registrar devolución";
                   if (isAnnulled) {
                     returnTitle = "No se puede devolver una compra anulada";
+                  } else if (!canCreateReturn) {
+                    returnTitle = "No tienes permiso para crear devoluciones";
                   } else if (!canReturn) {
                     returnTitle = compra.maxReturnDate 
                       ? `La fecha límite de devolución era ${formatDate(compra.maxReturnDate)}`

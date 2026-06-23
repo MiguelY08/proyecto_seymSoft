@@ -1,84 +1,86 @@
-import React, { useState, useMemo } from 'react';
-import { X, SquarePen, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useMemo, useState } from "react";
+import { AlertTriangle, ChevronLeft, ChevronRight, SquarePen, X } from "lucide-react";
 import {
-  getBadgeEstadoDevolucion,
-  getBadgeEstadoProducto,
   calcularTotalesProducto,
   formatCurrency,
-} from '../helpers/returnsHelpers';
+  getBadgeEstadoDevolucion,
+  getBadgeEstadoProducto,
+} from "../helpers/returnsHelpers";
 
-/**
- * Componente Badge genérico.
- * Muestra un badge con etiqueta y estilos personalizados.
- * @param {object} props - Props del componente.
- * @param {string} props.label - Texto del badge.
- * @param {object} props.style - Estilos inline para el badge.
- * @returns {JSX.Element} Badge renderizado.
- */
 const Badge = ({ label, style }) => (
   <span
     className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap"
     style={style}
   >
-    {label ?? '-'}
+    {label || "-"}
   </span>
 );
 
-/**
- * Componente InfoRow.
- * Fila de información con etiqueta y contenido, estilo similar a InfoUser.
- * @param {object} props - Props del componente.
- * @param {string} props.label - Etiqueta de la fila.
- * @param {JSX.Element} props.children - Contenido de la fila.
- * @returns {JSX.Element} Fila de información.
- */
 const InfoRow = ({ label, children }) => (
-  <div className="flex flex-col py-3 gap-0.5">
+  <div className="flex flex-col py-3 gap-0.5 min-w-0">
     <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</span>
     {children}
   </div>
 );
 
-/**
- * Componente ReturnInfo.
- * Modal de solo lectura para mostrar detalles de una devolución.
- * Incluye información general, productos con paginación y totales.
- * @param {object} props - Props del componente.
- * @param {object} props.devolucion - Datos completos de la devolución.
- * @param {function} props.onClose - Función para cerrar el modal.
- * @param {function} props.onEdit - Función opcional para abrir edición.
- * @returns {JSX.Element} Modal con detalles de la devolución.
- */
+const TextValue = ({ children }) => (
+  <span className="text-sm font-medium text-gray-800 truncate">{children || "-"}</span>
+);
+
+const hasPriceData = (producto) =>
+  Number(producto?.valorUnit ?? 0) > 0 || Number(producto?.iva ?? 0) > 0;
+
 const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
   const [paginaActual, setPaginaActual] = useState(1);
-  const POR_PAGINA = 4;
+  const porPagina = 4;
 
-  const productos  = devolucion?.productos ?? [];
-  const isAnulada  = devolucion?.estado === 'Anulada';
-  const canEdit    = !isAnulada && !devolucion?.estado?.startsWith('Procesada');
-  const estadoStyle = getBadgeEstadoDevolucion(devolucion?.estado);
+  const productos = devolucion?.productos ?? [];
+  const estado = devolucion?.estado ?? "";
+  const isAnulada = estado === "Anulada";
+  const isClosed = isAnulada || estado === "Listo" || estado.startsWith("Procesada");
+  const canEdit = !isClosed;
+  const estadoStyle = getBadgeEstadoDevolucion(estado);
+  const providerName =
+    devolucion?.proveedor ??
+    devolucion?.provider?.name ??
+    devolucion?.purchase?.provider?.name ??
+    "-";
+  const progressLabel =
+    devolucion?.progress?.label ??
+    `${devolucion?.progress?.completed ?? 0}/${devolucion?.progress?.total ?? productos.length}`;
+  const shouldShowTotals = productos.some(hasPriceData);
+  const cancellationReason =
+    devolucion?.motivoAnulacion ??
+    devolucion?.cancellationReason ??
+    devolucion?.annulmentReason ??
+    null;
+  const cancellationDate =
+    devolucion?.fechaAnulacion ??
+    devolucion?.cancelledAt ??
+    devolucion?.annulledAt ??
+    null;
 
-  // ── Paginación de productos ────────────────────────────────────────────────
-  const totalPaginas    = Math.max(1, Math.ceil(productos.length / POR_PAGINA));
+  const totalPaginas = Math.max(1, Math.ceil(productos.length / porPagina));
   const productosPagina = useMemo(() => {
-    const start = (paginaActual - 1) * POR_PAGINA;
-    return productos.slice(start, start + POR_PAGINA);
+    const start = (paginaActual - 1) * porPagina;
+    return productos.slice(start, start + porPagina);
   }, [paginaActual, productos]);
 
-  // ── Totales ────────────────────────────────────────────────────────────────
-  const { totalSubtotal, totalIva, totalGeneral } = useMemo(() =>
-    productos.reduce(
-      (acc, p) => {
-        const { subtotal, ivaValor, total } = calcularTotalesProducto(p);
-        return {
-          totalSubtotal: acc.totalSubtotal + subtotal,
-          totalIva:      acc.totalIva      + ivaValor,
-          totalGeneral:  acc.totalGeneral  + total,
-        };
-      },
-      { totalSubtotal: 0, totalIva: 0, totalGeneral: 0 }
-    ),
-  [productos]);
+  const { totalSubtotal, totalIva, totalGeneral } = useMemo(
+    () =>
+      productos.reduce(
+        (acc, producto) => {
+          const { subtotal, ivaValor, total } = calcularTotalesProducto(producto);
+          return {
+            totalSubtotal: acc.totalSubtotal + subtotal,
+            totalIva: acc.totalIva + ivaValor,
+            totalGeneral: acc.totalGeneral + total,
+          };
+        },
+        { totalSubtotal: 0, totalIva: 0, totalGeneral: 0 }
+      ),
+    [productos]
+  );
 
   return (
     <div
@@ -86,16 +88,14 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
     >
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-lg shadow-2xl w-full max-w-xs sm:max-w-sm md:max-w-2xl overflow-hidden flex flex-col"
-        style={{ maxHeight: '92vh' }}
+        onClick={(event) => event.stopPropagation()}
+        className="bg-white rounded-lg shadow-2xl w-full max-w-xs sm:max-w-sm md:max-w-4xl overflow-hidden flex flex-col"
+        style={{ maxHeight: "92vh" }}
       >
-
-        {/* ── Header ─────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
-          <div>
-            <h2 className="text-white font-semibold text-lg leading-tight">Detalle de Devolución</h2>
-            <span className="text-white/60 text-xs">{devolucion?.id ?? '—'}</span>
+          <div className="min-w-0">
+            <h2 className="text-white font-semibold text-lg leading-tight">Detalle de Devolucion</h2>
+            <span className="text-white/60 text-xs">{devolucion?.id ?? "-"}</span>
           </div>
           <button
             onClick={onClose}
@@ -105,87 +105,131 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
           </button>
         </div>
 
-        {/* ── Body ───────────────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto px-6 py-2 flex flex-col">
-
-          {/* Info general — filas estilo InfoUser */}
           <div className="flex flex-col divide-y divide-gray-100">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4">
-              <InfoRow label="No. Devolución">
-                <span className="text-sm font-medium text-gray-800">{devolucion?.id ?? '—'}</span>
+              <InfoRow label="No. Devolucion">
+                <TextValue>{devolucion?.id}</TextValue>
               </InfoRow>
               <InfoRow label="No. Factura">
-                <span className="text-sm font-medium text-gray-800">{devolucion?.idCompra ?? '—'}</span>
+                <TextValue>{devolucion?.idCompra}</TextValue>
+              </InfoRow>
+              <InfoRow label="Proveedor">
+                <TextValue>{providerName}</TextValue>
               </InfoRow>
               <InfoRow label="Fecha">
-                <span className="text-sm font-medium text-gray-800">{devolucion?.fechaDevolucion ?? '—'}</span>
+                <TextValue>{devolucion?.fechaDevolucion}</TextValue>
               </InfoRow>
               <InfoRow label="Estado">
-                <Badge label={devolucion?.estado} style={estadoStyle} />
+                <Badge label={estado} style={estadoStyle} />
+              </InfoRow>
+              <InfoRow label="Progreso">
+                <TextValue>{progressLabel}</TextValue>
+              </InfoRow>
+              <InfoRow label="Detalles">
+                <TextValue>{String(productos.length)}</TextValue>
+              </InfoRow>
+              <InfoRow label="Compra">
+                <TextValue>{devolucion?.purchaseId}</TextValue>
               </InfoRow>
             </div>
           </div>
 
-          {/* ── Banner de anulación — solo si está anulada ───────────────── */}
           {isAnulada && (
             <div
               className="flex gap-2.5 items-start rounded-lg px-4 py-3 text-xs mb-3"
-              style={{ backgroundColor: '#fff1f2', border: '1px solid #fecaca' }}
+              style={{ backgroundColor: "#fff1f2", border: "1px solid #fecaca" }}
             >
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: '#b91c1c' }} strokeWidth={1.8} />
+              <AlertTriangle
+                className="w-4 h-4 shrink-0 mt-0.5"
+                style={{ color: "#b91c1c" }}
+                strokeWidth={1.8}
+              />
               <div>
-                <p className="font-semibold mb-0.5" style={{ color: '#b91c1c' }}>Motivo de anulación</p>
-                <p style={{ color: '#7f1d1d' }}>
-                  {devolucion?.motivoAnulacion ?? 'Sin motivo registrado.'}
+                <p className="font-semibold mb-0.5" style={{ color: "#b91c1c" }}>
+                  Motivo de anulacion
                 </p>
-                {devolucion?.fechaAnulacion && (
-                  <p className="mt-1" style={{ color: '#9f1239' }}>
-                    Anulada el {devolucion.fechaAnulacion}
+                <p style={{ color: "#7f1d1d" }}>
+                  {cancellationReason || "Sin motivo registrado."}
+                </p>
+                {cancellationDate && (
+                  <p className="mt-1" style={{ color: "#9f1239" }}>
+                    Anulada el {cancellationDate}
                   </p>
                 )}
               </div>
             </div>
           )}
 
-          {/* Tabla de productos */}
           <div className="mb-4">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
               Productos ({productos.length})
             </p>
 
-            <div className="rounded-lg overflow-hidden border border-gray-200">
-              <table className="w-full text-xs">
+            <div className="rounded-lg overflow-x-auto border border-gray-200">
+              <table className="w-full min-w-[760px] text-xs">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
                     <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Producto</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Referencia</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Codigo</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Motivo</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Tipo</th>
                     <th className="px-3 py-2 text-center text-xs font-semibold text-gray-500">Estado</th>
                     <th className="px-3 py-2 text-center text-xs font-semibold text-gray-500">Cant.</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">V. Unit</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">IVA</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Total</th>
+                    {shouldShowTotals && (
+                      <>
+                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">V. Unit</th>
+                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">IVA</th>
+                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Total</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
-                  {productosPagina.map((p, i) => {
-                    const { ivaValor, total } = calcularTotalesProducto(p);
-                    const estadoPStyle        = getBadgeEstadoProducto(p.estado);
+                  {productosPagina.map((producto, index) => {
+                    const { ivaValor, total } = calcularTotalesProducto(producto);
+                    const estadoProductoStyle = getBadgeEstadoProducto(producto.estado);
+
                     return (
                       <tr
-                        key={i}
-                        className={`transition-colors duration-150 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-100'}`}
+                        key={producto.id ?? `${producto.codigoBarras}-${index}`}
+                        className={`transition-colors duration-150 ${
+                          index % 2 === 0 ? "bg-white" : "bg-gray-100"
+                        }`}
                       >
-                        <td className="px-3 py-2 font-medium text-gray-800 max-w-130px truncate">{p.nombre ?? '-'}</td>
-                        <td className="px-3 py-2 text-gray-600">{p.motivo ?? '-'}</td>
-                        <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{p.tipoDevolucion ?? '-'}</td>
-                        <td className="px-3 py-2 text-center">
-                          <Badge label={p.estado} style={estadoPStyle} />
+                        <td className="px-3 py-2 font-medium text-gray-800 max-w-[180px] truncate">
+                          {producto.nombre ?? "-"}
                         </td>
-                        <td className="px-3 py-2 text-center font-semibold text-gray-700">{p.cantidadDevolver ?? '-'}</td>
-                        <td className="px-3 py-2 text-right text-gray-700">{formatCurrency(p.valorUnit)}</td>
-                        <td className="px-3 py-2 text-right text-gray-600">{formatCurrency(ivaValor)}</td>
-                        <td className="px-3 py-2 text-right font-semibold text-gray-800">{formatCurrency(total)}</td>
+                        <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
+                          {producto.referencia || "-"}
+                        </td>
+                        <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
+                          {producto.codigoBarras || "-"}
+                        </td>
+                        <td className="px-3 py-2 text-gray-600">{producto.motivo || "-"}</td>
+                        <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
+                          {producto.tipoDevolucion || "-"}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <Badge label={producto.estado} style={estadoProductoStyle} />
+                        </td>
+                        <td className="px-3 py-2 text-center font-semibold text-gray-700">
+                          {producto.cantidadDevolver ?? "-"}
+                        </td>
+                        {shouldShowTotals && (
+                          <>
+                            <td className="px-3 py-2 text-right text-gray-700">
+                              {formatCurrency(producto.valorUnit)}
+                            </td>
+                            <td className="px-3 py-2 text-right text-gray-600">
+                              {formatCurrency(ivaValor)}
+                            </td>
+                            <td className="px-3 py-2 text-right font-semibold text-gray-800">
+                              {formatCurrency(total)}
+                            </td>
+                          </>
+                        )}
                       </tr>
                     );
                   })}
@@ -193,42 +237,47 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
               </table>
             </div>
 
-            {/* ── Totales — siempre visibles, fuera de la paginación ──────── */}
-            <div className="mt-1 border border-gray-200 rounded-lg overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Subtotal</span>
-                <span className="text-xs font-semibold text-gray-700">{formatCurrency(totalSubtotal)}</span>
+            {shouldShowTotals ? (
+              <div className="mt-1 border border-gray-200 rounded-lg overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Subtotal</span>
+                  <span className="text-xs font-semibold text-gray-700">{formatCurrency(totalSubtotal)}</span>
+                </div>
+                <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">IVA</span>
+                  <span className="text-xs font-semibold text-gray-700">{formatCurrency(totalIva)}</span>
+                </div>
+                <div className="flex items-center justify-between px-4 py-2.5" style={{ backgroundColor: "#f0f9ff" }}>
+                  <span className="text-sm font-bold text-gray-600">Total devolucion</span>
+                  <span className="text-sm font-bold" style={{ color: "#004D77" }}>
+                    {formatCurrency(totalGeneral)}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">IVA</span>
-                <span className="text-xs font-semibold text-gray-700">{formatCurrency(totalIva)}</span>
+            ) : (
+              <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-900">
+                El detalle recibido no incluye valores unitarios ni IVA; por ahora se muestran solo los datos
+                operativos de la devolucion.
               </div>
-              <div className="flex items-center justify-between px-4 py-2.5" style={{ backgroundColor: '#f0f9ff' }}>
-                <span className="text-sm font-bold text-gray-600">Total devolución</span>
-                <span className="text-sm font-bold" style={{ color: '#004D77' }}>{formatCurrency(totalGeneral)}</span>
-              </div>
-            </div>
+            )}
 
-            {/* Paginador de productos */}
             {totalPaginas > 1 && (
               <div className="flex items-center justify-between mt-2 px-1">
-                <span className="text-xs text-gray-400">Página {paginaActual} de {totalPaginas}</span>
+                <span className="text-xs text-gray-400">
+                  Pagina {paginaActual} de {totalPaginas}
+                </span>
                 <div className="flex gap-1">
                   <button
-                    onClick={() => setPaginaActual((p) => Math.max(1, p - 1))}
+                    onClick={() => setPaginaActual((page) => Math.max(1, page - 1))}
                     disabled={paginaActual === 1}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200
-                               text-gray-500 bg-white hover:border-[#004D77] hover:text-[#004D77]
-                               disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 bg-white hover:border-[#004D77] hover:text-[#004D77] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
                   <button
-                    onClick={() => setPaginaActual((p) => Math.min(totalPaginas, p + 1))}
+                    onClick={() => setPaginaActual((page) => Math.min(totalPaginas, page + 1))}
                     disabled={paginaActual === totalPaginas}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200
-                               text-gray-500 bg-white hover:border-[#004D77] hover:text-[#004D77]
-                               disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 bg-white hover:border-[#004D77] hover:text-[#004D77] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                   >
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
@@ -236,10 +285,8 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
               </div>
             )}
           </div>
-
         </div>
 
-        {/* ── Footer ─────────────────────────────────────────────────────── */}
         <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
           <button
             onClick={onClose}
@@ -249,15 +296,17 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
           </button>
           {canEdit && onEdit && (
             <button
-              onClick={() => { onClose(); onEdit(devolucion); }}
+              onClick={() => {
+                onClose();
+                onEdit(devolucion);
+              }}
               className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"
             >
               <SquarePen className="w-4 h-4" strokeWidth={1.8} />
-              Editar devolución
+              Editar devolucion
             </button>
           )}
         </div>
-
       </div>
     </div>
   );

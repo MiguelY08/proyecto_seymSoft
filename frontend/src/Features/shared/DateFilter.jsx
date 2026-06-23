@@ -10,6 +10,7 @@ export const PurchasesFilters = ({
   setFechaFinal,
   setCurrentPage,
   onClearFilters,
+  searchScannerField,
 }) => {
   const hasActiveFilters = search !== "" || fechaInicial !== "" || fechaFinal !== "";
 
@@ -22,6 +23,7 @@ export const PurchasesFilters = ({
           type="text"
           placeholder="Buscar"
           value={search}
+          data-scanner-field={searchScannerField}
           onChange={(e) => {
             setSearch(e.target.value);
             setCurrentPage(1);
