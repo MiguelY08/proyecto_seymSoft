@@ -6,11 +6,11 @@ import {
   Info,
   SquarePen,
   Trash2,
+  Package,
   FileSpreadsheet,
+  Loader2,
   Filter,
   Eraser,
-  Package,
-  Loader2,
 } from "lucide-react";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -24,11 +24,12 @@ import CreateProduct from "../modals/CreateProduct";
 import EditProduct from "../modals/EditProduct";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import Spinner from "../../../../shared/spinner";
-import ButtonComponent from "../../../../shared/ButtonComponent";
 import ProductsService from "../services/productsServices";
+import ButtonComponent from "../../../../shared/ButtonComponent";
 import { HighlightText } from "../helpers/productsHelpers";
 import {
   findProductByBarcode,
+  normalizeBarcode,
   productMatchesBarcodeSearch,
   useBarcodeScanner,
 } from "../../../../shared/scanner";
@@ -151,6 +152,27 @@ function Products() {
     setFilterSubcategory("all");
   }, [filterCategory]);
 
+  const handleScannedProductSearch = ({ code, target }) => {
+    const scannedCode = normalizeBarcode(code, { numericOnly: true });
+    const inputCode = normalizeBarcode(target?.value, { numericOnly: true });
+    const product =
+      findProductByBarcode(data, scannedCode) ||
+      findProductByBarcode(data, inputCode);
+    const searchCode = product ? "" : inputCode || scannedCode;
+
+    if (!product) {
+      setSearch(searchCode);
+      showError(
+        "Codigo no registrado",
+        `No se encontro ningun producto con el codigo de barras ${searchCode}.`
+      );
+      return;
+    }
+
+    setSearch("");
+    handleVerDetalles(product);
+  };
+
   useBarcodeScanner({
     enabled: canView && canViewInfo && data.length > 0 && !showModal && !showFormModal && !showEditModal,
     numericOnly: true,
@@ -159,22 +181,9 @@ function Products() {
     scannerFields: ["product-search"],
     duplicateDelayMs: 800,
     preventTerminatorDefault: true,
-    onScan: ({ code, scannerField }) => {
+    onScan: ({ code, scannerField, target }) => {
       if (scannerField !== "product-search") return;
-
-      const product = findProductByBarcode(data, code);
-
-      if (!product) {
-        setSearch(code);
-        showError(
-          "Codigo no registrado",
-          `No se encontro ningun producto con el codigo de barras ${code}.`
-        );
-        return;
-      }
-
-      setSearch("");
-      handleVerDetalles(product);
+      handleScannedProductSearch({ code, target });
     },
   });
 

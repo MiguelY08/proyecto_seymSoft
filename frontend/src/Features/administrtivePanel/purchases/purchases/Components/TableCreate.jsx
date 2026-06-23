@@ -1,75 +1,89 @@
-// features/administrtivePanel/purchases/purchases/components/TableCreate.jsx
 import React from "react";
 import { Trash2 } from "lucide-react";
 
-const BarcodeCell = ({ codigoBarras, codigosExtra = [] }) => {
-  const total = codigosExtra.length;
-  return (
-    <div className="flex items-center gap-1.5 flex-wrap">
-      <span className="font-mono text-xs">{codigoBarras}</span>
-      {total > 0 && (
-        <div className="relative group">
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-[10px] font-semibold text-[#004D77] cursor-default select-none">
-            +{total} más
-          </span>
-          <div className="absolute z-50 bottom-full left-0 mb-1.5 hidden group-hover:block bg-white border border-gray-200 rounded-xl shadow-xl px-3 py-2.5 min-w-[180px]">
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">Códigos adicionales</p>
-            <ul className="flex flex-col gap-1">
-              {codigosExtra.map((code, i) => (
-                <li key={i} className="flex items-center gap-1.5 text-xs font-mono text-gray-700">
-                  <span className="w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[#004D77] text-white text-[9px] font-bold shrink-0">{i + 1}</span>
-                  {code}
-                </li>
-              ))}
-            </ul>
-          </div>
+const BarcodeCell = ({ codigoBarras, codigosExtra = [] }) => (
+  <div className="flex items-center gap-1.5">
+    <span className="font-mono text-xs text-gray-600">{codigoBarras}</span>
+    {codigosExtra.length > 0 && (
+      <div className="group relative">
+        <span className="inline-flex cursor-default select-none items-center rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-[#004D77]">
+          +{codigosExtra.length}
+        </span>
+        <div className="absolute bottom-full left-0 z-50 mb-2 hidden min-w-[190px] rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-xl group-hover:block">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-gray-400">
+            Códigos adicionales
+          </p>
+          <ul className="flex flex-col gap-1.5">
+            {codigosExtra.map((code, index) => (
+              <li
+                key={`${code}-${index}`}
+                className="flex items-center gap-2 text-xs font-mono text-gray-700"
+              >
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#004D77] text-[9px] font-bold text-white">
+                  {index + 1}
+                </span>
+                {code}
+              </li>
+            ))}
+          </ul>
         </div>
-      )}
-    </div>
-  );
-};
+      </div>
+    )}
+  </div>
+);
 
-const CreateTable = ({ currentData, handleDeleteItem }) => {
-  return (
-    <div className="overflow-hidden rounded-xl border border-gray-200">
-      <table className="w-full text-xs">
-        <thead className="bg-[#004D77] text-white">
-          <tr>
-            <th className="px-3 py-3 text-left font-semibold">Producto</th>
-            <th className="px-3 py-3 text-left font-semibold">Código De Barras</th>
-            <th className="px-3 py-3 text-center font-semibold">Cantidad</th>
-            <th className="px-3 py-3 text-right font-semibold">Valor Unit</th>
-            <th className="px-3 py-3 text-right font-semibold">Subtotal</th>
-            <th className="px-3 py-3 text-center font-semibold">%IVA</th>
-            <th className="px-3 py-3 text-right font-semibold">IVA</th>
-            <th className="px-3 py-3 text-right font-semibold">Total</th>
-            <th className="px-3 py-3 text-center font-semibold"><Trash2 size={14} /></th>
+const CreateTable = ({ currentData, handleDeleteItem }) => (
+  <div className="overflow-x-auto rounded-lg border border-gray-200">
+    <table className="min-w-[900px] w-full">
+      <thead className="bg-[#004D77]/5">
+        <tr>
+          <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Producto</th>
+          <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Código de barras</th>
+          <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Cant.</th>
+          <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Valor unit.</th>
+          <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Subtotal</th>
+          <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">IVA</th>
+          <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Valor IVA</th>
+          <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Total</th>
+          <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Acción</th>
+        </tr>
+      </thead>
+      <tbody>
+        {currentData.map((item, index) => (
+          <tr
+            key={item.id}
+            className={`${
+              index % 2 === 0 ? "bg-white" : "bg-gray-50"
+            } transition-colors hover:bg-blue-50`}
+          >
+            <td className="px-3 py-2 text-xs font-medium text-gray-800">{item.producto}</td>
+            <td className="px-3 py-2">
+              <BarcodeCell
+                codigoBarras={item.codigoBarras}
+                codigosExtra={item.codigosExtra || []}
+              />
+            </td>
+            <td className="px-3 py-2 text-center text-xs font-semibold text-gray-700">{item.cantidad}</td>
+            <td className="px-3 py-2 text-right text-xs text-gray-600">${item.valorUnit.toLocaleString("es-CO")}</td>
+            <td className="px-3 py-2 text-right text-xs text-gray-600">${item.subtotal.toLocaleString("es-CO")}</td>
+            <td className="px-3 py-2 text-center text-xs text-gray-600">{item.iva}%</td>
+            <td className="px-3 py-2 text-right text-xs text-gray-600">${item.ivaValor.toLocaleString("es-CO")}</td>
+            <td className="px-3 py-2 text-right text-xs font-semibold text-gray-800">${item.total.toLocaleString("es-CO")}</td>
+            <td className="px-3 py-2 text-center">
+              <button
+                type="button"
+                onClick={() => handleDeleteItem(item.id)}
+                className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-red-500"
+                title="Eliminar producto"
+              >
+                <Trash2 size={15} strokeWidth={1.7} />
+              </button>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          {currentData.map((item, index) => (
-            <tr key={item.id} className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-blue-50 transition-colors`}>
-              <td className="px-3 py-3 text-gray-800 font-medium">{item.producto}</td>
-              <td className="px-3 py-3 text-gray-600">
-                <BarcodeCell codigoBarras={item.codigoBarras} codigosExtra={item.codigosExtra || []} />
-              </td>
-              <td className="px-3 py-3 text-center text-gray-800 font-semibold">{item.cantidad}</td>
-              <td className="px-3 py-3 text-right text-gray-800">{item.valorUnit.toLocaleString()}</td>
-              <td className="px-3 py-3 text-right text-gray-800 font-semibold">{item.subtotal.toLocaleString()}</td>
-              <td className="px-3 py-3 text-center text-gray-600">{item.iva}%</td>
-              <td className="px-3 py-3 text-right text-gray-800">{item.ivaValor.toLocaleString()}</td>
-              <td className="px-3 py-3 text-right text-gray-800 font-bold">{item.total.toLocaleString()}</td>
-              <td className="px-3 py-3 text-center">
-                <button onClick={() => handleDeleteItem(item.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                  <Trash2 size={14} />
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
 
 export default CreateTable;

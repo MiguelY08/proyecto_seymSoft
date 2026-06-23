@@ -1,107 +1,233 @@
-// features/administrtivePanel/purchases/purchases/components/Anulatepurchase.jsx
 import React, { useState } from "react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  Calendar,
+  FileText,
+  Package,
+  Truck,
+  X,
+  XCircle,
+} from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
-import { X, AlertCircle, FileText } from "lucide-react";
 
-const AnulatePurchase = ({ purchase, onClose, onConfirm }) => {
-  const [motivo, setMotivo] = useState("");
-  const { showWarning } = useAlert();
+const MAX_REASON_LENGTH = 250;
 
-  const handleSubmit = () => {
-    if (!motivo.trim()) {
-      showWarning("Campo requerido", "Debes escribir el motivo de la anulación.");
-      return;
-    }
-    onConfirm(motivo);
-  };
-
-  const isAlreadyAnnulled = purchase?.estado === "Anulada";
+const DetailRow = ({ icon: Icon, label, value, highlight = false }) => {
+  const hasValue =
+    value !== undefined && value !== null && String(value).trim().length > 0;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 px-4" style={{ backgroundColor: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)" }}>
-      <div className="relative rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" style={{ backgroundColor: "#ffffff" }}>
-        <div className="flex items-center justify-center py-6 px-8 relative" style={{ backgroundColor: isAlreadyAnnulled ? "#6c757d" : "#a93226" }}>
-          <h2 className="text-xl font-bold tracking-wide text-white" style={{ fontFamily: "'Segoe UI', sans-serif" }}>
-            {isAlreadyAnnulled ? "Compra ya Anulada" : "Anular Compra"}
-          </h2>
-          <button onClick={onClose} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition-colors">
-            <X size={20} />
+    <div className="flex items-start gap-3 border-b border-gray-50 py-2 last:border-0">
+      <div
+        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${
+          hasValue ? "bg-red-50" : "bg-gray-100"
+        }`}
+      >
+        <Icon
+          className={`h-3.5 w-3.5 ${
+            hasValue ? "text-red-500" : "text-gray-300"
+          }`}
+          strokeWidth={1.8}
+        />
+      </div>
+      <div className="min-w-0 flex-1">
+        <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide leading-none text-gray-400">
+          {label}
+        </span>
+        <span
+          className={`block truncate text-sm font-medium ${
+            hasValue
+              ? highlight
+                ? "font-semibold text-red-600"
+                : "text-gray-800"
+              : "font-normal italic text-gray-300"
+          }`}
+        >
+          {hasValue ? value : "-"}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const SectionTitle = ({ children }) => (
+  <div className="mb-3 flex items-center gap-2">
+    <div className="h-px flex-1 bg-gray-100" />
+    <span className="px-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+      {children}
+    </span>
+    <div className="h-px flex-1 bg-gray-100" />
+  </div>
+);
+
+const AnulatePurchase = ({ purchase, onClose, onConfirm }) => {
+  const [reason, setReason] = useState("");
+  const { showWarning } = useAlert();
+  const isAlreadyAnnulled = purchase?.estado === "Anulada";
+
+  const handleSubmit = () => {
+    if (!reason.trim()) {
+      showWarning(
+        "Campo requerido",
+        "Debes escribir el motivo de la anulación."
+      );
+      return;
+    }
+
+    onConfirm(reason.trim());
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+    >
+      <div
+        onClick={(event) => event.stopPropagation()}
+        className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl"
+      >
+        <div
+          className={`flex shrink-0 items-center justify-between px-6 py-4 ${
+            isAlreadyAnnulled ? "bg-gray-600" : "bg-red-600"
+          }`}
+        >
+          <div className="flex min-w-0 items-center gap-2.5">
+            <XCircle className="h-5 w-5 shrink-0 text-white" strokeWidth={2} />
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-semibold leading-tight text-white">
+                {isAlreadyAnnulled ? "Compra anulada" : "Anular compra"}
+              </h2>
+              <p
+                className={`truncate text-xs ${
+                  isAlreadyAnnulled ? "text-gray-200" : "text-red-200"
+                }`}
+              >
+                Factura {purchase?.numeroFacturacion ?? "-"}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="cursor-pointer rounded-full p-1 text-white transition-colors hover:bg-white/20"
+            title="Cerrar"
+          >
+            <X className="h-5 w-5" strokeWidth={2} />
           </button>
         </div>
 
-        <div className="px-10 pt-7 pb-8 flex flex-col gap-6">
-          <div>
-            <label className="block text-sm font-semibold mb-2" style={{ color: "#1a1a2e", fontFamily: "'Segoe UI', sans-serif" }}>
-              <span className="flex items-center gap-2">
-                <FileText size={15} style={{ color: "#1a5276" }} />
-                Número de Factura
-              </span>
-            </label>
-            <div className="w-full rounded-xl px-4 py-2.5 text-sm font-medium" style={{ backgroundColor: "#f0f4f8", color: "#1a5276", border: "1px solid #d0dce8", fontFamily: "'Segoe UI', sans-serif" }}>
-              {purchase?.numeroFacturacion ?? "FAC-000123"}
-            </div>
+        {!isAlreadyAnnulled && (
+          <div className="flex shrink-0 items-start gap-3 border-b border-red-100 bg-red-50 px-6 py-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+            <p className="text-xs leading-relaxed text-red-700">
+              Esta acción es <strong>permanente e irreversible</strong>. La
+              compra quedará anulada y no podrá gestionarse nuevamente.
+            </p>
           </div>
+        )}
 
-          <div>
-            <label className="block text-sm font-semibold mb-2" style={{ color: "#1a1a2e", fontFamily: "'Segoe UI', sans-serif" }}>
-              <span className="flex items-center gap-2">
-                <AlertCircle size={15} style={{ color: "#1a5276" }} />
-                Estado Actual
-              </span>
-            </label>
-            <div className="w-full rounded-xl px-4 py-2.5 text-sm font-medium" style={{ backgroundColor: purchase?.estado === "Anulada" ? "#fee2e2" : "#e8f5e9", color: purchase?.estado === "Anulada" ? "#b91c1c" : "#2e7d32", border: `1px solid ${purchase?.estado === "Anulada" ? "#fecaca" : "#c8e6c9"}`, fontFamily: "'Segoe UI', sans-serif" }}>
-              {purchase?.estado ?? "Completada"}
-            </div>
-          </div>
-
-          {!isAlreadyAnnulled && (
-            <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: "#1a1a2e", fontFamily: "'Segoe UI', sans-serif" }}>
-                <span className="flex items-center gap-2">
-                  <AlertCircle size={15} style={{ color: "#1a5276" }} />
-                  Motivo de Anulación
-                </span>
-              </label>
-              <textarea
-                placeholder="Escribe el motivo de la anulación..."
-                value={motivo}
-                onChange={(e) => setMotivo(e.target.value)}
-                rows={5}
-                className="w-full rounded-xl px-4 py-3 text-sm resize-none outline-none transition-all"
-                style={{ border: "1.5px solid #d0dce8", fontFamily: "'Segoe UI', sans-serif", color: "#1a1a2e", backgroundColor: "#f9fbfd" }}
-                onFocus={(e) => (e.target.style.borderColor = "#1a5276")}
-                onBlur={(e) => (e.target.style.borderColor = "#d0dce8")}
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid grid-cols-1 divide-y divide-gray-100 md:grid-cols-2 md:divide-x md:divide-y-0">
+            <div className="px-6 py-5">
+              <SectionTitle>Detalles de la compra</SectionTitle>
+              <DetailRow
+                icon={FileText}
+                label="No. facturación"
+                value={purchase?.numeroFacturacion}
+                highlight
               />
-              <p className="text-xs text-gray-400 mt-1">Máximo 250 caracteres</p>
+              <DetailRow
+                icon={Calendar}
+                label="Fecha de compra"
+                value={purchase?.fechaCompra}
+              />
+              <DetailRow
+                icon={Truck}
+                label="Proveedor"
+                value={purchase?.proveedor}
+              />
+              <DetailRow
+                icon={Package}
+                label="Estado actual"
+                value={purchase?.estado ?? "Completada"}
+              />
             </div>
-          )}
 
-          {isAlreadyAnnulled && purchase?.motivoAnulacion && (
-            <div className="rounded-xl px-4 py-3 text-sm" style={{ backgroundColor: "#fff1f2", border: "1px solid #fecaca", color: "#b91c1c" }}>
-              <p className="font-semibold mb-1">Motivo de anulación registrado:</p>
-              <p>{purchase.motivoAnulacion}</p>
-              {purchase.fechaAnulacion && (
-                <p className="text-xs mt-2 text-gray-500">Fecha de anulación: {purchase.fechaAnulacion}</p>
+            <div className="px-6 py-5">
+              <SectionTitle>
+                {isAlreadyAnnulled ? "Información de anulación" : "Motivo"}
+              </SectionTitle>
+
+              {isAlreadyAnnulled ? (
+                <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-red-600">
+                      Motivo registrado
+                    </p>
+                    <p className="mt-1 text-sm leading-relaxed text-red-700">
+                      {purchase?.motivoAnulacion || "Sin motivo registrado."}
+                    </p>
+                    {purchase?.fechaAnulacion && (
+                      <p className="mt-2 text-xs text-red-400">
+                        Anulada el {purchase.fechaAnulacion}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Motivo de anulación <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <textarea
+                      value={reason}
+                      onChange={(event) =>
+                        setReason(
+                          event.target.value.slice(0, MAX_REASON_LENGTH)
+                        )
+                      }
+                      rows={6}
+                      placeholder="Describe el motivo por el cual se anula esta compra..."
+                      className="w-full resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 outline-none transition-colors placeholder:text-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                    />
+                    <span
+                      className={`absolute bottom-2 right-3 text-[10px] ${
+                        reason.length >= MAX_REASON_LENGTH
+                          ? "text-red-400"
+                          : "text-gray-400"
+                      }`}
+                    >
+                      {reason.length}/{MAX_REASON_LENGTH}
+                    </span>
+                  </div>
+                </div>
               )}
             </div>
-          )}
-
-          <div className="flex gap-3 mt-1">
-            {!isAlreadyAnnulled ? (
-              <>
-                <button onClick={handleSubmit} className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all" style={{ backgroundColor: "#c0392b", fontFamily: "'Segoe UI', sans-serif", letterSpacing: "0.03em" }} onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#a93226")} onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#c0392b")}>
-                  Confirmar Anulación
-                </button>
-                <button onClick={onClose} className="w-full py-3 rounded-xl text-sm font-semibold transition-all" style={{ backgroundColor: "#7f8c8d", color: "#ffffff", fontFamily: "'Segoe UI', sans-serif", letterSpacing: "0.03em" }} onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#6c7a7a")} onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#7f8c8d")}>
-                  Cancelar
-                </button>
-              </>
-            ) : (
-              <button onClick={onClose} className="w-full py-3 rounded-xl text-sm font-semibold transition-all" style={{ backgroundColor: "#004D77", color: "#ffffff", fontFamily: "'Segoe UI', sans-serif", letterSpacing: "0.03em" }} onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#003a5c")} onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#004D77")}>
-                Cerrar
-              </button>
-            )}
           </div>
+        </div>
+
+        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="cursor-pointer rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600"
+          >
+            {isAlreadyAnnulled ? "Cerrar" : "Cancelar"}
+          </button>
+
+          {!isAlreadyAnnulled && (
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="flex cursor-pointer items-center gap-2 rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+            >
+              <XCircle className="h-4 w-4" strokeWidth={2} />
+              Confirmar anulación
+            </button>
+          )}
         </div>
       </div>
     </div>

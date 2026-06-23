@@ -4,9 +4,9 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const CreatePagination = ({ currentPage, totalPages, setCurrentPage, purchaseItems }) => {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6">
-      <p className="text-xs text-gray-600 text-center sm:text-left">
-        Mostrando {purchaseItems.length} Productos de {purchaseItems.length}
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-center text-xs text-gray-500 sm:text-left">
+        {purchaseItems.length} producto{purchaseItems.length !== 1 ? "s" : ""} agregado{purchaseItems.length !== 1 ? "s" : ""}
       </p>
       <div className="flex items-center justify-center gap-1.5 overflow-x-auto scrollbar-hide">
         <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className={`min-w-[32px] h-8 flex items-center justify-center rounded-lg border transition-all ${currentPage === 1 ? "border-gray-200 text-gray-300 cursor-not-allowed" : "border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50"}`}>

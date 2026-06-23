@@ -11,6 +11,18 @@ import FormProvider from "../../providers/components/FormProvider";
 import { createPurchase, getProducts, getProviders } from "../data/purchasesService";
 import { providersService } from "../../providers/data/providersService";
 import { findProductByBarcode, productMatchesBarcodeSearch } from "../../../../shared/scanner";
+import Spinner from "../../../../shared/spinner";
+import FullScreenSpinner from "../../../../shared/spinner/FullScreenSpinner";
+import {
+  CalendarDays,
+  CircleDollarSign,
+  PackageOpen,
+  PanelLeftOpen,
+  ReceiptText,
+  Save,
+  ShoppingBag,
+  X,
+} from "lucide-react";
 
 const CreatePurchase = () => {
   const navigate = useNavigate();
@@ -34,6 +46,7 @@ const CreatePurchase = () => {
   const [loading, setLoading] = useState(false);
   const [extraBarcodes, setExtraBarcodes] = useState({});
   const [fechaLimiteDevolucion, setFechaLimiteDevolucion] = useState("");
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   
   // Datos reales desde API
   const [productsDB, setProductsDB] = useState([]);
@@ -297,20 +310,15 @@ const CreatePurchase = () => {
   };
 
   if (loadingProducts || loadingProviders) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#004D77] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando datos...</p>
-        </div>
-      </div>
-    );
+    return <Spinner message="Cargando datos de la compra..." />;
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-blue-50 px-4 py-6">
+    <div className="min-h-screen bg-white px-4 py-6">
+      {loading && <FullScreenSpinner message="Guardando compra..." />}
+
       <div className="max-w-1400px mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-3">
+        <div className={isSidebarVisible ? "lg:col-span-4" : "hidden"}>
           <CreateSidebar
             productsDB={productsDB}
             providersList={providersList}
@@ -339,62 +347,120 @@ const CreatePurchase = () => {
             openCreateProvider={() => setIsFormModalOpen(true)}
             extraBarcodes={extraBarcodes}
             onExtraBarcodesChange={setExtraBarcodes}
+            onCollapse={() => setIsSidebarVisible(false)}
           />
         </div>
 
-        <div className="lg:col-span-9 bg-white rounded-2xl shadow-lg p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-800">Detalle productos</h2>
-          </div>
-
-          {/* Totales con fecha límite de devolución */}
-          <div className="flex flex-wrap gap-4 mb-6">
-            <div className="px-5 py-3 border-2 border-gray-300 rounded-full text-sm font-semibold">
-              Total De La Compra: ${totalCompra.toLocaleString()}
+        <div className={isSidebarVisible ? "lg:col-span-8" : "lg:col-span-12"}>
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="flex items-center gap-3 border-b border-gray-100 bg-gray-50 px-5 py-3.5">
+              {!isSidebarVisible && (
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarVisible(true)}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-colors hover:border-[#004D77] hover:text-[#004D77]"
+                  title="Mostrar panel"
+                  aria-label="Mostrar panel de información"
+                >
+                  <PanelLeftOpen className="h-4 w-4" strokeWidth={1.8} />
+                </button>
+              )}
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#004D77]">
+                <ShoppingBag className="h-4 w-4 text-white" strokeWidth={2} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-800">Productos de la compra</p>
+                <p className="text-xs text-gray-400">Revisa los productos y valores antes de guardar</p>
+              </div>
             </div>
-            <div className="px-5 py-3 border-2 border-gray-300 rounded-full text-sm font-semibold">
-              Impuestos totales (IVA): ${totalIVA.toLocaleString()}
+
+            <div className="flex flex-col gap-4 p-5">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#004D77]/10">
+                    <CircleDollarSign className="h-4 w-4 text-[#004D77]" strokeWidth={1.8} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Total compra</p>
+                    <p className="truncate text-base font-bold text-gray-800">${totalCompra.toLocaleString("es-CO")}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
+                    <ReceiptText className="h-4 w-4 text-emerald-600" strokeWidth={1.8} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">IVA incluido</p>
+                    <p className="truncate text-base font-bold text-gray-800">${totalIVA.toLocaleString("es-CO")}</p>
+                  </div>
+                </div>
+
+                <div className={`flex items-center gap-3 rounded-lg border px-4 py-3 sm:col-span-2 xl:col-span-1 ${
+                  fechaLimiteDevolucion ? "border-blue-200 bg-blue-50" : "border-gray-200 bg-gray-50"
+                }`}>
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                    fechaLimiteDevolucion ? "bg-blue-100" : "bg-gray-100"
+                  }`}>
+                    <CalendarDays className={`h-4 w-4 ${
+                      fechaLimiteDevolucion ? "text-blue-600" : "text-gray-400"
+                    }`} strokeWidth={1.8} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Límite de devolución</p>
+                    <p className={`truncate text-sm font-semibold ${
+                      fechaLimiteDevolucion ? "text-blue-700" : "text-gray-400"
+                    }`}>
+                      {fechaLimiteDevolucion || "Selecciona proveedor y fecha"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {purchaseItems.length === 0 ? (
+                <div className="flex min-h-[280px] flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-gray-200 px-4 text-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#004D77]/10">
+                    <PackageOpen className="h-7 w-7 text-[#004D77]/40" strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-500">No hay productos agregados</p>
+                    <p className="mt-1 text-xs text-gray-400">Busca un producto desde el panel izquierdo para comenzar</p>
+                  </div>
+                </div>
+              ) : (
+                <CreateTable currentData={currentData} handleDeleteItem={handleDeleteItem} />
+              )}
+
+              {purchaseItems.length > 0 && (
+                <CreatePagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  setCurrentPage={setCurrentPage}
+                  purchaseItems={purchaseItems}
+                />
+              )}
             </div>
-            <div className={`px-5 py-3 border-2 rounded-full text-sm font-semibold ${
-              fechaLimiteDevolucion 
-                ? 'border-blue-300 bg-blue-50 text-blue-700' 
-                : 'border-gray-300 bg-gray-50 text-gray-400'
-            }`}>
-              📅 Fecha límite devolución: {fechaLimiteDevolucion || 'Selecciona proveedor y fecha'}
+
+            <div className="flex items-center justify-end gap-3 border-t border-gray-200 px-5 py-4">
+              <button
+                type="button"
+                onClick={handleCancelPurchase}
+                className="flex cursor-pointer items-center gap-2 rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={loading}
+              >
+                <X className="h-4 w-4" strokeWidth={2} />
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSavePurchase}
+                className="flex cursor-pointer items-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={loading}
+              >
+                <Save className="h-4 w-4" strokeWidth={2} />
+                {loading ? "Guardando..." : "Guardar compra"}
+              </button>
             </div>
-          </div>
-
-          {purchaseItems.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">No hay productos agregados</div>
-          ) : (
-            <CreateTable
-              currentData={currentData}
-              handleDeleteItem={handleDeleteItem}
-            />
-          )}
-
-          <CreatePagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            setCurrentPage={setCurrentPage}
-            purchaseItems={purchaseItems}
-          />
-
-          <div className="flex justify-end gap-3 mt-6">
-            <button
-              onClick={handleCancelPurchase}
-              className="px-8 py-3 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-all shadow-lg"
-              disabled={loading}
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleSavePurchase}
-              className="px-8 py-3 bg-[#004D77] text-white font-semibold rounded-lg hover:bg-[#003a5c] transition-all shadow-lg"
-              disabled={loading}
-            >
-              {loading ? "Guardando..." : "Guardar Compra"}
-            </button>
           </div>
         </div>
       </div>

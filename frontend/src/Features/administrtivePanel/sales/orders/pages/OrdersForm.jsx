@@ -11,6 +11,7 @@ import { clientsService } from '../../clients/services/clientsService';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import Spinner from '../../../../shared/spinner';
 import { getPrimaryProductBarcode } from '../../../../shared/scanner';
+import { getProductPriceForClient } from '../../shared/clientPricing';
 
 // Contexto de autenticaciÃ³n
 import { useAuth } from '../../../../access/context/AuthContext';
@@ -30,12 +31,6 @@ const toNumber = (value, fallback = 0) => {
 const roundMoney = (value) =>
   Math.round((Number(value) || 0) * 100) / 100;
 
-const normalizeText = (value) =>
-  String(value ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
-
 const getPrimaryBarcode = (product = {}) => (
   getPrimaryProductBarcode(product)
 );
@@ -53,24 +48,6 @@ const getTotalStock = (product = {}) => {
 const getRetailPrice = (product = {}) => toNumber(
   product.precioDetalle ?? product.retailPrice ?? product.price
 );
-
-const getProductPriceForClient = (product = {}, client = null) => {
-  const clientType = normalizeText(client?.clientType);
-
-  if (clientType.includes('mayor')) {
-    return roundMoney(product.wholesalePrice ?? product.precioMayorista ?? product.retailPrice ?? product.precioDetalle ?? 0);
-  }
-
-  if (clientType.includes('colega') || clientType.includes('partner')) {
-    return roundMoney(product.partnerPrice ?? product.precioColegas ?? product.retailPrice ?? product.precioDetalle ?? 0);
-  }
-
-  if (clientType.includes('paca') || clientType.includes('bulk')) {
-    return roundMoney(product.bulkPrice ?? product.precioPacas ?? product.retailPrice ?? product.precioDetalle ?? 0);
-  }
-
-  return roundMoney(product.retailPrice ?? product.precioDetalle ?? product.price ?? 0);
-};
 
 const calculateLineSubtotal = (cantidad, precioUnitario) =>
   roundMoney(toNumber(cantidad) * toNumber(precioUnitario));
@@ -678,10 +655,10 @@ function OrdersForm() {
       } else {
         if (creaVentaDirecta) {
           const paymentMethods = buildDirectSalePaymentMethods(pagos);
+          const sessionEmployeeId = getSessionEmployeeId(user);
 
           await SalesServices.create('direct', {
-            idEmployee: getSessionEmployeeId(user) ?? getSessionUserId(user),
-            idUser: getSessionUserId(user),
+            ...(sessionEmployeeId && { idEmployee: sessionEmployeeId }),
             idSaleStatus: 1,
             order: {
               idClient: payload.clienteId,

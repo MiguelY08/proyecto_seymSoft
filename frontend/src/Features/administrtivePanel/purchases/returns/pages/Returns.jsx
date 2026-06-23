@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import PaginationAdmin from "../../../../shared/PaginationAdmin";
 import Spinner from "../../../../shared/spinner";
+import FullScreenSpinner from "../../../../shared/spinner/FullScreenSpinner";
 import PurchaseReturnsMetricsCards from "../components/PurchaseReturnsMetricsCards";
 import TopBar from "../components/TopBar";
 import ReturnsTable from "../components/ReturnsTable";
@@ -247,21 +247,6 @@ function Returns() {
 
   return (
     <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
-      <div>
-        <button
-          onClick={() => navigate("/admin/purchases")}
-          className="flex items-center gap-1 text-sm font-semibold text-[#004D77] hover:text-[#003a5c] transition-colors duration-200 cursor-pointer group"
-        >
-          <ChevronLeft
-            className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-0.5"
-            strokeWidth={2.5}
-          />
-          Volver
-        </button>
-      </div>
-
-      <PurchaseReturnsMetricsCards metrics={metricsLoading ? DEFAULT_METRICS : metrics} />
-
       <TopBar
         search={search}
         setSearch={(value) => {
@@ -275,6 +260,8 @@ function Returns() {
         setCurrentPage={setCurrentPage}
         returns={returns}
       />
+
+      <PurchaseReturnsMetricsCards metrics={metricsLoading ? DEFAULT_METRICS : metrics} />
 
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
         <ReturnsTable
@@ -297,8 +284,15 @@ function Returns() {
         />
       )}
 
-      {detailLoading && <Spinner message="Cargando detalle..." />}
-      {formLoading && <Spinner message="Cargando formulario..." />}
+      {detailLoading && (
+        <FullScreenSpinner message="Cargando detalle de la devolución..." />
+      )}
+      {formLoading && (
+        <FullScreenSpinner message="Cargando formulario de devolución..." />
+      )}
+      {annulLoading && (
+        <FullScreenSpinner message="Anulando devolución..." />
+      )}
 
       {selectedReturn && (
         <ReturnInfo
