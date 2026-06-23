@@ -357,15 +357,39 @@ export const getEvidencesByReturnId = async (returnId) => {
 // DEVOLUCIÓN DE COMPRA
 // ============================================
 
-export const getPurchaseReturnInfo = async (idBarcode, saleReturnId) => {
+export const getPurchaseReturnInfo = async (
+  idBarcode,
+  saleReturnId,
+  saleReturnDetailId
+) => {
   try {
     const response = await apiClient.get(API_ENDPOINTS.PURCHASE_RETURN_INFO, {
-      params: { idBarcode, saleReturnId }
+      params: { idBarcode, saleReturnId, saleReturnDetailId }
     });
     return response.data.data;
   } catch (error) {
     console.error('[getPurchaseReturnInfo] Error:', error);
     throw new Error('Error al obtener información de devolución de compra');
+  }
+};
+
+export const resolveDefectiveProduct = async (
+  saleReturnId,
+  saleReturnDetailId,
+  resolution
+) => {
+  try {
+    const response = await apiClient.post(
+      `/sales-returns/${saleReturnId}/details/${saleReturnDetailId}/defective-resolution`,
+      resolution
+    );
+    return response.data.data;
+  } catch (error) {
+    console.error('[resolveDefectiveProduct] Error:', error);
+    throw new Error(
+      error.response?.data?.message ||
+      'No fue posible completar la gestión del producto defectuoso'
+    );
   }
 };
 
@@ -433,6 +457,7 @@ export default {
   deleteEvidence,
   getEvidencesByReturnId,
   getPurchaseReturnInfo,
+  resolveDefectiveProduct,
   fileToBase64,
   getReturnStatusInfo,
   getProductStatesForMethod,
