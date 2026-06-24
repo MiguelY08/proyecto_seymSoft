@@ -280,7 +280,7 @@ export const cancelReturn = async (id, cancellationReason) => {
 /**
  * Elimina una devolución (solo por compatibilidad)
  */
-export const deleteReturn = async (id) => {
+export const deleteReturn = async () => {
   try {
     console.warn('⚠️ El método deleteReturn no elimina realmente, usa cancelReturn');
     throw new Error('Las devoluciones no se eliminan, se anulan. Usa cancelReturn en su lugar.');

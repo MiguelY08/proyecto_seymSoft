@@ -13,6 +13,33 @@ import { downloadClientsExcel } from '../helpers/excelHelper';
 
 const RECORDS_PER_PAGE = 13;
 const CREDIT_EVENTS_SEEN_KEY = 'clients_seen_credit_balance_events';
+const SEARCH_FETCH_LIMIT = 10000;
+
+const normalizeSearch = (value) =>
+  String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+const flattenSearchValues = (value) => {
+  if (value === null || value === undefined) return [];
+  if (Array.isArray(value)) return value.flatMap(flattenSearchValues);
+  if (typeof value === 'object') return Object.values(value).flatMap(flattenSearchValues);
+  return [String(value)];
+};
+
+const clientMatchesSearch = (client, searchTerm) => {
+  const term = normalizeSearch(searchTerm).trim();
+  if (!term) return true;
+
+  const statusText = client.active ? 'Activo' : 'Inactivo';
+  const searchable = [
+    ...flattenSearchValues(client),
+    statusText,
+    client.status,
+    client.fullName,
+    `${client.firstName || ''} ${client.lastName || ''}`,
+  ];
+
+  return searchable.some((value) => normalizeSearch(value).includes(term));
+};
 
 function ClientsPage() {
   const [clients,         setClients]         = useState([]);
@@ -66,13 +93,22 @@ function ClientsPage() {
   const loadClients = async () => {
     setLoading(true);
     try {
+      const hasSearch = searchTerm.trim() !== '';
       const result = await clientsService.getAll({
-        page: currentPage,
-        limit: RECORDS_PER_PAGE,
-        search: searchTerm
+        page: hasSearch ? 1 : currentPage,
+        limit: hasSearch ? SEARCH_FETCH_LIMIT : RECORDS_PER_PAGE,
+        search: ''
       });
-      setClients(result.data);
-      setTotalRecords(result.pagination.total);
+
+      if (hasSearch) {
+        const filtered = result.data.filter((client) => clientMatchesSearch(client, searchTerm));
+        const start = (currentPage - 1) * RECORDS_PER_PAGE;
+        setClients(filtered.slice(start, start + RECORDS_PER_PAGE));
+        setTotalRecords(filtered.length);
+      } else {
+        setClients(result.data);
+        setTotalRecords(result.pagination.total);
+      }
     } catch (error) {
       showError('Error', error.message || 'No se pudieron cargar los clientes');
     } finally {

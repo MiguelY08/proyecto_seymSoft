@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { LoaderCircle, UserRound, X } from 'lucide-react';
 import { clientsService } from '../../../administrtivePanel/sales/clients/services/clientsService';
 import FormSelect from '../../../shared/FormSelect';
+import LoadingOverlay from '../../../shared/LoadingOverlay';
+import { useAlert } from '../../../shared/alerts/useAlert';
 
 const splitName = (fullName = '') => {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
@@ -10,6 +12,26 @@ const splitName = (fullName = '') => {
     lastName: parts.slice(1).join(' '),
   };
 };
+
+const onlyDigits = (value, maxLength = 10) =>
+  String(value ?? '').replace(/\D/g, '').slice(0, maxLength);
+
+const onlyLetters = (value, maxLength = 80) =>
+  String(value ?? '')
+    .replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'-]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .slice(0, maxLength);
+
+const cleanDocument = (value, documentType) => {
+  const maxLength = documentType === 'NIT' ? 20 : 15;
+  if (['CC', 'CE', 'NIT'].includes(documentType)) {
+    return onlyDigits(value, maxLength);
+  }
+  return String(value ?? '').replace(/[^A-Za-z0-9-]/g, '').slice(0, maxLength);
+};
+
+const cleanCiuCode = (value) =>
+  String(value ?? '').replace(/[^A-Za-z0-9-]/g, '').slice(0, 25);
 
 const validateField = (name, value, form) => {
   const clean = String(value ?? '').trim();
@@ -53,7 +75,7 @@ const SELECT_OPTIONS = {
   naturalDocument: [
     { value: 'CC', label: 'Cédula de ciudadanía' },
     { value: 'CE', label: 'Cédula de extranjería' },
-    { value: 'PPT', label: 'PPT' },
+    { value: 'NIT', label: 'NIT' },
   ],
   legalDocument: [{ value: 'NIT', label: 'NIT' }],
   rut: [
@@ -63,6 +85,7 @@ const SELECT_OPTIONS = {
 };
 
 function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
+  const { showConfirm } = useAlert();
   const initialForm = useMemo(() => {
     const names = splitName(user?.fullName);
     return {
@@ -87,6 +110,13 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState('');
 
+  const isDirty = useMemo(
+    () => Object.keys(initialForm).some(
+      (key) => String(form[key] ?? '') !== String(initialForm[key] ?? '')
+    ),
+    [form, initialForm]
+  );
+
   useEffect(() => {
     if (isOpen) {
       setForm(initialForm);
@@ -98,12 +128,43 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
 
   if (!isOpen) return null;
 
-  const updateField = (name, value) => {
-    let nextForm = { ...form, [name]: value };
-    if (name === 'personType') {
-      nextForm.documentType = value === 'juridica' ? 'NIT' : 'CC';
+  const handleClose = async () => {
+    if (submitting) return;
+    if (!isDirty) {
+      onClose();
+      return;
     }
-    if (name === 'rut' && value === 'no') {
+
+    const confirmed = await showConfirm(
+      'warning',
+      'Salir sin guardar?',
+      'Los datos que ya escribiste se perderán.',
+      { confirmButtonText: 'Sí, salir', cancelButtonText: 'Continuar editando' }
+    );
+
+    if (confirmed?.isConfirmed) onClose();
+  };
+
+  const updateField = (name, value) => {
+    let nextValue = value;
+    if (name === 'phone' || name === 'contactPhone') {
+      nextValue = onlyDigits(value, 10);
+    }
+    if (name === 'firstName' || name === 'lastName' || name === 'contactName') {
+      nextValue = onlyLetters(value, name === 'contactName' ? 100 : 80);
+    }
+    if (name === 'document') {
+      nextValue = cleanDocument(value, form.documentType);
+    }
+    if (name === 'ciuCode') {
+      nextValue = cleanCiuCode(value);
+    }
+
+    let nextForm = { ...form, [name]: nextValue };
+    if (name === 'personType') {
+      nextForm.documentType = nextValue === 'juridica' ? 'NIT' : 'CC';
+    }
+    if (name === 'rut' && nextValue === 'no') {
       nextForm.ciuCode = '';
     }
 
@@ -116,7 +177,7 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
     }));
     setErrors((current) => ({
       ...current,
-      [name]: validateField(name, value, nextForm),
+      [name]: validateField(name, nextValue, nextForm),
       ...(name === 'personType'
         ? { documentType: validateField('documentType', nextForm.documentType, nextForm) }
         : {}),
@@ -168,7 +229,7 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
   };
 
   const inputClass = (name) =>
-    `w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${
+    `h-10 w-full rounded-xl border px-3 py-0 text-sm outline-none transition ${
       touched[name] && errors[name]
         ? 'border-red-400 bg-red-50'
         : 'border-slate-200 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/10'
@@ -189,11 +250,12 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
       </span>
       <input
         type={options.type || 'text'}
-        value={form[name]}
+        value={options.disabled ? 'No aplica' : form[name]}
         maxLength={options.maxLength}
+        disabled={options.disabled}
         onChange={(event) => updateField(name, event.target.value)}
         onBlur={() => updateField(name, form[name])}
-        className={inputClass(name)}
+        className={`${inputClass(name)} ${options.disabled ? 'cursor-not-allowed bg-slate-100 text-slate-500' : ''}`}
         placeholder={options.placeholder}
       />
       {errorMessage(name)}
@@ -211,7 +273,7 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
         onChange={(value) => updateField(name, value)}
         error={Boolean(touched[name] && errors[name])}
         ariaLabel={label}
-        className="rounded-xl py-2 pr-10"
+        className="h-10 rounded-xl py-0 pr-10"
       />
       {errorMessage(name)}
     </label>
@@ -219,7 +281,8 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
 
   return (
     <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm">
-      <div className="flex max-h-[94vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+      <div className="relative flex max-h-[94vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+        <LoadingOverlay show={submitting} message="Guardando tus datos..." />
         <header className="flex items-center justify-between bg-[#004D77] px-5 py-4 text-white">
           <div className="flex items-center gap-3">
             <span className="rounded-xl bg-white/15 p-2"><UserRound size={19} /></span>
@@ -230,7 +293,7 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             disabled={submitting}
             className="rounded-full bg-white/15 p-2 transition duration-200 hover:scale-105 hover:bg-white/30 disabled:opacity-50"
             aria-label="Cerrar"
@@ -255,9 +318,11 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
             )}
             {renderInput('document', 'Documento', { maxLength: 20 })}
             {renderSelect('rut', 'RUT', SELECT_OPTIONS.rut)}
-            {form.rut === 'si' && renderInput('ciuCode', 'Código CIU', {
+            {renderInput('ciuCode', 'Código CIU', {
+              optional: form.rut !== 'si',
               maxLength: 25,
-              placeholder: 'Ej: 4711',
+              placeholder: form.rut === 'si' ? 'Ej: 4711' : 'No aplica',
+              disabled: form.rut !== 'si',
             })}
             {renderInput('firstName', 'Nombres', { maxLength: 80 })}
             {renderInput('lastName', 'Apellidos', { maxLength: 80 })}
@@ -279,7 +344,7 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
           <div className="mt-5 flex justify-end gap-3 border-t border-slate-100 pt-4">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={submitting}
               className="rounded-full border border-slate-300 px-5 py-2.5 text-xs font-bold text-slate-600 transition duration-200 hover:-translate-y-0.5 hover:border-[#004D77] hover:bg-sky-50 hover:text-[#004D77] disabled:opacity-50"
             >

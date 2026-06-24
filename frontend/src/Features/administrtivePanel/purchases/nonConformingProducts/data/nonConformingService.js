@@ -13,6 +13,32 @@ const api = {
   getProductByBarcode: (barcode) => apiClient.get(`/non-conforming-products/barcode/${barcode}`),
 };
 
+const REPORT_REASON_LABELS = {
+  DEFECTUOSO: 'Producto defectuoso',
+  PRODUCTO_EQUIVOCADO: 'Producto equivocado',
+  PRODUCTO_INCOMPLETO: 'Producto incompleto',
+  MAL_ESTADO: 'Producto en mal estado',
+  PRODUCTO_USADO: 'Producto usado',
+  OTRO: 'Otro motivo',
+};
+
+const formatReportReason = (reason = '') => {
+  const source = String(reason || '').trim();
+  if (!source) return '';
+
+  const sourceMatch = source.match(/\[SALE_RETURN:(\d+):DETAIL:\d+\]\s*/i);
+  const originText = sourceMatch ? `Origen: devolución de venta #${sourceMatch[1]}. ` : '';
+  let clean = source.replace(/\[SALE_RETURN:\d+:DETAIL:\d+\]\s*/gi, '');
+
+  clean = clean.replace(/devoluci[oó]n venta/gi, 'devolución de venta');
+  Object.entries(REPORT_REASON_LABELS).forEach(([code, label]) => {
+    clean = clean.replace(new RegExp(`\\b${code}\\b`, 'g'), label);
+  });
+  clean = clean.replace(/\s+-\s+$/g, '').replace(/\s{2,}/g, ' ').trim();
+
+  return `${originText}${clean}`.trim();
+};
+
 // ==========================================
 // PRODUCTOS NO CONFORMES
 // ==========================================
@@ -37,7 +63,7 @@ export const getNonConforming = async ({ page = 1, limit = 13, search = '', star
       categoria: report.categoryName || 'Sin categoría',
       cantidadAfectada: report.affected_quantity || 0,
       fechaDeteccion: report.detection_date?.split('T')[0] || report.detection_date || '',
-      motivo: report.report_reason || '',
+      motivo: formatReportReason(report.report_reason),
       estado: report.status || 'Activo',
     }));
     
@@ -74,7 +100,7 @@ export const createNonConforming = async (reportData) => {
       categoria: report.categoryName || 'Sin categoría',
       cantidadAfectada: report.affected_quantity || 0,
       fechaDeteccion: report.detection_date?.split('T')[0] || report.detection_date || '',
-      motivo: report.report_reason || '',
+      motivo: formatReportReason(report.report_reason),
       estado: report.status || 'Activo',
     };
   } catch (error) {
@@ -95,7 +121,7 @@ export const cancelNonConforming = async (id, cancellationReason) => {
       categoria: report.categoryName || 'Sin categoría',
       cantidadAfectada: report.affected_quantity || 0,
       fechaDeteccion: report.detection_date?.split('T')[0] || report.detection_date || '',
-      motivo: report.report_reason || '',
+      motivo: formatReportReason(report.report_reason),
       estado: report.status || 'Anulado',
     };
   } catch (error) {

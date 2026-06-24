@@ -33,6 +33,22 @@ const highlightText = (text, search) => {
 
 const HEADERS = ['#', 'Número', 'Factura', 'Cliente', 'Motivo', 'Fecha', 'Valor', 'Estado', 'Acciones'];
 
+const formatReasonLabel = (reason) => {
+  if (!reason) return 'Varios motivos';
+  const labels = {
+    DEFECTUOSO: 'Producto defectuoso',
+    PRODUCTO_EQUIVOCADO: 'Producto equivocado',
+    PRODUCTO_INCOMPLETO: 'Producto incompleto',
+    MAL_ESTADO: 'Producto en mal estado',
+    PRODUCTO_USADO: 'Producto usado',
+    OTRO: 'Otro motivo',
+  };
+  const value = String(reason).trim();
+  const label = labels[value] || value.replace(/[_-]+/g, ' ');
+  const normalized = label.toLocaleLowerCase('es-CO');
+  return normalized.charAt(0).toLocaleUpperCase('es-CO') + normalized.slice(1);
+};
+
 function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }) {
   const { hasPermission } = usePermissions();
   const canView = hasPermission('devoluciones_en_ventas.ver');
@@ -81,7 +97,7 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
               const returnNumber = getField(row, ['numeroDevolucion', 'returnNumber']);
               const invoiceNumber = getField(row, ['numeroFactura', 'invoiceNumber']);
               const client = getField(row, ['cliente', 'clientName']);
-              const reason = getField(row, ['motivo', 'reason'], 'Varios motivos');
+              const reason = formatReasonLabel(getField(row, ['motivo', 'reason'], 'Varios motivos'));
               const createdAt = getField(row, ['fechaCreacion', 'createdAt', 'creationDate']);
               const total = getField(row, ['totalValor', 'totalAmount'], 0);
               const status = getField(row, ['estado', 'status'], 'En Proceso');

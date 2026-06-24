@@ -11,7 +11,6 @@ const ViewEvidence = ({
 
   if (!isOpen || !evidences || evidences.length === 0) return null;
 
-  // ✅ REVERTIR ORDEN
   const evidenciasOrdenadas = [...evidences].reverse();
   const currentEvidence = evidenciasOrdenadas[currentIndex];
 
@@ -64,16 +63,16 @@ const ViewEvidence = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] w-full max-w-5xl max-h-[95vh] flex flex-col overflow-hidden border border-[#004D77]/20">
+      <div className="bg-white rounded-3xl shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] w-full max-w-5xl max-h-[95vh] flex flex-col overflow-hidden">
 
-        <div className="flex items-center justify-between px-6 py-3.5 border-b border-[#004D77]/20 flex-shrink-0 bg-gradient-to-r from-[#004D77] to-[#006699] rounded-t-3xl">
+        <div className="flex items-center justify-between px-6 py-3.5 flex-shrink-0 bg-gradient-to-r from-[#004D77] to-[#006699]">
           <div>
             <h2 className="text-base font-bold text-white">{title}</h2>
             <p className="text-xs text-white/70">
               {evidences.length} {evidences.length === 1 ? 'evidencia' : 'evidencias'}
             </p>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-xl transition text-white">
+          <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-xl transition text-white cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -85,7 +84,7 @@ const ViewEvidence = ({
                 <img
                   src={currentImageUrl}
                   alt={`Evidencia ${currentIndex + 1}`}
-                  className="max-w-full max-h-[65vh] w-auto h-auto object-contain rounded-2xl shadow-lg border border-[#004D77]/20"
+                  className="max-w-full max-h-[65vh] w-auto h-auto object-contain rounded-2xl shadow-lg"
                   onError={(e) => {
                     console.error('Error cargando imagen:', currentImageUrl);
                     e.target.src = '';
@@ -144,18 +143,12 @@ const ViewEvidence = ({
           )}
         </div>
 
-        <div className="flex items-center justify-between px-6 py-3.5 border-t border-[#004D77]/20 flex-shrink-0 bg-white rounded-b-3xl">
+        <div className="flex items-center justify-between px-6 py-3.5 border-t border-gray-200 flex-shrink-0 bg-white">
           <div className="flex-1 min-w-0">
             {currentDescription ? (
-              <p className="text-xs text-gray-600 truncate flex items-center gap-1.5">
-                <span className="text-[#004D77]"></span>
-                <span>{currentDescription}</span>
-              </p>
+              <p className="text-xs text-gray-600 truncate">{currentDescription}</p>
             ) : (
-              <p className="text-xs text-gray-400 italic flex items-center gap-1.5">
-                <span></span>
-                <span>Sin descripción</span>
-              </p>
+              <p className="text-xs text-gray-400 italic">Sin descripción</p>
             )}
           </div>
           
@@ -169,14 +162,21 @@ const ViewEvidence = ({
                 currentEvidence?.name || getFileName(currentImageUrl)
               )}
               disabled={!currentImageUrl}
-              className={`px-3 py-1.5 text-xs font-medium rounded-xl transition-all duration-200 flex items-center gap-1.5 border ${
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg transition-colors ${
                 currentImageUrl 
-                  ? 'bg-[#004D77] text-white hover:bg-[#003d61] hover:shadow-lg hover:scale-105 active:scale-95 border-[#004D77]' 
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed border-gray-200'
+                  ? 'text-gray-600 border-gray-400 hover:bg-gray-200 cursor-pointer'
+                  : 'text-gray-400 cursor-not-allowed border-gray-200 bg-gray-100'
               }`}
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-4 h-4" strokeWidth={1.8} />
               Descargar
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+            >
+              Cancelar
             </button>
           </div>
         </div>

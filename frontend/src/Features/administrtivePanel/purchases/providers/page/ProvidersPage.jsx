@@ -17,6 +17,32 @@ import Spinner from '../../../../shared/spinner';
 import { downloadProvidersExcel } from '../utils/excelHelper';
 
 const RECORDS_PER_PAGE = 13;
+const SEARCH_FETCH_LIMIT = 10000;
+
+const normalizeSearch = (value) =>
+  String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+const flattenSearchValues = (value) => {
+  if (value === null || value === undefined) return [];
+  if (Array.isArray(value)) return value.flatMap(flattenSearchValues);
+  if (typeof value === 'object') return Object.values(value).flatMap(flattenSearchValues);
+  return [String(value)];
+};
+
+const providerMatchesSearch = (provider, searchTerm) => {
+  const term = normalizeSearch(searchTerm).trim();
+  if (!term) return true;
+
+  const statusText = provider.activo ? 'Activo' : 'Inactivo';
+  const searchable = [
+    ...flattenSearchValues(provider),
+    statusText,
+    provider.nombre,
+    `${provider.nombres || ''} ${provider.apellidos || ''}`,
+  ];
+
+  return searchable.some((value) => normalizeSearch(value).includes(term));
+};
 
 function ProvidersPage() {
   const [providers, setProviders] = useState([]);
@@ -37,14 +63,22 @@ function ProvidersPage() {
   const loadProviders = async () => {
     setLoading(true);
     try {
+      const hasSearch = searchTerm.trim() !== '';
       const result = await providersService.getAll({
-        page: currentPage,
-        limit: RECORDS_PER_PAGE,
-        search: searchTerm
+        page: hasSearch ? 1 : currentPage,
+        limit: hasSearch ? SEARCH_FETCH_LIMIT : RECORDS_PER_PAGE,
+        search: ''
       });
-      
-      setProviders(result.data);
-      setTotalRecords(result.pagination.total);
+
+      if (hasSearch) {
+        const filtered = result.data.filter((provider) => providerMatchesSearch(provider, searchTerm));
+        const start = (currentPage - 1) * RECORDS_PER_PAGE;
+        setProviders(filtered.slice(start, start + RECORDS_PER_PAGE));
+        setTotalRecords(filtered.length);
+      } else {
+        setProviders(result.data);
+        setTotalRecords(result.pagination.total);
+      }
     } catch (error) {
       showError('Error', error.message || 'No se pudieron cargar los proveedores');
     } finally {

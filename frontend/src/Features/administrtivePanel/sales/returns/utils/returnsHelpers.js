@@ -186,6 +186,22 @@ export const generateReturnNumber = () => {
 
 // ======================= FUNCIONALIDAD: FILTRADO =======================
 
+const normalizeSearch = (value) =>
+  String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+const flattenSearchValues = (value) => {
+  if (value === null || value === undefined) return [];
+  if (Array.isArray(value)) return value.flatMap(flattenSearchValues);
+  if (typeof value === 'object') return Object.values(value).flatMap(flattenSearchValues);
+  return [String(value)];
+};
+
+const matchesEverywhere = (record, searchTerm) => {
+  const term = normalizeSearch(searchTerm).trim();
+  if (!term) return true;
+  return flattenSearchValues(record).some((value) => normalizeSearch(value).includes(term));
+};
+
 /**
  * Filtra un array de devoluciones por término de búsqueda.
  * Busca en múltiples campos: número, factura, cliente, motivo y estado.
@@ -199,14 +215,7 @@ export const filterReturns = (returns, searchTerm) => {
   if (!searchTerm) return returns;
   if (!returns || !Array.isArray(returns)) return [];
   
-  const term = searchTerm.toLowerCase().trim();
-  return returns.filter(r => 
-    r.numeroDevolucion?.toLowerCase().includes(term) ||
-    r.numeroFactura?.toLowerCase().includes(term) ||
-    r.cliente?.toLowerCase().includes(term) ||
-    r.motivo?.toLowerCase().includes(term) ||
-    r.estado?.toLowerCase().includes(term)
-  );
+  return returns.filter((item) => matchesEverywhere(item, searchTerm));
 };
 
 /**
@@ -245,14 +254,7 @@ export const filterReturnsByDateAndSearch = (returns, searchTerm, startDate, end
   
   // Filtrar por término de búsqueda
   if (searchTerm && searchTerm.trim() !== '') {
-    const term = searchTerm.toLowerCase().trim();
-    filtered = filtered.filter(r => 
-      r.numeroDevolucion?.toLowerCase().includes(term) ||
-      r.numeroFactura?.toLowerCase().includes(term) ||
-      r.cliente?.toLowerCase().includes(term) ||
-      r.motivo?.toLowerCase().includes(term) ||
-      r.estado?.toLowerCase().includes(term)
-    );
+    filtered = filtered.filter((item) => matchesEverywhere(item, searchTerm));
   }
   
   return filtered;
