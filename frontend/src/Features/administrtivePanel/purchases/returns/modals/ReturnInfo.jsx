@@ -1,5 +1,17 @@
 import React, { useMemo, useState } from "react";
-import { AlertTriangle, ChevronLeft, ChevronRight, SquarePen, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Calendar,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Package,
+  PackageCheck,
+  SquarePen,
+  Truck,
+  X,
+} from "lucide-react";
 import {
   calcularTotalesProducto,
   formatCurrency,
@@ -9,37 +21,74 @@ import {
 
 const Badge = ({ label, style }) => (
   <span
-    className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap"
+    className="inline-flex items-center rounded-full border border-black/5 px-2.5 py-0.5 text-[10px] font-semibold whitespace-nowrap"
     style={style}
   >
     {label || "-"}
   </span>
 );
 
-const InfoRow = ({ label, children }) => (
-  <div className="flex flex-col py-3 gap-0.5 min-w-0">
-    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</span>
-    {children}
+const DetailRow = ({ icon: Icon, label, value, highlight = false }) => {
+  const hasValue =
+    value !== undefined && value !== null && String(value).trim().length > 0;
+
+  return (
+    <div className="flex items-start gap-3 border-b border-gray-50 py-2 last:border-0">
+      <div
+        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${
+          hasValue ? "bg-[#004D77]/10" : "bg-gray-100"
+        }`}
+      >
+        <Icon
+          className={`h-3.5 w-3.5 ${
+            hasValue ? "text-[#004D77]" : "text-gray-300"
+          }`}
+          strokeWidth={1.8}
+        />
+      </div>
+      <div className="min-w-0 flex-1">
+        <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide leading-none text-gray-400">
+          {label}
+        </span>
+        <span
+          className={`block truncate text-sm font-medium ${
+            hasValue
+              ? highlight
+                ? "font-semibold text-[#004D77]"
+                : "text-gray-800"
+              : "font-normal italic text-gray-300"
+          }`}
+        >
+          {hasValue ? value : "-"}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const SectionTitle = ({ children }) => (
+  <div className="mb-3 flex items-center gap-2">
+    <div className="h-px flex-1 bg-gray-100" />
+    <span className="px-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+      {children}
+    </span>
+    <div className="h-px flex-1 bg-gray-100" />
   </div>
 );
 
-const TextValue = ({ children }) => (
-  <span className="text-sm font-medium text-gray-800 truncate">{children || "-"}</span>
-);
-
-const hasPriceData = (producto) =>
-  Number(producto?.valorUnit ?? 0) > 0 || Number(producto?.iva ?? 0) > 0;
+const hasPriceData = (product) =>
+  Number(product?.valorUnit ?? 0) > 0 || Number(product?.iva ?? 0) > 0;
 
 const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
-  const [paginaActual, setPaginaActual] = useState(1);
-  const porPagina = 4;
-
-  const productos = devolucion?.productos ?? [];
-  const estado = devolucion?.estado ?? "";
-  const isAnulada = estado === "Anulada";
-  const isClosed = isAnulada || estado === "Listo" || estado.startsWith("Procesada");
+  const [currentPage, setCurrentPage] = useState(1);
+  const productsPerPage = 4;
+  const products = devolucion?.productos ?? [];
+  const status = devolucion?.estado ?? "";
+  const isAnnulled = status === "Anulada";
+  const isClosed =
+    isAnnulled || status === "Listo" || status.startsWith("Procesada");
   const canEdit = !isClosed;
-  const estadoStyle = getBadgeEstadoDevolucion(estado);
+  const statusStyle = getBadgeEstadoDevolucion(status);
   const providerName =
     devolucion?.proveedor ??
     devolucion?.provider?.name ??
@@ -47,8 +96,14 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
     "-";
   const progressLabel =
     devolucion?.progress?.label ??
-    `${devolucion?.progress?.completed ?? 0}/${devolucion?.progress?.total ?? productos.length}`;
-  const shouldShowTotals = productos.some(hasPriceData);
+    `${devolucion?.progress?.completed ?? 0}/${
+      devolucion?.progress?.total ?? products.length
+    }`;
+  const completedDetails =
+    devolucion?.completedDetails ?? devolucion?.progress?.completed ?? 0;
+  const totalDetails =
+    devolucion?.totalDetails ?? devolucion?.progress?.total ?? products.length;
+  const showTotals = products.some(hasPriceData);
   const cancellationReason =
     devolucion?.motivoAnulacion ??
     devolucion?.cancellationReason ??
@@ -60,100 +115,70 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
     devolucion?.annulledAt ??
     null;
 
-  const totalPaginas = Math.max(1, Math.ceil(productos.length / porPagina));
-  const productosPagina = useMemo(() => {
-    const start = (paginaActual - 1) * porPagina;
-    return productos.slice(start, start + porPagina);
-  }, [paginaActual, productos]);
+  const totalPages = Math.max(1, Math.ceil(products.length / productsPerPage));
+  const visibleProducts = useMemo(() => {
+    const start = (currentPage - 1) * productsPerPage;
+    return products.slice(start, start + productsPerPage);
+  }, [currentPage, products]);
 
   const { totalSubtotal, totalIva, totalGeneral } = useMemo(
     () =>
-      productos.reduce(
-        (acc, producto) => {
-          const { subtotal, ivaValor, total } = calcularTotalesProducto(producto);
+      products.reduce(
+        (totals, product) => {
+          const { subtotal, ivaValor, total } =
+            calcularTotalesProducto(product);
           return {
-            totalSubtotal: acc.totalSubtotal + subtotal,
-            totalIva: acc.totalIva + ivaValor,
-            totalGeneral: acc.totalGeneral + total,
+            totalSubtotal: totals.totalSubtotal + subtotal,
+            totalIva: totals.totalIva + ivaValor,
+            totalGeneral: totals.totalGeneral + total,
           };
         },
         { totalSubtotal: 0, totalIva: 0, totalGeneral: 0 }
       ),
-    [productos]
+    [products]
   );
 
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
     >
       <div
         onClick={(event) => event.stopPropagation()}
-        className="bg-white rounded-lg shadow-2xl w-full max-w-xs sm:max-w-sm md:max-w-4xl overflow-hidden flex flex-col"
-        style={{ maxHeight: "92vh" }}
+        className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl"
       >
-        <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
+        <div className="flex shrink-0 items-center justify-between bg-[#004D77] px-6 py-4">
           <div className="min-w-0">
-            <h2 className="text-white font-semibold text-lg leading-tight">Detalle de Devolucion</h2>
-            <span className="text-white/60 text-xs">{devolucion?.id ?? "-"}</span>
+            <h2 className="truncate text-lg font-semibold text-white">
+              Devolución #{devolucion?.id ?? "-"}
+            </h2>
+            <p className="mt-0.5 text-xs text-white/60">
+              Detalle de devolución en compra
+            </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
+            className="cursor-pointer rounded-full p-1 text-white transition-colors hover:bg-white/20"
+            title="Cerrar"
           >
-            <X className="w-5 h-5" strokeWidth={2} />
+            <X className="h-5 w-5" strokeWidth={2} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-2 flex flex-col">
-          <div className="flex flex-col divide-y divide-gray-100">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4">
-              <InfoRow label="No. Devolucion">
-                <TextValue>{devolucion?.id}</TextValue>
-              </InfoRow>
-              <InfoRow label="No. Factura">
-                <TextValue>{devolucion?.idCompra}</TextValue>
-              </InfoRow>
-              <InfoRow label="Proveedor">
-                <TextValue>{providerName}</TextValue>
-              </InfoRow>
-              <InfoRow label="Fecha">
-                <TextValue>{devolucion?.fechaDevolucion}</TextValue>
-              </InfoRow>
-              <InfoRow label="Estado">
-                <Badge label={estado} style={estadoStyle} />
-              </InfoRow>
-              <InfoRow label="Progreso">
-                <TextValue>{progressLabel}</TextValue>
-              </InfoRow>
-              <InfoRow label="Detalles">
-                <TextValue>{String(productos.length)}</TextValue>
-              </InfoRow>
-              <InfoRow label="Compra">
-                <TextValue>{devolucion?.purchaseId}</TextValue>
-              </InfoRow>
-            </div>
-          </div>
-
-          {isAnulada && (
-            <div
-              className="flex gap-2.5 items-start rounded-lg px-4 py-3 text-xs mb-3"
-              style={{ backgroundColor: "#fff1f2", border: "1px solid #fecaca" }}
-            >
-              <AlertTriangle
-                className="w-4 h-4 shrink-0 mt-0.5"
-                style={{ color: "#b91c1c" }}
-                strokeWidth={1.8}
-              />
+        <div className="flex-1 overflow-y-auto">
+          {isAnnulled && (
+            <div className="mx-4 mt-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 shadow-sm">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
               <div>
-                <p className="font-semibold mb-0.5" style={{ color: "#b91c1c" }}>
-                  Motivo de anulacion
+                <p className="text-xs font-semibold text-red-600">
+                  Devolución anulada
                 </p>
-                <p style={{ color: "#7f1d1d" }}>
+                <p className="mt-0.5 text-xs leading-relaxed text-red-500">
                   {cancellationReason || "Sin motivo registrado."}
                 </p>
                 {cancellationDate && (
-                  <p className="mt-1" style={{ color: "#9f1239" }}>
+                  <p className="mt-1 text-xs text-red-400">
                     Anulada el {cancellationDate}
                   </p>
                 )}
@@ -161,125 +186,234 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
             </div>
           )}
 
-          <div className="mb-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-              Productos ({productos.length})
-            </p>
-
-            <div className="rounded-lg overflow-x-auto border border-gray-200">
-              <table className="w-full min-w-[760px] text-xs">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Producto</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Referencia</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Codigo</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Motivo</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Tipo</th>
-                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-500">Estado</th>
-                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-500">Cant.</th>
-                    {shouldShowTotals && (
-                      <>
-                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">V. Unit</th>
-                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">IVA</th>
-                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Total</th>
-                      </>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {productosPagina.map((producto, index) => {
-                    const { ivaValor, total } = calcularTotalesProducto(producto);
-                    const estadoProductoStyle = getBadgeEstadoProducto(producto.estado);
-
-                    return (
-                      <tr
-                        key={producto.id ?? `${producto.codigoBarras}-${index}`}
-                        className={`transition-colors duration-150 ${
-                          index % 2 === 0 ? "bg-white" : "bg-gray-100"
-                        }`}
-                      >
-                        <td className="px-3 py-2 font-medium text-gray-800 max-w-[180px] truncate">
-                          {producto.nombre ?? "-"}
-                        </td>
-                        <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
-                          {producto.referencia || "-"}
-                        </td>
-                        <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
-                          {producto.codigoBarras || "-"}
-                        </td>
-                        <td className="px-3 py-2 text-gray-600">{producto.motivo || "-"}</td>
-                        <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
-                          {producto.tipoDevolucion || "-"}
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          <Badge label={producto.estado} style={estadoProductoStyle} />
-                        </td>
-                        <td className="px-3 py-2 text-center font-semibold text-gray-700">
-                          {producto.cantidadDevolver ?? "-"}
-                        </td>
-                        {shouldShowTotals && (
-                          <>
-                            <td className="px-3 py-2 text-right text-gray-700">
-                              {formatCurrency(producto.valorUnit)}
-                            </td>
-                            <td className="px-3 py-2 text-right text-gray-600">
-                              {formatCurrency(ivaValor)}
-                            </td>
-                            <td className="px-3 py-2 text-right font-semibold text-gray-800">
-                              {formatCurrency(total)}
-                            </td>
-                          </>
-                        )}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+          <div className="grid grid-cols-1 divide-y divide-gray-100 md:grid-cols-2 md:divide-x md:divide-y-0">
+            <div className="px-6 py-5">
+              <SectionTitle>Información general</SectionTitle>
+              <DetailRow
+                icon={FileText}
+                label="No. devolución"
+                value={devolucion?.id}
+                highlight
+              />
+              <DetailRow
+                icon={FileText}
+                label="No. factura"
+                value={devolucion?.idCompra}
+              />
+              <DetailRow
+                icon={Truck}
+                label="Proveedor"
+                value={providerName}
+              />
+              <DetailRow
+                icon={Calendar}
+                label="Fecha de devolución"
+                value={devolucion?.fechaDevolucion}
+              />
             </div>
 
-            {shouldShowTotals ? (
-              <div className="mt-1 border border-gray-200 rounded-lg overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Subtotal</span>
-                  <span className="text-xs font-semibold text-gray-700">{formatCurrency(totalSubtotal)}</span>
+            <div className="px-6 py-5">
+              <SectionTitle>Estado del proceso</SectionTitle>
+              <DetailRow
+                icon={PackageCheck}
+                label="Estado"
+                value={<Badge label={status} style={statusStyle} />}
+              />
+              <DetailRow
+                icon={CheckCircle2}
+                label="Progreso"
+                value={progressLabel}
+                highlight
+              />
+              <DetailRow
+                icon={Package}
+                label="Detalles listos"
+                value={`${completedDetails} de ${totalDetails}`}
+              />
+              <DetailRow
+                icon={FileText}
+                label="Compra asociada"
+                value={devolucion?.purchaseId ?? devolucion?.idCompra}
+              />
+            </div>
+          </div>
+
+          <div className="border-t border-gray-100 px-6 py-5">
+            <SectionTitle>Productos devueltos</SectionTitle>
+
+            {products.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-gray-200 py-10">
+                <Package className="h-7 w-7 text-gray-300" strokeWidth={1.5} />
+                <p className="text-xs text-gray-400">
+                  No hay productos registrados en esta devolución
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
+                <table className="min-w-[920px] w-full">
+                  <thead className="bg-[#004D77]/5">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                        Producto
+                      </th>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                        Referencia
+                      </th>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                        Código
+                      </th>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                        Motivo
+                      </th>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                        Tipo
+                      </th>
+                      <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                        Estado
+                      </th>
+                      <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                        Cant.
+                      </th>
+                      {showTotals && (
+                        <>
+                          <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                            V. unit.
+                          </th>
+                          <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                            IVA
+                          </th>
+                          <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                            Total
+                          </th>
+                        </>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleProducts.map((product, index) => {
+                      const { ivaValor, total } =
+                        calcularTotalesProducto(product);
+                      const productStatusStyle = getBadgeEstadoProducto(
+                        product.estado
+                      );
+
+                      return (
+                        <tr
+                          key={
+                            product.id ??
+                            `${product.codigoBarras}-${index}`
+                          }
+                          className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                        >
+                          <td className="max-w-[190px] truncate px-3 py-2 text-xs font-medium text-gray-800">
+                            {product.nombre ?? "-"}
+                          </td>
+                          <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">
+                            {product.referencia || "-"}
+                          </td>
+                          <td className="px-3 py-2 font-mono text-xs text-gray-600 whitespace-nowrap">
+                            {product.codigoBarras || "-"}
+                          </td>
+                          <td className="max-w-[160px] truncate px-3 py-2 text-xs text-gray-600">
+                            {product.motivo || "-"}
+                          </td>
+                          <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">
+                            {product.tipoDevolucion || "-"}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <Badge
+                              label={product.estado}
+                              style={productStatusStyle}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                            {product.cantidadDevolver ?? "-"}
+                          </td>
+                          {showTotals && (
+                            <>
+                              <td className="px-3 py-2 text-right text-xs text-gray-600">
+                                {formatCurrency(product.valorUnit)}
+                              </td>
+                              <td className="px-3 py-2 text-right text-xs text-gray-600">
+                                {formatCurrency(ivaValor)}
+                              </td>
+                              <td className="px-3 py-2 text-right text-xs font-semibold text-gray-800">
+                                {formatCurrency(total)}
+                              </td>
+                            </>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {showTotals ? (
+              <div className="mt-3 ml-auto w-full max-w-sm overflow-hidden rounded-lg border border-gray-200">
+                <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-2">
+                  <span className="text-xs font-medium text-gray-500">
+                    Subtotal
+                  </span>
+                  <span className="text-sm font-semibold text-gray-700">
+                    {formatCurrency(totalSubtotal)}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">IVA</span>
-                  <span className="text-xs font-semibold text-gray-700">{formatCurrency(totalIva)}</span>
+                <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-2">
+                  <span className="text-xs font-medium text-gray-500">IVA</span>
+                  <span className="text-sm font-semibold text-gray-700">
+                    {formatCurrency(totalIva)}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between px-4 py-2.5" style={{ backgroundColor: "#f0f9ff" }}>
-                  <span className="text-sm font-bold text-gray-600">Total devolucion</span>
-                  <span className="text-sm font-bold" style={{ color: "#004D77" }}>
+                <div className="flex items-center justify-between bg-[#004D77] px-4 py-2.5">
+                  <span className="text-xs font-bold uppercase tracking-wide text-white/80">
+                    Total devolución
+                  </span>
+                  <span className="text-base font-bold text-white">
                     {formatCurrency(totalGeneral)}
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-900">
-                El detalle recibido no incluye valores unitarios ni IVA; por ahora se muestran solo los datos
-                operativos de la devolucion.
+              <div className="mt-3 flex items-start gap-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
+                <FileText className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
+                <p className="text-xs leading-relaxed text-blue-800">
+                  El detalle recibido no incluye valores unitarios ni IVA. Se
+                  muestran únicamente los datos operativos de la devolución.
+                </p>
               </div>
             )}
 
-            {totalPaginas > 1 && (
-              <div className="flex items-center justify-between mt-2 px-1">
+            {totalPages > 1 && (
+              <div className="mt-4 flex items-center justify-between px-1">
                 <span className="text-xs text-gray-400">
-                  Pagina {paginaActual} de {totalPaginas}
+                  Página {currentPage} de {totalPages}
                 </span>
                 <div className="flex gap-1">
                   <button
-                    onClick={() => setPaginaActual((page) => Math.max(1, page - 1))}
-                    disabled={paginaActual === 1}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 bg-white hover:border-[#004D77] hover:text-[#004D77] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    type="button"
+                    onClick={() =>
+                      setCurrentPage((page) => Math.max(1, page - 1))
+                    }
+                    disabled={currentPage === 1}
+                    className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-colors hover:border-[#004D77] hover:text-[#004D77] disabled:cursor-not-allowed disabled:opacity-40"
+                    title="Página anterior"
                   >
-                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <ChevronLeft className="h-3.5 w-3.5" />
                   </button>
                   <button
-                    onClick={() => setPaginaActual((page) => Math.min(totalPaginas, page + 1))}
-                    disabled={paginaActual === totalPaginas}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 bg-white hover:border-[#004D77] hover:text-[#004D77] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    type="button"
+                    onClick={() =>
+                      setCurrentPage((page) =>
+                        Math.min(totalPages, page + 1)
+                      )
+                    }
+                    disabled={currentPage === totalPages}
+                    className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-colors hover:border-[#004D77] hover:text-[#004D77] disabled:cursor-not-allowed disabled:opacity-40"
+                    title="Página siguiente"
                   >
-                    <ChevronRight className="w-3.5 h-3.5" />
+                    <ChevronRight className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
@@ -287,23 +421,25 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
           </div>
         </div>
 
-        <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
+        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
           <button
+            type="button"
             onClick={onClose}
-            className="px-6 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+            className="cursor-pointer rounded-lg bg-gray-500 px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-600"
           >
             Cerrar
           </button>
           {canEdit && onEdit && (
             <button
+              type="button"
               onClick={() => {
                 onClose();
                 onEdit(devolucion);
               }}
-              className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"
+              className="flex cursor-pointer items-center gap-2 rounded-lg bg-[#004D77] px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-[#003a5c]"
             >
-              <SquarePen className="w-4 h-4" strokeWidth={1.8} />
-              Editar devolucion
+              <SquarePen className="h-4 w-4" strokeWidth={1.8} />
+              Editar devolución
             </button>
           )}
         </div>

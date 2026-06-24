@@ -1,15 +1,22 @@
-// features/administrtivePanel/purchases/purchases/components/TablePurchases.jsx
 import React from "react";
-import { Info, RefreshCw, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Info, Package, RefreshCw, XCircle } from "lucide-react";
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 
+const escapeRegExp = (value = "") =>
+  String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const highlightText = (text, search) => {
-  if (!search || !text) return text;
-  const regex = new RegExp(`(${search})`, "gi");
-  const parts = text.toString().split(regex);
-  return parts.map((part, index) =>
-    part.toLowerCase() === search.toLowerCase() ? (
-      <span key={index} className="bg-[#004d7726] text-[#004D77] rounded px-0.5">
+  if (!search?.trim() || text === null || text === undefined) return text;
+
+  const normalizedSearch = search.trim();
+  const regex = new RegExp(`(${escapeRegExp(normalizedSearch)})`, "gi");
+
+  return String(text).split(regex).map((part, index) =>
+    part.toLowerCase() === normalizedSearch.toLowerCase() ? (
+      <span
+        key={`${part}-${index}`}
+        className="rounded bg-[#004D77]/10 px-0.5 text-[#004D77]"
+      >
         {part}
       </span>
     ) : (
@@ -18,165 +25,219 @@ const highlightText = (text, search) => {
   );
 };
 
-const isWithinReturnPeriod = (fechaCompra, maxReturnDate) => {
+const isWithinReturnPeriod = (purchaseDate, maxReturnDate) => {
   if (maxReturnDate) {
-    const hoy = new Date();
-    const maxDate = new Date(maxReturnDate);
-    hoy.setHours(0, 0, 0, 0);
-    maxDate.setHours(0, 0, 0, 0);
-    return hoy <= maxDate;
+    const today = new Date();
+    const limitDate = new Date(maxReturnDate);
+    today.setHours(0, 0, 0, 0);
+    limitDate.setHours(0, 0, 0, 0);
+    return today <= limitDate;
   }
-  // Si no hay maxReturnDate, usar la lógica anterior (60 días)
-  if (!fechaCompra) return false;
-  const fecha = new Date(fechaCompra);
-  const hoy = new Date();
-  const diffTime = hoy - fecha;
-  const diffDays = diffTime / (1000 * 60 * 60 * 24);
-  return diffDays <= 60;
+
+  if (!purchaseDate) return false;
+
+  const purchase = new Date(purchaseDate);
+  const today = new Date();
+  return (today - purchase) / (1000 * 60 * 60 * 24) <= 60;
 };
 
 const formatDate = (dateString) => {
-  if (!dateString) return '-';
+  if (!dateString) return "-";
+
   const date = new Date(dateString);
-  return date.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  if (Number.isNaN(date.getTime())) return String(dateString);
+
+  return date.toLocaleDateString("es-CO", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
 };
 
+const getStatusClasses = (status) => {
+  if (status === "Completada") {
+    return "border-green-300 bg-green-100 text-green-700";
+  }
+  if (status === "Anulada") {
+    return "border-red-200 bg-red-100 text-red-500";
+  }
+  return "border-amber-300 bg-amber-100 text-amber-700";
+};
+
+function EmptyState({ isSearching }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 px-4 py-16">
+      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#004D77]/10">
+        <Package className="h-10 w-10 text-[#004D77]/40" strokeWidth={1.5} />
+      </div>
+      <p className="text-base font-semibold text-gray-500">
+        {isSearching
+          ? "No se encontraron resultados"
+          : "No hay compras registradas"}
+      </p>
+      <p className="max-w-xs text-center text-sm text-gray-400">
+        {isSearching
+          ? "Ninguna compra coincide con los filtros aplicados. Intenta con otros criterios."
+          : "Aún no se han registrado compras en el sistema. Crea la primera para comenzar."}
+      </p>
+    </div>
+  );
+}
+
 export const PurchasesTable = ({
-  currentData,
-  filteredProducts,
-  currentPage,
-  setCurrentPage,
-  totalPages,
-  startIndex,
-  endIndex,
+  currentData = [],
   handleCancel,
   handleViewDetail,
   handleReturn,
-  search,
+  search = "",
+  isSearching = false,
 }) => {
   const { hasPermission } = usePermissions();
   const canCreateReturn = hasPermission("devoluciones_en_compras.crear");
 
+  if (currentData.length === 0) {
+    return <EmptyState isSearching={isSearching} />;
+  }
+
   return (
-    <>
-      <div className="bg-white rounded-xl shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full w-full text-xs">
-            <thead className="bg-[#004D77] text-white">
-              <tr>
-                <th className="px-3 py-2 text-center font-semibold">#</th>
-                <th className="px-3 py-2 text-center font-semibold">No. Facturación</th>
-                <th className="px-3 py-2 text-center font-semibold">Fecha compra</th>
-                <th className="px-3 py-2 text-center font-semibold">Proveedor</th>
-                <th className="px-3 py-2 text-center font-semibold">Cantidad</th>
-                <th className="px-3 py-2 text-center font-semibold">Precio</th>
-                <th className="px-3 py-2 text-center font-semibold">Fecha límite devolución</th>
-                <th className="px-3 py-2 text-center font-semibold">Estado</th>
-                <th className="px-3 py-2 text-center font-semibold">Acciones</th>
-              </tr>
-            </thead>
+    <div className="min-h-0 flex-1 overflow-x-auto rounded-xl shadow-md">
+      <table className="min-w-max w-full">
+        <thead className="bg-[#004D77] text-white">
+          <tr>
+            <th className="sticky left-0 z-10 bg-[#004D77] px-3 py-2.5 text-center text-xs font-semibold">
+              No. Facturación
+            </th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Fecha compra</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Proveedor</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Cantidad</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Precio</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+              Límite devolución
+            </th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Estado</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Acciones</th>
+          </tr>
+        </thead>
 
-            <tbody>
-              {!currentData.length ? (
-                <tr>
-                  <td colSpan={9} className="py-8 text-center text-sm text-gray-400">
-                    No se encontraron compras.
-                  </td>
-                </tr>
-              ) : (
-                currentData.map((compra, index) => {
-                  const recordNumber = startIndex + index + 1;
-                  const canReturn =
-                    canCreateReturn &&
-                    isWithinReturnPeriod(compra.fechaCompra, compra.maxReturnDate);
-                  const isAnnulled = compra.estado === "Anulada";
+        <tbody>
+          {currentData.map((purchase, index) => {
+            const baseRowBg = index % 2 === 0 ? "bg-gray-100" : "bg-white";
+            const isAnnulled = purchase.estado === "Anulada";
+            const isExpired =
+              Boolean(purchase.maxReturnDate) &&
+              new Date(purchase.maxReturnDate) < new Date();
+            const canReturn =
+              canCreateReturn &&
+              !isAnnulled &&
+              isWithinReturnPeriod(purchase.fechaCompra, purchase.maxReturnDate);
 
-                  let returnTitle = "Registrar devolución";
-                  if (isAnnulled) {
-                    returnTitle = "No se puede devolver una compra anulada";
-                  } else if (!canCreateReturn) {
-                    returnTitle = "No tienes permiso para crear devoluciones";
-                  } else if (!canReturn) {
-                    returnTitle = compra.maxReturnDate 
-                      ? `La fecha límite de devolución era ${formatDate(compra.maxReturnDate)}`
-                      : "La compra tiene más de 2 meses, no se puede generar devolución";
-                  }
+            let returnTitle = "Registrar devolución";
+            if (isAnnulled) {
+              returnTitle = "No se puede devolver una compra anulada";
+            } else if (!canCreateReturn) {
+              returnTitle = "No tienes permiso para crear devoluciones";
+            } else if (!canReturn) {
+              returnTitle = purchase.maxReturnDate
+                ? `La fecha límite de devolución era ${formatDate(purchase.maxReturnDate)}`
+                : "La compra superó el periodo permitido para devoluciones";
+            }
 
-                  const isExpired = compra.maxReturnDate && new Date(compra.maxReturnDate) < new Date();
-
-                  return (
-                    <tr key={compra.id} className={`${index % 2 === 0 ? "bg-white hover:bg-gray-50" : "bg-gray-50 hover:bg-gray-100"}`}>
-                      <td className="px-3 py-2.5 text-center">{recordNumber}</td>
-                      <td className="px-3 py-2.5 text-center">{highlightText(compra.numeroFacturacion || "", search)}</td>
-                      <td className="px-3 py-2.5 text-center">{compra.fechaCompra}</td>
-                      <td className="px-3 py-2.5">{highlightText(compra.proveedor || "", search)}</td>
-                      <td className="px-3 py-2.5 text-center font-semibold">
-                        {highlightText(compra.cantidadProductos?.toString() || "0", search)}
-                      </td>
-                      <td className="px-3 py-2.5 text-center">
-                        ${highlightText(Number(compra.precioTotal).toLocaleString(), search)}
-                      </td>
-                      <td className="px-3 py-2.5 text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          isExpired ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
-                        }`}>
-                          {formatDate(compra.maxReturnDate)}
-                          {isExpired && " (Vencida)"}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2.5 text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          compra.estado === "Completada" ? "bg-green-100 text-green-700" :
-                          compra.estado === "Anulada" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"
-                        }`}>
-                          {highlightText(compra.estado || "Devuelta", search)}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2.5 text-center">
-                        <div className="flex justify-center gap-3">
-                          <button onClick={() => handleViewDetail(compra)} className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-125" title="Ver detalle">
-                            <Info size={16} />
-                          </button>
-                          <button onClick={() => { if (!isAnnulled && canReturn) handleReturn?.(compra); }} title={returnTitle} className={`transition-all duration-200 transform hover:scale-125 ${isAnnulled || !canReturn ? "text-gray-200 cursor-not-allowed" : "text-gray-400 hover:text-yellow-600"}`} disabled={isAnnulled || !canReturn}>
-                            <RefreshCw size={16} />
-                          </button>
-                          <button onClick={() => handleCancel(compra)} className="text-gray-400 hover:text-red-600 transition-all duration-200 transform hover:scale-125" title="Anular compra">
-                            <XCircle size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between py-3">
-        <p className="text-xs text-gray-600">
-          Mostrando {startIndex + 1} – {Math.min(endIndex, filteredProducts.length)} de {filteredProducts.length} registros
-        </p>
-        <div className="flex items-center gap-1.5 rounded-2xl px-4 py-1.5 shadow">
-          <button onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1} className={`w-8 h-8 flex items-center justify-center rounded-lg border ${currentPage === 1 ? "border-gray-200 text-gray-300 cursor-not-allowed bg-white" : "border-gray-300 text-gray-600 hover:border-gray-400 cursor-pointer bg-white"}`}>
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          {[...Array(totalPages)].map((_, i) => {
-            const pageNum = i + 1;
-            const isActive = currentPage === pageNum;
             return (
-              <button key={i} onClick={() => setCurrentPage(pageNum)} className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-medium ${isActive ? "bg-[#004D77] text-white shadow-sm" : "bg-white text-gray-700 border border-gray-300 hover:border-gray-400 hover:bg-gray-50"}`}>
-                {pageNum}
-              </button>
+              <tr
+                key={purchase.id}
+                className={`group transition-colors duration-150 ${baseRowBg} hover:bg-blue-50`}
+              >
+                <td
+                  className={`sticky left-0 z-10 px-3 py-2 text-center font-mono text-xs text-gray-700 whitespace-nowrap transition-colors duration-150 ${baseRowBg} group-hover:bg-blue-50`}
+                >
+                  {highlightText(purchase.numeroFacturacion || purchase.id || "-", search)}
+                </td>
+                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                  {highlightText(purchase.fechaCompra || "-", search)}
+                </td>
+                <td className="max-w-xs truncate px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap">
+                  {highlightText(purchase.proveedor || "Proveedor no disponible", search)}
+                </td>
+                <td className="px-3 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
+                  {highlightText(purchase.cantidadProductos?.toString() || "0", search)}
+                </td>
+                <td className="px-3 py-2 text-center text-xs font-semibold text-gray-800 whitespace-nowrap">
+                  {highlightText(
+                    `$${Number(purchase.precioTotal || 0).toLocaleString("es-CO")}`,
+                    search
+                  )}
+                </td>
+                <td className="px-3 py-2 text-center whitespace-nowrap">
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                      isExpired
+                        ? "border-red-300 bg-red-100 text-red-700"
+                        : "border-blue-300 bg-blue-100 text-blue-700"
+                    }`}
+                  >
+                    {formatDate(purchase.maxReturnDate)}
+                    {isExpired ? " (Vencida)" : ""}
+                  </span>
+                </td>
+                <td className="px-3 py-2 text-center whitespace-nowrap">
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getStatusClasses(
+                      purchase.estado
+                    )}`}
+                  >
+                    {highlightText(purchase.estado || "Sin estado", search)}
+                  </span>
+                </td>
+                <td className="px-3 py-2">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleViewDetail(purchase)}
+                      className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]"
+                      title="Ver información"
+                    >
+                      <Info className="h-4 w-4" strokeWidth={1.5} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => canReturn && handleReturn?.(purchase)}
+                      title={returnTitle}
+                      disabled={!canReturn}
+                      className={`transition ${
+                        canReturn
+                          ? "cursor-pointer text-gray-400 hover:scale-110 hover:text-amber-500"
+                          : "cursor-not-allowed text-gray-200"
+                      }`}
+                    >
+                      <RefreshCw className="h-4 w-4" strokeWidth={1.5} />
+                    </button>
+
+                    {isAnnulled ? (
+                      <span
+                        className="cursor-not-allowed text-gray-200"
+                        title="No disponible para compras anuladas"
+                      >
+                        <XCircle className="h-4 w-4" strokeWidth={1.5} />
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleCancel(purchase)}
+                        className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-red-500"
+                        title="Anular compra"
+                      >
+                        <XCircle className="h-4 w-4" strokeWidth={1.5} />
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
             );
           })}
-          <button onClick={() => setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages} className={`w-8 h-8 flex items-center justify-center rounded-lg border ${currentPage === totalPages ? "border-gray-200 text-gray-300 cursor-not-allowed bg-white" : "border-gray-300 text-gray-600 hover:border-gray-400 cursor-pointer bg-white"}`}>
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    </>
+        </tbody>
+      </table>
+    </div>
   );
 };
 

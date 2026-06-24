@@ -1,6 +1,20 @@
 // features/administrtivePanel/purchases/purchases/components/CreatePurchaseSideBar.jsx
-import { useEffect, useState } from "react";
-import { Search, Plus, Minus, AlertCircle, Barcode, ChevronDown, ChevronUp, Check } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Barcode,
+  Calendar,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  Minus,
+  PanelLeftClose,
+  Plus,
+  Search,
+  Truck,
+} from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import {
@@ -40,6 +54,7 @@ const CreateSidebar = ({
   openCreateProvider,  // ← NUEVO PROP
   extraBarcodes = {},
   onExtraBarcodesChange,
+  onCollapse,
 }) => {
   const navigate = useNavigate();
   const { showConfirm, showError } = useAlert();
@@ -56,6 +71,29 @@ const CreateSidebar = ({
   const [barcodeError, setBarcodeError] = useState("");
   const [activeBarcodeIndex, setActiveBarcodeIndex] = useState(0);
   const [scannerMessage, setScannerMessage] = useState(null);
+  const providerWrapperRef = useRef(null);
+  const productWrapperRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        providerWrapperRef.current &&
+        !providerWrapperRef.current.contains(event.target)
+      ) {
+        setIsOpen(false);
+      }
+
+      if (
+        productWrapperRef.current &&
+        !productWrapperRef.current.contains(event.target)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const getProductWithLocalBarcodes = (product) => ({
     ...product,
@@ -120,10 +158,10 @@ const CreateSidebar = ({
   })();
 
   const inputClass = (error) =>
-    `w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-600 outline-none transition-all ${
+    `w-full pl-10 pr-9 py-2.5 bg-white border rounded-lg text-sm text-gray-700 outline-none transition-colors duration-200 ${
       error
-        ? "border-red-400 focus:ring-2 focus:ring-red-300"
-        : "border-gray-300 focus:ring-2 focus:ring-[#004D77]"
+        ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+        : "border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
     }`;
 
   const handleBackToPurchases = async (e) => {
@@ -275,21 +313,41 @@ const CreateSidebar = ({
 
   return (
     <div className="col-span-3">
-      <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-6">
+      <div className="sticky top-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="flex items-center gap-3 border-b border-gray-100 bg-gray-50 px-5 py-3.5">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#004D77]">
+            <FileText className="h-4 w-4 text-white" strokeWidth={2} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-gray-800">Información de la compra</p>
+            <p className="text-xs text-gray-400">Proveedor, factura y productos</p>
+          </div>
+          <button
+            type="button"
+            onClick={onCollapse}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-200 hover:text-[#004D77]"
+            title="Ocultar panel"
+            aria-label="Ocultar panel de información"
+          >
+            <PanelLeftClose className="h-4 w-4" strokeWidth={1.8} />
+          </button>
+        </div>
+        <div className="flex flex-col gap-4 p-5">
 
         {/* ================= PROVEEDOR ================= */}
-        <div className="mb-6 relative">
-          <label className="block text-sm font-bold text-gray-800 mb-2">
-            Proveedores
+        <div ref={providerWrapperRef} className="relative flex flex-col gap-1.5">
+          <label className="block text-sm font-medium text-gray-700">
+            Proveedor <span className="text-red-500">*</span>
           </label>
 
           <div
             onClick={() => { setIsOpen(!isOpen); setProviderTouched(true); }}
-            className={`w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-600 cursor-pointer flex justify-between items-center transition-all ${
-              providerError ? "border-red-400" : "border-gray-300 hover:border-[#004D77]"
+            className={`relative flex w-full cursor-pointer items-center justify-between rounded-lg border bg-white py-2.5 pl-10 pr-3 text-sm text-gray-700 transition-colors ${
+              providerError ? "border-red-500" : "border-gray-300 hover:border-[#004D77]"
             }`}
           >
-            <span>{selectedProvider || "Seleccione el proveedor"}</span>
+            <Truck className="pointer-events-none absolute left-3 h-4 w-4 text-gray-400" strokeWidth={1.8} />
+            <span className="truncate">{selectedProvider || "Seleccione el proveedor"}</span>
             <div className="flex items-center gap-2">
               {providerTouched && providerError && (
                 <AlertCircle size={16} className="text-red-400" />
@@ -299,12 +357,12 @@ const CreateSidebar = ({
           </div>
 
           {isOpen && (
-            <div className="absolute z-50 mt-2 w-full bg-white rounded-2xl shadow-2xl border-4 border-[#004D77] px-2.5">
+            <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-gray-200 bg-white p-2 shadow-xl">
               <h3 className="text-center font-semibold text-gray-800 mb-3">
                 Seleccione un Proveedor
               </h3>
               <div className="flex items-center gap-2 mb-3">
-                <div className="flex items-center bg-gray-100 px-3 py-2 rounded-full w-full">
+                <div className="flex w-full items-center rounded-lg border border-gray-300 bg-white px-3 py-2">
                   <Search size={16} className="text-gray-500 mr-2" />
                   <input
                     type="text"
@@ -317,17 +375,17 @@ const CreateSidebar = ({
                 {/* ← BOTÓN CREAR PROVEEDOR CORREGIDO */}
                 <button
                   onClick={openCreateProvider}  // ← Cambiado de openCreateProduct a openCreateProvider
-                  className="flex items-center gap-1 px-3 py-1 border border-sky-700 text-[#004D77] bg-white hover:bg-sky-50 rounded-lg text-xs font-semibold transition-all"
+                  title="Crear proveedor"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#004D77] bg-white text-[#004D77] transition-colors hover:bg-[#004D77] hover:text-white"
                 >
-                  Crear <Plus size={14} />
+                  <Plus size={14} />
                 </button>
               </div>
-              <div className="w-full h-[2px] bg-[#004D77] mb-3"></div>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
+              <div className="max-h-44 overflow-y-auto">
                 {filteredProviders.map((provider, index) => (
                   <label
                     key={provider.id || index}
-                    className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-2 rounded-lg"
+                    className="flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm text-gray-700 transition-colors hover:bg-[#004D77]/10"
                   >
                     <input
                       type="checkbox"
@@ -359,11 +417,12 @@ const CreateSidebar = ({
         </div>
 
         {/* ================= FACTURA ================= */}
-        <div className="mb-6">
-          <label className="block text-sm font-bold text-gray-800 mb-2">
-            No. factura
+        <div className="flex flex-col gap-1.5">
+          <label className="block text-sm font-medium text-gray-700">
+            No. factura <span className="text-red-500">*</span>
           </label>
           <div className="relative">
+            <FileText className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
             <input
               type="text"
               value={invoiceNumber}
@@ -395,11 +454,12 @@ const CreateSidebar = ({
         </div>
 
         {/* ================= FECHA ================= */}
-        <div className="mb-6">
-          <label className="block text-sm font-bold text-gray-800 mb-2">
-            Fecha compra
+        <div className="flex flex-col gap-1.5">
+          <label className="block text-sm font-medium text-gray-700">
+            Fecha de compra <span className="text-red-500">*</span>
           </label>
           <div className="relative">
+            <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
             <input
               type="date"
               value={purchaseDate}
@@ -426,19 +486,23 @@ const CreateSidebar = ({
         </div>
 
         {/* ================= BUSCAR PRODUCTO ================= */}
-        <div className="mb-1 relative">
-          <label className="block text-sm font-bold text-gray-800 mb-2">
-            Busque el Producto
+        <div
+          ref={productWrapperRef}
+          className="relative border-t border-gray-100 pt-4"
+        >
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">
+            Producto
           </label>
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
               <input
                 type="text"
                 value={searchProduct}
                 onChange={handleSearchChange}
                 data-scanner-field="purchase-product-search"
                 placeholder="Buscar producto o código"
-                className={`w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-600 focus:ring-2 focus:ring-[#004D77] outline-none transition-all ${
+                className={`w-full rounded-lg border bg-white py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none transition-colors focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 ${
                   searchProduct && !selectedProduct && filteredProducts.length === 0
                     ? "border-red-400"
                     : "border-gray-300"
@@ -446,8 +510,10 @@ const CreateSidebar = ({
               />
             </div>
             <button
+              type="button"
               onClick={openCreateProduct}
-              className="flex items-center justify-center px-3 py-2 border border-[#004D77] text-[#004D77] bg-white hover:bg-[#004D77] hover:text-white rounded-lg transition-all"
+              title="Crear producto"
+              className="flex h-[42px] w-10 shrink-0 items-center justify-center rounded-lg border border-[#004D77] bg-white text-[#004D77] transition-colors hover:bg-[#004D77] hover:text-white"
             >
               <Plus size={16} />
             </button>
@@ -467,12 +533,12 @@ const CreateSidebar = ({
           </div>
 
           {showSuggestions && searchProduct && filteredProducts.length > 0 && (
-            <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+            <div className="absolute z-50 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-xl">
               {filteredProducts.slice(0, 6).map((product) => (
                 <div
                   key={product.id}
                   onClick={() => handleSelectProduct(product)}
-                  className="px-4 py-2 text-sm text-gray-700 hover:bg-[#004D77] hover:text-white cursor-pointer transition-all"
+                  className="cursor-pointer px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-[#004D77]/10"
                 >
                   <div className="font-semibold">{product.nombre}</div>
                   <div className="text-xs opacity-70">
@@ -630,14 +696,15 @@ const CreateSidebar = ({
         </div>
 
         {/* ================= CANTIDAD ================= */}
-        <div className="mb-6">
-          <label className="block text-sm font-bold text-gray-800 mb-2">
+        <div className="flex flex-col gap-1.5">
+          <label className="block text-sm font-medium text-gray-700">
             Cantidad
           </label>
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="grid grid-cols-[42px_1fr_42px] items-center gap-2">
             <button
+              type="button"
               onClick={() => handleQuantityChange(-1)}
-              className="w-12 h-10 flex items-center justify-center bg-white border-2 border-gray-300 rounded-lg"
+              className="flex h-10 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 transition-colors hover:border-[#004D77] hover:text-[#004D77]"
             >
               <Minus size={18} />
             </button>
@@ -647,11 +714,12 @@ const CreateSidebar = ({
               onChange={(e) =>
                 setQuantity(Math.max(1, parseInt(e.target.value) || 1))
               }
-              className="w-24 sm:w-32 py-2 bg-white border border-gray-300 rounded-lg text-center font-semibold"
+              className="h-10 w-full rounded-lg border border-gray-300 bg-white text-center text-sm font-semibold text-gray-700 outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
             />
             <button
+              type="button"
               onClick={() => handleQuantityChange(1)}
-              className="w-12 h-10 flex items-center justify-center bg-[#004D77] border-2 border-[#004D77] rounded-lg text-white"
+              className="flex h-10 items-center justify-center rounded-lg border border-[#004D77] bg-[#004D77] text-white transition-colors hover:bg-[#003a5c]"
             >
               <Plus size={18} />
             </button>
@@ -660,10 +728,12 @@ const CreateSidebar = ({
 
         {/* ================= BOTONES ================= */}
         <button
+          type="button"
           onClick={handleAddProduct}
-          className="w-full py-3 bg-[#004D77] text-white font-semibold rounded-lg hover:bg-[#003a5c] transition-all shadow-lg"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#003a5c]"
         >
-          Agregar ({purchaseItems.length})
+          <Plus className="h-4 w-4" strokeWidth={2} />
+          Agregar producto ({purchaseItems.length})
         </button>
 
         <div className="mt-2 flex justify-center">
@@ -673,11 +743,13 @@ const CreateSidebar = ({
         <Link
           to="/admin/purchases"
           onClick={handleBackToPurchases}
-          className="w-full mt-3 block text-center py-3 border-2 border-[#004D77] text-[#004D77] font-semibold rounded-lg hover:bg-[#004D77] hover:text-white transition-all"
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white py-2.5 text-sm font-medium text-gray-600 transition-colors hover:border-gray-400 hover:bg-gray-50"
         >
+          <ArrowLeft className="h-4 w-4" strokeWidth={2} />
           Volver a Compras
         </Link>
 
+        </div>
       </div>
     </div>
   );

@@ -247,8 +247,31 @@ const CREDIT_ERROR_MESSAGES = {
   CREDIT_LIMIT_EXCEEDED: 'El monto a credito supera el cupo disponible del cliente.',
 };
 
+const formatPaymentTotalMismatch = (details = {}) => {
+  const serverTotal = Number(details.serverTotal ?? 0);
+  const paidAmount = Number(details.paidAmount ?? 0);
+  const difference = Number(details.difference ?? serverTotal - paidAmount);
+  const absoluteDifference = Math.abs(difference);
+  const differenceLabel = difference > 0 ? 'faltan' : 'sobran';
+
+  return [
+    'El total calculado por el servidor no coincide con el pago registrado.',
+    `Total servidor: ${formatCurrency(serverTotal)}.`,
+    `Total pagado: ${formatCurrency(paidAmount)}.`,
+    absoluteDifference > 0
+      ? `Diferencia: ${differenceLabel} ${formatCurrency(absoluteDifference)}.`
+      : '',
+    'Revisa el tipo de cliente y los precios del producto antes de guardar.',
+  ].filter(Boolean).join(' ');
+};
+
 const getErrorMessage = (error, fallback) => {
   const responseData = error?.response?.data;
+
+  if (responseData?.errorCode === 'PAYMENT_AMOUNT_MUST_MATCH_TOTAL') {
+    return formatPaymentTotalMismatch(responseData.details);
+  }
+
   const errorCodeMessage = CREDIT_ERROR_MESSAGES[responseData?.errorCode];
   const detail =
     formatErrorDetail(responseData?.errors) ||

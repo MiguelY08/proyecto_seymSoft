@@ -6,9 +6,6 @@ import {
   Info,
   SquarePen,
   Trash2,
-  FileSpreadsheet,
-  Filter,
-  Eraser,
   Package,
   Loader2,
 } from "lucide-react";
@@ -24,11 +21,11 @@ import CreateProduct from "../modals/CreateProduct";
 import EditProduct from "../modals/EditProduct";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import Spinner from "../../../../shared/spinner";
-import ButtonComponent from "../../../../shared/ButtonComponent";
 import ProductsService from "../services/productsServices";
 import { HighlightText } from "../helpers/productsHelpers";
 import {
   findProductByBarcode,
+  normalizeBarcode,
   productMatchesBarcodeSearch,
   useBarcodeScanner,
 } from "../../../../shared/scanner";
@@ -151,6 +148,27 @@ function Products() {
     setFilterSubcategory("all");
   }, [filterCategory]);
 
+  const handleScannedProductSearch = ({ code, target }) => {
+    const scannedCode = normalizeBarcode(code, { numericOnly: true });
+    const inputCode = normalizeBarcode(target?.value, { numericOnly: true });
+    const product =
+      findProductByBarcode(data, scannedCode) ||
+      findProductByBarcode(data, inputCode);
+    const searchCode = product ? "" : inputCode || scannedCode;
+
+    if (!product) {
+      setSearch(searchCode);
+      showError(
+        "Codigo no registrado",
+        `No se encontro ningun producto con el codigo de barras ${searchCode}.`
+      );
+      return;
+    }
+
+    setSearch("");
+    handleVerDetalles(product);
+  };
+
   useBarcodeScanner({
     enabled: canView && canViewInfo && data.length > 0 && !showModal && !showFormModal && !showEditModal,
     numericOnly: true,
@@ -159,22 +177,9 @@ function Products() {
     scannerFields: ["product-search"],
     duplicateDelayMs: 800,
     preventTerminatorDefault: true,
-    onScan: ({ code, scannerField }) => {
+    onScan: ({ code, scannerField, target }) => {
       if (scannerField !== "product-search") return;
-
-      const product = findProductByBarcode(data, code);
-
-      if (!product) {
-        setSearch(code);
-        showError(
-          "Codigo no registrado",
-          `No se encontro ningun producto con el codigo de barras ${code}.`
-        );
-        return;
-      }
-
-      setSearch("");
-      handleVerDetalles(product);
+      handleScannedProductSearch({ code, target });
     },
   });
 
@@ -543,112 +548,28 @@ function Products() {
       <div
         className={`flex min-h-0 flex-1 flex-col gap-3 bg-white p-3 sm:p-4 ${showModal || showFormModal || showEditModal ? "blur-sm" : ""}`}
       >
-        {/* Toolbar con búsqueda y botón crear */}
+        {/* Toolbar con busqueda, filtros y acciones */}
         {!loading && canView && data.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="rounded-xl bg-white p-3 shadow-sm">
             <ProductsToolbar
               search={search}
               onSearchChange={setSearch}
+              categories={categories}
+              subcategories={subcategories}
+              filterCategory={filterCategory}
+              onCategoryChange={setFilterCategory}
+              filterSubcategory={filterSubcategory}
+              onSubcategoryChange={setFilterSubcategory}
+              hasActiveFilters={hasActiveFilters}
+              onClearFilters={resetFilters}
+              canExport={canExport}
+              exporting={exporting}
+              onExport={handleExportExcel}
+              canCreate={canCreate}
+              onCreate={() => setShowFormModal(true)}
             />
-
-            {/* Botón Exportar Excel */}
-            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-              {canExport && (
-                <ButtonComponent
-                  onClick={handleExportExcel}
-                  disabled={exporting}
-                  className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-2"
-                  title="Exportar a Excel"
-                >
-                  {exporting ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
-                  )}
-                  <span className="hidden sm:inline">
-                    {exporting ? "Exportando..." : "Exportar Excel"}
-                  </span>
-                </ButtonComponent>
-              )}
-
-              {canCreate && (
-                <ButtonComponent
-                  onClick={() => setShowFormModal(true)}
-                  title="Nuevo"
-                >
-                  <span className="hidden sm:inline">Nuevo</span>
-                  <Plus className="w-4 h-4" strokeWidth={2} />
-                </ButtonComponent>
-              )}
-            </div>
           </div>
         )}
-
-        {/* Filtros por Categoría y Subcategoría */}
-        {!loading &&
-          canView &&
-          data.length > 0 &&
-          (categories.length > 0 || subcategories.length > 0) && (
-            <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-xl shadow-sm">
-              <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <Filter className="w-4 h-4" />
-                Filtros:
-              </span>
-
-              {/* Filtro Categoría */}
-              {categories.length > 0 && (
-                <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#004D77] bg-white"
-                >
-                  <option value="all">Todas las categorías</option>
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              {/* Filtro Subcategoría */}
-              {subcategories.length > 0 && (
-                <select
-                  value={filterSubcategory}
-                  onChange={(e) => setFilterSubcategory(e.target.value)}
-                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#004D77] bg-white"
-                  disabled={subcategories.length === 0}
-                >
-                  <option value="all">Todas las subcategorías</option>
-                  {subcategories.map((sub) => (
-                    <option key={sub} value={sub}>
-                      {sub}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              {/* Botón limpiar filtros - Solo se muestra si hay filtros activos */}
-              {hasActiveFilters && (
-                <button
-                  onClick={resetFilters}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                >
-                  <Eraser className="w-3.5 h-3.5" />
-                  Limpiar filtros
-                </button>
-              )}
-
-              {/* Contador de resultados filtrados */}
-              {hasActiveFilters && (
-                <span className="text-sm text-gray-600 ml-auto">
-                  {filteredData.length} producto
-                  {filteredData.length !== 1 ? "s" : ""} encontrado
-                  {filteredData.length !== 1 ? "s" : ""}
-                </span>
-              )}
-            </div>
-          )}
 
         {loading ? (
           <div className="flex min-h-0 flex-1 items-center justify-center bg-white">

@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, Save } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import { getPrimaryProductBarcode } from '../../../../shared/scanner';
+import { getProductPriceForClient } from '../../shared/clientPricing';
 
 // Servicios
 import { SalesServices } from '../services/salesServices';
@@ -54,24 +55,6 @@ const getPaymentMethodId = (methodName) => {
 
 const roundMoney = (value) =>
   Math.round((Number(value) || 0) * 100) / 100;
-
-const getProductPriceForClient = (product, client) => {
-  const clientType = normalizeText(client?.clientType);
-
-  if (clientType.includes('mayor')) {
-    return roundMoney(product.wholesalePrice ?? product.retailPrice ?? product.precioDetalle ?? 0);
-  }
-
-  if (clientType.includes('colega') || clientType.includes('partner')) {
-    return roundMoney(product.partnerPrice ?? product.retailPrice ?? product.precioDetalle ?? 0);
-  }
-
-  if (clientType.includes('paca') || clientType.includes('bulk')) {
-    return roundMoney(product.bulkPrice ?? product.retailPrice ?? product.precioDetalle ?? 0);
-  }
-
-  return roundMoney(product.retailPrice ?? product.precioDetalle ?? 0);
-};
 
 const getIncludedIvaAmount = (totalWithIva, ivaPercentage) => {
   const rate = Number(ivaPercentage || 0) / 100;
@@ -131,7 +114,15 @@ const isCreditOverdue = (account) =>
   normalizeText(account?.estado ?? account?.status).includes('vencido');
 
 const getSessionUserId = (user) =>
-  user?.idUser ?? user?.id ?? null;
+  user?.idUser ?? user?.id_user ?? user?.id ?? null;
+
+const getSessionEmployeeId = (user) =>
+  user?.idEmployee ??
+  user?.id_employee ??
+  user?.employee?.idEmployee ??
+  user?.employee?.id_employee ??
+  user?.employeeId ??
+  null;
 
 const getCreditDueDate = () => {
   const date = new Date();
@@ -596,8 +587,10 @@ function SaleForm() {
         }
       }
 
+      const sessionEmployeeId = getSessionEmployeeId(user);
+
       const payload = {
-        idEmployee: getSessionUserId(user),
+        ...(sessionEmployeeId && { idEmployee: sessionEmployeeId }),
         idSaleStatus: 1,
         order: {
           idClient: formData.clienteId,

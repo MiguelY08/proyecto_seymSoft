@@ -1,260 +1,403 @@
-// features/administrtivePanel/purchases/purchases/components/DetailPurchases.jsx
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import {
+  AlertTriangle,
+  Barcode,
+  Calendar,
+  CheckCircle2,
+  Clock3,
+  DollarSign,
+  FileText,
+  Package,
+  PackageCheck,
+  Truck,
+  X,
+} from "lucide-react";
 import Pagination from "../../../../shared/PaginationLanding";
 
-const EstadoBadge = ({ estado }) => {
-  const styles = {
-    "Completada":        { bg: "#dcfce7", color: "#15803d" },
-    "Completada*":       { bg: "#d1fae5", color: "#065f46" },
-    "Proc. devolución":  { bg: "#fef9c3", color: "#a16207" },
-    "Anulada":           { bg: "#fee2e2", color: "#b91c1c" },
-  };
-  const s = styles[estado] ?? { bg: "#f3f4f6", color: "#374151" };
-  return (
-    <span
-      className="inline-block px-3 py-0.5 rounded-full text-xs font-semibold"
-      style={{ backgroundColor: s.bg, color: s.color }}
-    >
-      {estado ?? "-"}
-    </span>
-  );
+const STATUS_STYLES = {
+  Completada: "border-green-300 bg-green-100 text-green-700",
+  "Completada*": "border-emerald-300 bg-emerald-100 text-emerald-700",
+  "Proc. devolución": "border-amber-300 bg-amber-100 text-amber-700",
+  Anulada: "border-red-200 bg-red-100 text-red-600",
 };
 
-const BarcodeCell = ({ codigoBarras, codigosExtra = [] }) => {
-  const total = codigosExtra.length;
+const EstadoBadge = ({ estado }) => (
+  <span
+    className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold whitespace-nowrap ${
+      STATUS_STYLES[estado] ?? "border-gray-300 bg-gray-100 text-gray-600"
+    }`}
+  >
+    {estado ?? "-"}
+  </span>
+);
+
+const DetailRow = ({ icon: Icon, label, value, highlight = false }) => {
+  const hasValue = value !== undefined && value !== null && String(value).trim();
+
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
-      <span className="font-mono text-xs">{codigoBarras ?? "-"}</span>
-      {total > 0 && (
-        <div className="relative group">
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-[10px] font-semibold text-[#004D77] cursor-default select-none">
-            +{total} más
-          </span>
-          <div className="absolute z-50 bottom-full left-0 mb-1.5 hidden group-hover:block bg-white border border-gray-200 rounded-xl shadow-xl px-3 py-2.5 min-w-[180px]">
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">
-              Códigos adicionales
-            </p>
-            <ul className="flex flex-col gap-1">
-              {codigosExtra.map((code, i) => (
-                <li key={i} className="flex items-center gap-1.5 text-xs font-mono text-gray-700">
-                  <span className="w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[#004D77] text-white text-[9px] font-bold shrink-0">
-                    {i + 1}
-                  </span>
-                  {code}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
+    <div className="flex items-start gap-3 border-b border-gray-50 py-2 last:border-0">
+      <div
+        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${
+          hasValue ? "bg-[#004D77]/10" : "bg-gray-100"
+        }`}
+      >
+        <Icon
+          className={`h-3.5 w-3.5 ${
+            hasValue ? "text-[#004D77]" : "text-gray-300"
+          }`}
+          strokeWidth={1.8}
+        />
+      </div>
+      <div className="min-w-0 flex-1">
+        <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide leading-none text-gray-400">
+          {label}
+        </span>
+        <span
+          className={`block truncate text-sm font-medium ${
+            hasValue
+              ? highlight
+                ? "font-semibold text-[#004D77]"
+                : "text-gray-800"
+              : "font-normal italic text-gray-300"
+          }`}
+        >
+          {hasValue ? value : "-"}
+        </span>
+      </div>
     </div>
   );
 };
 
+const SectionTitle = ({ children }) => (
+  <div className="mb-3 flex items-center gap-2">
+    <div className="h-px flex-1 bg-gray-100" />
+    <span className="px-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+      {children}
+    </span>
+    <div className="h-px flex-1 bg-gray-100" />
+  </div>
+);
+
+const BarcodeCell = ({ codigoBarras, codigosExtra = [] }) => (
+  <div className="flex items-center justify-center gap-1.5">
+    <span className="font-mono text-xs text-gray-600">{codigoBarras ?? "-"}</span>
+    {codigosExtra.length > 0 && (
+      <div className="group relative">
+        <span className="inline-flex cursor-default select-none items-center rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-[#004D77]">
+          +{codigosExtra.length}
+        </span>
+        <div className="absolute bottom-full left-1/2 z-50 mb-2 hidden min-w-[190px] -translate-x-1/2 rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-xl group-hover:block">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-gray-400">
+            Códigos adicionales
+          </p>
+          <ul className="flex flex-col gap-1.5">
+            {codigosExtra.map((code, index) => (
+              <li
+                key={`${code}-${index}`}
+                className="flex items-center gap-2 text-xs font-mono text-gray-700"
+              >
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#004D77] text-[9px] font-bold text-white">
+                  {index + 1}
+                </span>
+                {code}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    )}
+  </div>
+);
+
 const DetailPurchases = ({ purchase, onClose, loading = false }) => {
   const navigate = useNavigate();
-  
-  if (!purchase && !loading) {
-    return null;
-  }
-
-  const fmt = (n) =>
-    typeof n === "number"
-      ? n.toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-      : n ?? "-";
-
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 5;
+  const products = Array.isArray(purchase?.productos) ? purchase.productos : [];
 
-  const productos = Array.isArray(purchase?.productos) ? purchase.productos : [];
-  
   const currentProducts = useMemo(() => {
     const start = (currentPage - 1) * productsPerPage;
-    return productos.slice(start, start + productsPerPage);
-  }, [currentPage, productos]);
+    return products.slice(start, start + productsPerPage);
+  }, [currentPage, products]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [productos]);
+  }, [products]);
 
-  const isAnulada        = purchase?.estado === "Anulada";
-  const isCompletadaStar = purchase?.estado === "Completada*";
-  const isProcDevolucion = purchase?.estado === "Proc. devolución";
+  if (!purchase || loading) return null;
 
-  const ivaTotal = purchase?.ivaTotal ?? productos.reduce((sum, p) => sum + (p.ivaValor || 0), 0);
-  const precioTotal = purchase?.precioTotal ?? productos.reduce((sum, p) => sum + (p.total || p.subtotal || 0), 0);
+  const formatNumber = (value) =>
+    Number(value ?? 0).toLocaleString("es-CO", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
 
-  if (loading) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md">
-        <div className="bg-white rounded-xl shadow-2xl p-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#004D77] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando detalle...</p>
-        </div>
-      </div>
+  const formatCurrency = (value) => `$${formatNumber(value)}`;
+  const isAnnulled = purchase.estado === "Anulada";
+  const hasCompletedReturn = purchase.estado === "Completada*";
+  const isReturnInProgress = purchase.estado === "Proc. devolución";
+  const ivaTotal =
+    purchase.ivaTotal ??
+    products.reduce((sum, product) => sum + Number(product.ivaValor ?? 0), 0);
+  const purchaseTotal =
+    purchase.precioTotal ??
+    products.reduce(
+      (sum, product) =>
+        sum + Number(product.total ?? product.subtotal ?? 0),
+      0
     );
-  }
+
+  const openReturns = () => {
+    onClose();
+    navigate("/admin/purchases/returns-p", {
+      state: { openReturnForm: true, purchase },
+    });
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+    >
       <div
-        className="bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col"
-        style={{ width: "1000px", maxWidth: "95vw", maxHeight: "95vh" }}
+        onClick={(event) => event.stopPropagation()}
+        className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl"
       >
-        {/* Header */}
-        <div className="relative flex items-center px-6 py-3 shrink-0" style={{ backgroundColor: "#004D77" }}>
-          <h2 className="absolute left-1/2 transform -translate-x-1/2 text-white font-semibold text-lg">
-            Detalle De Compra
-          </h2>
-          <button onClick={onClose} className="ml-auto text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer">
-            <X className="w-5 h-5" strokeWidth={2} />
+        <div className="flex shrink-0 items-center justify-between bg-[#004D77] px-6 py-4">
+          <div className="min-w-0">
+            <h2 className="truncate text-lg font-semibold text-white">
+              Compra #{purchase.numeroFacturacion ?? purchase.id ?? "-"}
+            </h2>
+            <p className="mt-0.5 text-xs text-white/60">
+              Detalle de compra
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="cursor-pointer rounded-full p-1 text-white transition-colors hover:bg-white/20"
+            title="Cerrar"
+          >
+            <X className="h-5 w-5" strokeWidth={2} />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="px-6 py-4 text-sm text-gray-800 overflow-y-auto flex-1">
-          {/* Información general */}
-          <div className="grid grid-cols-2 gap-x-6 gap-y-2 mb-4">
-            <div>
-              <p className="text-xs text-gray-500">No. Facturación</p>
-              <p className="font-semibold text-gray-800">{purchase?.numeroFacturacion ?? "-"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Fecha</p>
-              <p className="font-semibold text-gray-800">{purchase?.fechaCompra ?? "-"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Proveedor</p>
-              <p className="font-semibold text-gray-800">{purchase?.proveedor ?? "-"}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-gray-500">Estado</p>
-              <EstadoBadge estado={purchase?.estado ?? "N/A"} />
-            </div>
-          </div>
-
-          {/* Cantidad de productos */}
-          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-            <p className="text-sm">
-              <strong>Cantidad total de productos:</strong> {purchase?.cantidadProductos ?? 0} unidades
-            </p>
-            <p className="text-sm mt-1">
-              <strong>Total de la compra:</strong> ${fmt(precioTotal)}
-            </p>
-          </div>
-
-          {/* Motivo de anulación */}
-          {isAnulada && purchase?.motivoAnulacion && (
-            <div className="flex gap-2.5 items-start rounded-lg px-3 py-2.5 mb-4 text-xs" style={{ backgroundColor: "#fff1f2", border: "1px solid #fecaca" }}>
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#b91c1c" }} strokeWidth={1.8} />
+        <div className="flex-1 overflow-y-auto">
+          {isAnnulled && (
+            <div className="mx-4 mt-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 shadow-sm">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
               <div>
-                <p className="font-semibold mb-0.5" style={{ color: "#b91c1c" }}>Motivo de anulación</p>
-                <p style={{ color: "#7f1d1d" }}>{purchase.motivoAnulacion}</p>
+                <p className="text-xs font-semibold text-red-600">Compra anulada</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-red-500">
+                  {purchase.motivoAnulacion || "Sin motivo registrado."}
+                </p>
               </div>
             </div>
           )}
 
-          {/* Completada* */}
-          {isCompletadaStar && (
-            <div className="flex gap-2.5 items-start rounded-lg px-3 py-2.5 mb-4 text-xs" style={{ backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0" }}>
-              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#15803d" }} strokeWidth={1.8} />
-              <p style={{ color: "#166534" }}>Esta compra ha pasado por un proceso de devolución.</p>
+          {hasCompletedReturn && (
+            <div className="mx-4 mt-4 flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-sm">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+              <div>
+                <p className="text-xs font-semibold text-emerald-700">
+                  Proceso de devolución completado
+                </p>
+                <p className="mt-0.5 text-xs text-emerald-600">
+                  Esta compra ha pasado por un proceso de devolución.
+                </p>
+              </div>
             </div>
           )}
 
-          {/* Proc. devolución */}
-          {isProcDevolucion && (
-            <div className="flex gap-2.5 items-start rounded-lg px-3 py-2.5 mb-4 text-xs" style={{ backgroundColor: "#fefce8", border: "1px solid #fde68a" }}>
-              <Clock className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#a16207" }} strokeWidth={1.8} />
-              <p style={{ color: "#854d0e" }}>
-                Esta compra tiene un proceso de devolución en curso.{" "}
-                <button
-                  onClick={() => {
-                    onClose();
-                    navigate("/admin/purchases/returns-p", {
-                      state: { openReturnForm: true, purchase },
-                    });
-                  }}
-                  className="font-semibold underline underline-offset-2 cursor-pointer transition-opacity hover:opacity-75"
-                  style={{ color: "#a16207" }}
-                >
-                  Pulse aquí para ir a Devoluciones en Compras.
-                </button>
-              </p>
+          {isReturnInProgress && (
+            <div className="mx-4 mt-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
+              <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <div>
+                <p className="text-xs font-semibold text-amber-700">
+                  Devolución en proceso
+                </p>
+                <p className="mt-0.5 text-xs leading-relaxed text-amber-600">
+                  Esta compra tiene una devolución en curso.{" "}
+                  <button
+                    type="button"
+                    onClick={openReturns}
+                    className="cursor-pointer font-semibold underline underline-offset-2 hover:text-amber-800"
+                  >
+                    Ir a devoluciones
+                  </button>
+                </p>
+              </div>
             </div>
           )}
 
-          {/* Tabla de productos */}
-          <div className="mt-4">
-            <h3 className="text-sm font-semibold text-gray-800 mb-3">Productos comprados</h3>
-            {productos.length === 0 ? (
-              <p className="text-xs text-gray-500">No hay productos registrados en esta compra.</p>
+          <div className="grid grid-cols-1 divide-y divide-gray-100 md:grid-cols-2 md:divide-x md:divide-y-0">
+            <div className="px-6 py-5">
+              <SectionTitle>Información general</SectionTitle>
+              <DetailRow
+                icon={FileText}
+                label="No. facturación"
+                value={purchase.numeroFacturacion}
+                highlight
+              />
+              <DetailRow
+                icon={Calendar}
+                label="Fecha de compra"
+                value={purchase.fechaCompra}
+              />
+              <DetailRow
+                icon={Truck}
+                label="Proveedor"
+                value={purchase.proveedor}
+              />
+              <DetailRow
+                icon={PackageCheck}
+                label="Estado"
+                value={<EstadoBadge estado={purchase.estado} />}
+              />
+            </div>
+
+            <div className="px-6 py-5">
+              <SectionTitle>Resumen de compra</SectionTitle>
+              <DetailRow
+                icon={Package}
+                label="Unidades compradas"
+                value={`${purchase.cantidadProductos ?? 0} unidades`}
+              />
+              <DetailRow
+                icon={Barcode}
+                label="Productos registrados"
+                value={`${products.length} líneas`}
+              />
+              <DetailRow
+                icon={DollarSign}
+                label="IVA total"
+                value={formatCurrency(ivaTotal)}
+              />
+              <DetailRow
+                icon={DollarSign}
+                label="Total de la compra"
+                value={formatCurrency(purchaseTotal)}
+                highlight
+              />
+            </div>
+          </div>
+
+          <div className="border-t border-gray-100 px-6 py-5">
+            <SectionTitle>Productos comprados</SectionTitle>
+
+            {products.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-gray-200 py-10">
+                <Package className="h-7 w-7 text-gray-300" strokeWidth={1.5} />
+                <p className="text-xs text-gray-400">
+                  No hay productos registrados en esta compra
+                </p>
+              </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-xs">
-                  <thead>
-                    <tr className="text-left border-b border-gray-300">
-                      <th className="pb-2 font-semibold text-gray-700">Producto</th>
-                      <th className="pb-2 font-semibold text-gray-700">Código Barras</th>
-                      <th className="pb-2 font-semibold text-gray-700 text-center">Cantidad</th>
-                      <th className="pb-2 font-semibold text-gray-700 text-right">Valor Unit</th>
-                      <th className="pb-2 font-semibold text-gray-700 text-center">%IVA</th>
-                      <th className="pb-2 font-semibold text-gray-700 text-right">IVA</th>
-                      <th className="pb-2 font-semibold text-gray-700 text-right">Subtotal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentProducts.map((p, i) => (
-                      <tr key={p.id || i} className="border-b border-gray-100">
-                        <td className="py-2">{p.nombre ?? "-"}</td>
-                        <td className="py-2">
-                          <BarcodeCell codigoBarras={p.codigoBarras} codigosExtra={p.codigosExtra || []} />
-                        </td>
-                        <td className="py-2 text-center">{p.cantidad ?? 0}</td>
-                        <td className="py-2 text-right">${fmt(p.valorUnit)}</td>
-                        <td className="py-2 text-center">{p.iva ?? 0}%</td>
-                        <td className="py-2 text-right">${fmt(p.ivaValor)}</td>
-                        <td className="py-2 text-right">${fmt(p.subtotal)}</td>
+              <>
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                  <table className="min-w-[850px] w-full">
+                    <thead className="bg-[#004D77]/5">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                          Producto
+                        </th>
+                        <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                          Código de barras
+                        </th>
+                        <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                          Cant.
+                        </th>
+                        <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                          Valor unit.
+                        </th>
+                        <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                          IVA
+                        </th>
+                        <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                          Valor IVA
+                        </th>
+                        <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                          Subtotal
+                        </th>
                       </tr>
-                    ))}
-                    {/* Totales */}
-                    <tr className="border-t border-gray-300">
-                      <td colSpan={5} className="pt-2 pb-1 font-bold text-sm text-right">IVA Total</td>
-                      <td colSpan={2} className="pt-2 pb-1 font-bold text-sm text-right">${fmt(ivaTotal)}</td>
-                    </tr>
-                    <tr className="border-t border-gray-200">
-                      <td colSpan={5} className="py-2 font-bold text-sm text-right">Total Compra</td>
-                      <td colSpan={2} className="py-2 font-bold text-sm text-right text-[#004D77]">${fmt(precioTotal)}</td>
-                    </tr>
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {currentProducts.map((product, index) => (
+                        <tr
+                          key={product.id ?? `${product.codigoBarras}-${index}`}
+                          className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                        >
+                          <td className="px-3 py-2 text-xs font-medium text-gray-800">
+                            {product.nombre ?? "-"}
+                          </td>
+                          <td className="px-3 py-2">
+                            <BarcodeCell
+                              codigoBarras={product.codigoBarras}
+                              codigosExtra={product.codigosExtra ?? []}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-center text-xs font-medium text-gray-600">
+                            {product.cantidad ?? 0}
+                          </td>
+                          <td className="px-3 py-2 text-right text-xs text-gray-600">
+                            {formatCurrency(product.valorUnit)}
+                          </td>
+                          <td className="px-3 py-2 text-center text-xs text-gray-600">
+                            {product.iva ?? 0}%
+                          </td>
+                          <td className="px-3 py-2 text-right text-xs text-gray-600">
+                            {formatCurrency(product.ivaValor)}
+                          </td>
+                          <td className="px-3 py-2 text-right text-xs font-semibold text-gray-800">
+                            {formatCurrency(product.subtotal)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="mt-3 ml-auto w-full max-w-sm overflow-hidden rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-2">
+                    <span className="text-xs font-medium text-gray-500">IVA total</span>
+                    <span className="text-sm font-semibold text-gray-700">
+                      {formatCurrency(ivaTotal)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between bg-[#004D77] px-4 py-2.5">
+                    <span className="text-xs font-bold uppercase tracking-wide text-white/80">
+                      Total compra
+                    </span>
+                    <span className="text-base font-bold text-white">
+                      {formatCurrency(purchaseTotal)}
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {products.length > productsPerPage && (
+              <div className="mt-4 flex justify-center">
+                <Pagination
+                  totalProducts={products.length}
+                  productsPerPage={productsPerPage}
+                  currentPage={currentPage}
+                  setCurrentPage={setCurrentPage}
+                />
               </div>
             )}
           </div>
+        </div>
 
-          {/* Paginador */}
-          {productos.length > productsPerPage && (
-            <div className="mt-4 flex justify-center">
-              <Pagination
-                totalProducts={productos.length}
-                productsPerPage={productsPerPage}
-                currentPage={currentPage}
-                setCurrentPage={setCurrentPage}
-              />
-            </div>
-          )}
-
-          {/* Botón cerrar */}
-          <div className="flex justify-center mt-6">
-            <button
-              onClick={onClose}
-              className="px-6 py-2 rounded-lg text-white text-sm bg-gray-500 hover:bg-gray-600 transition-all duration-200"
-            >
-              Cerrar
-            </button>
-          </div>
+        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="cursor-pointer rounded-lg bg-gray-500 px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-600"
+          >
+            Cerrar
+          </button>
         </div>
       </div>
     </div>

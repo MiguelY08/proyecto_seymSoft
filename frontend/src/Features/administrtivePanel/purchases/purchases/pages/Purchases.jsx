@@ -10,6 +10,9 @@ import { Plus, FileSpreadsheet } from "lucide-react";
 import { getAllPurchases, annulPurchase, getPurchaseById } from "../data/purchasesService";
 import Spinner from "../../../../shared/spinner"; // ← IMPORTAR SPINNER
 import * as XLSX from "xlsx";
+import PaginationAdmin from "../../../../shared/PaginationAdmin";
+import { exportPurchasesExcel } from "../helpers/purchasesExcel";
+import FullScreenSpinner from "../../../../shared/spinner/FullScreenSpinner";
 
 export const Purchases = () => {
   const [products, setProducts] = useState([]);
@@ -22,6 +25,7 @@ export const Purchases = () => {
   const [selectedPurchase, setSelectedPurchase] = useState(null);
   const [selectedPurchaseDetail, setSelectedPurchaseDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [annulLoading, setAnnulLoading] = useState(false);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const { showSuccess, showError, showInfo } = useAlert();
   const navigate = useNavigate();
@@ -37,7 +41,6 @@ export const Purchases = () => {
         endDate: fechaFinal,
       });
       
-      console.log('📊 Purchases loaded:', result.data);
       setProducts(result.data);
       setPagination(result.pagination);
     } catch (err) {
@@ -67,12 +70,14 @@ export const Purchases = () => {
 
   const confirmCancelPurchase = async (motivo) => {
     try {
+      setAnnulLoading(true);
       await annulPurchase(cancelPurchase.id, motivo);
       await fetchPurchases();
       showSuccess("Compra Anulada", "La compra fue anulada correctamente.");
     } catch (err) {
       showError("Error", err.message || "No se pudo anular la compra.");
     } finally {
+      setAnnulLoading(false);
       setCancelPurchase(null);
     }
   };
@@ -103,7 +108,7 @@ export const Purchases = () => {
     showSuccess("Filtros limpiados", "Todos los filtros han sido eliminados");
   };
 
-  const handleDownloadExcel = () => {
+  const handleDownloadExcelLegacy = () => {
     if (products.length === 0) {
       showInfo("Sin datos", "No hay compras para exportar.");
       return;
@@ -200,20 +205,35 @@ export const Purchases = () => {
     }
   };
 
-  const totalPages = pagination.totalPages || 1;
-  const startIndex = (currentPage - 1) * 13;
-  const endIndex = startIndex + 13;
-  const currentData = products;
+  const handleDownloadExcel = async () => {
+    if (products.length === 0) {
+      showInfo("Sin datos", "No hay compras para exportar.");
+      return;
+    }
 
-  // ✅ USAR SPINNER IGUAL QUE EN PROVIDERS Y CATEGORÍAS
+    try {
+      await exportPurchasesExcel(products);
+      showSuccess(
+        "Exportación exitosa",
+        "El archivo Excel se generó correctamente."
+      );
+    } catch {
+      showError("Error", "No se pudo exportar el archivo.");
+    }
+  };
+
+  const currentData = products;
+  const totalRecords = pagination.total || 0;
+  const isSearching = Boolean(search || fechaInicial || fechaFinal);
+
   if (loading && products.length === 0) {
     return <Spinner message="Cargando compras..." />;
   }
 
   return (
     <>
-      <div className="h-full flex flex-col gap-0.5 p-3 sm:p-3">
-        <div className="flex flex-wrap items-end gap-3 mb-3">
+      <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
+        <div className="flex flex-wrap items-end gap-3">
           <PurchasesFilters
             search={search}
             setSearch={setSearch}
@@ -231,40 +251,45 @@ export const Purchases = () => {
               className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
             >
               <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
-              <span className="hidden sm:inline">Export Excel</span>
+              <span className="hidden sm:inline">Exportar Excel</span>
             </button>
             <Link
               to="/admin/purchases/create"
               className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 whitespace-nowrap"
             >
-              <span className="hidden sm:inline">Crear Compra</span>
+              <span className="hidden sm:inline">Nueva</span>
               <Plus className="w-4 h-4" strokeWidth={2} />
             </Link>
           </div>
         </div>
 
-        {products.length === 0 && !loading && (
-          <p className="text-gray-500">No hay compras registradas aún.</p>
-        )}
+        <div className="bg-white rounded-xl shadow-md">
+          <PurchasesTable
+            currentData={currentData}
+            handleCancel={handleCancel}
+            handleViewDetail={handleViewDetail}
+            handleReturn={handleReturn}
+            search={search}
+            isSearching={isSearching}
+          />
+        </div>
 
-        {products.length > 0 && (
-          <div className="flex-1 overflow-auto min-h-0">
-            <PurchasesTable
-              currentData={currentData}
-              filteredProducts={products}
-              currentPage={currentPage}
-              setCurrentPage={setCurrentPage}
-              totalPages={totalPages}
-              startIndex={startIndex}
-              endIndex={endIndex}
-              handleCancel={handleCancel}
-              handleViewDetail={handleViewDetail}
-              handleReturn={handleReturn}
-              search={search}
-            />
-          </div>
+        {totalRecords > 0 && (
+          <PaginationAdmin
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            totalRecords={totalRecords}
+            recordsPerPage={13}
+          />
         )}
       </div>
+
+      {loadingDetail && (
+        <FullScreenSpinner message="Cargando detalle de la compra..." />
+      )}
+      {annulLoading && (
+        <FullScreenSpinner message="Anulando compra..." />
+      )}
 
       {selectedPurchaseDetail && (
         <DetailPurchases 

@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import ButtonComponent from "../../../../shared/ButtonComponent";
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
+import { exportPurchaseReturnsExcel } from "../helpers/returnsExcel";
 
 const formatDate = (dateStr) => {
   if (!dateStr) return "";
@@ -46,7 +47,7 @@ function TopBar({
 
   const hayFiltrosActivos = Boolean(search || fechaInicial || fechaFinal);
 
-  const handleDownload = () => {
+  const handleDownloadLegacy = () => {
     if (returns.length === 0) {
       showWarning("Sin registros", "No hay devoluciones en la pagina actual para exportar.");
       return;
@@ -162,6 +163,39 @@ function TopBar({
 
       showTimer("success", "Descarga completada", "El resumen de devoluciones se genero correctamente.", 4000);
     });
+  };
+
+  const handleDownload = async () => {
+    if (returns.length === 0) {
+      showWarning(
+        "Sin registros",
+        "No hay devoluciones en la página actual para exportar."
+      );
+      return;
+    }
+
+    const result = await showConfirm(
+      "question",
+      "Descargar resumen",
+      `Se exportarán ${returns.length} devolución${
+        returns.length !== 1 ? "es" : ""
+      } de la página actual.`,
+      { confirmButtonText: "Descargar", cancelButtonText: "Cancelar" }
+    );
+
+    if (!result?.isConfirmed) return;
+
+    try {
+      await exportPurchaseReturnsExcel(returns);
+      showTimer(
+        "success",
+        "Descarga completada",
+        "El resumen de devoluciones se generó correctamente.",
+        4000
+      );
+    } catch {
+      showWarning("Error", "No se pudo generar el archivo Excel.");
+    }
   };
 
   return (

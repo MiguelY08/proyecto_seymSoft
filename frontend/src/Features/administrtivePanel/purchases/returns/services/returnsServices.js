@@ -208,6 +208,39 @@ const getDetailUnitPrice = (detail) =>
 const getDetailTaxPercentage = (detail) =>
   Number(detail?.purchaseDetail?.taxPercentage ?? detail?.taxPercentage ?? 0);
 
+const getDetailReturnAvailability = (detail) => {
+  const purchaseDetail = detail?.purchaseDetail ?? {};
+  const availability = purchaseDetail?.returnAvailability ?? {};
+  const purchasedQuantity = Number(
+    purchaseDetail?.purchasedQuantity ??
+    availability?.purchasedQuantity ??
+    purchaseDetail?.quantity ??
+    0
+  );
+  const reservedQuantity = Number(
+    purchaseDetail?.returnReservedQuantity ??
+    availability?.reservedQuantity ??
+    0
+  );
+  const finalReturnedQuantity = Number(
+    purchaseDetail?.finalReturnedQuantity ??
+    availability?.finalReturnedQuantity ??
+    0
+  );
+  const availableQuantity = Number(
+    purchaseDetail?.returnAvailableQuantity ??
+    availability?.availableQuantity ??
+    purchasedQuantity
+  );
+
+  return {
+    purchasedQuantity,
+    reservedQuantity,
+    finalReturnedQuantity,
+    availableQuantity,
+  };
+};
+
 export const mapPurchaseReturnToDetail = (purchaseReturn) => {
   if (!purchaseReturn) return null;
 
@@ -265,6 +298,7 @@ export const mapPurchaseReturnToDetail = (purchaseReturn) => {
       const reason = getReasonLabel(detail.reason);
       const method = getLabel(detail.method);
       const detailStatus = getLabel(detail.status);
+      const returnAvailability = getDetailReturnAvailability(detail);
 
       return {
         id: detail.id,
@@ -281,7 +315,11 @@ export const mapPurchaseReturnToDetail = (purchaseReturn) => {
         barcodeId: detail.barcodeId ?? detail.purchaseDetail?.barcodeId ?? barcode?.id ?? null,
         valorUnit: getDetailUnitPrice(detail),
         iva: getDetailTaxPercentage(detail),
-        cantidadComprada: Number(detail.purchaseDetail?.quantity ?? detail.quantity ?? 0),
+        cantidadComprada: returnAvailability.purchasedQuantity,
+        cantidadDisponibleDevolucion: returnAvailability.availableQuantity,
+        cantidadDevueltaDefinitiva: returnAvailability.finalReturnedQuantity,
+        cantidadReservadaDevolucion: returnAvailability.reservedQuantity,
+        returnAvailability,
         cantidadDevolver: Number(detail.quantity ?? 0),
         supplierDate: detail.supplierDate ?? null,
         motivo: reason,
