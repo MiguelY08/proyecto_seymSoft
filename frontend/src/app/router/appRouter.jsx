@@ -38,6 +38,8 @@ import InfoUser from "../../Features/administrtivePanel/users/components/InfoUse
 /* PURCHASES */
 import CategoriesPage from "../../Features/administrtivePanel/purchases/categories/pages/CategoriesPage.jsx"; 
 import Products from "../../Features/administrtivePanel/purchases/products/pages/Products.jsx";
+import CreateProductPage from "../../Features/administrtivePanel/purchases/products/pages/CreateProductPage.jsx";
+import EditProductPage from "../../Features/administrtivePanel/purchases/products/pages/EditProductPage.jsx";
 import ProvidersPage from "../../Features/administrtivePanel/purchases/providers/page/ProvidersPage.jsx";
 import Purchases from "../../Features/administrtivePanel/purchases/purchases/pages/Purchases.jsx";
 // import CreatePurchase from "../../Features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx";
@@ -69,10 +71,6 @@ import AccountDetailsPage from "../../Features/administrtivePanel/sales/payments
 import RolesPage from "../../Features/administrtivePanel/configuration/roles/page/RolesPage.jsx";
 import Banners from "../../Features/administrtivePanel/configuration/carousel/pages/Banner.jsx";
 import PermissionGuard from "../../Features/administrtivePanel/configuration/roles/guards/PermissionGuard.jsx";
-
-/* PRODUCTS */
-import FormProduct from "../../Features/administrtivePanel/purchases/products/modals/CreateProduct.jsx";
-import EditProduct from "../../Features/administrtivePanel/purchases/products/modals/EditProduct.jsx";
 
 const AppRouter = () => {
   return (
@@ -126,6 +124,28 @@ const AppRouter = () => {
           {/* PURCHASES */}
           <Route path="purchases/categories" element={<CategoriesPage />} />
           <Route path="purchases/products" element={<Products />} />
+          <Route
+            path="purchases/products/new"
+            element={
+              <PermissionGuard
+                permission="productos.crear"
+                fallback={<Navigate to="/admin/purchases/products" replace />}
+              >
+                <CreateProductPage />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="purchases/products/:id/edit"
+            element={
+              <PermissionGuard
+                permission="productos.editar"
+                fallback={<Navigate to="/admin/purchases/products" replace />}
+              >
+                <EditProductPage />
+              </PermissionGuard>
+            }
+          />
           <Route path="purchases/providers" element={<ProvidersPage />} />
           <Route path="purchases" element={<Purchases />} />
           <Route path="purchases/create" element={<CreatePurchase />} />

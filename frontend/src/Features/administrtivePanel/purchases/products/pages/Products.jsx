@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import {
   Search,
   Plus,
@@ -17,8 +17,6 @@ import ActiveToggle from "../components/ActiveToggle";
 import ProductsPagination from "../components/ProductsPagination";
 import ProductsToolbar from "../components/ProductsToolbar";
 import DetailProduct from "../modals/DetailProduct";
-import CreateProduct from "../modals/CreateProduct";
-import EditProduct from "../modals/EditProduct";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import Spinner from "../../../../shared/spinner";
 import ProductsService from "../services/productsServices";
@@ -83,6 +81,7 @@ function EmptyState({ onCreateProduct, canCreate }) {
 function Products() {
   const { showConfirm, showSuccess, showError } = useAlert();
   const { hasPermission } = usePermissions();
+  const navigate = useNavigate();
 
   const canCreate = hasPermission("productos.crear");
   const canEdit = hasPermission("productos.editar");
@@ -98,27 +97,11 @@ function Products() {
   const [filterSubcategory, setFilterSubcategory] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
-  const [showFormModal, setShowFormModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [screenLoadingMessage, setScreenLoadingMessage] = useState("");
   const [exporting, setExporting] = useState(false);
   const [deletingIds, setDeletingIds] = useState([]);
   const [togglingIds, setTogglingIds] = useState([]);
-  const refreshData = async (message = "") => {
-    if (message) setScreenLoadingMessage(message);
-
-    try {
-      const products = await ProductsService.list();
-      setData(products || []);
-    } catch (error) {
-      console.error("Error al recargar:", error);
-      showError("Error de carga", "No se pudieron actualizar los productos.");
-    } finally {
-      if (message) setScreenLoadingMessage("");
-    }
-  };
   // Cargar productos del backend
   useEffect(() => {
     const loadProducts = async () => {
@@ -170,7 +153,7 @@ function Products() {
   };
 
   useBarcodeScanner({
-    enabled: canView && canViewInfo && data.length > 0 && !showModal && !showFormModal && !showEditModal,
+    enabled: canView && canViewInfo && data.length > 0 && !showModal,
     numericOnly: true,
     minLength: 6,
     maxLength: 20,
@@ -495,41 +478,22 @@ function Products() {
       setExporting(false);
     }
   };
-  const handleProductoCreado = async () => {
-    await refreshData("Actualizando productos...");
-    setCurrentPage(1);
-    setShowFormModal(false);
-  };
-  const handleProductoActualizado = async () => {
-    await refreshData("Actualizando productos...");
-    setShowEditModal(false);
-    setSelectedProduct(null);
-  };
-
   const handleVerDetalles = (p) => {
     if (!canViewInfo) return;
     setSelectedProduct(p);
     setShowModal(true);
   };
   const handleEditarProducto = (p) => {
-    setSelectedProduct(p);
-    setShowEditModal(true);
+    navigate(`/admin/purchases/products/${p.id}/edit`);
   };
   const handleCloseModal = () => {
     setShowModal(false);
     setSelectedProduct(null);
   };
-  const handleCloseFormModal = () => {
-    setShowFormModal(false);
-  };
-  const handleCloseEditModal = () => {
-    setShowEditModal(false);
-    setSelectedProduct(null);
-  };
   const handleEditFromDetail = (p) => {
     setShowModal(false);
-    setSelectedProduct(p);
-    setShowEditModal(true);
+    setSelectedProduct(null);
+    navigate(`/admin/purchases/products/${p.id}/edit`);
   };
 
   const resetFilters = () => {
@@ -539,14 +503,8 @@ function Products() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-white">
-      {screenLoadingMessage && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-white/80 backdrop-blur-sm">
-          <Spinner message={screenLoadingMessage} className="min-h-0" />
-        </div>
-      )}
-
       <div
-        className={`flex min-h-0 flex-1 flex-col gap-3 bg-white p-3 sm:p-4 ${showModal || showFormModal || showEditModal ? "blur-sm" : ""}`}
+        className={`flex min-h-0 flex-1 flex-col gap-3 bg-white p-3 sm:p-4 ${showModal ? "blur-sm" : ""}`}
       >
         {/* Toolbar con busqueda, filtros y acciones */}
         {!loading && canView && data.length > 0 && (
@@ -566,7 +524,7 @@ function Products() {
               exporting={exporting}
               onExport={handleExportExcel}
               canCreate={canCreate}
-              onCreate={() => setShowFormModal(true)}
+              onCreate={() => navigate('/admin/purchases/products/new')}
             />
           </div>
         )}
@@ -593,7 +551,7 @@ function Products() {
         ) : data.length === 0 ? (
           <EmptyState
             canCreate={canCreate}
-            onCreateProduct={() => setShowFormModal(true)}
+            onCreateProduct={() => navigate('/admin/purchases/products/new')}
           />
         ) : filteredData.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4">
@@ -835,19 +793,6 @@ function Products() {
           onEdit={handleEditFromDetail}
         />
       )}
-      <CreateProduct
-        isOpen={showFormModal}
-        onClose={handleCloseFormModal}
-        onCreate={handleProductoCreado}
-        existingProducts={data}
-      />
-      <EditProduct
-        producto={selectedProduct}
-        isOpen={showEditModal}
-        onClose={handleCloseEditModal}
-        onUpdate={handleProductoActualizado}
-        existingProducts={data}
-      />
     </div>
   );
 }
