@@ -11,18 +11,21 @@ function CategorySelector({
   onToggleExpand,
   error,
   idPrefix = 'cat',
+  compact = false,
 }) {
   const selectedCategories = new Set(selectedCategoryIds.map(Number));
   const selectedSubcategories = new Set(selectedSubcategoryIds.map(Number));
 
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-700 mb-1.5">
+      <label className="block text-sm font-medium text-gray-700 mb-1.5">
         Categorias <span className="text-red-500">*</span>
       </label>
 
       <div
-        className={`border rounded-lg p-2 h-[200px] overflow-y-auto transition-colors duration-200 ${
+        className={`border rounded-lg p-2 overflow-y-auto transition-colors duration-200 ${
+          compact ? 'h-[132px]' : 'h-[200px]'
+        } ${
           error ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white focus-within:border-[#004D77] focus-within:ring-2 focus-within:ring-[#004D77]/20'
         }`}
       >
@@ -36,7 +39,7 @@ function CategorySelector({
             const checkedSubCount = subsCat.filter((sub) => selectedSubcategories.has(Number(sub.id))).length;
 
             return (
-              <div key={cat.id} className="mb-2 last:mb-0 overflow-hidden rounded-lg border border-gray-200 bg-white">
+              <div key={cat.id} className="mb-2 last:mb-0 overflow-hidden rounded-lg border border-gray-200 bg-white transition-colors duration-150">
                 <div className="flex items-center gap-2 px-2.5 py-2 transition-colors hover:bg-[#004D77]/5">
                   <input
                     type="checkbox"

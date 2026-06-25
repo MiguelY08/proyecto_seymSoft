@@ -188,7 +188,7 @@ export default function HeaderSidebar() {
 
   return (
     <>
-      <header className="w-full h-16 flex items-center justify-between px-4 md:px-6 bg-[#F0F0F0] border-b border-slate-200 font-lexend">
+      <header className="w-full h-16 flex items-center justify-between pl-14 pr-4 md:px-6 bg-[#F0F0F0] border-b border-slate-200 font-lexend">
         {/* ─────────────────────────────
         BREADCRUMB
         ───────────────────────────── */}

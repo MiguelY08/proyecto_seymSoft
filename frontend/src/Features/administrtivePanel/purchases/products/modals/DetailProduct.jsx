@@ -10,6 +10,7 @@ import {
   Hash,
   DollarSign,
   Image as ImageIcon,
+  Maximize2,
 } from 'lucide-react';
 
 function DetailRow({ icon: Icon, label, value, placeholder = 'No especificado', highlight = false }) {
@@ -81,10 +82,12 @@ function PriceCard({ label, value }) {
 function DetailProduct({ producto, isOpen, onClose }) {
   const [images, setImages] = useState([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isImageExpanded, setIsImageExpanded] = useState(false);
 
   useEffect(() => {
     setImages(producto?.images || []);
     setSelectedImageIndex(0);
+    setIsImageExpanded(false);
   }, [producto]);
 
   if (!isOpen || !producto) return null;
@@ -98,6 +101,7 @@ function DetailProduct({ producto, isOpen, onClose }) {
     : '';
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl flex flex-col overflow-hidden max-h-[90vh]">
         {/* Header */}
@@ -124,17 +128,28 @@ function DetailProduct({ producto, isOpen, onClose }) {
 
               {images.length > 0 ? (
                 <div className="w-full">
-                  <div className="relative overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setIsImageExpanded(true)}
+                    className="group relative block w-full cursor-pointer overflow-hidden rounded-lg border border-gray-200 bg-white text-left shadow-sm"
+                    title="Ampliar imagen"
+                  >
                     <img
                       src={selectedImage?.url}
                       alt={producto.name}
-                      className="w-full aspect-square object-contain bg-white"
+                      className="w-full aspect-square object-contain bg-white transition-transform duration-300 group-hover:scale-[1.02]"
                     />
 
                     <span className="absolute left-3 top-3 rounded-md bg-black/60 px-2 py-1 text-[10px] font-semibold text-white">
                       {selectedImageIndex + 1} / {images.length}
                     </span>
-                  </div>
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-200 group-hover:bg-black/30 group-hover:opacity-100">
+                      <span className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-[#004D77] shadow-lg">
+                        <Maximize2 className="h-4 w-4" />
+                        Ampliar imagen
+                      </span>
+                    </span>
+                  </button>
 
                   {images.length > 1 && (
                     <div className="mt-3 grid grid-cols-5 gap-2">
@@ -334,6 +349,29 @@ function DetailProduct({ producto, isOpen, onClose }) {
         </div>
       </div>
     </div>
+    {isImageExpanded && selectedImage?.url && (
+      <div
+        className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4"
+        onClick={() => setIsImageExpanded(false)}
+      >
+        <div className="relative max-h-[92vh] max-w-6xl" onClick={(event) => event.stopPropagation()}>
+          <img
+            src={selectedImage.url}
+            alt={producto.name}
+            className="max-h-[88vh] max-w-full rounded-xl object-contain shadow-2xl"
+          />
+          <button
+            type="button"
+            onClick={() => setIsImageExpanded(false)}
+            className="absolute -right-3 -top-3 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white text-gray-700 shadow-lg hover:bg-gray-100"
+            title="Cerrar imagen"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 

@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from "react";
 import {
   Eraser,
   FileSpreadsheet,
@@ -29,25 +28,6 @@ function ProductsToolbar({
   canCreate,
   onCreate,
 }) {
-  const [isSearchOpen, setIsSearchOpen] = useState(Boolean(search));
-  const searchWrapperRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        isSearchOpen &&
-        !search.trim() &&
-        searchWrapperRef.current &&
-        !searchWrapperRef.current.contains(event.target)
-      ) {
-        setIsSearchOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isSearchOpen, search]);
-
   const categoryOptions = [
     { value: "all", label: "Todas las categorías" },
     ...categories.map((category) => ({ value: category, label: category })),
@@ -61,51 +41,35 @@ function ProductsToolbar({
   ];
 
   return (
-    <div className="flex shrink-0 items-center justify-between gap-2 sm:gap-3">
-      <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
-        <div
-          ref={searchWrapperRef}
-          className={`relative shrink-0 transition-all duration-300 ease-out ${
-            isSearchOpen ? "w-64" : "w-10"
-          }`}
-        >
-          {isSearchOpen ? (
-            <>
-              <input
-                type="text"
-                data-scanner-field="product-search"
-                placeholder="Buscar"
-                value={search}
-                autoFocus
-                onChange={(event) => onSearchChange(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-4 pr-10 text-sm text-gray-700 outline-none placeholder:text-gray-400 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  onSearchChange("");
-                  setIsSearchOpen(false);
-                }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-[#004D77]"
-                title="Cerrar búsqueda"
-              >
-                <X className="h-4 w-4" strokeWidth={2} />
-              </button>
-            </>
-          ) : (
+    <div className="flex shrink-0 items-center justify-between gap-3 sm:gap-4">
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none sm:gap-3">
+        <div className="relative min-w-0 flex-1 sm:flex-none sm:w-72 md:w-80">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+            strokeWidth={2}
+          />
+          <input
+            type="text"
+            data-scanner-field="product-search"
+            placeholder="Buscar producto por nombre, código o referencia..."
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-10 text-sm text-gray-700 outline-none placeholder:text-gray-400 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
+          />
+          {search && (
             <button
               type="button"
-              onClick={() => setIsSearchOpen(true)}
-              className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 transition hover:border-[#004D77] hover:text-[#004D77]"
-              title="Buscar"
+              onClick={() => onSearchChange("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 transition hover:text-[#004D77]"
+              title="Limpiar búsqueda"
             >
-              <Search className="h-4 w-4" strokeWidth={2} />
+              <X className="h-4 w-4" strokeWidth={2} />
             </button>
           )}
         </div>
 
         {categories.length > 0 && (
-          <div className={`shrink-0 transition-all duration-300 ${isSearchOpen ? "w-40" : "w-52"}`}>
+          <div className="w-36 shrink-0">
             <FormSelect
               value={filterCategory}
               options={categoryOptions}
@@ -118,7 +82,7 @@ function ProductsToolbar({
         )}
 
         {subcategories.length > 0 && (
-          <div className={`shrink-0 transition-all duration-300 ${isSearchOpen ? "w-40" : "w-52"}`}>
+          <div className="w-36 shrink-0">
             <FormSelect
               value={filterSubcategory}
               options={subcategoryOptions}
@@ -134,7 +98,7 @@ function ProductsToolbar({
           <button
             type="button"
             onClick={onClearFilters}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 transition hover:bg-gray-100 hover:text-gray-800"
+            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 transition hover:bg-gray-100 hover:text-gray-800"
             title="Limpiar filtros"
           >
             <Eraser className="h-4 w-4" strokeWidth={2} />

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 
 import {
   Home,
@@ -21,8 +21,6 @@ import {
   CreditCard,
 } from "lucide-react";
 
-import { useLocation } from "react-router-dom";
-
 import SidebarItem from "./SidebarItem";
 
 import HorizontalLogo from "../../assets/PMLogo_Horizontal.png";
@@ -34,19 +32,28 @@ import {
 const ADMIN_BASE = "/admin";
 
 export default function Sidebar() {
+  const { hasPermission } = usePermissions();
+  const [isOpen, setIsOpen] = useState(false);
+  const [openItem, setOpenItem] = useState(null);
+  useEffect(() => {
+    if (!isOpen) return undefined;
 
-  const {
-    hasPermission
-  } = usePermissions();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
-  const [isOpen,setIsOpen] =
-    useState(false);
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
 
-  const [openItem,setOpenItem] =
-    useState(null);
+    document.addEventListener("keydown", handleKeyDown);
 
-  const { pathname } =
-    useLocation();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
 
   // ─────────────────────────────
   // CONFIGURACIÓN DINÁMICA
@@ -61,14 +68,7 @@ export default function Sidebar() {
       label: "Usuarios",
       icon: Users,
       permission: "usuarios.ver",
-      children: [
-        {
-          label: "Usuarios",
-          href: `${ADMIN_BASE}/users`,
-          icon: Users,
-          permission: "usuarios.ver"
-        }
-      ]
+      href: `${ADMIN_BASE}/users`
     },
     {
       label: "Compras",
@@ -172,8 +172,7 @@ export default function Sidebar() {
   // FILTRAR SIDEBAR
   // ─────────────────────────────
   const filteredSidebar =
-    useMemo(() => {
-      return sidebarConfig
+      sidebarConfig
         .map((item) => {
 
           // ITEM SIMPLE
@@ -211,7 +210,6 @@ export default function Sidebar() {
           };
         })
         .filter(Boolean);
-    }, [hasPermission]);
 
   // ─────────────────────────────
   // FILTRAR CONFIG
@@ -228,10 +226,11 @@ export default function Sidebar() {
     <>
       {/* BOTÓN MOBILE */}
       <button
-        onClick={() =>
-          setIsOpen(true)
-        }
-        className="md:hidden p-3"
+        type="button"
+        onClick={() => setIsOpen(true)}
+        className="fixed left-3 top-3 z-30 flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-[#004D77] transition-colors hover:bg-[#004D77]/10 md:hidden"
+        aria-label="Abrir menú de navegación"
+        aria-expanded={isOpen}
       >
         <Menu size={24} />
       </button>
@@ -240,23 +239,25 @@ export default function Sidebar() {
       {
         isOpen && (
           <div
-            className="fixed inset-0 bg-black/40 z-40 md:hidden"
-            onClick={() =>
-              setIsOpen(false)
-            }
+            role="presentation"
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px] animate-in fade-in duration-200 md:hidden"
+            onClick={() => setIsOpen(false)}
+            aria-hidden="true"
           />
         )
       }
 
       {/* SIDEBAR */}
       <aside
+        aria-label="Menú principal"
         className={`
           font-lexend
           fixed md:static top-0 left-0 z-50
-          w-64 min-h-screen flex flex-col
+          h-dvh w-64 max-w-[85vw] md:h-screen md:max-w-none flex flex-col
           bg-[#F0F0F0]
           border-r border-slate-200
-          transform transition-transform duration-300
+          shadow-xl md:shadow-none
+          transform transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
           ${
             isOpen
               ? "translate-x-0"
@@ -277,18 +278,18 @@ export default function Sidebar() {
             </div>
           </div>
           <button
-            onClick={() =>
-              setIsOpen(false)
-            }
-            className="absolute top-4 right-4 md:hidden"
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="absolute top-4 right-4 flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#004D77] transition-colors hover:bg-[#004D77]/10 md:hidden"
+            aria-label="Cerrar menú de navegación"
           >
             <X size={20} />
           </button>
-          <div className="mt-3 h-[2px] w-full bg-[#004D77]" />
+          <div className="mx-2 mt-2 h-px rounded-full bg-gradient-to-r from-transparent via-[#004D77]/25 to-transparent" />
         </div>
 
         {/* NAV */}
-        <nav className="flex-1 px-2 py-3 flex flex-col gap-0.5 overflow-y-auto">
+        <nav className="flex-1 px-2 py-3 flex flex-col gap-0.5 overflow-y-auto overscroll-contain">
           {
             filteredSidebar.map((item) => (
               <SidebarItem
@@ -299,6 +300,7 @@ export default function Sidebar() {
                 children={item.children ?? []}
                 openItem={openItem}
                 setOpenItem={setOpenItem}
+                onNavigate={() => setIsOpen(false)}
               />
             ))
           }
@@ -307,7 +309,8 @@ export default function Sidebar() {
         {/* CONFIG */}
         {
           filteredConfig.length > 0 && (
-            <div className="border-t border-slate-100 px-2 py-3">
+            <div className="px-2 pb-3 pt-1">
+              <div className="mx-2 mb-3 h-px rounded-full bg-gradient-to-r from-transparent via-[#004D77]/25 to-transparent" />
               <SidebarItem
                 icon={Settings}
                 label="Configuración"
@@ -315,6 +318,7 @@ export default function Sidebar() {
                 children={filteredConfig}
                 openItem={openItem}
                 setOpenItem={setOpenItem}
+                onNavigate={() => setIsOpen(false)}
               />
               <p className="text-[10px] text-slate-400 text-center mt-2">
                 Powered by SeymsSoft © 2025
