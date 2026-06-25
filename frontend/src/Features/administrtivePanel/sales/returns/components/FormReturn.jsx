@@ -15,6 +15,7 @@ import { X, ChevronDown, ChevronLeft, Minus, Plus, Image, Search, Loader } from 
 import Evidence from './Evidence';
 import FormSelect from '../../../../shared/FormSelect';
 import { useAlert } from '../../../../shared/alerts/useAlert';
+import LoadingOverlay from '../../../../shared/LoadingOverlay';
 import {
   getProductStatesForMethod,
   getInitialStateForMethod,
@@ -23,6 +24,9 @@ import {
 import { getAvailableInvoices, getReturnableSales } from '../data/returnsService';
 
 // ======================= DATOS DE REFERENCIA =======================
+
+const onlyDigits = (value, maxLength = 4) =>
+  String(value ?? '').replace(/\D/g, '').slice(0, maxLength);
 
 const PRODUCTOS_VENTA = [];
 
@@ -63,6 +67,8 @@ const formatReasonLabel = (reason) => {
   const normalized = label.trim().toLocaleLowerCase('es-CO');
   return normalized.charAt(0).toLocaleUpperCase('es-CO') + normalized.slice(1);
 };
+
+const RETURN_SELECT_CLASS = 'h-10 py-0 rounded-xl text-sm font-medium';
 
 const getReasonId = (reasonName) => {
   const reasonMap = {
@@ -129,7 +135,8 @@ function EstadoBadgeSelect({ value, onChange, metodo, sharedStyle = true }) {
         disabled={!metodo}
         placeholder={metodo ? 'Selecciona un estado' : 'Selecciona método primero'}
         ariaLabel="Estado del producto"
-        className="py-1.5 rounded-xl text-xs"
+        className={RETURN_SELECT_CLASS}
+        placement="bottom"
       />
     );
   }
@@ -459,7 +466,16 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
 
   const configFieldClass = (configIndex, field, value, config) => {
     const hasError = (touched[`${configIndex}-${field}`] || submitted) && validateField(field, value, config);
-    return `w-full px-3 py-1.5 text-sm border rounded-xl outline-none bg-white text-gray-700 transition-colors cursor-pointer ${
+    return `h-10 w-full px-3 py-0 text-sm border rounded-xl outline-none bg-white text-gray-700 transition-colors cursor-pointer ${
+      hasError
+        ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+        : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
+    }`;
+  };
+
+  const configTextareaClass = (configIndex, field, value, config) => {
+    const hasError = (touched[`${configIndex}-${field}`] || submitted) && validateField(field, value, config);
+    return `w-full min-h-[86px] px-3 py-2.5 text-sm leading-5 border rounded-xl outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors resize-none ${
       hasError
         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
@@ -517,7 +533,8 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
                     error={Boolean((touched[`${index}-motivo`] || submitted) && validateField('motivo', config.motivo, config))}
                     placeholder="Selecciona una opción"
                     ariaLabel="Motivo de devolución"
-                    className="py-1.5 rounded-xl"
+                    className={RETURN_SELECT_CLASS}
+                    placement="bottom"
                   />
                   {renderConfigError(index, 'motivo', config.motivo, config)}
                 </div>
@@ -534,7 +551,8 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
                     error={Boolean((touched[`${index}-metodo`] || submitted) && validateField('metodo', config.metodo, config))}
                     placeholder="Selecciona una opción"
                     ariaLabel="Método de devolución"
-                    className="py-1.5 rounded-xl"
+                    className={RETURN_SELECT_CLASS}
+                    placement="bottom"
                   />
                   {renderConfigError(index, 'metodo', config.metodo, config)}
                   {config.metodo === 'Saldo a favor' && (
@@ -584,12 +602,15 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
                       <Minus className="w-3 h-3" />
                     </button>
                     <input 
-                      type="number" 
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={Math.max(1, Number(config.cantidad) || 1)}
                       min={1} 
                       max={remainingQuantity + Math.max(1, Number(config.cantidad) || 1)}
                       onChange={(e) => {
-                        const typedValue = e.target.value === '' ? 1 : Number(e.target.value);
+                        const cleanValue = onlyDigits(e.target.value);
+                        const typedValue = cleanValue === '' ? 1 : Number(cleanValue);
                         const currentValue = Math.max(1, Number(config.cantidad) || 1);
                         const newValue = Math.min(
                           remainingQuantity + currentValue,
@@ -598,7 +619,7 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
                         handleConfigChange(index, 'cantidad', newValue);
                       }}
                       onBlur={() => handleConfigBlur(index, 'cantidad')}
-                      className={configFieldClass(index, 'cantidad', config.cantidad, config).replace('w-full', 'w-14 text-center')} />
+                      className={configFieldClass(index, 'cantidad', config.cantidad, config).replace('w-full', 'w-16 text-center')} />
                     <button 
                       type="button" 
                       onClick={() => {
@@ -619,7 +640,7 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
               </div>
 
               {config.motivo === 'OTRO' && (
-                <div className="mt-3 col-span-2">
+                <div className="mt-3 col-span-2 rounded-2xl border border-gray-100 bg-gray-50/60 p-3">
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Descripción del motivo<span className="text-red-500">*</span>
                   </label>
@@ -630,10 +651,12 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
                     maxLength={255}
                     placeholder="Explica brevemente el motivo de la devolución"
                     rows={3}
-                    className={`${configFieldClass(index, 'descripcionMotivo', config.descripcionMotivo || '', config)} resize-none`}
+                    className={configTextareaClass(index, 'descripcionMotivo', config.descripcionMotivo || '', config)}
                   />
-                  <div className="mt-1 flex items-start justify-between gap-2">
-                    {renderConfigError(index, 'descripcionMotivo', config.descripcionMotivo || '', config)}
+                  <div className="mt-1.5 flex items-start justify-between gap-3">
+                    <div className="min-h-[18px]">
+                      {renderConfigError(index, 'descripcionMotivo', config.descripcionMotivo || '', config)}
+                    </div>
                     <span className="ml-auto text-[10px] text-gray-400">
                       {(config.descripcionMotivo || '').length}/255
                     </span>
@@ -662,7 +685,7 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
 
 function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
   const isEdit = Boolean(returnData);
-  const { showError, showSuccess } = useAlert();
+  const { showConfirm, showError, showSuccess } = useAlert();
 
   // ==================== ESTADOS ====================
   const [noFactura, setNoFactura] = useState('');
@@ -680,6 +703,7 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
   const [descripcion, setDescripcion] = useState('');
   const [seleccionados, setSeleccionados] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
   
   const [productosDisponibles, setProductosDisponibles] = useState([]);
   
@@ -1126,11 +1150,9 @@ useEffect(() => {
     return newErrors;
   };
 
-  const liveValidationErrors = validateForm();
-  const hasLiveErrors = !isEdit && Object.values(liveValidationErrors).some(Boolean);
-
   // ==================== SUBMIT ====================
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (saving) return;
     setSubmitted(true);
     
    if (isEdit) {
@@ -1179,13 +1201,18 @@ useEffect(() => {
         .filter(ev => ev.id && !(ev instanceof File))
         .map(ev => ev.id);
 
-      onSave?.({
-        ...updatedData,
-        evidenceFiles: evidenceFiles,
-        evidenceDescription: evidenceDescription || descripcion || '',
-        deletedEvidenceIds: deletedEvidenceIds,
-        existingEvidenceIds: existingEvidenceIds
-      });
+      try {
+        setSaving(true);
+        await onSave?.({
+          ...updatedData,
+          evidenceFiles: evidenceFiles,
+          evidenceDescription: evidenceDescription || descripcion || '',
+          deletedEvidenceIds: deletedEvidenceIds,
+          existingEvidenceIds: existingEvidenceIds
+        });
+      } finally {
+        setSaving(false);
+      }
       return;
     }
     
@@ -1257,13 +1284,18 @@ useEffect(() => {
     isDefective: p.isDefective || false,
     applyCredit: p.applyCredit === true,
     descripcionMotivo: p.description || '',
-    status: p.status || 'En Proceso'  // ✅ DEBE ESTAR
+    status: p.status || 'En Proceso'
   })),
   evidenceFiles: evidenceFiles,
   evidenceDescription: evidenceDescription || descripcion || ''
 };
 
-    onSave?.(returnDataToSave);
+    try {
+      setSaving(true);
+      await onSave?.(returnDataToSave);
+    } finally {
+      setSaving(false);
+    }
   };
 
   // ==================== FUNCIONES DE RENDERIZADO ====================
@@ -1287,12 +1319,49 @@ useEffect(() => {
     return null;
   };
 
+  const hasFormChanges = () => {
+    if (isEdit) {
+      return descripcion !== (returnData?.description || returnData?.descripcion || '')
+        || evidencias.length > 0
+        || Object.keys(seleccionados).length > 0;
+    }
+
+    return Boolean(
+      noFactura ||
+      cliente ||
+      asesor ||
+      direccion ||
+      descripcion ||
+      domicilio ||
+      evidencias.length > 0 ||
+      Object.keys(seleccionados).length > 0
+    );
+  };
+
+  const handleClose = async () => {
+    if (saving) return;
+    if (!hasFormChanges()) {
+      onClose();
+      return;
+    }
+
+    const confirmed = await showConfirm(
+      'warning',
+      'Salir sin guardar?',
+      'Los cambios no guardados se perderán.',
+      { confirmButtonText: 'Sí, salir', cancelButtonText: 'Continuar editando' }
+    );
+
+    if (confirmed?.isConfirmed) onClose();
+  };
+
   if (!isOpen) return null;
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] w-full flex flex-col overflow-hidden"
-        style={{ maxWidth: 1060, maxHeight: '92vh' }}>
+      <div className="relative bg-white rounded-3xl shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] w-full flex flex-col overflow-hidden"
+        style={{ maxWidth: 1240, maxHeight: '92vh' }}>
+        <LoadingOverlay show={saving} message={isEdit ? 'Guardando cambios...' : 'Creando devolución...'} />
 
         <div className="bg-gradient-to-r from-[#004D77] to-[#006699] px-6 py-3.5 flex items-center justify-between flex-shrink-0 rounded-t-3xl">
           <h2 className="text-white font-bold text-[15px] tracking-wide">
@@ -1303,7 +1372,7 @@ useEffect(() => {
               <span className="text-white text-[10px] font-medium">Modo edición: solo estados</span>
             </div>
           )}
-          <button type="button" onClick={onClose}
+          <button type="button" onClick={handleClose}
             className="w-7 h-7 flex items-center justify-center rounded-xl bg-white/20 hover:bg-white/30 text-white transition cursor-pointer hover:scale-105">
             <X className="w-4 h-4" />
           </button>
@@ -1312,7 +1381,7 @@ useEffect(() => {
         <div className="flex flex-1 min-h-0 divide-x divide-gray-200">
 
           {/* COL 1 - Datos generales */}
-          <div className="w-[300px] flex-shrink-0 flex flex-col gap-3 p-4 overflow-y-auto">
+          <div className="w-[330px] flex-shrink-0 flex flex-col gap-3 p-5 overflow-y-auto">
             {isEdit ? (
               <>
                 <DisabledField label="No. Factura" value={noFactura} required />
@@ -1332,7 +1401,8 @@ useEffect(() => {
                     disabled={isEdit}
                     placeholder="Selecciona un estado"
                     ariaLabel="Estado general de la devolución"
-                    className="rounded-xl font-semibold"
+                    className={RETURN_SELECT_CLASS}
+                    placement="bottom"
                   />
                   {isEdit && (
                     <p className="text-[10px] text-gray-400 mt-1">
@@ -1542,19 +1612,23 @@ useEffect(() => {
                     className={`w-full border rounded-xl px-3 py-2 text-sm flex items-center justify-between ${
                       errors.evidencias && (touched.evidencias || submitted)
                         ? 'border-red-500'
-                        : 'border-gray-300 border-dashed hover:border-[#004D77]'
+                        : evidencias.length > 0
+                          ? 'border-green-300 bg-green-50 hover:border-green-500'
+                          : 'border-gray-300 border-dashed hover:border-[#004D77]'
                     }`}>
-                    <span className="text-xs text-gray-400">
-                      {evidencias.length === 0 ? 'Adjuntar evidencias' : `${evidencias.length} archivo(s)`}
+                    <span className={`text-xs ${evidencias.length > 0 ? 'font-semibold text-green-700' : 'text-gray-400'}`}>
+                      {evidencias.length === 0 ? 'Adjuntar evidencias' : `${evidencias.length} evidencia(s) adjunta(s)`}
                     </span>
-                    <Image className="w-4 h-4 text-gray-400" />
+                    <Image className={`w-4 h-4 ${evidencias.length > 0 ? 'text-green-600' : 'text-gray-400'}`} />
                   </button>
                   {renderError('evidencias')}
-                  {!domicilio && (
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      Opcional sin domicilio
-                    </p>
-                  )}
+                  <p className={`mt-1 text-[10px] ${evidencias.length > 0 ? 'text-green-700' : 'text-gray-400'}`}>
+                    {evidencias.length > 0
+                      ? 'Estas evidencias se enviarán al crear la devolución'
+                      : domicilio
+                        ? 'Obligatorio con domicilio'
+                        : 'Opcional sin domicilio'}
+                  </p>
                 </div>
                 
                 <div className="flex items-center justify-between">
@@ -1619,7 +1693,7 @@ useEffect(() => {
           </div>
 
           {/* COL 2 - Selección de productos */}
-          <div className="flex-1 flex flex-col p-4 overflow-hidden min-w-0">
+          <div className="flex-1 flex flex-col p-5 overflow-hidden min-w-0">
             <p className="text-sm font-bold text-gray-800 mb-0.5">1. Productos</p>
             <p className="text-xs text-gray-400 mb-3">Selecciona los productos a devolver</p>
             
@@ -1699,7 +1773,7 @@ useEffect(() => {
           </div>
 
           {/* COL 3 - Resumen y cálculo */}
-          <div className="w-[280px] flex-shrink-0 flex flex-col p-4 overflow-hidden">
+          <div className="w-[320px] flex-shrink-0 flex flex-col p-5 overflow-hidden">
             <p className="text-sm font-bold text-gray-800 mb-0.5">2. Productos devueltos</p>
             <p className="text-xs text-gray-400 mb-3">Cantidad a devolver</p>
             
@@ -1796,14 +1870,15 @@ useEffect(() => {
           </div>
         </div>
 
-        <div className="flex gap-3 px-4 py-3 border-t border-gray-200 flex-shrink-0 bg-gray-50 rounded-b-3xl">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 flex-shrink-0 bg-gray-50 rounded-b-3xl">
           <button type="button" onClick={handleSubmit}
-            disabled={hasLiveErrors}
-            className="flex-1 py-2.5 bg-[#004D77] hover:bg-[#003d61] text-white text-sm font-bold rounded-xl transition cursor-pointer hover:shadow-lg hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100">
+            disabled={saving}
+            className="px-7 py-2.5 bg-[#004D77] hover:bg-[#003d61] text-white text-sm font-bold rounded-xl transition cursor-pointer hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none">
             {isEdit ? 'Guardar cambios' : 'Crear devolución'}
           </button>
-          <button type="button" onClick={onClose}
-            className="flex-1 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-600 text-sm font-bold rounded-xl transition cursor-pointer hover:shadow-md hover:scale-105 active:scale-95">
+          <button type="button" onClick={handleClose}
+            disabled={saving}
+            className="px-7 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-bold rounded-xl transition cursor-pointer hover:shadow-md active:scale-95 disabled:cursor-not-allowed disabled:opacity-50">
             Cancelar
           </button>
         </div>

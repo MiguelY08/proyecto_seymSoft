@@ -13,6 +13,7 @@ function FormSelect({
   className = '',
   optionClassName = '',
   ariaLabel,
+  placement = 'auto',
 }) {
   const safeOptions = Array.isArray(options) ? options : [];
   const [isOpen, setIsOpen] = useState(false);
@@ -32,7 +33,7 @@ function FormSelect({
     const maxHeight = 240;
     const spaceBelow = window.innerHeight - rect.bottom - gap;
     const spaceAbove = rect.top - gap;
-    const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
+    const openUp = placement === 'top' || (placement === 'auto' && spaceBelow < 160 && spaceAbove > spaceBelow);
     const availableHeight = Math.max(120, Math.min(maxHeight, openUp ? spaceAbove : spaceBelow));
 
     setDropdownStyle({
@@ -43,7 +44,7 @@ function FormSelect({
       maxHeight: availableHeight,
       zIndex: 9999,
     });
-  }, []);
+  }, [placement]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

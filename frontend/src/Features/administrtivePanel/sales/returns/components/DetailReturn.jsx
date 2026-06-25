@@ -3,7 +3,7 @@
  * Modal para visualizar los detalles completos de una devolución.
  */
 import React, { useEffect, useState } from 'react';
-import { X, Download, AlertTriangle, Image, PackageSearch } from 'lucide-react';
+import { X, FileDown, AlertTriangle, Image, PackageSearch, Loader2 } from 'lucide-react';
 import ViewEvidence from './ViewEvidence';
 import PurchaseReturnModal from './PurchaseReturnModal';
 import { formatDate } from '../utils/returnsHelpers';
@@ -21,11 +21,39 @@ const isDefectiveDetail = (detail = {}) => {
     || reason.includes('PRODUCTO DEFECTUOSO');
 };
 
+const formatReasonLabel = (reason) => {
+  if (!reason) return 'Sin motivo';
+  const labels = {
+    DEFECTUOSO: 'Producto defectuoso',
+    PRODUCTO_EQUIVOCADO: 'Producto equivocado',
+    PRODUCTO_INCOMPLETO: 'Producto incompleto',
+    MAL_ESTADO: 'Producto en mal estado',
+    PRODUCTO_USADO: 'Producto usado',
+    OTRO: 'Otro motivo',
+  };
+  const label = labels[reason] || String(reason).replace(/[_-]+/g, ' ');
+  const normalized = label.trim().toLocaleLowerCase('es-CO');
+  return normalized.charAt(0).toLocaleUpperCase('es-CO') + normalized.slice(1);
+};
+
+const buildNonConformingReason = (detail = {}, info = {}, returnNumber = '') => {
+  const productReason = formatReasonLabel(detail.reason || detail.motivo || 'Producto defectuoso');
+  const source = returnNumber
+    ? `devolución de venta ${returnNumber}`
+    : 'devolución de venta';
+  const detailReason = info.reason || 'No fue posible generar una devolución de compra.';
+  return `${productReason} detectado en ${source}. ${detailReason}`;
+};
+
+const actionButtonClass = 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 border border-gray-400 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer';
+const evidenceButtonClass = 'flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-[#004D77]/10 text-[#004D77] hover:bg-[#004D77]/20 transition cursor-pointer';
+
 function DetailReturn({ isOpen, onClose, devolucion = null }) {
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [purchaseInfoByDetail, setPurchaseInfoByDetail] = useState({});
   const [selectedDefectiveProduct, setSelectedDefectiveProduct] = useState(null);
   const [resolvingDetailId, setResolvingDetailId] = useState(null);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const { showConfirm, showError, showSuccess } = useAlert();
 
   useEffect(() => {
@@ -76,7 +104,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
 
   if (!isOpen || !devolucion) return null;
 
-  // ✅ USAR MODELO ÚNICO
+  // Usar modelo único
   const {
     returnNumber,
     invoiceNumber,
@@ -137,11 +165,24 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
   })) : [];
 
   const handleExportPDF = () => {
-    exportReturnToPDF(devolucion);
+    if (exportingPdf) return;
+
+    setExportingPdf(true);
+    window.setTimeout(() => {
+      try {
+        exportReturnToPDF(devolucion);
+      } finally {
+        setExportingPdf(false);
+      }
+    }, 0);
   };
 
   const refreshPurchaseInfo = async (detail) => {
     const detailId = detail.idSaleReturnDetail || detail.id;
+    setPurchaseInfoByDetail((current) => ({
+      ...current,
+      [detailId]: { loading: true },
+    }));
     const info = await getPurchaseReturnInfo(
       detail.idBarcode,
       devolucion.id,
@@ -170,6 +211,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
       setResolvingDetailId(detailId);
       await resolveDefectiveProduct(devolucion.id, detailId, {
         action: 'NON_CONFORMING',
+        reportReason: buildNonConformingReason(detail, info, devolucion.returnNumber),
       });
       showSuccess(
         'Producto no conforme registrado',
@@ -196,7 +238,12 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
       );
     }
     if (!state || state.loading) {
-      return <p className="mt-1 text-[10px] text-gray-400">Verificando compra...</p>;
+      return (
+        <p className="mt-1 flex items-center gap-1.5 text-[10px] text-gray-400">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Verificando compra...
+        </p>
+      );
     }
     if (state.error) {
       return (
@@ -205,7 +252,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
           onClick={() => refreshPurchaseInfo(detail).catch((error) => {
             showError('No se pudo verificar', error.message);
           })}
-          className="mt-1 text-[10px] font-semibold text-red-600 underline"
+          className="mt-2 flex w-max items-center rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[11px] font-semibold text-red-700 transition hover:bg-red-100"
         >
           Reintentar verificación
         </button>
@@ -231,13 +278,14 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
       return (
         <button
           type="button"
+          disabled={Boolean(resolvingDetailId)}
           onClick={() => setSelectedDefectiveProduct({
             ...detail,
             saleReturnId: devolucion.id,
             saleReturnDetailId: detailId,
             purchaseInfo: info,
           })}
-          className="mt-1 inline-flex items-center gap-1 rounded-lg bg-[#004D77] px-2 py-1 text-[10px] font-semibold text-white transition hover:bg-[#003d61]"
+          className="mt-2 flex w-max items-center gap-1.5 rounded-lg bg-[#004D77] px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-[#003d61] disabled:cursor-not-allowed disabled:opacity-60"
         >
           <PackageSearch className="h-3 w-3" />
           Generar devolución de compra
@@ -250,9 +298,11 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
         type="button"
         disabled={resolvingDetailId === detailId}
         onClick={() => handleNonConforming(detail, info)}
-        className="mt-1 inline-flex items-center gap-1 rounded-lg bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-800 transition hover:bg-amber-200 disabled:opacity-60"
+        className="mt-2 flex w-max items-center gap-1.5 rounded-lg bg-amber-100 px-3 py-1.5 text-[11px] font-semibold text-amber-800 transition hover:bg-amber-200 disabled:opacity-60"
       >
-        <AlertTriangle className="h-3 w-3" />
+        {resolvingDetailId === detailId
+          ? <Loader2 className="h-3 w-3 animate-spin" />
+          : <AlertTriangle className="h-3 w-3" />}
         {resolvingDetailId === detailId ? 'Registrando...' : 'Enviar a no conforme'}
       </button>
     );
@@ -266,16 +316,13 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
           <div className="bg-[#004D77] px-6 py-3.5 flex items-center justify-between flex-shrink-0">
             <h2 className="text-white font-bold text-[15px] tracking-wide">Detalles de la devolución</h2>
             <div className="flex items-center gap-2">
-              <button onClick={handleExportPDF} className="w-7 h-7 flex items-center justify-center rounded-xl bg-white/20 hover:bg-white/30 text-white transition cursor-pointer hover:scale-105" title="Exportar PDF">
-                <Download className="w-4 h-4" />
-              </button>
               <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-xl bg-white/20 hover:bg-white/30 text-white transition cursor-pointer hover:scale-105">
                 <X className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          <div className="px-6 py-5 overflow-y-auto" style={{ maxHeight: 'calc(92vh - 80px)' }}>
+          <div className="px-6 py-5 overflow-y-auto" style={{ maxHeight: 'calc(92vh - 148px)' }}>
 
             {status === 'Anulado' && (
               <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-2xl">
@@ -314,7 +361,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
                 {evidenciasMapeadas.length > 0 && (
                   <button
                     onClick={() => setEvidenceOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-[#004D77]/10 text-[#004D77] hover:bg-[#004D77]/20 transition cursor-pointer"
+                    className={evidenceButtonClass}
                   >
                     <Image className="w-3.5 h-3.5" />
                     VER EVIDENCIAS ({evidenciasMapeadas.length})
@@ -365,7 +412,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
                         const precioUnit = p.unitPrice || 0;
                         const total = cantidad * precioUnit;
                         const estadoProducto = p.status || 'Pendiente';
-                        const motivo = p.reason || '-';
+                        const motivo = formatReasonLabel(p.reason || p.motivo || '-');
                         const metodo = p.method || '-';
                         const mostrarDescripcionOtro = (
                           p.reasonId === 4 ||
@@ -384,13 +431,17 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
                                 </div>
                               )}
                             </td>
-                            <td className="px-3 py-2.5 text-gray-600">{motivo}</td>
+                            <td className="px-3 py-2.5 text-gray-600">
+                              <div className="flex flex-col items-start gap-1.5">
+                                <span>{motivo}</span>
+                                {renderDefectiveAction(p)}
+                              </div>
+                            </td>
                             <td className="px-3 py-2.5 text-gray-600">{metodo}</td>
                             <td className="px-3 py-2.5">
                               <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${isAnulado ? 'text-red-600 bg-red-100' : getStatusColor(estadoProducto)}`}>
                                 {estadoProducto}
                               </span>
-                              {renderDefectiveAction(p)}
                             </td>
                             <td className="px-3 py-2.5 text-center text-gray-700 font-medium">{cantidad}</td>
                             <td className="px-3 py-2.5 text-right text-gray-700 font-medium">
@@ -428,6 +479,26 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
               </div>
             </div>
 
+          </div>
+          <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0 bg-white">
+            <button
+              type="button"
+              onClick={handleExportPDF}
+              disabled={exportingPdf}
+              className={`${actionButtonClass} disabled:cursor-not-allowed disabled:opacity-60`}
+            >
+              {exportingPdf
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <FileDown className="w-4 h-4" strokeWidth={1.8} />}
+              {exportingPdf ? 'Generando...' : 'Exportar PDF'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+            >
+              Cancelar
+            </button>
           </div>
         </div>
       </div>

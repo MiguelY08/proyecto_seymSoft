@@ -1,22 +1,23 @@
 /**
  * Archivo: Evidence.jsx
- * 
- * Modal para adjuntar evidencias (fotos) a una devolución.
- * Solo permite imágenes: JPG, PNG, WebP, GIF.
+ *
+ * Modal para adjuntar evidencias fotográficas a una devolución.
+ * Solo permite imágenes: JPG, PNG, WebP o GIF.
  */
 
-import React, { useRef, useState, useEffect } from 'react';
-import { X, Link, Image } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { X, Link, Image, Loader2 } from 'lucide-react';
 import { deleteEvidence } from '../data/returnsService';
+import { useAlert } from '../../../../shared/alerts/useAlert';
 
-function Evidence({ 
-  isOpen, 
-  onClose, 
-  onSave, 
-  files = [], 
+function Evidence({
+  isOpen,
+  onClose,
+  onSave,
+  files = [],
   descripcion = '',
   isEdit = false,
-  existingEvidences = []
+  existingEvidences = [],
 }) {
   const inputRef = useRef(null);
   const [localFiles, setLocalFiles] = useState([]);
@@ -25,121 +26,136 @@ function Evidence({
   const [deletedIds, setDeletedIds] = useState([]);
   const [fileError, setFileError] = useState('');
   const [descriptionTouched, setDescriptionTouched] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const { showConfirm } = useAlert();
 
   useEffect(() => {
-    if (isOpen) {
-      if (isEdit && existingEvidences.length > 0) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setExistingFiles(existingEvidences);
-      } else {
-        setExistingFiles([]);
-      }
-      
-      const newFiles = files.filter(f => f instanceof File);
-      setLocalFiles(newFiles);
-      setLocalDesc(descripcion);
-      setDeletedIds([]);
-      setFileError('');
-      setDescriptionTouched(false);
-    }
+    if (!isOpen) return;
+
+    setExistingFiles(isEdit && existingEvidences.length > 0 ? existingEvidences : []);
+    setLocalFiles(files.filter((file) => file instanceof File));
+    setLocalDesc(descripcion);
+    setDeletedIds([]);
+    setFileError('');
+    setDescriptionTouched(false);
   }, [isOpen, files, descripcion, isEdit, existingEvidences]);
 
-  // ✅ SOLO IMÁGENES
-  // En Evidence.jsx, en addFiles:
+  const addFiles = (incoming) => {
+    const incomingFiles = Array.from(incoming || []);
+    if (incomingFiles.length === 0) return;
 
-// ============================================
-// ADD FILES - SIN DUPLICADOS
-// ============================================
+    const maxSize = 50 * 1024 * 1024;
+    const oversized = incomingFiles.filter((file) => file.size > maxSize);
+    if (oversized.length > 0) {
+      setFileError(`${oversized.map((file) => file.name).join(', ')} supera el límite de 50MB`);
+      return;
+    }
 
-const addFiles = (incoming) => {
-  const arr = Array.from(incoming);
-  
-  // ✅ Validar tamaño (50MB)
-  const maxSize = 50 * 1024 * 1024;
-  const oversized = arr.filter(f => f.size > maxSize);
-  if (oversized.length > 0) {
-    setFileError(`${oversized.map(f => f.name).join(', ')} supera el límite de 50MB`);
-    return;
-  }
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    const invalid = incomingFiles.filter((file) => !validTypes.includes(file.type));
+    if (invalid.length > 0) {
+      setFileError('Solo se permiten imágenes JPG, PNG, WebP o GIF');
+      return;
+    }
 
-  // ✅ Validar tipo (solo imágenes)
-  const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-  const invalid = arr.filter(f => !validTypes.includes(f.type));
-  if (invalid.length > 0) {
-    setFileError('Solo se permiten imágenes JPG, PNG, WebP o GIF');
-    return;
-  }
+    const unique = incomingFiles.filter(
+      (file) => !localFiles.some((previous) => previous.name === file.name && previous.size === file.size),
+    );
 
-  // ✅ Evitar duplicados por nombre y tamaño
-  const unique = arr.filter(f => 
-    !localFiles.some(p => p.name === f.name && p.size === f.size)
-  );
+    if (localFiles.length + existingFiles.length + unique.length > 10) {
+      setFileError('Puede adjuntar máximo 10 evidencias');
+      return;
+    }
 
-  if (localFiles.length + existingFiles.length + unique.length > 10) {
-    setFileError('Puede adjuntar máximo 10 evidencias');
-    return;
-  }
-  
-  setFileError(unique.length === arr.length ? '' : 'Se ignoraron archivos duplicados');
-  setLocalFiles(prev => [...prev, ...unique]);
-};
+    setFileError(unique.length === incomingFiles.length ? '' : 'Se ignoraron archivos duplicados');
+    setLocalFiles((current) => [...current, ...unique]);
+  };
 
   const removeFile = (index, isExisting = false) => {
     if (isExisting) {
       const fileToRemove = existingFiles[index];
       if (fileToRemove?.id) {
-        setDeletedIds(prev => [...prev, fileToRemove.id]);
+        setDeletedIds((current) => [...current, fileToRemove.id]);
       }
-      setExistingFiles(prev => prev.filter((_, i) => i !== index));
-    } else {
-      setLocalFiles(prev => prev.filter((_, i) => i !== index));
+      setExistingFiles((current) => current.filter((_, fileIndex) => fileIndex !== index));
+      return;
     }
+
+    setLocalFiles((current) => current.filter((_, fileIndex) => fileIndex !== index));
   };
 
   const openFile = (file) => {
     if (file instanceof File) {
       const url = URL.createObjectURL(file);
       window.open(url, '_blank');
-    } else if (file.base64) {
-      window.open(file.base64, '_blank');
-    } else if (file.imageUrl) {
-      window.open(file.imageUrl, '_blank');
+      return;
     }
+
+    const url = file.base64 || file.imageUrl || file.image_path || file.url;
+    if (url) window.open(url, '_blank');
+  };
+
+  const hasUnsavedChanges = () => {
+    const originalFiles = files.filter((file) => file instanceof File);
+    const currentSignature = localFiles.map((file) => `${file.name}-${file.size}`).sort().join('|');
+    const originalSignature = originalFiles.map((file) => `${file.name}-${file.size}`).sort().join('|');
+
+    return currentSignature !== originalSignature
+      || deletedIds.length > 0
+      || localDesc !== descripcion;
+  };
+
+  const handleClose = async () => {
+    if (saving) return;
+
+    if (!hasUnsavedChanges()) {
+      onClose?.();
+      return;
+    }
+
+    const confirmed = await showConfirm(
+      'warning',
+      'Evidencias sin guardar',
+      'Seleccionaste o modificaste evidencias. Si sales ahora, esos cambios no se adjuntarán a la devolución.',
+      { confirmButtonText: 'Salir sin guardar', cancelButtonText: 'Seguir editando' },
+    );
+
+    if (confirmed?.isConfirmed) onClose?.();
   };
 
   const handleSave = async () => {
+    if (saving) return;
+
     const descriptionError = localDesc.length > 255
       ? 'La descripción no puede superar 255 caracteres'
       : '';
+
     setDescriptionTouched(true);
     if (fileError || descriptionError) return;
 
     try {
-      // ✅ Si hay evidencias eliminadas, llamar al backend
+      setSaving(true);
       if (deletedIds.length > 0 && isEdit) {
         for (const id of deletedIds) {
           await deleteEvidence(id);
         }
       }
 
-      const newFiles = localFiles.filter(f => f instanceof File);
-      
-      // ✅ Enviar datos al padre
       onSave?.({
-        files: newFiles,
+        files: localFiles.filter((file) => file instanceof File),
         descripcion: localDesc,
-        existingFiles: existingFiles,
-        deletedIds: deletedIds
+        existingFiles,
+        deletedIds,
       });
-      
-      // ✅ LIMPIAR después de guardar para evitar duplicados
+
       setDeletedIds([]);
       setLocalFiles([]);
-      
       onClose?.();
     } catch (error) {
       console.error('Error al guardar evidencias:', error);
       alert('Error al guardar evidencias');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -152,78 +168,98 @@ const addFiles = (incoming) => {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[480px] overflow-hidden">
-
-        <div className="bg-[#004D77] px-5 py-3.5 flex items-center justify-between">
-          <h2 className="text-white font-bold text-[15px] tracking-wide">
+      <div className="w-full max-w-[520px] overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between bg-[#004D77] px-5 py-3.5">
+          <h2 className="text-[15px] font-bold tracking-wide text-white">
             {isEdit ? 'Gestionar evidencias' : 'Evidencias'}
           </h2>
-          <button type="button" onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 text-white transition cursor-pointer">
-            <X className="w-4 h-4" />
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={saving}
+            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg bg-white/20 text-white transition hover:bg-white/30 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="px-6 py-5 flex flex-col gap-4">
+        <div className="flex flex-col gap-4 px-6 py-5">
+          <div className="text-center">
+            <p className="text-sm leading-snug text-gray-600">
+              Adjunta fotos que demuestren el estado del producto o el motivo de la devolución.
+            </p>
+            <p className="mt-1 text-xs text-gray-400">
+              Solo imágenes: JPG, PNG, WebP o GIF.
+            </p>
+          </div>
 
-          <p className="text-sm text-gray-600 text-center leading-snug">
-            Adjunta fotos que demuestren el<br />
-            estado del producto o el motivo de la devolución
-          </p>
-
-          <p className="text-xs text-gray-400 text-center">
-            Solo imágenes: JPG, PNG, WebP o GIF
-          </p>
-
-          <button type="button" onClick={() => inputRef.current?.click()}
-            className="flex items-center justify-center gap-2 w-full py-3 bg-[#004D77] hover:bg-[#003d61] text-white text-sm font-bold rounded-xl transition cursor-pointer">
-            <Link className="w-4 h-4" />
-            Subir Imágenes
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={saving}
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#004D77] py-3 text-sm font-bold text-white transition hover:bg-[#003d61] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Link className="h-4 w-4" />
+            Subir imágenes
           </button>
-          
-          <input ref={inputRef} type="file" multiple
+
+          <input
+            ref={inputRef}
+            type="file"
+            multiple
             accept="image/*"
             className="hidden"
-            onChange={(e) => addFiles(e.target.files)} />
+            onChange={(event) => {
+              addFiles(event.target.files);
+              event.target.value = '';
+            }}
+          />
 
-          {fileError && <p className="text-xs text-red-600 text-center">{fileError}</p>}
+          {fileError && <p className="text-center text-xs text-red-600">{fileError}</p>}
 
           {allFiles.length > 0 && (
-            <div className="border border-gray-200 rounded-xl overflow-hidden max-h-60 overflow-y-auto">
-              {allFiles.map((file, i) => {
+            <div className="max-h-60 overflow-y-auto rounded-xl border border-gray-200">
+              {allFiles.map((file, index) => {
                 const fileName = file.name || (file instanceof File ? file.name : 'Archivo');
                 const isExisting = !(file instanceof File) && file.id;
-                
-                return (
-                  <div key={i}
-                    className={`flex items-center gap-3 px-3 py-2.5 ${i !== allFiles.length - 1 ? 'border-b border-gray-200' : ''}`}>
 
-                    <button type="button" onClick={() => openFile(file)}
-                      className="relative flex-shrink-0 cursor-pointer group" title="Abrir imagen">
-                      <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-blue-50 transition">
-                        <Image className="w-4 h-4 text-gray-400 group-hover:text-[#004D77] transition" />
-                      </div>
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                        <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none">
-                          <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
+                return (
+                  <div
+                    key={`${fileName}-${index}`}
+                    className={`flex items-center gap-3 px-3 py-2.5 ${index !== allFiles.length - 1 ? 'border-b border-gray-200' : ''}`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => openFile(file)}
+                      className="group relative shrink-0 cursor-pointer"
+                      title="Abrir imagen"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 transition group-hover:bg-blue-50">
+                        <Image className="h-4 w-4 text-gray-400 transition group-hover:text-[#004D77]" />
                       </div>
                     </button>
 
-                    <button type="button" onClick={() => openFile(file)}
-                      className="flex-1 text-sm text-[#004D77] hover:underline truncate text-left cursor-pointer transition"
-                      title="Abrir imagen">
+                    <button
+                      type="button"
+                      onClick={() => openFile(file)}
+                      className="flex-1 cursor-pointer truncate text-left text-sm text-[#004D77] transition hover:underline"
+                      title="Abrir imagen"
+                    >
                       {fileName}
                       {isExisting && (
-                        <span className="text-[10px] text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded ml-2">
-                          ✓ Guardado
+                        <span className="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-500">
+                          Guardado
                         </span>
                       )}
                     </button>
 
-                    <button type="button" onClick={() => removeFile(i, isExisting)}
-                      className="text-gray-400 hover:text-gray-700 transition cursor-pointer flex-shrink-0">
-                      <X className="w-4 h-4" />
+                    <button
+                      type="button"
+                      onClick={() => removeFile(index, isExisting)}
+                      disabled={saving}
+                      className="shrink-0 cursor-pointer text-gray-400 transition hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
                 );
@@ -232,37 +268,57 @@ const addFiles = (incoming) => {
           )}
 
           <div>
-            <p className="text-sm text-gray-600 text-center mb-2">
+            <p className="mb-2 text-center text-sm text-gray-600">
               Describe brevemente las evidencias
             </p>
-            <textarea 
-              value={localDesc} 
-              onChange={(e) => {
+            <textarea
+              value={localDesc}
+              onChange={(event) => {
                 setDescriptionTouched(true);
-                setLocalDesc(e.target.value);
+                setLocalDesc(event.target.value);
               }}
               onBlur={() => setDescriptionTouched(true)}
               maxLength={255}
-              placeholder="Agrega una breve descripción de las imágenes" 
+              placeholder="Agrega una breve descripción de las imágenes"
               rows={4}
-              className={`w-full border rounded-xl px-4 py-3 text-sm text-gray-600 outline-none focus:border-[#004D77] resize-none placeholder-gray-300 ${descriptionTouched && descriptionError ? 'border-red-500' : 'border-gray-300'}`} />
+              className={`w-full resize-none rounded-xl border px-4 py-3 text-sm text-gray-600 outline-none placeholder-gray-300 focus:border-[#004D77] ${
+                descriptionTouched && descriptionError ? 'border-red-500' : 'border-gray-300'
+              }`}
+            />
             <div className="mt-1 flex justify-between gap-2">
-              {descriptionTouched && descriptionError && <p className="text-xs text-red-600">{descriptionError}</p>}
+              {descriptionTouched && descriptionError && (
+                <p className="text-xs text-red-600">{descriptionError}</p>
+              )}
               <span className="ml-auto text-[10px] text-gray-400">{localDesc.length}/255</span>
             </div>
           </div>
         </div>
 
-        <div className="flex gap-3 px-6 pb-5">
-          <button type="button" onClick={handleSave}
-            disabled={Boolean(fileError || descriptionError)}
-            className="flex-1 py-3 bg-[#004D77] hover:bg-[#003d61] text-white text-sm font-bold rounded-xl transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-50">
-            {isEdit ? 'Actualizar' : 'Guardar'}
-          </button>
-          <button type="button" onClick={onClose}
-            className="flex-1 py-3 bg-gray-200 hover:bg-gray-300 text-gray-600 text-sm font-bold rounded-xl transition cursor-pointer">
-            Cancelar
-          </button>
+        <div className="border-t border-gray-100 px-6 py-4">
+          <p className={`mb-3 text-center text-xs font-medium ${allFiles.length > 0 ? 'text-green-700' : 'text-gray-400'}`}>
+            {allFiles.length > 0
+              ? `${allFiles.length} evidencia(s) listas. Presiona Guardar para adjuntarlas a la devolución.`
+              : 'No hay evidencias seleccionadas.'}
+          </p>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || Boolean(fileError || descriptionError)}
+              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#004D77] py-3 text-sm font-bold text-white transition hover:bg-[#003d61] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              {saving ? 'Guardando...' : (isEdit ? 'Actualizar' : 'Guardar')}
+            </button>
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={saving}
+              className="flex-1 cursor-pointer rounded-xl bg-gray-200 py-3 text-sm font-bold text-gray-600 transition hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Cancelar
+            </button>
+          </div>
         </div>
       </div>
     </div>

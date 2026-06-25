@@ -9,6 +9,27 @@ import GraphClient from '../components/GraphClient';
 import { validateClientForm } from '../helpers/clientHelpers';
 import FormSelect from '../../../../shared/FormSelect';
 import { useAlert } from '../../../../shared/alerts/useAlert';
+import LoadingOverlay from '../../../../shared/LoadingOverlay';
+
+const onlyDigits = (value, maxLength = 10) =>
+  String(value ?? '').replace(/\D/g, '').slice(0, maxLength);
+
+const onlyLetters = (value, maxLength = 80) =>
+  String(value ?? '')
+    .replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'-]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .slice(0, maxLength);
+
+const cleanDocument = (value, documentType) => {
+  const maxLength = documentType === 'NIT' ? 20 : 15;
+  if (['CC', 'CE', 'NIT'].includes(documentType)) {
+    return onlyDigits(value, maxLength);
+  }
+  return String(value ?? '').replace(/[^A-Za-z0-9-]/g, '').slice(0, maxLength);
+};
+
+const cleanCiuCode = (value) =>
+  String(value ?? '').replace(/[^A-Za-z0-9-]/g, '').slice(0, 25);
 
 // Componente Mini Gráfica para el formulario (solo edición) - CON DATOS REALES
 function MiniFormGraph({ clientId, onExpand }) {
@@ -84,7 +105,7 @@ function MiniFormGraph({ clientId, onExpand }) {
 
   if (loading) {
     return (
-      <div className="bg-gray-50 rounded-xl border border-gray-200 p-3 h-32 flex items-center justify-center mt-2">
+      <div className="bg-gray-50 rounded-xl border border-gray-200 p-2 h-24 flex items-center justify-center mt-1">
         <Loader2 className="w-5 h-5 text-[#004D77] animate-spin" />
         <span className="ml-2 text-xs text-gray-400">Cargando...</span>
       </div>
@@ -93,11 +114,11 @@ function MiniFormGraph({ clientId, onExpand }) {
 
   if (!loading && data.length === 0) {
     return (
-      <div className="bg-gray-50 rounded-xl border border-gray-200 p-3 cursor-pointer hover:shadow-md transition-shadow mt-2" onClick={onExpand}>
-        <div className="flex items-center justify-center h-16">
+      <div className="bg-gray-50 rounded-xl border border-gray-200 p-2 cursor-pointer hover:shadow-md transition-shadow mt-1" onClick={onExpand}>
+        <div className="flex items-center justify-center h-12">
           <p className="text-xs text-gray-400">Sin compras registradas</p>
         </div>
-        <p className="text-[9px] text-gray-400 text-center mt-2">
+        <p className="text-[9px] text-gray-400 text-center mt-1">
           Haz clic para ver gráfica completa
         </p>
       </div>
@@ -107,8 +128,8 @@ function MiniFormGraph({ clientId, onExpand }) {
   const maxValue = Math.max(...data.map(d => d.value), 1);
 
   return (
-    <div className="bg-gray-50 rounded-xl border border-gray-200 p-3 cursor-pointer hover:shadow-md transition-shadow mt-2" onClick={onExpand}>
-      <div className="flex items-center justify-between mb-2">
+    <div className="bg-gray-50 rounded-xl border border-gray-200 p-2 cursor-pointer hover:shadow-md transition-shadow mt-1" onClick={onExpand}>
+      <div className="flex items-center justify-between mb-1">
         <div>
           <p className="text-[9px] text-gray-400 uppercase tracking-wide">Compras {selectedYear}</p>
           <p className="text-xs font-bold text-[#004D77]">
@@ -135,12 +156,12 @@ function MiniFormGraph({ clientId, onExpand }) {
       </div>
 
       {/* Mini gráfica menos larga - h-20 en lugar de h-28 */}
-      <div className="flex items-end gap-0.5 h-20">
+      <div className="flex items-end gap-0.5 h-12">
         {data.map((d, i) => (
           <div
             key={i}
             className="flex-1 bg-[#004D77]/30 hover:bg-[#004D77] transition-all rounded-t cursor-pointer"
-            style={{ height: `${(d.value / maxValue) * 70}px` }}
+            style={{ height: `${(d.value / maxValue) * 44}px` }}
             title={`${d.month}: $${(d.value / 1000000).toFixed(1)}M`}
           />
         ))}
@@ -152,7 +173,7 @@ function MiniFormGraph({ clientId, onExpand }) {
         ))}
       </div>
 
-      <p className="text-[9px] text-gray-400 text-center mt-2">
+      <p className="text-[9px] text-gray-400 text-center mt-1">
         Haz clic para ver gráfica completa
       </p>
     </div>
@@ -282,7 +303,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
         contactName:  client.contactName  || '',
         contactPhone: client.contactPhone || '',
         clientCredit: client.clientCredit || '',
-        saldoFavor:   client.saldoFavor   || '', // ✅ Ya no tiene '0' por defecto
+        saldoFavor:   client.saldoFavor   || '', // Ya no tiene '0' por defecto
         clientType:   client.clientType   || '',
         rut:          client.rut          || '',
         ciuCode:      client.ciuCode      || '',
@@ -354,13 +375,27 @@ function FormClient({ isOpen, onClose, client, onSave }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    let newFormData = { ...formData, [name]: value };
+    let nextValue = value;
+    if (name === 'phone' || name === 'contactPhone') {
+      nextValue = onlyDigits(value, 10);
+    }
+    if (name === 'firstName' || name === 'lastName' || name === 'contactName') {
+      nextValue = onlyLetters(value, name === 'contactName' ? 100 : 80);
+    }
+    if (name === 'document') {
+      nextValue = cleanDocument(value, formData.documentType);
+    }
+    if (name === 'ciuCode') {
+      nextValue = cleanCiuCode(value);
+    }
+
+    let newFormData = { ...formData, [name]: nextValue };
 
     // ============================================
     // VALIDACIÓN PARA clientCredit y saldoFavor
     // ============================================
     if (name === 'clientCredit' || name === 'saldoFavor') {
-      const formattedValue = formatNumericValue(value);
+      const formattedValue = formatNumericValue(nextValue);
       newFormData[name] = formattedValue;
     }
 
@@ -504,14 +539,14 @@ function FormClient({ isOpen, onClose, client, onSave }) {
   if (!isOpen) return null;
 
   const inputClass = (field) =>
-    `w-full px-3 py-2 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
+    `h-9 w-full px-3 py-0 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
       errors[field] && touched[field]
         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
 
   const disabledInputClass = (field) =>
-    `w-full px-3 py-2 text-sm border rounded-lg outline-none bg-gray-100 text-gray-500 cursor-not-allowed ${
+    `h-9 w-full px-3 py-0 text-sm border rounded-lg outline-none bg-gray-100 text-gray-500 cursor-not-allowed ${
       errors[field] && touched[field]
         ? 'border-red-500'
         : 'border-gray-300'
@@ -564,6 +599,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       <div className={`relative bg-white rounded-lg shadow-2xl overflow-hidden flex transition-all duration-500 ease-in-out ${
         showGraph ? 'w-[95vw] max-w-325' : 'w-full max-w-2xl'
       }`}>
+        <LoadingOverlay show={saving} message={isEditing ? 'Actualizando cliente...' : 'Creando cliente...'} />
 
         {/* Panel izquierdo - sin borde derecho blanco */}
         <div
@@ -571,7 +607,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
           style={{ width: showGraph ? '50%' : '100%', transition: 'width 500ms ease-in-out' }}
         >
           {/* CABECERA - sin línea blanca */}
-          <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
+          <div className="flex items-center justify-between px-5 py-3 bg-[#004D77] shrink-0">
             <h2 className="text-white font-semibold text-lg">
               {isEditing ? 'Editar cliente' : 'Nuevo cliente'}
             </h2>
@@ -585,10 +621,15 @@ function FormClient({ isOpen, onClose, client, onSave }) {
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-            <div className="px-5 py-2 grid grid-cols-2 gap-x-4 gap-y-0">
+            {isEditing && (
+              <div className="mx-5 mt-2 rounded-xl border border-sky-100 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-800">
+                Modo edición: puedes actualizar contacto, crédito, tipo de cliente, RUT y CIU. La identificación queda protegida.
+              </div>
+            )}
+            <div className="px-5 py-1.5 grid grid-cols-2 gap-x-4 gap-y-0">
 
               {/* COLUMNA IZQUIERDA */}
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Datos personales</span>
                   <div className="flex-1 h-px bg-[#004D77]/15" />
@@ -604,8 +645,8 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     error={errors.personType && touched.personType}
                     placeholder="Selecciona una opción"
                     ariaLabel="Tipo de persona"
+                    className="h-9 py-0"
                   />
-                  {isEditing && <p className="text-xs text-gray-400 mt-0.5">No se puede modificar en edición</p>}
                   <ErrorMsg field="personType" />
                 </div>
 
@@ -620,6 +661,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                       error={errors.documentType && touched.documentType}
                       placeholder="Tipo"
                       ariaLabel="Tipo de documento"
+                      className="h-9 py-0"
                     />
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
@@ -635,7 +677,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                       className={isEditing ? disabledInputClass('document') : inputClass('document')}
                       disabled={isEditing}
                     />
-                    {isEditing && <p className="text-xs text-gray-400 mt-0.5">No se puede modificar en edición</p>}
                     <ErrorMsg field="document" />
                   </div>
                 </div>
@@ -653,7 +694,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     className={isEditing ? disabledInputClass('firstName') : inputClass('firstName')}
                     disabled={isEditing}
                   />
-                  {isEditing && <p className="text-xs text-gray-400 mt-0.5">No se puede modificar en edición</p>}
                   <ErrorMsg field="firstName" />
                 </div>
 
@@ -670,7 +710,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     className={isEditing ? disabledInputClass('lastName') : inputClass('lastName')}
                     disabled={isEditing}
                   />
-                  {isEditing && <p className="text-xs text-gray-400 mt-0.5">No se puede modificar en edición</p>}
                   <ErrorMsg field="lastName" />
                 </div>
 
@@ -722,7 +761,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
               </div>
 
               {/* COLUMNA DERECHA */}
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Información adicional</span>
                   <div className="flex-1 h-px bg-[#004D77]/15" />
@@ -768,6 +807,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     error={errors.clientType && touched.clientType}
                     placeholder="Selecciona una opción"
                     ariaLabel="Tipo de cliente"
+                    className="h-9 py-0"
                   />
                   <ErrorMsg field="clientType" />
                 </div>
@@ -812,6 +852,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                       error={errors.rut && touched.rut}
                       placeholder="Seleccione"
                       ariaLabel="RUT"
+                      className="h-9 py-0"
                     />
                     <ErrorMsg field="rut" />
                   </div>
@@ -829,9 +870,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                       disabled={formData.rut === 'no'}
                       readOnly={formData.rut === 'no'}
                     />
-                    {formData.rut === 'no' && (
-                      <p className="text-xs text-gray-400 mt-0.5">Automático: No aplica</p>
-                    )}
                     <ErrorMsg field="ciuCode" />
                   </div>
                 </div>
@@ -843,7 +881,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
               </div>
             </div>
 
-            <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
+            <div className="border-t border-gray-200 px-5 py-3 flex items-center justify-between shrink-0">
               {isEditing ? (
                 <button
                   type="button"

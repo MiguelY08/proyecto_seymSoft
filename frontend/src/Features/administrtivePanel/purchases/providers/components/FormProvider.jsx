@@ -18,6 +18,27 @@ import { useAlert } from '../../../../shared/alerts/useAlert';
 import { validateProviderForm } from '../utils/providerHelpers';
 import { categoriesService } from '../data/categoriesService';
 import FormSelect from '../../../../shared/FormSelect';
+import LoadingOverlay from '../../../../shared/LoadingOverlay';
+
+const onlyDigits = (value, maxLength = 10) =>
+  String(value ?? '').replace(/\D/g, '').slice(0, maxLength);
+
+const onlyLetters = (value, maxLength = 80) =>
+  String(value ?? '')
+    .replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'-]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .slice(0, maxLength);
+
+const cleanDocument = (value, documentType) => {
+  const maxLength = documentType === 'NIT' ? 20 : 15;
+  if (['CC', 'CE', 'NIT'].includes(documentType)) {
+    return onlyDigits(value, maxLength);
+  }
+  return String(value ?? '').replace(/[^A-Za-z0-9-]/g, '').slice(0, maxLength);
+};
+
+const cleanCiuCode = (value) =>
+  String(value ?? '').replace(/[^A-Za-z0-9-]/g, '').slice(0, 25);
 
 const getCategoryIds = (categories) => {
   if (!Array.isArray(categories)) return [];
@@ -171,7 +192,24 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    let newFormData = { ...formData, [name]: value };
+    let nextValue = value;
+    if (name === 'telefono' || name === 'numeroContacto') {
+      nextValue = onlyDigits(value, 10);
+    }
+    if (name === 'nombres' || name === 'apellidos' || name === 'nombreContacto') {
+      nextValue = onlyLetters(value, name === 'nombreContacto' ? 100 : 80);
+    }
+    if (name === 'numero') {
+      nextValue = cleanDocument(value, formData.tipo);
+    }
+    if (name === 'codigoCIU') {
+      nextValue = cleanCiuCode(value);
+    }
+    if (name === 'plazoDevoluciones') {
+      nextValue = onlyDigits(value, 3);
+    }
+
+    let newFormData = { ...formData, [name]: nextValue };
     
     if (name === 'tipoPersona') {
       if (value === 'juridica') {
@@ -358,14 +396,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
   const hasLiveErrors = Object.keys(liveValidationErrors).length > 0;
 
   const inputClass = (field) =>
-    `w-full px-3 py-1.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors ${
+    `h-9 w-full px-3 py-0 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors ${
       errors[field] && touched[field]
         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
 
   const disabledInputClass = (field) =>
-    `w-full px-3 py-1.5 text-sm border rounded-lg outline-none bg-gray-100 text-gray-500 cursor-not-allowed ${
+    `h-9 w-full px-3 py-0 text-sm border rounded-lg outline-none bg-gray-100 text-gray-500 cursor-not-allowed ${
       errors[field] && touched[field]
         ? 'border-red-500'
         : 'border-gray-300'
@@ -443,8 +481,9 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       />
 
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col">
+        <LoadingOverlay show={saving} message={isEditing ? 'Actualizando proveedor...' : 'Creando proveedor...'} />
         
-        <div className="bg-[#004D77] text-white px-6 py-4 flex items-center justify-between shrink-0">
+        <div className="bg-[#004D77] text-white px-5 py-3 flex items-center justify-between shrink-0">
           <h2 className="text-white font-semibold text-lg">
             {isEditing ? 'Editar proveedor' : 'Nuevo proveedor'}
           </h2>
@@ -459,10 +498,15 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <div className="flex-1 overflow-y-auto p-6">
+            {isEditing && (
+              <div className="mb-4 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-800">
+                Modo edición: puedes actualizar contacto, plazo de devolución, categorías, RUT y CIU. La identificación queda protegida.
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 max-w-6xl mx-auto">
 
               {/* COLUMNA IZQUIERDA: DATOS PERSONALES */}
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-1.5">
                 
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Datos personales</span>
@@ -479,8 +523,8 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     error={errors.tipoPersona && touched.tipoPersona}
                     placeholder="Selecciona una opción"
                     ariaLabel="Tipo de persona"
+                    className="h-9 py-0"
                   />
-                  {isEditing && <p className="text-xs text-gray-400 mt-0.5">No se puede modificar en edición</p>}
                   {renderError('tipoPersona')}
                 </div>
 
@@ -495,6 +539,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       error={errors.tipo && touched.tipo}
                       placeholder="Tipo"
                       ariaLabel="Tipo de documento"
+                      className="h-9 py-0"
                     />
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
@@ -510,7 +555,6 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       className={isEditing ? disabledInputClass('numero') : inputClass('numero')}
                       disabled={isEditing}
                     />
-                    {isEditing && <p className="text-xs text-gray-400 mt-0.5">No se puede modificar en edición</p>}
                     {renderError('numero')}
                   </div>
                 </div>
@@ -528,7 +572,6 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     className={isEditing ? disabledInputClass('nombres') : inputClass('nombres')}
                     disabled={isEditing}
                   />
-                  {isEditing && <p className="text-xs text-gray-400 mt-0.5">No se puede modificar en edición</p>}
                   {renderError('nombres')}
                 </div>
 
@@ -545,7 +588,6 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     className={isEditing ? disabledInputClass('apellidos') : inputClass('apellidos')}
                     disabled={isEditing}
                   />
-                  {isEditing && <p className="text-xs text-gray-400 mt-0.5">No se puede modificar en edición</p>}
                   {renderError('apellidos')}
                 </div>
 
@@ -598,7 +640,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
               </div>
 
               {/* COLUMNA DERECHA: INFORMACIÓN ADICIONAL */}
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-1.5">
 
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Información adicional</span>
@@ -707,6 +749,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       error={errors.rut && touched.rut}
                       placeholder="Seleccione"
                       ariaLabel="RUT"
+                      className="h-9 py-0"
                     />
                     {renderError('rut')}
                   </div>
@@ -718,18 +761,11 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       value={formData.codigoCIU}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder={formData.rut === 'si' ? "Ej: 1212" : "Se genera automáticamente"}
                       autoComplete="off"
                       className={formData.rut === 'si' ? inputClass('codigoCIU') : disabledInputClass('codigoCIU')}
                       disabled={formData.rut === 'no'}
                       readOnly={formData.rut === 'no'}
                     />
-                    {formData.rut === 'no' && (
-                      <p className="text-xs text-gray-400 mt-0.5">Automático: No aplica</p>
-                    )}
-                    {formData.rut === 'si' && (
-                      <p className="text-xs text-gray-400 mt-0.5"></p>
-                    )}
                     {renderError('codigoCIU')}
                   </div>
                 </div>
@@ -739,7 +775,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
             </div>
           </div>
 
-          <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
+          <div className="border-t border-gray-200 px-5 py-3 flex items-center justify-end gap-3 shrink-0">
             <button
               type="button"
               onClick={handleClose}
