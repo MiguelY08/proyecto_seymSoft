@@ -10,6 +10,7 @@ import { validateClientForm } from '../helpers/clientHelpers';
 import FormSelect from '../../../../shared/FormSelect';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import LoadingOverlay from '../../../../shared/LoadingOverlay';
+import { clientsService } from '../services/clientsService';
 
 const onlyDigits = (value, maxLength = 10) =>
   String(value ?? '').replace(/\D/g, '').slice(0, maxLength);
@@ -22,6 +23,9 @@ const onlyLetters = (value, maxLength = 80) =>
 
 const cleanDocument = (value, documentType) => {
   const maxLength = documentType === 'NIT' ? 20 : 15;
+  if (documentType === 'NIT') {
+    return String(value ?? '').replace(/[^0-9-]/g, '').slice(0, maxLength);
+  }
   if (['CC', 'CE', 'NIT'].includes(documentType)) {
     return onlyDigits(value, maxLength);
   }
@@ -49,7 +53,6 @@ function MiniFormGraph({ clientId, onExpand }) {
   const loadPurchases = async () => {
     setLoading(true);
     try {
-      const { clientsService } = await import('../services/clientsService');
       const purchasesData = await clientsService.getClientPurchases(clientId);
       setPurchasesCache(purchasesData);
       
@@ -78,7 +81,6 @@ function MiniFormGraph({ clientId, onExpand }) {
         setTotalValue(0);
       }
     } catch (error) {
-      console.error('Error al cargar compras del cliente:', error);
       setData([]);
       setTotalValue(0);
     } finally {
@@ -539,17 +541,17 @@ function FormClient({ isOpen, onClose, client, onSave }) {
   if (!isOpen) return null;
 
   const inputClass = (field) =>
-    `h-9 w-full px-3 py-0 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
+    `h-10 w-full rounded-xl border px-3 py-0 text-sm outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
       errors[field] && touched[field]
         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-        : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
+        : 'border-slate-200 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/10'
     }`;
 
   const disabledInputClass = (field) =>
-    `h-9 w-full px-3 py-0 text-sm border rounded-lg outline-none bg-gray-100 text-gray-500 cursor-not-allowed ${
+    `h-10 w-full rounded-xl border px-3 py-0 text-sm outline-none bg-slate-100 text-slate-500 cursor-not-allowed ${
       errors[field] && touched[field]
         ? 'border-red-500'
-        : 'border-gray-300'
+        : 'border-slate-200'
     }`;
 
   const ErrorMsg = ({ field }) =>
@@ -574,7 +576,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     : [
         { value: 'CC', label: 'CC' },
         { value: 'CE', label: 'CE' },
-        { value: 'NIT', label: 'NIT' },
       ];
   const clientTypeOptions = [
     { value: '', label: 'Selecciona una opción' },
@@ -596,7 +597,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
         onClick={handleClose}
       />
 
-      <div className={`relative bg-white rounded-lg shadow-2xl overflow-hidden flex transition-all duration-500 ease-in-out ${
+      <div className={`relative bg-white rounded-3xl shadow-2xl overflow-hidden flex transition-all duration-500 ease-in-out max-h-[94vh] ${
         showGraph ? 'w-[95vw] max-w-325' : 'w-full max-w-2xl'
       }`}>
         <LoadingOverlay show={saving} message={isEditing ? 'Actualizando cliente...' : 'Creando cliente...'} />
@@ -607,7 +608,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
           style={{ width: showGraph ? '50%' : '100%', transition: 'width 500ms ease-in-out' }}
         >
           {/* CABECERA - sin línea blanca */}
-          <div className="flex items-center justify-between px-5 py-3 bg-[#004D77] shrink-0">
+          <div className="flex items-center justify-between px-5 py-4 bg-[#004D77] shrink-0">
             <h2 className="text-white font-semibold text-lg">
               {isEditing ? 'Editar cliente' : 'Nuevo cliente'}
             </h2>
@@ -626,7 +627,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                 Modo edición: puedes actualizar contacto, crédito, tipo de cliente, RUT y CIU. La identificación queda protegida.
               </div>
             )}
-            <div className="px-5 py-1.5 grid grid-cols-2 gap-x-4 gap-y-0">
+            <div className="px-5 py-4 grid grid-cols-2 gap-x-4 gap-y-3 overflow-y-auto">
 
               {/* COLUMNA IZQUIERDA */}
               <div className="flex flex-col gap-1.5">
@@ -645,7 +646,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     error={errors.personType && touched.personType}
                     placeholder="Selecciona una opción"
                     ariaLabel="Tipo de persona"
-                    className="h-9 py-0"
+                    className="h-10 rounded-xl py-0 pr-10"
                   />
                   <ErrorMsg field="personType" />
                 </div>
@@ -661,7 +662,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                       error={errors.documentType && touched.documentType}
                       placeholder="Tipo"
                       ariaLabel="Tipo de documento"
-                      className="h-9 py-0"
+                      className="h-10 rounded-xl py-0 pr-10"
                     />
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
@@ -681,6 +682,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-2">
                 <div className="flex flex-col gap-1">
                   <Label required>Nombres</Label>
                   <input
@@ -711,6 +713,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     disabled={isEditing}
                   />
                   <ErrorMsg field="lastName" />
+                </div>
                 </div>
 
                 <div className="flex gap-2">
@@ -807,7 +810,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     error={errors.clientType && touched.clientType}
                     placeholder="Selecciona una opción"
                     ariaLabel="Tipo de cliente"
-                    className="h-9 py-0"
+                    className="h-10 rounded-xl py-0 pr-10"
                   />
                   <ErrorMsg field="clientType" />
                 </div>
@@ -852,7 +855,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                       error={errors.rut && touched.rut}
                       placeholder="Seleccione"
                       ariaLabel="RUT"
-                      className="h-9 py-0"
+                      className="h-10 rounded-xl py-0 pr-10"
                     />
                     <ErrorMsg field="rut" />
                   </div>
@@ -881,7 +884,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
               </div>
             </div>
 
-            <div className="border-t border-gray-200 px-5 py-3 flex items-center justify-between shrink-0">
+            <div className="border-t border-slate-100 px-5 py-4 flex items-center justify-between shrink-0">
               {isEditing ? (
                 <button
                   type="button"
@@ -900,14 +903,14 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   type="button"
                   onClick={handleClose}
                   disabled={saving}
-                  className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="rounded-full border border-slate-300 px-6 py-2.5 text-sm font-semibold text-slate-600 transition duration-200 hover:-translate-y-0.5 hover:border-[#004D77] hover:bg-sky-50 hover:text-[#004D77] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={saving || hasLiveErrors}
-                  className="px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  disabled={saving}
+                  className="flex items-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-semibold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-[#003d61] hover:shadow-lg disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {saving ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}

@@ -156,8 +156,6 @@ export const providersService = {
     if (providerData.categoryIds !== undefined) payload.categoryIds = providerData.categoryIds;
     if (providerData.idStatus !== undefined) payload.idStatus = providerData.idStatus;
     
-    console.log(' Update payload:', payload);
-    
     const response = await apiClient.put(`/providers/${id}`, payload);
     const result = response.data;
     

@@ -35,6 +35,11 @@ const highlightText = (text, search) => {
   );
 };
 
+const fallbackText = (value) => {
+  const text = String(value ?? '').trim();
+  return text || 'N/A';
+};
+
 const formatCategories = (categorias) => {
   if (!categorias || !Array.isArray(categorias) || categorias.length === 0) {
     return '—';
@@ -133,10 +138,10 @@ function ProvidersTable({
                   {highlightText(provider.nombre, searchTerm)}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlightText(provider.pContacto, searchTerm)}
+                  {highlightText(fallbackText(provider.pContacto), searchTerm)}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlightText(formatPhoneNumber(provider.nuContacto), searchTerm)}
+                  {highlightText(fallbackText(formatPhoneNumber(provider.nuContacto)), searchTerm)}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlightText(categoriasTexto, searchTerm)}

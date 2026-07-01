@@ -2,9 +2,10 @@
  * Archivo: ReturnsPage.jsx
  * Página principal del módulo de gestión de devoluciones de ventas.
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import ReturnsToolbar from '../components/ReturnsToolbar';
 import ReturnsTable from '../components/ReturnsTable';
+import SalesReturnsMetricsCards from '../components/SalesReturnsMetricsCards';
 import PaginationAdmin from '../../../../shared/PaginationAdmin';
 import FormReturn from '../components/FormReturn';
 import DetailReturn from '../components/DetailReturn';
@@ -105,12 +106,8 @@ function ReturnsPage() {
       setLoading(true);
       const response = await getReturns({ page: 1, limit: 100 });
       const rawData = response?.data || [];
-      
-      const mappedData = rawData.map(normalizeReturn);
-      
-      setReturns(mappedData);
+      setReturns(rawData.map(normalizeReturn));
     } catch (error) {
-      console.error('Error cargando devoluciones:', error);
       showError('Error', error.message || 'No se pudieron cargar las devoluciones');
       setReturns([]);
     } finally {
@@ -122,7 +119,6 @@ function ReturnsPage() {
     loadReturns();
   }, [loadReturns]);
 
-  // ✅ FILTROS
   const handleSearchChange = (term) => {
     setSearchTerm(term);
     setCurrentPage(1);
@@ -156,7 +152,6 @@ function ReturnsPage() {
       await exportReturnsToExcel(filtered);
       showSuccess('Exportación exitosa', 'El archivo Excel se generó correctamente');
     } catch (error) {
-      console.error('Error en exportación:', error);
       showError('Error', 'No se pudo exportar el archivo');
     }
   };
@@ -220,7 +215,6 @@ function ReturnsPage() {
     loadReturns();
   };
 
-  // ✅ GUARDAR CON MODELO ÚNICO
   const handleSave = async (formData) => {
     if (!formData) {
       showError('Error', 'No se recibieron datos del formulario');
@@ -285,8 +279,15 @@ function ReturnsPage() {
     }
   };
 
-  const filteredReturns = filterReturnsByDateAndSearch(returns, searchTerm, startDate, endDate);
-  const paginatedResult = paginateData(filteredReturns, currentPage, RECORDS_PER_PAGE);
+  const filteredReturns = useMemo(
+    () => filterReturnsByDateAndSearch(returns, searchTerm, startDate, endDate),
+    [returns, searchTerm, startDate, endDate]
+  );
+
+  const paginatedResult = useMemo(
+    () => paginateData(filteredReturns, currentPage, RECORDS_PER_PAGE),
+    [filteredReturns, currentPage]
+  );
   const currentData = paginatedResult.currentData || [];
   const startIndex = paginatedResult.startIndex || 0;
   const hasActiveFilters = searchTerm !== '' || startDate !== '' || endDate !== '';
@@ -296,7 +297,7 @@ function ReturnsPage() {
   }
 
   return (
-    <div className="flex min-h-0 flex-col gap-3 p-3 sm:p-4">
+    <div className="flex h-full min-h-0 flex-col gap-4 p-3 sm:p-4">
       <ReturnsToolbar
         search={searchTerm}
         onSearchChange={handleSearchChange}
@@ -308,6 +309,8 @@ function ReturnsPage() {
         onNew={handleNew}
         onExport={handleExport}
       />
+
+      <SalesReturnsMetricsCards returns={returns} />
 
       {hasActiveFilters && (
         <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
@@ -325,7 +328,7 @@ function ReturnsPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-md">
+      <div className="flex-1 min-h-[260px] overflow-hidden rounded-xl bg-white shadow-md">
         <ReturnsTable
           data={currentData}
           startIndex={startIndex}

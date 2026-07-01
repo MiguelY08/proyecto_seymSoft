@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Info, SquarePen, XCircle } from 'lucide-react';
 import { usePermissions } from '../../../configuration/roles/hooks/usePermissions';
 import {
@@ -49,6 +49,165 @@ const formatReasonLabel = (reason) => {
   return normalized.charAt(0).toLocaleUpperCase('es-CO') + normalized.slice(1);
 };
 
+const normalizeStatus = (status) => String(status || 'Sin estado').trim();
+
+const getDetailStatus = (detail) => normalizeStatus(detail.status || detail.estado);
+
+const getDetailName = (detail) =>
+  detail.productName || detail.nombre || detail.name || 'Producto';
+
+const getProductDetails = (row) => {
+  const details = row?.details || row?.productosDevueltos || row?.saleReturnDetails || [];
+  return Array.isArray(details) ? details : [];
+};
+
+const getStatusDotClass = (status) => {
+  const normalized = normalizeStatus(status).toLocaleLowerCase('es-CO');
+  if (normalized.includes('listo') || normalized.includes('procesad')) return 'bg-emerald-400';
+  if (normalized.includes('anulad') || normalized.includes('cancel')) return 'bg-red-400';
+  if (normalized.includes('reembolso') || normalized.includes('reemplazo')) return 'bg-yellow-400';
+  if (normalized.includes('envio') || normalized.includes('envío')) return 'bg-orange-400';
+  return 'bg-slate-400';
+};
+
+function useFloatingTooltip() {
+  const [position, setPosition] = useState(null);
+  const ref = useRef(null);
+
+  const show = useCallback(() => {
+    if (!ref.current) return;
+
+    const rect = ref.current.getBoundingClientRect();
+    const tooltipWidth = 260;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUp = spaceBelow < 190 && rect.top > spaceBelow;
+
+    setPosition({
+      left: Math.min(Math.max(rect.left + rect.width / 2 - tooltipWidth / 2, 12), window.innerWidth - tooltipWidth - 12),
+      top: openUp ? rect.top - 8 : rect.bottom + 8,
+      openUp,
+    });
+  }, []);
+
+  const hide = useCallback(() => setPosition(null), []);
+
+  return { ref, position, show, hide };
+}
+
+const FloatingTooltip = ({ position, children }) => {
+  if (!position) return null;
+
+  return (
+    <div
+      className="fixed z-[9999] w-[260px] rounded-xl bg-slate-800 p-3 text-white shadow-2xl"
+      style={{
+        left: position.left,
+        top: position.openUp ? undefined : position.top,
+        bottom: position.openUp ? window.innerHeight - position.top : undefined,
+      }}
+    >
+      {children}
+    </div>
+  );
+};
+
+const StatusProcessTooltip = ({ row, status }) => {
+  const { ref, position, show, hide } = useFloatingTooltip();
+  const details = getProductDetails(row);
+  const total = details.length;
+  const ready = details.filter((detail) => getDetailStatus(detail) === 'Listo').length;
+  const pending = Math.max(total - ready, 0);
+
+  const statusCounts = details.reduce((acc, detail) => {
+    const detailStatus = getDetailStatus(detail);
+    acc[detailStatus] = (acc[detailStatus] || 0) + 1;
+    return acc;
+  }, {});
+
+  const statusEntries = Object.entries(statusCounts).sort(([a], [b]) => {
+    if (a === 'Listo') return 1;
+    if (b === 'Listo') return -1;
+    return a.localeCompare(b, 'es-CO');
+  });
+
+  const isCancelled = status === 'Anulado';
+
+  return (
+    <>
+      <span
+        ref={ref}
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        className={`inline-flex max-w-full cursor-default items-center justify-center truncate rounded-full px-2 py-0.5 text-[9px] font-semibold ${getStatusStyle(status)}`}
+        title={getStatusText(status)}
+      >
+        {getStatusText(status)}
+      </span>
+
+      <FloatingTooltip position={position}>
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-300">
+          Progreso de devolución
+        </p>
+
+        {isCancelled ? (
+          <div className="rounded-lg bg-red-500/10 px-2.5 py-2 text-xs text-red-100">
+            Esta devolución fue anulada.
+          </div>
+        ) : total > 0 ? (
+          <>
+            <div className="mb-3 grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-lg bg-white/10 px-2.5 py-2">
+                <p className="text-slate-300">Listos</p>
+                <p className="font-semibold text-emerald-300">{ready} de {total}</p>
+              </div>
+              <div className="rounded-lg bg-white/10 px-2.5 py-2">
+                <p className="text-slate-300">Pendientes</p>
+                <p className="font-semibold text-yellow-300">{pending}</p>
+              </div>
+            </div>
+
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Estados de productos
+            </p>
+            <div className="space-y-1.5">
+              {statusEntries.map(([detailStatus, count]) => (
+                <div key={detailStatus} className="flex items-center justify-between gap-3 text-xs">
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${getStatusDotClass(detailStatus)}`} />
+                    <span className="truncate">{detailStatus}</span>
+                  </span>
+                  <span className="shrink-0 font-semibold text-blue-200">{count}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-3 border-t border-white/10 pt-2">
+              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                Productos
+              </p>
+              <div className="max-h-24 space-y-1 overflow-hidden">
+                {details.slice(0, 3).map((detail, index) => (
+                  <div key={`${getDetailName(detail)}-${index}`} className="flex items-center justify-between gap-2 text-[11px] text-slate-200">
+                    <span className="truncate">{getDetailName(detail)}</span>
+                    <span className="shrink-0 text-slate-400">{getDetailStatus(detail)}</span>
+                  </div>
+                ))}
+                {details.length > 3 && (
+                  <p className="text-[11px] text-slate-400">+ {details.length - 3} producto(s) más</p>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="rounded-lg bg-white/10 px-2.5 py-2 text-xs text-slate-200">
+            No hay productos cargados para calcular el progreso.
+          </div>
+        )}
+      </FloatingTooltip>
+    </>
+  );
+};
+
 function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }) {
   const { hasPermission } = usePermissions();
   const canView = hasPermission('devoluciones_en_ventas.ver');
@@ -56,8 +215,8 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
   const canAnnul = hasPermission('devoluciones_en_ventas.anular');
 
   return (
-    <div className="w-full overflow-hidden rounded-xl shadow-md">
-      <table className="w-full table-fixed">
+    <div className="h-full min-h-0 w-full overflow-auto rounded-xl bg-white">
+      <table className="min-w-[1100px] w-full table-fixed">
         <colgroup>
           <col className="w-[4%]" />
           <col className="w-[13%]" />
@@ -70,7 +229,7 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
           <col className="w-[7%]" />
         </colgroup>
 
-        <thead className="bg-[#004D77] text-white">
+        <thead className="sticky top-0 z-10 bg-[#004D77] text-white">
           <tr>
             {HEADERS.map((header) => (
               <th
@@ -127,12 +286,7 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
                     ${formatCurrency(total)}
                   </td>
                   <td className="px-1 py-1.5 text-center">
-                    <span
-                      className={`inline-block max-w-full truncate rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${getStatusStyle(status)}`}
-                      title={getStatusText(status)}
-                    >
-                      {getStatusText(status)}
-                    </span>
+                    <StatusProcessTooltip row={row} status={status} />
                   </td>
                   <td className="px-0.5 py-1.5">
                     <div className="flex items-center justify-center gap-1">

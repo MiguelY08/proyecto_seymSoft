@@ -24,18 +24,15 @@ const validateAndFormatNumber = (value) => {
   num = Math.round(num * 100) / 100;
   
   if (num > MAX_NUMERIC_10_2) {
-    console.warn(` Valor ${num} excede el máximo, limitando a ${MAX_NUMERIC_10_2}`);
     return MAX_NUMERIC_10_2.toString();
   }
   
   if (num < MIN_NUMERIC_10_2) {
-    console.warn(` Valor ${num} es menor que el mínimo, limitando a ${MIN_NUMERIC_10_2}`);
     return MIN_NUMERIC_10_2.toString();
   }
   
   const integerPart = Math.floor(Math.abs(num)).toString();
   if (integerPart.length > 8) {
-    console.warn(` Valor ${num} tiene ${integerPart.length} dígitos enteros, excede el límite de 8`);
     return MAX_NUMERIC_10_2.toString();
   }
   
@@ -153,8 +150,6 @@ export const clientsService = {
   },
 
   update: async (id, clientData) => {
-    console.log('🔍 EDITANDO CLIENTE ID:', id);
-    console.log('📦 Datos recibidos del formulario:', JSON.stringify(clientData, null, 2));
     
     const payload = {};
     
@@ -179,18 +174,11 @@ export const clientsService = {
       payload.ciuCode = (clientData.ciuCode === 'No aplica' || !clientData.ciuCode) ? null : clientData.ciuCode;
     }
     
-    console.log('📤 Payload a enviar al backend:', JSON.stringify(payload, null, 2));
     
     try {
       const response = await apiClient.put(`/clients/${id}`, payload);
-      console.log('✅ Edición exitosa');
       return response.data.data;
     } catch (error) {
-      if (error.response) {
-        console.error('❌ ERROR DEL BACKEND:');
-        console.error('Status:', error.response.status);
-        console.error('Data:', error.response.data);
-      }
       throw error;
     }
   },

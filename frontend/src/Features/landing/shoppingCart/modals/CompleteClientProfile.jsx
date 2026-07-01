@@ -24,6 +24,9 @@ const onlyLetters = (value, maxLength = 80) =>
 
 const cleanDocument = (value, documentType) => {
   const maxLength = documentType === 'NIT' ? 20 : 15;
+  if (documentType === 'NIT') {
+    return String(value ?? '').replace(/[^0-9-]/g, '').slice(0, maxLength);
+  }
   if (['CC', 'CE', 'NIT'].includes(documentType)) {
     return onlyDigits(value, maxLength);
   }
@@ -75,7 +78,6 @@ const SELECT_OPTIONS = {
   naturalDocument: [
     { value: 'CC', label: 'Cédula de ciudadanía' },
     { value: 'CE', label: 'Cédula de extranjería' },
-    { value: 'NIT', label: 'NIT' },
   ],
   legalDocument: [{ value: 'NIT', label: 'NIT' }],
   rut: [
@@ -234,10 +236,6 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
         ? 'border-red-400 bg-red-50'
         : 'border-slate-200 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/10'
     }`;
-  const hasLiveErrors = Object.keys(form).some((name) =>
-    Boolean(validateField(name, form[name], form)),
-  );
-
   const errorMessage = (name) =>
     touched[name] && errors[name] ? (
       <span className="mt-1 block text-[11px] text-red-500">{errors[name]}</span>
@@ -262,8 +260,8 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
     </label>
   );
 
-  const renderSelect = (name, label, options) => (
-    <label>
+  const renderSelect = (name, label, options, fieldOptions = {}) => (
+    <label className={fieldOptions.full ? 'sm:col-span-2' : ''}>
       <span className="mb-1 block text-xs font-bold text-slate-600">
         {label} <span className="text-red-500">*</span>
       </span>
@@ -308,7 +306,7 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            {renderSelect('personType', 'Tipo de persona', SELECT_OPTIONS.personType)}
+            {renderSelect('personType', 'Tipo de persona', SELECT_OPTIONS.personType, { full: true })}
             {renderSelect(
               'documentType',
               'Tipo de documento',
@@ -317,6 +315,11 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
                 : SELECT_OPTIONS.naturalDocument,
             )}
             {renderInput('document', 'Documento', { maxLength: 20 })}
+            {renderInput('firstName', 'Nombres', { maxLength: 80 })}
+            {renderInput('lastName', 'Apellidos', { maxLength: 80 })}
+            {renderInput('phone', 'Teléfono', { type: 'tel', maxLength: 10 })}
+            {renderInput('email', 'Correo', { type: 'email', maxLength: 255 })}
+            {renderInput('address', 'Dirección', { full: true, maxLength: 255 })}
             {renderSelect('rut', 'RUT', SELECT_OPTIONS.rut)}
             {renderInput('ciuCode', 'Código CIU', {
               optional: form.rut !== 'si',
@@ -324,11 +327,6 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
               placeholder: form.rut === 'si' ? 'Ej: 4711' : 'No aplica',
               disabled: form.rut !== 'si',
             })}
-            {renderInput('firstName', 'Nombres', { maxLength: 80 })}
-            {renderInput('lastName', 'Apellidos', { maxLength: 80 })}
-            {renderInput('phone', 'Teléfono', { type: 'tel', maxLength: 10 })}
-            {renderInput('email', 'Correo', { type: 'email', maxLength: 255 })}
-            {renderInput('address', 'Dirección', { full: true, maxLength: 255 })}
             {renderInput('contactName', 'Persona de contacto', { optional: true, maxLength: 100 })}
             {renderInput('contactPhone', 'Teléfono de contacto', {
               optional: true,
@@ -352,7 +350,7 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
             </button>
             <button
               type="submit"
-              disabled={submitting || hasLiveErrors}
+              disabled={submitting}
               className="flex items-center gap-2 rounded-full bg-[#004D77] px-5 py-2.5 text-xs font-bold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-[#003d61] hover:shadow-lg disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60"
             >
               {submitting && <LoaderCircle size={15} className="animate-spin" />}

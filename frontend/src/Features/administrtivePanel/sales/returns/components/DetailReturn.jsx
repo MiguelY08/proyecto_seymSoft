@@ -3,7 +3,20 @@
  * Modal para visualizar los detalles completos de una devolución.
  */
 import React, { useEffect, useState } from 'react';
-import { X, FileDown, AlertTriangle, Image, PackageSearch, Loader2 } from 'lucide-react';
+import {
+  X,
+  FileDown,
+  AlertTriangle,
+  Image,
+  PackageSearch,
+  Loader2,
+  ReceiptText,
+  UserRound,
+  UserCheck,
+  Phone,
+  MapPin,
+  BadgeCheck,
+} from 'lucide-react';
 import ViewEvidence from './ViewEvidence';
 import PurchaseReturnModal from './PurchaseReturnModal';
 import { formatDate } from '../utils/returnsHelpers';
@@ -47,6 +60,27 @@ const buildNonConformingReason = (detail = {}, info = {}, returnNumber = '') => 
 
 const actionButtonClass = 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 border border-gray-400 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer';
 const evidenceButtonClass = 'flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-[#004D77]/10 text-[#004D77] hover:bg-[#004D77]/20 transition cursor-pointer';
+
+const DetailDataRow = ({ icon: Icon, label, value, valueClassName = 'text-gray-800' }) => {
+  const hasValue = value !== undefined && value !== null && String(value).trim().length > 0;
+
+  return (
+    <div className="flex min-w-0 items-start gap-2.5 py-1.5">
+      <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${hasValue ? 'bg-[#004D77]/10' : 'bg-gray-100'}`}>
+        <Icon
+          className={`h-4 w-4 ${hasValue ? 'text-[#004D77]' : 'text-gray-300'}`}
+          strokeWidth={1.8}
+        />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{label}</p>
+        <p className={`text-sm font-medium leading-snug break-words ${hasValue ? valueClassName : 'italic text-gray-300'}`}>
+          {hasValue ? value : 'No registrado'}
+        </p>
+      </div>
+    </div>
+  );
+};
 
 function DetailReturn({ isOpen, onClose, devolucion = null }) {
   const [evidenceOpen, setEvidenceOpen] = useState(false);
@@ -369,22 +403,16 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-y-1.5">
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">No. Factura</p>
-                  <p className="text-sm font-medium text-gray-800 mb-2">{invoiceNumber}</p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cliente</p>
-                  <p className="text-sm font-medium text-gray-800 mb-2">{clientName}</p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Atendió</p>
-                  <p className="text-sm font-medium text-gray-800">{mostrarAsesor}</p>
+              <div className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <DetailDataRow icon={ReceiptText} label="No. Factura" value={invoiceNumber} />
+                  <DetailDataRow icon={UserRound} label="Cliente" value={clientName} />
+                  <DetailDataRow icon={UserCheck} label="Atendió" value={mostrarAsesor} />
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Teléfono</p>
-                  <p className="text-sm font-medium text-gray-800 mb-2">{mostrarTelefono}</p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Dirección</p>
-                  <p className="text-sm font-medium text-gray-800 mb-2">{mostrarDireccion}</p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Estado</p>
-                  <p className={`text-sm font-bold ${estadoColor}`}>{status}</p>
+                <div className="space-y-1">
+                  <DetailDataRow icon={Phone} label="Teléfono" value={mostrarTelefono} />
+                  <DetailDataRow icon={MapPin} label="Dirección" value={mostrarDireccion} />
+                  <DetailDataRow icon={BadgeCheck} label="Estado" value={status} valueClassName={`font-bold ${estadoColor}`} />
                 </div>
               </div>
             </div>
@@ -439,7 +467,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
                             </td>
                             <td className="px-3 py-2.5 text-gray-600">{metodo}</td>
                             <td className="px-3 py-2.5">
-                              <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${isAnulado ? 'text-red-600 bg-red-100' : getStatusColor(estadoProducto)}`}>
+                              <span className={`inline-flex min-w-[84px] items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold ${isAnulado ? 'text-red-600 bg-red-100' : getStatusColor(estadoProducto)}`}>
                                 {estadoProducto}
                               </span>
                             </td>

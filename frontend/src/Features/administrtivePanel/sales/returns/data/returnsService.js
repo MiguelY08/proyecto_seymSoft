@@ -66,7 +66,6 @@ const prepareFormData = (data, files = []) => {
  * Maneja errores de la API de manera consistente
  */
 const handleApiError = (error, customMessage = 'Error en la operación') => {
-  console.error('[API Error]', error);
   if (error.response?.data?.errors) {
     const errors = error.response.data.errors;
     const errorMessages = errors.map(e => e.message).join(', ');
@@ -151,19 +150,14 @@ export const getAvailableInvoices = async (search = '') => {
       return response.data.data || [];
     }
     
-    console.warn('[getAvailableInvoices] Respuesta inesperada:', response.data);
     return [];
     
   } catch (error) {
-    console.error('[getAvailableInvoices] Error:', error);
-    
     if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-      console.warn('[getAvailableInvoices] Timeout, devolviendo array vacío');
       return [];
     }
     
     if (error.response?.status === 500) {
-      console.warn('[getAvailableInvoices] Error 500, devolviendo array vacío');
       return [];
     }
     
@@ -183,7 +177,6 @@ export const getInvoiceDetails = async (invoiceNumber) => {
     }
     return invoice;
   } catch (error) {
-    console.error('[getInvoiceDetails] Error:', error);
     throw new Error(error.message || 'Error al obtener detalles de la factura');
   }
 };
@@ -213,8 +206,6 @@ export const createReturn = async (returnData, evidenceFiles = []) => {
     
     return response.data.data;
   } catch (error) {
-    console.error('📦 [createReturn] Error:', error);
-    
     // ✅ Capturar error de multer (archivo muy grande)
     const errorMessage = error.response?.data?.message || error.message || '';
     
@@ -271,7 +262,6 @@ export const cancelReturn = async (id, cancellationReason) => {
     
     return response.data.data;
   } catch (error) {
-    console.error('[cancelReturn] Error:', error);
     const message = error.response?.data?.message || error.message || 'Error al anular la devolución';
     throw new Error(message);
   }
@@ -282,7 +272,6 @@ export const cancelReturn = async (id, cancellationReason) => {
  */
 export const deleteReturn = async () => {
   try {
-    console.warn('⚠️ El método deleteReturn no elimina realmente, usa cancelReturn');
     throw new Error('Las devoluciones no se eliminan, se anulan. Usa cancelReturn en su lugar.');
   } catch (error) {
     return handleApiError(error, 'Error al eliminar la devolución');
@@ -328,7 +317,6 @@ export const saveEvidence = async (returnId, files, description = '') => {
     );
     return metadata;
   } catch (error) {
-    console.error('Error en saveEvidence:', error);
     throw new Error('Error al procesar las evidencias');
   }
 };
@@ -338,7 +326,6 @@ export const deleteEvidence = async (evidenceId) => {
     const response = await apiClient.delete(`/sales-returns/evidence/${evidenceId}`);
     return response.data;
   } catch (error) {
-    console.error('Error al eliminar evidencia:', error);
     throw new Error('Error al eliminar la evidencia');
   }
 };
@@ -348,7 +335,6 @@ export const getEvidencesByReturnId = async (returnId) => {
     const returnData = await getReturnById(returnId);
     return returnData?.evidences || [];
   } catch (error) {
-    console.error('Error al obtener evidencias:', error);
     return [];
   }
 };
@@ -368,7 +354,6 @@ export const getPurchaseReturnInfo = async (
     });
     return response.data.data;
   } catch (error) {
-    console.error('[getPurchaseReturnInfo] Error:', error);
     throw new Error('Error al obtener información de devolución de compra');
   }
 };
@@ -385,7 +370,6 @@ export const resolveDefectiveProduct = async (
     );
     return response.data.data;
   } catch (error) {
-    console.error('[resolveDefectiveProduct] Error:', error);
     throw new Error(
       error.response?.data?.message ||
       'No fue posible completar la gestión del producto defectuoso'

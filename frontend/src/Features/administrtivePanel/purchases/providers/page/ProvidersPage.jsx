@@ -5,7 +5,7 @@
  * del módulo de Proveedores.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ProvidersToolbar from '../components/ProvidersToolbar';
 import ProvidersTable from '../components/ProvidersTable';
 import PaginationAdmin from '../../../../shared/PaginationAdmin';
@@ -18,6 +18,18 @@ import { downloadProvidersExcel } from '../utils/excelHelper';
 
 const RECORDS_PER_PAGE = 13;
 const SEARCH_FETCH_LIMIT = 10000;
+const SEARCH_DEBOUNCE_MS = 350;
+
+const useDebouncedValue = (value, delay = SEARCH_DEBOUNCE_MS) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedValue(value), delay);
+    return () => window.clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+};
 
 const normalizeSearch = (value) =>
   String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -32,6 +44,9 @@ const flattenSearchValues = (value) => {
 const providerMatchesSearch = (provider, searchTerm) => {
   const term = normalizeSearch(searchTerm).trim();
   if (!term) return true;
+
+  if (['activo', 'activos'].includes(term)) return provider.activo === true;
+  if (['inactivo', 'inactivos'].includes(term)) return provider.activo === false;
 
   const statusText = provider.activo ? 'Activo' : 'Inactivo';
   const searchable = [
@@ -53,17 +68,14 @@ function ProvidersPage() {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [loading, setLoading] = useState(true);
+  const debouncedSearchTerm = useDebouncedValue(searchTerm);
 
   const { showConfirm, showSuccess, showError } = useAlert();
 
-  useEffect(() => {
-    loadProviders();
-  }, [currentPage, searchTerm]);
-
-  const loadProviders = async () => {
+  const loadProviders = useCallback(async () => {
     setLoading(true);
     try {
-      const hasSearch = searchTerm.trim() !== '';
+      const hasSearch = debouncedSearchTerm.trim() !== '';
       const result = await providersService.getAll({
         page: hasSearch ? 1 : currentPage,
         limit: hasSearch ? SEARCH_FETCH_LIMIT : RECORDS_PER_PAGE,
@@ -71,7 +83,7 @@ function ProvidersPage() {
       });
 
       if (hasSearch) {
-        const filtered = result.data.filter((provider) => providerMatchesSearch(provider, searchTerm));
+        const filtered = result.data.filter((provider) => providerMatchesSearch(provider, debouncedSearchTerm));
         const start = (currentPage - 1) * RECORDS_PER_PAGE;
         setProviders(filtered.slice(start, start + RECORDS_PER_PAGE));
         setTotalRecords(filtered.length);
@@ -84,7 +96,11 @@ function ProvidersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, debouncedSearchTerm, showError]);
+
+  useEffect(() => {
+    loadProviders();
+  }, [loadProviders]);
 
   const handleToggleActive = async (id) => {
     const provider = providers.find(p => p.id === id);
@@ -180,7 +196,7 @@ function ProvidersPage() {
 
   const handleDelete = async (provider) => {
     const result = await showConfirm(
-      'error',
+      'warning',
       'Eliminar proveedor',
       `¿Está seguro de eliminar el proveedor "${provider.nombre}"? Esta acción no se puede deshacer.`,
       { confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar' }

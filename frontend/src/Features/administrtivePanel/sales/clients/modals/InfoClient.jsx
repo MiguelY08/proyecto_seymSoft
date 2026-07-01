@@ -81,7 +81,6 @@ function MiniGraphClient({ clientId, onExpand }) {
         setTotalValue(0);
       }
     } catch (error) {
-      console.error('Error al cargar compras del cliente:', error);
       setData([]);
       setTotalValue(0);
     } finally {
