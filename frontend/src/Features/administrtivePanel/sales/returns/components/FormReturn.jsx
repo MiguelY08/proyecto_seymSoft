@@ -10,7 +10,7 @@
  * Todos los demás campos están deshabilitados con mensaje informativo.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { X, ChevronDown, ChevronLeft, Minus, Plus, Image, Search, Loader } from 'lucide-react';
 import Evidence from './Evidence';
 import FormSelect from '../../../../shared/FormSelect';
@@ -714,6 +714,8 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
   const [cargandoFacturas, setCargandoFacturas] = useState(false);
   const facturaInputRef = useRef(null);
   const dropdownRef = useRef(null);
+  const facturaSearchTimeoutRef = useRef(null);
+  const facturaRequestIdRef = useRef(0);
 
   // ==================== VALIDACIÓN ====================
   const [errors, setErrors] = useState({
@@ -821,17 +823,24 @@ useEffect(() => {
 
   // ==================== CARGAR FACTURAS ====================
   const cargarFacturas = async (search = '') => {
+    const requestId = facturaRequestIdRef.current + 1;
+    facturaRequestIdRef.current = requestId;
+
     try {
       setCargandoFacturas(true);
       const facturas = await getAvailableInvoices(search);
+      if (requestId !== facturaRequestIdRef.current) return;
+
       setFacturasDisponibles(facturas || []);
       setShowDropdownFactura(facturas && facturas.length > 0);
     } catch (error) {
-      console.error('Error cargando facturas:', error);
+      if (requestId !== facturaRequestIdRef.current) return;
       setFacturasDisponibles([]);
       setShowDropdownFactura(false);
     } finally {
-      setCargandoFacturas(false);
+      if (requestId === facturaRequestIdRef.current) {
+        setCargandoFacturas(false);
+      }
     }
   };
 
@@ -885,17 +894,22 @@ useEffect(() => {
 
       showSuccess('Factura cargada', `Factura #${factura.invoiceNumber} cargada correctamente`);
     } catch (error) {
-      console.error('Error cargando productos:', error);
       setProductosDisponibles([]);
       setSeleccionados({});
     }
   };
   // ==================== FILTRAR FACTURAS ====================
-  const facturasFiltradas = facturasDisponibles.filter(factura => {
+  const facturasFiltradas = useMemo(() => facturasDisponibles.filter(factura => {
     const term = searchTermFactura.toLowerCase();
     return String(factura.invoiceNumber).includes(term) ||
            factura.clientName?.toLowerCase().includes(term);
-  });
+  }), [facturasDisponibles, searchTermFactura]);
+
+  useEffect(() => () => {
+    if (facturaSearchTimeoutRef.current) {
+      window.clearTimeout(facturaSearchTimeoutRef.current);
+    }
+  }, []);
 
   // ==================== EFECTO PARA CERRAR DROPDOWN ====================
   useEffect(() => {
@@ -1256,7 +1270,7 @@ useEffect(() => {
           idBarcode: producto.idBarcode || null,
           imageUrl: producto.imagen || '',
           reasonName: config.motivo,
-          isDefective: ['DEFECTUOSO', 'MAL_ESTADO', 'PRODUCTO_INCOMPLETO'].includes(config.motivo)
+          isDefective: ['DEFECTUOSO', 'MAL_ESTADO', 'PRODUCTO_INCOMPLETO', 'PRODUCTO_USADO'].includes(config.motivo)
         });
       });
     });
@@ -1438,8 +1452,15 @@ useEffect(() => {
                                 ? ''
                                 : 'Debe seleccionar una factura de la lista',
                             }));
-                            if (e.target.value.length >= 1) {
-                              cargarFacturas(e.target.value);
+                            if (facturaSearchTimeoutRef.current) {
+                              window.clearTimeout(facturaSearchTimeoutRef.current);
+                            }
+
+                            if (e.target.value.trim().length >= 1) {
+                              const searchValue = e.target.value;
+                              facturaSearchTimeoutRef.current = window.setTimeout(() => {
+                                cargarFacturas(searchValue);
+                              }, 350);
                             } else {
                               setShowDropdownFactura(false);
                               setFacturasDisponibles([]);

@@ -22,6 +22,20 @@ const getMethodId = (method) => (
   RETURN_METHODS.find((option) => option.label === method)?.id ?? 1
 );
 
+const formatReturnDeadline = (date) => {
+  if (!date) return 'la fecha configurada';
+
+  const parsedDate = new Date(date);
+  if (Number.isNaN(parsedDate.getTime())) return 'la fecha configurada';
+
+  return parsedDate.toLocaleDateString('es-CO', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'America/Bogota',
+  });
+};
+
 function PurchaseReturnModal({
   isOpen,
   onClose,
@@ -142,7 +156,7 @@ function PurchaseReturnModal({
                 {' · '}
                 {purchaseInfo.provider?.name_provider || purchaseInfo.providerName || 'Proveedor'}
                 {' · '}
-                disponible hasta {purchaseInfo.maxReturnDate || 'la fecha configurada'}
+                disponible hasta {formatReturnDeadline(purchaseInfo.maxReturnDate)}
               </p>
             </div>
           </div>

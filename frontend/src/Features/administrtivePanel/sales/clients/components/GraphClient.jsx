@@ -45,7 +45,6 @@ function GraphClient({ clientId, clientStartDate = '07/05/2023' }) {
         setTotalGeneral(0);
       }
     } catch (error) {
-      console.error('Error al cargar compras del cliente:', error);
       setData([]);
       setTotalGeneral(0);
     } finally {

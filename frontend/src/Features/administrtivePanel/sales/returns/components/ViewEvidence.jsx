@@ -46,7 +46,6 @@ const ViewEvidence = ({
         alert('No se puede descargar esta imagen');
       }
     } catch (error) {
-      console.error('Error al descargar:', error);
       alert('Error al descargar la imagen');
     }
   };
@@ -86,7 +85,6 @@ const ViewEvidence = ({
                   alt={`Evidencia ${currentIndex + 1}`}
                   className="max-w-full max-h-[65vh] w-auto h-auto object-contain rounded-2xl shadow-lg"
                   onError={(e) => {
-                    console.error('Error cargando imagen:', currentImageUrl);
                     e.target.src = '';
                     e.target.alt = 'Error al cargar imagen';
                   }}

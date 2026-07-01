@@ -152,7 +152,6 @@ function Evidence({
       setLocalFiles([]);
       onClose?.();
     } catch (error) {
-      console.error('Error al guardar evidencias:', error);
       alert('Error al guardar evidencias');
     } finally {
       setSaving(false);

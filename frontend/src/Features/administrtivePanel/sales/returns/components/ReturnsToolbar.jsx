@@ -129,9 +129,9 @@ function ReturnsToolbar({
         <button
           onClick={onNew}
           className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-sky-700 rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
-          aria-label="Nueva devolución"
+          aria-label="Nuevo"
         >
-          <span className="hidden sm:inline">Nueva devolución</span>
+          <span className="hidden sm:inline">Nuevo</span>
           <Plus className="w-4 h-4" strokeWidth={2} />
         </button>
       </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import ClientsToolbar    from '../components/ClientsToolbar';
 import ClientsTable      from '../components/ClientsTable';
 import PaginationAdmin   from '../../../../shared/PaginationAdmin';
@@ -14,6 +14,18 @@ import { downloadClientsExcel } from '../helpers/excelHelper';
 const RECORDS_PER_PAGE = 13;
 const CREDIT_EVENTS_SEEN_KEY = 'clients_seen_credit_balance_events';
 const SEARCH_FETCH_LIMIT = 10000;
+const SEARCH_DEBOUNCE_MS = 350;
+
+const useDebouncedValue = (value, delay = SEARCH_DEBOUNCE_MS) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedValue(value), delay);
+    return () => window.clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+};
 
 const normalizeSearch = (value) =>
   String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -28,6 +40,9 @@ const flattenSearchValues = (value) => {
 const clientMatchesSearch = (client, searchTerm) => {
   const term = normalizeSearch(searchTerm).trim();
   if (!term) return true;
+
+  if (['activo', 'activos'].includes(term)) return client.active === true;
+  if (['inactivo', 'inactivos'].includes(term)) return client.active === false;
 
   const statusText = client.active ? 'Activo' : 'Inactivo';
   const searchable = [
@@ -50,12 +65,9 @@ function ClientsPage() {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedClient,  setSelectedClient]  = useState(null);
   const [loading,         setLoading]         = useState(true);
+  const debouncedSearchTerm = useDebouncedValue(searchTerm);
 
   const { showConfirm, showSuccess, showError, showWarning } = useAlert();
-
-  useEffect(() => {
-    loadClients();
-  }, [currentPage, searchTerm]);
 
   useEffect(() => {
     const notifyCreditEvents = async () => {
@@ -82,18 +94,18 @@ function ClientsPage() {
           `Saldo a favor ${action}`,
           `${latest.clientName}: ${value}. ${latest.reason}. Devolución ${latest.returnNumber}, producto ${latest.productName}. Procesado por: ${latest.processedBy || 'Sistema'}.`
         );
-      } catch (error) {
-        console.error('No se pudieron consultar los movimientos de saldo a favor:', error);
+      } catch {
+        return;
       }
     };
 
     notifyCreditEvents();
   }, [showWarning]);
 
-  const loadClients = async () => {
+  const loadClients = useCallback(async () => {
     setLoading(true);
     try {
-      const hasSearch = searchTerm.trim() !== '';
+      const hasSearch = debouncedSearchTerm.trim() !== '';
       const result = await clientsService.getAll({
         page: hasSearch ? 1 : currentPage,
         limit: hasSearch ? SEARCH_FETCH_LIMIT : RECORDS_PER_PAGE,
@@ -101,7 +113,7 @@ function ClientsPage() {
       });
 
       if (hasSearch) {
-        const filtered = result.data.filter((client) => clientMatchesSearch(client, searchTerm));
+        const filtered = result.data.filter((client) => clientMatchesSearch(client, debouncedSearchTerm));
         const start = (currentPage - 1) * RECORDS_PER_PAGE;
         setClients(filtered.slice(start, start + RECORDS_PER_PAGE));
         setTotalRecords(filtered.length);
@@ -114,7 +126,11 @@ function ClientsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, debouncedSearchTerm, showError]);
+
+  useEffect(() => {
+    loadClients();
+  }, [loadClients]);
 
   const handleToggleActive = async (id) => {
     const client = clients.find(c => c.id === id);
@@ -180,10 +196,7 @@ const handleSave = async (formData) => {
       // 🔥 Obtener el mensaje desde error.response.data
       const errorMessage = error?.response?.data?.message || error.message || '';
       const errorCode = error?.response?.data?.errorCode || '';
-      
-      console.log('📛 errorMessage:', errorMessage);
-      console.log('📛 errorCode:', errorCode);
-      
+
       // ✅ ALERTA PARA CRÉDITO VENCIDO
       if (errorCode === 'CLIENT_HAS_OVERDUE_CREDITS' || 
           errorCode === 'CLIENT_HAS_OVERDUE_INVOICES' ||
@@ -223,10 +236,7 @@ const handleDelete = async (client) => {
       // 🔥 Obtener el mensaje desde error.response.data
       const errorMessage = error.response?.data?.message || error.message || '';
       const errorCode = error.response?.data?.errorCode || '';
-      
-      console.log('📛 errorMessage:', errorMessage);
-      console.log('📛 errorCode:', errorCode);
-      
+
       // Verificar por errorCode específico
       if (errorCode === 'CLIENT_HAS_SALES') {
         showError(
