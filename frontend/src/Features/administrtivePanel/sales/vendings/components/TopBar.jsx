@@ -14,6 +14,7 @@ import { useAlert } from '../../../../shared/alerts/useAlert';
 import ButtonComponent from '../../../../shared/ButtonComponent';
 import FormSelect from '../../../../shared/FormSelect';
 import { downloadSalesExcel } from '../helpers/salesHelpers';
+import Permission from '../../../configuration/roles/components/Permission';
 
 const SALES_TYPE_EXPORT_CONFIG = {
   all: {
@@ -235,46 +236,50 @@ function TopBar({
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
-        <ButtonComponent
-          className={`bg-white text-green-600 border-green-600 px-2 flex items-center gap-2 ${
-            isExporting
-              ? 'opacity-60 cursor-not-allowed'
-              : 'hover:bg-green-400'
-          }`}
-          onClick={isExporting ? undefined : handleDownload}
-        >
-          <FileSpreadsheet className="w-4 h-4" />
-          {isExporting ? 'Exportando...' : 'Exportar Excel'}
-        </ButtonComponent>
-
-        <div className="relative">
+        <Permission permission="ventas.exportar">
           <ButtonComponent
-            onClick={() => setShowSaleTypeMenu((prev) => !prev)}
-            title="Nueva"
+            className={`bg-white text-green-600 border-green-600 px-2 flex items-center gap-2 ${
+              isExporting
+                ? 'opacity-60 cursor-not-allowed'
+                : 'hover:bg-green-400'
+            }`}
+            onClick={isExporting ? undefined : handleDownload}
           >
-            <span className="hidden sm:inline">Nueva</span>
-            <Plus className="w-4 h-4" strokeWidth={2} />
+            <FileSpreadsheet className="w-4 h-4" />
+            {isExporting ? 'Exportando...' : 'Exportar Excel'}
           </ButtonComponent>
+        </Permission>
 
-          {showSaleTypeMenu && (
-            <div className="absolute right-0 top-full mt-2 w-44 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden z-20">
-              <button
-                type="button"
-                onClick={() => handleNewSale('manual')}
-                className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-[#004D77]/10 hover:text-[#004D77] cursor-pointer"
-              >
-                Venta manual
-              </button>
-              <button
-                type="button"
-                onClick={() => handleNewSale('direct')}
-                className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-[#004D77]/10 hover:text-[#004D77] cursor-pointer"
-              >
-                Venta directa
-              </button>
-            </div>
-          )}
-        </div>
+        <Permission permission="ventas.crear">
+          <div className="relative">
+            <ButtonComponent
+              onClick={() => setShowSaleTypeMenu((prev) => !prev)}
+              title="Nueva"
+            >
+              <span className="hidden sm:inline">Nueva</span>
+              <Plus className="w-4 h-4" strokeWidth={2} />
+            </ButtonComponent>
+
+            {showSaleTypeMenu && (
+              <div className="absolute right-0 top-full mt-2 w-44 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden z-20">
+                <button
+                  type="button"
+                  onClick={() => handleNewSale('manual')}
+                  className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-[#004D77]/10 hover:text-[#004D77] cursor-pointer"
+                >
+                  Venta manual
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNewSale('direct')}
+                  className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-[#004D77]/10 hover:text-[#004D77] cursor-pointer"
+                >
+                  Venta directa
+                </button>
+              </div>
+            )}
+          </div>
+        </Permission>
       </div>
     </div>
   );

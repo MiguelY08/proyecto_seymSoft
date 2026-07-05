@@ -10,6 +10,7 @@ import { getNonConforming, cancelNonConforming } from "../data/nonConformingServ
 import Spinner from "../../../../shared/spinner"; // ← IMPORTAR SPINNER
 import * as XLSX from "xlsx";
 import { normalizeBarcode, useBarcodeScanner } from "../../../../shared/scanner";
+import Permission from "../../../configuration/roles/components/Permission";
 
 const NON_CONFORMING_SEARCH_SCANNER_FIELD = "non-conforming-product-search";
 
@@ -272,6 +273,7 @@ export const NonConformingProducts = () => {
           />
           <div className="flex-1" />
           <div className="flex items-center gap-2">
+            <Permission permission="producto_no_conforme.exportar">
             <button
               onClick={handleDownloadExcel}
               className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
@@ -279,6 +281,8 @@ export const NonConformingProducts = () => {
               <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
               <span className="hidden sm:inline">Export Excel</span>
             </button>
+            </Permission>
+            <Permission permission="producto_no_conforme.crear">
             <button
               onClick={() => setShowModal(true)}
               className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 whitespace-nowrap"
@@ -287,6 +291,7 @@ export const NonConformingProducts = () => {
               <span className="sm:hidden">Nuevo</span>
               <Plus className="w-4 h-4" strokeWidth={2} />
             </button>
+            </Permission>
           </div>
         </div>
 

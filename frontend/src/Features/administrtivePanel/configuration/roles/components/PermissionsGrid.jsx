@@ -10,12 +10,27 @@ export default function PermissionsGrid({
 
 }) {
 
+  const ACTION_HELP = {
+    "pagos_y_abonos.generar_interes":
+      "Se usa dentro de Contactar cliente.",
+    "pagos_y_abonos.anular":
+      "Se usa desde el historial de abonos.",
+  };
+
   const getModuleLabel = (moduleName) => {
     if (moduleName === "dashboard") {
       return "Inicio";
     }
 
-    return moduleName;
+    return String(moduleName || "")
+      .replaceAll("_", " ")
+      .split(" ")
+      .filter(Boolean)
+      .map((word) =>
+        word.charAt(0).toUpperCase() +
+        word.slice(1).toLowerCase()
+      )
+      .join(" ");
   };
 
   // ─────────────────────────────
@@ -294,11 +309,19 @@ export default function PermissionsGrid({
 
                   {
 
-                    modulo.acciones.map((accion) => (
+                    modulo.acciones.map((accion) => {
+
+                      const helpText =
+                        ACTION_HELP[
+                          `${modulo.modulo}.${accion.key}`
+                        ];
+
+                      return (
 
                       <label
                         key={accion.key}
-                        className="flex items-center gap-2 cursor-pointer"
+                        className="flex items-start gap-2 cursor-pointer"
+                        title={helpText || accion.label}
                       >
 
                         <input
@@ -338,11 +361,23 @@ export default function PermissionsGrid({
                           }`}
                         />
 
-                        {accion.label}
+                        <span className="leading-tight">
+                          <span>
+                            {accion.label}
+                          </span>
+
+                          {helpText && (
+                            <span className="block text-[10px] text-gray-500">
+                              {helpText}
+                            </span>
+                          )}
+                        </span>
 
                       </label>
 
-                    ))
+                    );
+
+                    })
 
                   }
 

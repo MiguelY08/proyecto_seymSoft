@@ -15,6 +15,7 @@
  */
 import React from 'react';
 import { Search, Plus, FileSpreadsheet, Eraser } from 'lucide-react';
+import Permission from '../../../configuration/roles/components/Permission';
 
 /**
  * Componente: ReturnsToolbar
@@ -117,23 +118,27 @@ function ReturnsToolbar({
 
       {/* ===== BOTONES DE ACCIONES ===== */}
       <div className="flex items-center gap-2 shrink-0">
-        <button
-          onClick={onExport}
-          className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
-          aria-label="Exportar a Excel"
-        >
-          <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
-          <span className="hidden sm:inline">Export Excel</span>
-        </button>
+        <Permission permission="devoluciones_en_ventas.exportar">
+          <button
+            onClick={onExport}
+            className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
+            aria-label="Exportar a Excel"
+          >
+            <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
+            <span className="hidden sm:inline">Export Excel</span>
+          </button>
+        </Permission>
 
-        <button
-          onClick={onNew}
-          className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-sky-700 rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
-          aria-label="Nuevo"
-        >
-          <span className="hidden sm:inline">Nuevo</span>
-          <Plus className="w-4 h-4" strokeWidth={2} />
-        </button>
+        <Permission permission="devoluciones_en_ventas.crear">
+          <button
+            onClick={onNew}
+            className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-sky-700 rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
+            aria-label="Nuevo"
+          >
+            <span className="hidden sm:inline">Nuevo</span>
+            <Plus className="w-4 h-4" strokeWidth={2} />
+          </button>
+        </Permission>
       </div>
 
     </div>
