@@ -1,6 +1,7 @@
 // features/administrtivePanel/purchases/nonConformingProducts/components/NonConformingProductsTable.jsx
 import { Info, XCircle, Ban } from "lucide-react";
 import Pagination from "../../../../shared/PaginationAdmin";
+import Permission from "../../../configuration/roles/components/Permission";
 
 export const NonConformingProductsTable = ({
   currentData,
@@ -28,7 +29,7 @@ export const NonConformingProductsTable = ({
                 <th className="px-3 py-2 text-center font-semibold">Cantidad Afectada</th>
                 <th className="px-3 py-2 text-center font-semibold">Fecha de Detección</th>
                 <th className="px-3 py-2 text-left font-semibold">Motivo del Reporte</th>
-                <th className="px-3 py-2 text-center font-semibold">Funciones</th>
+                <th className="px-3 py-2 text-center font-semibold">Acciones</th>
               </tr>
             </thead>
 
@@ -67,26 +68,30 @@ export const NonConformingProductsTable = ({
                   </td>
                   <td className="px-3 py-2.5 text-center">
                     <div className="flex justify-center gap-3">
-                      <button
-                        onClick={() => handleViewDetails(report)}
-                        className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-125"
-                      >
-                        <Info size={16} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (report.estado !== "Anulado") {
-                            handleCancel(report.id);
-                          }
-                        }}
-                        className={`transition-all duration-200 transform hover:scale-125 ${
-                          report.estado === "Anulado"
-                            ? "text-red-600 cursor-not-allowed"
-                            : "text-gray-400 hover:text-red-600"
-                        }`}
-                      >
-                        {report.estado === "Anulado" ? <Ban size={16} /> : <XCircle size={16} />}
-                      </button>
+                      <Permission permission="producto_no_conforme.ver_informacion">
+                        <button
+                          onClick={() => handleViewDetails(report)}
+                          className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-125"
+                        >
+                          <Info size={16} />
+                        </button>
+                      </Permission>
+                      <Permission permission="producto_no_conforme.anular">
+                        <button
+                          onClick={() => {
+                            if (report.estado !== "Anulado") {
+                              handleCancel(report.id);
+                            }
+                          }}
+                          className={`transition-all duration-200 transform hover:scale-125 ${
+                            report.estado === "Anulado"
+                              ? "text-red-600 cursor-not-allowed"
+                              : "text-gray-400 hover:text-red-600"
+                          }`}
+                        >
+                          {report.estado === "Anulado" ? <Ban size={16} /> : <XCircle size={16} />}
+                        </button>
+                      </Permission>
                     </div>
                   </td>
                 </tr>

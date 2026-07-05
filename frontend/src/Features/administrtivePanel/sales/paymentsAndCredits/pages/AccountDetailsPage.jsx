@@ -13,8 +13,9 @@ import GeneratePaymentModal from "../components/GeneratePaymentModal";
 import CancelPaymentModal from "../components/CancelPaymentModal";
 import AccountReceipt from "../components/AccountReceipt";
 import StatusBadge from "../components/StatusBadge";
-import ButtonComponent from "../../../../shared/ButtonComponent";
 import Spinner from "../../../../shared/Spinner";
+import Permission from "../../../configuration/roles/components/Permission";
+import { clientsService } from "../../clients/services/clientsService";
 
 import {
   createInstallment,
@@ -22,6 +23,113 @@ import {
 } from "../services/paymentsServices";
 import usePaymentsDetails from "../hooks/usePaymentsDetails";
 import { getTotalAbonadoFactura } from "../utils/paymentHelpers";
+
+const getCustomerEmail = (customer) =>
+  customer?.email ??
+  customer?.correo ??
+  customer?.mail ??
+  customer?.user?.email ??
+  "";
+
+function CreditDateTooltip({ factura, formatDate }) {
+  const anchorRef = useRef(null);
+  const [position, setPosition] = useState(null);
+
+  const rawDueDate =
+    factura?.dueDate ||
+    factura?.due_date ||
+    factura?.fechaVencimiento ||
+    factura?.fecha_vencimiento ||
+    factura?.expirationDate ||
+    factura?.expiration_date;
+
+  const calculatedDueDate = useMemo(() => {
+    if (rawDueDate) {
+      return rawDueDate;
+    }
+
+    if (!factura?.fechaCredito) {
+      return null;
+    }
+
+    const creditDate = new Date(factura.fechaCredito);
+
+    if (Number.isNaN(creditDate.getTime())) {
+      return null;
+    }
+
+    const dueDate = new Date(creditDate);
+    dueDate.setMonth(dueDate.getMonth() + 2);
+
+    return dueDate;
+  }, [factura?.fechaCredito, rawDueDate]);
+
+  const observation =
+    factura?.observacion ||
+    factura?.observation ||
+    factura?.descripcion ||
+    factura?.description ||
+    "";
+
+  const showTooltip = () => {
+    if (!anchorRef.current) return;
+
+    const rect = anchorRef.current.getBoundingClientRect();
+    const tooltipWidth = 190;
+    const left = Math.min(
+      Math.max(rect.left + rect.width / 2 - tooltipWidth / 2, 12),
+      window.innerWidth - tooltipWidth - 12,
+    );
+
+    setPosition({
+      left,
+      top: rect.bottom + 8,
+    });
+  };
+
+  const hideTooltip = () => {
+    setPosition(null);
+  };
+
+  return (
+    <span
+      ref={anchorRef}
+      className="relative inline-flex justify-center"
+      onMouseEnter={showTooltip}
+      onMouseLeave={hideTooltip}
+    >
+      <span className="cursor-default">
+        {formatDate(factura?.fechaCredito)}
+      </span>
+
+      {position && (
+        <div
+          className="fixed z-[9999] min-w-[190px] max-w-[240px] rounded-lg bg-[#0f172a] px-3.5 py-2.5 text-center text-xs text-white shadow-xl"
+          style={{
+            left: position.left,
+            top: position.top,
+          }}
+        >
+          <p className="font-semibold">
+            Fecha de vencimiento
+          </p>
+          <p className="mt-1 text-slate-200">
+            {formatDate(calculatedDueDate)}
+          </p>
+
+          {observation && (
+            <>
+              <div className="my-2 h-px bg-slate-600" />
+              <p className="break-words text-slate-100">
+                {observation}
+              </p>
+            </>
+          )}
+        </div>
+      )}
+    </span>
+  );
+}
 
 export default function AccountDetailsPage({ mode }) {
   const { id } = useParams();
@@ -32,6 +140,7 @@ export default function AccountDetailsPage({ mode }) {
     nombre: "",
     documento: "",
     telefono: "",
+    correo: "",
     creditoAsignado: 0,
     saldo: 0,
     cupoDisponible: 0,
@@ -66,11 +175,20 @@ export default function AccountDetailsPage({ mode }) {
 
         if (!customer) return;
 
+        let customerDetails = null;
+
+        try {
+          customerDetails = await clientsService.getById(id);
+        } catch (customerDetailsError) {
+          console.error(customerDetailsError);
+        }
+
         setAccount({
           id: customer.idClient,
           nombre: customer.fullName,
           documento: customer.doc_number ,
           telefono: customer.phone,
+          correo: getCustomerEmail(customer) || getCustomerEmail(customerDetails),
           creditoAsignado: Number(customer.assignedCredit ?? 0),
           saldo: Number(customer.usedCredit ?? 0),
           cupoDisponible: Number(customer.availableCredit ?? 0),
@@ -274,7 +392,7 @@ export default function AccountDetailsPage({ mode }) {
           className="bg-white rounded-2xl shadow-md overflow-hidden"
         >
           {/* Cabecera — 8 columnas */}
-          <div className="grid grid-cols-8 bg-[#004D77] text-white text-xs font-medium px-4 py-3">
+          <div className="grid grid-cols-9 bg-[#004D77] text-white text-xs font-medium px-4 py-3">
             <span>Nro Factura</span>
             <span className="text-center">Valor Crédito</span>
             <span className="text-center">Interés</span>
@@ -283,6 +401,7 @@ export default function AccountDetailsPage({ mode }) {
             <span className="text-center">Total Abonado</span>
             <span className="text-center">Saldo</span>
             <span className="text-center">Estado</span>
+            <span className="text-center">Acciones</span>
           </div>
 
           {facturas.length === 0 && (
@@ -312,7 +431,7 @@ export default function AccountDetailsPage({ mode }) {
               >
                 {/* Fila clickeable */}
                 <div
-                  className="grid grid-cols-8 items-center px-4 py-3 text-sm cursor-pointer hover:bg-gray-50 transition"
+                  className="grid grid-cols-9 items-center px-4 py-3 text-sm cursor-pointer hover:bg-gray-50 transition"
                   onClick={() => toggleFactura(factura.id)}
                 >
                   {/* Nro Factura */}
@@ -358,7 +477,10 @@ export default function AccountDetailsPage({ mode }) {
 
                   {/* Fecha Crédito */}
                   <span className="text-center text-gray-500">
-                    {formatDate(factura.fechaCredito)}
+                    <CreditDateTooltip
+                      factura={factura}
+                      formatDate={formatDate}
+                    />
                   </span>
 
                   {/* Total Abonado a Capital */}
@@ -378,6 +500,25 @@ export default function AccountDetailsPage({ mode }) {
                   {/* Estado */}
                   <div className="flex justify-center">
                     <StatusBadge status={estadoFac} />
+                  </div>
+
+                  <div className="flex justify-center">
+                    <Permission permission="pagos_y_abonos.abonar">
+                      {mode === "payment" && saldoFac > 0 && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenPaymentModal(factura);
+                          }}
+                          className="text-gray-400 hover:scale-110 hover:text-green-600 transition cursor-pointer"
+                          title="Registrar Abono"
+                          aria-label="Registrar Abono"
+                        >
+                          <PlusCircle size={17} strokeWidth={1.7} />
+                        </button>
+                      )}
+                    </Permission>
                   </div>
                 </div>
 
@@ -413,23 +554,6 @@ export default function AccountDetailsPage({ mode }) {
                     )}
 
                     {/* Botón Registrar Abono */}
-                    {mode === "payment" && saldoFac > 0 && (
-                      <div className="flex justify-end">
-                        <ButtonComponent
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenPaymentModal(factura);
-                          }}
-                          className="flex items-center gap-2 bg-[#004D77] text-[#004D77] border-[#004D77] hover:bg-[#003D5e]"
-                        >
-                          <span className="flex items-center gap-2">
-                            <PlusCircle size={15} />
-                            Registrar Abono
-                          </span>
-                        </ButtonComponent>
-                      </div>
-                    )}
-
                     {/* Tabla de abonos */}
                     <PaymentHistoryTable
                       abonos={getPaginatedAbonos(factura)}

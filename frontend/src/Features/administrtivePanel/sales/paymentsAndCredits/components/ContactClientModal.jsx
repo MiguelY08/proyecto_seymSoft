@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 import GenerateInterestModal from "./GenerateInterestModal";
 import { generateInterest } from "../services/paymentsServices";
 import { useAlert } from "../../../../shared/alerts/useAlert";
+import Permission from "../../../configuration/roles/components/Permission";
 
 /*
   Modal de gestión de contacto para clientes con facturas vencidas.
@@ -167,12 +168,14 @@ export default function ContactClientModal({
                       )}
                     </span>
                   </div>
+                  <Permission permission="pagos_y_abonos.generar_interes">
                   <button
                     onClick={() => handleOpenInterest(credit)}
                     className="text-xs px-3 py-1 bg-[#004D77] text-white rounded-lg hover:bg-[#003D5e] transition cursor-pointer"
                   >
                     Interés
                   </button>
+                  </Permission>
                 </div>
               ))}
             </div>

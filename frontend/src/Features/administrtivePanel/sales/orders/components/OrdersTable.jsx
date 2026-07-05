@@ -9,6 +9,7 @@ import {
 } from '../helpers/ordersHelpers';
 import { ESTADOS_LOGISTICOS, PaymentService } from '../services/ordersService';
 import OrderPaymentHover from './OrderPaymentHover';
+import Permission from '../../../configuration/roles/components/Permission';
 
 // ─── Empty State ─────────────────────────────────────────────────────────────
 function EmptyState({ isSearching }) {
@@ -179,6 +180,7 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex items-center justify-center gap-1.5">
+                    <Permission permission="pedidos.ver_informacion">
                     <button
                       onClick={() => onViewDetail(order)}
                       className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
@@ -186,7 +188,9 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
                     >
                       <Info className="w-4 h-4" strokeWidth={1.5} />
                     </button>
+                    </Permission>
 
+                    <Permission permission="pedidos.editar">
                     {deshabilitado ? (
                       <span className="text-gray-200 cursor-not-allowed" title={disabledTitle}>
                         <SquarePen className="w-4 h-4" strokeWidth={1.5} />
@@ -200,7 +204,9 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
                         <SquarePen className="w-4 h-4" strokeWidth={1.5} />
                       </button>
                     )}
+                    </Permission>
 
+                    <Permission permission="pedidos.anular">
                     {deshabilitado ? (
                       <span className="text-gray-200 cursor-not-allowed" title={disabledTitle}>
                         <XCircle className="w-4 h-4" strokeWidth={1.5} />
@@ -214,6 +220,7 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
                         <XCircle className="w-4 h-4" strokeWidth={1.5} />
                       </button>
                     )}
+                    </Permission>
                   </div>
                 </td>
               </tr>

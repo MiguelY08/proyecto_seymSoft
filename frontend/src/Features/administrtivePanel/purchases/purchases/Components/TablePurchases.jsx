@@ -1,6 +1,7 @@
 import React from "react";
 import { Info, Package, RefreshCw, XCircle } from "lucide-react";
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
+import Permission from "../../../configuration/roles/components/Permission";
 
 const escapeRegExp = (value = "") =>
   String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -190,6 +191,7 @@ export const PurchasesTable = ({
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex items-center justify-center gap-1.5">
+                    <Permission permission="compras.ver_informacion">
                     <button
                       type="button"
                       onClick={() => handleViewDetail(purchase)}
@@ -198,7 +200,9 @@ export const PurchasesTable = ({
                     >
                       <Info className="h-4 w-4" strokeWidth={1.5} />
                     </button>
+                    </Permission>
 
+                    <Permission permission="compras.devolver">
                     <button
                       type="button"
                       onClick={() => canReturn && handleReturn?.(purchase)}
@@ -212,7 +216,9 @@ export const PurchasesTable = ({
                     >
                       <RefreshCw className="h-4 w-4" strokeWidth={1.5} />
                     </button>
+                    </Permission>
 
+                    <Permission permission="compras.anular">
                     {isAnnulled ? (
                       <span
                         className="cursor-not-allowed text-gray-200"
@@ -230,6 +236,7 @@ export const PurchasesTable = ({
                         <XCircle className="h-4 w-4" strokeWidth={1.5} />
                       </button>
                     )}
+                    </Permission>
                   </div>
                 </td>
               </tr>

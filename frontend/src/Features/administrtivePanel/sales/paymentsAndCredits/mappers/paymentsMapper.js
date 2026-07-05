@@ -15,6 +15,13 @@ export const mapCustomer = (customer) => ({
 
   telefono: customer.phone,
 
+  correo:
+    customer.email ??
+    customer.correo ??
+    customer.mail ??
+    customer.user?.email ??
+    "",
+
   creditoAsignado:
     Number(customer.assignedCredit ?? 0),
 
@@ -58,25 +65,58 @@ export const mapInvoice = (invoice) => {
     nroFactura: invoice.idSale,
 
     valorCredito:
-      Number(invoice.creditAmount ?? 0),
+      Number(
+        invoice.creditAmount ??
+        invoice.credit_amount ??
+        0
+      ),
 
     saldo:
-      Number(invoice.remainingBalance ?? 0),
+      Number(
+        invoice.remainingBalance ??
+        invoice.remaining_balance ??
+        0
+      ),
 
     interes:
-      Number(invoice.pendingInterest ?? 0),
+      Number(
+        invoice.pendingInterest ??
+        invoice.pending_interest ??
+        0
+      ),
 
     deudaTotal:
-      Number(invoice.totalDebt ?? 0),
+      Number(
+        invoice.totalDebt ??
+        invoice.total_debt ??
+        0
+      ),
 
     totalAbonado:
-      Number(invoice.totalPaid ?? 0),
+      Number(
+        invoice.totalPaid ??
+        invoice.total_paid ??
+        0
+      ),
 
     fechaCredito:
-      invoice.saleDate,
+      invoice.creditDate ??
+      invoice.credit_date ??
+      invoice.saleDate ??
+      invoice.sale_date,
 
     fechaVencimiento:
-      invoice.dueDate,
+      invoice.dueDate ??
+      invoice.due_date ??
+      invoice.fechaVencimiento ??
+      invoice.fecha_vencimiento,
+
+    observacion:
+      invoice.observations ??
+      invoice.observation ??
+      invoice.description ??
+      invoice.descripcion ??
+      "",
 
     estado:
       statusMap[

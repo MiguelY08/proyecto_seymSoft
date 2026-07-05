@@ -24,6 +24,8 @@ export default function GeneratePaymentModal({
 
   const [errors, setErrors] = useState({});
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const formatNumber = (value) => {
     if (!value) return "";
 
@@ -76,6 +78,8 @@ export default function GeneratePaymentModal({
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+
     if (!validate()) {
       showWarning(
         "Formulario incompleto",
@@ -100,6 +104,8 @@ export default function GeneratePaymentModal({
     if (!confirm.isConfirmed) return;
 
     try {
+      setIsSubmitting(true);
+
       await onSave({
         monto: parseNumber(monto),
 
@@ -114,6 +120,8 @@ export default function GeneratePaymentModal({
         "Error al guardar",
         error.message || "Ocurrió un problema al registrar el abono.",
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -123,7 +131,11 @@ export default function GeneratePaymentModal({
         <div className="bg-[#004D77] text-white px-5 py-3 flex justify-between items-center">
           <h3 className="font-semibold text-lg">Registrar Abono</h3>
 
-          <X size={18} className="cursor-pointer" onClick={onClose} />
+          <X
+            size={18}
+            className={isSubmitting ? "cursor-not-allowed opacity-50" : "cursor-pointer"}
+            onClick={isSubmitting ? undefined : onClose}
+          />
         </div>
 
         <div className="p-6 space-y-5">
@@ -289,16 +301,18 @@ export default function GeneratePaymentModal({
           <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition cursor-pointer"
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
 
             <button
               onClick={handleSubmit}
-              className="px-4 py-2 rounded-lg text-white transition bg-[#004D77] hover:bg-[#003D5e] cursor-pointer"
+              disabled={isSubmitting}
+              className="px-4 py-2 rounded-lg text-white transition bg-[#004D77] hover:bg-[#003D5e] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Guardar Abono
+              {isSubmitting ? "Guardando..." : "Guardar Abono"}
             </button>
           </div>
         </div>

@@ -15,6 +15,7 @@ import { useAlert } from '../../../../shared/alerts/useAlert';
 import ButtonComponent from '../../../../shared/ButtonComponent';
 import { exportOrdersToExcel } from '../helpers/ordersHelpers';
 import { ORIGENES, ESTADOS_PAGO } from '../services/ordersService';
+import Permission from '../../../configuration/roles/components/Permission';
 
 function TopBar({
   search,
@@ -320,21 +321,25 @@ function TopBar({
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
-        <ButtonComponent
-          className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-2 flex items-center gap-2"
-          onClick={handleDownloadExcel}
-        >
-          <FileSpreadsheet className="w-4 h-4" />
-          <span className="hidden sm:inline">Exportar Excel</span>
-        </ButtonComponent>
+        <Permission permission="pedidos.exportar">
+          <ButtonComponent
+            className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-2 flex items-center gap-2"
+            onClick={handleDownloadExcel}
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="hidden sm:inline">Exportar Excel</span>
+          </ButtonComponent>
+        </Permission>
 
-        <ButtonComponent
-          onClick={() => navigate('new-order')}
-          title="Nuevo"
-        >
-          <span className="hidden sm:inline">Nuevo</span>
-          <Plus className="w-4 h-4" strokeWidth={2} />
-        </ButtonComponent>
+        <Permission permission="pedidos.crear">
+          <ButtonComponent
+            onClick={() => navigate('new-order')}
+            title="Nuevo"
+          >
+            <span className="hidden sm:inline">Nuevo</span>
+            <Plus className="w-4 h-4" strokeWidth={2} />
+          </ButtonComponent>
+        </Permission>
       </div>
     </div>
   );
