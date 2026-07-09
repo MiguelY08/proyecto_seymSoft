@@ -138,7 +138,7 @@ const StatusProcessTooltip = ({ row, status }) => {
         ref={ref}
         onMouseEnter={show}
         onMouseLeave={hide}
-        className={`inline-flex max-w-full cursor-default items-center justify-center truncate rounded-full px-2 py-0.5 text-[9px] font-semibold ${getStatusStyle(status)}`}
+        className={`inline-flex max-w-full cursor-default items-center justify-center truncate rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusStyle(status)}`}
         title={getStatusText(status)}
       >
         {getStatusText(status)}
@@ -215,7 +215,7 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
   const canAnnul = hasPermission('devoluciones_en_ventas.anular');
 
   return (
-    <div className="h-full min-h-0 w-full overflow-auto rounded-xl bg-white">
+    <div className="h-full min-h-0 w-full overflow-auto rounded-xl bg-white shadow-md">
       <table className="min-w-[1100px] w-full table-fixed">
         <colgroup>
           <col className="w-[4%]" />
@@ -234,7 +234,7 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
             {HEADERS.map((header) => (
               <th
                 key={header}
-                className="truncate px-1 py-2 text-center text-[10px] font-semibold"
+                className="truncate px-4 py-3 text-center text-sm font-semibold"
                 title={header}
               >
                 {header}
@@ -246,13 +246,13 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
         <tbody>
           {!data?.length ? (
             <tr>
-              <td colSpan={9} className="py-8 text-center text-xs text-gray-400">
+              <td colSpan={9} className="py-8 text-center text-sm text-gray-400">
                 No se encontraron devoluciones.
               </td>
             </tr>
           ) : (
             data.map((row, index) => {
-              const rowBg = index % 2 === 0 ? 'bg-white' : 'bg-gray-100';
+              const rowBg = index % 2 === 0 ? 'bg-gray-100 hover:bg-blue-50' : 'bg-white hover:bg-blue-50';
               const returnNumber = getField(row, ['numeroDevolucion', 'returnNumber']);
               const invoiceNumber = getField(row, ['numeroFactura', 'invoiceNumber']);
               const client = getField(row, ['cliente', 'clientName']);
@@ -263,41 +263,41 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
               const cancelled = status === 'Anulado';
 
               return (
-                <tr key={row.id || returnNumber || index} className={`${rowBg} transition-colors`}>
-                  <td className="px-1 py-1.5 text-center text-[10px] font-medium text-gray-500">
+                <tr key={row.id || returnNumber || index} className={`${rowBg} transition-colors duration-150`}>
+                  <td className="px-4 py-2.5 text-center text-sm font-medium text-gray-500">
                     {startIndex + index + 1}
                   </td>
-                  <td className="truncate px-1 py-1.5 text-center text-[10px] text-gray-700" title={returnNumber}>
+                  <td className="truncate px-4 py-2.5 text-center text-sm text-gray-700" title={returnNumber}>
                     {highlightText(returnNumber, searchTerm)}
                   </td>
-                  <td className="truncate px-1 py-1.5 text-center text-[10px] text-gray-700" title={invoiceNumber}>
+                  <td className="truncate px-4 py-2.5 text-center text-sm text-gray-700" title={invoiceNumber}>
                     {highlightText(invoiceNumber, searchTerm)}
                   </td>
-                  <td className="truncate px-1 py-1.5 text-center text-[10px] font-medium text-gray-800" title={client}>
+                  <td className="truncate px-4 py-2.5 text-center text-sm font-medium text-gray-800" title={client}>
                     {highlightText(client, searchTerm)}
                   </td>
-                  <td className="truncate px-1 py-1.5 text-center text-[10px] text-gray-700" title={reason}>
+                  <td className="truncate px-4 py-2.5 text-center text-sm text-gray-700" title={reason}>
                     {highlightText(reason, searchTerm)}
                   </td>
-                  <td className="truncate px-1 py-1.5 text-center text-[10px] text-gray-700">
+                  <td className="truncate px-4 py-2.5 text-center text-sm text-gray-700">
                     {formatDate(createdAt)}
                   </td>
-                  <td className="truncate px-1 py-1.5 text-center text-[10px] text-gray-700" title={`$${formatCurrency(total)}`}>
+                  <td className="truncate px-4 py-2.5 text-center text-sm text-gray-700 font-semibold" title={`$${formatCurrency(total)}`}>
                     ${formatCurrency(total)}
                   </td>
-                  <td className="px-1 py-1.5 text-center">
+                  <td className="px-4 py-2.5 text-center">
                     <StatusProcessTooltip row={row} status={status} />
                   </td>
-                  <td className="px-0.5 py-1.5">
-                    <div className="flex items-center justify-center gap-1">
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center justify-center gap-2">
                       {canView && (
                         <button
                           type="button"
                           onClick={() => onInfo(row)}
-                          className="text-gray-400 transition hover:text-[#004D77]"
+                          className="text-gray-400 transition-colors duration-200 hover:text-[#004D77] cursor-pointer"
                           title="Ver detalle"
                         >
-                          <Info className="h-3.5 w-3.5" strokeWidth={1.6} />
+                          <Info className="h-5 w-5" strokeWidth={1.5} />
                         </button>
                       )}
                       {canEdit && (
@@ -305,10 +305,10 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
                           type="button"
                           onClick={() => onEdit(row)}
                           disabled={cancelled}
-                          className="text-gray-400 transition hover:text-[#004D77] disabled:cursor-not-allowed disabled:opacity-30"
+                          className="text-gray-400 transition-colors duration-200 hover:text-[#004D77] disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer"
                           title={cancelled ? 'No se puede editar una devolución anulada' : 'Editar'}
                         >
-                          <SquarePen className="h-3.5 w-3.5" strokeWidth={1.6} />
+                          <SquarePen className="h-5 w-5" strokeWidth={1.5} />
                         </button>
                       )}
                       {canAnnul && (
@@ -316,10 +316,10 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
                           type="button"
                           onClick={() => onCancel(row)}
                           disabled={cancelled}
-                          className="text-gray-400 transition hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30"
+                          className="text-gray-400 transition-colors duration-200 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer"
                           title={cancelled ? 'Ya está anulada' : 'Anular devolución'}
                         >
-                          <XCircle className="h-3.5 w-3.5" strokeWidth={1.6} />
+                          <XCircle className="h-5 w-5" strokeWidth={1.5} />
                         </button>
                       )}
                     </div>

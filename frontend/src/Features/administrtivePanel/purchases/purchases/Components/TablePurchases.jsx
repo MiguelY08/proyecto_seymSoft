@@ -104,18 +104,18 @@ export const PurchasesTable = ({
       <table className="min-w-max w-full">
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="sticky left-0 z-10 bg-[#004D77] px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="sticky left-0 z-10 bg-[#004D77] px-4 py-3 text-center text-sm font-semibold">
               No. Facturación
             </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Fecha compra</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Proveedor</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Cantidad</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Precio</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">Fecha compra</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold">Proveedor</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold">Cantidad</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold">Precio</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               Límite devolución
             </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Estado</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Acciones</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold">Estado</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold">Acciones</th>
           </tr>
         </thead>
 
@@ -148,28 +148,28 @@ export const PurchasesTable = ({
                 className={`group transition-colors duration-150 ${baseRowBg} hover:bg-blue-50`}
               >
                 <td
-                  className={`sticky left-0 z-10 px-3 py-2 text-center font-mono text-xs text-gray-700 whitespace-nowrap transition-colors duration-150 ${baseRowBg} group-hover:bg-blue-50`}
+                  className={`sticky left-0 z-10 px-4 py-2.5 text-center font-mono text-sm text-gray-700 whitespace-nowrap transition-colors duration-150 ${baseRowBg} group-hover:bg-blue-50`}
                 >
                   {highlightText(purchase.numeroFacturacion || purchase.id || "-", search)}
                 </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                   {highlightText(purchase.fechaCompra || "-", search)}
                 </td>
-                <td className="max-w-xs truncate px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap">
+                <td className="max-w-xs truncate px-4 py-2.5 text-center text-sm text-gray-800 whitespace-nowrap">
                   {highlightText(purchase.proveedor || "Proveedor no disponible", search)}
                 </td>
-                <td className="px-3 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center text-sm font-semibold text-gray-700 whitespace-nowrap">
                   {highlightText(purchase.cantidadProductos?.toString() || "0", search)}
                 </td>
-                <td className="px-3 py-2 text-center text-xs font-semibold text-gray-800 whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center text-sm font-semibold text-gray-800 whitespace-nowrap">
                   {highlightText(
                     `$${Number(purchase.precioTotal || 0).toLocaleString("es-CO")}`,
                     search
                   )}
                 </td>
-                <td className="px-3 py-2 text-center whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center whitespace-nowrap">
                   <span
-                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
                       isExpired
                         ? "border-red-300 bg-red-100 text-red-700"
                         : "border-blue-300 bg-blue-100 text-blue-700"
@@ -179,24 +179,24 @@ export const PurchasesTable = ({
                     {isExpired ? " (Vencida)" : ""}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-center whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center whitespace-nowrap">
                   <span
-                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getStatusClasses(
+                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusClasses(
                       purchase.estado
                     )}`}
                   >
                     {highlightText(purchase.estado || "Sin estado", search)}
                   </span>
                 </td>
-                <td className="px-3 py-2">
-                  <div className="flex items-center justify-center gap-1.5">
+                <td className="px-4 py-2.5">
+                  <div className="flex items-center justify-center gap-2">
                     <button
                       type="button"
                       onClick={() => handleViewDetail(purchase)}
                       className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]"
                       title="Ver información"
                     >
-                      <Info className="h-4 w-4" strokeWidth={1.5} />
+                      <Info className="h-4.5 w-4.5" strokeWidth={1.5} />
                     </button>
 
                     <button
@@ -210,7 +210,7 @@ export const PurchasesTable = ({
                           : "cursor-not-allowed text-gray-200"
                       }`}
                     >
-                      <RefreshCw className="h-4 w-4" strokeWidth={1.5} />
+                      <RefreshCw className="h-4.5 w-4.5" strokeWidth={1.5} />
                     </button>
 
                     {isAnnulled ? (
@@ -218,7 +218,7 @@ export const PurchasesTable = ({
                         className="cursor-not-allowed text-gray-200"
                         title="No disponible para compras anuladas"
                       >
-                        <XCircle className="h-4 w-4" strokeWidth={1.5} />
+                        <XCircle className="h-4.5 w-4.5" strokeWidth={1.5} />
                       </span>
                     ) : (
                       <button
@@ -227,7 +227,7 @@ export const PurchasesTable = ({
                         className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-red-500"
                         title="Anular compra"
                       >
-                        <XCircle className="h-4 w-4" strokeWidth={1.5} />
+                        <XCircle className="h-4.5 w-4.5" strokeWidth={1.5} />
                       </button>
                     )}
                   </div>

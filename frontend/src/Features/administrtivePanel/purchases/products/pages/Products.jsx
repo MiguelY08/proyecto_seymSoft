@@ -583,28 +583,28 @@ function Products() {
               <table className="min-w-max w-full">
                 <thead className="bg-[#004D77] text-white">
                   <tr>
-                    <th className="px-3 py-2.5 text-center text-xs font-semibold">
+                    <th className="px-4 py-3 text-center text-sm font-semibold">
                       Nombre del producto
                     </th>
-                    <th className="px-3 py-2.5 text-center text-xs font-semibold">
+                    <th className="px-4 py-3 text-center text-sm font-semibold">
                       Cod Barras
                     </th>
-                    <th className="px-3 py-2.5 text-center text-xs font-semibold">
+                    <th className="px-4 py-3 text-center text-sm font-semibold">
                       Referencia
                     </th>
-                    <th className="px-3 py-2.5 text-center text-xs font-semibold">
+                    <th className="px-4 py-3 text-center text-sm font-semibold">
                       Categoría/Sub
                     </th>
-                    <th className="px-3 py-2.5 text-center text-xs font-semibold">
+                    <th className="px-4 py-3 text-center text-sm font-semibold">
                       Unidad
                     </th>
-                    <th className="px-3 py-2.5 text-center text-xs font-semibold">
+                    <th className="px-4 py-3 text-center text-sm font-semibold">
                       Stock
                     </th>
-                    <th className="px-3 py-2.5 text-center text-xs font-semibold">
+                    <th className="px-4 py-3 text-center text-sm font-semibold">
                       Precio detal
                     </th>
-                    <th className="px-3 py-2.5 text-center text-xs font-semibold">
+                    <th className="px-4 py-3 text-center text-sm font-semibold">
                       Acciones
                     </th>
                   </tr>
@@ -629,37 +629,37 @@ function Products() {
                         key={row.id}
                         className={`transition-colors duration-150 ${rowBg}`}
                       >
-                        <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">
+                        <td className="px-4 py-2.5 text-center text-sm text-gray-800 whitespace-nowrap">
                           <HighlightText text={row.name} highlight={search} />
                         </td>
-                        <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                        <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                           <HighlightText
                             text={row.barcodes?.[0]?.barcode || ""}
                             highlight={search}
                           />
                         </td>
-                        <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                        <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                           <HighlightText
                             text={row.reference || ""}
                             highlight={search}
                           />
                         </td>
-                        <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                        <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                           <HighlightText
                             text={subcategoriaDisplay}
                             highlight={search}
                           />
                         </td>
-                        <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                        <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                           <HighlightText
                             text={unitMeasureDisplay}
                             highlight={search}
                           />
                         </td>
-                        <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
-                          <div className="mx-auto flex h-7 w-24 items-center justify-center gap-1.5 rounded-md border border-[#004D77]/15 bg-white px-2 shadow-sm">
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[#004D77]/10 text-[#004D77]">
-                              <Package className="h-3.5 w-3.5" strokeWidth={2} />
+                        <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                          <div className="mx-auto flex h-8 w-28 items-center justify-center gap-2 rounded-md border border-[#004D77]/15 bg-white px-2.5 shadow-sm">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[#004D77]/10 text-[#004D77]">
+                              <Package className="h-4 w-4" strokeWidth={2} />
                             </span>
                             <span className="min-w-0 truncate font-semibold text-gray-800">
                               <HighlightText
@@ -671,7 +671,7 @@ function Products() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                        <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                           <HighlightText
                             text={Number(row.retailPrice || 0).toLocaleString(
                               "es-CO",
@@ -679,8 +679,8 @@ function Products() {
                             highlight={search}
                           />
                         </td>
-                        <td className="px-3 py-1.5">
-                          <div className="flex items-center justify-center gap-1 sm:gap-1.5">
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center justify-center gap-1.5 sm:gap-2">
                             {canToggle && (
                               <ActiveToggle
                                 activo={row.status === "Activo" ? true : false}
@@ -697,7 +697,7 @@ function Products() {
                                 title="Ver detalles"
                               >
                                 <Info
-                                  className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                                  className="w-4 h-4 sm:w-4.5 sm:h-4.5"
                                   strokeWidth={1.5}
                                 />
                               </button>
@@ -710,7 +710,7 @@ function Products() {
                                 title="Editar"
                               >
                                 <SquarePen
-                                  className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                                  className="w-4 h-4 sm:w-4.5 sm:h-4.5"
                                   strokeWidth={1.5}
                                 />
                               </button>
@@ -726,10 +726,10 @@ function Products() {
                                 title="Eliminar"
                               >
                                 {deletingIds.includes(row.id) ? (
-                                  <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" strokeWidth={1.5} />
+                                  <Loader2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 animate-spin" strokeWidth={1.5} />
                                 ) : (
                                   <Trash2
-                                    className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                                    className="w-4 h-4 sm:w-4.5 sm:h-4.5"
                                     strokeWidth={1.5}
                                   />
                                 )}

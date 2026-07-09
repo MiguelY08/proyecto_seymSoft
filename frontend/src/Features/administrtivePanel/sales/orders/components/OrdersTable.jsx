@@ -37,7 +37,7 @@ function EmptyState({ isSearching }) {
 }
 
 // ─── OrdersTable ─────────────────────────────────────────────────────────────
-function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offset = 0, totalOrders = 0 }) {
+function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', totalOrders = 0 }) {
   const isSearching = totalOrders > 0 && search.trim().length > 0;
   const [paymentCache, setPaymentCache] = React.useState({});
   const [paymentHoverPositions, setPaymentHoverPositions] = React.useState({});
@@ -109,14 +109,14 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
       <table className="min-w-max w-full">
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">N° Pedido</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Cliente</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Fecha</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Entrega</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Total</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Estado</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Pago</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Acciones</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold">N° Pedido</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold">Cliente</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold">Fecha</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold">Entrega</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold">Total</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold">Estado</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold">Pago</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -141,25 +141,25 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
 
             return (
               <tr key={order.id} className={`transition-colors duration-150 ${rowBg}`}>
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap font-mono">
+                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap font-mono">
                   {highlight(order.numeroPedido || String(order.id), search)}
                 </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center text-sm text-gray-800 whitespace-nowrap">
                   {highlight(clienteMostrar, search)}
                 </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                   {highlight(order.fechaPedido ? new Date(order.fechaPedido).toLocaleDateString('es-CO') : '', search)}
                 </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap max-w-xs truncate">
+                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap max-w-xs truncate">
                   {highlight(direccionMostrar, search)}
                 </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap font-semibold">
                   {highlight(`$${order.total.toLocaleString()}`, search)}
                 </td>
-                <td className="px-3 py-2 text-center whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center whitespace-nowrap">
                   <EstadoLogisticoBadgeTable estado={order.estadoLogistico} term={search} />
                 </td>
-                <td className="px-3 py-2 text-center whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center whitespace-nowrap">
                   <div
                     className="group relative inline-flex justify-center"
                     onMouseEnter={(event) => {
@@ -177,41 +177,41 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', offs
                     />
                   </div>
                 </td>
-                <td className="px-3 py-2">
-                  <div className="flex items-center justify-center gap-1.5">
+                <td className="px-4 py-2.5">
+                  <div className="flex items-center justify-center gap-2">
                     <button
                       onClick={() => onViewDetail(order)}
-                      className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                      className="text-gray-400 hover:text-[#004D77] transition-colors duration-200 cursor-pointer"
                       title="Información"
                     >
-                      <Info className="w-4 h-4" strokeWidth={1.5} />
+                      <Info className="w-5 h-5" strokeWidth={1.5} />
                     </button>
 
                     {deshabilitado ? (
                       <span className="text-gray-200 cursor-not-allowed" title={disabledTitle}>
-                        <SquarePen className="w-4 h-4" strokeWidth={1.5} />
+                        <SquarePen className="w-5 h-5" strokeWidth={1.5} />
                       </span>
                     ) : (
                       <button
                         onClick={() => onEdit(order)}
-                        className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                        className="text-gray-400 hover:text-[#004D77] transition-colors duration-200 cursor-pointer"
                         title="Editar pedido"
                       >
-                        <SquarePen className="w-4 h-4" strokeWidth={1.5} />
+                        <SquarePen className="w-5 h-5" strokeWidth={1.5} />
                       </button>
                     )}
 
                     {deshabilitado ? (
                       <span className="text-gray-200 cursor-not-allowed" title={disabledTitle}>
-                        <XCircle className="w-4 h-4" strokeWidth={1.5} />
+                        <XCircle className="w-5 h-5" strokeWidth={1.5} />
                       </span>
                     ) : (
                       <button
                         onClick={() => onCancel(order)}
-                        className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
+                        className="text-gray-400 hover:text-red-500 transition-colors duration-200 cursor-pointer"
                         title="Cancelar pedido"
                       >
-                        <XCircle className="w-4 h-4" strokeWidth={1.5} />
+                        <XCircle className="w-5 h-5" strokeWidth={1.5} />
                       </button>
                     )}
                   </div>
