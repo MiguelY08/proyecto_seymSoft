@@ -1,6 +1,7 @@
-import { Info, DollarSign, Phone } from "lucide-react";
-import StatusBadge from "./StatusBadge";
-import { highlight } from "../utils/paymentHelpers";
+import { Info, DollarSign, Phone } from "lucide-react"
+import StatusBadge from "./StatusBadge"
+import { highlight } from "../utils/paymentHelpers"
+import Permission from "../../../configuration/roles/components/Permission"
 
 export default function PaymentsTable({
   data = [],
@@ -121,31 +122,37 @@ export default function PaymentsTable({
                   <StatusBadge status={status} search={search} />
                 </td>
 
-                {/* Acciones */}
-                <td className="px-4 py-2.5">
-                  <div className="flex items-center justify-center gap-2">
-                    <Info
-                      size={20}
-                      className="text-gray-400 cursor-pointer transition-colors duration-200 hover:text-[#004D77]"
-                      title="Ver detalle"
-                      onClick={() => onView(item.id)}
-                    />
-                    {(status === "pendiente" || status === "vencido") && (
-                      <DollarSign
-                        size={20}
-                        className="cursor-pointer text-gray-400 transition-colors duration-200 hover:text-green-600"
-                        title="Registrar abono"
-                        onClick={() => onAbonar(item.id)}
+                {/* Funciones */}
+                <td className="px-3 py-1">
+                  <div className="flex justify-center gap-2">
+                    <Permission permission="pagos_y_abonos.ver_informacion">
+                      <Info
+                        size={14}
+                        className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-[#004D77]"
+                        title="Ver detalle"
+                        onClick={() => onView(item.id)}
                       />
-                    )}
-                    {status === "vencido" && (
-                      <Phone
-                        size={20}
-                        className="text-gray-400 cursor-pointer transition-colors duration-200 hover:text-red-500"
-                        title="Contactar cliente"
-                        onClick={() => onContact(item)}
-                      />
-                    )}
+                    </Permission>
+                    <Permission permission="pagos_y_abonos.abonar">
+                      {(status === "pendiente" || status === "vencido") && (
+                        <DollarSign
+                          size={14}
+                          className="cursor-pointer text-gray-400 hover:scale-110 transition hover:text-green-600"
+                          title="Registrar abono"
+                          onClick={() => onAbonar(item.id)}
+                        />
+                      )}
+                    </Permission>
+                    <Permission permission="pagos_y_abonos.contactar">
+                      {status === "vencido" && (
+                        <Phone
+                          size={14}
+                          className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-red-500"
+                          title="Contactar cliente"
+                          onClick={() => onContact(item)}
+                        />
+                      )}
+                    </Permission>
                   </div>
                 </td>
 

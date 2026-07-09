@@ -31,6 +31,7 @@ export default function CancelPaymentModal({
   const [password,     setPassword]     = useState("")
   const [errors,       setErrors]       = useState({})
   const [showPassword, setShowPassword] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   if (!isOpen) return null
 
@@ -54,6 +55,7 @@ export default function CancelPaymentModal({
   }
 
 const handleSubmit = async () => {
+  if (isSubmitting) return;
 
   const reasonError =
     validateReason(reason);
@@ -74,7 +76,7 @@ const handleSubmit = async () => {
   const confirm =
     await showConfirm(
       "warning",
-      "¿Confirmar anulación?",
+      "Confirmar anulacion",
       "Esta acción no se puede deshacer.",
       {
         confirmButtonText:
@@ -88,6 +90,7 @@ const handleSubmit = async () => {
     return;
 
   try {
+    setIsSubmitting(true);
 
     await cancelInstallment(
       payment?.id,
@@ -127,6 +130,8 @@ const handleSubmit = async () => {
       "Error",
       message
     );
+  } finally {
+    setIsSubmitting(false);
   }
 };
 
@@ -209,15 +214,17 @@ const handleSubmit = async () => {
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button
               onClick={onClose}
-              className="flex-1 bg-gray-400 text-white py-2 rounded-xl cursor-pointer hover:bg-gray-500 transition"
+              disabled={isSubmitting}
+              className="flex-1 bg-gray-400 text-white py-2 rounded-xl cursor-pointer hover:bg-gray-500 transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
             <button
               onClick={handleSubmit}
-              className="flex-1 text-white py-2 rounded-xl cursor-pointer bg-[#004D77] hover:bg-[#003D5e] transition"
+              disabled={isSubmitting}
+              className="flex-1 text-white py-2 rounded-xl cursor-pointer bg-[#004D77] hover:bg-[#003D5e] transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Confirmar anulación
+              {isSubmitting ? "Anulando..." : "Confirmar anulación"}
             </button>
           </div>
 
@@ -226,3 +233,4 @@ const handleSubmit = async () => {
     </div>
   )
 }
+

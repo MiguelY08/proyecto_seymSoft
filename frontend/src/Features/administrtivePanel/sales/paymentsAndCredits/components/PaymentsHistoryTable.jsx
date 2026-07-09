@@ -1,5 +1,6 @@
 import { XCircle } from "lucide-react";
 import { useRef, useState } from "react";
+import Permission from "../../../configuration/roles/components/Permission";
 
 export default function PaymentHistoryTable({
   abonos = [],
@@ -200,19 +201,21 @@ export default function PaymentHistoryTable({
                   {mode === "payment" && (
                     <td className="px-3 py-2 text-center">
 
-                      <XCircle
-                        size={15}
-                        onClick={() => {
-                          if (allowed) {
-                            onDelete(abono);
-                          }
-                        }}
-                        className={`mx-auto transition ${
-                          allowed
-                            ? "text-gray-400 hover:text-red-500 hover:scale-110 cursor-pointer"
-                            : "text-gray-200 cursor-not-allowed"
-                        }`}
-                      />
+                      <Permission permission="pagos_y_abonos.anular">
+                        <XCircle
+                          size={15}
+                          onClick={() => {
+                            if (allowed) {
+                              onDelete(abono);
+                            }
+                          }}
+                          className={`mx-auto transition ${
+                            allowed
+                              ? "text-gray-400 hover:text-red-500 hover:scale-110 cursor-pointer"
+                              : "text-gray-200 cursor-not-allowed"
+                          }`}
+                        />
+                      </Permission>
 
                     </td>
                   )}

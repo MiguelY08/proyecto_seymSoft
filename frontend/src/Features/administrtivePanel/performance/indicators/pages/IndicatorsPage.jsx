@@ -9,6 +9,7 @@ import useBreakpoint from "../hooks/useBreakpoint";
 import useIndicators from "../hooks/useIndicators";
 
 import Spinner from "../../../../shared/spinner/Spinner.jsx";
+import Permission from "../../../configuration/roles/components/Permission";
 
 function IndicatorsPage() {
   const { isMobile, isTablet } = useBreakpoint();
@@ -52,20 +53,21 @@ function IndicatorsPage() {
       : "2fr 1fr";
 
   return (
-    <div
-      style={{
-        padding: isMobile ? "12px" : "16px",
-        fontFamily:
-          "'Geist', 'DM Sans', 'Segoe UI', system-ui, sans-serif",
-        boxSizing: "border-box",
-        width: "100%",
-        minHeight: "100%",
-        background: "#f0f4f8",
-        display: "flex",
-        flexDirection: "column",
-        gap: "12px",
-      }}
-    >
+    <Permission permission="dashboard.ver">
+      <div
+        style={{
+          padding: isMobile ? "12px" : "16px",
+          fontFamily:
+            "'Geist', 'DM Sans', 'Segoe UI', system-ui, sans-serif",
+          boxSizing: "border-box",
+          width: "100%",
+          minHeight: "100%",
+          background: "#f0f4f8",
+          display: "flex",
+          flexDirection: "column",
+          gap: "12px",
+        }}
+      >
       {/* Fila 1 – KPI cards */}
       <DashboardStats
         monthlySales={
@@ -123,7 +125,8 @@ function IndicatorsPage() {
       <TopClientsChart
         clients={indicators?.topClients}
       />
-    </div>
+      </div>
+    </Permission>
   );
 }
 

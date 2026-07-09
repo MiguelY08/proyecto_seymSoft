@@ -15,6 +15,7 @@ import {
   getEstadoLogisticoColor,
 } from "../../orders/helpers/ordersHelpers";
 import Spinner from "../../../../shared/spinner";
+import Permission from "../../../configuration/roles/components/Permission";
 
 const estadoVariants = {
   Aprobada: "bg-green-100 text-green-700 border-green-300",
@@ -267,97 +268,105 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
                   <EstadoBadge estado={row.estado} term={search} />
                 </td>
 
-                <td className="px-4 py-2.5">
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      onClick={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        navigateWithSpinner("Cargando detalles de la venta...", "/admin/sales/info-sale", {
-                          state: {
-                            sale: row,
-                            origin: {
-                              x: rect.left + rect.width / 2,
-                              y: rect.top + rect.height / 2,
+                <td className="px-3 py-2">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <Permission permission="ventas.ver_informacion">
+                      <button
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          navigateWithSpinner("Cargando detalles de la venta...", "/admin/sales/info-sale", {
+                            state: {
+                              sale: row,
+                              origin: {
+                                x: rect.left + rect.width / 2,
+                                y: rect.top + rect.height / 2,
+                              },
                             },
-                          },
-                        });
-                      }}
-                      className="text-gray-400 hover:text-[#004D77] transition-colors duration-200 cursor-pointer"
-                      title="Ver información"
-                    >
-                      <Info className="w-5 h-5" strokeWidth={1.5} />
-                    </button>
-
-                    {deshabilitado ? (
-                      <span
-                        className="text-gray-200 cursor-not-allowed"
-                        title="No disponible para ventas anuladas"
+                          });
+                        }}
+                        className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                        title="Ver informacion"
                       >
-                        <SquarePen className="w-5 h-5" strokeWidth={1.5} />
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() =>
-                          navigateWithSpinner("Cargando edición de la venta...", "/admin/sales/edit-sale", {
-                            state: { sale: row },
-                          })
-                        }
-                        className="text-gray-400 hover:text-[#004D77] transition-colors duration-200 cursor-pointer"
-                        title="Editar venta"
-                      >
-                        <SquarePen className="w-5 h-5" strokeWidth={1.5} />
+                        <Info className="w-4 h-4" strokeWidth={1.5} />
                       </button>
-                    )}
+                    </Permission>
 
-                    {deshabilitado ? (
-                      <span
-                        className="text-gray-200 cursor-not-allowed"
-                        title="No disponible para ventas anuladas"
-                      >
-                        <RefreshCw className="w-5 h-5" strokeWidth={1.5} />
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => handleDevolucion(row)}
-                        className={`transition-colors duration-200 ${
-                          puedeDevolver
-                            ? "text-gray-400 hover:text-amber-500 cursor-pointer"
-                            : "text-gray-200 cursor-not-allowed"
-                        }`}
-                        title={
-                          puedeDevolver
-                            ? "Generar devolución"
-                            : "Devolución no disponible"
-                        }
-                      >
-                        <RefreshCw className="w-5 h-5" strokeWidth={1.5} />
-                      </button>
-                    )}
+                    <Permission permission="ventas.editar">
+                      {deshabilitado ? (
+                        <span
+                          className="text-gray-200 cursor-not-allowed"
+                          title="No disponible para ventas anuladas"
+                        >
+                          <SquarePen className="w-4 h-4" strokeWidth={1.5} />
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() =>
+                            navigateWithSpinner("Cargando edicion de la venta...", "/admin/sales/edit-sale", {
+                              state: { sale: row },
+                            })
+                          }
+                          className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                          title="Editar venta"
+                        >
+                          <SquarePen className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
+                      )}
+                    </Permission>
 
-                    {deshabilitado ? (
-                      <span
-                        className="text-gray-200 cursor-not-allowed"
-                        title="No disponible para ventas anuladas"
-                      >
-                        <XCircle className="w-5 h-5" strokeWidth={1.5} />
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => handleAnular(row)}
-                        className={`transition-colors duration-200 ${
-                          puedeAnular
-                            ? "text-gray-400 hover:text-red-500 cursor-pointer"
-                            : "text-gray-200 cursor-not-allowed"
-                        }`}
-                        title={
-                          puedeAnular
-                            ? "Anular venta"
-                            : "Anulación no disponible"
-                        }
-                      >
-                        <XCircle className="w-5 h-5" strokeWidth={1.5} />
-                      </button>
-                    )}
+                    <Permission permission="ventas.crear_devolucion">
+                      {deshabilitado ? (
+                        <span
+                          className="text-gray-200 cursor-not-allowed"
+                          title="No disponible para ventas anuladas"
+                        >
+                          <RefreshCw className="w-4 h-4" strokeWidth={1.5} />
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleDevolucion(row)}
+                          className={`transition ${
+                            puedeDevolver
+                              ? "text-gray-400 hover:scale-110 hover:text-amber-500 cursor-pointer"
+                              : "text-gray-200 cursor-not-allowed"
+                          }`}
+                          title={
+                            puedeDevolver
+                              ? "Generar devolucion"
+                              : "Devolucion no disponible"
+                          }
+                        >
+                          <RefreshCw className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
+                      )}
+                    </Permission>
+
+                    <Permission permission="ventas.anular">
+                      {deshabilitado ? (
+                        <span
+                          className="text-gray-200 cursor-not-allowed"
+                          title="No disponible para ventas anuladas"
+                        >
+                          <XCircle className="w-4 h-4" strokeWidth={1.5} />
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleAnular(row)}
+                          className={`transition ${
+                            puedeAnular
+                              ? "text-gray-400 hover:scale-110 hover:text-red-500 cursor-pointer"
+                              : "text-gray-200 cursor-not-allowed"
+                          }`}
+                          title={
+                            puedeAnular
+                              ? "Anular venta"
+                              : "Anulacion no disponible"
+                          }
+                        >
+                          <XCircle className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
+                      )}
+                    </Permission>
                   </div>
                 </td>
               </tr>

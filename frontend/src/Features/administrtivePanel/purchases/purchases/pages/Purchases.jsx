@@ -13,6 +13,7 @@ import * as XLSX from "xlsx";
 import PaginationAdmin from "../../../../shared/PaginationAdmin";
 import { exportPurchasesExcel } from "../helpers/purchasesExcel";
 import FullScreenSpinner from "../../../../shared/spinner/FullScreenSpinner";
+import Permission from "../../../configuration/roles/components/Permission";
 
 export const Purchases = () => {
   const [products, setProducts] = useState([]);
@@ -246,20 +247,24 @@ export const Purchases = () => {
           />
           <div className="flex-1" />
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleDownloadExcel}
-              className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
-            >
-              <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
-              <span className="hidden sm:inline">Exportar Excel</span>
-            </button>
-            <Link
-              to="/admin/purchases/create"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 whitespace-nowrap"
-            >
-              <span className="hidden sm:inline">Nueva</span>
-              <Plus className="w-4 h-4" strokeWidth={2} />
-            </Link>
+            <Permission permission="compras.exportar">
+              <button
+                onClick={handleDownloadExcel}
+                className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
+              >
+                <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
+                <span className="hidden sm:inline">Exportar Excel</span>
+              </button>
+            </Permission>
+            <Permission permission="compras.crear">
+              <Link
+                to="/admin/purchases/create"
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 whitespace-nowrap"
+              >
+                <span className="hidden sm:inline">Nueva</span>
+                <Plus className="w-4 h-4" strokeWidth={2} />
+              </Link>
+            </Permission>
           </div>
         </div>
 

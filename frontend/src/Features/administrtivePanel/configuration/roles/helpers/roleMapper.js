@@ -75,7 +75,6 @@ const MODULE_RULES = {
     "CREATE",
     "READ",
     "READ_DETAIL",
-    "UPDATE",
     "DELETE",
     "EXPORT",
     "ANULAR"

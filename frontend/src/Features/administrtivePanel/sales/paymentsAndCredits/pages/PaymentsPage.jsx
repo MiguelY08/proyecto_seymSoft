@@ -9,6 +9,7 @@ import PaymentsPaginator from "../components/PaymentsPaginator";
 import ContactClientModal from "../components/ContactClientModal";
 
 import Spinner from "../../../../shared/spinner/Spinner";
+import Permission from "../../../configuration/roles/components/Permission";
 
 import { exportAccountsToExcel } from "../utils/paymentHelpers";
 
@@ -249,13 +250,15 @@ export default function PaymentsPage() {
             </select>
           </div>
 
-          <ButtonComponent
-            className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-6 flex items-center gap-2"
-            onClick={handleExportExcel}
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            Exportar Excel
-          </ButtonComponent>
+          <Permission permission="pagos_y_abonos.exportar">
+            <ButtonComponent
+              className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-6 flex items-center gap-2"
+              onClick={handleExportExcel}
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Exportar Excel
+            </ButtonComponent>
+          </Permission>
         </div>
       </div>
 

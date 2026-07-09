@@ -1,6 +1,7 @@
 // features/administrtivePanel/purchases/nonConformingProducts/components/NonConformingProductsTable.jsx
 import { Info, XCircle, Ban } from "lucide-react";
 import Pagination from "../../../../shared/PaginationAdmin";
+import Permission from "../../../configuration/roles/components/Permission";
 
 const EstadoBadge = ({ estado }) => {
   const isAnulado = estado === "Anulado";
@@ -37,100 +38,80 @@ export const NonConformingProductsTable = ({
           <table className="min-w-max w-full">
             <thead className="bg-[#004D77] text-white">
               <tr>
-                <th className="px-4 py-3 text-center text-sm font-semibold">#</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Nombre</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold">Código de Barras</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold">Categoría</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold">Cantidad Afectada</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold">Fecha de Detección</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Motivo del Reporte</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold">Estado</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold">Acciones</th>
+                <th className="px-3 py-2 text-center font-semibold">#</th>
+                <th className="px-3 py-2 text-left font-semibold">Nombre</th>
+                <th className="px-3 py-2 text-center font-semibold">Código de Barras</th>
+                <th className="px-3 py-2 text-center font-semibold">Categoría</th>
+                <th className="px-3 py-2 text-center font-semibold">Cantidad Afectada</th>
+                <th className="px-3 py-2 text-center font-semibold">Fecha de Detección</th>
+                <th className="px-3 py-2 text-left font-semibold">Motivo del Reporte</th>
+                <th className="px-3 py-2 text-center font-semibold">Acciones</th>
               </tr>
             </thead>
 
             <tbody>
-              {currentData.map((report, index) => {
-                const isAnulado = report.estado === "Anulado";
-                const rowBg = isAnulado
-                  ? "bg-red-50/80 hover:bg-red-100/80"
-                  : index % 2 === 0
-                    ? "bg-gray-100 hover:bg-blue-50"
-                    : "bg-white hover:bg-blue-50";
-
-                return (
-                  <tr
-                    key={report.id}
-                    className={`transition-colors duration-150 ${rowBg}`}
-                  >
-                    <td className="px-4 py-2.5 text-center text-sm text-gray-800 whitespace-nowrap font-medium">
-                      {highlightText(startIndex + index + 1)}
-                    </td>
-
-                    <td className="px-4 py-2.5 text-sm text-gray-800 min-w-[180px]">
-                      {highlightText(report.nombre)}
-                    </td>
-
-                    <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
-                      {highlightText(report.codigoBarras)}
-                    </td>
-
-                    <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
-                      {highlightText(report.categoria)}
-                    </td>
-
-                    <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap font-semibold">
-                      {highlightText(report.cantidadAfectada)}
-                    </td>
-
-                    <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
-                      {highlightText(report.fechaDeteccion)}
-                    </td>
-
-                    <td className="px-4 py-2.5 text-sm text-gray-700 min-w-[220px] max-w-[320px]">
-                      <div className="line-clamp-2">
-                        {highlightText(report.motivo)}
-                      </div>
-                    </td>
-
-                    <td className="px-4 py-2.5 text-center">
-                      <EstadoBadge estado={report.estado} />
-                    </td>
-
-                    <td className="px-4 py-2.5 text-center">
-                      <div className="flex items-center justify-center gap-2">
+              {currentData.map((report, index) => (
+                <tr
+                  key={report.id}
+                  className={`${
+                    report.estado === "Anulado"
+                      ? "bg-red-50 opacity-70"
+                      : index % 2 === 0
+                      ? "bg-white hover:bg-gray-50"
+                      : "bg-gray-50 hover:bg-gray-100"
+                  }`}
+                >
+                  <td className="px-3 py-2.5 text-center">
+                    {highlightText(startIndex + index + 1)}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    {highlightText(report.nombre)}
+                  </td>
+                  <td className="px-3 py-2.5 text-center">
+                    {highlightText(report.codigoBarras)}
+                  </td>
+                  <td className="px-3 py-2.5 text-center">
+                    {highlightText(report.categoria)}
+                  </td>
+                  <td className="px-3 py-2.5 text-center">
+                    {highlightText(report.cantidadAfectada)}
+                  </td>
+                  <td className="px-3 py-2.5 text-center">
+                    {highlightText(report.fechaDeteccion)}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    {highlightText(report.motivo)}
+                  </td>
+                  <td className="px-3 py-2.5 text-center">
+                    <div className="flex justify-center gap-3">
+                      <Permission permission="producto_no_conforme.ver_informacion">
                         <button
                           onClick={() => handleViewDetails(report)}
-                          title="Ver detalle"
-                          className="text-gray-400 hover:text-[#004D77] transition-colors duration-200 cursor-pointer"
+                          className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-125"
                         >
-                          <Info className="w-5 h-5" strokeWidth={1.5} />
+                          <Info size={16} />
                         </button>
-
+                      </Permission>
+                      <Permission permission="producto_no_conforme.anular">
                         <button
                           onClick={() => {
-                            if (!isAnulado) {
+                            if (report.estado !== "Anulado") {
                               handleCancel(report.id);
                             }
                           }}
-                          title={isAnulado ? "Reporte anulado" : "Anular reporte"}
-                          className={`transition-colors duration-200 ${
-                            isAnulado
+                          className={`transition-all duration-200 transform hover:scale-125 ${
+                            report.estado === "Anulado"
                               ? "text-red-600 cursor-not-allowed"
-                              : "text-gray-400 hover:text-red-600 cursor-pointer"
+                              : "text-gray-400 hover:text-red-600"
                           }`}
                         >
-                          {isAnulado ? (
-                            <Ban className="w-5 h-5" strokeWidth={1.5} />
-                          ) : (
-                            <XCircle className="w-5 h-5" strokeWidth={1.5} />
-                          )}
+                          {report.estado === "Anulado" ? <Ban size={16} /> : <XCircle size={16} />}
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                      </Permission>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
