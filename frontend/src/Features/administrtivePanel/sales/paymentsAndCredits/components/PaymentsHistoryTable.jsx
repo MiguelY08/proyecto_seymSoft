@@ -2,6 +2,8 @@ import { XCircle } from "lucide-react";
 import { useRef, useState } from "react";
 import Permission from "../../../configuration/roles/components/Permission";
 
+const CANCELLATION_LIMIT_HOURS = 48;
+
 export default function PaymentHistoryTable({
   abonos = [],
   mode = "view",
@@ -12,13 +14,18 @@ export default function PaymentHistoryTable({
 
   const canCancel = (abono) => {
     if (abono.anulado) return false;
-    if (!abono.createdAt) return true;
+
+    const createdAt = abono.createdAt ?? abono.fecha;
+    if (!createdAt) return false;
+
+    const createdAtDate = new Date(createdAt);
+    if (Number.isNaN(createdAtDate.getTime())) return false;
 
     const diffHours =
-      (new Date() - new Date(abono.createdAt)) /
+      (new Date() - createdAtDate) /
       (1000 * 60 * 60);
 
-    return diffHours <= 48;
+    return diffHours >= 0 && diffHours <= CANCELLATION_LIMIT_HOURS;
   };
 
   const formatCurrency = (value) =>
