@@ -1,11 +1,11 @@
-import DashboardStats from "../components/DashboardStats";
+﻿import DashboardStats from "../components/DashboardStats";
 import MonthlySalesReturnsChart from "../components/MonthlySalesReturnsChart";
 import SalesPurchasesChart from "../components/SalesPurchasesChart";
 import CategoryDemandChart from "../components/CategoryDemandChart";
 import TopProductsChart from "../components/TopProductsChart";
 import TopClientsChart from "../components/TopClientsChart";
 
-import useBreakpoint from "../hooks/useBreakpoint";
+import useBreakpoint from "../hooks/useBreakPoint";
 import useIndicators from "../hooks/useIndicators";
 
 import Spinner from "../../../../shared/spinner/Spinner.jsx";
@@ -40,11 +40,11 @@ function IndicatorsPage() {
     );
   }
 
-  // Fila 2: en móvil apila, en tablet y desktop lado a lado
+  // Fila 2: en mÃ³vil apila, en tablet y desktop lado a lado
   const row2Cols =
     isMobile ? "1fr" : "1fr 1fr";
 
-  // Fila 3: en móvil apila, en tablet 1fr/1fr, en desktop 2fr/1fr
+  // Fila 3: en mÃ³vil apila, en tablet 1fr/1fr, en desktop 2fr/1fr
   const row3Cols =
     isMobile
       ? "1fr"
@@ -68,7 +68,7 @@ function IndicatorsPage() {
           gap: "12px",
         }}
       >
-      {/* Fila 1 – KPI cards */}
+      {/* Fila 1 â€“ KPI cards */}
       <DashboardStats
         monthlySales={
           indicators?.monthlySales
@@ -81,7 +81,7 @@ function IndicatorsPage() {
         }
       />
 
-      {/* Fila 2 – Comparativos mensuales */}
+      {/* Fila 2 â€“ Comparativos mensuales */}
       <div
         style={{
           display: "grid",
@@ -116,7 +116,7 @@ function IndicatorsPage() {
           }
         />
 
-        {/* Temporal hasta que el compañero conecte backend */}
+        {/* Temporal hasta que el compaÃ±ero conecte backend */}
         <CategoryDemandChart
           data={indicators?.categoryDemand}
         />
@@ -131,3 +131,4 @@ function IndicatorsPage() {
 }
 
 export default IndicatorsPage;
+

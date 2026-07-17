@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+﻿import { useParams } from "react-router-dom";
 import { useState, useEffect, useRef, useMemo } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -13,7 +13,7 @@ import GeneratePaymentModal from "../components/GeneratePaymentModal";
 import CancelPaymentModal from "../components/CancelPaymentModal";
 import AccountReceipt from "../components/AccountReceipt";
 import StatusBadge from "../components/StatusBadge";
-import Spinner from "../../../../shared/Spinner";
+import Spinner from "../../../../shared/spinner";
 import Permission from "../../../configuration/roles/components/Permission";
 import { clientsService } from "../../clients/services/clientsService";
 
@@ -262,12 +262,12 @@ export default function AccountDetailsPage({ mode }) {
       minimumFractionDigits: 0,
     }).format(value ?? 0);
 
-  // ✅ SPINNER INTEGRADO
+  // âœ… SPINNER INTEGRADO
   if (loading && (invoices?.length ?? 0) === 0) {
     return <Spinner message="Cargando datos de la cuenta..." />;
   }
 
-  // ── Handlers ─────────────────────────────────────────────────────────────
+  // â”€â”€ Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const toggleFactura = (facturaId) =>
     setFacturaExpandida((prev) => (prev === facturaId ? null : facturaId));
 
@@ -306,9 +306,9 @@ export default function AccountDetailsPage({ mode }) {
 
     const confirm = await showConfirm(
       "question",
-      "¿Descargar comprobante?",
-      "Se generará el PDF del estado de cuenta completo.",
-      { confirmButtonText: "Sí, descargar", cancelButtonText: "Cancelar" },
+      "Â¿Descargar comprobante?",
+      "Se generarÃ¡ el PDF del estado de cuenta completo.",
+      { confirmButtonText: "SÃ­, descargar", cancelButtonText: "Cancelar" },
     );
     if (!confirm.isConfirmed) return;
 
@@ -348,13 +348,13 @@ export default function AccountDetailsPage({ mode }) {
       pdf.save(`Comprobante_${account.nombre}.pdf`);
       showSuccess("Descarga completada", "El PDF fue generado correctamente.");
     } catch {
-      showError("Error", "Ocurrió un problema al generar el PDF.");
+      showError("Error", "OcurriÃ³ un problema al generar el PDF.");
     } finally {
       setIsGeneratingPDF(false);
     }
   };
 
-  // ── Paginación ────────────────────────────────────────────────────────────
+  // â”€â”€ PaginaciÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const getPage = (facturaId) => pages[facturaId] ?? 1;
   const setPage = (facturaId, page) =>
     setPages((prev) => ({ ...prev, [facturaId]: page }));
@@ -370,7 +370,7 @@ export default function AccountDetailsPage({ mode }) {
       <BackHeader title="Volver" />
 
       <div className="p-4 sm:p-6 space-y-6 font-lexend">
-        {/* ── HEADER DEL CLIENTE ── */}
+        {/* â”€â”€ HEADER DEL CLIENTE â”€â”€ */}
         <AccountHeader
           nombre={account.nombre}
           documento={account.documento}
@@ -386,18 +386,18 @@ export default function AccountDetailsPage({ mode }) {
           onDownloadPDF={handleDownloadPDF}
         />
 
-        {/* ── TABLA DE FACTURAS ── */}
+        {/* â”€â”€ TABLA DE FACTURAS â”€â”€ */}
         <div
           key={reloadKey}
           className="bg-white rounded-2xl shadow-md overflow-hidden"
         >
-          {/* Cabecera — 8 columnas */}
+          {/* Cabecera â€” 8 columnas */}
           <div className="grid grid-cols-9 bg-[#004D77] text-white text-xs font-medium px-4 py-3">
             <span>Nro Factura</span>
-            <span className="text-center">Valor Crédito</span>
-            <span className="text-center">Interés</span>
+            <span className="text-center">Valor CrÃ©dito</span>
+            <span className="text-center">InterÃ©s</span>
             <span className="text-center">Valor Capital</span>
-            <span className="text-center">Fecha Crédito</span>
+            <span className="text-center">Fecha CrÃ©dito</span>
             <span className="text-center">Total Abonado</span>
             <span className="text-center">Saldo</span>
             <span className="text-center">Estado</span>
@@ -444,12 +444,12 @@ export default function AccountDetailsPage({ mode }) {
                     {factura.nroFactura}
                   </div>
 
-                  {/* Valor Crédito */}
+                  {/* Valor CrÃ©dito */}
                   <span className="text-center text-gray-700">
                     {formatCOP(factura.valorCredito)}
                   </span>
 
-                  {/* Interés — destacado en naranja si tiene mora */}
+                  {/* InterÃ©s â€” destacado en naranja si tiene mora */}
                   <span
                     className={`text-center font-semibold ${
                       interes > 0 ? "text-orange-500" : "text-gray-400"
@@ -457,11 +457,11 @@ export default function AccountDetailsPage({ mode }) {
                   >
                     {interes > 0 ? (
                       <span className="flex items-center justify-center gap-1">
-                        <span>⚠</span>
+                        <span>âš </span>
                         {formatCOP(interes)}
                         {saldoInt <= 0 && (
                           <span className="text-[10px] text-green-600 font-normal ml-1">
-                            ✓ pagado
+                            âœ“ pagado
                           </span>
                         )}
                       </span>
@@ -475,7 +475,7 @@ export default function AccountDetailsPage({ mode }) {
                     {formatCOP(totalAPagar)}
                   </span>
 
-                  {/* Fecha Crédito */}
+                  {/* Fecha CrÃ©dito */}
                   <span className="text-center text-gray-500">
                     <CreditDateTooltip
                       factura={factura}
@@ -488,7 +488,7 @@ export default function AccountDetailsPage({ mode }) {
                     {formatCOP(totalAbonado)}
                   </span>
 
-                  {/* Saldo total (capital + interés pendiente) */}
+                  {/* Saldo total (capital + interÃ©s pendiente) */}
                   <span
                     className={`text-center font-semibold ${
                       saldoFac > 0 ? "text-red-600" : "text-green-600"
@@ -522,10 +522,10 @@ export default function AccountDetailsPage({ mode }) {
                   </div>
                 </div>
 
-                {/* Panel expandido — abonos */}
+                {/* Panel expandido â€” abonos */}
                 {isExpanded && (
                   <div className="bg-gray-50 px-4 pb-4 pt-2 space-y-3">
-                    {/* Resumen capital vs interés dentro del panel */}
+                    {/* Resumen capital vs interÃ©s dentro del panel */}
                     {showInterestSummaryInExpandedPanel && interes > 0 && (
                       <div className="flex gap-4 text-xs text-gray-500 border-b border-gray-200 pb-2">
                         <span>
@@ -541,9 +541,9 @@ export default function AccountDetailsPage({ mode }) {
                             )}
                           </span>
                         </span>
-                        <span>•</span>
+                        <span>â€¢</span>
                         <span>
-                          Saldo interés:{" "}
+                          Saldo interÃ©s:{" "}
                           <span
                             className={`font-semibold ${saldoInt > 0 ? "text-orange-500" : "text-green-600"}`}
                           >
@@ -553,7 +553,7 @@ export default function AccountDetailsPage({ mode }) {
                       </div>
                     )}
 
-                    {/* Botón Registrar Abono */}
+                    {/* BotÃ³n Registrar Abono */}
                     {/* Tabla de abonos */}
                     <PaymentHistoryTable
                       abonos={getPaginatedAbonos(factura)}
@@ -578,7 +578,7 @@ export default function AccountDetailsPage({ mode }) {
         </div>
       </div>
 
-      {/* ── MODAL ABONAR ── */}
+      {/* â”€â”€ MODAL ABONAR â”€â”€ */}
       {showPaymentModal && facturaAbono && (
         <GeneratePaymentModal
           cliente={account}
@@ -588,7 +588,7 @@ export default function AccountDetailsPage({ mode }) {
         />
       )}
 
-      {/* ── MODAL ANULAR ── */}
+      {/* â”€â”€ MODAL ANULAR â”€â”€ */}
       {showCancelModal && selectedAbono && selectedFactura && (
         <CancelPaymentModal
           isOpen={showCancelModal}
@@ -602,7 +602,7 @@ export default function AccountDetailsPage({ mode }) {
         />
       )}
 
-      {/* ── RECEIPT OCULTO PARA PDF ── */}
+      {/* â”€â”€ RECEIPT OCULTO PARA PDF â”€â”€ */}
       <div
         style={{
           position: "fixed",
@@ -621,3 +621,4 @@ export default function AccountDetailsPage({ mode }) {
     </>
   );
 }
+

@@ -1,6 +1,6 @@
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+﻿import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { chartCard, cardTitle, tooltipBox, tooltipLabel, tooltipValue } from "../helpers/indicatorsHelpers";
-import useBreakpoint from "../hooks/useBreakpoint";
+import useBreakpoint from "../hooks/useBreakPoint";
 
 const COLORS = ["#2563eb", "#3b82f6", "#60a5fa", "#93c5fd", "#cbd5e1"];
 
@@ -29,7 +29,7 @@ function CategoryDemandChart({ data = [] }) {
 
   return (
     <div style={{ ...chartCard, display: "flex", flexDirection: "column" }}>
-      <h3 style={cardTitle}>Categorías Demandadas</h3>
+      <h3 style={cardTitle}>CategorÃ­as Demandadas</h3>
 
       <div style={{ width: "100%", height: isMobile ? 180 : 150 }}>
         <ResponsiveContainer width="100%" height="100%">
@@ -98,3 +98,4 @@ function CategoryDemandChart({ data = [] }) {
 }
 
 export default CategoryDemandChart;
+

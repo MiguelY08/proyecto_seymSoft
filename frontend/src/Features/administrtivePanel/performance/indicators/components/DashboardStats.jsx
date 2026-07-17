@@ -1,6 +1,6 @@
-import { ShoppingCart, Users, Package } from "lucide-react";
+﻿import { ShoppingCart, Users, Package } from "lucide-react";
 import { createElement } from "react";
-import useBreakpoint from "../hooks/useBreakpoint";
+import useBreakpoint from "../hooks/useBreakPoint";
 
 const StatCard = ({
   icon: Icon,
@@ -25,7 +25,7 @@ const StatCard = ({
       minWidth: "0",
     }}
   >
-    {/* Fila 1 – Icono + Label */}
+    {/* Fila 1 â€“ Icono + Label */}
     <div
       style={{
         display: "flex",
@@ -63,7 +63,7 @@ const StatCard = ({
       </span>
     </div>
 
-    {/* Fila 2 – Valor + Tendencia */}
+    {/* Fila 2 â€“ Valor + Tendencia */}
     <div
       style={{
         display: "flex",
@@ -186,3 +186,4 @@ function DashboardStats({
 }
 
 export default DashboardStats;
+

@@ -7,7 +7,7 @@ import { useAlert } from "../../../../shared/alerts/useAlert";
 import DetailPurchases from "../pages/DetailPurchases";
 import Anulatepurchase from "../pages/Anulatepurchase";
 import { Plus, FileSpreadsheet } from "lucide-react";
-import { getAllPurchases, annulPurchase, getPurchaseById } from "../data/purchasesService";
+import { getAllPurchases, annulPurchase, getPurchaseById } from "../data/PurchasesService";
 import Spinner from "../../../../shared/spinner"; // â† IMPORTAR SPINNER
 import * as XLSX from "xlsx";
 import PaginationAdmin from "../../../../shared/PaginationAdmin";
@@ -315,4 +315,5 @@ export const Purchases = () => {
 };
 
 export default Purchases;
+
 

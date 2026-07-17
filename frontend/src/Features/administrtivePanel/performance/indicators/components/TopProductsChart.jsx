@@ -1,7 +1,7 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { chartCard, cardTitle } from "../helpers/indicatorsHelpers";
 import useBarAnimation from "../hooks/useBarAnimation";
-import useBreakpoint from "../hooks/useBreakpoint";
+import useBreakpoint from "../hooks/useBreakPoint";
 
 const PROD_COLORS = [
   "#1d4ed8",
@@ -78,7 +78,7 @@ function TopProductsChart({
             margin: 0,
           }}
         >
-          Top Productos Más Vendidos
+          Top Productos MÃ¡s Vendidos
         </h3>
 
         <div
