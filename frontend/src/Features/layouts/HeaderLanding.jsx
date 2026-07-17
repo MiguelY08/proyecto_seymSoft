@@ -119,8 +119,8 @@ function HeaderLanding() {
     try {
       await logout();
       showSuccess(
-        "SesiÃ³n cerrada",
-        "Has cerrado sesiÃ³n correctamente"
+        "Sesión cerrada",
+        "Has cerrado Sesión correctamente"
       );
       setProfileModal(
         false
@@ -545,7 +545,7 @@ function HeaderLanding() {
                               ?
                               "Cerrando..."
                               :
-                              "Cerrar sesiÃ³n"
+                              "Cerrar Sesión"
                             }
                           </button>
                         </>
@@ -556,7 +556,7 @@ function HeaderLanding() {
                             className="flex items-center gap-2.5 px-3.5 py-2 text-xs text-[#004D77] hover:bg-gray-100 transition-colors"
                           >
                             <LogIn size={16} />
-                            Iniciar sesiÃ³n
+                            Iniciar Sesión
                           </Link>
                           <Link
                             to="/register"
