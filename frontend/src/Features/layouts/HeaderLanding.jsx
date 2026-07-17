@@ -574,12 +574,15 @@ function HeaderLanding() {
 
               {/* MOBILE MENU */}
               <button
+                type="button"
                 onClick={()=>
                   setMenuOpen(
                     true
                   )
                 }
                 className="lg:hidden p-1.5 rounded-full hover:bg-[#004D77]/10 transition-colors"
+                aria-label="Abrir menú"
+                aria-expanded={menuOpen}
               >
                 <Menu className="h-[18px] w-[18px] text-gray-700" />
               </button>
@@ -594,6 +597,204 @@ function HeaderLanding() {
             : "h-14 sm:h-16"
         }`}
       />
+
+      {menuOpen && (
+        <div className="fixed inset-0 z-[70] lg:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 h-full w-full bg-black/45 backdrop-blur-[1px]"
+            onClick={() => setMenuOpen(false)}
+            aria-label="Cerrar menú"
+          />
+
+          <aside
+            ref={mobileMenuRef}
+            className="absolute right-0 top-0 flex h-dvh w-[min(22rem,88vw)] flex-col overflow-hidden bg-white shadow-2xl"
+            aria-label="Menú móvil"
+          >
+            <div className="flex items-center justify-between border-b border-[#e2edf5] px-4 py-3">
+              <Link
+                to="/"
+                onClick={() => setMenuOpen(false)}
+                className="flex min-w-0 items-center gap-2"
+                aria-label="Inicio Papelería Magic"
+              >
+                <img
+                  src={logo}
+                  alt="Papelería Magic"
+                  className="h-10 w-10 rounded-full object-cover"
+                />
+                <span className="truncate font-serif text-lg font-semibold italic text-[#004D77]">
+                  Papelería Magic
+                </span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(false)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-700 transition-colors hover:bg-[#004D77]/10"
+                aria-label="Cerrar menú"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <nav className="flex-1 overflow-y-auto px-3 py-4">
+              <MobileNavLink
+                icon={Home}
+                label="Inicio"
+                to="/"
+                active={isActive("/")}
+                onClick={() => setMenuOpen(false)}
+              />
+              <MobileNavLink
+                icon={Store}
+                label="Tienda"
+                to="/shop"
+                active={isActive("/shop")}
+                onClick={() => setMenuOpen(false)}
+              />
+              <MobileNavLink
+                icon={Package}
+                label="Pedidos"
+                to="/orders-l"
+                active={isActive("/orders-l")}
+                onClick={() => setMenuOpen(false)}
+              />
+              <MobileNavLink
+                icon={Heart}
+                label="Favoritos"
+                to="/favorites"
+                active={isActive("/favorites")}
+                badge={favoritesCount}
+                onClick={() => setMenuOpen(false)}
+              />
+              <MobileNavLink
+                icon={ShoppingCart}
+                label="Carrito"
+                to="/cart"
+                active={isActive("/cart")}
+                badge={cartCount}
+                onClick={() => setMenuOpen(false)}
+              />
+            </nav>
+
+            <div className="border-t border-[#e2edf5] bg-slate-50 px-4 py-4">
+              <div className="mb-3 flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#004D77] text-sm font-bold text-white">
+                  {
+                    user
+                    ?
+                    getInitials(
+                      user.fullName
+                      ||
+                      user.name
+                    )
+                    :
+                    <UserCircle2 size={28} />
+                  }
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-[#004D77]">
+                    {
+                      user?.fullName
+                      ||
+                      user?.name
+                      ||
+                      "Invitado"
+                    }
+                  </p>
+                  <p className="truncate text-xs text-slate-500">
+                    {
+                      user?.email
+                      ||
+                      "No autenticado"
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {
+                user
+                ?
+                <div className="space-y-1">
+                  {
+                    role
+                    &&
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        handleGoToAdmin();
+                      }}
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-[#004D77] transition-colors hover:bg-white"
+                    >
+                      <LayoutDashboard size={18} />
+                      Ir a Panel Administrativo
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setIsEditProfileOpen(true);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-[#004D77] transition-colors hover:bg-white"
+                  >
+                    <SquarePen size={18} />
+                    Editar Perfil
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      handleLogout();
+                    }}
+                    disabled={isLoggingOut}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-red-500 transition-colors hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {
+                      isLoggingOut
+                      ?
+                      <Loader2
+                        size={18}
+                        className="animate-spin"
+                      />
+                      :
+                      <LogOut size={18} />
+                    }
+                    {
+                      isLoggingOut
+                      ?
+                      "Cerrando..."
+                      :
+                      "Cerrar Sesión"
+                    }
+                  </button>
+                </div>
+                :
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    to="/login"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center justify-center gap-2 rounded-lg bg-[#004D77] px-3 py-2.5 text-sm font-semibold text-white"
+                  >
+                    <LogIn size={17} />
+                    Iniciar
+                  </Link>
+                  <Link
+                    to="/register"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center justify-center gap-2 rounded-lg border border-[#004D77] px-3 py-2.5 text-sm font-semibold text-[#004D77]"
+                  >
+                    <UserPlus size={17} />
+                    Registro
+                  </Link>
+                </div>
+              }
+            </div>
+          </aside>
+        </div>
+      )}
 
       {/* MODAL EDITAR PERFIL */}
       {isEditProfileOpen && (
@@ -685,6 +886,42 @@ const IconButton = ({
       badge > 0
       &&
       <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[14px] h-3.5 flex items-center justify-center px-1">
+        {
+          badge > 99
+          ? "99+"
+          : badge
+        }
+      </span>
+    }
+  </Link>
+);
+
+const MobileNavLink = ({
+  icon: Icon,
+  label,
+  to,
+  active,
+  badge,
+  onClick
+}) => (
+
+  <Link
+    to={to}
+    onClick={onClick}
+    className={`mb-1 flex items-center justify-between rounded-xl px-3 py-3 transition-colors ${
+      active
+        ? "bg-[#004D77]/10 text-[#004D77]"
+        : "text-gray-700 hover:bg-[#004D77]/5 hover:text-[#004D77]"
+    }`}
+  >
+    <span className="flex items-center gap-3 text-sm font-semibold">
+      <Icon className="h-5 w-5" />
+      {label}
+    </span>
+    {
+      badge > 0
+      &&
+      <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
         {
           badge > 99
           ? "99+"
