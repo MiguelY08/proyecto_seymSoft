@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+﻿import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
   Search,
@@ -23,7 +23,7 @@ import logo from "../../assets/PapeleriaMagicLogo.png";
 import horizontalLogo from "../../assets/PMLogo_Horizontal.png";
 import { useAuth } from "../access/context/AuthContext";
 import { useAlert } from "../shared/alerts/useAlert";
-import { useCart } from "../shared/Context/Cartcontext";
+import { useCart } from "../shared/Context/CartContext";
 import { useFavorites } from "../shared/Context/Favoritescontext";
 import EditProfileForm from "../access/components/EditProfileForm";
 
@@ -75,7 +75,7 @@ function HeaderLanding() {
   ] = useState(false);
 
   const [
-    isEditProfileOpen, // ✅ NUEVO
+    isEditProfileOpen, // âœ… NUEVO
     setIsEditProfileOpen
   ] = useState(false);
 
@@ -94,9 +94,9 @@ function HeaderLanding() {
     (path) =>
       location.pathname === path;
 
-  // ─────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // SEARCH
-  // ─────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleSearch = (e) => {
     e.preventDefault();
     if (!searchQuery.trim())
@@ -108,9 +108,9 @@ function HeaderLanding() {
     );
   };
 
-  // ─────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // LOGOUT
-  // ─────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleLogout =
   useCallback(async () => {
     setIsLoggingOut(
@@ -119,8 +119,8 @@ function HeaderLanding() {
     try {
       await logout();
       showSuccess(
-        "Sesión cerrada",
-        "Has cerrado sesión correctamente"
+        "SesiÃ³n cerrada",
+        "Has cerrado sesiÃ³n correctamente"
       );
       setProfileModal(
         false
@@ -144,9 +144,9 @@ function HeaderLanding() {
     showSuccess
   ]);
 
-  // ─────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // PANEL ADMINISTRATIVO
-  // ─────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleGoToAdmin =
   async () => {
     setProfileModal(
@@ -155,8 +155,8 @@ function HeaderLanding() {
     const result =
     await showConfirm(
       "info",
-      "¿Ir al panel administrativo?",
-      "Entrarás al panel administrativo",
+      "Â¿Ir al panel administrativo?",
+      "EntrarÃ¡s al panel administrativo",
       {
         confirmButtonText:
           "Ir",
@@ -173,9 +173,9 @@ function HeaderLanding() {
     }
   };
 
-  // ─────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // SCROLL HEADER
-  // ─────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const handleScroll =
     () => {
@@ -194,9 +194,9 @@ function HeaderLanding() {
       );
   }, []);
 
-  // ─────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // CLOSE PROFILE MODAL
-  // ─────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const handleClickOutside =
     (e) => {
@@ -225,9 +225,9 @@ function HeaderLanding() {
       );
   }, [profileModal]);
 
-  // ─────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // CLOSE MENUS ON ROUTE CHANGE
-  // ─────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     setProfileModal(
       false
@@ -237,9 +237,9 @@ function HeaderLanding() {
     );
   }, [location]);
 
-  // ─────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // BLOCK BODY SCROLL
-  // ─────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (menuOpen) {
       document.body.style.overflow =
@@ -254,9 +254,9 @@ function HeaderLanding() {
     };
   }, [menuOpen]);
 
-  // ─────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // USER INITIALS
-  // ─────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const getInitials =
   useCallback((name) => {
     if (!name)
@@ -274,9 +274,9 @@ function HeaderLanding() {
       .join("");
   }, []);
 
-  // ─────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // ROLE NAME
-  // ─────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const roleName =
     role?.nameRole
     ||
@@ -311,7 +311,7 @@ function HeaderLanding() {
             <Link
               to="/"
               className="flex shrink-0 items-center"
-              aria-label="Inicio Papelería Magic"
+              aria-label="Inicio PapelerÃ­a Magic"
             >
               <div
                 className={`rounded-full overflow-hidden cursor-pointer transition-all duration-150 md:hidden ${
@@ -328,7 +328,7 @@ function HeaderLanding() {
               </div>
               <img
                 src={horizontalLogo}
-                alt="Papelería Magic"
+                alt="PapelerÃ­a Magic"
                 className={`hidden object-contain transition-all duration-150 md:block ${
                   scrolled
                     ? "h-8 max-w-[130px] lg:max-w-[165px]"
@@ -342,7 +342,7 @@ function HeaderLanding() {
                     : "text-lg sm:text-2xl"
                 }`}
               >
-                Papelería Magic
+                PapelerÃ­a Magic
               </h1>
             </Link>
 
@@ -545,7 +545,7 @@ function HeaderLanding() {
                               ?
                               "Cerrando..."
                               :
-                              "Cerrar sesión"
+                              "Cerrar sesiÃ³n"
                             }
                           </button>
                         </>
@@ -556,7 +556,7 @@ function HeaderLanding() {
                             className="flex items-center gap-2.5 px-3.5 py-2 text-xs text-[#004D77] hover:bg-gray-100 transition-colors"
                           >
                             <LogIn size={16} />
-                            Iniciar sesión
+                            Iniciar sesiÃ³n
                           </Link>
                           <Link
                             to="/register"
@@ -606,9 +606,9 @@ function HeaderLanding() {
   );
 }
 
-/* ───────────────────────────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 /* AUX COMPONENTS */
-/* ───────────────────────────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 const NavLink = ({
   icon: Icon,

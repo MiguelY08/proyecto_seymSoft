@@ -1,14 +1,14 @@
-import { ShoppingCart, Info, Heart, HeartCrack, ChevronDown, ArrowRight } from 'lucide-react';
+﻿import { ShoppingCart, Info, Heart, HeartCrack, ChevronDown, ArrowRight } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import BgFavoritos from '../../../assets/BgFavoritos.png';
 import { useFavorites } from '../../shared/Context/Favoritescontext';
-import { useCart } from '../../shared/Context/Cartcontext';
+import { useCart } from '../../shared/Context/CartContext';
 import { useAlert } from '../../shared/alerts/useAlert';
 import useClientType from '../../shared/hooks/useClientType';
 import { getDisplayPricing } from '../../shared/utils/shopPricingHelper';
 
-/* ── Estilos ── */
+/* â”€â”€ Estilos â”€â”€ */
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,600&family=Nunito:wght@400;600;700;800;900&display=swap');
 
@@ -27,14 +27,14 @@ const STYLES = `
     50%       { transform: translateY(-8px); }
   }
 
-  /* ── Page ── */
+  /* â”€â”€ Page â”€â”€ */
   .fav-page {
     min-height: 100vh;
     background: #f6f9fc;
     font-family: 'Nunito', 'Segoe UI', sans-serif;
   }
 
-  /* ── Banner ── */
+  /* â”€â”€ Banner â”€â”€ */
   .fav-banner-wrap {
     width: 100%;
     position: relative;
@@ -79,14 +79,14 @@ const STYLES = `
     line-height: 1.1; margin: 0;
   }
 
-  /* ── Main content ── */
+  /* â”€â”€ Main content â”€â”€ */
   .fav-main {
     max-width: 1280px;
     margin: 0 auto;
     padding: clamp(28px, 5vw, 52px) 20px clamp(40px, 6vw, 80px);
   }
 
-  /* ── Section header ── */
+  /* â”€â”€ Section header â”€â”€ */
   .fav-header {
     display: flex;
     align-items: flex-end;
@@ -123,7 +123,7 @@ const STYLES = `
     color: #004D77; margin-top: 8px;
   }
 
-  /* ── Sort control ── */
+  /* â”€â”€ Sort control â”€â”€ */
   .fav-sort-wrap {
     display: flex; align-items: center; gap: 10px;
     flex-shrink: 0;
@@ -156,7 +156,7 @@ const STYLES = `
     pointer-events: none; color: #9abcce;
   }
 
-  /* ── Product card (horizontal) ── */
+  /* â”€â”€ Product card (horizontal) â”€â”€ */
   .fav-card {
     background: #ffffff;
     border: 1.5px solid #e4eff6;
@@ -281,7 +281,7 @@ const STYLES = `
     flex-shrink: 0; align-self: stretch; margin: 16px 0;
   }
 
-  /* Botón favorito lateral */
+  /* BotÃ³n favorito lateral */
   .fav-side {
     flex-shrink: 0;
     width: clamp(52px, 8vw, 68px);
@@ -315,7 +315,7 @@ const STYLES = `
     .fav-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
   }
 
-  /* ── Empty state ── */
+  /* â”€â”€ Empty state â”€â”€ */
   .fav-empty {
     text-align: center;
     padding: clamp(48px, 10vw, 96px) 24px;
@@ -354,7 +354,7 @@ const STYLES = `
   .fav-btn-outline:hover  { background: #004D77; color: #fff; transform: translateY(-1px); }
   .fav-btn-outline:active { transform: scale(0.97); }
 
-  /* ── Section divider ── */
+  /* â”€â”€ Section divider â”€â”€ */
   .fav-section-divider {
     height: 1px;
     background: linear-gradient(90deg, transparent, #d1e5f0, transparent);
@@ -371,7 +371,7 @@ function injectStyles() {
   stylesInjected = true;
 }
 
-/* ── Componente ── */
+/* â”€â”€ Componente â”€â”€ */
 function Favorites() {
   injectStyles();
   const navigate = useNavigate();
@@ -416,8 +416,8 @@ function Favorites() {
   const handleToggleFavorito = async (producto) => {
     const result = await showConfirm(
       'warning',
-      '¿Quitar de favoritos?',
-      `¿Estás seguro de eliminar "${producto.name}" de tu lista de deseos?`
+      'Â¿Quitar de favoritos?',
+      `Â¿EstÃ¡s seguro de eliminar "${producto.name}" de tu lista de deseos?`
     );
     if (result.isConfirmed) {
       toggleFavorite(producto);
@@ -433,7 +433,7 @@ function Favorites() {
     }
 
     addToCart(producto, 1);
-    showSuccess('Añadido al carrito', `${producto.name} se ha agregado al carrito.`);
+    showSuccess('AÃ±adido al carrito', `${producto.name} se ha agregado al carrito.`);
   };
 
   const handleHeartClick = (e, producto) => {
@@ -446,7 +446,7 @@ function Favorites() {
   return (
     <div className="fav-page">
 
-      {/* ══ Banner ══ */}
+      {/* â•â• Banner â•â• */}
       <div className="fav-banner-wrap">
         <div
           className="fav-banner-bg"
@@ -454,15 +454,15 @@ function Favorites() {
         />
         <div className="fav-banner-overlay" />
         <div className="fav-banner-content">
-          <p className="fav-banner-tag">Tu selección</p>
+          <p className="fav-banner-tag">Tu selecciÃ³n</p>
           <h1 className="fav-banner-title">Lista de deseos</h1>
         </div>
       </div>
 
-      {/* ══ Contenido principal ══ */}
+      {/* â•â• Contenido principal â•â• */}
       <main className="fav-main">
 
-        {/* Header de sección */}
+        {/* Header de secciÃ³n */}
         <div className="fav-header">
           <div>
             <p className="fav-eyebrow">Guardados</p>
@@ -496,15 +496,15 @@ function Favorites() {
 
         <div className="fav-section-divider" />
 
-        {/* ══ Empty state ══ */}
+        {/* â•â• Empty state â•â• */}
         {favorites.length === 0 && (
           <div className="fav-empty">
             <div className="fav-empty-icon">
               <Heart size={32} color="#004D77" strokeWidth={1.5} />
             </div>
-            <h3 className="fav-empty-title">Aún no tienes favoritos</h3>
+            <h3 className="fav-empty-title">AÃºn no tienes favoritos</h3>
             <p className="fav-empty-sub">
-              Explora nuestra tienda y guarda los productos que más te gusten para encontrarlos fácilmente después.
+              Explora nuestra tienda y guarda los productos que mÃ¡s te gusten para encontrarlos fÃ¡cilmente despuÃ©s.
             </p>
             <Link to="/shop" className="fav-btn-outline">
               Explorar tienda <ArrowRight size={13} strokeWidth={3} />
@@ -512,7 +512,7 @@ function Favorites() {
           </div>
         )}
 
-        {/* ══ Grid de productos ══ */}
+        {/* â•â• Grid de productos â•â• */}
         {favorites.length > 0 && (
           <div className="fav-grid">
             {productosOrdenados.map((producto) => {
@@ -530,7 +530,7 @@ function Favorites() {
                       alt={producto.name}
                     />
                     <span className="fav-chip">
-                      {producto.category || producto.mainCategory?.name || producto.categories?.[0]?.name || 'Sin categoría'}
+                      {producto.category || producto.mainCategory?.name || producto.categories?.[0]?.name || 'Sin categorÃ­a'}
                     </span>
                   </div>
 
@@ -551,7 +551,7 @@ function Favorites() {
                         onClick={() => handleAgregarAlCarrito(producto)}
                       >
                         <ShoppingCart size={14} strokeWidth={2.5} />
-                        Añadir al carrito
+                        AÃ±adir al carrito
                       </button>
 
                       <button
@@ -567,7 +567,7 @@ function Favorites() {
                   {/* Separador */}
                   <div className="fav-divider-v" />
 
-                  {/* Botón heart lateral */}
+                  {/* BotÃ³n heart lateral */}
                   <div className="fav-side">
                     <button
                       className={`fav-heart-btn${esFavorito ? ' active' : ''}`}
@@ -607,3 +607,4 @@ function Favorites() {
 }
 
 export default Favorites;
+

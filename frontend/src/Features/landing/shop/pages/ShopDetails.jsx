@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ChevronLeft,
@@ -10,7 +10,7 @@ import {
 
 import ProductsService from "../../../administrtivePanel/purchases/products/services/productsServices.js";
 import { useAlert } from "../../../shared/alerts/useAlert";
-import { useCart } from "../../../shared/Context/Cartcontext";
+import { useCart } from "../../../shared/Context/CartContext";
 import useClientType from "../../../shared/hooks/useClientType.js";
 import ProductCard from "../../../shared/productCard/ProductCard";
 import { getDisplayPricing } from "../../../shared/utils/shopPricingHelper.js";
@@ -48,7 +48,7 @@ function ShopDetail() {
       const productId = Number(id);
 
       if (!Number.isInteger(productId) || productId <= 0) {
-        setError("El producto solicitado no es válido.");
+        setError("El producto solicitado no es vÃ¡lido.");
         setLoading(false);
         return;
       }
@@ -119,7 +119,7 @@ function ShopDetail() {
   const categoryName =
     product?.mainCategory?.name ||
     product?.categories?.[0]?.name ||
-    "Sin categoría";
+    "Sin categorÃ­a";
 
   const cartProduct = useMemo(() => {
     if (!product) return null;
@@ -157,8 +157,8 @@ function ShopDetail() {
 
     addToCart(cartProduct, quantity);
     showSuccess(
-      "Añadido al carrito",
-      `${quantity} x ${product.name} se agregó al carrito.`
+      "AÃ±adido al carrito",
+      `${quantity} x ${product.name} se agregÃ³ al carrito.`
     );
     setQuantity(1);
   };
@@ -280,7 +280,7 @@ function ShopDetail() {
               {product.name}
             </h1>
             <p className="mt-4 leading-7 text-slate-600">
-              {product.description || "Este producto no tiene descripción disponible."}
+              {product.description || "Este producto no tiene descripciÃ³n disponible."}
             </p>
 
             <div className="mt-6 text-xs font-black uppercase tracking-wider text-slate-500">
@@ -342,13 +342,13 @@ function ShopDetail() {
                 className="flex items-center gap-2 rounded-full bg-[#004D77] px-6 py-3 font-black uppercase tracking-wide text-white disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 <ShoppingCart size={17} />
-                {available ? "Añadir al carrito" : "Producto agotado"}
+                {available ? "AÃ±adir al carrito" : "Producto agotado"}
               </button>
             </div>
 
             <div className="mt-8 border-t border-slate-200 pt-6">
               <h2 className="font-black uppercase tracking-wider text-slate-700">
-                Información del producto
+                InformaciÃ³n del producto
               </h2>
               <ul className="mt-3 space-y-2 text-sm text-slate-600">
                 {product.reference && <li>Referencia: {product.reference}</li>}
@@ -362,7 +362,7 @@ function ShopDetail() {
         {relatedProducts.length > 0 && (
           <section className="mt-16">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#004D77]">
-              También te puede interesar
+              TambiÃ©n te puede interesar
             </p>
             <h2 className="mt-1 text-3xl font-black text-[#0c2a3a]">
               Productos relacionados
@@ -413,3 +413,4 @@ function ShopDetail() {
 }
 
 export default ShopDetail;
+
