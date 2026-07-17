@@ -25,7 +25,7 @@ const StatCard = ({
       minWidth: "0",
     }}
   >
-    {/* Fila 1 â€“ Icono + Label */}
+    {/* Fila 1 – Icono + Label */}
     <div
       style={{
         display: "flex",
@@ -63,7 +63,7 @@ const StatCard = ({
       </span>
     </div>
 
-    {/* Fila 2 â€“ Valor + Tendencia */}
+    {/* Fila 2 – Valor + Tendencia */}
     <div
       style={{
         display: "flex",

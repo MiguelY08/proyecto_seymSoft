@@ -55,9 +55,9 @@ export default function Sidebar() {
     };
   }, [isOpen]);
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // CONFIGURACIÃ“N DINÃMICA
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
+  // CONFIGURACIÓN DINÁMICA
+  // ─────────────────────────────
   const sidebarConfig = [
     {
       label: "Inicio",
@@ -75,7 +75,7 @@ export default function Sidebar() {
       icon: ShoppingBag,
       children: [
         {
-          label: "CategorÃ­as",
+          label: "Categorías",
           href: `${ADMIN_BASE}/purchases/categories`,
           icon: LayoutGrid,
           permission: "categorias.ver"
@@ -150,9 +150,9 @@ export default function Sidebar() {
     }
   ];
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // CONFIGURACIÃ“N
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
+  // CONFIGURACIÓN
+  // ─────────────────────────────
   const configItems = [
     {
       label: "Gest. roles",
@@ -168,9 +168,9 @@ export default function Sidebar() {
     }
   ];
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   // FILTRAR SIDEBAR
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   const filteredSidebar =
       sidebarConfig
         .map((item) => {
@@ -211,9 +211,9 @@ export default function Sidebar() {
         })
         .filter(Boolean);
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   // FILTRAR CONFIG
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   const filteredConfig =
     configItems.filter(
       (item) =>
@@ -224,12 +224,12 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* BOTÃ“N MOBILE */}
+      {/* BOTÓN MOBILE */}
       <button
         type="button"
         onClick={() => setIsOpen(true)}
         className="fixed left-3 top-3 z-30 flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-[#004D77] transition-colors hover:bg-[#004D77]/10 md:hidden"
-        aria-label="Abrir menÃº de navegaciÃ³n"
+        aria-label="Abrir menú de navegación"
         aria-expanded={isOpen}
       >
         <Menu size={24} />
@@ -249,7 +249,7 @@ export default function Sidebar() {
 
       {/* SIDEBAR */}
       <aside
-        aria-label="MenÃº principal"
+        aria-label="Menú principal"
         className={`
           font-lexend
           fixed md:static top-0 left-0 z-50
@@ -272,7 +272,7 @@ export default function Sidebar() {
             <div className="h-20 w-full overflow-hidden">
               <img
                 src={HorizontalLogo}
-                alt="Logo PapelerÃ­a Magic"
+                alt="Logo Papelería Magic"
                 className="h-full w-full object-contain object-left"
               />
             </div>
@@ -281,7 +281,7 @@ export default function Sidebar() {
             type="button"
             onClick={() => setIsOpen(false)}
             className="absolute top-4 right-4 flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#004D77] transition-colors hover:bg-[#004D77]/10 md:hidden"
-            aria-label="Cerrar menÃº de navegaciÃ³n"
+            aria-label="Cerrar menú de navegación"
           >
             <X size={20} />
           </button>
@@ -313,7 +313,7 @@ export default function Sidebar() {
               <div className="mx-2 mb-3 h-px rounded-full bg-gradient-to-r from-transparent via-[#004D77]/25 to-transparent" />
               <SidebarItem
                 icon={Settings}
-                label="ConfiguraciÃ³n"
+                label="Configuración"
                 href={`${ADMIN_BASE}/configuration`}
                 children={filteredConfig}
                 openItem={openItem}
@@ -321,7 +321,7 @@ export default function Sidebar() {
                 onNavigate={() => setIsOpen(false)}
               />
               <p className="text-[10px] text-slate-400 text-center mt-2">
-                Powered by SeymsSoft Â© 2025
+                Powered by SeymsSoft © 2025
               </p>
             </div>
           )

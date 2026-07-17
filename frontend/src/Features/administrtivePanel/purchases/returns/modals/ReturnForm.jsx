@@ -28,7 +28,7 @@ import {
 } from '../services/returnsServices';
 import FullScreenSpinner from '../../../../shared/spinner/FullScreenSpinner';
 
-// â”€â”€â”€ ID unico para lineas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── ID unico para lineas ─────────────────────────────────────────────────────
 const newLineaId = () =>
   `linea-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -60,7 +60,7 @@ const getExistingReturnQuantity = (producto) =>
 const getReturnQuantityLimit = (producto) =>
   getReturnAvailableQuantity(producto) + getExistingReturnQuantity(producto);
 
-// â”€â”€â”€ useLongPress â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── useLongPress ─────────────────────────────────────────────────────────────
 function useLongPress(callback, { delay = 380, interval = 75 } = {}) {
   const timerRef    = useRef(null);
   const intervalRef = useRef(null);
@@ -85,7 +85,7 @@ function useLongPress(callback, { delay = 380, interval = 75 } = {}) {
   };
 }
 
-// â”€â”€â”€ EstadoDropdown (portal fixed) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── EstadoDropdown (portal fixed) ────────────────────────────────────────────
 function EstadoDropdown({ value, disabled, estados, onChange, hasError, allowEmpty = true }) {
   const [open, setOpen] = useState(false);
   const [pos,  setPos]  = useState(null);
@@ -189,10 +189,10 @@ function EstadoDropdown({ value, disabled, estados, onChange, hasError, allowEmp
   );
 }
 
-// â”€â”€â”€ Clases base de inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Clases base de inputs ────────────────────────────────────────────────────
 const inputBase = 'w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200';
 
-// â”€â”€â”€ Selector de motivo (editable) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Selector de motivo (editable) ───────────────────────────────────────────
 const MotivoSelect = ({ value, onChange, hasError }) => (
   <div className="relative">
     <select
@@ -213,7 +213,7 @@ const MotivoSelect = ({ value, onChange, hasError }) => (
   </div>
 );
 
-// â”€â”€â”€ Selector de tipo (editable) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Selector de tipo (editable) ─────────────────────────────────────────────
 const TipoSelect = ({ value, onChange, hasError }) => (
   <div className="relative">
     <select
@@ -234,7 +234,7 @@ const TipoSelect = ({ value, onChange, hasError }) => (
   </div>
 );
 
-// â”€â”€â”€ Campo cantidad editable con botones (+/-) (mejorado) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Campo cantidad editable con botones (+/-) (mejorado) ─────────────────────
 const CantidadInput = ({ value, max, onChange, hasError }) => {
   const cantidad = value ?? 1;
   const decCb = useCallback(() => onChange(Math.max(1, cantidad - 1)), [cantidad, onChange]);
@@ -281,14 +281,14 @@ const CantidadInput = ({ value, max, onChange, hasError }) => {
   );
 };
 
-// â”€â”€â”€ Campo de solo lectura â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Campo de solo lectura ───────────────────────────────────────────────────
 const ReadonlyField = ({ value, placeholder = '-' }) => (
   <div className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed select-none">
     {value || placeholder}
   </div>
 );
 
-// â”€â”€â”€ LineaConfig - una fila de devolucion por producto (con editable condicional) â”€â”€
+// ─── LineaConfig - una fila de devolucion por producto (con editable condicional) ──
 const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errores, editableCompleto, isEditMode }) => {
   const esTerminal     = isEstadoTerminal(linea.estado);
   const badgeStyle     = getBadgeEstadoProducto(linea.estado);
@@ -445,7 +445,7 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
   );
 };
 
-// â”€â”€â”€ ProductConfig - panel de un producto con sus lineas (colapsable con animacion) â”€â”€
+// ─── ProductConfig - panel de un producto con sus lineas (colapsable con animacion) ──
 const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, errores, isExpanded, onToggleExpand, isEditMode }) => {
   const totalUsado       = (producto.lineas ?? []).reduce((sum, l) => sum + (Number(l.cantidadDevolver) || 0), 0);
   const cantidadLimite   = getReturnQuantityLimit(producto);
@@ -536,7 +536,7 @@ const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, err
   );
 };
 
-// â”€â”€â”€ ReturnForm - componente principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── ReturnForm - componente principal ────────────────────────────────────────
 const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved }) => {
   const { showConfirm, showSuccess, showError, showWarning } = useAlert();
   const navigate = useNavigate();
@@ -546,7 +546,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
   // Estado para controlar que card esta expandida (solo una a la vez)
   const [expandedProductId, setExpandedProductId] = useState(null);
 
-  // â”€â”€ Productos completos de la compra â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Productos completos de la compra ────────────────────────────────────────
   const productosCompra = useMemo(() =>
     (purchase?.productos ?? []).map((p) => ({
       id:               p.id,
@@ -581,7 +581,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
     [purchase, purchaseId]
   );
 
-  // â”€â”€ InicializaciÃ³n de estados â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Inicialización de estados ──────────────────────────────────────────────
   const initState = useMemo(() => {
     if (isEdit && devolucion?.productos?.length) {
       const datosProducto = {};
@@ -679,7 +679,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
     });
   }, [isEdit, datosProducto, seleccionados]);
 
-  // â”€â”€ Handlers de seleccion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Handlers de seleccion ───────────────────────────────────────────────────
   const totalOriginal = (p) => Math.round(p.valorUnit * p.cantidadComprada * (1 + p.iva / 100));
 
   const toggleSeleccion = (codigoBarras) => {
@@ -750,7 +750,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
     }
   };
 
-  // â”€â”€ Handlers de lineas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Handlers de lineas ─────────────────────────────────────────────────────
   const handleAddLinea = useCallback((codigoBarras) => {
     setDatosProducto((prev) => {
       const prod = prev[codigoBarras];
@@ -816,7 +816,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
     }
   }, [touched]);
 
-  // â”€â”€ Guardar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Guardar ────────────────────────────────────────────────────────────────
   const handleGuardar = async () => {
     if (isSaving) return;
     setTouched(true);

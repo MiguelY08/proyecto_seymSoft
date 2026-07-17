@@ -88,7 +88,7 @@ const CreatePurchase = () => {
     loadProviders();
   }, [showError]);
 
-  // Calcular fecha lÃ­mite de devoluciÃ³n
+  // Calcular fecha límite de devolución
   useEffect(() => {
     if (selectedProviderId && purchaseDate) {
       const provider = providersList.find(p => p.id === selectedProviderId);
@@ -114,8 +114,8 @@ const CreatePurchase = () => {
       const result = await showConfirm(
         "warning",
         "Cancelar compra",
-        "Si sales ahora se eliminarÃ¡n los productos agregados. Â¿Deseas continuar?",
-        { confirmButtonText: "SÃ­, salir", cancelButtonText: "Seguir editando" }
+        "Si sales ahora se eliminarán los productos agregados. ¿Deseas continuar?",
+        { confirmButtonText: "Sí, salir", cancelButtonText: "Seguir editando" }
       );
       if (!result?.isConfirmed) return;
     }
@@ -123,8 +123,8 @@ const CreatePurchase = () => {
   };
 
   const handleSaveProvider = async (dataToSave) => {
-    // Convertir las claves en inglÃ©s que envÃ­a FormProvider al formato
-    // que espera providersService.create (claves en espaÃ±ol)
+    // Convertir las claves en inglés que envía FormProvider al formato
+    // que espera providersService.create (claves en español)
     const providerPayload = {
       tipoPersona: dataToSave.personType,
       tipo: dataToSave.documentType,
@@ -144,9 +144,9 @@ const CreatePurchase = () => {
 
     try {
       const newProvider = await providersService.create(providerPayload);
-      showSuccess("Proveedor creado", "El proveedor se creÃ³ correctamente");
+      showSuccess("Proveedor creado", "El proveedor se creó correctamente");
 
-      // Seleccionar automÃ¡ticamente el proveedor reciÃ©n creado
+      // Seleccionar automáticamente el proveedor recién creado
       setSelectedProvider(newProvider.nombre);
       setSelectedProviderId(newProvider.id);
 
@@ -174,7 +174,7 @@ const CreatePurchase = () => {
   };
 
   const handleDeleteItem = async (id) => {
-    const result = await showConfirm("warning", "Eliminar producto", "Â¿EstÃ¡s seguro de que deseas eliminar este producto?");
+    const result = await showConfirm("warning", "Eliminar producto", "¿Estás seguro de que deseas eliminar este producto?");
     if (!result?.isConfirmed) return;
     setPurchaseItems(purchaseItems.filter((item) => item.id !== id));
     showSuccess("Producto eliminado", "El producto fue eliminado correctamente");
@@ -199,7 +199,7 @@ const CreatePurchase = () => {
     const searchTerm = searchProduct.trim();
 
     if (!searchTerm && !resolvedBarcode) {
-      showWarning("Producto requerido", "Debes escribir un producto o cÃ³digo");
+      showWarning("Producto requerido", "Debes escribir un producto o código");
       return;
     }
 
@@ -214,7 +214,7 @@ const CreatePurchase = () => {
     );
 
     if (!foundProduct) {
-      showError("Producto no encontrado", "Verifica el nombre o cÃ³digo");
+      showError("Producto no encontrado", "Verifica el nombre o código");
       return;
     }
 
@@ -236,7 +236,7 @@ const CreatePurchase = () => {
         return item;
       });
       setPurchaseItems(updatedItems);
-      showSuccess("Cantidad actualizada", "Se sumÃ³ la cantidad al producto existente");
+      showSuccess("Cantidad actualizada", "Se sumó la cantidad al producto existente");
     } else {
       const subtotal = foundProduct.valorUnit * quantity;
       const ivaValor = (subtotal * foundProduct.iva) / 100;
@@ -258,7 +258,7 @@ const CreatePurchase = () => {
       };
 
       setPurchaseItems([...purchaseItems, newItem]);
-      showSuccess("Producto agregado", "AÃ±adido correctamente");
+      showSuccess("Producto agregado", "Añadido correctamente");
     }
 
     setSearchProduct("");
@@ -275,12 +275,12 @@ const CreatePurchase = () => {
       return;
     }
     if (purchaseItems.length === 0) {
-      showWarning("Compra vacÃ­a", "Agrega al menos un producto");
+      showWarning("Compra vacía", "Agrega al menos un producto");
       return;
     }
 
-    const result = await showConfirm("info", "Confirmar compra", "Â¿Deseas guardar esta compra?", {
-      confirmButtonText: "SÃ­, guardar",
+    const result = await showConfirm("info", "Confirmar compra", "¿Deseas guardar esta compra?", {
+      confirmButtonText: "Sí, guardar",
       cancelButtonText: "Cancelar",
     });
 
@@ -300,7 +300,7 @@ const CreatePurchase = () => {
         })),
       });
 
-      showSuccess("Compra guardada", "Se registrÃ³ correctamente");
+      showSuccess("Compra guardada", "Se registró correctamente");
       navigate("/admin/purchases");
     } catch (err) {
       showError("Error", err.message || "No se pudo guardar la compra.");
@@ -360,7 +360,7 @@ const CreatePurchase = () => {
                   onClick={() => setIsSidebarVisible(true)}
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-colors hover:border-[#004D77] hover:text-[#004D77]"
                   title="Mostrar panel"
-                  aria-label="Mostrar panel de informaciÃ³n"
+                  aria-label="Mostrar panel de información"
                 >
                   <PanelLeftOpen className="h-4 w-4" strokeWidth={1.8} />
                 </button>
@@ -407,7 +407,7 @@ const CreatePurchase = () => {
                     }`} strokeWidth={1.8} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">LÃ­mite de devoluciÃ³n</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Límite de devolución</p>
                     <p className={`truncate text-sm font-semibold ${
                       fechaLimiteDevolucion ? "text-blue-700" : "text-gray-400"
                     }`}>

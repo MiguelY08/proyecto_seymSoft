@@ -48,7 +48,7 @@ function ShopDetail() {
       const productId = Number(id);
 
       if (!Number.isInteger(productId) || productId <= 0) {
-        setError("El producto solicitado no es vÃ¡lido.");
+        setError("El producto solicitado no es válido.");
         setLoading(false);
         return;
       }
@@ -119,7 +119,7 @@ function ShopDetail() {
   const categoryName =
     product?.mainCategory?.name ||
     product?.categories?.[0]?.name ||
-    "Sin categorÃ­a";
+    "Sin categoría";
 
   const cartProduct = useMemo(() => {
     if (!product) return null;
@@ -157,8 +157,8 @@ function ShopDetail() {
 
     addToCart(cartProduct, quantity);
     showSuccess(
-      "AÃ±adido al carrito",
-      `${quantity} x ${product.name} se agregÃ³ al carrito.`
+      "Añadido al carrito",
+      `${quantity} x ${product.name} se agregó al carrito.`
     );
     setQuantity(1);
   };
@@ -280,7 +280,7 @@ function ShopDetail() {
               {product.name}
             </h1>
             <p className="mt-4 leading-7 text-slate-600">
-              {product.description || "Este producto no tiene descripciÃ³n disponible."}
+              {product.description || "Este producto no tiene descripción disponible."}
             </p>
 
             <div className="mt-6 text-xs font-black uppercase tracking-wider text-slate-500">
@@ -342,13 +342,13 @@ function ShopDetail() {
                 className="flex items-center gap-2 rounded-full bg-[#004D77] px-6 py-3 font-black uppercase tracking-wide text-white disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 <ShoppingCart size={17} />
-                {available ? "AÃ±adir al carrito" : "Producto agotado"}
+                {available ? "Añadir al carrito" : "Producto agotado"}
               </button>
             </div>
 
             <div className="mt-8 border-t border-slate-200 pt-6">
               <h2 className="font-black uppercase tracking-wider text-slate-700">
-                InformaciÃ³n del producto
+                Información del producto
               </h2>
               <ul className="mt-3 space-y-2 text-sm text-slate-600">
                 {product.reference && <li>Referencia: {product.reference}</li>}
@@ -362,7 +362,7 @@ function ShopDetail() {
         {relatedProducts.length > 0 && (
           <section className="mt-16">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#004D77]">
-              TambiÃ©n te puede interesar
+              También te puede interesar
             </p>
             <h2 className="mt-1 text-3xl font-black text-[#0c2a3a]">
               Productos relacionados

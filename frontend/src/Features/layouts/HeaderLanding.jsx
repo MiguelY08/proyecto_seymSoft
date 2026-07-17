@@ -75,7 +75,7 @@ function HeaderLanding() {
   ] = useState(false);
 
   const [
-    isEditProfileOpen, // âœ… NUEVO
+    isEditProfileOpen, // ✅ NUEVO
     setIsEditProfileOpen
   ] = useState(false);
 
@@ -94,9 +94,9 @@ function HeaderLanding() {
     (path) =>
       location.pathname === path;
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   // SEARCH
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   const handleSearch = (e) => {
     e.preventDefault();
     if (!searchQuery.trim())
@@ -108,9 +108,9 @@ function HeaderLanding() {
     );
   };
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   // LOGOUT
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   const handleLogout =
   useCallback(async () => {
     setIsLoggingOut(
@@ -144,9 +144,9 @@ function HeaderLanding() {
     showSuccess
   ]);
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   // PANEL ADMINISTRATIVO
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   const handleGoToAdmin =
   async () => {
     setProfileModal(
@@ -155,8 +155,8 @@ function HeaderLanding() {
     const result =
     await showConfirm(
       "info",
-      "Â¿Ir al panel administrativo?",
-      "EntrarÃ¡s al panel administrativo",
+      "¿Ir al panel administrativo?",
+      "Entrarás al panel administrativo",
       {
         confirmButtonText:
           "Ir",
@@ -173,9 +173,9 @@ function HeaderLanding() {
     }
   };
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   // SCROLL HEADER
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   useEffect(() => {
     const handleScroll =
     () => {
@@ -194,9 +194,9 @@ function HeaderLanding() {
       );
   }, []);
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   // CLOSE PROFILE MODAL
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   useEffect(() => {
     const handleClickOutside =
     (e) => {
@@ -225,9 +225,9 @@ function HeaderLanding() {
       );
   }, [profileModal]);
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   // CLOSE MENUS ON ROUTE CHANGE
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   useEffect(() => {
     setProfileModal(
       false
@@ -237,9 +237,9 @@ function HeaderLanding() {
     );
   }, [location]);
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   // BLOCK BODY SCROLL
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   useEffect(() => {
     if (menuOpen) {
       document.body.style.overflow =
@@ -254,9 +254,9 @@ function HeaderLanding() {
     };
   }, [menuOpen]);
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   // USER INITIALS
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   const getInitials =
   useCallback((name) => {
     if (!name)
@@ -274,9 +274,9 @@ function HeaderLanding() {
       .join("");
   }, []);
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   // ROLE NAME
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────
   const roleName =
     role?.nameRole
     ||
@@ -311,7 +311,7 @@ function HeaderLanding() {
             <Link
               to="/"
               className="flex shrink-0 items-center"
-              aria-label="Inicio PapelerÃ­a Magic"
+              aria-label="Inicio Papelería Magic"
             >
               <div
                 className={`rounded-full overflow-hidden cursor-pointer transition-all duration-150 md:hidden ${
@@ -328,7 +328,7 @@ function HeaderLanding() {
               </div>
               <img
                 src={horizontalLogo}
-                alt="PapelerÃ­a Magic"
+                alt="Papelería Magic"
                 className={`hidden object-contain transition-all duration-150 md:block ${
                   scrolled
                     ? "h-8 max-w-[130px] lg:max-w-[165px]"
@@ -342,7 +342,7 @@ function HeaderLanding() {
                     : "text-lg sm:text-2xl"
                 }`}
               >
-                PapelerÃ­a Magic
+                Papelería Magic
               </h1>
             </Link>
 
@@ -606,9 +606,9 @@ function HeaderLanding() {
   );
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ───────────────────────────── */
 /* AUX COMPONENTS */
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ───────────────────────────── */
 
 const NavLink = ({
   icon: Icon,

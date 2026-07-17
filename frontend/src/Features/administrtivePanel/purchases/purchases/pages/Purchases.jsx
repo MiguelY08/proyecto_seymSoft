@@ -8,7 +8,7 @@ import DetailPurchases from "../pages/DetailPurchases";
 import Anulatepurchase from "../pages/Anulatepurchase";
 import { Plus, FileSpreadsheet } from "lucide-react";
 import { getAllPurchases, annulPurchase, getPurchaseById } from "../data/PurchasesService";
-import Spinner from "../../../../shared/spinner"; // â† IMPORTAR SPINNER
+import Spinner from "../../../../shared/spinner"; // ← IMPORTAR SPINNER
 import * as XLSX from "xlsx";
 import PaginationAdmin from "../../../../shared/PaginationAdmin";
 import { exportPurchasesExcel } from "../helpers/purchasesExcel";
@@ -121,10 +121,10 @@ export const Purchases = () => {
       const formattedDateTime = currentDate.toLocaleString("es-CO", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
       const titleRow = [["COMPRAS"]];
-      const dateRow = [[`Fecha de exportaciÃ³n: ${formattedDate} - ${formattedDateTime}`]];
+      const dateRow = [[`Fecha de exportación: ${formattedDate} - ${formattedDateTime}`]];
       const emptyRow = [[""]];
 
-      const summaryHeaders = ["No. FacturaciÃ³n", "Fecha Compra", "Proveedor", "Cantidad Productos", "Precio Total", "Estado"];
+      const summaryHeaders = ["No. Facturación", "Fecha Compra", "Proveedor", "Cantidad Productos", "Precio Total", "Estado"];
       const summaryData = products.map((c) => [
         c.numeroFacturacion || "",
         c.fechaCompra || "",
@@ -141,11 +141,11 @@ export const Purchases = () => {
       summaryWs["!merges"].push({ s: { r: 1, c: 0 }, e: { r: 1, c: summaryHeaders.length - 1 } });
       summaryWs["!merges"].push({ s: { r: 3, c: 0 }, e: { r: 3, c: summaryHeaders.length - 1 } });
       summaryWs["A1"] = { v: "COMPRAS", t: "s" };
-      summaryWs["A2"] = { v: `Fecha de exportaciÃ³n: ${formattedDate} - ${formattedDateTime}`, t: "s" };
+      summaryWs["A2"] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: "s" };
       summaryWs["A4"] = { v: "RESUMEN DE COMPRAS", t: "s" };
       summaryWs["!cols"] = [{ wch: 20 }, { wch: 15 }, { wch: 30 }, { wch: 18 }, { wch: 16 }, { wch: 14 }];
 
-      const productHeaders = ["No. FacturaciÃ³n", "Fecha Compra", "Proveedor", "Producto", "Cantidad", "Precio Unitario", "Total Producto", "Estado"];
+      const productHeaders = ["No. Facturación", "Fecha Compra", "Proveedor", "Producto", "Cantidad", "Precio Unitario", "Total Producto", "Estado"];
       const productData = [];
       products.forEach((c) => {
         productData.push([c.numeroFacturacion || "", c.fechaCompra || "", c.proveedor || "", "Ver detalle para productos", c.cantidadProductos || 0, "", "", c.estado || ""]);
@@ -158,7 +158,7 @@ export const Purchases = () => {
       productWs["!merges"].push({ s: { r: 1, c: 0 }, e: { r: 1, c: productHeaders.length - 1 } });
       productWs["!merges"].push({ s: { r: 3, c: 0 }, e: { r: 3, c: productHeaders.length - 1 } });
       productWs["A1"] = { v: "COMPRAS", t: "s" };
-      productWs["A2"] = { v: `Fecha de exportaciÃ³n: ${formattedDate} - ${formattedDateTime}`, t: "s" };
+      productWs["A2"] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: "s" };
       productWs["A4"] = { v: "DETALLE DE PRODUCTOS", t: "s" };
       productWs["!cols"] = [{ wch: 20 }, { wch: 15 }, { wch: 30 }, { wch: 35 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 14 }];
 
@@ -169,7 +169,7 @@ export const Purchases = () => {
       const anuladas = products.filter((c) => c.estado === "Anulada").length;
       const enProceso = products.filter((c) => c.estado !== "Completada" && c.estado !== "Anulada").length;
 
-      const statsHeaders = ["MÃ©trica", "Valor"];
+      const statsHeaders = ["Métrica", "Valor"];
       const statsData = [
         ["Total Compras", totalCompras],
         ["Total Valor Compras", totalValor],
@@ -180,27 +180,27 @@ export const Purchases = () => {
         ["Compras Anuladas", anuladas],
         ["Compras en Proceso", enProceso],
         [""],
-        ["Fecha de ExportaciÃ³n", formattedDateTime],
+        ["Fecha de Exportación", formattedDateTime],
       ];
 
-      const statsSheetData = [...titleRow, ...dateRow, ...emptyRow, [["ESTADÃSTICAS"]], ...emptyRow, statsHeaders, ...statsData];
+      const statsSheetData = [...titleRow, ...dateRow, ...emptyRow, [["ESTADÍSTICAS"]], ...emptyRow, statsHeaders, ...statsData];
       const statsWs = XLSX.utils.aoa_to_sheet(statsSheetData);
       if (!statsWs["!merges"]) statsWs["!merges"] = [];
       statsWs["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } });
       statsWs["!merges"].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 1 } });
       statsWs["!merges"].push({ s: { r: 3, c: 0 }, e: { r: 3, c: 1 } });
       statsWs["A1"] = { v: "COMPRAS", t: "s" };
-      statsWs["A2"] = { v: `Fecha de exportaciÃ³n: ${formattedDate} - ${formattedDateTime}`, t: "s" };
-      statsWs["A4"] = { v: "ESTADÃSTICAS", t: "s" };
+      statsWs["A2"] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: "s" };
+      statsWs["A4"] = { v: "ESTADÍSTICAS", t: "s" };
       statsWs["!cols"] = [{ wch: 28 }, { wch: 20 }];
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, summaryWs, "Resumen Compras");
       XLSX.utils.book_append_sheet(wb, productWs, "Detalle Productos");
-      XLSX.utils.book_append_sheet(wb, statsWs, "EstadÃ­sticas");
+      XLSX.utils.book_append_sheet(wb, statsWs, "Estadísticas");
       XLSX.writeFile(wb, `compras_${new Date().toISOString().split("T")[0]}.xlsx`);
 
-      showSuccess("ExportaciÃ³n exitosa", "El archivo Excel se generÃ³ correctamente");
+      showSuccess("Exportación exitosa", "El archivo Excel se generó correctamente");
     } catch {
       showError("Error", "No se pudo exportar el archivo");
     }
@@ -215,8 +215,8 @@ export const Purchases = () => {
     try {
       await exportPurchasesExcel(products);
       showSuccess(
-        "ExportaciÃ³n exitosa",
-        "El archivo Excel se generÃ³ correctamente."
+        "Exportación exitosa",
+        "El archivo Excel se generó correctamente."
       );
     } catch {
       showError("Error", "No se pudo exportar el archivo.");

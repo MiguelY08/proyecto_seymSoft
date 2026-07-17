@@ -29,7 +29,7 @@ function CategoryDemandChart({ data = [] }) {
 
   return (
     <div style={{ ...chartCard, display: "flex", flexDirection: "column" }}>
-      <h3 style={cardTitle}>CategorÃ­as Demandadas</h3>
+      <h3 style={cardTitle}>Categorías Demandadas</h3>
 
       <div style={{ width: "100%", height: isMobile ? 180 : 150 }}>
         <ResponsiveContainer width="100%" height="100%">

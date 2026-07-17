@@ -559,7 +559,7 @@ function ProductForm({
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-800">Datos esenciales</p>
-                <p className="text-xs text-gray-400">IdentificaciÃ³n y clasificaciÃ³n principal del producto</p>
+                <p className="text-xs text-gray-400">Identificación y clasificación principal del producto</p>
               </div>
             </div>
             <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr)_minmax(280px,1fr)_minmax(220px,0.7fr)] gap-4 p-4">
@@ -595,7 +595,7 @@ function ProductForm({
               </div>
               <div className="md:col-span-9">
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  CÃ³digo de barras y stock <span className="text-red-500">*</span>
+                  Código de barras y stock <span className="text-red-500">*</span>
                 </label>
                 <div className={`grid grid-cols-[minmax(0,1fr)_110px] overflow-hidden rounded-lg border bg-white transition-colors duration-200 focus-within:ring-2 ${
                   errors.codBarras || errors.stockPrincipal
@@ -611,7 +611,7 @@ function ProductForm({
                       onChange={handleChange}
                       onFocus={() => setActiveBarcodeTarget({ type: 'main', index: null })}
                       data-scanner-field="product-barcode-main"
-                      placeholder="Escanea o escribe el cÃ³digo"
+                      placeholder="Escanea o escribe el código"
                       className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400"
                     />
                   </div>
@@ -665,7 +665,7 @@ function ProductForm({
                     <p className="mt-1 text-lg font-semibold text-[#004D77]">{calcStock(formData).toLocaleString('es-CO')}</p>
                   </div>
                   <div className="rounded-lg border border-gray-200 bg-white p-3">
-                    <p className="text-xs text-gray-500">CÃ³digos</p>
+                    <p className="text-xs text-gray-500">Códigos</p>
                     <p className="mt-1 text-lg font-semibold text-[#004D77]">{1 + (formData.codsBarrasExtra || []).length}</p>
                   </div>
                 </div>
@@ -680,15 +680,15 @@ function ProductForm({
                   <Package className="w-4 h-4 text-white" strokeWidth={2} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-800">Inventario y configuraciÃ³n comercial</p>
+                  <p className="text-sm font-semibold text-gray-800">Inventario y configuración comercial</p>
                   <p className="text-xs text-gray-400">Presentaciones, existencias, precios y descuentos</p>
                 </div>
               </div>
               <div className="p-5 flex flex-col gap-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-medium text-gray-700">CÃ³digos adicionales</p>
-                    <p className="text-xs text-gray-400">AgrÃ©galos solo cuando el producto tenga otras presentaciones.</p>
+                    <p className="text-sm font-medium text-gray-700">Códigos adicionales</p>
+                    <p className="text-xs text-gray-400">Agrégalos solo cuando el producto tenga otras presentaciones.</p>
                   </div>
                   <button type="button" onClick={handleAddCodBarras} className="flex shrink-0 items-center gap-1 text-sm font-medium text-[#004D77] px-2 py-1 rounded-md hover:bg-[#004D77]/10 transition-colors duration-200 cursor-pointer">
                     <Plus className="w-3 h-3" />
@@ -707,7 +707,7 @@ function ProductForm({
                         <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_110px] overflow-hidden rounded-lg border border-gray-300 bg-white transition-colors duration-200 focus-within:border-[#004D77] focus-within:ring-2 focus-within:ring-[#004D77]/20">
                           <div className="relative min-w-0">
                             <Barcode className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                            <input type="text" value={item.cod || ''} onChange={(e) => handleCodBarrasExtraChange(i, 'cod', e.target.value)} onFocus={() => setActiveBarcodeTarget({ type: 'extra', index: i })} data-scanner-field="product-barcode-extra" placeholder={`CÃ³digo de barras ${i + 2}`} className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400" />
+                            <input type="text" value={item.cod || ''} onChange={(e) => handleCodBarrasExtraChange(i, 'cod', e.target.value)} onFocus={() => setActiveBarcodeTarget({ type: 'extra', index: i })} data-scanner-field="product-barcode-extra" placeholder={`Código de barras ${i + 2}`} className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400" />
                           </div>
                           <div className="relative border-l border-gray-200 bg-gray-50">
                             <Boxes className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
@@ -732,7 +732,7 @@ function ProductForm({
                     <BadgeDollarSign className="h-4 w-4 text-[#004D77]" strokeWidth={1.8} />
                     <div>
                       <p className="text-sm font-semibold text-gray-800">Precios y descuentos</p>
-                      <p className="text-xs text-gray-400">El precio detal es la configuraciÃ³n comercial principal.</p>
+                      <p className="text-xs text-gray-400">El precio detal es la configuración comercial principal.</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -753,15 +753,15 @@ function ProductForm({
                 <ImagePlus className="w-4 h-4 text-white" strokeWidth={2} />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-800">InformaciÃ³n complementaria</p>
-                <p className="text-xs text-gray-400">ImÃ¡genes y descripciÃ³n para el catÃ¡logo</p>
+                <p className="text-sm font-semibold text-gray-800">Información complementaria</p>
+                <p className="text-xs text-gray-400">Imágenes y descripción para el catálogo</p>
               </div>
             </div>
             <div className="flex flex-col gap-5 p-5">
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-sm font-medium text-gray-700">
-                    {isEditMode ? 'ImÃ¡genes' : 'Imagen'} {!isEditMode && <span className="text-red-500">*</span>}
+                    {isEditMode ? 'Imágenes' : 'Imagen'} {!isEditMode && <span className="text-red-500">*</span>}
                   </label>
                   <span className="text-xs font-medium text-gray-500">
                     {imagenesActuales.length + imagenesNuevas.length} {isEditMode ? 'visible' : 'seleccionada'}
@@ -774,7 +774,7 @@ function ProductForm({
                 }`}>
                   <button type="button" onClick={() => imageInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-[#004D77] border border-[#004D77] bg-white rounded-lg hover:bg-[#004D77] hover:text-white transition-colors duration-200 cursor-pointer">
                     <ImagePlus className="w-4 h-4" />
-                    {isEditMode ? 'Agregar imÃ¡genes' : 'Seleccionar imÃ¡genes'}
+                    {isEditMode ? 'Agregar imágenes' : 'Seleccionar imágenes'}
                   </button>
                   {imagenesActuales.length > 0 && (
                     <div>
@@ -833,16 +833,16 @@ function ProductForm({
                       <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${errors.imagen ? 'bg-red-100' : 'bg-gray-100'}`}>
                         <Upload className={`w-6 h-6 ${errors.imagen ? 'text-red-400' : 'text-gray-400'}`} />
                       </div>
-                      <p className="text-xs font-medium text-gray-600">{isEditMode ? 'No hay imÃ¡genes asociadas' : 'AÃºn no hay imÃ¡genes cargadas'}</p>
-                      <p className="text-[10px] text-gray-400">{isEditMode ? 'Agrega nuevas imÃ¡genes con el botÃ³n superior.' : 'Usa el botÃ³n superior para agregarlas.'}</p>
+                      <p className="text-xs font-medium text-gray-600">{isEditMode ? 'No hay imágenes asociadas' : 'Aún no hay imágenes cargadas'}</p>
+                      <p className="text-[10px] text-gray-400">{isEditMode ? 'Agrega nuevas imágenes con el botón superior.' : 'Usa el botón superior para agregarlas.'}</p>
                     </div>
                   )}
                 </div>
                 <ErrMsg field="imagen" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">DescripciÃ³n <span className="text-gray-400 font-normal">(opcional)</span></label>
-                <textarea name="descripcion" value={formData.descripcion || ''} onChange={handleChange} placeholder="DescripciÃ³n del producto..." className="w-full px-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 resize-none text-sm text-gray-700 placeholder-gray-400 min-h-[200px] transition-colors duration-200" />
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Descripción <span className="text-gray-400 font-normal">(opcional)</span></label>
+                <textarea name="descripcion" value={formData.descripcion || ''} onChange={handleChange} placeholder="Descripción del producto..." className="w-full px-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 resize-none text-sm text-gray-700 placeholder-gray-400 min-h-[200px] transition-colors duration-200" />
               </div>
             </div>
           </div>
@@ -856,8 +856,8 @@ function ProductForm({
                   <FileText className="w-4 h-4 text-white" strokeWidth={2} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-800">InformaciÃ³n general</p>
-                  <p className="text-xs text-gray-400">ImÃ¡genes, categorÃ­as y descripciÃ³n</p>
+                  <p className="text-sm font-semibold text-gray-800">Información general</p>
+                  <p className="text-xs text-gray-400">Imágenes, categorías y descripción</p>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-5">
@@ -952,8 +952,8 @@ function ProductForm({
                   <Package className="w-4 h-4 text-white" strokeWidth={2} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-800">InformaciÃ³n del producto</p>
-                  <p className="text-xs text-gray-400">IdentificaciÃ³n, inventario y unidad</p>
+                  <p className="text-sm font-semibold text-gray-800">Información del producto</p>
+                  <p className="text-xs text-gray-400">Identificación, inventario y unidad</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 p-5">
@@ -1032,7 +1032,7 @@ function ProductForm({
                 <BadgeDollarSign className="w-4 h-4 text-white" strokeWidth={2} />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-800">ConfiguraciÃ³n de precios</p>
+                <p className="text-sm font-semibold text-gray-800">Configuración de precios</p>
                 <p className="text-xs text-gray-400">Precios de venta y descuentos</p>
               </div>
             </div>

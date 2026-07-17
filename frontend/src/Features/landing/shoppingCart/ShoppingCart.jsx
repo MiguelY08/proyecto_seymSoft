@@ -25,7 +25,7 @@ import CompleteClientProfile from './modals/CompleteClientProfile.jsx';
 import { useAuth } from '../../access/context/AuthContext';
 import { getSession, saveSession } from '../../access/helpers/authStorage';
 
-/* â”€â”€ Estilos (coherentes con Home/Favorites) â”€â”€ */
+/* ── Estilos (coherentes con Home/Favorites) ── */
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,600&family=Nunito:wght@400;600;700;800;900&display=swap');
 
@@ -75,7 +75,7 @@ const STYLES = `
     margin: 0;
   }
 
-  /* Botones acciÃ³n */
+  /* Botones acción */
   .cart-action-buttons {
     display: flex;
     gap: 10px;
@@ -523,11 +523,11 @@ function ShoppingCart() {
     return () => window.clearTimeout(timer);
   }, [cartItems.length, cartLoading, clientId, resumeCheckout]);
 
-  // Validaciones (idÃ©nticas al original)
+  // Validaciones (idénticas al original)
   const validateNombreCompleto = (value) => {
     if (!value.trim()) return 'El nombre completo es obligatorio';
-    if (value.trim().length < 3) return 'MÃ­nimo 3 caracteres';
-    if (!/^[a-zÃ¡Ã©Ã­Ã³ÃºÃ±A-ZÃÃ‰ÃÃ“ÃšÃ‘\s]+$/.test(value)) return 'Solo letras';
+    if (value.trim().length < 3) return 'Mínimo 3 caracteres';
+    if (!/^[a-záéíóúñA-ZÁÉÍÓÚÑ\s]+$/.test(value)) return 'Solo letras';
     if (value.trim().split(/\s+/).length < 2) return 'Ingresa nombre y apellido';
     return '';
   };
@@ -535,31 +535,31 @@ function ShoppingCart() {
     if (!value.trim()) return 'El correo es obligatorio';
     if (!value.includes('@')) return 'Debe contener @';
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!regex.test(value)) return 'Formato invÃ¡lido';
+    if (!regex.test(value)) return 'Formato inválido';
     return '';
   };
   const validateTelefono = (value) => {
-    if (!value.trim()) return 'El telÃ©fono es obligatorio';
-    if (!/^[\d\s]+$/.test(value)) return 'Solo nÃºmeros';
+    if (!value.trim()) return 'El teléfono es obligatorio';
+    if (!/^[\d\s]+$/.test(value)) return 'Solo números';
     const digitsOnly = value.replace(/\s/g, '');
-    if (digitsOnly.length < 10) return 'MÃ­nimo 10 dÃ­gitos';
-    if (digitsOnly.length > 10) return 'MÃ¡ximo 10 dÃ­gitos';
+    if (digitsOnly.length < 10) return 'Mínimo 10 dígitos';
+    if (digitsOnly.length > 10) return 'Máximo 10 dígitos';
     return '';
   };
   const validateCiudad = (value) => {
     if (!value.trim()) return 'La ciudad es obligatoria';
-    if (value.trim().length < 3) return 'MÃ­nimo 3 caracteres';
-    if (!/^[a-zÃ¡Ã©Ã­Ã³ÃºÃ±A-ZÃÃ‰ÃÃ“ÃšÃ‘\s]+$/.test(value)) return 'Solo letras';
+    if (value.trim().length < 3) return 'Mínimo 3 caracteres';
+    if (!/^[a-záéíóúñA-ZÁÉÍÓÚÑ\s]+$/.test(value)) return 'Solo letras';
     return '';
   };
   const validateBarrio = (value) => {
     if (!value.trim()) return 'El barrio es obligatorio';
-    if (value.trim().length < 3) return 'MÃ­nimo 3 caracteres';
+    if (value.trim().length < 3) return 'Mínimo 3 caracteres';
     return '';
   };
   const validateDireccion = (value) => {
-    if (!value.trim()) return 'La direcciÃ³n es obligatoria';
-    if (value.trim().length < 5) return 'MÃ­nimo 5 caracteres';
+    if (!value.trim()) return 'La dirección es obligatoria';
+    if (value.trim().length < 5) return 'Mínimo 5 caracteres';
     return '';
   };
 
@@ -651,8 +651,8 @@ function ShoppingCart() {
   const handleRemoveItem = async (item) => {
     const result = await showConfirm(
       'warning',
-      'Â¿Eliminar producto?',
-      `Â¿EstÃ¡s seguro de eliminar "${item.name}" del carrito?`
+      '¿Eliminar producto?',
+      `¿Estás seguro de eliminar "${item.name}" del carrito?`
     );
     if (result.isConfirmed) removeFromCart(item.id);
   };
@@ -660,15 +660,15 @@ function ShoppingCart() {
   const handleClearCart = async () => {
     const result = await showConfirm(
       'warning',
-      'Â¿Vaciar carrito?',
-      'Â¿EstÃ¡s seguro de eliminar todos los productos del carrito?'
+      '¿Vaciar carrito?',
+      '¿Estás seguro de eliminar todos los productos del carrito?'
     );
     if (result.isConfirmed) clearCart();
   };
 
   const handleProcederPago = () => {
     if (!isAuthenticated) {
-      showError('Inicia sesiÃ³n', 'Debes iniciar sesiÃ³n para crear y consultar tu pedido.');
+      showError('Inicia sesión', 'Debes iniciar sesión para crear y consultar tu pedido.');
       navigate('/login', { state: { from: '/cart' } });
       return;
     }
@@ -721,9 +721,9 @@ function ShoppingCart() {
             <div className="cart-empty-icon">
               <CartIcon size={26} color="#004D77" strokeWidth={1.5} />
             </div>
-            <h3 className="cart-empty-title">Tu carrito estÃ¡ vacÃ­o</h3>
+            <h3 className="cart-empty-title">Tu carrito está vacío</h3>
             <p className="cart-empty-sub">
-              Agrega los productos que deseas y continÃºa tu compra de forma fÃ¡cil y rÃ¡pida.
+              Agrega los productos que deseas y continúa tu compra de forma fácil y rápida.
             </p>
             <button onClick={() => navigate('/shop')} className="btn-outline">
               Ir a la tienda <ArrowRight size={12} strokeWidth={3} />
@@ -779,7 +779,7 @@ function ShoppingCart() {
                       {item.name}
                     </div>
                     <div className="cart-item-category">
-                      {item.category || item.mainCategory?.name || item.categories?.[0]?.name || 'Sin categorÃ­a'}
+                      {item.category || item.mainCategory?.name || item.categories?.[0]?.name || 'Sin categoría'}
                     </div>
                     <div className="cart-item-price">
                       ${item.price.toLocaleString()} COP
@@ -831,7 +831,7 @@ function ShoppingCart() {
             {deliveryMethod === 'domicilio' ? (
               <div className="delivery-form-card">
                 <div className="form-title">
-                  <MapPin size={18} color="#004D77" /> InformaciÃ³n de envÃ­o
+                  <MapPin size={18} color="#004D77" /> Información de envío
                 </div>
 
                 <div className="delivery-method-grid">
@@ -852,9 +852,9 @@ function ShoppingCart() {
                 </div>
 
                 {[
-                  { name: 'nombreCompleto', label: 'Nombre completo', icon: HomeIcon, type: 'text', placeholder: 'Juan PÃ©rez' },
-                  { name: 'correo', label: 'Correo electrÃ³nico', icon: Mail, type: 'email', placeholder: 'ejemplo@correo.com' },
-                  { name: 'telefono', label: 'TelÃ©fono', icon: Phone, type: 'tel', placeholder: '300 123 4567' },
+                  { name: 'nombreCompleto', label: 'Nombre completo', icon: HomeIcon, type: 'text', placeholder: 'Juan Pérez' },
+                  { name: 'correo', label: 'Correo electrónico', icon: Mail, type: 'email', placeholder: 'ejemplo@correo.com' },
+                  { name: 'telefono', label: 'Teléfono', icon: Phone, type: 'tel', placeholder: '300 123 4567' },
                 ].map((field) => (
                   <div className="form-group" key={field.name}>
                     <label className="form-label">
@@ -894,7 +894,7 @@ function ShoppingCart() {
                       value={formData.ciudad}
                       onChange={handleInputChange}
                       onBlur={() => handleBlur('ciudad')}
-                      placeholder="MedellÃ­n"
+                      placeholder="Medellín"
                       className={`form-input ${
                         errors.ciudad && touched.ciudad ? 'error' : formData.ciudad && !errors.ciudad && touched.ciudad ? 'success' : ''
                       }`}
@@ -922,7 +922,7 @@ function ShoppingCart() {
 
                 <div className="form-group">
                   <label className="form-label">
-                    <MapPin size={12} /> DirecciÃ³n <span className="text-red-500">*</span>
+                    <MapPin size={12} /> Dirección <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -959,7 +959,7 @@ function ShoppingCart() {
                     <span className="font-bold">${subtotal.toLocaleString()} COP</span>
                   </div>
                   <div className="price-row">
-                    <span>EnvÃ­o</span>
+                    <span>Envío</span>
                     <span>N/A</span>
                   </div>
                   <div className="price-row total-row">
@@ -999,7 +999,7 @@ function ShoppingCart() {
                   <span className="font-bold">${subtotal.toLocaleString()} COP</span>
                 </div>
                 <div className="price-row">
-                  <span>EnvÃ­o</span>
+                  <span>Envío</span>
                   <span>N/A</span>
                 </div>
                 <div className="price-row total-row">

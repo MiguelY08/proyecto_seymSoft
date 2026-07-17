@@ -78,7 +78,7 @@ function TopProductsChart({
             margin: 0,
           }}
         >
-          Top Productos MÃ¡s Vendidos
+          Top Productos Más Vendidos
         </h3>
 
         <div
