@@ -267,12 +267,15 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
           </table>
         )}
 
-        <Pagination
-          totalProducts={subcategories.length}
-          productsPerPage={productsPerPage}
-          currentPage={currentPage}
-          setCurrentPage={setCurrentPage}
-        />
+      
+        <div className="scale-80 ">
+          <Pagination
+            totalProducts={subcategories.length}
+            productsPerPage={productsPerPage}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+          />
+        </div>
       </div>
     </div>
   );
