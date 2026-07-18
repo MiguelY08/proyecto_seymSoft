@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import {
   ShoppingCart as CartIcon,
   Minus,
@@ -16,7 +16,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useCart } from '../../shared/Context/Cartcontext';
+import { useCart } from '../../shared/Context/CartContext';
 import { useAlert } from '../../shared/alerts/useAlert';
 import useAuthenticatedClient from '../../shared/hooks/useAuthenticatedClient';
 import { getDisplayPricing, normalizeClientType } from '../../shared/utils/shopPricingHelper';
@@ -1054,3 +1054,4 @@ function ShoppingCart() {
 }
 
 export default ShoppingCart;
+

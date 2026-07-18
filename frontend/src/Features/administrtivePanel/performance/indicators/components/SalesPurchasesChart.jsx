@@ -1,9 +1,9 @@
-import {
+﻿import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import { chartCard, cardTitle, axTick, tooltipBox, tooltipLabel, tooltipValue } from "../helpers/indicatorsHelpers";
-import useBreakpoint from "../hooks/useBreakpoint";
+import useBreakpoint from "../hooks/useBreakPoint";
 
 const formatCompactCurrency = (value) =>
   new Intl.NumberFormat("es-CO", {
@@ -67,3 +67,4 @@ function SalesPurchasesChart({ data = [] }) {
 }
 
 export default SalesPurchasesChart;
+

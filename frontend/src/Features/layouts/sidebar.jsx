@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 
 import {
   Home,
@@ -21,7 +21,7 @@ import {
   CreditCard,
 } from "lucide-react";
 
-import SidebarItem from "./SidebarItem";
+import SidebarItem from "./SIdebarItem";
 
 import HorizontalLogo from "../../assets/PMLogo_Horizontal.png";
 
@@ -330,3 +330,4 @@ export default function Sidebar() {
     </>
   );
 }
+

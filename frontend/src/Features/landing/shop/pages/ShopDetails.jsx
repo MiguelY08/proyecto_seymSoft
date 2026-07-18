@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ChevronLeft,
@@ -10,7 +10,7 @@ import {
 
 import ProductsService from "../../../administrtivePanel/purchases/products/services/productsServices.js";
 import { useAlert } from "../../../shared/alerts/useAlert";
-import { useCart } from "../../../shared/Context/Cartcontext";
+import { useCart } from "../../../shared/Context/CartContext";
 import useClientType from "../../../shared/hooks/useClientType.js";
 import ProductCard from "../../../shared/productCard/ProductCard";
 import { getDisplayPricing } from "../../../shared/utils/shopPricingHelper.js";
@@ -413,3 +413,4 @@ function ShopDetail() {
 }
 
 export default ShopDetail;
+

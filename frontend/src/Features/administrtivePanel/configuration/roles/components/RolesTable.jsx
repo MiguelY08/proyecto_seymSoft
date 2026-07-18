@@ -79,6 +79,17 @@ export default function RolesTable({
 
 }) {
 
+  const pendingActionRef =
+    React.useRef(null);
+
+  const [
+    pendingActionKey,
+    setPendingActionKey
+  ] = React.useState(null);
+
+  const hasPendingAction =
+    Boolean(pendingActionKey);
+
   const {
 
     hasPermission
@@ -98,19 +109,73 @@ export default function RolesTable({
   // EDITAR
   // ─────────────────────────────
 
-  const handleEditRole = (role) => {
+  const handleEditRole = async (role) => {
+
+    const actionKey =
+      `edit-${role.id}`;
+
+    if (pendingActionRef.current) {
+      return;
+    }
+
+    pendingActionRef.current =
+      actionKey;
+
+    setPendingActionKey(
+      actionKey
+    );
 
     if (isProtectedRole(role)) {
 
-      showWarning(
+      await showWarning(
         "Rol protegido",
         "El rol Administrador no puede ser editado."
+      );
+
+      pendingActionRef.current =
+        null;
+
+      setPendingActionKey(
+        null
       );
 
       return;
     }
 
-    onEdit(role);
+    await onEdit(role);
+
+    pendingActionRef.current =
+      null;
+
+    setPendingActionKey(
+      null
+    );
+  };
+
+  const handleViewRole = async (role) => {
+
+    const actionKey =
+      `view-${role.id}`;
+
+    if (pendingActionRef.current) {
+      return;
+    }
+
+    pendingActionRef.current =
+      actionKey;
+
+    setPendingActionKey(
+      actionKey
+    );
+
+    await onView(role);
+
+    pendingActionRef.current =
+      null;
+
+    setPendingActionKey(
+      null
+    );
   };
 
   // ─────────────────────────────
@@ -119,11 +184,25 @@ export default function RolesTable({
 
   const handleToggleActive = async (role) => {
 
+    const actionKey =
+      `toggle-${role.id}`;
+
+    if (pendingActionRef.current) {
+      return;
+    }
+
+    pendingActionRef.current =
+      actionKey;
+
+    setPendingActionKey(
+      actionKey
+    );
+
     try {
 
       if (isProtectedRole(role)) {
 
-        showWarning(
+        await showWarning(
           "Rol protegido",
           "Este rol no puede desactivarse"
         );
@@ -207,6 +286,15 @@ export default function RolesTable({
         errorInfo.message
       );
 
+    } finally {
+
+      pendingActionRef.current =
+        null;
+
+      setPendingActionKey(
+        null
+      );
+
     }
 
   };
@@ -217,11 +305,25 @@ export default function RolesTable({
 
   const handleDeleteRole = async (role) => {
 
+    const actionKey =
+      `delete-${role.id}`;
+
+    if (pendingActionRef.current) {
+      return;
+    }
+
+    pendingActionRef.current =
+      actionKey;
+
+    setPendingActionKey(
+      actionKey
+    );
+
     try {
 
       if (isProtectedRole(role)) {
 
-        showWarning(
+        await showWarning(
           "Rol protegido",
           "Este rol no puede eliminarse"
         );
@@ -277,6 +379,15 @@ export default function RolesTable({
         errorInfo.message
       );
 
+    } finally {
+
+      pendingActionRef.current =
+        null;
+
+      setPendingActionKey(
+        null
+      );
+
     }
 
   };
@@ -305,9 +416,172 @@ export default function RolesTable({
 
   return (
 
-    <div className="flex-1 overflow-x-auto rounded-xl shadow-md font-lexend">
+    <div className="font-lexend">
 
-      <table className="min-w-max w-full">
+      <div className="grid gap-3 md:hidden">
+
+        {
+
+          roles.map((role, index) => {
+
+            return (
+
+              <div
+                key={role.id}
+                className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+              >
+
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold text-gray-400">
+                      #{index + 1}
+                    </p>
+                    <h3 className="mt-1 break-words text-sm font-semibold text-[#004D77]">
+                      {highlight(role.name, search)}
+                    </h3>
+                  </div>
+
+                  {
+
+                    hasPermission(
+                      "roles.activar_desactivar"
+                    )
+
+                    &&
+
+                    <button
+                      disabled={hasPendingAction}
+                      onClick={() =>
+                        handleToggleActive(role)
+                      }
+                      className={`relative h-6 w-12 shrink-0 rounded-full transition-colors duration-300 ${
+                        hasPendingAction
+                          ? "opacity-60 cursor-not-allowed"
+                          : "cursor-pointer"
+                      } ${
+                        role.active
+                          ? "bg-green-500"
+                          : "bg-red-400"
+                      }`}
+                    >
+
+                      <span
+                        className={`absolute top-1/2 -translate-y-1/2 text-white text-[9px] font-bold transition-all duration-300 ${
+                          role.active
+                            ? "left-1.5"
+                            : "right-1.5"
+                        }`}
+                      >
+                        {role.active ? "A" : "I"}
+                      </span>
+
+                      <span
+                        className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-all duration-300 ${
+                          role.active
+                            ? "left-7"
+                            : "left-1"
+                        }`}
+                      />
+
+                    </button>
+
+                  }
+                </div>
+
+                <div className="mt-3 space-y-2 text-xs text-gray-600">
+                  <p className="break-words">
+                    <span className="font-semibold text-gray-500">Descripción:</span>{" "}
+                    {highlight(role.description || "Sin descripción", search)}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-gray-500">Fecha creación:</span>{" "}
+                    {highlight(formatDate(role.createdAt), search)}
+                  </p>
+                </div>
+
+                <div className="mt-4 flex items-center justify-end gap-4 border-t border-gray-100 pt-3">
+
+                  {
+
+                    hasPermission(
+                      "roles.ver_informacion"
+                    )
+
+                    &&
+
+                    <Info
+                      size={18}
+                      onClick={() =>
+                        handleViewRole(role)
+                      }
+                      className={`text-gray-400 transition ${
+                        hasPendingAction
+                          ? "opacity-60 cursor-not-allowed"
+                          : "cursor-pointer hover:scale-110 hover:text-[#004D77]"
+                      }`}
+                    />
+
+                  }
+
+                  {
+
+                    hasPermission(
+                      "roles.editar"
+                    )
+
+                    &&
+
+                    <SquarePen
+                      size={18}
+                      onClick={() =>
+                        handleEditRole(role)
+                      }
+                      className={`text-gray-400 transition ${
+                        hasPendingAction
+                          ? "opacity-60 cursor-not-allowed"
+                          : "cursor-pointer hover:scale-110 hover:text-[#004D77]"
+                      }`}
+                    />
+
+                  }
+
+                  {
+
+                    hasPermission(
+                      "roles.eliminar"
+                    )
+
+                    &&
+
+                    <Trash2
+                      size={18}
+                      onClick={() =>
+                        handleDeleteRole(role)
+                      }
+                      className={`text-gray-400 transition ${
+                        hasPendingAction
+                          ? "opacity-60 cursor-not-allowed"
+                          : "cursor-pointer hover:scale-110 hover:text-red-500"
+                      }`}
+                    />
+
+                  }
+
+                </div>
+
+              </div>
+
+            );
+
+          })
+
+        }
+
+      </div>
+
+      <div className="hidden md:block flex-1 overflow-x-auto rounded-xl shadow-md">
+
+      <table className="min-w-[760px] w-full">
 
         <thead className="bg-[#004D77] text-white">
 
@@ -361,7 +635,7 @@ export default function RolesTable({
 
                   </td>
 
-                  <td className="px-3 py-2 text-center text-xs font-semibold">
+                  <td className="px-3 py-2 text-center text-xs font-semibold max-w-[180px] break-words">
 
                     {highlight(
                       role.name,
@@ -370,7 +644,7 @@ export default function RolesTable({
 
                   </td>
 
-                  <td className="px-3 py-2 text-center text-xs">
+                  <td className="px-3 py-2 text-center text-xs max-w-[260px] break-words">
 
                     {highlight(
                       role.description,
@@ -410,10 +684,15 @@ export default function RolesTable({
                         &&
 
                         <button
+                          disabled={hasPendingAction}
                           onClick={() =>
                             handleToggleActive(role)
                           }
-                          className={`relative w-11 h-5 rounded-full transition-colors duration-300 cursor-pointer ${
+                          className={`relative w-11 h-5 rounded-full transition-colors duration-300 ${
+                            hasPendingAction
+                              ? "opacity-60 cursor-not-allowed"
+                              : "cursor-pointer"
+                          } ${
                             role.active
                               ? "bg-green-500"
                               : "bg-red-400"
@@ -455,9 +734,13 @@ export default function RolesTable({
                         <Info
                           size={16}
                           onClick={() =>
-                            onView(role)
+                            handleViewRole(role)
                           }
-                          className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-[#004D77]"
+                          className={`text-gray-400 transition ${
+                            hasPendingAction
+                              ? "opacity-60 cursor-not-allowed"
+                              : "cursor-pointer hover:scale-110 hover:text-[#004D77]"
+                          }`}
                         />
 
                       }
@@ -475,7 +758,11 @@ export default function RolesTable({
                           onClick={() =>
                             handleEditRole(role)
                           }
-                          className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-[#004D77]"
+                          className={`text-gray-400 transition ${
+                            hasPendingAction
+                              ? "opacity-60 cursor-not-allowed"
+                              : "cursor-pointer hover:scale-110 hover:text-[#004D77]"
+                          }`}
                         />
 
                       }
@@ -493,7 +780,11 @@ export default function RolesTable({
                           onClick={() =>
                             handleDeleteRole(role)
                           }
-                          className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-red-500"
+                          className={`text-gray-400 transition ${
+                            hasPendingAction
+                              ? "opacity-60 cursor-not-allowed"
+                              : "cursor-pointer hover:scale-110 hover:text-red-500"
+                          }`}
                         />
 
                       }
@@ -514,6 +805,7 @@ export default function RolesTable({
 
       </table>
 
+      </div>
     </div>
 
   );

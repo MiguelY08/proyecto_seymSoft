@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { FileSpreadsheet } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAlert } from "../../../../shared/alerts/useAlert";
@@ -38,12 +38,16 @@ export default function PaymentsPage() {
 
   const [selectedAccount, setSelectedAccount] = useState(null);
 
+  const navigationLockRef = useRef(false);
+  const contactLockRef = useRef(false);
+  const exportLockRef = useRef(false);
+
   const itemsPerPage = 11;
 
   /* ===============================
      CARGAR CLIENTES
   ================================ */
-  const loadCustomers = async () => {
+  const loadCustomers = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -57,13 +61,13 @@ export default function PaymentsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showError]);
   /* ===============================
      INICIALIZAR
   ================================ */
   useEffect(() => {
     loadCustomers();
-  }, [location]);
+  }, [location, loadCustomers]);
 
   /* ===============================
      FILTRADO
@@ -123,14 +127,29 @@ export default function PaymentsPage() {
      NAVEGACIÓN
   ================================ */
   const handleView = (id) => {
+    if (navigationLockRef.current) return;
+    navigationLockRef.current = true;
+
     navigate(`/admin/sales/payments-and-credits/${id}`);
   };
 
   const handleAbonar = (id) => {
+    if (navigationLockRef.current) return;
+    navigationLockRef.current = true;
+
     navigate(`/admin/sales/payments-and-credits/${id}/payment`);
   };
 
   const handleContact = async (account) => {
+    if (
+      selectedAccount ||
+      contactLockRef.current
+    ) {
+      return;
+    }
+
+    contactLockRef.current = true;
+
     try {
       const contactData = await getCustomerContact(account.id);
       console.log("CONTACT RESPONSE", contactData);
@@ -138,6 +157,8 @@ export default function PaymentsPage() {
     } catch (error) {
       console.error("Error cargando contacto cliente:", error);
       showError("Error", "No fue posible cargar la información de contacto.");
+    } finally {
+      contactLockRef.current = false;
     }
   };
 
@@ -145,8 +166,14 @@ export default function PaymentsPage() {
      EXPORTAR EXCEL
   ================================ */
   const handleExportExcel = async () => {
+    if (exportLockRef.current) return;
+
+    exportLockRef.current = true;
+
     if (!filteredData.length) {
       showError("Sin datos", "No hay registros para exportar.");
+
+      exportLockRef.current = false;
 
       return;
     }
@@ -162,13 +189,19 @@ export default function PaymentsPage() {
       },
     );
 
-    if (!confirm.isConfirmed) return;
+    if (!confirm.isConfirmed) {
+      exportLockRef.current = false;
+
+      return;
+    }
 
     try {
       const success = await exportAccountsToExcel(filteredData);
 
       if (!success) {
         showError("Error", "No se pudo generar el archivo.");
+
+        exportLockRef.current = false;
 
         return;
       }
@@ -177,12 +210,14 @@ export default function PaymentsPage() {
         "Exportación completada",
         "El archivo Excel fue generado correctamente.",
       );
-    } catch (error) {
+    } catch {
       showError(
         "Error al exportar",
         "Ocurrió un problema al generar el Excel.",
       );
     }
+
+    exportLockRef.current = false;
   };
 
   if (loading) {
@@ -194,11 +229,11 @@ export default function PaymentsPage() {
   }
 
   return (
-    <div className="p-6 font-lexend space-y-3">
+    <div className="p-3 sm:p-4 lg:p-6 font-lexend space-y-3">
       {/* ENCABEZADO */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
         {/* BUSCADOR */}
-        <div className="relative flex-1 max-w-md">
+        <div className="relative w-full lg:max-w-md">
           <input
             type="text"
             placeholder="Buscar cliente o monto..."
@@ -227,8 +262,8 @@ export default function PaymentsPage() {
         </div>
 
         {/* FILTROS */}
-        <div className="flex items-end gap-4">
-          <div className="w-48">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4 w-full lg:w-auto">
+          <div className="w-full sm:w-48">
             <label className="block text-xs font-medium mb-1">Estado</label>
 
             <select
@@ -252,7 +287,7 @@ export default function PaymentsPage() {
 
           <Permission permission="pagos_y_abonos.exportar">
             <ButtonComponent
-              className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-6 flex items-center gap-2"
+              className="w-full sm:w-auto bg-white text-green-600 border-green-600 hover:bg-green-400 px-6 flex items-center gap-2"
               onClick={handleExportExcel}
             >
               <FileSpreadsheet className="w-4 h-4" />
@@ -287,7 +322,10 @@ export default function PaymentsPage() {
       {selectedAccount && (
         <ContactClientModal
           account={selectedAccount}
-          onClose={() => setSelectedAccount(null)}
+          onClose={() => {
+            contactLockRef.current = false;
+            setSelectedAccount(null);
+          }}
           onInterestApplied={() => loadCustomers()}
         />
       )}
