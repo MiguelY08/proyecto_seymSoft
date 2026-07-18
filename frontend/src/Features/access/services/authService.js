@@ -365,6 +365,17 @@ export const updateProfile = async(
 
     if(
 
+      changes.address!==undefined
+
+    ){
+
+      body.address=
+      changes.address;
+
+    }
+
+    if(
+
       changes.currentPassword!==undefined
 
     ){
@@ -419,6 +430,16 @@ export const updateProfile = async(
     const currentSession=
       getSession();
 
+    const baseClient = client ?? currentSession?.client ?? null;
+    const resolvedClient = baseClient
+      ? {
+          ...baseClient,
+          ...(changes.email !== undefined ? { email: changes.email } : {}),
+          ...(changes.phone !== undefined ? { phone: changes.phone } : {}),
+          ...(changes.address !== undefined ? { address: changes.address } : {}),
+        }
+      : null;
+
 
     saveSession({
 
@@ -430,7 +451,7 @@ export const updateProfile = async(
 
       permissions,
 
-      client: client ?? currentSession?.client ?? null,
+      client: resolvedClient,
 
 
     });
@@ -446,7 +467,7 @@ export const updateProfile = async(
 
       permissions,
 
-      client: client ?? currentSession?.client ?? null
+      client: resolvedClient
 
     };
 

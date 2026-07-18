@@ -1,9 +1,9 @@
-import { ShoppingCart, Info, Heart, HeartCrack, ChevronDown, ArrowRight } from 'lucide-react';
+﻿import { ShoppingCart, Info, Heart, HeartCrack, ChevronDown, ArrowRight } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import BgFavoritos from '../../../assets/BgFavoritos.png';
 import { useFavorites } from '../../shared/Context/Favoritescontext';
-import { useCart } from '../../shared/Context/Cartcontext';
+import { useCart } from '../../shared/Context/CartContext';
 import { useAlert } from '../../shared/alerts/useAlert';
 import useClientType from '../../shared/hooks/useClientType';
 import { getDisplayPricing } from '../../shared/utils/shopPricingHelper';
@@ -607,3 +607,4 @@ function Favorites() {
 }
 
 export default Favorites;
+

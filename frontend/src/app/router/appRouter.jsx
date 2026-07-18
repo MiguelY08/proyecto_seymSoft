@@ -7,7 +7,7 @@ import LoginPage from "../../Features/access/pages/LoginPage.jsx";
 import RegisterPage from "../../Features/access/pages/RegisterPage.jsx";
 import ForgotPasswordPage from "../../Features/access/pages/ForgotPasswordPage.jsx";
 import ResetPasswordPage from "../../Features/access/pages/ResetPasswordPage.jsx";
-// import EditProfilePage from "../../Features/access/pages/EditProfilePage.jsx";
+import EditProfilePage from "../../Features/access/pages/EditProfilePage.jsx";
 import AuthCallback from "../../Features/access/pages/AuthCallback.jsx";
 
 /* ========= LANDING ========= */
@@ -104,12 +104,13 @@ const AppRouter = () => {
         <Route path="cart" element={<ShoppingCart />} />
       </Route>
 
+      <Route element={<PrivateRoute requireRole={false} />}>
+        <Route path="/perfil/editar" element={<EditProfilePage />} />
+      </Route>
+
       {/* ========= PANEL ADMIN ========= */}
 
       <Route element={<PrivateRoute requireRole />}>
-        {/* Ruta para editar perfil, accesible para cualquier usuario autenticado */}
-        {/* <Route path="/perfil/editar" element={<EditProfilePage />} /> */}
-
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<DashboardPage />} />
 

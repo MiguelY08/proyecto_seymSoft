@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { X, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -47,17 +47,53 @@ const PasswordField = ({ label, name, value, onChange, show, onToggle, touched, 
   </div>
 );
 
+const firstText = (...values) => {
+  const value = values.find((item) => String(item ?? "").trim());
+  return String(value ?? "").trim();
+};
+
+const getProfileAddress = (user, client) => firstText(
+  client?.address,
+  client?.direccion,
+  client?.deliveryAddress,
+  client?.delivery_address,
+  user?.client?.address,
+  user?.client?.direccion,
+  user?.client?.deliveryAddress,
+  user?.client?.delivery_address,
+  user?.customer?.address,
+  user?.customer?.direccion,
+  user?.customer?.deliveryAddress,
+  user?.customer?.delivery_address,
+  user?.address,
+  user?.direccion,
+  user?.deliveryAddress,
+  user?.delivery_address,
+);
+
+const getProfileSnapshot = (user, client) => ({
+  fullName: firstText(user?.fullName, user?.full_name, user?.name, client?.fullName),
+  email: firstText(user?.email, client?.email),
+  phone: firstText(user?.phone, client?.phone),
+  address: getProfileAddress(user, client),
+});
+
 function EditProfileForm({ onClose, isModal = false }) {
-  const { user, updateProfile, logout, loading } = useAuth();
+  const { user, client, updateProfile, logout, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isAdminContext = location.pathname.startsWith("/admin");
   const { showSuccess, showError, showWarning, showInfo } = useAlert();
+  const profileSnapshot = useMemo(
+    () => getProfileSnapshot(user, client),
+    [client, user]
+  );
 
   const [form, setForm] = useState({
-    fullName: user?.fullName ?? "",
-    email: user?.email ?? "",
-    phone: user?.phone ?? "",
+    fullName: profileSnapshot.fullName,
+    email: profileSnapshot.email,
+    phone: profileSnapshot.phone,
+    address: profileSnapshot.address,
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
@@ -68,6 +104,16 @@ function EditProfileForm({ onClose, isModal = false }) {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  useEffect(() => {
+    setForm((current) => ({
+      ...current,
+      fullName: profileSnapshot.fullName,
+      email: profileSnapshot.email,
+      phone: profileSnapshot.phone,
+      address: profileSnapshot.address,
+    }));
+  }, [profileSnapshot]);
 
   const validateField = (name, value, currentForm = form) => {
     const v = value.trim();
@@ -88,6 +134,10 @@ function EditProfileForm({ onClose, isModal = false }) {
         if (!/^\d{10}$/.test(v.replace(/\D/g, ""))) {
           return "Teléfono inválido (10 dígitos).";
         }
+        return "";
+
+      case "address":
+        if (v && v.length < 5) return "La direcciÃ³n debe tener al menos 5 caracteres.";
         return "";
 
       case "currentPassword":
@@ -144,9 +194,10 @@ function EditProfileForm({ onClose, isModal = false }) {
   };
 
   const isDirty =
-    form.fullName !== (user?.fullName ?? "") ||
-    form.email !== (user?.email ?? "") ||
-    form.phone !== (user?.phone ?? "") ||
+    form.fullName !== profileSnapshot.fullName ||
+    form.email !== profileSnapshot.email ||
+    form.phone !== profileSnapshot.phone ||
+    form.address !== profileSnapshot.address ||
     form.newPassword.trim() !== "";
 
   const handleCancel = () => {
@@ -230,15 +281,19 @@ const handleSubmit = async () => {
 
     const profileChanged =
 
-      form.fullName.trim() !== (user?.fullName ?? "")
+      form.fullName.trim() !== profileSnapshot.fullName
 
       ||
 
-      form.email.trim() !== (user?.email ?? "")
+      form.email.trim() !== profileSnapshot.email
 
       ||
 
-      form.phone.trim() !== (user?.phone ?? "");
+      form.phone.trim() !== profileSnapshot.phone
+
+      ||
+
+      form.address.trim() !== profileSnapshot.address;
 
     const passwordChanged =
       form.newPassword.trim() !== "";
@@ -260,6 +315,9 @@ const handleSubmit = async () => {
 
           phone:
             form.phone.trim(),
+
+          address:
+            form.address.trim(),
 
         });
 
@@ -437,6 +495,23 @@ const handleSubmit = async () => {
               disabled={loading}
             />
             <ErrorMsg field="phone" touched={touched} errors={errors} />
+          </div>
+
+          <div className="sm:col-span-2 flex flex-col gap-1.5">
+            <label className="block text-sm font-medium text-gray-700">
+              Direccion <span className="text-xs text-gray-400 font-normal ml-1">(opcional)</span>
+            </label>
+            <input
+              type="text"
+              name="address"
+              value={form.address}
+              onChange={handleChange}
+              placeholder="Calle 123 # 45-67"
+              maxLength={255}
+              className={inputClass("address")}
+              disabled={loading}
+            />
+            <ErrorMsg field="address" touched={touched} errors={errors} />
           </div>
 
           <div className="sm:col-span-2 border-t border-gray-200 pt-4">

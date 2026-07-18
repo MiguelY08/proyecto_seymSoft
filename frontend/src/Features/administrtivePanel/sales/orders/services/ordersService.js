@@ -116,6 +116,19 @@ const normalizePaymentReceipt = (receipt = {}, pedidoId = null) => ({
     new Date().toISOString(),
   status: receipt.status ?? receipt.verificationStatus ?? 'pendiente',
   observations: receipt.observations ?? receipt.observaciones ?? '',
+  reviewObservations:
+    receipt.reviewObservations ??
+    receipt.review_observations ??
+    receipt.reviewNotes ??
+    '',
+  reviewedAt:
+    receipt.reviewedAt ??
+    receipt.reviewed_at ??
+    null,
+  reviewedBy:
+    receipt.reviewedBy ??
+    receipt.reviewed_by ??
+    null,
 });
 
 const normalizeProduct = (product = {}) => {
@@ -193,6 +206,44 @@ const getPaymentReceiptsFromOrder = (order = {}) => (
   []
 ).map((receipt) => normalizePaymentReceipt(receipt, order.id));
 
+const normalizeReceiptStatus = (status) => String(status || 'pendiente').trim().toLowerCase();
+
+const getPaymentReceiptSummary = (order = {}, receipts = []) => {
+  const summary = order.paymentReceiptSummary ?? order.payment_receipt_summary ?? {};
+  const hasSummary = Object.keys(summary).length > 0;
+
+  if (hasSummary) {
+    const totalReceipts = toNumber(summary.totalReceipts ?? summary.total_receipts);
+    const pendingReceipts = toNumber(summary.pendingReceipts ?? summary.pending_receipts);
+    const approvedReceipts = toNumber(summary.approvedReceipts ?? summary.approved_receipts);
+    const rejectedReceipts = toNumber(summary.rejectedReceipts ?? summary.rejected_receipts);
+
+    return {
+      totalReceipts,
+      pendingReceipts,
+      approvedReceipts,
+      rejectedReceipts,
+      hasPendingReceipt: Boolean(summary.hasPendingReceipt ?? summary.has_pending_receipt ?? pendingReceipts > 0),
+      hasApprovedReceipt: Boolean(summary.hasApprovedReceipt ?? summary.has_approved_receipt ?? approvedReceipts > 0),
+      hasRejectedReceipt: Boolean(summary.hasRejectedReceipt ?? summary.has_rejected_receipt ?? rejectedReceipts > 0),
+    };
+  }
+
+  const pendingReceipts = receipts.filter((receipt) => normalizeReceiptStatus(receipt.status) === 'pendiente').length;
+  const approvedReceipts = receipts.filter((receipt) => normalizeReceiptStatus(receipt.status) === 'aprobado').length;
+  const rejectedReceipts = receipts.filter((receipt) => normalizeReceiptStatus(receipt.status) === 'rechazado').length;
+
+  return {
+    totalReceipts: receipts.length,
+    pendingReceipts,
+    approvedReceipts,
+    rejectedReceipts,
+    hasPendingReceipt: pendingReceipts > 0,
+    hasApprovedReceipt: approvedReceipts > 0,
+    hasRejectedReceipt: rejectedReceipts > 0,
+  };
+};
+
 const getAdvisor = (order = {}) =>
   order.advisor ??
   order.asesor ??
@@ -213,6 +264,7 @@ const normalizeOrder = (order = {}) => {
   const subtotal = toNumber(order.subtotal, roundMoney(total - iva));
   const pagos = getPaymentsFromOrder(order);
   const comprobantesPago = getPaymentReceiptsFromOrder(order);
+  const paymentReceiptSummary = getPaymentReceiptSummary(order, comprobantesPago);
   const totalPagado = toNumber(
     order.paidAmount ?? order.totalPagado,
     pagos.reduce((sum, payment) => sum + payment.monto, 0)
@@ -259,6 +311,7 @@ const normalizeOrder = (order = {}) => {
     productos,
     pagos,
     comprobantesPago,
+    paymentReceiptSummary,
     subtotal,
     iva,
     total,
@@ -270,7 +323,8 @@ const normalizeOrder = (order = {}) => {
     fechaLimitePago: order.paymentDeadline ?? null,
     estadoLogistico: normalizeEstadoLogistico(order.estadoLogistico ?? order.logisticStatus ?? order.status),
     pagoEstado: normalizePagoEstado(order.pagoEstado ?? order.paymentStatus, totalPagado, total),
-    origen: order.origen ?? order.origin ?? ORIGENES.MANUAL,
+    saleType: order.saleType ?? order.sale_type ?? ORIGENES.MANUAL,
+    origen: order.origen ?? order.origin ?? order.saleType ?? order.sale_type ?? ORIGENES.MANUAL,
     motivoCancelacion: order.motivoCancelacion ?? order.cancelReason ?? order.cancellationReason ?? null,
     cancellationReason: order.cancellationReason ?? order.motivoCancelacion ?? order.cancelReason ?? null,
     fechaCancelacion: order.fechaCancelacion ?? order.cancelledAt ?? order.canceledAt ?? null,
@@ -280,12 +334,14 @@ const normalizeOrder = (order = {}) => {
 
 const buildCreateOrderPayload = (data = {}) => {
   const isRecoge = data.tipoEntrega === 'recoge' || data.direccionEntrega === 'El cliente lo recoge';
+  const saleType = data.saleType ?? data.sale_type ?? data.origen ?? data.origin ?? ORIGENES.MANUAL;
 
   return {
     idClient: data.clienteId,
     idEmployee: data.asesorId,
     idUser: data.usuarioId,
     idOrderStatus: ORDER_STATUS_IDS[data.estadoLogistico] ?? data.estadoLogistico ?? 1,
+    saleType,
     deliveryType: isRecoge ? 'Recoge' : 'Domicilio',
     deliveryAddress: isRecoge ? null : data.direccionEntrega,
     items: (data.productos || []).map((product) => ({
@@ -303,7 +359,7 @@ const ORDER_STATUS_IDS = {
   [ESTADOS_LOGISTICOS.CANCELADO]: 4,
 };
 
-const PAYMENT_METHOD_IDS = {
+export const PAYMENT_METHOD_IDS = {
   [METODOS_PAGO.TRANSFERENCIA]: 1,
   [METODOS_PAGO.EFECTIVO]: 2,
   [METODOS_PAGO.CREDITO]: 3,
@@ -504,6 +560,23 @@ export const PaymentReceiptService = {
       result?.paymentReceipt ?? result?.receipt ?? result,
       pedidoId
     );
+  },
+
+  async review(pedidoId, receiptId, payload = {}) {
+    const response = await apiClient.patch(
+      `/orders/${pedidoId}/payment-receipts/${receiptId}/review`,
+      payload
+    );
+    const result = unwrap(response);
+    const paymentReceipt = normalizePaymentReceipt(
+      result?.paymentReceipt ?? result?.receipt ?? result,
+      pedidoId
+    );
+
+    return {
+      ...result,
+      paymentReceipt,
+    };
   },
 };
 

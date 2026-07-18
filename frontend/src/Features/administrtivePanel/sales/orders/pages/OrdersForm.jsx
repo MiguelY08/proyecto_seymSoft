@@ -13,10 +13,10 @@ import Spinner from '../../../../shared/spinner';
 import { getPrimaryProductBarcode } from '../../../../shared/scanner';
 import { getProductPriceForClient } from '../../shared/clientPricing';
 
-// Contexto de autenticaciÃ³n
+// Contexto de autenticación
 import { useAuth } from '../../../../access/context/AuthContext';
 
-// Componentes de secciÃ³n
+// Componentes de sección
 import LeftSectionForm from '../components/LeftSectionForm';
 import RightSectionForm from '../components/RightSectionForm';
 import PaymentsSection from '../components/PaymentsSection';
@@ -125,7 +125,7 @@ function OrdersForm() {
   const [clientes, setClientes] = useState([]);
   const [productosCatalogo, setProductosCatalogo] = useState([]);
 
-  // Pagos existentes (solo en ediciÃ³n)
+  // Pagos existentes (solo en edición)
   const [pagos, setPagos] = useState([]);
   const [paymentReceipts, setPaymentReceipts] = useState([]);
   const [totalPagado, setTotalPagado] = useState(0);
@@ -161,7 +161,7 @@ function OrdersForm() {
 
   // Determinar si los productos son editables
   const productosEditables = useMemo(() => {
-    if (!isEditMode) return true; // en creaciÃ³n siempre editables
+    if (!isEditMode) return true; // en creación siempre editables
     if (estadoLogisticoOriginal === ESTADOS_LOGISTICOS.CANCELADO) return false;
     if (estadoLogisticoOriginal === ESTADOS_LOGISTICOS.ENTREGADO) return false;
     if (formData.pagoEstado === ESTADOS_PAGO.PAGADO) return false;
@@ -183,14 +183,14 @@ function OrdersForm() {
     );
   };
 
-  // Actualizar asesorId cuando el usuario estÃ© disponible
+  // Actualizar asesorId cuando el usuario esté disponible
   useEffect(() => {
     if (user) {
       setFormData(prev => ({ ...prev, asesorId: getSessionEmployeeId(user) ?? getSessionUserId(user) }));
     }
   }, [user]);
 
-  // Carga inicial de datos maestros, pedido y pagos (si ediciÃ³n)
+  // Carga inicial de datos maestros, pedido y pagos (si edición)
   useEffect(() => {
     const loadInitialData = async () => {
       try {
@@ -247,7 +247,7 @@ function OrdersForm() {
             };
           });
 
-          // Determinar tipoEntrega basado en la direcciÃ³n guardada
+          // Determinar tipoEntrega basado en la dirección guardada
           const direccion = order.direccionEntrega || '';
           const tipoEntrega = direccion === 'El cliente lo recoge' ? 'recoge' : 'domicilio';
 
@@ -510,7 +510,7 @@ function OrdersForm() {
     showSuccess('Abono eliminado', 'El abono pendiente fue eliminado.');
   };
 
-  // --- ValidaciÃ³n ---
+  // --- Validación ---
   const validate = () => {
     const newErrors = {};
     if (pedidoInmutable) {
@@ -560,7 +560,7 @@ function OrdersForm() {
     return newErrors;
   };
 
-  // --- EnvÃ­o del formulario ---
+  // --- Envío del formulario ---
   const handleSubmit = async () => {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
@@ -721,7 +721,7 @@ function OrdersForm() {
   }
 
   return (
-    // âœ… Cambio principal: se reemplaza max-w-7xl mx-auto por w-full
+    // ✅ Cambio principal: se reemplaza max-w-7xl mx-auto por w-full
     <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
       {/* Cabecera */}
       <div className="mb-5 flex items-center justify-between">
@@ -800,7 +800,7 @@ function OrdersForm() {
         />
       </div>
 
-      {/* SecciÃ³n de pagos */}
+      {/* Sección de pagos */}
       {isEditMode && paymentReceipts.length > 0 && (
         <div className="mt-5">
           <PaymentReceiptsSection receipts={paymentReceipts} />

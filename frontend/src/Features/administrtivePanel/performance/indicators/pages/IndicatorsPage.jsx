@@ -1,11 +1,11 @@
-import DashboardStats from "../components/DashboardStats";
+﻿import DashboardStats from "../components/DashboardStats";
 import MonthlySalesReturnsChart from "../components/MonthlySalesReturnsChart";
 import SalesPurchasesChart from "../components/SalesPurchasesChart";
 import CategoryDemandChart from "../components/CategoryDemandChart";
 import TopProductsChart from "../components/TopProductsChart";
 import TopClientsChart from "../components/TopClientsChart";
 
-import useBreakpoint from "../hooks/useBreakpoint";
+import useBreakpoint from "../hooks/useBreakPoint";
 import useIndicators from "../hooks/useIndicators";
 
 import Spinner from "../../../../shared/spinner/Spinner.jsx";
@@ -131,3 +131,4 @@ function IndicatorsPage() {
 }
 
 export default IndicatorsPage;
+

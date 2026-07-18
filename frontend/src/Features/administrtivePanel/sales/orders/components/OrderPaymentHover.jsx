@@ -21,6 +21,33 @@ const formatDate = (value) => {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('es-CO');
 };
 
+const normalizeReceiptStatus = (status) => String(status || 'pendiente').trim().toLowerCase();
+
+const getReceiptSummary = (order = {}) => {
+  const receipts = Array.isArray(order.comprobantesPago) ? order.comprobantesPago : [];
+  const summary = order.paymentReceiptSummary ?? {};
+
+  if (summary.totalReceipts !== undefined) {
+    return {
+      totalReceipts: toNumber(summary.totalReceipts),
+      pendingReceipts: toNumber(summary.pendingReceipts),
+      approvedReceipts: toNumber(summary.approvedReceipts),
+      rejectedReceipts: toNumber(summary.rejectedReceipts),
+    };
+  }
+
+  const pendingReceipts = receipts.filter((receipt) => normalizeReceiptStatus(receipt.status) === 'pendiente').length;
+  const approvedReceipts = receipts.filter((receipt) => normalizeReceiptStatus(receipt.status) === 'aprobado').length;
+  const rejectedReceipts = receipts.filter((receipt) => normalizeReceiptStatus(receipt.status) === 'rechazado').length;
+
+  return {
+    totalReceipts: receipts.length,
+    pendingReceipts,
+    approvedReceipts,
+    rejectedReceipts,
+  };
+};
+
 const SummaryRow = ({ colorClass, label, value }) => (
   <div className="flex items-center justify-between gap-3 text-xs" style={{ color: '#f1f5f9' }}>
     <span className="inline-flex items-center gap-2 min-w-0">
@@ -39,6 +66,13 @@ const TotalRow = ({ label, value }) => (
     <span className="font-semibold tabular-nums shrink-0" style={{ color: '#e2e8f0' }}>
       {formatCurrency(value)}
     </span>
+  </div>
+);
+
+const ReceiptCounter = ({ label, value, className }) => (
+  <div className={`rounded-lg px-2 py-1.5 text-center ${className}`}>
+    <p className="text-sm font-black leading-none">{value}</p>
+    <p className="mt-0.5 text-[10px] font-semibold leading-none">{label}</p>
   </div>
 );
 
@@ -91,6 +125,10 @@ function OrderPaymentHover({
     ? Math.max(0, toNumber(order.saldoPendiente))
     : Math.max(0, total - paid);
   const isPaid = total > 0 && pending <= 0;
+  const receiptSummary = getReceiptSummary(order);
+  const hasReceipts = receiptSummary.totalReceipts > 0;
+  const hasPendingReceipts = receiptSummary.pendingReceipts > 0;
+  const hasRejectedReceipts = receiptSummary.rejectedReceipts > 0;
 
   const positionStyle = position
     ? { left: `${position.left}px`, top: `${position.top}px` }
@@ -119,6 +157,44 @@ function OrderPaymentHover({
         <SummaryRow colorClass="bg-emerald-400" label="Total pagado" value={paid} />
         <SummaryRow colorClass="bg-amber-400" label="Pendiente" value={pending} />
       </div>
+
+      {hasReceipts && (
+        <div className="mt-2 border-b border-slate-600/70 pb-2">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94a3b8' }}>
+            Comprobantes
+          </p>
+          <div className="grid grid-cols-3 gap-1.5">
+            <ReceiptCounter
+              label="Pend."
+              value={receiptSummary.pendingReceipts}
+              className="bg-amber-400/15 text-amber-100"
+            />
+            <ReceiptCounter
+              label="Aprob."
+              value={receiptSummary.approvedReceipts}
+              className="bg-emerald-400/15 text-emerald-100"
+            />
+            <ReceiptCounter
+              label="Rech."
+              value={receiptSummary.rejectedReceipts}
+              className="bg-red-400/15 text-red-100"
+            />
+          </div>
+          {(hasPendingReceipts || hasRejectedReceipts) && (
+            <p
+              className="mt-1.5 rounded-lg px-2 py-1.5 text-[11px] font-medium"
+              style={{
+                background: hasRejectedReceipts ? 'rgba(127, 29, 29, 0.28)' : 'rgba(120, 53, 15, 0.28)',
+                color: hasRejectedReceipts ? '#fecaca' : '#fde68a',
+              }}
+            >
+              {hasRejectedReceipts
+                ? 'Hay comprobantes rechazados. Revisa el detalle del pedido.'
+                : 'Hay comprobantes pendientes de validacion.'}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="mt-2">
         <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94a3b8' }}>

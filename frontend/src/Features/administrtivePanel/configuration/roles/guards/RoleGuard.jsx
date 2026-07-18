@@ -1,6 +1,6 @@
-import { Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { usePermissions } from "../../admin/roles/hooks/usePermissions";
+﻿import { Navigate } from "react-router-dom";
+import { useAuth } from "../../../../access/context/AuthContext";
+import { usePermissions } from "../hooks/usePermissions";
 
 export default function RoleGuard({
 

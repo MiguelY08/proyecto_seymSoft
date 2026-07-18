@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+﻿import { useParams } from "react-router-dom";
 import { useState, useEffect, useRef, useMemo } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -13,7 +13,7 @@ import GeneratePaymentModal from "../components/GeneratePaymentModal";
 import CancelPaymentModal from "../components/CancelPaymentModal";
 import AccountReceipt from "../components/AccountReceipt";
 import StatusBadge from "../components/StatusBadge";
-import Spinner from "../../../../shared/Spinner";
+import Spinner from "../../../../shared/spinner";
 import Permission from "../../../configuration/roles/components/Permission";
 import { clientsService } from "../../clients/services/clientsService";
 
@@ -621,3 +621,4 @@ export default function AccountDetailsPage({ mode }) {
     </>
   );
 }
+

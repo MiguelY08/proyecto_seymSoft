@@ -24,6 +24,31 @@ import {
   getOrderStatusClasses,
 } from './helpers/customerOrderHelpers';
 
+const normalizeReceiptStatus = (status) => String(status || 'Pendiente').trim().toLowerCase();
+
+const getReceiptStatusView = (status) => {
+  const normalized = normalizeReceiptStatus(status);
+
+  if (normalized === 'aprobado') {
+    return {
+      label: 'Aprobado',
+      className: 'bg-green-100 text-green-700',
+    };
+  }
+
+  if (normalized === 'rechazado') {
+    return {
+      label: 'Rechazado',
+      className: 'bg-red-100 text-red-700',
+    };
+  }
+
+  return {
+    label: 'Pendiente de verificacion',
+    className: 'bg-amber-100 text-amber-700',
+  };
+};
+
 function OrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -157,6 +182,10 @@ function OrderDetail() {
     );
   }
 
+  const hasRejectedReceipt = order.comprobantesPago?.some(
+    (proof) => normalizeReceiptStatus(proof.status) === 'rechazado'
+  );
+
   return (
     <div className="min-h-screen bg-[#f6f9fc]">
       <ShopHero
@@ -209,6 +238,11 @@ function OrderDetail() {
                   <CreditCard size={21} className="text-[#004D77]" /> Completar pago
                 </h2>
                 <p className="mt-3 text-3xl font-black text-red-600">{formatMoney(order.saldoPendiente)}</p>
+                {hasRejectedReceipt && (
+                  <p className="mt-2 rounded-2xl bg-red-50 px-4 py-3 text-xs font-semibold leading-relaxed text-red-700">
+                    Uno de tus comprobantes fue rechazado. Puedes enviar una nueva imagen para que el administrador revise el pago nuevamente.
+                  </p>
+                )}
 
                 <div className="mt-5 grid gap-5 sm:grid-cols-2">
                   <div className="text-center">
@@ -315,25 +349,47 @@ function OrderDetail() {
             {!!order.comprobantesPago?.length && (
               <div className="mt-5 border-t border-slate-200 pt-5">
                 <h3 className="text-sm font-black text-slate-800">Comprobantes enviados</h3>
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  {order.comprobantesPago.map((proof) => (
-                    <a
-                      key={proof.id}
-                      href={proof.imageUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
-                    >
-                      <img
-                        src={proof.imageUrl}
-                        alt={proof.fileName || 'Comprobante de pago'}
-                        className="h-28 w-full object-cover"
-                      />
-                      <p className="truncate px-2 py-2 text-[11px] font-bold text-slate-600">
-                        Pendiente de verificación
-                      </p>
-                    </a>
-                  ))}
+                <div className="mt-3 space-y-3">
+                  {order.comprobantesPago.map((proof) => {
+                    const statusView = getReceiptStatusView(proof.status);
+                    const reviewedAt = proof.reviewedAt
+                      ? formatOrderDate(proof.reviewedAt, {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : null;
+
+                    return (
+                      <a
+                        key={proof.id}
+                        href={proof.imageUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+                      >
+                        <img
+                          src={proof.imageUrl}
+                          alt={proof.fileName || 'Comprobante de pago'}
+                          className="h-28 w-full object-cover"
+                        />
+                        <div className="space-y-2 p-3">
+                          <span className={`inline-flex rounded-full px-2 py-1 text-[10px] font-black uppercase ${statusView.className}`}>
+                            {statusView.label}
+                          </span>
+                          {reviewedAt && (
+                            <p className="text-[11px] font-semibold text-slate-500">
+                              Revisado el {reviewedAt}
+                            </p>
+                          )}
+                          {normalizeReceiptStatus(proof.status) === 'rechazado' && proof.reviewObservations && (
+                            <p className="rounded-lg bg-red-50 p-2 text-[11px] font-semibold leading-snug text-red-700">
+                              {proof.reviewObservations}
+                            </p>
+                          )}
+                        </div>
+                      </a>
+                    );
+                  })}
                 </div>
               </div>
             )}

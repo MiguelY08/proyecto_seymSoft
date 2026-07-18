@@ -1,4 +1,4 @@
-import {
+﻿import {
   ArrowLeft,
   BadgeDollarSign,
   Barcode,
@@ -151,7 +151,7 @@ function ProductForm({
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/categories');
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api"}/categories`);
         const data = await response.json();
         setCategories(data.data || []);
       } catch (error) {
@@ -165,7 +165,7 @@ function ProductForm({
     if (!isOpen) return;
     const loadSubcategories = async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/categories/subcategories');
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api"}/categories/subcategories`);
         const data = await response.json();
         setSubcategories(data.data || []);
       } catch (error) {
@@ -1084,3 +1084,5 @@ function ProductForm({
 }
 
 export default ProductForm;
+
+

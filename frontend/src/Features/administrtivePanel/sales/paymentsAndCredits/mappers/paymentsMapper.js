@@ -138,6 +138,12 @@ export const mapInstallment = (installment) => ({
 
   fecha: installment.installmentDate,
 
+  createdAt:
+    installment.createdAt ??
+    installment.creationDate ??
+    installment.created_at ??
+    installment.installmentDate,
+
   monto: Number(installment.installmentAmount ?? 0),
 
   capitalPagado: Number(installment.capitalPaid ?? 0),
