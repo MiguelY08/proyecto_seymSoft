@@ -42,11 +42,11 @@ export default function AccountHeader({
   const estado = estadoConfig[estadoGeneral] ?? estadoConfig.al_dia;
 
   return (
-    <div className="bg-white rounded-2xl shadow-md p-4 md:p-5 font-lexend flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+    <div className="bg-white rounded-2xl shadow-md p-4 md:p-5 font-lexend flex flex-col xl:flex-row xl:justify-between xl:items-start gap-4">
       
       {/* INFO IZQUIERDA */}
-      <div className="space-y-1">
-        <h2 className="text-base md:text-lg font-semibold text-gray-800">
+      <div className="space-y-1 min-w-0">
+        <h2 className="text-base md:text-lg font-semibold text-gray-800 break-words">
           {mode === "payment" ? "Abonar a Cuenta" : "Detalle de Cuenta"} — {nombre}
         </h2>
         <p className="text-xs text-gray-500">Documento: {documento}</p>
@@ -57,19 +57,19 @@ export default function AccountHeader({
       </div>
 
       {/* CARDS + BOTÓN DERECHA */}
-      <div className="flex flex-col items-start lg:items-end gap-3 w-full lg:w-auto">
+      <div className="flex flex-col items-start xl:items-end gap-3 w-full xl:w-auto">
         
         {/* CARDS COMPACTAS EN FILA */}
-        <div className="flex flex-wrap gap-2 justify-start lg:justify-end w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:flex xl:flex-wrap gap-2 justify-start xl:justify-end w-full">
           
           {/* Límite de Crédito */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-center min-w-[110px]">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-center min-w-0 xl:min-w-[110px]">
             <p className="text-[9px] text-gray-400 font-medium uppercase">Límite de Crédito</p>
             <p className="text-sm font-bold text-[#004D77] mt-1">{formatCOP(credAsignado)}</p>
           </div>
 
           {/* Capital Adeudado */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-center min-w-[130px]">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-center min-w-0 xl:min-w-[130px]">
             <p className="text-[9px] text-gray-400 font-medium uppercase">Capital Adeudado</p>
             <p className={`text-sm font-bold mt-1 ${cupoOcupado > 0 ? "text-red-600" : "text-green-600"}`}>
               {formatCOP(cupoOcupado)}
@@ -86,7 +86,7 @@ export default function AccountHeader({
           </div>
 
           {/* Cupo Disponible */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-center min-w-[110px]">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-center min-w-0 xl:min-w-[110px]">
             <p className="text-[9px] text-gray-400 font-medium uppercase">Cupo Disponible</p>
             <p className={`text-sm font-bold mt-1 ${cupoDisponibleValue > 0 ? "text-green-600" : "text-gray-400"}`}>
               {formatCOP(cupoDisponibleValue)}
@@ -95,7 +95,7 @@ export default function AccountHeader({
 
           {/* Intereses Generados */}
           {interes > 0 && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg px-2.5 py-1.5 text-center min-w-[110px]">
+            <div className="bg-orange-50 border border-orange-200 rounded-lg px-2.5 py-1.5 text-center min-w-0 xl:min-w-[110px]">
               <p className="text-[9px] text-orange-400 font-medium uppercase">Intereses Generados</p>
               <p className="text-sm font-bold text-orange-500 mt-1">{formatCOP(interes)}</p>
               <p className="text-[8px] text-orange-300 mt-0.5">No consume cupo</p>
@@ -104,7 +104,7 @@ export default function AccountHeader({
 
           {/* Deuda Total */}
             {totalAPagar > 0 && (
-              <div className="bg-red-50 border border-red-200 rounded-lg px-2.5 py-1.5 text-center min-w-[110px]">
+              <div className="bg-red-50 border border-red-200 rounded-lg px-2.5 py-1.5 text-center min-w-0 xl:min-w-[110px]">
                 <p className="text-[9px] text-red-400 font-medium uppercase">Deuda Total</p>
                 <p className="text-sm font-bold text-red-600 mt-1">{formatCOP(totalAPagar)}</p>
                 {interes > 0 ? (
@@ -122,7 +122,7 @@ export default function AccountHeader({
           <ButtonComponent
             onClick={onDownloadPDF}
             disabled={isGeneratingPDF}
-            className="bg-[#004D77] text-[#004D77] hover:bg-[#003D5e] border border-[#004D77] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 rounded-lg px-4 py-2"
+            className="w-full sm:w-auto bg-[#004D77] text-[#004D77] hover:bg-[#003D5e] border border-[#004D77] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 rounded-lg px-4 py-2"
           >
             {isGeneratingPDF ? "Generando..." : "Descargar PDF"}
           </ButtonComponent>

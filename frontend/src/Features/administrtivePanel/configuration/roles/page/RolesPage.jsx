@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 
 import ButtonComponent from "../../../../shared/ButtonComponent";
 import TableFilters from "../../../../shared/TableFilters";
@@ -44,6 +44,12 @@ export default function RolesPage() {
 
   const [selectedRole, setSelectedRole] =
     useState(null);
+
+  const openingModalRef =
+    useRef(false);
+
+  const loadingRoleRef =
+    useRef(false);
 
   const RECORDS_PER_PAGE = 13;
 
@@ -196,6 +202,15 @@ export default function RolesPage() {
 
   const handleCreate = () => {
 
+    if (
+      isModalOpen ||
+      openingModalRef.current
+    ) {
+      return;
+    }
+
+    openingModalRef.current = true;
+
     setModalMode(
       "create"
     );
@@ -213,6 +228,15 @@ export default function RolesPage() {
   const handleEdit = async (
     role
   ) => {
+
+    if (
+      isModalOpen ||
+      loadingRoleRef.current
+    ) {
+      return;
+    }
+
+    loadingRoleRef.current = true;
 
     try {
 
@@ -248,6 +272,10 @@ export default function RolesPage() {
         errorInfo.message
       );
 
+    } finally {
+
+      loadingRoleRef.current = false;
+
     }
 
   };
@@ -255,6 +283,15 @@ export default function RolesPage() {
   const handleView = async (
     role
   ) => {
+
+    if (
+      isModalOpen ||
+      loadingRoleRef.current
+    ) {
+      return;
+    }
+
+    loadingRoleRef.current = true;
 
     try {
 
@@ -289,6 +326,10 @@ export default function RolesPage() {
         errorInfo.title,
         errorInfo.message
       );
+
+    } finally {
+
+      loadingRoleRef.current = false;
 
     }
 
@@ -398,18 +439,18 @@ export default function RolesPage() {
   return (
 
     <Permission permission="roles.ver">
-      <div className="p-6 font-lexend">
+      <div className="p-3 sm:p-4 lg:p-6 font-lexend">
 
-        <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 sm:gap-4 mb-4">
 
-          <div className="-mb-4">
+          <div className="w-full lg:w-auto lg:-mb-4">
 
             <TableFilters
               search={search}
               setSearch={setSearch}
               setCurrentPage={setCurrentPage}
               showDateFilters={false}
-              searchWidth="w-[380px]"
+              searchWidth="w-full sm:min-w-[260px] lg:w-[380px]"
             />
 
           </div>
@@ -418,6 +459,8 @@ export default function RolesPage() {
 
             <ButtonComponent
               onClick={handleCreate}
+              disabled={isModalOpen}
+              className="w-full sm:w-auto"
             >
 
               Nuevo +
@@ -453,9 +496,10 @@ export default function RolesPage() {
           mode={modalMode}
           roleData={selectedRole}
           onSave={handleSave}
-          onClose={() =>
-            setIsModalOpen(false)
-          }
+          onClose={() => {
+            openingModalRef.current = false;
+            setIsModalOpen(false);
+          }}
         />
 
       </div>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { X } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 
@@ -25,6 +25,8 @@ export default function GeneratePaymentModal({
   const [errors, setErrors] = useState({});
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const submitLockRef = useRef(false);
 
   const formatNumber = (value) => {
     if (!value) return "";
@@ -78,13 +80,20 @@ export default function GeneratePaymentModal({
   };
 
   const handleSubmit = async () => {
-    if (isSubmitting) return;
+    if (
+      isSubmitting ||
+      submitLockRef.current
+    ) return;
+
+    submitLockRef.current = true;
 
     if (!validate()) {
-      showWarning(
+      await showWarning(
         "Formulario incompleto",
         "Revisa los campos marcados en rojo.",
       );
+
+      submitLockRef.current = false;
 
       return;
     }
@@ -101,7 +110,11 @@ export default function GeneratePaymentModal({
       },
     );
 
-    if (!confirm.isConfirmed) return;
+    if (!confirm.isConfirmed) {
+      submitLockRef.current = false;
+
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -122,14 +135,15 @@ export default function GeneratePaymentModal({
       );
     } finally {
       setIsSubmitting(false);
+      submitLockRef.current = false;
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 font-lexend p-4">
-      <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden">
-        <div className="bg-[#004D77] text-white px-5 py-3 flex justify-between items-center">
-          <h3 className="font-semibold text-lg">Registrar Abono</h3>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 font-lexend p-2 sm:p-4">
+      <div className="bg-white w-full max-w-md max-h-[94vh] rounded-2xl shadow-xl overflow-hidden flex flex-col">
+        <div className="bg-[#004D77] text-white px-4 sm:px-5 py-3 flex justify-between items-center gap-3">
+          <h3 className="font-semibold text-base sm:text-lg">Registrar Abono</h3>
 
           <X
             size={18}
@@ -138,9 +152,9 @@ export default function GeneratePaymentModal({
           />
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto">
           <div className="bg-gray-50 rounded-xl p-3 text-sm space-y-1 border border-gray-200">
-            <p className="font-semibold text-gray-800">{cliente?.nombre}</p>
+            <p className="font-semibold text-gray-800 break-words">{cliente?.nombre}</p>
 
             <p className="text-gray-500">
               Factura:
@@ -298,11 +312,11 @@ export default function GeneratePaymentModal({
             />
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2">
             <button
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
@@ -310,7 +324,7 @@ export default function GeneratePaymentModal({
             <button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-lg text-white transition bg-[#004D77] hover:bg-[#003D5e] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-4 py-2 rounded-lg text-white transition bg-[#004D77] hover:bg-[#003D5e] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "Guardando..." : "Guardar Abono"}
             </button>
