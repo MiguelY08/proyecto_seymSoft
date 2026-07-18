@@ -199,11 +199,11 @@ export default function PermissionsGrid({
 
         !readOnly && (
 
-          <div className="flex justify-end mb-3">
+          <div className="flex justify-stretch sm:justify-end mb-3">
 
             <button
               onClick={toggleAllModules}
-              className="text-xs bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition"
+              className="w-full sm:w-auto text-xs bg-blue-600 text-white px-3 py-2 sm:py-1 rounded-md hover:bg-blue-700 transition"
             >
 
               Seleccionar todos
@@ -216,7 +216,7 @@ export default function PermissionsGrid({
 
       }
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
 
         {
 
@@ -252,7 +252,7 @@ export default function PermissionsGrid({
 
               <div
                 key={modulo.id}
-                className={`border rounded-xl p-4 shadow-sm bg-white transition
+                className={`border rounded-xl p-3 sm:p-4 shadow-sm bg-white transition
 
                 ${
 
@@ -271,9 +271,9 @@ export default function PermissionsGrid({
                 `}
               >
 
-                <div className="flex justify-between items-center mb-3">
+                <div className="flex justify-between items-start gap-3 mb-3">
 
-                  <h4 className="font-semibold text-sm">
+                  <h4 className="font-semibold text-sm break-words">
 
                     {getModuleLabel(modulo.modulo)}
 
@@ -305,7 +305,7 @@ export default function PermissionsGrid({
 
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-sm">
 
                   {
 
@@ -320,7 +320,7 @@ export default function PermissionsGrid({
 
                       <label
                         key={accion.key}
-                        className="flex items-start gap-2 cursor-pointer"
+                        className="flex items-start gap-2 cursor-pointer min-w-0"
                         title={helpText || accion.label}
                       >
 
@@ -361,7 +361,7 @@ export default function PermissionsGrid({
                           }`}
                         />
 
-                        <span className="leading-tight">
+                        <span className="leading-tight min-w-0 break-words">
                           <span>
                             {accion.label}
                           </span>

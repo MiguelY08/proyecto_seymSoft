@@ -62,7 +62,7 @@ function CreditDateTooltip({ factura, formatDate }) {
     dueDate.setMonth(dueDate.getMonth() + 2);
 
     return dueDate;
-  }, [factura?.fechaCredito, rawDueDate]);
+  }, [factura, rawDueDate]);
 
   const observation =
     factura?.observacion ||
@@ -160,6 +160,9 @@ export default function AccountDetailsPage({ mode }) {
   const [reloadKey, setReloadKey] = useState(0);
 
   const pdfRef = useRef(null);
+  const downloadLockRef = useRef(false);
+  const openingPaymentModalRef = useRef(false);
+  const openingCancelModalRef = useRef(false);
   const itemsPerPage = 4;
   const showInterestSummaryInExpandedPanel = false;
 
@@ -204,7 +207,7 @@ export default function AccountDetailsPage({ mode }) {
     loadCustomerData();
   }, [id, loadInvoices, reloadKey]);
 
-  const facturas = invoices ?? [];
+  const facturas = useMemo(() => invoices ?? [], [invoices]);
 
   const cupoOcupado = Number(account.saldo ?? 0);
 
@@ -272,6 +275,15 @@ export default function AccountDetailsPage({ mode }) {
     setFacturaExpandida((prev) => (prev === facturaId ? null : facturaId));
 
   const handleOpenPaymentModal = (factura) => {
+    if (
+      showPaymentModal ||
+      openingPaymentModalRef.current
+    ) {
+      return;
+    }
+
+    openingPaymentModalRef.current = true;
+
     setFacturaAbono(factura);
     setShowPaymentModal(true);
   };
@@ -286,6 +298,7 @@ export default function AccountDetailsPage({ mode }) {
       });
 
       setReloadKey((prev) => prev + 1);
+      openingPaymentModalRef.current = false;
       setShowPaymentModal(false);
       setFacturaExpandida(facturaAbono.id);
 
@@ -296,13 +309,29 @@ export default function AccountDetailsPage({ mode }) {
   };
 
   const handleOpenCancelModal = (factura, abono) => {
+    if (
+      showCancelModal ||
+      openingCancelModalRef.current
+    ) {
+      return;
+    }
+
+    openingCancelModalRef.current = true;
+
     setSelectedFactura(factura);
     setSelectedAbono(abono);
     setShowCancelModal(true);
   };
 
   const handleDownloadPDF = async () => {
-    if (!account || !pdfRef.current || isGeneratingPDF) return;
+    if (
+      !account ||
+      !pdfRef.current ||
+      isGeneratingPDF ||
+      downloadLockRef.current
+    ) return;
+
+    downloadLockRef.current = true;
 
     const confirm = await showConfirm(
       "question",
@@ -310,7 +339,11 @@ export default function AccountDetailsPage({ mode }) {
       "Se generará el PDF del estado de cuenta completo.",
       { confirmButtonText: "Sí, descargar", cancelButtonText: "Cancelar" },
     );
-    if (!confirm.isConfirmed) return;
+    if (!confirm.isConfirmed) {
+      downloadLockRef.current = false;
+
+      return;
+    }
 
     try {
       setIsGeneratingPDF(true);
@@ -351,6 +384,7 @@ export default function AccountDetailsPage({ mode }) {
       showError("Error", "Ocurrió un problema al generar el PDF.");
     } finally {
       setIsGeneratingPDF(false);
+      downloadLockRef.current = false;
     }
   };
 
@@ -369,7 +403,7 @@ export default function AccountDetailsPage({ mode }) {
     <>
       <BackHeader title="Volver" />
 
-      <div className="p-4 sm:p-6 space-y-6 font-lexend">
+      <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 font-lexend">
         {/* ── HEADER DEL CLIENTE ── */}
         <AccountHeader
           nombre={account.nombre}
@@ -391,6 +425,8 @@ export default function AccountDetailsPage({ mode }) {
           key={reloadKey}
           className="bg-white rounded-2xl shadow-md overflow-hidden"
         >
+          <div className="overflow-x-auto">
+          <div className="min-w-[980px]">
           {/* Cabecera — 8 columnas */}
           <div className="grid grid-cols-9 bg-[#004D77] text-white text-xs font-medium px-4 py-3">
             <span>Nro Factura</span>
@@ -575,6 +611,8 @@ export default function AccountDetailsPage({ mode }) {
               </div>
             );
           })}
+          </div>
+          </div>
         </div>
       </div>
 
@@ -583,7 +621,10 @@ export default function AccountDetailsPage({ mode }) {
         <GeneratePaymentModal
           cliente={account}
           factura={facturaAbono}
-          onClose={() => setShowPaymentModal(false)}
+          onClose={() => {
+            openingPaymentModalRef.current = false;
+            setShowPaymentModal(false);
+          }}
           onSave={handleSavePayment}
         />
       )}
@@ -592,11 +633,15 @@ export default function AccountDetailsPage({ mode }) {
       {showCancelModal && selectedAbono && selectedFactura && (
         <CancelPaymentModal
           isOpen={showCancelModal}
-          onClose={() => setShowCancelModal(false)}
+          onClose={() => {
+            openingCancelModalRef.current = false;
+            setShowCancelModal(false);
+          }}
           account={account}
           payment={selectedAbono}
           onSuccess={async () => {
             setReloadKey((prev) => prev + 1);
+            openingCancelModalRef.current = false;
             setShowCancelModal(false);
           }}
         />

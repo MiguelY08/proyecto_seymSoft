@@ -1,6 +1,6 @@
 
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 
 import Spinner from "../../../../shared/spinner/Spinner";
@@ -84,6 +84,9 @@ export default function RoleModal({
 
   const [saving,setSaving] =
     useState(false);
+
+  const submitLockRef =
+    useRef(false);
 
   const validateCurrentRole = (data) =>
     validateRole(data, { mode });
@@ -404,8 +407,15 @@ useEffect(() => {
 
   const handleSubmit = async () => {
 
-    if (isView || saving)
+    if (
+      isView ||
+      saving ||
+      submitLockRef.current
+    )
       return;
+
+    submitLockRef.current =
+      true;
 
     const validationErrors =
       validateCurrentRole({
@@ -436,10 +446,13 @@ useEffect(() => {
       const validationAlert =
         getFirstValidationError(validationErrors);
 
-      showWarning(
+      await showWarning(
         validationAlert.title,
         validationAlert.message
       );
+
+      submitLockRef.current =
+        false;
 
       return;
 
@@ -544,24 +557,27 @@ useEffect(() => {
 
       setSaving(false);
 
+      submitLockRef.current =
+        false;
+
     }
 
   };
 
   return(
 
-<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+<div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
 
 <div
 className="absolute inset-0 bg-black/40 backdrop-blur-sm"
 onClick={onClose}
 />
 
-<div className="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-xl shadow-2xl flex flex-col font-lexend z-10">
+<div className="relative w-full max-w-6xl max-h-[94vh] sm:max-h-[90vh] bg-white rounded-xl shadow-2xl flex flex-col font-lexend z-10">
 
-<div className="bg-[#0E5676] text-white px-6 py-4 flex justify-between items-center rounded-t-xl">
+<div className="bg-[#0E5676] text-white px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center gap-3 rounded-t-xl">
 
-<h2 className="text-lg font-semibold">
+<h2 className="text-base sm:text-lg font-semibold">
 
 {mode==="create" && "Crear Rol"}
 {mode==="edit" && "Editar Rol"}
@@ -569,7 +585,7 @@ onClick={onClose}
 
 </h2>
 
-<button onClick={onClose}>
+<button onClick={onClose} className="shrink-0">
 
 <X size={22} />
 
@@ -577,9 +593,9 @@ onClick={onClose}
 
 </div>
 
-<div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
+<div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-6 sm:space-y-8">
 
-<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
 
 <div>
 
@@ -598,7 +614,7 @@ handleNombreChange(
 e.target.value
 )
 }
-className="w-full mt-2 border border-gray-400 rounded-lg px-4 py-2 text-sm focus:outline-blue-600"
+className="w-full mt-2 border border-gray-400 rounded-lg px-3 sm:px-4 py-2 text-sm focus:outline-blue-600"
 />
 
 {errors.name && (
@@ -624,7 +640,7 @@ Fecha de Creación
 <input
   value={formatDate(roleData?.createdAt || today)}
   disabled
-  className="w-full mt-2 bg-gray-200 rounded-lg px-4 py-2 text-sm"
+  className="w-full mt-2 bg-gray-200 rounded-lg px-3 sm:px-4 py-2 text-sm"
 />
 
 </div>
@@ -647,7 +663,7 @@ handleDescripcionChange(
 e.target.value
 )
 }
-className="w-full mt-2 border border-gray-400 rounded-lg px-4 py-2 text-sm focus:outline-blue-600"
+className="w-full mt-2 border border-gray-400 rounded-lg px-3 sm:px-4 py-2 text-sm focus:outline-blue-600"
 />
 
 {errors.description && (
@@ -714,12 +730,12 @@ Permisos y Privilegios
 
 {mode !== "view" && (
 
-<div className="px-6 py-4 flex justify-between gap-4">
+<div className="px-4 sm:px-6 py-4 flex flex-col-reverse sm:flex-row sm:justify-between gap-3 sm:gap-4 border-t border-gray-100">
 
 <button
 onClick={onClose}
 disabled={saving}
-className="w-1/3 bg-gray-400 text-white py-2 rounded-lg hover:bg-gray-500 transition"
+className="w-full sm:w-1/3 bg-gray-400 text-white py-2 rounded-lg hover:bg-gray-500 transition"
 >
 
 Cancelar
@@ -729,7 +745,7 @@ Cancelar
 <button
 onClick={handleSubmit}
 disabled={saving || loadingPermissions || permisosSistema.length === 0}
-className="w-1/3 bg-[#004D77] text-white py-2 rounded-lg hover:bg-[#003b5c] transition disabled:opacity-60 disabled:cursor-not-allowed"
+className="w-full sm:w-1/3 bg-[#004D77] text-white py-2 rounded-lg hover:bg-[#003b5c] transition disabled:opacity-60 disabled:cursor-not-allowed"
 >
 
 {saving ? "Guardando..." : "Guardar"}

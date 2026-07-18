@@ -86,25 +86,25 @@ export default function ContactClientModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-      <div className="bg-white w-full max-w-md rounded-xl shadow-xl overflow-hidden font-lexend">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white w-full max-w-md max-h-[94vh] rounded-xl shadow-xl overflow-hidden font-lexend flex flex-col">
         {/* HEADER */}
-        <div className="bg-[#004D77] text-white px-4 py-3 flex justify-between items-center">
-          <h3 className="font-semibold">Gestión de contacto al cliente</h3>
+        <div className="bg-[#004D77] text-white px-4 py-3 flex justify-between items-center gap-3">
+          <h3 className="font-semibold text-sm sm:text-base">Gestión de contacto al cliente</h3>
           <X size={18} className="cursor-pointer" onClick={onClose} />
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto">
           {/* INFO CLIENTE */}
           <div className="bg-gray-100 rounded-xl p-4 shadow-sm space-y-3">
-            <div className="flex justify-between">
+            <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
               <div>
                 <p className="text-xs text-gray-500">Nombre</p>
                 <p className="font-medium">
                   {account.fullName ?? account.nombre}
                 </p>
               </div>
-              <div className="text-right">
+              <div className="sm:text-right">
                 <p className="text-xs text-gray-500">Teléfono</p>
                 <p className="font-medium">
                   {account.phone ?? account.telefono}
@@ -112,7 +112,7 @@ export default function ContactClientModal({
               </div>
             </div>
 
-            <div className="flex justify-between">
+            <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
               <div>
                 <p className="text-xs text-gray-500">Último pago</p>
 
@@ -128,7 +128,7 @@ export default function ContactClientModal({
                     : "Sin registros"}
                 </p>
               </div>
-              <div className="text-right">
+              <div className="sm:text-right">
                 <p className="text-xs text-gray-500">Días de atraso</p>
                 <p
                   className={`font-semibold ${daysLate > 0 ? "text-red-600" : "text-green-600"}`}
@@ -154,14 +154,14 @@ export default function ContactClientModal({
               {overdueCredits.map((credit) => (
                 <div
                   key={credit.idCredit}
-                  className="flex justify-between items-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <span className="font-medium">
                       Crédito #{credit.idCredit}
                     </span>
                     <span className="text-gray-400 mx-2">·</span>
-                    <span className="text-red-600 font-semibold">
+                    <span className="text-red-600 font-semibold break-words">
                       Saldo pendiente: $
                       {new Intl.NumberFormat("es-CO").format(
                         credit.remainingBalance ?? 0,
@@ -171,7 +171,7 @@ export default function ContactClientModal({
                   <Permission permission="pagos_y_abonos.generar_interes">
                   <button
                     onClick={() => handleOpenInterest(credit)}
-                    className="text-xs px-3 py-1 bg-[#004D77] text-white rounded-lg hover:bg-[#003D5e] transition cursor-pointer"
+                    className="w-full sm:w-auto text-xs px-3 py-2 sm:py-1 bg-[#004D77] text-white rounded-lg hover:bg-[#003D5e] transition cursor-pointer"
                   >
                     Interés
                   </button>
@@ -182,10 +182,10 @@ export default function ContactClientModal({
           )}
 
           {/* BOTÓN CERRAR */}
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-stretch sm:justify-end pt-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-gray-400 rounded-lg text-sm text-white hover:bg-gray-600 transition-colors cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2 bg-gray-400 rounded-lg text-sm text-white hover:bg-gray-600 transition-colors cursor-pointer"
             >
               Cerrar
             </button>

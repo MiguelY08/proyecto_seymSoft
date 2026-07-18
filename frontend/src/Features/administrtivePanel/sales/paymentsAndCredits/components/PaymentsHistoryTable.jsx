@@ -12,8 +12,36 @@ export default function PaymentHistoryTable({
   const tooltipRef = useRef(null);
   const [activeTooltip, setActiveTooltip] = useState(null);
 
+  const getUserName = (user) => {
+    if (!user) return null;
+    if (typeof user === "string") return user;
+
+    const composedName =
+      [user.firstName, user.lastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+
+    const directName =
+      user.nombre ??
+      user.fullName ??
+      user.name ??
+      user.userName ??
+      user.username ??
+      composedName;
+
+    return directName || getUserName(user.user) || user.email || null;
+  };
+
+  const getRegisteredBy = (abono) =>
+    getUserName(abono.registeredBy) ??
+    "Sin registro";
+
+  const isCancelled = (abono) =>
+    abono.isCancelled ?? abono.anulado;
+
   const canCancel = (abono) => {
-    if (abono.anulado) return false;
+    if (isCancelled(abono)) return false;
 
     const createdAt = abono.createdAt ?? abono.fecha;
     if (!createdAt) return false;
@@ -62,9 +90,9 @@ export default function PaymentHistoryTable({
   return (
     <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
 
-      <div className="max-h-[220px] overflow-y-auto">
+      <div className="max-h-[220px] overflow-auto">
 
-        <table className="w-full">
+        <table className="min-w-[760px] w-full">
 
           <thead className="sticky top-0 z-10 bg-[#004D77] text-white">
             <tr>
@@ -85,6 +113,10 @@ export default function PaymentHistoryTable({
               </th>
 
               <th className="px-3 py-2 text-xs font-semibold text-center">
+                Registrado por
+              </th>
+
+              <th className="px-3 py-2 text-xs font-semibold text-center">
                 Estado
               </th>
 
@@ -100,7 +132,7 @@ export default function PaymentHistoryTable({
             {abonos.length === 0 && (
               <tr>
                 <td
-                  colSpan={mode === "payment" ? 6 : 5}
+                  colSpan={mode === "payment" ? 7 : 6}
                   className="py-6 text-center text-sm text-gray-400"
                 >
                   No hay abonos registrados
@@ -137,9 +169,13 @@ export default function PaymentHistoryTable({
                     {abono.medioPago}
                   </td>
 
+                  <td className="px-3 py-2 text-xs text-center">
+                    {getRegisteredBy(abono)}
+                  </td>
+
                   <td className="px-3 py-2 text-center">
 
-                    {abono.anulado ? (
+                    {isCancelled(abono) ? (
                       <div 
                         className="relative inline-block"
                         onMouseEnter={(e) => handleMouseEnter(e, abono.id)}
@@ -173,7 +209,7 @@ export default function PaymentHistoryTable({
                           <div className="text-center space-y-0.5">
 
                             <p className="font-medium text-[10px]">
-                              {abono.cancelledBy?.nombre || "N/A"}
+                              {getUserName(abono.cancelledBy) || "Sin registro"}
                             </p>
 
                             <p className="text-[9px] text-slate-300">
@@ -189,7 +225,8 @@ export default function PaymentHistoryTable({
                             <div className="h-px bg-slate-700 my-0.5" />
 
                             <p className="text-[9px] break-words">
-                              {abono.motivoCancelacion ||
+                              {abono.cancellationReason ||
+                                abono.motivoCancelacion ||
                                 "Sin motivo"}
                             </p>
 
@@ -235,14 +272,14 @@ export default function PaymentHistoryTable({
 
       </div>
 
-      <div className="px-4 py-2 border-t border-gray-200 bg-gray-50 text-xs text-gray-500 flex justify-between items-center">
+      <div className="px-3 sm:px-4 py-2 border-t border-gray-200 bg-gray-50 text-xs text-gray-500 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
         <span>
           {abonos.length} abono
           {abonos.length !== 1 ? "s" : ""} registrado
           {abonos.length !== 1 ? "s" : ""}
         </span>
 
-        {abonos.some((a) => a.anulado) && (
+        {abonos.some((a) => isCancelled(a)) && (
           <span className="text-red-500 text-[11px]">
             Incluye registros anulados
           </span>
