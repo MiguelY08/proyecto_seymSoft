@@ -2,8 +2,9 @@ import React, { useState, useRef, useCallback } from "react";
 import { Info, SquarePen, XCircle, PackageX } from "lucide-react";
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 import {
-  getBadgeEstadoDevolucion,
+  getBadgeEstadoDevolucionClasses,
   getBadgeEstadoProducto,
+  isEstadoAnulado,
 } from "../helpers/returnsHelpers";
 
 // ─── Highlight ────────────────────────────────────────────────────────────────
@@ -27,12 +28,9 @@ const highlight = (text, search) => {
 
 // ─── EstadoBadge ──────────────────────────────────────────────────────────────
 const EstadoBadge = ({ estado }) => {
-  const style = getBadgeEstadoDevolucion(estado);
+  const classes = getBadgeEstadoDevolucionClasses(estado);
   return (
-    <span
-      className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap"
-      style={style}
-    >
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${classes}`}>
       {estado ?? "-"}
     </span>
   );
@@ -296,7 +294,7 @@ function ReturnsTable({
   const canEditGlobal = hasPermission("devoluciones_en_compras.editar");
   const canAnnulGlobal = hasPermission("devoluciones_en_compras.anular");
 
-  const isClosed = (d) => d.estado === "Anulada" || d.estado === "Listo" || d.estado?.startsWith("Procesada");
+  const isClosed = (d) => isEstadoAnulado(d.estado) || d.estado === "Listo" || d.estado?.startsWith("Procesada");
   const canEdit  = (d) => canEditGlobal && !isClosed(d);
   const canAnnul = (d) => canAnnulGlobal && !isClosed(d);
 

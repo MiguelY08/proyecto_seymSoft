@@ -17,6 +17,7 @@ import {
   formatCurrency,
   getBadgeEstadoDevolucion,
   getBadgeEstadoProducto,
+  isEstadoAnulado,
 } from "../helpers/returnsHelpers";
 
 const Badge = ({ label, style }) => (
@@ -84,7 +85,7 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
   const productsPerPage = 4;
   const products = devolucion?.productos ?? [];
   const status = devolucion?.estado ?? "";
-  const isAnnulled = status === "Anulada";
+  const isAnnulled = isEstadoAnulado(status);
   const isClosed =
     isAnnulled || status === "Listo" || status.startsWith("Procesada");
   const canEdit = !isClosed;

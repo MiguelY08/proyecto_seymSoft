@@ -33,7 +33,7 @@ function EstadoBadge({ estado, term }) {
 
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${classes}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${classes}`}
     >
       {content}
     </span>
@@ -60,17 +60,17 @@ function EstadoPedidoIndicator({ estado, term }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${classes}`}
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${classes}`}
       title={`Pedido: ${displayLabel}`}
     >
-      <span className="relative inline-flex h-2 w-2 shrink-0">
+      <span className="relative inline-flex h-1.5 w-1.5 shrink-0">
         {shouldPulse && (
           <span
             className={`absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping ${dotClass}`}
           />
         )}
         <span
-          className={`relative inline-flex h-2 w-2 rounded-full ${dotClass}`}
+          className={`relative inline-flex h-1.5 w-1.5 rounded-full ${dotClass}`}
         />
       </span>
       {content}

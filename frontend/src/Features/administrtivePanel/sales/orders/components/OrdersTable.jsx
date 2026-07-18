@@ -38,6 +38,17 @@ function EmptyState({ isSearching }) {
 }
 
 // ─── OrdersTable ─────────────────────────────────────────────────────────────
+function getDeliveryText(order = {}) {
+  const deliveryType = String(order.tipoEntrega ?? order.deliveryType ?? '').toLowerCase();
+  const deliveryAddress = order.direccionEntrega ?? order.deliveryAddress ?? order.address ?? '';
+
+  if (deliveryType.includes('recoge') || deliveryType.includes('recibe')) {
+    return 'Recoger en tienda';
+  }
+
+  return deliveryAddress || 'Sin direccion registrada';
+}
+
 function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', totalOrders = 0 }) {
   const isSearching = totalOrders > 0 && search.trim().length > 0;
   const [paymentCache, setPaymentCache] = React.useState({});
@@ -125,7 +136,7 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', tota
             const rowBg = index % 2 === 0 ? 'bg-gray-100 hover:bg-blue-50' : 'bg-white hover:bg-blue-50';
             // Llamada corregida con dos parámetros
             const { deshabilitado } = getPermisos(order.estadoLogistico, order.pagoEstado);
-            const direccionMostrar = order.direccionEntrega || '';
+            const entregaMostrar = getDeliveryText(order);
             const clienteMostrar = order.clienteNombre || 'Cliente no especificado';
             const cachedPayments = paymentCache[order.id];
             const hoverPosition = paymentHoverPositions[order.id];
@@ -152,7 +163,7 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', tota
                   {highlight(order.fechaPedido ? new Date(order.fechaPedido).toLocaleDateString('es-CO') : '', search)}
                 </td>
                 <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap max-w-xs truncate">
-                  {highlight(direccionMostrar, search)}
+                  {highlight(entregaMostrar, search)}
                 </td>
                 <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap font-semibold">
                   {highlight(`$${order.total.toLocaleString()}`, search)}
