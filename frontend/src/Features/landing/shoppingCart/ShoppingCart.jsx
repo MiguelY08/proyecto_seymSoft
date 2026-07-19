@@ -854,6 +854,24 @@ function ShoppingCart() {
     0
   );
 
+  if (cartLoading) {
+    return (
+      <div className="cart-page">
+        <div className="cart-container">
+          <div className="cart-empty">
+            <div className="cart-empty-icon">
+              <CartIcon size={26} color="#004D77" strokeWidth={1.5} />
+            </div>
+            <h3 className="cart-empty-title">Cargando carrito...</h3>
+            <p className="cart-empty-sub">
+              Estamos sincronizando tus productos.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (cartItems.length === 0) {
     return (
       <div className="cart-page">

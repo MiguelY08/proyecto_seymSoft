@@ -39,6 +39,7 @@ function ShopDetail() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [addingToCart, setAddingToCart] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -149,18 +150,32 @@ function ShopDetail() {
     );
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!cartProduct || !available) {
       showError("Producto no disponible", "Este producto no tiene stock.");
       return;
     }
 
-    addToCart(cartProduct, quantity);
-    showSuccess(
-      "Añadido al carrito",
-      `${quantity} x ${product.name} se agregó al carrito.`
-    );
-    setQuantity(1);
+    try {
+      setAddingToCart(true);
+      const wasAdded = await addToCart(cartProduct, quantity);
+
+      if (!wasAdded) {
+        showError(
+          "No se pudo agregar",
+          "Intenta nuevamente en unos segundos."
+        );
+        return;
+      }
+
+      showSuccess(
+        "Añadido al carrito",
+        `${quantity} x ${product.name} se agregó al carrito.`
+      );
+      setQuantity(1);
+    } finally {
+      setAddingToCart(false);
+    }
   };
 
   if (loading) {
@@ -337,12 +352,14 @@ function ShopDetail() {
 
               <button
                 type="button"
-                disabled={!available}
+                disabled={!available || addingToCart}
                 onClick={handleAddToCart}
                 className="flex items-center gap-2 rounded-full bg-[#004D77] px-6 py-3 font-black uppercase tracking-wide text-white disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 <ShoppingCart size={17} />
-                {available ? "Añadir al carrito" : "Producto agotado"}
+                {addingToCart
+                  ? "Añadiendo..."
+                  : available ? "Añadir al carrito" : "Producto agotado"}
               </button>
             </div>
 
