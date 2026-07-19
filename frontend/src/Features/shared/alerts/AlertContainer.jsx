@@ -5,8 +5,8 @@ import AlertItem from './AlertItem';
 const HIGH_IMPORTANCE = (alert) => alert.isConfirm || alert.type === 'warning';
 
 function AlertContainer({ alerts, onRemove }) {
-  // Mostrar solo las 3 alertas más recientes (últimas en insertarse)
-  const visibleAlerts = alerts.slice(-3).reverse();
+  // El estado ya llega limitado desde AlertContext; aqui solo invertimos el orden visual.
+  const visibleAlerts = alerts.slice().reverse();
 
   const centerAlerts = visibleAlerts.filter((a) => HIGH_IMPORTANCE(a));
   const rightAlerts  = visibleAlerts.filter((a) => !HIGH_IMPORTANCE(a));

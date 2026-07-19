@@ -486,7 +486,7 @@ function Home() {
               <div key={`skeleton-${i}`} className="cat-card loading-skeleton" style={{ minHeight: '120px' }} />
             ))
           ) : categories.length > 0 ? (
-            categories.map((cat) => {
+            categories.slice(0, 5).map((cat) => {
               const Icon = categoryIcons[cat.id] || ShoppingBag;
               return (
                 <Link key={cat.id} to={`/shop?category=${cat.id}`} className="cat-card">

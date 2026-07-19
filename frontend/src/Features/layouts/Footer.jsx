@@ -1,13 +1,33 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import logo from '../../assets/PapeleriaMagicLogo.png';
 import horizontalLogo from "../../assets/PMLogo_Horizontal.png";
 import instagramLogo from '../../assets/socialMedia/instagramWhite.png';
 import tiktokLogo from '../../assets/socialMedia/tiktokWhite.png';
 import whatsappLogo from '../../assets/socialMedia/whatsappWhite.png';
 import { MapPin, Mail, Phone, ChevronRight } from 'lucide-react';
+import categoriesService from '../administrtivePanel/purchases/categories/services/categoriesService.js';
 
 function Footer() {
-  const categories = ['Escolar', 'Oficina', 'Escritura', 'Papelería básica', 'Arte'];
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        const allCategories = await categoriesService.getAll();
+        setCategories(allCategories);
+      } catch (error) {
+        console.error('Error cargando categorias del footer:', error);
+        setCategories([]);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
 
   return (
     <footer
@@ -142,27 +162,33 @@ function Footer() {
               Categorías
             </h3>
             <ul className="flex flex-col gap-2">
-              {categories.map((category, index) => (
-                <li key={index}>
-                  <a
-                    href={`#${category.toLowerCase().replace(/\s+/g, '-')}`}
-                    style={{
-                      fontSize: '0.85rem',
-                      color: '#cbd5e1',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      transition: 'color 0.2s',
-                      textDecoration: 'none',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.color = '#93c5fd'; }}
-                    onMouseLeave={e => { e.currentTarget.style.color = '#cbd5e1'; }}
-                  >
-                    <ChevronRight size={12} style={{ color: '#3b82f6', flexShrink: 0 }} />
-                    {category}
-                  </a>
-                </li>
-              ))}
+              {loadingCategories ? (
+                <li style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Cargando...</li>
+              ) : categories.length > 0 ? (
+                categories.slice(0, 5).map((category) => (
+                  <li key={category.id}>
+                    <Link
+                      to={`/shop?category=${category.id}`}
+                      style={{
+                        fontSize: '0.85rem',
+                        color: '#cbd5e1',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        transition: 'color 0.2s',
+                        textDecoration: 'none',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.color = '#93c5fd'; }}
+                      onMouseLeave={e => { e.currentTarget.style.color = '#cbd5e1'; }}
+                    >
+                      <ChevronRight size={12} style={{ color: '#3b82f6', flexShrink: 0 }} />
+                      {category.name}
+                    </Link>
+                  </li>
+                ))
+              ) : (
+                <li style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Sin categorias</li>
+              )}
             </ul>
           </div>
 
