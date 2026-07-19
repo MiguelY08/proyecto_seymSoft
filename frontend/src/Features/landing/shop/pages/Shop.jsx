@@ -67,21 +67,36 @@ const SHOP_STYLES = `
 
   .products-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
+    grid-template-columns: 1fr;
+    gap: 12px;
     margin-top: 8px;
     animation: shop-fadeUp 0.4s ease;
   }
 
+  @media (min-width: 340px) {
+    .products-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+  }
+
   @media (min-width: 640px) {
     .products-grid {
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
     }
   }
 
   @media (min-width: 1024px) {
     .products-grid {
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+  }
+
+  @media (min-width: 1180px) {
+    .products-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }
   }
 

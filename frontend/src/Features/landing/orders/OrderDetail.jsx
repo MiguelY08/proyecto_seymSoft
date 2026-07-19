@@ -23,6 +23,7 @@ import {
   formatOrderDate,
   getOrderStatusClasses,
 } from './helpers/customerOrderHelpers';
+import { ORDER_FONT_FAMILY, injectOrderTypography } from './orderTypography';
 
 const normalizeReceiptStatus = (status) => String(status || 'Pendiente').trim().toLowerCase();
 
@@ -50,6 +51,7 @@ const getReceiptStatusView = (status) => {
 };
 
 function OrderDetail() {
+  injectOrderTypography();
   const { id } = useParams();
   const navigate = useNavigate();
   const {
@@ -64,6 +66,7 @@ function OrderDetail() {
   const [receipt, setReceipt] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const [proofPreview, setProofPreview] = useState(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -155,7 +158,7 @@ function OrderDetail() {
 
   if (authLoading || loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f6f9fc] text-[#004D77]">
+      <div className="flex min-h-screen items-center justify-center bg-[#f6f9fc] text-[#004D77]" style={{ fontFamily: ORDER_FONT_FAMILY }}>
         <LoaderCircle size={34} className="animate-spin" />
       </div>
     );
@@ -163,12 +166,12 @@ function OrderDetail() {
 
   if (!isAuthenticated || !clientId || error || !order) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[#f6f9fc] p-6 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#f6f9fc] p-4 text-center sm:p-6" style={{ fontFamily: ORDER_FONT_FAMILY }}>
         <Package size={40} className="mb-4 text-[#004D77]" />
         <h1 className="text-xl font-black text-slate-800">
           {!isAuthenticated ? 'Inicia sesión para ver el pedido' : 'Pedido no encontrado'}
         </h1>
-        <p className="mt-2 text-sm text-slate-500">
+        <p className="mt-2 max-w-md break-words text-sm text-slate-500 [overflow-wrap:anywhere]">
           {error || (!clientId ? 'Tu cuenta no tiene un cliente asociado.' : 'No encontramos este pedido.')}
         </p>
         <button
@@ -187,7 +190,7 @@ function OrderDetail() {
   );
 
   return (
-    <div className="min-h-screen bg-[#f6f9fc]">
+    <div className="min-h-screen bg-[#f6f9fc]" style={{ fontFamily: ORDER_FONT_FAMILY }}>
       <ShopHero
         image={BgPedidos}
         title="Pedidos"
@@ -195,7 +198,7 @@ function OrderDetail() {
         subtitle={`Pedido N.° ${order.numeroPedido || order.id}`}
       />
 
-      <main className="mx-auto max-w-7xl px-5 py-8">
+      <main className="mx-auto max-w-7xl px-3 py-5 sm:px-5 sm:py-8">
         <button
           type="button"
           onClick={() => navigate('/orders-l')}
@@ -204,9 +207,9 @@ function OrderDetail() {
           <ChevronLeft size={17} /> Volver a pedidos
         </button>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-          <div className="space-y-6">
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="space-y-4 sm:space-y-6">
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="flex items-center gap-2 text-xl font-black text-slate-800">
                   <Package size={21} className="text-[#004D77]" /> Información del pedido
@@ -216,7 +219,7 @@ function OrderDetail() {
                 </span>
               </div>
 
-              <div className="grid gap-4 text-sm sm:grid-cols-2">
+              <div className="grid gap-3 text-sm sm:grid-cols-2 sm:gap-4">
                 <Info label="Fecha" value={formatOrderDate(order.fechaPedido)} />
                 <Info label="Número" value={order.numeroPedido || order.id} />
                 <Info
@@ -233,24 +236,24 @@ function OrderDetail() {
             </section>
 
             {order.saldoPendiente > 0 && order.estadoLogistico !== 'cancelado' && (
-              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
                 <h2 className="flex items-center gap-2 text-xl font-black text-slate-800">
                   <CreditCard size={21} className="text-[#004D77]" /> Completar pago
                 </h2>
-                <p className="mt-3 text-3xl font-black text-red-600">{formatMoney(order.saldoPendiente)}</p>
+                <p className="mt-3 break-words text-2xl font-black text-red-600 [overflow-wrap:anywhere] sm:text-3xl">{formatMoney(order.saldoPendiente)}</p>
                 {hasRejectedReceipt && (
                   <p className="mt-2 rounded-2xl bg-red-50 px-4 py-3 text-xs font-semibold leading-relaxed text-red-700">
                     Uno de tus comprobantes fue rechazado. Puedes enviar una nueva imagen para que el administrador revise el pago nuevamente.
                   </p>
                 )}
 
-                <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                <div className="mt-5 grid gap-4 sm:grid-cols-2 sm:gap-5">
                   <div className="text-center">
                     <img
                       src={qrMagic}
                       alt="Código QR de pago Magic"
                       onClick={() => setQrOpen(true)}
-                      className="mx-auto h-44 w-44 cursor-pointer rounded-2xl border border-slate-200 object-contain p-1 shadow-sm"
+                      className="mx-auto h-36 w-36 cursor-pointer rounded-2xl border border-slate-200 bg-white object-contain p-1 shadow-sm sm:h-44 sm:w-44"
                     />
                     <button
                       type="button"
@@ -262,7 +265,7 @@ function OrderDetail() {
                   </div>
 
                   <div>
-                    <label className="flex h-full min-h-44 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 p-4 text-center hover:border-[#004D77] hover:bg-blue-50">
+                    <label className="flex h-full min-h-36 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 p-4 text-center hover:border-[#004D77] hover:bg-blue-50 sm:min-h-44">
                       <input
                         type="file"
                         accept="image/png,image/jpeg"
@@ -291,7 +294,7 @@ function OrderDetail() {
               </section>
             )}
 
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
               <h2 className="text-lg font-black text-slate-800">Ayuda con el pedido</h2>
               <button
                 type="button"
@@ -303,7 +306,7 @@ function OrderDetail() {
             </section>
           </div>
 
-          <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:sticky lg:top-24">
+          <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6 lg:sticky lg:top-24">
             <h2 className="text-lg font-black text-slate-800">
               {order.productos.length} {order.productos.length === 1 ? 'producto' : 'productos'}
             </h2>
@@ -314,9 +317,9 @@ function OrderDetail() {
                   type="button"
                   key={product.detalleId || `${product.id}-${product.codBarras}`}
                   onClick={() => navigate(`/shop/detail/${product.id}`)}
-                  className="flex w-full items-center gap-3 rounded-2xl border border-slate-100 p-3 text-left transition hover:border-blue-200 hover:bg-blue-50"
+                  className="grid w-full min-w-0 grid-cols-[48px_minmax(0,1fr)] gap-x-3 gap-y-2 rounded-2xl border border-slate-100 p-3 text-left transition hover:border-blue-200 hover:bg-blue-50 sm:flex sm:items-center"
                 >
-                  <span className="flex h-14 w-14 shrink-0 overflow-hidden items-center justify-center rounded-xl bg-blue-50 text-[#004D77]">
+                  <span className="flex h-12 w-12 shrink-0 overflow-hidden items-center justify-center rounded-xl bg-blue-50 text-[#004D77] sm:h-14 sm:w-14">
                     {product.image ? (
                       <img
                         src={product.image}
@@ -328,17 +331,17 @@ function OrderDetail() {
                     )}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <strong className="block truncate text-sm text-slate-800">{product.nombre}</strong>
-                    <small className="text-slate-500">
+                    <strong className="block break-words text-sm text-slate-800 [overflow-wrap:anywhere] sm:truncate">{product.nombre}</strong>
+                    <small className="block break-words text-slate-500 [overflow-wrap:anywhere]">
                       {product.cantidad} und. × {formatMoney(product.precioUnitario)}
                     </small>
                   </span>
-                  <strong className="text-sm text-[#004D77]">{formatMoney(product.subtotal)}</strong>
+                  <strong className="col-start-2 min-w-0 break-words text-sm text-[#004D77] [overflow-wrap:anywhere] sm:ml-auto sm:max-w-[96px] sm:shrink-0 sm:text-right">{formatMoney(product.subtotal)}</strong>
                 </button>
               ))}
             </div>
 
-            <div className="mt-5 space-y-2 border-t border-slate-200 pt-5 text-sm">
+            <div className="mt-5 space-y-2.5 border-t border-slate-200 pt-5 text-sm">
               <Summary label="Subtotal" value={formatMoney(order.subtotal)} />
               <Summary label="IVA incluido" value={formatMoney(order.iva)} />
               <Summary label="Total" value={formatMoney(order.total)} strong />
@@ -360,12 +363,11 @@ function OrderDetail() {
                       : null;
 
                     return (
-                      <a
+                      <button
+                        type="button"
                         key={proof.id}
-                        href={proof.imageUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+                        onClick={() => setProofPreview(proof)}
+                        className="block w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50 text-left transition hover:border-blue-200 hover:bg-blue-50"
                       >
                         <img
                           src={proof.imageUrl}
@@ -373,7 +375,7 @@ function OrderDetail() {
                           className="h-28 w-full object-cover"
                         />
                         <div className="space-y-2 p-3">
-                          <span className={`inline-flex rounded-full px-2 py-1 text-[10px] font-black uppercase ${statusView.className}`}>
+                          <span className={`inline-flex max-w-full rounded-full px-2 py-1 text-[10px] font-black uppercase ${statusView.className}`}>
                             {statusView.label}
                           </span>
                           {reviewedAt && (
@@ -382,12 +384,12 @@ function OrderDetail() {
                             </p>
                           )}
                           {normalizeReceiptStatus(proof.status) === 'rechazado' && proof.reviewObservations && (
-                            <p className="rounded-lg bg-red-50 p-2 text-[11px] font-semibold leading-snug text-red-700">
+                            <p className="break-words rounded-lg bg-red-50 p-2 text-[11px] font-semibold leading-snug text-red-700 [overflow-wrap:anywhere]">
                               {proof.reviewObservations}
                             </p>
                           )}
                         </div>
-                      </a>
+                      </button>
                     );
                   })}
                 </div>
@@ -411,19 +413,42 @@ function OrderDetail() {
 
       {qrOpen && (
         <div
-          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 p-5"
+          className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto bg-black/80 p-3 sm:p-5"
           onClick={() => setQrOpen(false)}
         >
-          <div className="relative rounded-3xl bg-white p-4" onClick={(event) => event.stopPropagation()}>
+          <div className="relative w-full max-w-[420px] rounded-2xl bg-white p-3 pt-12 shadow-2xl sm:max-w-[520px] sm:rounded-3xl sm:p-4 sm:pt-14" onClick={(event) => event.stopPropagation()}>
             <button
               type="button"
               onClick={() => setQrOpen(false)}
-              className="absolute right-3 top-3 rounded-full bg-slate-100 p-2"
+              className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition hover:bg-slate-200"
               aria-label="Cerrar QR"
             >
               <X size={18} />
             </button>
-            <img src={qrMagic} alt="Código QR de pago ampliado" className="max-h-[80vh] max-w-[80vw] rounded-2xl object-contain" />
+            <img src={qrMagic} alt="Código QR de pago ampliado" className="max-h-[82vh] max-w-[92vw] rounded-2xl object-contain sm:max-w-[80vw]" />
+          </div>
+        </div>
+      )}
+
+      {proofPreview && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto bg-black/80 p-3 sm:p-5"
+          onClick={() => setProofPreview(null)}
+        >
+          <div className="relative w-full max-w-[520px] rounded-2xl bg-white p-3 pt-12 shadow-2xl sm:max-w-3xl sm:rounded-3xl sm:p-4 sm:pt-14" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setProofPreview(null)}
+              className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition hover:bg-slate-200"
+              aria-label="Cerrar comprobante"
+            >
+              <X size={18} />
+            </button>
+            <img
+              src={proofPreview.imageUrl}
+              alt={proofPreview.fileName || 'Comprobante de pago'}
+              className="mx-auto max-h-[76vh] w-full rounded-2xl object-contain"
+            />
           </div>
         </div>
       )}
@@ -433,18 +458,18 @@ function OrderDetail() {
 
 function Info({ label, value, icon }) {
   return (
-    <div className="rounded-2xl bg-slate-50 p-4">
-      <span className="flex items-center gap-1 text-xs font-black uppercase text-slate-400">{icon}{label}</span>
-      <p className="mt-1 font-bold text-slate-700">{value || 'No disponible'}</p>
+    <div className="rounded-2xl bg-slate-50 p-3 sm:p-4">
+      <span className="flex min-w-0 items-center gap-1 text-xs font-black uppercase text-slate-400">{icon}{label}</span>
+      <p className="mt-1 break-words font-bold text-slate-700 [overflow-wrap:anywhere]">{value || 'No disponible'}</p>
     </div>
   );
 }
 
 function Summary({ label, value, strong = false, className = '' }) {
   return (
-    <div className={`flex justify-between gap-3 ${strong ? 'border-t border-slate-200 pt-3 text-base font-black' : ''} ${className}`}>
-      <span>{label}</span>
-      <span className="font-bold">{value}</span>
+    <div className={`grid grid-cols-[minmax(0,1fr)_minmax(0,max-content)] items-baseline gap-x-3 gap-y-1 ${strong ? 'border-t border-slate-200 pt-3 text-base font-black' : ''} ${className}`}>
+      <span className="min-w-0 break-words [overflow-wrap:anywhere]">{label}</span>
+      <span className="min-w-0 max-w-[160px] break-words text-right font-bold [overflow-wrap:anywhere] sm:max-w-none">{value}</span>
     </div>
   );
 }

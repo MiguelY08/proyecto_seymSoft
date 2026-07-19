@@ -59,7 +59,7 @@ export function ProductCardActions({
   }, []);
 
   return (
-    <div className="px-3.5 pb-3 pt-0.5">
+    <div className="px-3 pb-3 pt-0.5 sm:px-3.5">
       <button
         type="button"
         onClick={handleClick}
@@ -75,18 +75,22 @@ export function ProductCardActions({
           w-full
           items-center
           justify-center
-          gap-1.5
+          gap-1
           overflow-hidden
           rounded-xl
           border-2
-          px-3
+          px-2.5
           py-2.5
-          text-[0.68rem]
+          text-[0.64rem]
           font-black
           uppercase
-          tracking-[0.1em]
+          tracking-[0.07em]
           transition-all
           duration-300
+          sm:gap-1.5
+          sm:px-3
+          sm:text-[0.68rem]
+          sm:tracking-[0.1em]
           ${
             available
               ? `
@@ -115,7 +119,7 @@ export function ProductCardActions({
         )}
 
         {/* Contenido dinámico */}
-        <span className="relative z-10 flex items-center justify-center gap-1.5">
+        <span className="relative z-10 flex min-w-0 items-center justify-center gap-1 sm:gap-1.5">
           {isAdding ? (
             <>
               <LoaderCircle
@@ -124,7 +128,8 @@ export function ProductCardActions({
                 className="animate-spin"
               />
 
-              <span>Añadiendo...</span>
+              <span className="sm:hidden">Añadiendo</span>
+              <span className="hidden sm:inline">Añadiendo...</span>
             </>
           ) : available ? (
             <>
@@ -133,7 +138,8 @@ export function ProductCardActions({
                 strokeWidth={2.6}
               />
 
-              <span>Añadir al carrito</span>
+              <span className="sm:hidden">Añadir</span>
+              <span className="hidden sm:inline">Añadir al carrito</span>
             </>
           ) : (
             <>
@@ -142,7 +148,8 @@ export function ProductCardActions({
                 strokeWidth={2.6}
               />
 
-              <span>Producto agotado</span>
+              <span className="sm:hidden">Agotado</span>
+              <span className="hidden sm:inline">Producto agotado</span>
             </>
           )}
         </span>

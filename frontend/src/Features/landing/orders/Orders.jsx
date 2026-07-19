@@ -10,8 +10,10 @@ import {
   formatOrderDate,
   getOrderStatusClasses,
 } from './helpers/customerOrderHelpers';
+import { ORDER_FONT_FAMILY, injectOrderTypography } from './orderTypography';
 
 function Orders() {
+  injectOrderTypography();
   const navigate = useNavigate();
   const {
     clientId,
@@ -225,7 +227,7 @@ function Orders() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f9fc]">
+    <div className="min-h-screen bg-[#f6f9fc]" style={{ fontFamily: ORDER_FONT_FAMILY }}>
       <ShopHero image={BgPedidos} title="Pedidos" tag="Historial" subtitle="Revisa el estado de tus compras" />
 
       <main className="mx-auto max-w-7xl px-5 py-8">

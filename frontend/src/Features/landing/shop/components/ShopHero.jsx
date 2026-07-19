@@ -3,7 +3,7 @@ import React from 'react';
 
 /* ── Estilos (coherentes con el banner de Favorites) ── */
 const SHOP_HERO_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito:wght@800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito:wght@400;600;700;800;900&display=swap');
 
   .shop-hero-wrap {
     width: 100%;
