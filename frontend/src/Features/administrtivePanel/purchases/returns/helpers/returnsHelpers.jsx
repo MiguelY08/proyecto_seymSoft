@@ -68,11 +68,14 @@ export const RETURN_STATUS_OPTIONS = [
   { id: RETURN_STATUS_IDS.PENDING_REPLACEMENT, label: "Pend. reemplazo", terminal: false },
   { id: RETURN_STATUS_IDS.PENDING_REFUND, label: "Pend. reembolso", terminal: false },
   { id: RETURN_STATUS_IDS.READY, label: "Listo", terminal: true },
-  { id: RETURN_STATUS_IDS.ANNULLED, label: "Anulada", terminal: true },
+  { id: RETURN_STATUS_IDS.ANNULLED, label: "Anulado", terminal: true },
 ];
 
 export const getReturnStatusIdByLabel = (label) =>
-  RETURN_STATUS_OPTIONS.find((status) => status.label === label)?.id ?? null;
+  RETURN_STATUS_OPTIONS.find((status) => status.label === label)?.id ??
+  (["Anulado", "Anulada"].includes(String(label).trim())
+    ? RETURN_STATUS_IDS.ANNULLED
+    : null);
 
 export const getReturnStatusLabelById = (id) =>
   RETURN_STATUS_OPTIONS.find((status) => status.id === Number(id))?.label ?? "";
@@ -205,6 +208,9 @@ export const isProductoTerminado = (producto) =>
 export const isEstadoTerminal = (estado) =>
   getReturnStatusId(estado) === RETURN_STATUS_IDS.READY;
 
+export const isEstadoAnulado = (estado) =>
+  getReturnStatusId(estado) === RETURN_STATUS_IDS.ANNULLED;
+
 // ─── Estilos de badge de estado (devolución general) ─────────────────────────
 
 /**
@@ -214,7 +220,7 @@ export const isEstadoTerminal = (estado) =>
  * @returns {object} Objeto con estilos background y color.
  */
 export const getBadgeEstadoDevolucion = (estado = "") => {
-  if (estado === "Anulada") {
+  if (isEstadoAnulado(estado)) {
     return { background: "#fee2e2", color: "#b91c1c" };
   }
   if (estado.startsWith("Procesada")) {
@@ -226,6 +232,36 @@ export const getBadgeEstadoDevolucion = (estado = "") => {
   return { background: "#f3f4f6", color: "#374151" };
 };
 
+export const getBadgeEstadoDevolucionClasses = (estado = "") => {
+  const normalizedStatus = String(estado).trim();
+
+  if (isEstadoAnulado(normalizedStatus)) {
+    return "bg-rose-100 text-rose-700 border-rose-300";
+  }
+  if (normalizedStatus === "Listo") {
+    return "bg-emerald-100 text-emerald-700 border-emerald-300";
+  }
+  if (normalizedStatus === "Pend. envio" || normalizedStatus === "Pend. envío") {
+    return "bg-amber-100 text-amber-700 border-amber-300";
+  }
+  if (normalizedStatus === "Pend. reemplazo") {
+    return "bg-sky-100 text-sky-700 border-sky-300";
+  }
+  if (normalizedStatus === "Pend. reembolso") {
+    return "bg-violet-100 text-violet-700 border-violet-300";
+  }
+  if (normalizedStatus.startsWith("Procesada")) {
+    return "bg-emerald-100 text-emerald-700 border-emerald-300";
+  }
+  if (normalizedStatus.startsWith("Aprobada")) {
+    return "bg-sky-100 text-sky-700 border-sky-300";
+  }
+  if (normalizedStatus.startsWith("Pendiente")) {
+    return "bg-amber-100 text-amber-700 border-amber-300";
+  }
+  return "bg-slate-100 text-slate-600 border-slate-300";
+};
+
 // ─── Estilos de badge de estado (producto individual) ────────────────────────
 
 /**
@@ -234,6 +270,10 @@ export const getBadgeEstadoDevolucion = (estado = "") => {
  * @returns {object} Objeto con estilos background y color.
  */
 export const getBadgeEstadoProducto = (estado = "") => {
+  if (isEstadoAnulado(estado)) {
+    return { background: "#fee2e2", color: "#b91c1c" };
+  }
+
   switch (estado) {
     case "Listo":
       return { background: "#dcfce7", color: "#15803d" };    // verde — terminal

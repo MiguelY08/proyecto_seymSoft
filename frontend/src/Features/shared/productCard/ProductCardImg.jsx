@@ -1,11 +1,12 @@
 // ProductCardImg.jsx
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Heart,
   HeartCrack,
   ChevronLeft,
   ChevronRight,
+  ImageOff,
 } from 'lucide-react';
 
 export function ProductCardImage({
@@ -29,6 +30,12 @@ export function ProductCardImage({
 }) {
   const currentImage =
     product.images?.[activeImageIndex] ?? product.images?.[0];
+  const [imageFailed, setImageFailed] = useState(false);
+  const hasDisplayImage = Boolean(currentImage?.url) && !imageFailed;
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [currentImage?.url]);
 
   return (
     <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-[#eef6fb] via-[#edf5fa] to-[#dfeef8]">
@@ -37,16 +44,28 @@ export function ProductCardImage({
 
       {/* Imagen activa */}
       <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
-        <img
-          src={currentImage?.url}
-          alt={currentImage?.alt ?? product.name}
-          loading="lazy"
-          className={`relative z-10 h-[78%] w-[78%] object-contain transition-all duration-500 ease-out ${
-            isHoveringCard
-              ? 'scale-[1.08] rotate-[1deg]'
-              : 'scale-100 rotate-0'
-          }`}
-        />
+        {hasDisplayImage ? (
+          <img
+            src={currentImage.url}
+            alt={currentImage?.alt ?? product.name}
+            loading="lazy"
+            onError={() => setImageFailed(true)}
+            className={`relative z-10 h-[76%] w-[76%] object-contain transition-all duration-500 ease-out sm:h-[78%] sm:w-[78%] ${
+              isHoveringCard
+                ? 'scale-[1.08] rotate-[1deg]'
+                : 'scale-100 rotate-0'
+            }`}
+          />
+        ) : (
+          <div className="relative z-10 flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#cfe4f0] bg-white/80 text-[#004D77] shadow-sm sm:h-16 sm:w-16">
+              <ImageOff size={24} strokeWidth={1.9} />
+            </div>
+            <span className="line-clamp-2 max-w-[9rem] text-[0.62rem] font-black uppercase leading-snug tracking-[0.08em] text-[#406578] sm:max-w-[11rem] sm:text-[0.68rem]">
+              {product.name}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Gradiente inferior */}
@@ -133,7 +152,7 @@ export function ProductCardImage({
 
           {/* Flecha izquierda */}
           <div
-            className={`absolute left-2 top-1/2 z-30 -translate-y-1/2 transition-all duration-300 ${
+            className={`absolute left-2 top-1/2 z-30 hidden -translate-y-1/2 transition-all duration-300 sm:block ${
               isHoveringCard
                 ? 'translate-x-0 opacity-100'
                 : '-translate-x-2 opacity-0'
@@ -154,7 +173,7 @@ export function ProductCardImage({
 
           {/* Flecha derecha */}
           <div
-            className={`absolute right-2 top-1/2 z-30 -translate-y-1/2 transition-all duration-300 ${
+            className={`absolute right-2 top-1/2 z-30 hidden -translate-y-1/2 transition-all duration-300 sm:block ${
               isHoveringCard
                 ? 'translate-x-0 opacity-100'
                 : 'translate-x-2 opacity-0'
@@ -182,7 +201,7 @@ export function ProductCardImage({
 
       {/* Badge hover */}
       <div
-        className={`pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center pb-8 transition-all duration-500 ${
+        className={`pointer-events-none absolute inset-x-0 bottom-0 z-20 hidden justify-center pb-8 transition-all duration-500 sm:flex ${
           isHoveringCard
             ? 'translate-y-0 opacity-100'
             : 'translate-y-2 opacity-0'

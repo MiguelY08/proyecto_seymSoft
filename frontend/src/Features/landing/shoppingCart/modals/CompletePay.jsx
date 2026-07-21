@@ -12,6 +12,19 @@ import { getProductBarcode } from '../../orders/helpers/customerOrderHelpers';
 
 const INITIAL_SECONDS = 48 * 60 * 60;
 
+const buildDeliveryAddress = (deliveryInfo = {}) => {
+  const addressParts = [
+    deliveryInfo?.direccion,
+    deliveryInfo?.barrio ? `Barrio ${deliveryInfo.barrio}` : null,
+    deliveryInfo?.ciudad,
+  ]
+    .map((part) => String(part || '').trim())
+    .filter(Boolean);
+
+  const notes = String(deliveryInfo?.notas || '').trim();
+  return `${addressParts.join(', ')}${notes ? ` (${notes})` : ''}`;
+};
+
 function useCountdown() {
   const [secondsLeft, setSecondsLeft] = useState(INITIAL_SECONDS);
   const intervalRef = useRef(null);
@@ -126,11 +139,7 @@ function CompletePay({
     const isPickup = deliveryMethod === 'tienda';
     const deliveryAddress = isPickup
       ? 'El cliente lo recoge'
-      : [
-          deliveryInfo?.direccion,
-          deliveryInfo?.barrio && `Barrio ${deliveryInfo.barrio}`,
-          deliveryInfo?.ciudad,
-        ].filter(Boolean).join(', ');
+      : buildDeliveryAddress(deliveryInfo);
 
     setSubmitting(true);
     let createdOrder = pendingOrder;
@@ -144,6 +153,7 @@ function CompletePay({
           productos: products,
           estadoLogistico: ESTADOS_LOGISTICOS.EN_PROCESO,
           origen: ORIGENES.WEB,
+          saleType: ORIGENES.WEB,
         });
         setPendingOrder(createdOrder);
       }

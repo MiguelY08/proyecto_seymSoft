@@ -14,6 +14,7 @@ import {
   AlertCircle,
   CheckCircle,
   ArrowRight,
+  SquarePen,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../shared/Context/CartContext';
@@ -326,11 +327,43 @@ const STYLES = `
     border-color: #004D77;
     box-shadow: 0 0 0 3px rgba(0, 77, 119, 0.1);
   }
+  .form-input:disabled {
+    background: #f4f8fb;
+    color: #64748b;
+    cursor: not-allowed;
+  }
   .form-input.error {
     border-color: #f56565;
   }
   .form-input.success {
     border-color: #48bb78;
+  }
+  .profile-edit-row {
+    display: flex;
+    justify-content: flex-end;
+    margin: -4px 0 12px;
+  }
+  .btn-profile-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1.5px solid #e2edf5;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #004D77;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    padding: 7px 12px;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+  }
+  .btn-profile-edit:hover {
+    background: #f0f8ff;
+    border-color: #afd0e6;
+    transform: translateY(-1px);
   }
   .error-message {
     font-size: 0.64rem;
@@ -462,11 +495,40 @@ function injectStyles() {
   stylesInjected = true;
 }
 
+const getClientFullName = (client) => (
+  client?.fullName
+  || [client?.firstName, client?.lastName].filter(Boolean).join(' ')
+);
+
+const firstText = (...values) => {
+  const value = values.find((item) => String(item ?? '').trim());
+  return String(value ?? '').trim();
+};
+
+const getProfileAddress = (user, client) => firstText(
+  client?.address,
+  client?.direccion,
+  client?.deliveryAddress,
+  client?.delivery_address,
+  user?.client?.address,
+  user?.client?.direccion,
+  user?.client?.deliveryAddress,
+  user?.client?.delivery_address,
+  user?.customer?.address,
+  user?.customer?.direccion,
+  user?.customer?.deliveryAddress,
+  user?.customer?.delivery_address,
+  user?.address,
+  user?.direccion,
+  user?.deliveryAddress,
+  user?.delivery_address,
+);
+
 function ShoppingCart() {
   injectStyles();
   const navigate = useNavigate();
   const { showConfirm, showError } = useAlert();
-  const { user, setClient } = useAuth();
+  const { user, client, setClient } = useAuth();
   const {
     clientId,
     clientType: resolvedClientType,
@@ -513,6 +575,26 @@ function ShoppingCart() {
     barrio: false,
     direccion: false,
   });
+
+  const preloadedCustomerData = useMemo(() => ({
+    nombreCompleto: String(user?.fullName || getClientFullName(client) || '').trim(),
+    correo: String(user?.email || client?.email || '').trim(),
+    telefono: String(user?.phone || client?.phone || '').trim(),
+    direccionPerfil: getProfileAddress(user, client),
+  }), [
+    client,
+    user,
+  ]);
+
+  const profileAddress = preloadedCustomerData.direccionPerfil;
+
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      ...preloadedCustomerData,
+      direccion: touched.direccion ? prev.direccion : prev.direccion || profileAddress,
+    }));
+  }, [preloadedCustomerData, profileAddress, touched.direccion]);
 
   useEffect(() => {
     if (!resumeCheckout || !clientId || cartLoading || cartItems.length === 0) return;
@@ -629,9 +711,9 @@ function ShoppingCart() {
 
   const validateForm = () => {
     const newErrors = {
-      nombreCompleto: validateNombreCompleto(formData.nombreCompleto),
-      correo: validateCorreo(formData.correo),
-      telefono: validateTelefono(formData.telefono),
+      nombreCompleto: validateNombreCompleto(preloadedCustomerData.nombreCompleto),
+      correo: validateCorreo(preloadedCustomerData.correo),
+      telefono: validateTelefono(preloadedCustomerData.telefono),
       ciudad: validateCiudad(formData.ciudad),
       barrio: validateBarrio(formData.barrio),
       direccion: validateDireccion(formData.direccion),
@@ -646,6 +728,22 @@ function ShoppingCart() {
       direccion: true,
     });
     return !Object.values(newErrors).some((error) => error !== '');
+  };
+
+  const getIncompleteProfileFields = () => {
+    const fields = [];
+
+    if (validateNombreCompleto(preloadedCustomerData.nombreCompleto)) {
+      fields.push('nombre');
+    }
+    if (validateCorreo(preloadedCustomerData.correo)) {
+      fields.push('correo');
+    }
+    if (validateTelefono(preloadedCustomerData.telefono)) {
+      fields.push('teléfono');
+    }
+
+    return fields;
   };
 
   const handleRemoveItem = async (item) => {
@@ -666,7 +764,7 @@ function ShoppingCart() {
     if (result.isConfirmed) clearCart();
   };
 
-  const handleProcederPago = () => {
+  const handleProcederPago = async () => {
     if (!isAuthenticated) {
       showError('Inicia sesión', 'Debes iniciar sesión para crear y consultar tu pedido.');
       navigate('/login', { state: { from: '/cart' } });
@@ -678,16 +776,47 @@ function ShoppingCart() {
       return;
     }
 
+    if (!clientId) {
+      setShowClientModal(true);
+      return;
+    }
+
+    const incompleteProfileFields = getIncompleteProfileFields();
+    if (incompleteProfileFields.length > 0) {
+      setErrors((prev) => ({
+        ...prev,
+        nombreCompleto: validateNombreCompleto(preloadedCustomerData.nombreCompleto),
+        correo: validateCorreo(preloadedCustomerData.correo),
+        telefono: validateTelefono(preloadedCustomerData.telefono),
+      }));
+      setTouched((prev) => ({
+        ...prev,
+        nombreCompleto: true,
+        correo: true,
+        telefono: true,
+      }));
+
+      const result = await showConfirm(
+        'warning',
+        'Perfil incompleto',
+        `Para finalizar la compra debes completar tu ${incompleteProfileFields.join(', ')} en el perfil.`,
+        {
+          confirmButtonText: 'Editar perfil',
+          cancelButtonText: 'Volver al carrito',
+        }
+      );
+
+      if (result?.isConfirmed) {
+        navigate('/perfil/editar', { state: { from: '/cart' } });
+      }
+      return;
+    }
+
     if (deliveryMethod === 'domicilio') {
       if (!validateForm()) {
         showError('Formulario incompleto', 'Por favor completa todos los campos correctamente.');
         return;
       }
-    }
-
-    if (!clientId) {
-      setShowClientModal(true);
-      return;
     }
 
     setShowPaymentModal(true);
@@ -708,10 +837,40 @@ function ShoppingCart() {
     [cartItems, clientType]
   );
 
+  const checkoutDeliveryInfo = useMemo(
+    () => ({
+      ...formData,
+      ...preloadedCustomerData,
+      ciudad: formData.ciudad,
+      barrio: formData.barrio,
+      direccion: formData.direccion,
+      notas: formData.notas,
+    }),
+    [formData, preloadedCustomerData]
+  );
+
   const subtotal = displayCartItems.reduce(
     (total, item) => total + item.price * item.quantity,
     0
   );
+
+  if (cartLoading) {
+    return (
+      <div className="cart-page">
+        <div className="cart-container">
+          <div className="cart-empty">
+            <div className="cart-empty-icon">
+              <CartIcon size={26} color="#004D77" strokeWidth={1.5} />
+            </div>
+            <h3 className="cart-empty-title">Cargando carrito...</h3>
+            <p className="cart-empty-sub">
+              Estamos sincronizando tus productos.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (cartItems.length === 0) {
     return (
@@ -863,10 +1022,11 @@ function ShoppingCart() {
                     <input
                       type={field.type}
                       name={field.name}
-                      value={formData[field.name]}
+                      value={preloadedCustomerData[field.name]}
                       onChange={handleInputChange}
                       onBlur={() => handleBlur(field.name)}
                       placeholder={field.placeholder}
+                      disabled
                       className={`form-input ${
                         errors[field.name] && touched[field.name]
                           ? 'error'
@@ -882,6 +1042,16 @@ function ShoppingCart() {
                     )}
                   </div>
                 ))}
+
+                <div className="profile-edit-row">
+                  <button
+                    type="button"
+                    className="btn-profile-edit"
+                    onClick={() => navigate('/perfil/editar')}
+                  >
+                    <SquarePen size={13} /> Editar perfil
+                  </button>
+                </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="form-group">
@@ -1026,7 +1196,7 @@ function ShoppingCart() {
           }}
           totalAmount={subtotal}
           deliveryMethod={deliveryMethod}
-          deliveryInfo={deliveryMethod === 'domicilio' ? formData : null}
+          deliveryInfo={deliveryMethod === 'domicilio' ? checkoutDeliveryInfo : null}
           cartItems={displayCartItems}
           clientId={clientId}
         />

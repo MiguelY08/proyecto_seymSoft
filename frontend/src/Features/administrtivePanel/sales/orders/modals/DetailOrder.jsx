@@ -11,9 +11,16 @@ import {
   EstadoPagoBadgePill,
   exportOrderToPDF
 } from '../helpers/ordersHelpers';
-import { PaymentService, ESTADOS_LOGISTICOS, ORIGENES } from '../services/ordersService';
+import OrdersService, {
+  PaymentReceiptService,
+  PaymentService,
+  ESTADOS_LOGISTICOS,
+  ORIGENES,
+} from '../services/ordersService';
 import { UserService } from '../../../users/services/userService';
 import PaymentReceiptsSection from '../components/PaymentReceiptsSection';
+import ApprovePaymentReceiptModal from './ApprovePaymentReceiptModal';
+import RejectPaymentReceiptModal from './RejectPaymentReceiptModal';
 
 // ─── DetailRow ────────────────────────────────────────────────────────────────
 function DetailRow({ icon, label, value, placeholder, highlight = false }) {
@@ -85,6 +92,8 @@ function StatusBanner({ order }) {
   return null;
 }
 
+const normalizeReceiptStatus = (status) => String(status || 'pendiente').trim().toLowerCase();
+
 function DetailOrder({ 
   order, 
   isOpen, 
@@ -92,13 +101,17 @@ function DetailOrder({
   onEdit, 
   onCancel, 
   onEstadoChange,
+  onOrderRefresh,
   modo = 'pedido' // 'pedido' o 'venta'
 }) {
-  const { showConfirm, showSuccess } = useAlert();
+  const { showConfirm, showSuccess, showError } = useAlert();
   const [pagos, setPagos] = useState([]);
   const [totalPagado, setTotalPagado] = useState(0);
   const [paymentReceipts, setPaymentReceipts] = useState([]);
   const [asesorNombre, setAsesorNombre] = useState('');
+  const [receiptToApprove, setReceiptToApprove] = useState(null);
+  const [receiptToReject, setReceiptToReject] = useState(null);
+  const [reviewingReceiptId, setReviewingReceiptId] = useState(null);
   const visible = isOpen;
 
   useEffect(() => {
@@ -199,48 +212,119 @@ function DetailOrder({
     exportOrderToPDF(order, pagos, asesorNombre);
   };
 
+  const ensurePendingReceipt = (receipt) => {
+    if (normalizeReceiptStatus(receipt?.status) === 'pendiente') return true;
+
+    showError(
+      'Comprobante ya revisado',
+      'Solo los comprobantes pendientes pueden aprobarse o rechazarse.'
+    );
+    return false;
+  };
+
+  const handleOpenApproveReceipt = (receipt) => {
+    if (!ensurePendingReceipt(receipt)) return;
+    setReceiptToApprove(receipt);
+  };
+
+  const handleOpenRejectReceipt = (receipt) => {
+    if (!ensurePendingReceipt(receipt)) return;
+    setReceiptToReject(receipt);
+  };
+
+  const refreshOrderDetail = async () => {
+    const freshOrder = await OrdersService.findById(order.id);
+    if (!freshOrder) return;
+
+    const freshPayments = await PaymentService.getByPedidoId(order.id);
+    const freshTotalPaid = await PaymentService.getTotalPagado(order.id);
+
+    setPagos(freshPayments);
+    setTotalPagado(freshTotalPaid);
+    setPaymentReceipts(freshOrder.comprobantesPago || []);
+    onOrderRefresh?.(freshOrder);
+  };
+
+  const handleReviewReceipt = async (receipt, payload, successMessage) => {
+    if (!receipt?.id || reviewingReceiptId) return;
+    if (!ensurePendingReceipt(receipt)) return;
+
+    setReviewingReceiptId(receipt.id);
+    try {
+      const result = await PaymentReceiptService.review(order.id, receipt.id, payload);
+
+      if (result?.paymentReceipt) {
+        setPaymentReceipts((current) =>
+          current.map((item) => (item.id === receipt.id ? result.paymentReceipt : item))
+        );
+      }
+
+      await refreshOrderDetail();
+      showSuccess('Comprobante revisado', successMessage);
+      setReceiptToApprove(null);
+      setReceiptToReject(null);
+    } catch (error) {
+      showError(
+        'No se pudo revisar',
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          'No se pudo actualizar el comprobante.'
+      );
+    } finally {
+      setReviewingReceiptId(null);
+    }
+  };
+
   const esModoVenta = modo === 'venta';
   const titulo = esModoVenta 
     ? `Venta #${order.numeroPedido || order.id}`
     : `Pedido #${order.numeroPedido || order.id}`;
 
   return (
-    <div
-      style={{ transition: 'opacity 250ms ease' }}
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm
-        ${visible ? 'opacity-100' : 'opacity-0'}`}
-    >
+    <>
       <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          transformOrigin: 'center center',
-          transition: 'transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 200ms ease',
-        }}
-        className={`bg-white rounded-lg shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden max-h-[90vh]
-          ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
+        style={{ transition: 'opacity 250ms ease' }}
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm
+          ${visible ? 'opacity-100' : 'opacity-0'}`}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
-          <h2 className="text-white font-semibold text-lg">
-            {titulo}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" strokeWidth={2} />
-          </button>
-        </div>
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            transformOrigin: 'center center',
+            transition: 'transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 200ms ease',
+          }}
+          className={`bg-white rounded-lg shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden max-h-[90vh]
+            ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
+            <h2 className="text-white font-semibold text-lg">
+              {titulo}
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" strokeWidth={2} />
+            </button>
+          </div>
 
-        {/* Cuerpo */}
-        <div className="overflow-y-auto flex-1">
-          <StatusBanner order={order} />
+          {/* Cuerpo */}
+          <div className="overflow-y-auto flex-1">
+            <StatusBanner order={order} />
 
-          {!esModoVenta && paymentReceipts.length > 0 && (
-            <div className="px-6 pt-5">
-              <PaymentReceiptsSection receipts={paymentReceipts} compact />
-            </div>
-          )}
+            {!esModoVenta && paymentReceipts.length > 0 && (
+              <div className="px-6 pt-5">
+                <PaymentReceiptsSection
+                  receipts={paymentReceipts}
+                  compact
+                  onApprove={handleOpenApproveReceipt}
+                  onReject={handleOpenRejectReceipt}
+                  reviewingReceiptId={reviewingReceiptId}
+                />
+              </div>
+            )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
             {/* ── Columna izquierda: Detalles ─────────────────── */}
@@ -422,9 +506,46 @@ function DetailOrder({
                 )}
               </>
             )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {receiptToApprove && (
+        <ApprovePaymentReceiptModal
+          key={receiptToApprove.id}
+          order={order}
+          receipt={receiptToApprove}
+          isOpen
+          isSubmitting={reviewingReceiptId === receiptToApprove.id}
+          onClose={() => setReceiptToApprove(null)}
+          onConfirm={(payload) =>
+            handleReviewReceipt(
+              receiptToApprove,
+              payload,
+              'El comprobante fue aprobado y el abono quedo registrado.'
+            )
+          }
+        />
+      )}
+
+      {receiptToReject && (
+        <RejectPaymentReceiptModal
+          key={receiptToReject.id}
+          order={order}
+          receipt={receiptToReject}
+          isOpen
+          isSubmitting={reviewingReceiptId === receiptToReject.id}
+          onClose={() => setReceiptToReject(null)}
+          onConfirm={(payload) =>
+            handleReviewReceipt(
+              receiptToReject,
+              payload,
+              'El comprobante fue rechazado y el cliente podra enviar uno nuevo.'
+            )
+          }
+        />
+      )}
+    </>
   );
 }
 

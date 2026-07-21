@@ -19,7 +19,7 @@ export function useProductCard(productData = {}, clientType = 'DETAL') {
 
   const { addToCart } = useCart();
   const { toggleFavorite, isFavorite } = useFavorites();
-  const { showSuccess } = useAlert();
+  const { showError, showSuccess } = useAlert();
 
   /**
    * Producto normalizado.
@@ -176,11 +176,11 @@ export function useProductCard(productData = {}, clientType = 'DETAL') {
    * Maneja añadir al carrito.
    */
   const handleAddToCart = useCallback(
-    (event) => {
+    async (event) => {
       event.stopPropagation();
 
       if (!product.id) {
-        showSuccess(
+        showError(
           'Producto no disponible',
           'No se pudo identificar el producto para agregarlo al carrito.'
         );
@@ -188,21 +188,29 @@ export function useProductCard(productData = {}, clientType = 'DETAL') {
       }
 
       if (!available) {
-        showSuccess(
+        showError(
           'Producto no disponible',
           `${product.name} no está disponible para agregar al carrito.`
         );
         return;
       }
 
-      addToCart(product, 1);
+      const wasAdded = await addToCart(product, 1);
+
+      if (!wasAdded) {
+        showError(
+          'No se pudo agregar',
+          'Intenta nuevamente en unos segundos.'
+        );
+        return;
+      }
 
       showSuccess(
         'Añadido al carrito',
         `${product.name} se ha agregado al carrito.`
       );
     },
-    [addToCart, available, product, showSuccess]
+    [addToCart, available, product, showError, showSuccess]
   );
 
   /**

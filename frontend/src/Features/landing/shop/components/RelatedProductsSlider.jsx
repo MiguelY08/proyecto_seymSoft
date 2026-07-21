@@ -13,13 +13,14 @@ const SLIDER_STYLES = `
 
   .slider-track {
     display: flex;
-    gap: 14px;
+    gap: 10px;
     overflow-x: auto;
     scroll-behavior: smooth;
+    scroll-snap-type: x proximity;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 #e2edf5;
-    padding: 8px 4px 16px 4px;
-    margin: 0 40px;
+    padding: 8px 2px 16px;
+    margin: 0;
   }
 
   .slider-track::-webkit-scrollbar {
@@ -42,7 +43,8 @@ const SLIDER_STYLES = `
 
   .slider-item {
     flex: 0 0 auto;
-    width: 210px;
+    width: min(74vw, 210px);
+    scroll-snap-align: start;
     transition: transform 0.3s ease;
   }
 
@@ -66,6 +68,7 @@ const SLIDER_STYLES = `
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 4px 12px rgba(0, 77, 119, 0.15);
+    display: none;
   }
 
   .slider-btn:hover {
@@ -90,6 +93,17 @@ const SLIDER_STYLES = `
   }
 
   @media (min-width: 768px) {
+    .slider-track {
+      gap: 14px;
+      margin: 0 40px;
+      padding: 8px 4px 16px 4px;
+    }
+    .slider-item {
+      width: 210px;
+    }
+    .slider-btn {
+      display: flex;
+    }
     .slider-btn-left {
       left: -16px;
     }

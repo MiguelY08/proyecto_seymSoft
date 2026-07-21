@@ -7,7 +7,8 @@ const bgAlert = 'bg-white';
 const variants = {
   success: {
     bg:       bgAlert,
-    border:   'border-green-300',
+    border:   'border-green-100',
+    iconBg:   'bg-green-50 ring-green-100',
     title:    'text-green-900',
     text:     'text-green-600',
     timerBar: 'bg-green-500',
@@ -18,7 +19,8 @@ const variants = {
   },
   error: {
     bg:       bgAlert,
-    border:   'border-red-300',
+    border:   'border-red-100',
+    iconBg:   'bg-red-50 ring-red-100',
     title:    'text-red-900',
     text:     'text-red-600',
     timerBar: 'bg-red-400',
@@ -29,7 +31,8 @@ const variants = {
   },
   warning: {
     bg:       bgAlert,
-    border:   'border-yellow-300',
+    border:   'border-yellow-100',
+    iconBg:   'bg-yellow-50 ring-yellow-100',
     title:    'text-yellow-900',
     text:     'text-yellow-700',
     timerBar: 'bg-yellow-400',
@@ -40,7 +43,8 @@ const variants = {
   },
   info: {
     bg:       bgAlert,
-    border:   'border-blue-300',
+    border:   'border-blue-100',
+    iconBg:   'bg-blue-50 ring-blue-100',
     title:    'text-blue-900',
     text:     'text-blue-600',
     timerBar: 'bg-blue-400',
@@ -51,7 +55,8 @@ const variants = {
   },
   question: {
     bg:       bgAlert,
-    border:   'border-blue-300',
+    border:   'border-blue-100',
+    iconBg:   'bg-[#e8f4fd] ring-[#cfe4f0]',
     title:    'text-blue-900',
     text:     'text-blue-600',
     timerBar: 'bg-blue-400',
@@ -62,7 +67,8 @@ const variants = {
   },
   plain: {
     bg:       bgAlert,
-    border:   'border-blue-300',
+    border:   'border-slate-200',
+    iconBg:   'bg-[#e8f4fd] ring-[#cfe4f0]',
     title:    'text-blue-900',
     text:     'text-blue-600',
     timerBar: 'bg-blue-400',
@@ -77,8 +83,8 @@ const variants = {
 const motionClass = (position, visible) => {
   if (position === 'right') {
     return visible
-      ? 'opacity-100 translate-x-0'
-      : 'opacity-0 translate-x-10';
+      ? 'opacity-100 translate-x-0 translate-y-0'
+      : 'opacity-0 -translate-y-3 sm:translate-x-10 sm:translate-y-0';
   }
   return visible
     ? 'opacity-100 translate-y-0'
@@ -150,16 +156,25 @@ function AlertItem({ alert, onRemove, position = 'center' }) {
 
   return (
     <div
-      className={`pointer-events-auto w-full rounded-2xl border shadow-lg overflow-hidden transition-all duration-300 ${v.bg} ${v.border} ${motionClass(position, visible)}`}
+      className={`pointer-events-auto relative w-full overflow-hidden rounded-xl border shadow-[0_18px_45px_rgba(15,23,42,0.14)] ring-1 ring-black/[0.02] transition-all duration-300 sm:rounded-2xl ${v.bg} ${v.border} ${motionClass(position, visible)}`}
+      role={isConfirm ? 'dialog' : 'alert'}
+      aria-live={isConfirm ? 'assertive' : 'polite'}
+      aria-modal={isConfirm ? 'false' : undefined}
+      aria-labelledby={`alert-title-${id}`}
+      aria-describedby={text || html ? `alert-message-${id}` : undefined}
     >
       {/* Contenido principal con botón de cierre (solo si no es confirmación) */}
-      <div className="flex items-start gap-3 px-4 pt-4 pb-3">
-        {v.icon && <div className="mt-0.5">{v.icon}</div>}
-        <div className="flex-1 min-w-0">
-          <p className={`text-base font-semibold ${v.title}`}>{title}</p>
-          {text && <p className={`text-sm mt-1 ${v.text}`}>{text}</p>}
+      <div className="flex max-h-[70vh] items-start gap-2.5 overflow-y-auto px-3.5 py-3 sm:gap-3 sm:px-4 sm:py-4">
+        {v.icon && (
+          <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-1 sm:h-9 sm:w-9 ${v.iconBg} [&>svg]:h-5 [&>svg]:w-5 sm:[&>svg]:h-6 sm:[&>svg]:w-6`}>
+            {v.icon}
+          </div>
+        )}
+        <div className="min-w-0 flex-1 break-words">
+          <p id={`alert-title-${id}`} className={`text-sm font-semibold leading-snug [overflow-wrap:anywhere] sm:text-base ${v.title}`}>{title}</p>
+          {text && <p id={`alert-message-${id}`} className={`mt-1 whitespace-pre-line text-xs leading-relaxed [overflow-wrap:anywhere] sm:text-sm ${v.text}`}>{text}</p>}
           {html && (
-            <p className={`text-sm mt-1 ${v.text}`} dangerouslySetInnerHTML={{ __html: html }} />
+            <p id={`alert-message-${id}`} className={`mt-1 text-xs leading-relaxed [overflow-wrap:anywhere] sm:text-sm ${v.text}`} dangerouslySetInnerHTML={{ __html: html }} />
           )}
         </div>
         {!isConfirm && (
@@ -175,16 +190,16 @@ function AlertItem({ alert, onRemove, position = 'center' }) {
 
       {/* Botones de confirmación (isConfirm) */}
       {isConfirm && (
-        <div className="flex items-center gap-2 px-4 pb-4">
+        <div className="flex flex-col gap-2 px-3.5 pb-3.5 sm:flex-row sm:items-center sm:px-4 sm:pb-4">
           <button
             onClick={handleConfirm}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${v.confirm}`}
+            className={`flex h-10 flex-1 items-center justify-center rounded-lg px-3 text-sm font-semibold transition-all duration-200 cursor-pointer ${v.confirm}`}
           >
             {confirmButtonText}
           </button>
           <button
             onClick={handleCancel}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${v.cancel}`}
+            className={`flex h-10 flex-1 items-center justify-center rounded-lg px-3 text-sm font-semibold transition-all duration-200 cursor-pointer ${v.cancel}`}
           >
             {cancelButtonText}
           </button>
@@ -193,8 +208,8 @@ function AlertItem({ alert, onRemove, position = 'center' }) {
 
       {/* Barra de progreso (sin contador de segundos) */}
       {effectiveTimer && (
-        <div className="px-4 pb-3">
-          <div className="w-full h-1.5 rounded-full bg-black/10 overflow-hidden">
+        <div className="px-3.5 pb-2.5 sm:px-4 sm:pb-3">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
             <div
               className={`h-full rounded-full transition-none ${v.timerBar}`}
               style={{ width: `${progress}%` }}

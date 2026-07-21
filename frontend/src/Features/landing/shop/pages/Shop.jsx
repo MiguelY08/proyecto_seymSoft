@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import Filters from "../components/FilterLanding";
 import SortDropdown from "../components/SortDropdown";
@@ -67,21 +67,36 @@ const SHOP_STYLES = `
 
   .products-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
+    grid-template-columns: 1fr;
+    gap: 12px;
     margin-top: 8px;
     animation: shop-fadeUp 0.4s ease;
   }
 
+  @media (min-width: 340px) {
+    .products-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+  }
+
   @media (min-width: 640px) {
     .products-grid {
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
     }
   }
 
   @media (min-width: 1024px) {
     .products-grid {
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+  }
+
+  @media (min-width: 1180px) {
+    .products-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }
   }
 
@@ -170,9 +185,34 @@ function buildCategoryFilters(categories, products) {
   });
 }
 
+function getPositiveParamId(searchParams, paramName) {
+  const paramId = Number(searchParams.get(paramName));
+  return Number.isInteger(paramId) && paramId > 0 ? paramId : null;
+}
+
+function getSelectedIdsFromParam(searchParams, paramName) {
+  const paramId = getPositiveParamId(searchParams, paramName);
+  return paramId ? [paramId] : [];
+}
+
+function areSelectedIdsEqual(currentIds, nextIds) {
+  return (
+    currentIds.length === nextIds.length &&
+    currentIds.every((id, index) => id === nextIds[index])
+  );
+}
+
+function toggleSelectedId(currentIds, nextId) {
+  return currentIds.includes(nextId)
+    ? currentIds.filter(id => id !== nextId)
+    : [...currentIds, nextId];
+}
+
 function Shop() {
   injectShopStyles();
   const [searchParams, setSearchParams] = useSearchParams();
+  const internalSearchSyncRef = useRef("");
+  const applyingSearchParamsRef = useRef(false);
 
   // ═══ ESTADO ═══
   const [products, setProducts] = useState([]);
@@ -180,10 +220,19 @@ function Shop() {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState(() => {
-    const categoryId = Number(searchParams.get("category"));
-    return Number.isInteger(categoryId) && categoryId > 0 ? [categoryId] : [];
+    return getSelectedIdsFromParam(searchParams, "category");
   });
-  const [selectedSubcategoryIds, setSelectedSubcategoryIds] = useState([]);
+  const [selectedSubcategoryIds, setSelectedSubcategoryIds] = useState(() => {
+    return getSelectedIdsFromParam(searchParams, "subcategory");
+  });
+  const selectedFiltersRef = useRef({
+    categoryIds: selectedCategoryIds,
+    subcategoryIds: selectedSubcategoryIds,
+  });
+  selectedFiltersRef.current = {
+    categoryIds: selectedCategoryIds,
+    subcategoryIds: selectedSubcategoryIds,
+  };
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSort, setSelectedSort] = useState("relevant");
   const [sortOpen, setSortOpen] = useState(false);
@@ -293,25 +342,52 @@ function Shop() {
 
   // ═══ MANEJAR CAMBIOS DE CATEGORÍA ═══
   const handleCategoryChange = (categoryId) => {
-    setSelectedCategoryIds(current =>
-      current.includes(categoryId)
-        ? current.filter(id => id !== categoryId)
-        : [...current, categoryId]
-    );
-    setCurrentPage(1);
+    const normalizedCategoryId = Number(categoryId);
+    setSelectedCategoryIds(current => toggleSelectedId(current, normalizedCategoryId));
   };
 
-  // ═══ MANEJAR CAMBIOS DE MARCA ═══
+  // ═══ MANEJAR CAMBIOS DE SUBCATEGORÍA ═══
   const handleSubcategoryChange = (subcategoryId) => {
-    setSelectedSubcategoryIds(current =>
-      current.includes(subcategoryId)
-        ? current.filter(id => id !== subcategoryId)
-        : [...current, subcategoryId]
-    );
-    setCurrentPage(1);
+    const normalizedSubcategoryId = Number(subcategoryId);
+    setSelectedSubcategoryIds(current => toggleSelectedId(current, normalizedSubcategoryId));
   };
 
   useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategoryIds, selectedSubcategoryIds]);
+
+  useEffect(() => {
+    const currentSearch = searchParams.toString();
+
+    if (internalSearchSyncRef.current === currentSearch) {
+      internalSearchSyncRef.current = "";
+      return;
+    }
+
+    const nextCategoryIds = getSelectedIdsFromParam(searchParams, "category");
+    const nextSubcategoryIds = getSelectedIdsFromParam(searchParams, "subcategory");
+    const isExternalFilterChange =
+      !areSelectedIdsEqual(selectedFiltersRef.current.categoryIds, nextCategoryIds) ||
+      !areSelectedIdsEqual(selectedFiltersRef.current.subcategoryIds, nextSubcategoryIds);
+
+    if (isExternalFilterChange) {
+      applyingSearchParamsRef.current = true;
+    }
+
+    setSelectedCategoryIds(current =>
+      areSelectedIdsEqual(current, nextCategoryIds) ? current : nextCategoryIds
+    );
+    setSelectedSubcategoryIds(current =>
+      areSelectedIdsEqual(current, nextSubcategoryIds) ? current : nextSubcategoryIds
+    );
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (applyingSearchParamsRef.current) {
+      applyingSearchParamsRef.current = false;
+      return;
+    }
+
     const nextParams = new URLSearchParams(searchParams);
 
     if (selectedCategoryIds.length === 1) {
@@ -320,10 +396,19 @@ function Shop() {
       nextParams.delete("category");
     }
 
-    if (nextParams.toString() !== searchParams.toString()) {
+    if (selectedSubcategoryIds.length === 1) {
+      nextParams.set("subcategory", String(selectedSubcategoryIds[0]));
+    } else {
+      nextParams.delete("subcategory");
+    }
+
+    const nextSearch = nextParams.toString();
+
+    if (nextSearch !== searchParams.toString()) {
+      internalSearchSyncRef.current = nextSearch;
       setSearchParams(nextParams, { replace: true });
     }
-  }, [searchParams, selectedCategoryIds, setSearchParams]);
+  }, [searchParams, selectedCategoryIds, selectedSubcategoryIds, setSearchParams]);
 
   // ═══ FILTRAR PRODUCTOS ═══
   const filteredProducts = useMemo(() => {
@@ -339,7 +424,7 @@ function Shop() {
         if (!hasSelectedCategory) return false;
       }
 
-      // Filtrar por marca (usando categoría principal)
+      // Filtrar por subcategorías
       if (selectedSubcategoryIds.length > 0) {
         const hasSelectedSubcategory = product.subcategories?.some(sub =>
           selectedSubcategoryIds.includes(Number(sub.id))
@@ -436,7 +521,7 @@ function Shop() {
                   </svg>
                 </div>
                 <h3 className="empty-title">No se encontraron productos</h3>
-                <p className="empty-sub">Intenta cambiar los filtros o seleccionar otra categoría.</p>
+                <p className="empty-sub">Intenta cambiar los filtros o seleccionar otra categoría o subcategoría.</p>
               </div>
             ) : (
               <>

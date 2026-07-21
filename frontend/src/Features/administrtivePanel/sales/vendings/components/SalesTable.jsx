@@ -60,7 +60,7 @@ function EstadoPedidoIndicator({ estado, term }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${classes}`}
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${classes}`}
       title={`Pedido: ${displayLabel}`}
     >
       <span className="relative inline-flex h-1.5 w-1.5 shrink-0">
@@ -105,7 +105,7 @@ function EmptyState({ isSearching }) {
             No se encontraron resultados
           </p>
           <p className="text-sm text-gray-400 text-center max-w-xs">
-            Ninguna venta coincide con la busqueda. Intenta con otro termino.
+            Ninguna venta coincide con la búsqueda. Intenta con otro término.
           </p>
         </>
       ) : (
@@ -114,7 +114,7 @@ function EmptyState({ isSearching }) {
             No hay ventas registradas
           </p>
           <p className="text-sm text-gray-400 text-center max-w-xs">
-            Aun no se han registrado ventas en el sistema. Crea la primera para
+            Aún no se han registrado ventas en el sistema. Crea la primera para
             comenzar.
           </p>
         </>
@@ -148,7 +148,7 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
 
     if (!puedeAnular) {
       showError(
-        "Anulacion no permitida",
+        "Anulación no permitida",
         `No es posible anular una venta con estado "${row.estado}".`,
       );
       return;
@@ -162,8 +162,8 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
 
     if (!puedeDevolver) {
       showError(
-        "Devolucion no permitida",
-        `No es posible generar una devolucion sobre una venta con estado "${row.estado}".`,
+        "Devolución no permitida",
+        `No es posible generar una devolución sobre una venta con estado "${row.estado}".`,
       );
       return;
     }
@@ -188,31 +188,31 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
       <table className="min-w-max w-full">
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="sticky left-0 z-10 bg-[#004D77] px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="sticky left-0 z-10 bg-[#004D77] px-4 py-3 text-center text-sm font-semibold">
               No. Factura
             </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               Cliente
             </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               Vendedor
             </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               Fecha
             </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               M. Pago
             </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               Total
             </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               Estado pedido
             </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               Estado
             </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               Acciones
             </th>
           </tr>
@@ -231,12 +231,12 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
                 className={`group transition-colors duration-150 ${baseRowBg} hover:bg-blue-50`}
               >
                 <td
-                  className={`sticky left-0 z-10 ${baseRowBg} group-hover:bg-blue-50 px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap font-mono transition-colors duration-150`}
+                  className={`sticky left-0 z-10 ${baseRowBg} group-hover:bg-blue-50 px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap font-mono transition-colors duration-150`}
                 >
                   {highlight(String(row.factura || row.id || "-"), search)}
                 </td>
 
-                <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center text-sm text-gray-800 whitespace-nowrap">
                   <TableText
                     value={row.cliente}
                     fallback="Cliente no disponible"
@@ -244,7 +244,7 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
                   />
                 </td>
 
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                   <TableText
                     value={row.vendedor}
                     fallback="Vendedor no disponible"
@@ -252,19 +252,19 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
                   />
                 </td>
 
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                   {highlight(row.fecha || "-", search)}
                 </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                   {highlight(row.metodoPago || "-", search)}
                 </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap font-semibold">
+                <td className="px-4 py-2.5 text-center text-sm text-gray-800 whitespace-nowrap font-semibold">
                   {highlight(row.total || "0", search)}
                 </td>
-                <td className="px-3 py-2 text-center whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center whitespace-nowrap">
                   <EstadoPedidoIndicator estado={row.estadoPedido} term={search} />
                 </td>
-                <td className="px-3 py-2 text-center whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center whitespace-nowrap">
                   <EstadoBadge estado={row.estado} term={search} />
                 </td>
 

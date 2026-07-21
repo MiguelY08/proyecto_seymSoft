@@ -96,9 +96,12 @@ function DetailRow({ icon: Icon, label, value }) {
   return (
     <div className="flex items-start gap-2.5 py-1.5 border-b border-gray-50 last:border-0">
       <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 mt-0.5 ${
-        hasValue ? 'bg-red-50' : 'bg-gray-100'
+        hasValue ? 'bg-[#004D77]/10' : 'bg-gray-100'
       }`}>
-        <Icon className={`w-3 h-3 ${hasValue ? 'text-red-400' : 'text-gray-300'}`} strokeWidth={1.8} />
+        {React.createElement(Icon, {
+          className: `w-3 h-3 ${hasValue ? 'text-[#004D77]' : 'text-gray-300'}`,
+          strokeWidth: 1.8,
+        })}
       </div>
       <div className="flex-1 min-w-0">
         <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wide leading-none mb-0.5">
@@ -335,12 +338,12 @@ function CancelOrder({
           ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-red-600 shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
           <div className="flex items-center gap-2.5">
             <XCircle className="w-5 h-5 text-white" strokeWidth={2} />
             <div>
               <h2 className="text-white font-semibold text-base leading-tight">{titulo}</h2>
-              <p className="text-red-200 text-xs">{entidadLabel} {numero}</p>
+              <p className="text-white/75 text-xs">{entidadLabel} {numero}</p>
             </div>
           </div>
           <button
@@ -357,9 +360,9 @@ function CancelOrder({
         </div>
 
         {/* Aviso de irreversibilidad */}
-        <div className="flex items-start gap-3 px-6 py-3 bg-red-50 border-b border-red-100 shrink-0">
-          <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" strokeWidth={2} />
-          <p className="text-xs text-red-700 leading-relaxed">
+        <div className="flex items-start gap-3 px-6 py-3 bg-yellow-50 border-b border-yellow-100 shrink-0">
+          <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 shrink-0" strokeWidth={2} />
+          <p className="text-xs text-yellow-800 leading-relaxed">
             Esta acción es <strong>permanente e irreversible</strong>. {mensajeIrreversible}
           </p>
         </div>
@@ -416,7 +419,7 @@ function CancelOrder({
                         ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
                         : motivoError
                         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-                        : 'border-gray-300 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+                        : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
                     }`}
                   />
                   <span className={`absolute bottom-2 right-3 text-[10px] ${
@@ -440,17 +443,17 @@ function CancelOrder({
               </div>
 
               {isDetailLoading ? (
-                <div className="flex flex-col items-center justify-center flex-1 py-10 gap-3 rounded-lg border-2 border-dashed border-red-100 bg-red-50/40">
-                  <Loader2 className="w-6 h-6 text-red-500 animate-spin" strokeWidth={2} />
-                  <p className="text-xs text-red-400 text-center">Cargando productos...</p>
+                <div className="flex flex-col items-center justify-center flex-1 py-10 gap-3 rounded-lg border-2 border-dashed border-[#004D77]/15 bg-[#004D77]/5">
+                  <Loader2 className="w-6 h-6 text-[#004D77] animate-spin" strokeWidth={2} />
+                  <p className="text-xs text-[#004D77]/70 text-center">Cargando productos...</p>
                 </div>
               ) : items.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-2 py-1.5 rounded-md bg-red-50 mb-1">
-                    <span className="text-[10px] font-bold text-red-400 uppercase tracking-wide">Producto</span>
-                    <span className="text-[10px] font-bold text-red-400 uppercase tracking-wide text-right">Cant</span>
-                    <span className="text-[10px] font-bold text-red-400 uppercase tracking-wide text-right">V. Unit</span>
-                    <span className="text-[10px] font-bold text-red-400 uppercase tracking-wide text-right">Total</span>
+                  <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-2 py-1.5 rounded-md bg-[#004D77]/10 mb-1">
+                    <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide">Producto</span>
+                    <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide text-right">Cant</span>
+                    <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide text-right">V. Unit</span>
+                    <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide text-right">Total</span>
                   </div>
 
                   <div className="flex flex-col mb-3 flex-1">
@@ -462,8 +465,8 @@ function CancelOrder({
                         }`}
                       >
                         <div className="flex items-start gap-2 min-w-0">
-                          <div className="w-5 h-5 rounded bg-red-50 flex items-center justify-center shrink-0 mt-0.5">
-                            <Package className="w-3 h-3 text-red-300" strokeWidth={1.5} />
+                          <div className="w-5 h-5 rounded bg-[#004D77]/10 flex items-center justify-center shrink-0 mt-0.5">
+                            <Package className="w-3 h-3 text-[#004D77]/60" strokeWidth={1.5} />
                           </div>
                           <div className="flex flex-col min-w-0">
                             <span className="text-xs text-gray-700 truncate">{producto.nombre}</span>
@@ -489,7 +492,7 @@ function CancelOrder({
                       <span className="text-xs text-gray-400">IVA (19%)</span>
                       <span className="text-xs text-gray-600 tabular-nums">{formatCurrency(iva)}</span>
                     </div>
-                    <div className="flex justify-between items-center mt-1 px-3 py-2.5 bg-red-600 rounded-lg">
+                    <div className="flex justify-between items-center mt-1 px-3 py-2.5 bg-[#004D77] rounded-lg">
                       <span className="text-xs font-bold text-white/80 uppercase tracking-wide">Total</span>
                       <span className="text-sm font-bold text-white tabular-nums">{formatCurrency(total)}</span>
                     </div>
@@ -529,8 +532,8 @@ function CancelOrder({
             disabled={isSubmitting}
             className={`flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition-colors ${
               isSubmitting
-                ? 'bg-red-400 cursor-not-allowed'
-                : 'bg-red-600 hover:bg-red-700 cursor-pointer'
+                ? 'bg-[#004D77]/50 cursor-not-allowed'
+                : 'bg-[#004D77] hover:bg-[#003D5e] cursor-pointer'
             }`}
           >
             {isSubmitting ? (

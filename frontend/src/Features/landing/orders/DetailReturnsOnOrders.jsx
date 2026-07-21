@@ -23,6 +23,7 @@ import {
   getReturnSignature,
   getStatusClasses,
 } from './salesReturnTracking';
+import { ORDER_FONT_FAMILY, injectOrderTypography } from './orderTypography';
 
 const POLL_INTERVAL = 30000;
 
@@ -44,6 +45,7 @@ const stepClasses = {
 };
 
 function DetailReturnsOnOrders() {
+  injectOrderTypography();
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated, loading: authLoading } = useAuthenticatedClient();
@@ -333,7 +335,7 @@ function InfoCard({ label, value }) {
 
 function PageShell({ children }) {
   return (
-    <div className="min-h-screen bg-[#f6f9fc]">
+    <div className="min-h-screen bg-[#f6f9fc]" style={{ fontFamily: ORDER_FONT_FAMILY }}>
       <main className="mx-auto max-w-7xl px-5 py-8">{children}</main>
     </div>
   );

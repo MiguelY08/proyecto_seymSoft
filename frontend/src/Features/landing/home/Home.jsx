@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ShoppingBag, Briefcase, ClipboardPen, FileText, Palette, ArrowRight } from 'lucide-react';
 
@@ -80,6 +80,60 @@ const PAGE_STYLES = `
   .btn-outline:active { transform: scale(0.97); }
 
   /* ─ Category cards ─ */
+  .categories-grid {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 2px 30px 12px;
+    scroll-behavior: smooth;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+    scrollbar-color: #c7ddea transparent;
+  }
+  .categories-grid::-webkit-scrollbar {
+    height: 5px;
+  }
+  .categories-grid::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .categories-grid::-webkit-scrollbar-thumb {
+    background: #c7ddea;
+    border-radius: 999px;
+  }
+  .categories-carousel {
+    position: relative;
+  }
+  .cat-scroll-btn {
+    position: absolute;
+    top: 50%;
+    z-index: 20;
+    display: flex;
+    width: 34px;
+    height: 34px;
+    transform: translateY(-50%);
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(0,77,119,0.16);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.92);
+    color: #004D77;
+    box-shadow: 0 8px 18px rgba(0,77,119,0.12);
+    backdrop-filter: blur(8px);
+    transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  }
+  .cat-scroll-btn:hover {
+    background: #ffffff;
+    box-shadow: 0 10px 24px rgba(0,77,119,0.16);
+  }
+  .cat-scroll-btn:active {
+    transform: translateY(-50%) scale(0.94);
+  }
+  .cat-scroll-btn-left {
+    left: -2px;
+  }
+  .cat-scroll-btn-right {
+    right: -2px;
+  }
   .cat-card {
     background: #ffffff;
     border: 1.5px solid #e2edf5;
@@ -88,8 +142,11 @@ const PAGE_STYLES = `
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    padding: 20px 12px;
+    gap: 8px;
+    flex: 0 0 clamp(118px, 36vw, 148px);
+    min-height: 104px;
+    padding: 14px 10px;
+    scroll-snap-align: start;
     cursor: pointer;
     text-decoration: none;
     transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
@@ -102,8 +159,8 @@ const PAGE_STYLES = `
   }
   .cat-card:active { transform: scale(0.96); }
   .cat-icon-wrap {
-    width: 52px; height: 52px;
-    border-radius: 14px;
+    width: 42px; height: 42px;
+    border-radius: 12px;
     background: linear-gradient(140deg, #e8f4fd 0%, #d4ebf8 100%);
     display: flex;
     align-items: center;
@@ -114,13 +171,57 @@ const PAGE_STYLES = `
     transform: scale(1.1) rotate(-4deg);
   }
   .cat-label {
-    font-size: 0.68rem;
+    display: -webkit-box;
+    max-width: 100%;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-size: 0.62rem;
     font-weight: 800;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: #1e4060;
     text-align: center;
     line-height: 1.3;
+  }
+  @media (min-width: 390px) {
+    .cat-card {
+      flex-basis: clamp(132px, 34vw, 156px);
+      min-height: 112px;
+      padding: 16px 12px;
+    }
+    .cat-icon-wrap {
+      width: 46px; height: 46px;
+      border-radius: 13px;
+    }
+    .cat-label {
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+    }
+  }
+  @media (min-width: 768px) {
+    .cat-scroll-btn {
+      display: none;
+    }
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      overflow: visible;
+      padding: 0;
+      scroll-snap-type: none;
+    }
+    .cat-card {
+      flex: initial;
+      gap: 10px;
+      min-height: 120px;
+      padding: 20px 12px;
+      scroll-snap-align: none;
+    }
+    .cat-icon-wrap {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+    }
   }
 
   /* ─ Carousel ─ */
@@ -145,6 +246,29 @@ const PAGE_STYLES = `
   }
   .products-grid .pm-card {
     animation: pm-fadeUp 0.45s ease both;
+  }
+  .products-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  @media (min-width: 340px) {
+    .products-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+  }
+  @media (min-width: 640px) {
+    .products-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .products-grid {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+    }
   }
   .products-grid .pm-card:nth-child(1)  { animation-delay: 0.04s; }
   .products-grid .pm-card:nth-child(2)  { animation-delay: 0.09s; }
@@ -275,6 +399,7 @@ function Home() {
   const [categories, setCategories] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const categoriesScrollRef = useRef(null);
 
   // Hook para obtener clientType
   const { clientType, loading: loadingClientType } = useClientType();
@@ -371,6 +496,15 @@ function Home() {
   const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % slides.length);
   const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
   const goToSlide = (index) => setCurrentSlide(index);
+  const scrollCategories = (direction) => {
+    const container = categoriesScrollRef.current;
+    if (!container) return;
+
+    container.scrollBy({
+      left: direction === 'left' ? -180 : 180,
+      behavior: 'smooth',
+    });
+  };
 
   return (
     <div className="home-page">
@@ -473,33 +607,47 @@ function Home() {
           </Link>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}
-          className="categories-grid">
-          <style>{`
-            @media (max-width: 767px) { .categories-grid { grid-template-columns: repeat(2, 1fr) !important; } }
-            @media (min-width: 768px) and (max-width: 1023px) { .categories-grid { grid-template-columns: repeat(3, 1fr) !important; } }
-          `}</style>
+        <div className="categories-carousel">
+          <button
+            type="button"
+            className="cat-scroll-btn cat-scroll-btn-left"
+            aria-label="Ver categorías anteriores"
+            onClick={() => scrollCategories('left')}
+          >
+            <ChevronLeft size={17} strokeWidth={2.5} />
+          </button>
 
-          {loadingCategories ? (
-            // Skeleton loaders
-            Array.from({ length: 5 }).map((_, i) => (
-              <div key={`skeleton-${i}`} className="cat-card loading-skeleton" style={{ minHeight: '120px' }} />
-            ))
-          ) : categories.length > 0 ? (
-            categories.map((cat) => {
-              const Icon = categoryIcons[cat.id] || ShoppingBag;
-              return (
-                <Link key={cat.id} to={`/shop?category=${cat.id}`} className="cat-card">
-                  <div className="cat-icon-wrap">
-                    <Icon size={24} color="#004D77" strokeWidth={1.75} />
-                  </div>
-                  <span className="cat-label">{cat.name}</span>
-                </Link>
-              );
-            })
-          ) : (
-            <p className="section-subtitle">No hay categorías disponibles</p>
-          )}
+          <div className="categories-grid" ref={categoriesScrollRef}>
+            {loadingCategories ? (
+              // Skeleton loaders
+              Array.from({ length: 5 }).map((_, i) => (
+                <div key={`skeleton-${i}`} className="cat-card loading-skeleton" />
+              ))
+            ) : categories.length > 0 ? (
+              categories.slice(0, 5).map((cat) => {
+                const Icon = categoryIcons[cat.id] || ShoppingBag;
+                return (
+                  <Link key={cat.id} to={`/shop?category=${cat.id}`} className="cat-card">
+                    <div className="cat-icon-wrap">
+                      <Icon size={24} color="#004D77" strokeWidth={1.75} />
+                    </div>
+                    <span className="cat-label">{cat.name}</span>
+                  </Link>
+                );
+              })
+            ) : (
+              <p className="section-subtitle">No hay categorías disponibles</p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="cat-scroll-btn cat-scroll-btn-right"
+            aria-label="Ver más categorías"
+            onClick={() => scrollCategories('right')}
+          >
+            <ChevronRight size={17} strokeWidth={2.5} />
+          </button>
         </div>
 
         <div className="section-divider" />
@@ -520,13 +668,7 @@ function Home() {
 
         <div
           className="products-grid"
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}
         >
-          <style>{`
-            @media (max-width: 639px)  { .products-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; } }
-            @media (min-width: 640px) and (max-width: 1023px) { .products-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 12px !important; } }
-          `}</style>
-
           {loadingProducts || loadingClientType ? (
             // Skeleton loaders
             Array.from({ length: 8 }).map((_, i) => (

@@ -587,23 +587,23 @@ export default function RolesTable({
 
           <tr>
 
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               #
             </th>
 
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               Nombre del Rol
             </th>
 
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               Descripción
             </th>
 
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               Fecha Creación
             </th>
 
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               Acciones
             </th>
 
@@ -629,7 +629,7 @@ export default function RolesTable({
                   className={`${rowBg} hover:bg-blue-50 cursor-pointer transition-colors`}
                 >
 
-                  <td className="px-3 py-2 text-center text-xs">
+                  <td className="px-4 py-2.5 text-center text-sm text-gray-700 font-medium">
 
                     {index + 1}
 
@@ -653,7 +653,7 @@ export default function RolesTable({
 
                   </td>
 
-                  <td className="px-3 py-2 text-center text-xs">
+                  <td className="px-4 py-2.5 text-center text-sm text-gray-700">
 
                     {
 
@@ -671,9 +671,9 @@ export default function RolesTable({
 
                   </td>
 
-                  <td className="px-3 py-2">
+                  <td className="px-4 py-2.5">
 
-                    <div className="flex items-center justify-center gap-3">
+                    <div className="flex items-center justify-center gap-2">
 
                       {
 
@@ -700,10 +700,10 @@ export default function RolesTable({
                         >
 
                           <span
-                            className={`absolute top-1/2 -translate-y-1/2 text-white text-[9px] font-bold transition-all duration-300 ${
+                            className={`absolute top-1/2 -translate-y-1/2 text-white text-[10px] font-bold transition-all duration-300 ${
                               role.active
-                                ? "left-1.5"
-                                : "right-1.5"
+                                ? "left-2"
+                                : "right-2"
                             }`}
                           >
 
@@ -712,9 +712,9 @@ export default function RolesTable({
                           </span>
 
                           <span
-                            className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
+                            className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-300 ${
                               role.active
-                                ? "left-6"
+                                ? "left-[26px]"
                                 : "left-0.5"
                             }`}
                           />
@@ -732,7 +732,7 @@ export default function RolesTable({
                         &&
 
                         <Info
-                          size={16}
+                          size={20}
                           onClick={() =>
                             handleViewRole(role)
                           }
@@ -754,7 +754,7 @@ export default function RolesTable({
                         &&
 
                         <SquarePen
-                          size={16}
+                          size={20}
                           onClick={() =>
                             handleEditRole(role)
                           }
@@ -776,7 +776,7 @@ export default function RolesTable({
                         &&
 
                         <Trash2
-                          size={16}
+                          size={20}
                           onClick={() =>
                             handleDeleteRole(role)
                           }

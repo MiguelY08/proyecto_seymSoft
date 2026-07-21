@@ -39,6 +39,7 @@ function ShopDetail() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [addingToCart, setAddingToCart] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -149,18 +150,32 @@ function ShopDetail() {
     );
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!cartProduct || !available) {
       showError("Producto no disponible", "Este producto no tiene stock.");
       return;
     }
 
-    addToCart(cartProduct, quantity);
-    showSuccess(
-      "Añadido al carrito",
-      `${quantity} x ${product.name} se agregó al carrito.`
-    );
-    setQuantity(1);
+    try {
+      setAddingToCart(true);
+      const wasAdded = await addToCart(cartProduct, quantity);
+
+      if (!wasAdded) {
+        showError(
+          "No se pudo agregar",
+          "Intenta nuevamente en unos segundos."
+        );
+        return;
+      }
+
+      showSuccess(
+        "Añadido al carrito",
+        `${quantity} x ${product.name} se agregó al carrito.`
+      );
+      setQuantity(1);
+    } finally {
+      setAddingToCart(false);
+    }
   };
 
   if (loading) {
@@ -207,13 +222,13 @@ function ShopDetail() {
 
         <section className="grid gap-8 lg:grid-cols-2 lg:gap-12">
           <div>
-            <div className="relative flex min-h-[420px] items-center justify-center overflow-hidden rounded-[28px] border border-[#dcebf3] bg-gradient-to-br from-[#eef6fb] to-[#dfeef8] p-8">
+            <div className="relative flex min-h-[260px] items-center justify-center overflow-hidden rounded-2xl border border-[#dcebf3] bg-gradient-to-br from-[#eef6fb] to-[#dfeef8] p-4 sm:min-h-[340px] sm:rounded-[24px] sm:p-6 lg:min-h-[420px] lg:rounded-[28px] lg:p-8">
               {images.length > 1 && (
                 <button
                   type="button"
                   aria-label="Ver imagen anterior"
                   onClick={showPreviousImage}
-                  className="absolute left-4 rounded-full bg-white p-3 text-[#004D77] shadow-md"
+                  className="absolute left-3 rounded-full bg-white p-2.5 text-[#004D77] shadow-md sm:left-4 sm:p-3"
                 >
                   <ChevronLeft size={20} />
                 </button>
@@ -223,7 +238,7 @@ function ShopDetail() {
                 <img
                   src={selectedImage.url}
                   alt={selectedImage.alt}
-                  className="max-h-[400px] w-full object-contain"
+                  className="max-h-[240px] w-full object-contain sm:max-h-[320px] lg:max-h-[400px]"
                 />
               ) : (
                 <span className="font-bold text-slate-500">
@@ -237,11 +252,11 @@ function ShopDetail() {
                     type="button"
                     aria-label="Ver imagen siguiente"
                     onClick={showNextImage}
-                    className="absolute right-4 rounded-full bg-white p-3 text-[#004D77] shadow-md"
+                    className="absolute right-3 rounded-full bg-white p-2.5 text-[#004D77] shadow-md sm:right-4 sm:p-3"
                   >
                     <ChevronRight size={20} />
                   </button>
-                  <span className="absolute bottom-4 right-4 rounded-full bg-[#004D77] px-3 py-1 text-xs font-bold text-white">
+                  <span className="absolute bottom-3 right-3 rounded-full bg-[#004D77] px-3 py-1 text-xs font-bold text-white sm:bottom-4 sm:right-4">
                     {selectedImageIndex + 1}/{images.length}
                   </span>
                 </>
@@ -249,13 +264,13 @@ function ShopDetail() {
             </div>
 
             {images.length > 1 && (
-              <div className="mt-3 flex flex-wrap gap-3">
+              <div className="mt-3 flex flex-wrap gap-2 sm:gap-3">
                 {images.map((image, index) => (
                   <button
                     key={`${image.url}-${index}`}
                     type="button"
                     onClick={() => setSelectedImageIndex(index)}
-                    className={`h-20 w-20 rounded-2xl border bg-white p-2 ${
+                    className={`h-16 w-16 rounded-xl border bg-white p-1.5 sm:h-20 sm:w-20 sm:rounded-2xl sm:p-2 ${
                       selectedImageIndex === index
                         ? "border-[#004D77]"
                         : "border-slate-200"
@@ -272,18 +287,18 @@ function ShopDetail() {
             )}
           </div>
 
-          <div className="rounded-[28px] border border-[#e4eff6] bg-white p-7 shadow-sm">
+          <div className="rounded-2xl border border-[#e4eff6] bg-white p-4 shadow-sm sm:rounded-[24px] sm:p-6 lg:rounded-[28px] lg:p-7">
             <span className="inline-block rounded-full bg-[#e8f4fd] px-3 py-1 text-xs font-black uppercase tracking-wider text-[#004D77]">
               {categoryName}
             </span>
-            <h1 className="mt-5 text-3xl font-black text-[#0c2a3a]">
+            <h1 className="mt-4 text-2xl font-black leading-tight text-[#0c2a3a] sm:mt-5 sm:text-3xl">
               {product.name}
             </h1>
-            <p className="mt-4 leading-7 text-slate-600">
+            <p className="mt-3 text-sm leading-6 text-slate-600 sm:mt-4 sm:text-base sm:leading-7">
               {product.description || "Este producto no tiene descripción disponible."}
             </p>
 
-            <div className="mt-6 text-xs font-black uppercase tracking-wider text-slate-500">
+            <div className="mt-5 text-[0.7rem] font-black uppercase tracking-wider text-slate-500 sm:mt-6 sm:text-xs">
               {pricing.label}
             </div>
             {pricing.hasDiscount && (
@@ -291,22 +306,36 @@ function ShopDetail() {
                 ${pricing.originalPrice.toLocaleString("es-CO")} COP
               </div>
             )}
-            <div className="mt-1 text-4xl font-black text-[#004D77]">
+            <div className="mt-1 text-3xl font-black leading-none text-[#004D77] sm:text-4xl">
               ${totalPrice.toLocaleString("es-CO")}
               <span className="ml-2 text-sm text-slate-400">COP</span>
             </div>
 
-            <p className="mt-4 font-bold text-slate-600">
-              {available ? `${stock} unidades disponibles` : "Producto agotado"}
-            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 sm:mt-4">
+              <span
+                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-black uppercase tracking-wide ${
+                  available
+                    ? "bg-[#edfdf3] text-[#12a150]"
+                    : "bg-[#fff1f0] text-[#ff4d4f]"
+                }`}
+              >
+                {available ? "Disponible" : "Producto agotado"}
+              </span>
 
-            <div className="mt-7 flex flex-wrap items-center gap-4">
-              <div className="flex overflow-hidden rounded-full border border-slate-200">
+              {available && (
+                <span className="inline-flex items-center rounded-full bg-[#f4f8fb] px-3 py-1 text-xs font-black uppercase tracking-wide text-slate-500">
+                  Stock: <span className="ml-1 text-[#004D77]">{stock}</span>
+                </span>
+              )}
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row sm:items-center">
+              <div className="flex h-12 overflow-hidden rounded-full border border-slate-200 sm:w-auto">
                 <button
                   type="button"
                   disabled={quantity <= 1}
                   onClick={() => setQuantity(current => Math.max(1, current - 1))}
-                  className="bg-slate-50 p-3 disabled:opacity-40"
+                  className="flex h-12 w-12 items-center justify-center bg-slate-50 disabled:opacity-40"
                 >
                   <Minus size={17} />
                 </button>
@@ -323,13 +352,13 @@ function ShopDetail() {
                     if (!Number.isFinite(nextQuantity)) return;
                     setQuantity(Math.min(stock, Math.max(1, nextQuantity)));
                   }}
-                  className="w-16 border-x border-slate-200 px-2 text-center font-black outline-none disabled:bg-slate-100"
+                  className="h-12 w-full min-w-14 border-x border-slate-200 px-2 text-center font-black outline-none disabled:bg-slate-100 sm:w-16"
                 />
                 <button
                   type="button"
                   disabled={!available || quantity >= stock}
                   onClick={() => setQuantity(current => Math.min(stock, current + 1))}
-                  className="bg-slate-50 p-3 disabled:opacity-40"
+                  className="flex h-12 w-12 items-center justify-center bg-slate-50 disabled:opacity-40"
                 >
                   <Plus size={17} />
                 </button>
@@ -337,23 +366,38 @@ function ShopDetail() {
 
               <button
                 type="button"
-                disabled={!available}
+                disabled={!available || addingToCart}
                 onClick={handleAddToCart}
-                className="flex items-center gap-2 rounded-full bg-[#004D77] px-6 py-3 font-black uppercase tracking-wide text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#004D77] px-5 text-sm font-black uppercase tracking-wide text-white disabled:cursor-not-allowed disabled:bg-slate-300 sm:w-auto sm:px-6"
               >
                 <ShoppingCart size={17} />
-                {available ? "Añadir al carrito" : "Producto agotado"}
+                {addingToCart
+                  ? "Añadiendo..."
+                  : available ? "Añadir al carrito" : "Producto agotado"}
               </button>
             </div>
 
-            <div className="mt-8 border-t border-slate-200 pt-6">
-              <h2 className="font-black uppercase tracking-wider text-slate-700">
+            <div className="mt-7 border-t border-slate-200 pt-5 sm:mt-8 sm:pt-6">
+              <h2 className="text-xs font-black uppercase tracking-wider text-slate-700">
                 Información del producto
               </h2>
-              <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                {product.reference && <li>Referencia: {product.reference}</li>}
-                <li>Unidad: {product.unitMeasure?.name || "Unidad"}</li>
-                <li>Stock disponible: {stock}</li>
+              <ul className="mt-3 overflow-hidden rounded-2xl border border-slate-100 bg-slate-50/70 text-sm">
+                {product.reference && (
+                  <li className="flex items-center justify-between gap-4 border-b border-white px-3 py-2.5 sm:px-4">
+                    <span className="font-bold text-slate-500">Referencia</span>
+                    <span className="text-right font-black text-[#0c2a3a]">{product.reference}</span>
+                  </li>
+                )}
+                <li className="flex items-center justify-between gap-4 border-b border-white px-3 py-2.5 sm:px-4">
+                  <span className="font-bold text-slate-500">Unidad</span>
+                  <span className="text-right font-black text-[#0c2a3a]">
+                    {product.unitMeasure?.name || "Unidad"}
+                  </span>
+                </li>
+                <li className="flex items-center justify-between gap-4 px-3 py-2.5 sm:px-4">
+                  <span className="font-bold text-slate-500">Stock disponible</span>
+                  <span className="text-right font-black text-[#0c2a3a]">{stock}</span>
+                </li>
               </ul>
             </div>
           </div>
@@ -375,17 +419,17 @@ function ShopDetail() {
                 onClick={() =>
                   relatedRef.current?.scrollBy({ left: -280, behavior: "smooth" })
                 }
-                className="shrink-0 rounded-full border border-slate-200 bg-white p-3 text-[#004D77]"
+                className="hidden shrink-0 rounded-full border border-slate-200 bg-white p-3 text-[#004D77] sm:inline-flex"
               >
                 <ChevronLeft size={18} />
               </button>
 
               <div
                 ref={relatedRef}
-                className="flex flex-1 gap-4 overflow-x-auto scroll-smooth py-2"
+                className="flex flex-1 snap-x snap-proximity gap-2 overflow-x-auto scroll-smooth py-2 sm:gap-4"
               >
                 {relatedProducts.map(relatedProduct => (
-                  <div key={relatedProduct.id} className="w-56 shrink-0">
+                  <div key={relatedProduct.id} className="w-[74vw] max-w-56 shrink-0 snap-start min-[420px]:w-48 sm:w-56">
                     <ProductCard
                       product={relatedProduct}
                       clientType={clientType}
@@ -400,7 +444,7 @@ function ShopDetail() {
                 onClick={() =>
                   relatedRef.current?.scrollBy({ left: 280, behavior: "smooth" })
                 }
-                className="shrink-0 rounded-full border border-slate-200 bg-white p-3 text-[#004D77]"
+                className="hidden shrink-0 rounded-full border border-slate-200 bg-white p-3 text-[#004D77] sm:inline-flex"
               >
                 <ChevronRight size={18} />
               </button>

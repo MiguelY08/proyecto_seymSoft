@@ -209,7 +209,7 @@ export const logout = async()=>{
 
         {
 
-          refresh_token:
+          refreshToken:
           session.refreshToken
 
         }
@@ -268,6 +268,20 @@ export const getProfile = async()=>{
       requiresPasswordSetup
 
     }=response.data.data;
+
+    const currentSession =
+      getSession();
+
+    if (currentSession?.accessToken) {
+      saveSession({
+        ...currentSession,
+        user,
+        role: role || null,
+        permissions: permissions || [],
+        client: client || null,
+        requiresPasswordSetup: requiresPasswordSetup || false
+      });
+    }
 
     return{
 
@@ -336,7 +350,7 @@ export const updateProfile = async(
 
     ){
 
-      body.full_name=
+      body.fullName=
       changes.fullName;
 
     }
@@ -365,6 +379,17 @@ export const updateProfile = async(
 
     if(
 
+      changes.address!==undefined
+
+    ){
+
+      body.address=
+      changes.address;
+
+    }
+
+    if(
+
       changes.currentPassword!==undefined
 
     ){
@@ -380,7 +405,7 @@ export const updateProfile = async(
 
     ){
 
-      body.pass_word=
+      body.password=
       changes.newPassword;
 
     }
@@ -406,31 +431,62 @@ export const updateProfile = async(
 
       );
 
+    const responseData =
+      response.data.data || response.data || {};
+
     const{
 
       user,
       role,
       permissions,
       client,
+      unchangedFields,
 
-    }=response.data.data;
+    }=responseData;
 
+    const requiresReLogin =
+      response.data.requiresReLogin === true
+      ||
+      responseData.requiresReLogin === true;
 
     const currentSession=
       getSession();
+    const updatedUser =
+      user ?? currentSession?.user ?? null;
+    const updatedRole =
+      role ?? currentSession?.role ?? null;
+    const updatedPermissions =
+      permissions ?? currentSession?.permissions ?? [];
+    const updatedClient =
+      client ?? currentSession?.client ?? null;
 
+    if (requiresReLogin) {
+      clearSession();
+
+      return{
+
+        success:true,
+
+        requiresReLogin:true,
+
+        unchangedFields: unchangedFields || {},
+
+        message: response.data.message || responseData.message
+
+      };
+    }
 
     saveSession({
 
       ...currentSession,
 
-      user,
+      user: updatedUser,
 
-      role,
+      role: updatedRole,
 
-      permissions,
+      permissions: updatedPermissions,
 
-      client: client ?? currentSession?.client ?? null,
+      client: updatedClient,
 
 
     });
@@ -440,13 +496,19 @@ export const updateProfile = async(
 
       success:true,
 
-      user,
+      user: updatedUser,
 
-      role,
+      role: updatedRole,
 
-      permissions,
+      permissions: updatedPermissions,
 
-      client: client ?? currentSession?.client ?? null
+      client: updatedClient,
+
+      unchangedFields: unchangedFields || {},
+
+      message: response.data.message || responseData.message,
+
+      requiresReLogin:false
 
     };
 
@@ -469,7 +531,11 @@ export const updateProfile = async(
 
       ||
 
-      "Error al actualizar perfil"
+      "Error al actualizar perfil",
+
+      status: error.response?.status,
+
+      data: error.response?.data?.data
 
     };
 

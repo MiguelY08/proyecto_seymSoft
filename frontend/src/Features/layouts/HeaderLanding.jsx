@@ -1,32 +1,19 @@
-﻿import { useState, useRef, useEffect, useCallback } from "react";
-import { useLocation, Link, useNavigate } from "react-router-dom";
-import {
-  Search,
-  Home,
-  Store,
-  Package,
-  Heart,
-  ShoppingCart,
-  Menu,
-  SquarePen,
-  LogOut,
-  User,
-  UserPlus,
-  X,
-  UserCircle2,
-  Loader2,
-  LogIn,
-  LayoutDashboard
-} from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
-import logo from "../../assets/PapeleriaMagicLogo.png";
-import horizontalLogo from "../../assets/PMLogo_Horizontal.png";
 import { useAuth } from "../access/context/AuthContext";
 import { useAlert } from "../shared/alerts/useAlert";
 import { useCart } from "../shared/Context/CartContext";
 import { useFavorites } from "../shared/Context/Favoritescontext";
 import EditProfileForm from "../access/components/EditProfileForm";
-
+import {
+  HeaderActions,
+  HeaderLogo,
+  HeaderNav,
+  HeaderSearch,
+  MobileMenu,
+  useHeaderSearch
+} from "./landingHeader";
 
 function HeaderLanding() {
   const {
@@ -54,19 +41,12 @@ function HeaderLanding() {
   const location =
     useLocation();
 
-  const [
-    searchQuery,
-    setSearchQuery
-  ] = useState("");
+  const headerSearch =
+    useHeaderSearch();
 
   const [
     menuOpen,
     setMenuOpen
-  ] = useState(false);
-
-  const [
-    scrolled,
-    setScrolled
   ] = useState(false);
 
   const [
@@ -75,7 +55,7 @@ function HeaderLanding() {
   ] = useState(false);
 
   const [
-    isEditProfileOpen, // ✅ NUEVO
+    isEditProfileOpen,
     setIsEditProfileOpen
   ] = useState(false);
 
@@ -87,30 +67,10 @@ function HeaderLanding() {
   const modalRef =
     useRef(null);
 
-  const mobileMenuRef =
-    useRef(null);
-
   const isActive =
     (path) =>
       location.pathname === path;
 
-  // ─────────────────────────────
-  // SEARCH
-  // ─────────────────────────────
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (!searchQuery.trim())
-      return;
-    navigate(
-      `/shop?search=${encodeURIComponent(
-        searchQuery.trim()
-      )}`
-    );
-  };
-
-  // ─────────────────────────────
-  // LOGOUT
-  // ─────────────────────────────
   const handleLogout =
   useCallback(async () => {
     setIsLoggingOut(
@@ -144,9 +104,6 @@ function HeaderLanding() {
     showSuccess
   ]);
 
-  // ─────────────────────────────
-  // PANEL ADMINISTRATIVO
-  // ─────────────────────────────
   const handleGoToAdmin =
   async () => {
     setProfileModal(
@@ -173,30 +130,6 @@ function HeaderLanding() {
     }
   };
 
-  // ─────────────────────────────
-  // SCROLL HEADER
-  // ─────────────────────────────
-  useEffect(() => {
-    const handleScroll =
-    () => {
-      setScrolled(
-        window.scrollY > 50
-      );
-    };
-    window.addEventListener(
-      "scroll",
-      handleScroll
-    );
-    return () =>
-      window.removeEventListener(
-        "scroll",
-        handleScroll
-      );
-  }, []);
-
-  // ─────────────────────────────
-  // CLOSE PROFILE MODAL
-  // ─────────────────────────────
   useEffect(() => {
     const handleClickOutside =
     (e) => {
@@ -225,9 +158,6 @@ function HeaderLanding() {
       );
   }, [profileModal]);
 
-  // ─────────────────────────────
-  // CLOSE MENUS ON ROUTE CHANGE
-  // ─────────────────────────────
   useEffect(() => {
     setProfileModal(
       false
@@ -237,9 +167,6 @@ function HeaderLanding() {
     );
   }, [location]);
 
-  // ─────────────────────────────
-  // BLOCK BODY SCROLL
-  // ─────────────────────────────
   useEffect(() => {
     if (menuOpen) {
       document.body.style.overflow =
@@ -254,9 +181,6 @@ function HeaderLanding() {
     };
   }, [menuOpen]);
 
-  // ─────────────────────────────
-  // USER INITIALS
-  // ─────────────────────────────
   const getInitials =
   useCallback((name) => {
     if (!name)
@@ -274,9 +198,6 @@ function HeaderLanding() {
       .join("");
   }, []);
 
-  // ─────────────────────────────
-  // ROLE NAME
-  // ─────────────────────────────
   const roleName =
     role?.nameRole
     ||
@@ -284,521 +205,88 @@ function HeaderLanding() {
     ||
     "Cliente";
 
+  const openProfileEdit = () => {
+    setIsEditProfileOpen(
+      true
+    );
+    setProfileModal(
+      false
+    );
+  };
+
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 border-b transition-all duration-150 backdrop-blur-md bg-white/85 ${
-          scrolled
-            ? "shadow-sm"
-            : "shadow-md"
-        }`}
+        className="fixed top-0 left-0 right-0 z-50 border-b bg-white/85 shadow-md backdrop-blur-md transition-all duration-150"
         style={{
           borderBottomColor:
             "#e2edf5"
         }}
       >
-
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
-          <div
-            className={`flex items-center justify-between gap-2 sm:gap-4 transition-all duration-150 ${
-              scrolled
-                ? "h-11 sm:h-12"
-                : "h-14 sm:h-16"
-            }`}
-          >
-
-            {/* LOGO */}
-            <Link
-              to="/"
-              className="flex shrink-0 items-center"
-              aria-label="Inicio Papelería Magic"
-            >
-              <div
-                className={`rounded-full overflow-hidden cursor-pointer transition-all duration-150 md:hidden ${
-                  scrolled
-                    ? "w-7 h-7"
-                    : "w-9 h-9"
-                }`}
-              >
-                <img
-                  src={logo}
-                  alt="Logo"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <img
-                src={horizontalLogo}
-                alt="Papelería Magic"
-                className={`hidden object-contain transition-all duration-150 md:block ${
-                  scrolled
-                    ? "h-8 max-w-[130px] lg:max-w-[165px]"
-                    : "h-11 max-w-[160px] lg:max-w-[220px]"
-                }`}
-              />
-              <h1
-                className={`hidden font-serif italic text-[#004D77] font-semibold tracking-tight transition-all duration-150 ${
-                  scrolled
-                    ? "text-lg sm:text-xl"
-                    : "text-lg sm:text-2xl"
-                }`}
-              >
-                Papelería Magic
-              </h1>
-            </Link>
-
-            {/* SEARCH */}
-            <form
-              onSubmit={handleSearch}
-              className="flex-1 max-w-[13rem] sm:max-w-sm lg:max-w-xl"
-            >
-              <div className="relative group">
-                <input
-                  type="text"
-                  placeholder="Buscar"
-                  value={searchQuery}
-                  onChange={(e)=>
-                    setSearchQuery(
-                      e.target.value
-                    )
-                  }
-                  className={`w-full pl-3 pr-9 sm:pr-10 rounded-full border border-[#e2edf5] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none transition-all duration-150 text-xs sm:text-sm text-gray-700 placeholder-gray-400 bg-[#f8fafc] ${
-                    scrolled
-                      ? "py-1"
-                      : "py-1.5"
-                  }`}
-                />
-                <button
-                  type="submit"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer"
-                >
-                  <Search
-                    className={`text-gray-500 hover:text-[#004D77] transition-all duration-150 ${
-                      scrolled
-                        ? "w-3.5 h-3.5"
-                        : "w-4 h-4"
-                    }`}
-                    strokeWidth={2}
-                  />
-                </button>
-              </div>
-            </form>
-
-            {/* NAV DESKTOP */}
-            <nav className="hidden lg:flex items-center gap-0.5">
-              <NavLink
-                icon={Home}
-                label="Inicio"
-                to="/"
-                active={isActive("/")}
-                scrolled={scrolled}
-              />
-              <NavLink
-                icon={Store}
-                label="Tienda"
-                to="/shop"
-                active={isActive("/shop")}
-                scrolled={scrolled}
-              />
-              <NavLink
-                icon={Package}
-                label="Pedidos"
-                to="/orders-l"
-                active={isActive("/orders-l")}
-                scrolled={scrolled}
-              />
-            </nav>
-
-            {/* ACTIONS */}
-            <div className="flex items-center gap-0.5 sm:gap-1">
-              <IconButton
-                icon={Heart}
-                to="/favorites"
-                badge={favoritesCount}
-                className="hidden sm:block"
-                scrolled={scrolled}
-                active={isActive("/favorites")}
-              />
-              <IconButton
-                icon={ShoppingCart}
-                to="/cart"
-                badge={cartCount}
-                scrolled={scrolled}
-                active={isActive("/cart")}
-              />
-
-              {/* PROFILE */}
-              <div
-                className="relative hidden sm:block"
-                ref={modalRef}
-              >
-                <button
-                  onClick={()=>
-                    setProfileModal(
-                      !profileModal
-                    )
-                  }
-                  className={`relative rounded-full bg-[#004D77] hover:bg-[#003d5e] transition-all duration-150 cursor-pointer flex items-center justify-center font-bold text-white ${
-                    scrolled
-                      ? "w-7 h-7 text-[0.68rem]"
-                      : "w-8 h-8 text-xs"
-                  }`}
-                >
-                  {
-                    user
-                    ?
-                    getInitials(
-                      user.fullName
-                      ||
-                      user.name
-                    )
-                    :
-                    <User size={15} />
-                  }
-                </button>
-                {
-                  profileModal
-                  &&
-                  <div
-                    className="absolute right-0 top-full mt-2 w-60 sm:w-64 bg-white rounded-xl shadow-xl border border-[#e2edf5] z-50 overflow-hidden"
-                  >
-
-                    {/* HEADER */}
-                    <div className="flex flex-col items-center gap-1 px-4 py-3 border-b border-[#e2edf5]">
-                      <div className="w-11 h-11 rounded-full bg-[#004D77] flex items-center justify-center text-white font-bold text-base mb-1">
-                        {
-                          user
-                          ?
-                          getInitials(
-                            user.fullName
-                            ||
-                            user.name
-                          )
-                          :
-                          <UserCircle2 size={28} />
-                        }
-                      </div>
-                      <p className="text-xs font-semibold text-[#004D77] text-center">
-                        {
-                          user?.fullName
-                          ||
-                          user?.name
-                          ||
-                          "Invitado"
-                        }
-                      </p>
-                      <p className="text-[0.68rem] text-[#004D77] break-all">
-                        {
-                          user?.email
-                          ||
-                          "No autenticado"
-                        }
-                      </p>
-                      <p className="text-[0.68rem] font-semibold text-slate-600 mt-0.5">
-                        {roleName}
-                      </p>
-                    </div>
-
-                    {/* ACTIONS */}
-                    <div className="py-1">
-                      {
-                        user
-                        ?
-                        <>
-                          {
-                            role
-                            &&
-                            <button
-                              onClick={handleGoToAdmin}
-                              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-[#004D77] hover:bg-gray-100 cursor-pointer transition-colors"
-                            >
-                              <LayoutDashboard size={16} />
-                              Ir a Panel Administrativo.
-                            </button>
-                          }
-                          <button
-                            onClick={() => {
-                              setIsEditProfileOpen(true);
-                              setProfileModal(false);
-                            }}
-                            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-[#004D77] hover:bg-gray-100 transition-colors cursor-pointer"
-                          >
-                            <SquarePen size={16} />
-                            Editar Perfil
-                          </button>
-                          <button
-                            onClick={handleLogout}
-                            disabled={isLoggingOut}
-                            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-red-500 hover:bg-red-50 cursor-pointer transition-colors disabled:opacity-50"
-                          >
-                            {
-                              isLoggingOut
-                              ?
-                              <Loader2
-                                size={16}
-                                className="animate-spin"
-                              />
-                              :
-                              <LogOut size={16} />
-                            }
-                            {
-                              isLoggingOut
-                              ?
-                              "Cerrando..."
-                              :
-                              "Cerrar Sesión"
-                            }
-                          </button>
-                        </>
-                        :
-                        <>
-                          <Link
-                            to="/login"
-                            className="flex items-center gap-2.5 px-3.5 py-2 text-xs text-[#004D77] hover:bg-gray-100 transition-colors"
-                          >
-                            <LogIn size={16} />
-                            Iniciar Sesión
-                          </Link>
-                          <Link
-                            to="/register"
-                            className="flex items-center gap-2.5 px-3.5 py-2 text-xs text-[#004D77] hover:bg-gray-100 transition-colors"
-                          >
-                            <UserPlus size={16} />
-                            Registrarse
-                          </Link>
-                        </>
-                      }
-                    </div>
-                  </div>
-                }
-              </div>
-
-              {/* MOBILE MENU */}
-              <button
-                type="button"
-                onClick={()=>
-                  setMenuOpen(
-                    true
-                  )
-                }
-                className="lg:hidden p-1.5 rounded-full hover:bg-[#004D77]/10 transition-colors"
-                aria-label="Abrir menú"
-                aria-expanded={menuOpen}
-              >
-                <Menu className="h-[18px] w-[18px] text-gray-700" />
-              </button>
-            </div>
+          <div className="flex h-14 items-center justify-between gap-2 transition-all duration-150 sm:h-16 sm:gap-4">
+            <HeaderLogo />
+            <HeaderSearch
+              searchQuery={headerSearch.query}
+              setSearchQuery={headerSearch.setQuery}
+              onSubmit={headerSearch.submitSearch}
+              results={headerSearch.results}
+              recentSearches={headerSearch.recentSearches}
+              shouldShowResults={headerSearch.shouldShowResults}
+              shouldShowRecentSearches={headerSearch.shouldShowRecentSearches}
+              hasResults={headerSearch.hasResults}
+              isLoading={headerSearch.isLoading}
+              error={headerSearch.error}
+              onFocus={headerSearch.openSearch}
+              onSelectResult={headerSearch.selectResult}
+              onSelectRecentSearch={headerSearch.selectRecentSearch}
+              onRemoveRecentSearch={headerSearch.removeRecentSearch}
+              onClearRecentSearches={headerSearch.clearRecentSearches}
+              onClose={headerSearch.closeSearch}
+              onClear={headerSearch.clearSearch}
+            />
+            <HeaderNav isActive={isActive} />
+            <HeaderActions
+              cartCount={cartCount}
+              favoritesCount={favoritesCount}
+              getInitials={getInitials}
+              handleGoToAdmin={handleGoToAdmin}
+              handleLogout={handleLogout}
+              isActive={isActive}
+              isLoggingOut={isLoggingOut}
+              menuOpen={menuOpen}
+              modalRef={modalRef}
+              onOpenMobileMenu={() => setMenuOpen(true)}
+              onOpenProfileEdit={openProfileEdit}
+              profileModal={profileModal}
+              role={role}
+              roleName={roleName}
+              setProfileModal={setProfileModal}
+              user={user}
+            />
           </div>
         </div>
       </header>
-      <div
-        className={`${
-          scrolled
-            ? "h-11 sm:h-12"
-            : "h-14 sm:h-16"
-        }`}
-      />
+      <div className="h-14 sm:h-16" />
 
       {menuOpen && (
-        <div className="fixed inset-0 z-[70] lg:hidden">
-          <button
-            type="button"
-            className="absolute inset-0 h-full w-full bg-black/45 backdrop-blur-[1px]"
-            onClick={() => setMenuOpen(false)}
-            aria-label="Cerrar menú"
-          />
-
-          <aside
-            ref={mobileMenuRef}
-            className="absolute right-0 top-0 flex h-dvh w-[min(22rem,88vw)] flex-col overflow-hidden bg-white shadow-2xl"
-            aria-label="Menú móvil"
-          >
-            <div className="flex items-center justify-between border-b border-[#e2edf5] px-4 py-3">
-              <Link
-                to="/"
-                onClick={() => setMenuOpen(false)}
-                className="flex min-w-0 items-center gap-2"
-                aria-label="Inicio Papelería Magic"
-              >
-                <img
-                  src={logo}
-                  alt="Papelería Magic"
-                  className="h-10 w-10 rounded-full object-cover"
-                />
-                <span className="truncate font-serif text-lg font-semibold italic text-[#004D77]">
-                  Papelería Magic
-                </span>
-              </Link>
-              <button
-                type="button"
-                onClick={() => setMenuOpen(false)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-700 transition-colors hover:bg-[#004D77]/10"
-                aria-label="Cerrar menú"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <nav className="flex-1 overflow-y-auto px-3 py-4">
-              <MobileNavLink
-                icon={Home}
-                label="Inicio"
-                to="/"
-                active={isActive("/")}
-                onClick={() => setMenuOpen(false)}
-              />
-              <MobileNavLink
-                icon={Store}
-                label="Tienda"
-                to="/shop"
-                active={isActive("/shop")}
-                onClick={() => setMenuOpen(false)}
-              />
-              <MobileNavLink
-                icon={Package}
-                label="Pedidos"
-                to="/orders-l"
-                active={isActive("/orders-l")}
-                onClick={() => setMenuOpen(false)}
-              />
-              <MobileNavLink
-                icon={Heart}
-                label="Favoritos"
-                to="/favorites"
-                active={isActive("/favorites")}
-                badge={favoritesCount}
-                onClick={() => setMenuOpen(false)}
-              />
-              <MobileNavLink
-                icon={ShoppingCart}
-                label="Carrito"
-                to="/cart"
-                active={isActive("/cart")}
-                badge={cartCount}
-                onClick={() => setMenuOpen(false)}
-              />
-            </nav>
-
-            <div className="border-t border-[#e2edf5] bg-slate-50 px-4 py-4">
-              <div className="mb-3 flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#004D77] text-sm font-bold text-white">
-                  {
-                    user
-                    ?
-                    getInitials(
-                      user.fullName
-                      ||
-                      user.name
-                    )
-                    :
-                    <UserCircle2 size={28} />
-                  }
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[#004D77]">
-                    {
-                      user?.fullName
-                      ||
-                      user?.name
-                      ||
-                      "Invitado"
-                    }
-                  </p>
-                  <p className="truncate text-xs text-slate-500">
-                    {
-                      user?.email
-                      ||
-                      "No autenticado"
-                    }
-                  </p>
-                </div>
-              </div>
-
-              {
-                user
-                ?
-                <div className="space-y-1">
-                  {
-                    role
-                    &&
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        handleGoToAdmin();
-                      }}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-[#004D77] transition-colors hover:bg-white"
-                    >
-                      <LayoutDashboard size={18} />
-                      Ir a Panel Administrativo
-                    </button>
-                  }
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setIsEditProfileOpen(true);
-                    }}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-[#004D77] transition-colors hover:bg-white"
-                  >
-                    <SquarePen size={18} />
-                    Editar Perfil
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      handleLogout();
-                    }}
-                    disabled={isLoggingOut}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-red-500 transition-colors hover:bg-red-50 disabled:opacity-50"
-                  >
-                    {
-                      isLoggingOut
-                      ?
-                      <Loader2
-                        size={18}
-                        className="animate-spin"
-                      />
-                      :
-                      <LogOut size={18} />
-                    }
-                    {
-                      isLoggingOut
-                      ?
-                      "Cerrando..."
-                      :
-                      "Cerrar Sesión"
-                    }
-                  </button>
-                </div>
-                :
-                <div className="grid grid-cols-2 gap-2">
-                  <Link
-                    to="/login"
-                    onClick={() => setMenuOpen(false)}
-                    className="flex items-center justify-center gap-2 rounded-lg bg-[#004D77] px-3 py-2.5 text-sm font-semibold text-white"
-                  >
-                    <LogIn size={17} />
-                    Iniciar
-                  </Link>
-                  <Link
-                    to="/register"
-                    onClick={() => setMenuOpen(false)}
-                    className="flex items-center justify-center gap-2 rounded-lg border border-[#004D77] px-3 py-2.5 text-sm font-semibold text-[#004D77]"
-                  >
-                    <UserPlus size={17} />
-                    Registro
-                  </Link>
-                </div>
-              }
-            </div>
-          </aside>
-        </div>
+        <MobileMenu
+          cartCount={cartCount}
+          favoritesCount={favoritesCount}
+          getInitials={getInitials}
+          handleGoToAdmin={handleGoToAdmin}
+          handleLogout={handleLogout}
+          isActive={isActive}
+          isLoggingOut={isLoggingOut}
+          onClose={() => setMenuOpen(false)}
+          onOpenProfileEdit={() => setIsEditProfileOpen(true)}
+          role={role}
+          user={user}
+        />
       )}
 
-      {/* MODAL EDITAR PERFIL */}
       {isEditProfileOpen && (
-        <EditProfileForm 
+        <EditProfileForm
           onClose={() => setIsEditProfileOpen(false)}
           isModal={true}
         />
@@ -806,130 +294,5 @@ function HeaderLanding() {
     </>
   );
 }
-
-/* ───────────────────────────── */
-/* AUX COMPONENTS */
-/* ───────────────────────────── */
-
-const NavLink = ({
-  icon: Icon,
-  label,
-  to,
-  active,
-  scrolled
-}) => (
-
-  <Link
-    to={to}
-    className={`flex items-center gap-1.5 rounded-full transition-all duration-150 ${
-      scrolled
-        ? "px-2.5 py-1"
-        : "px-3 py-1.5"
-    } ${
-      active
-        ? "text-[#004D77] font-semibold bg-[#004D77]/10"
-        : "text-gray-700 hover:text-[#004D77] hover:bg-[#004D77]/5"
-    }`}
-  >
-    <Icon
-      className={`${
-        scrolled
-          ? "w-3.5 h-3.5"
-          : "w-4 h-4"
-      }`}
-    />
-    <span
-      className={`${
-        scrolled
-          ? "text-[0.72rem]"
-          : "text-[0.8rem]"
-      }`}
-    >
-      {label}
-    </span>
-  </Link>
-);
-
-const IconButton = ({
-  icon: Icon,
-  to,
-  badge,
-  className = "",
-  scrolled,
-  active = false
-}) => (
-
-  <Link
-    to={to}
-    className={`relative rounded-full flex items-center justify-center transition-colors ${
-      scrolled
-        ? "p-1.5"
-        : "p-2"
-    } ${
-      active
-        ? "bg-[#004D77]/10 text-[#004D77]"
-        : "hover:bg-[#004D77]/10 text-gray-700"
-    } ${className}`}
-  >
-    <Icon
-      className={`${
-        scrolled
-          ? "w-3.5 h-3.5"
-          : "h-[18px] w-[18px]"
-      } ${
-        active
-          ? "text-[#004D77]"
-          : "text-gray-700"
-      }`}
-    />
-    {
-      badge > 0
-      &&
-      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[14px] h-3.5 flex items-center justify-center px-1">
-        {
-          badge > 99
-          ? "99+"
-          : badge
-        }
-      </span>
-    }
-  </Link>
-);
-
-const MobileNavLink = ({
-  icon: Icon,
-  label,
-  to,
-  active,
-  badge,
-  onClick
-}) => (
-
-  <Link
-    to={to}
-    onClick={onClick}
-    className={`mb-1 flex items-center justify-between rounded-xl px-3 py-3 transition-colors ${
-      active
-        ? "bg-[#004D77]/10 text-[#004D77]"
-        : "text-gray-700 hover:bg-[#004D77]/5 hover:text-[#004D77]"
-    }`}
-  >
-    <span className="flex items-center gap-3 text-sm font-semibold">
-      <Icon className="h-5 w-5" />
-      {label}
-    </span>
-    {
-      badge > 0
-      &&
-      <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
-        {
-          badge > 99
-          ? "99+"
-          : badge
-        }
-      </span>
-    }
-  </Link>
-);
 
 export default HeaderLanding;

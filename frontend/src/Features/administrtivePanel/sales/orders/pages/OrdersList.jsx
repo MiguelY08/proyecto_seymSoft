@@ -167,6 +167,13 @@ function OrdersList() {
     setSelectedOrder(null);
   };
 
+  const handleOrderRefresh = useCallback((updatedOrder) => {
+    if (!updatedOrder?.id) return;
+
+    setOrders(prev => prev.map(order => order.id === updatedOrder.id ? updatedOrder : order));
+    setSelectedOrder(updatedOrder);
+  }, []);
+
   const handleEdit = (order) => {
     if ([ESTADOS_LOGISTICOS.ENTREGADO, ESTADOS_LOGISTICOS.CANCELADO].includes(order.estadoLogistico)) {
       showWarning('Pedido inmutable', 'Los pedidos entregados o cancelados no pueden editarse.');
@@ -274,6 +281,7 @@ function OrdersList() {
         onEdit={handleEdit}
         onCancel={handleCancelOrder}
         onEstadoChange={(order, nuevoEstado) => handleEstadoLogisticoChange(order.id, nuevoEstado)}
+        onOrderRefresh={handleOrderRefresh}
       />
 
       {cancelando && (

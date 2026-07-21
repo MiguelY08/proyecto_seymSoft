@@ -10,16 +10,16 @@ function SubcategoriasBadge({ count }) {
 
   if (total === 0) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-400">
-        <Layers size={11} />
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-400">
+        <Layers size={13} />
         0
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-[#004D77]/10 text-[#004D77]">
-      <Layers size={11} />
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-semibold bg-[#004D77]/10 text-[#004D77]">
+      <Layers size={13} />
       {total}
     </span>
   );
@@ -53,11 +53,11 @@ export const CategoriesTable = ({
 
           <thead className="bg-[#004D77] text-white">
             <tr>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">#</th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Nombre Categoría</th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Subcategorías</th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Estado</th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Acciones</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">#</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Nombre Categoría</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Subcategorías</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Estado</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Acciones</th>
             </tr>
           </thead>
 
@@ -81,21 +81,21 @@ export const CategoriesTable = ({
                         : "bg-gray-50 hover:bg-gray-100"
                     }`}
                   >
-                    <td className="px-3 py-2 text-center text-xs text-gray-500 font-medium whitespace-nowrap">
+                    <td className="px-4 py-2.5 text-center text-sm text-gray-500 font-medium whitespace-nowrap">
                       {recordNumber}
                     </td>
 
-                    <td className="px-3 py-2 text-center text-xs text-gray-800 font-medium truncate">
+                    <td className="px-4 py-2.5 text-center text-sm text-gray-800 font-medium truncate">
                       {highlightText(category.nombre || "")}
                     </td>
 
-                    <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                    <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                       <SubcategoriasBadge count={category.subcategorias} />
                     </td>
 
-                    <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                    <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                       <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        className={`px-2.5 py-1 rounded-full text-sm font-medium ${
                           category.estado === "Activo"
                             ? "bg-green-100 text-green-700"
                             : "bg-red-100 text-red-700"
@@ -105,8 +105,8 @@ export const CategoriesTable = ({
                       </span>
                     </td>
 
-                    <td className="px-3 py-2">
-                      <div className="flex items-center justify-center gap-1.5">
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center justify-center gap-2">
                         <Permission permission ="categorias.activar_desactivar" >
                           <ActiveToggle
                             activo={category.estado === "Activo"}
@@ -119,7 +119,7 @@ export const CategoriesTable = ({
                             className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                             title="Ver detalle"
                           >
-                            <Info className="w-4 h-4" strokeWidth={1.5} />
+                            <Info className="w-4.5 h-4.5" strokeWidth={1.5} />
                           </button>
                         </Permission>
                         <Permission permission ="categorias.editar" >
@@ -128,7 +128,7 @@ export const CategoriesTable = ({
                             className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                             title="Editar categoría"
                           >
-                            <Edit className="w-4 h-4" strokeWidth={1.5} />
+                            <Edit className="w-4.5 h-4.5" strokeWidth={1.5} />
                           </button>
                         </Permission>
                         <Permission permission ="categorias.eliminar" >
@@ -137,7 +137,7 @@ export const CategoriesTable = ({
                             className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
                             title="Eliminar categoría"
                           >
-                            <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                            <Trash2 className="w-4.5 h-4.5" strokeWidth={1.5} />
                           </button>
                         </Permission>
                       </div>
