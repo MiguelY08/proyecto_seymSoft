@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { X, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useAlert } from "../../shared/alerts/useAlert.js";
-import { changePassword } from "../services/authService.js";
+import { getSession } from "../helpers/authStorage.js";
 
 const ErrorMsg = ({ field, touched, errors }) =>
   touched[field] && errors[field]
@@ -47,53 +47,26 @@ const PasswordField = ({ label, name, value, onChange, show, onToggle, touched, 
   </div>
 );
 
-const firstText = (...values) => {
-  const value = values.find((item) => String(item ?? "").trim());
-  return String(value ?? "").trim();
-};
-
-const getProfileAddress = (user, client) => firstText(
-  client?.address,
-  client?.direccion,
-  client?.deliveryAddress,
-  client?.delivery_address,
-  user?.client?.address,
-  user?.client?.direccion,
-  user?.client?.deliveryAddress,
-  user?.client?.delivery_address,
-  user?.customer?.address,
-  user?.customer?.direccion,
-  user?.customer?.deliveryAddress,
-  user?.customer?.delivery_address,
-  user?.address,
-  user?.direccion,
-  user?.deliveryAddress,
-  user?.delivery_address,
-);
-
-const getProfileSnapshot = (user, client) => ({
-  fullName: firstText(user?.fullName, user?.full_name, user?.name, client?.fullName),
-  email: firstText(user?.email, client?.email),
-  phone: firstText(user?.phone, client?.phone),
-  address: getProfileAddress(user, client),
-});
-
 function EditProfileForm({ onClose, isModal = false }) {
-  const { user, client, updateProfile, logout, loading } = useAuth();
+  const { user, client, updateProfile, clearLocalSession, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isAdminContext = location.pathname.startsWith("/admin");
   const { showSuccess, showError, showWarning, showInfo } = useAlert();
-  const profileSnapshot = useMemo(
-    () => getProfileSnapshot(user, client),
-    [client, user]
-  );
+  const sessionClient =
+    getSession()?.client ?? null;
+  const clientData =
+    client ?? sessionClient;
+  const currentAddress =
+    clientData?.address ?? "";
+  const canEditAddress =
+    clientData?.canEditAddress === true;
 
   const [form, setForm] = useState({
-    fullName: profileSnapshot.fullName,
-    email: profileSnapshot.email,
-    phone: profileSnapshot.phone,
-    address: profileSnapshot.address,
+    fullName: user?.fullName ?? "",
+    email: user?.email ?? "",
+    phone: user?.phone ?? "",
+    address: currentAddress,
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
@@ -104,16 +77,6 @@ function EditProfileForm({ onClose, isModal = false }) {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-
-  useEffect(() => {
-    setForm((current) => ({
-      ...current,
-      fullName: profileSnapshot.fullName,
-      email: profileSnapshot.email,
-      phone: profileSnapshot.phone,
-      address: profileSnapshot.address,
-    }));
-  }, [profileSnapshot]);
 
   const validateField = (name, value, currentForm = form) => {
     const v = value.trim();
@@ -137,7 +100,7 @@ function EditProfileForm({ onClose, isModal = false }) {
         return "";
 
       case "address":
-        if (v && v.length < 5) return "La direcciÃ³n debe tener al menos 5 caracteres.";
+        if (v && v.length < 5) return "La dirección debe tener al menos 5 caracteres.";
         return "";
 
       case "currentPassword":
@@ -194,10 +157,10 @@ function EditProfileForm({ onClose, isModal = false }) {
   };
 
   const isDirty =
-    form.fullName !== profileSnapshot.fullName ||
-    form.email !== profileSnapshot.email ||
-    form.phone !== profileSnapshot.phone ||
-    form.address !== profileSnapshot.address ||
+    form.fullName !== (user?.fullName ?? "") ||
+    form.email !== (user?.email ?? "") ||
+    form.phone !== (user?.phone ?? "") ||
+    (canEditAddress && form.address !== currentAddress) ||
     form.newPassword.trim() !== "";
 
   const handleCancel = () => {
@@ -222,12 +185,31 @@ function EditProfileForm({ onClose, isModal = false }) {
     }, 1500);
   };
 
-const handleSubmit = async () => {
+  const showUnchangedFieldAlerts = (unchangedFields = {}, userTouchedFields = {}) => {
+    Object.entries(unchangedFields).forEach(([field, message]) => {
+      const aliases = {
+        full_name: "fullName",
+        fullName: "fullName",
+        email: "email",
+        phone: "phone",
+        address: "address",
+      };
+      const formField = aliases[field] || field;
+
+      if (message && userTouchedFields[formField]) {
+        showInfo("Sin cambios", message);
+      }
+    });
+  };
+
+  const handleSubmit = async () => {
+  const userTouchedFields = { ...touched };
 
   const requiredFields = [
     "fullName",
     "email",
     "phone",
+    ...(canEditAddress ? ["address"] : []),
   ];
 
   const allFields = [
@@ -281,47 +263,85 @@ const handleSubmit = async () => {
 
     const profileChanged =
 
-      form.fullName.trim() !== profileSnapshot.fullName
+      form.fullName.trim() !== (user?.fullName ?? "")
 
       ||
 
-      form.email.trim() !== profileSnapshot.email
+      form.email.trim() !== (user?.email ?? "")
 
       ||
 
-      form.phone.trim() !== profileSnapshot.phone
+      form.phone.trim() !== (user?.phone ?? "")
 
       ||
 
-      form.address.trim() !== profileSnapshot.address;
+      (
+        canEditAddress
+        &&
+        form.address.trim() !== currentAddress
+      );
 
     const passwordChanged =
       form.newPassword.trim() !== "";
+
+    if (
+      !profileChanged
+      &&
+      !passwordChanged
+    ) {
+
+      showInfo(
+        "Sin cambios",
+        "Los datos enviados son iguales a los datos actuales"
+      );
+
+      return;
+    }
+
+    const profileChanges = {
+      fullName: form.fullName.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim(),
+    };
+
+    if (canEditAddress) {
+      profileChanges.address = form.address.trim();
+    }
+
+    if (passwordChanged) {
+      profileChanges.currentPassword = form.currentPassword.trim();
+      profileChanges.newPassword = form.newPassword.trim();
+      profileChanges.confirmPassword = form.confirmPassword.trim();
+    }
 
     // =====================================
     // ACTUALIZAR PERFIL
     // =====================================
 
-    if (profileChanged) {
+    if (
+      profileChanged
+      ||
+      passwordChanged
+    ) {
 
       const profileResult =
-        await updateProfile({
-
-          fullName:
-            form.fullName.trim(),
-
-          email:
-            form.email.trim(),
-
-          phone:
-            form.phone.trim(),
-
-          address:
-            form.address.trim(),
-
-        });
+        await updateProfile(profileChanges);
 
       if (!profileResult.success) {
+
+        if (
+          profileResult.status === 400
+          &&
+          /iguales|igual/i.test(profileResult.error || "")
+        ) {
+
+          showInfo(
+            "Sin cambios",
+            profileResult.error
+          );
+
+          return;
+        }
 
         showError(
           "Error",
@@ -330,6 +350,72 @@ const handleSubmit = async () => {
 
         return;
       }
+
+      showUnchangedFieldAlerts(
+        profileResult.unchangedFields,
+        userTouchedFields
+      );
+
+      if (profileResult.requiresReLogin) {
+
+        showSuccess(
+          "Perfil actualizado",
+          "Por seguridad, inicia sesión nuevamente."
+        );
+
+        clearLocalSession?.();
+
+        setTimeout(
+          () => {
+            navigate(
+              "/login",
+              { replace: true }
+            );
+          },
+          1500
+        );
+
+        return;
+      }
+
+      setForm({
+        fullName: profileResult.user?.fullName ?? form.fullName,
+        email: profileResult.user?.email ?? form.email,
+        phone: profileResult.user?.phone ?? form.phone,
+        address:
+          profileResult.client?.address ??
+          "",
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+
+      showSuccess(
+        passwordChanged ? "Contraseña actualizada" : "Perfil actualizado",
+        "Los cambios se guardaron correctamente"
+      );
+
+      setTimeout(
+        () => {
+
+          if (
+            isModal ||
+            isAdminContext
+          ) {
+
+            onClose?.();
+
+          } else {
+
+            navigate(-1);
+
+          }
+
+        },
+        1500
+      );
+
+      return;
     }
 
     // =====================================
@@ -339,7 +425,7 @@ const handleSubmit = async () => {
     if (passwordChanged) {
 
       const passwordResult =
-        await changePassword({
+        await updateProfile({
 
           currentPassword:
             form.currentPassword.trim(),
@@ -347,9 +433,26 @@ const handleSubmit = async () => {
           newPassword:
             form.newPassword.trim(),
 
+          confirmPassword:
+            form.confirmPassword.trim(),
+
         });
 
       if (!passwordResult.success) {
+
+        if (
+          passwordResult.status === 400
+          &&
+          /iguales|igual/i.test(passwordResult.error || "")
+        ) {
+
+          showInfo(
+            "Sin cambios",
+            passwordResult.error
+          );
+
+          return;
+        }
 
         showError(
           "Error",
@@ -359,20 +462,56 @@ const handleSubmit = async () => {
         return;
       }
 
+      showUnchangedFieldAlerts(
+        passwordResult.unchangedFields,
+        userTouchedFields
+      );
+
+      if (passwordResult.requiresReLogin) {
+
+        showSuccess(
+          "Perfil actualizado",
+          "Por seguridad, inicia sesión nuevamente."
+        );
+
+        clearLocalSession?.();
+
+        setTimeout(
+          () => {
+            navigate(
+              "/login",
+              { replace: true }
+            );
+          },
+          1500
+        );
+
+        return;
+      }
+
       showSuccess(
         "Contraseña actualizada",
-        "Debes iniciar sesión nuevamente"
+        "Los cambios se guardaron correctamente"
       );
 
       setTimeout(
-        async () => {
+        () => {
 
-          await logout();
+          if (
+            isModal ||
+            isAdminContext
+          ) {
 
-          navigate("/login");
+            onClose?.();
+
+          } else {
+
+            navigate(-1);
+
+          }
 
         },
-        2000
+        1500
       );
 
       return;
@@ -497,22 +636,24 @@ const handleSubmit = async () => {
             <ErrorMsg field="phone" touched={touched} errors={errors} />
           </div>
 
-          <div className="sm:col-span-2 flex flex-col gap-1.5">
-            <label className="block text-sm font-medium text-gray-700">
-              Direccion <span className="text-xs text-gray-400 font-normal ml-1">(opcional)</span>
-            </label>
-            <input
-              type="text"
-              name="address"
-              value={form.address}
-              onChange={handleChange}
-              placeholder="Calle 123 # 45-67"
-              maxLength={255}
-              className={inputClass("address")}
-              disabled={loading}
-            />
-            <ErrorMsg field="address" touched={touched} errors={errors} />
-          </div>
+          {canEditAddress && (
+            <div className="sm:col-span-2 flex flex-col gap-1.5">
+              <label className="block text-sm font-medium text-gray-700">
+                Dirección
+              </label>
+              <input
+                type="text"
+                name="address"
+                value={form.address}
+                onChange={handleChange}
+                placeholder="Nueva dirección"
+                maxLength={255}
+                className={inputClass("address")}
+                disabled={loading}
+              />
+              <ErrorMsg field="address" touched={touched} errors={errors} />
+            </div>
+          )}
 
           <div className="sm:col-span-2 border-t border-gray-200 pt-4">
             <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">

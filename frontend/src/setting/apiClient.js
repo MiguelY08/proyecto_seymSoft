@@ -35,7 +35,7 @@ const refreshAccessToken = async () => {
     }
 
     const response = await axios.post(`${BASE_URL}/auth/refresh`, {
-      refresh_token: session.refreshToken,
+      refreshToken: session.refreshToken,
     });
 
     const { accessToken, refreshToken } = response.data.data;
@@ -137,11 +137,22 @@ apiClient.interceptors.response.use(
     }
 
     const originalRequest = error.config;
+    const responseMessage =
+      error.response?.data?.message || "";
+
+    if (/refresh token expired|refresh token invalid|expired or invalid/i.test(responseMessage)) {
+      clearSession();
+      sessionStorage.clear();
+      window.location.href = "/login";
+      return Promise.reject(error);
+    }
 
 // Endpoints donde NO se debe intentar refresh
 const authEndpoints = [
   "/auth/login",
   "/auth/register",
+  "/auth/logout",
+  "/auth/refresh",
   "/auth/forgot-password",
   "/auth/reset-password",
 ];
@@ -174,6 +185,16 @@ if (
 
     clearSession();
     sessionStorage.clear();
+
+    if (
+      refreshError.message === "NO_REFRESH_TOKEN"
+      ||
+      /refresh token expired|refresh token invalid|expired or invalid/i.test(
+        refreshError.response?.data?.message || refreshError.message || ""
+      )
+    ) {
+      window.location.href = "/login";
+    }
 
     return Promise.reject(refreshError);
   }
