@@ -163,6 +163,8 @@ export const UserService = {
       createdAt: createdUser.creationDate ?? createdUser.createdAt,
       role: normalizeRole(createdData?.role ?? createdUser.role),
       permissions: createdData?.permissions || [],
+      warning: response.data.warning || null,
+      errorCode: response.data.errorCode || null,
     };
   },
 

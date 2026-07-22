@@ -157,8 +157,16 @@ function FormUser() {
         });
         showSuccess('Usuario actualizado', 'Los datos han sido guardados.');
       } else {
-        await UserService.create(userData);
-        showSuccess('Usuario creado', 'El usuario ha sido registrado. Se ha enviado una contraseña temporal al correo.');
+        const createdUser = await UserService.create(userData);
+
+        if (createdUser.errorCode === 'EMAIL_SEND_ERROR') {
+          showWarning(
+            'Usuario creado',
+            'El usuario fue registrado, pero no se pudo enviar la contraseña temporal al correo.'
+          );
+        } else {
+          showSuccess('Usuario creado', 'El usuario ha sido registrado. Se ha enviado una contraseña temporal al correo.');
+        }
       }
       navigate(returnTo, {
         state: returnTo !== '/admin/users' ? { newUserId: isEditing ? String(userToEdit.id) : undefined } : undefined,

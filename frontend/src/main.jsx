@@ -8,6 +8,7 @@ import { AuthProvider } from './Features/access/context/AuthContext.jsx';
 // import { initSystem } from './system/initSystem.js';
 import { FavoritesProvider } from './Features/shared/Context/Favoritescontext.jsx';
 import { CartProvider } from './Features/shared/Context/CartContext.jsx';
+import { NotificationProvider } from './Features/shared/Context/NotificationContext.jsx';
 
 // initSystem()
 
@@ -19,7 +20,9 @@ createRoot(document.getElementById('root')).render(
         <AuthProvider>         
           <FavoritesProvider>
             <CartProvider>
-              <App />
+              <NotificationProvider>
+                <App />
+              </NotificationProvider>
             </CartProvider>
           </FavoritesProvider>
         </AuthProvider>

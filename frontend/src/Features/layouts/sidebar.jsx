@@ -16,7 +16,6 @@ import {
   Settings,
   ImagePlay,
   SlidersHorizontal,
-  Menu,
   X,
   CreditCard,
 } from "lucide-react";
@@ -31,9 +30,13 @@ import {
 
 const ADMIN_BASE = "/admin";
 
-export default function Sidebar() {
+export default function Sidebar({
+  isOpen,
+  setIsOpen,
+  isCollapsed,
+  onExpandSidebar
+}) {
   const { hasPermission } = usePermissions();
-  const [isOpen, setIsOpen] = useState(false);
   const [openItem, setOpenItem] = useState(null);
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -53,7 +56,7 @@ export default function Sidebar() {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, setIsOpen]);
 
   // ─────────────────────────────
   // CONFIGURACIÓN DINÁMICA
@@ -224,17 +227,6 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* BOTÓN MOBILE */}
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="fixed left-3 top-3 z-30 flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-[#004D77] transition-colors hover:bg-[#004D77]/10 md:hidden"
-        aria-label="Abrir menú de navegación"
-        aria-expanded={isOpen}
-      >
-        <Menu size={24} />
-      </button>
-
       {/* OVERLAY */}
       {
         isOpen && (
@@ -253,11 +245,12 @@ export default function Sidebar() {
         className={`
           font-lexend
           fixed md:static top-0 left-0 z-50
-          h-dvh w-64 max-w-[85vw] md:h-screen md:max-w-none flex flex-col
+          h-dvh max-w-[85vw] md:h-screen md:max-w-none flex flex-col
           bg-[#F0F0F0]
           border-r border-slate-200
           shadow-xl md:shadow-none
-          transform transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
+          transform-gpu transition-[width,transform,box-shadow] duration-[340ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]
+          ${isCollapsed ? "w-20 md:w-20" : "w-64 md:w-64"}
           ${
             isOpen
               ? "translate-x-0"
@@ -267,8 +260,8 @@ export default function Sidebar() {
       >
 
         {/* HEADER */}
-        <div className="px-3 pt-3 pb-4 relative">
-          <div className="flex items-center pr-8">
+        <div className={`relative px-3 pt-3 ${isCollapsed ? "pb-3" : "pb-4"}`}>
+          <div className={`items-center pr-8 ${isCollapsed ? "hidden md:hidden" : "flex"}`}>
             <div className="h-20 w-full overflow-hidden">
               <img
                 src={HorizontalLogo}
@@ -285,11 +278,19 @@ export default function Sidebar() {
           >
             <X size={20} />
           </button>
-          <div className="mx-2 mt-2 h-px rounded-full bg-gradient-to-r from-transparent via-[#004D77]/25 to-transparent" />
+          {!isCollapsed && (
+            <div className="mx-2 mt-2 h-px rounded-full bg-gradient-to-r from-transparent via-[#004D77]/25 to-transparent" />
+          )}
         </div>
 
         {/* NAV */}
-        <nav className="flex-1 px-2 py-3 flex flex-col gap-0.5 overflow-y-auto overscroll-contain">
+        <nav
+          className={`flex-1 px-2 py-3 flex flex-col gap-0.5 overscroll-contain ${
+            isCollapsed
+              ? "items-center overflow-visible"
+              : "overflow-y-auto"
+          }`}
+        >
           {
             filteredSidebar.map((item) => (
               <SidebarItem
@@ -301,6 +302,8 @@ export default function Sidebar() {
                 openItem={openItem}
                 setOpenItem={setOpenItem}
                 onNavigate={() => setIsOpen(false)}
+                collapsed={isCollapsed}
+                onExpandSidebar={onExpandSidebar}
               />
             ))
           }
@@ -310,7 +313,9 @@ export default function Sidebar() {
         {
           filteredConfig.length > 0 && (
             <div className="px-2 pb-3 pt-1">
-              <div className="mx-2 mb-3 h-px rounded-full bg-gradient-to-r from-transparent via-[#004D77]/25 to-transparent" />
+              {!isCollapsed && (
+                <div className="mx-2 mb-3 h-px rounded-full bg-gradient-to-r from-transparent via-[#004D77]/25 to-transparent" />
+              )}
               <SidebarItem
                 icon={Settings}
                 label="Configuración"
@@ -319,10 +324,14 @@ export default function Sidebar() {
                 openItem={openItem}
                 setOpenItem={setOpenItem}
                 onNavigate={() => setIsOpen(false)}
+                collapsed={isCollapsed}
+                onExpandSidebar={onExpandSidebar}
               />
-              <p className="text-[10px] text-slate-400 text-center mt-2">
-                Powered by SeymsSoft © 2025
-              </p>
+              {!isCollapsed && (
+                <p className="text-[10px] text-slate-400 text-center mt-2">
+                  Powered by SeymsSoft © 2025
+                </p>
+              )}
             </div>
           )
         }
