@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   ChevronDown,
+  Menu,
   UserCircle2,
   SquarePen,
   LogOut,
@@ -11,8 +12,14 @@ import {
 import { useAuth } from "../access/context/AuthContext";
 import { useAlert } from "../shared/alerts/useAlert";
 import EditProfileForm from "../access/components/EditProfileForm";
+import { NotificationBell } from "../shared/components/notifications";
 
-export default function HeaderSidebar() {
+export default function HeaderSidebar({
+  onToggleSidebar,
+  isSidebarOpen,
+  isSidebarCollapsed,
+  isDesktop
+}) {
 
   const {
     user,
@@ -188,33 +195,71 @@ export default function HeaderSidebar() {
 
   return (
     <>
-      <header className="w-full h-16 flex items-center justify-between pl-14 pr-4 md:px-6 bg-[#F0F0F0] border-b border-slate-200 font-lexend">
+      <header className="w-full h-16 flex items-center justify-between px-3 md:px-6 bg-[#F0F0F0] border-b border-slate-200 font-lexend">
         {/* ─────────────────────────────
         BREADCRUMB
         ───────────────────────────── */}
-        <div className="flex items-center gap-2 text-[#004D77] text-sm md:text-base font-medium truncate">
-          <span className="truncate">
-            {moduleName}
-          </span>
-          {subModuleName && (
-            <>
-              <span className="text-slate-400 hidden sm:block">
-                /
-              </span>
-              <span className="truncate hidden sm:block">
-                {subModuleName}
-              </span>
-            </>
-          )}
+        <div className="flex min-w-0 items-center gap-3">
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            className="group flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[#004D77] transition-[background-color,transform] duration-150 ease-out hover:bg-[#004D77]/10 active:scale-95"
+            aria-label={
+              isDesktop
+                ? isSidebarCollapsed
+                  ? "Expandir menú de navegación"
+                  : "Colapsar menú de navegación"
+                : isSidebarOpen
+                  ? "Cerrar menú de navegación"
+                  : "Abrir menú de navegación"
+            }
+            aria-expanded={
+              isDesktop
+                ? !isSidebarCollapsed
+                : isSidebarOpen
+            }
+          >
+            <Menu
+              size={22}
+              className={`transition-transform duration-[320ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] group-hover:scale-105 ${
+                isDesktop
+                  ? isSidebarCollapsed
+                    ? "-rotate-90"
+                    : "rotate-0"
+                  : isSidebarOpen
+                    ? "rotate-90"
+                    : "rotate-0"
+              }`}
+            />
+          </button>
+
+          <div className="flex min-w-0 items-center gap-2 text-[#004D77] text-sm md:text-base font-medium truncate">
+            <span className="truncate">
+              {moduleName}
+            </span>
+            {subModuleName && (
+              <>
+                <span className="text-slate-400 hidden sm:block">
+                  /
+                </span>
+                <span className="truncate hidden sm:block">
+                  {subModuleName}
+                </span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* ─────────────────────────────
         PERFIL
         ───────────────────────────── */}
-        <div
-          className="relative"
-          ref={dropdownRef}
-        >
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+
+          <div
+            className="relative"
+            ref={dropdownRef}
+          >
           <button
             onClick={()=>
               setMenuOpen(!menuOpen)
@@ -331,6 +376,7 @@ export default function HeaderSidebar() {
               </div>
             </div>
           )}
+          </div>
         </div>
       </header>
 
