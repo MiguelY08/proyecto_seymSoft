@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 
 // Servicios
-import OrdersService, { PaymentService, ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES, METODOS_PAGO } from '../services/ordersService';
+import OrdersService, { PaymentService, LocationService, ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES, METODOS_PAGO } from '../services/ordersService';
 import { SalesServices } from '../../vendings/services/salesServices';
 import ProductsService from '../../../purchases/products/services/productsServices';
 import { clientsService } from '../../clients/services/clientsService';
@@ -111,6 +111,12 @@ function OrdersForm() {
     asesorId: user?.id || null,
     tipoEntrega: 'recoge',
     direccionEntrega: '',
+    deliveryRecipientName: '',
+    departamentoEntregaCodigo: '',
+    departamentoEntregaNombre: '',
+    ciudadEntregaCodigo: '',
+    ciudadEntregaNombre: '',
+    shippingAmount: 0,
     productos: [],
     estadoLogistico: ESTADOS_LOGISTICOS.EN_PROCESO,
     origen: ORIGENES.MANUAL,
@@ -124,15 +130,20 @@ function OrdersForm() {
 
   const [clientes, setClientes] = useState([]);
   const [productosCatalogo, setProductosCatalogo] = useState([]);
+  const [departamentos, setDepartamentos] = useState([]);
+  const [ciudades, setCiudades] = useState([]);
+  const [loadingCiudades, setLoadingCiudades] = useState(false);
 
   // Pagos existentes (solo en edición)
   const [pagos, setPagos] = useState([]);
   const [paymentReceipts, setPaymentReceipts] = useState([]);
   const [totalPagado, setTotalPagado] = useState(0);
 
-  const total = roundMoney(formData.productos.reduce((sum, p) => sum + toNumber(p.subtotal), 0));
+  const productosTotal = roundMoney(formData.productos.reduce((sum, p) => sum + toNumber(p.subtotal), 0));
+  const shippingAmount = formData.tipoEntrega === 'domicilio' ? roundMoney(formData.shippingAmount) : 0;
+  const total = roundMoney(productosTotal + shippingAmount);
   const iva = roundMoney(formData.productos.reduce((sum, p) => sum + toNumber(p.iva), 0));
-  const subtotal = roundMoney(total - iva);
+  const subtotal = roundMoney(productosTotal - iva);
   const selectedClient = clientes.find((cliente) => Number(cliente.id) === Number(formData.clienteId)) ?? null;
   const productosCatalogoConPrecio = productosCatalogo.map((product) => ({
     ...product,
@@ -143,22 +154,12 @@ function OrdersForm() {
     ESTADOS_LOGISTICOS.CANCELADO,
   ].includes(estadoLogisticoOriginal);
   const creaVentaDirecta = !isEditMode && formData.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO;
-  const tieneAbonosPendientes = pagos.some((pago) => !pago.locked && !pago.persisted);
-  const pagoCompleto = totalPagado >= total && total > 0;
-  const pagoCompletoPendienteGuardar = pagoCompleto && tieneAbonosPendientes;
-  const mensajePagoCompleto = (() => {
-    if (creaVentaDirecta) {
-      return 'Al crear, este pedido se registrara como venta directa porque fue marcado como Entregado.';
-    }
-    if (pagoCompletoPendienteGuardar) {
-      return 'Al guardar, se registrara el pago completo y se generara la venta manual. El estado logistico puede mantenerse en En proceso o Listo hasta la entrega.';
-    }
-    if (isEditMode) {
-      return 'Este pedido ya esta pagado. Si tiene una venta asociada, los productos quedan bloqueados.';
-    }
-    return 'El pedido quedara pagado al crearlo. Si no esta Entregado, seguira pendiente de gestion logistica.';
-  })();
-
+  const requiereRevisionEnvio = Boolean(
+    isEditMode &&
+    String(formData.origen || '').toLowerCase() === ORIGENES.WEB &&
+    formData.tipoEntrega === 'domicilio' &&
+    toNumber(formData.shippingAmount) <= 0
+  );
   // Determinar si los productos son editables
   const productosEditables = useMemo(() => {
     if (!isEditMode) return true; // en creación siempre editables
@@ -196,6 +197,9 @@ function OrdersForm() {
       try {
         const clientsResponse = await clientsService.getAll();
         setClientes((clientsResponse.data || clientsResponse || []).map(normalizeClientForForm));
+
+        const departmentsResponse = await LocationService.getDepartments();
+        setDepartamentos(departmentsResponse);
 
         const rawProductsList = await ProductsService.list();
         const normalizedProductsList = rawProductsList.map(product => ({
@@ -256,6 +260,12 @@ function OrdersForm() {
             asesorId: order.asesorId,
             tipoEntrega,
             direccionEntrega: direccion,
+            deliveryRecipientName: order.deliveryRecipientName || '',
+            departamentoEntregaCodigo: order.departamentoEntregaCodigo || '',
+            departamentoEntregaNombre: order.departamentoEntregaNombre || '',
+            ciudadEntregaCodigo: order.ciudadEntregaCodigo || '',
+            ciudadEntregaNombre: order.ciudadEntregaNombre || '',
+            shippingAmount: toNumber(order.shippingAmount),
             productos: productosNormalizados,
             estadoLogistico: order.estadoLogistico,
             pagoEstado: order.pagoEstado, // importante para permisos
@@ -275,6 +285,42 @@ function OrdersForm() {
 
     loadInitialData();
   }, [id, isEditMode, navigate, showError]);
+
+  useEffect(() => {
+    if (formData.tipoEntrega !== 'domicilio' || !formData.departamentoEntregaCodigo) {
+      setCiudades([]);
+      setLoadingCiudades(false);
+      return;
+    }
+
+    let active = true;
+
+    const loadCiudades = async () => {
+      setLoadingCiudades(true);
+      try {
+        const citiesResponse = await LocationService.getCitiesByDepartment(formData.departamentoEntregaCodigo);
+        if (active) {
+          setCiudades(citiesResponse);
+        }
+      } catch (error) {
+        if (active) {
+          setCiudades([]);
+          showError('Error', 'No se pudieron cargar los municipios del departamento.');
+        }
+        console.error(error);
+      } finally {
+        if (active) {
+          setLoadingCiudades(false);
+        }
+      }
+    };
+
+    loadCiudades();
+
+    return () => {
+      active = false;
+    };
+  }, [formData.departamentoEntregaCodigo, formData.tipoEntrega, showError]);
 
   useEffect(() => {
     if (isEditMode || formData.productos.length === 0) return;
@@ -353,16 +399,82 @@ function OrdersForm() {
   const handleTipoEntregaChange = (e) => {
     if (pedidoInmutable) return;
     const nuevoTipo = e.target.value;
+    if (nuevoTipo === 'recoge') {
+      setCiudades([]);
+    }
     setFormData(prev => {
       const nuevaDireccion = nuevoTipo === 'recoge' ? 'El cliente lo recoge' : prev.direccionEntrega;
-      return { ...prev, tipoEntrega: nuevoTipo, direccionEntrega: nuevaDireccion };
+      return {
+        ...prev,
+        tipoEntrega: nuevoTipo,
+        direccionEntrega: nuevaDireccion,
+        ...(nuevoTipo === 'recoge' && {
+          departamentoEntregaCodigo: '',
+          departamentoEntregaNombre: '',
+          ciudadEntregaCodigo: '',
+          ciudadEntregaNombre: '',
+          shippingAmount: 0,
+        }),
+      };
     });
   };
 
+  const handleDepartamentoEntregaChange = (e) => {
+    if (pedidoInmutable) return;
+    const departmentCode = e.target.value;
+    const selectedDepartment = departamentos.find((department) => department.code === departmentCode);
+
+    setFormData(prev => ({
+      ...prev,
+      departamentoEntregaCodigo: departmentCode,
+      departamentoEntregaNombre: selectedDepartment?.name || '',
+      ciudadEntregaCodigo: '',
+      ciudadEntregaNombre: '',
+    }));
+
+    setErrors(prev => ({
+      ...prev,
+      departamentoEntregaCodigo: null,
+      departamentoEntregaNombre: null,
+      ciudadEntregaCodigo: null,
+      ciudadEntregaNombre: null,
+    }));
+  };
+
+  const handleCiudadEntregaChange = (e) => {
+    if (pedidoInmutable) return;
+    const cityCode = e.target.value;
+    const selectedCity = ciudades.find((city) => city.code === cityCode);
+
+    setFormData(prev => ({
+      ...prev,
+      ciudadEntregaCodigo: cityCode,
+      ciudadEntregaNombre: selectedCity?.name || '',
+    }));
+
+    setErrors(prev => ({
+      ...prev,
+      ciudadEntregaCodigo: null,
+      ciudadEntregaNombre: null,
+    }));
+  };
   const handleDireccionManualChange = (e) => {
     if (pedidoInmutable) return;
     setFormData(prev => ({ ...prev, direccionEntrega: e.target.value }));
     if (errors.direccionEntrega) setErrors(prev => ({ ...prev, direccionEntrega: null }));
+  };
+
+  const handleDeliveryRecipientNameChange = (e) => {
+    if (pedidoInmutable) return;
+    setFormData(prev => ({ ...prev, deliveryRecipientName: e.target.value }));
+    if (errors.deliveryRecipientName) setErrors(prev => ({ ...prev, deliveryRecipientName: null }));
+  };
+
+  const handleShippingAmountChange = (e) => {
+    if (pedidoInmutable) return;
+    const value = e.target.value;
+    setFormData(prev => ({ ...prev, shippingAmount: value }));
+    if (errors.shippingAmount) setErrors(prev => ({ ...prev, shippingAmount: null }));
   };
 
   const handleEstadoLogisticoChange = async (e) => {
@@ -520,8 +632,22 @@ function OrdersForm() {
     if (formData.clienteId === '' || formData.clienteId === undefined) {
       newErrors.clienteId = 'Debe seleccionar un cliente.';
     }
+    if (!creaVentaDirecta && !formData.deliveryRecipientName?.trim()) {
+      newErrors.deliveryRecipientName = 'Debe ingresar la persona que recibe o recoge el pedido.';
+    }
     if (!formData.direccionEntrega?.trim()) {
       newErrors.direccionEntrega = 'La dirección de entrega es obligatoria.';
+    }
+    if (formData.tipoEntrega === 'domicilio') {
+      if (!formData.departamentoEntregaCodigo || !formData.departamentoEntregaNombre) {
+        newErrors.departamentoEntregaCodigo = 'Debe seleccionar un departamento.';
+      }
+      if (!formData.ciudadEntregaCodigo || !formData.ciudadEntregaNombre) {
+        newErrors.ciudadEntregaCodigo = 'Debe seleccionar un municipio/ciudad.';
+      }
+      if (toNumber(formData.shippingAmount) <= 0) {
+        newErrors.shippingAmount = 'Debe ingresar un valor de envío mayor a cero.';
+      }
     }
     if (formData.productos.length === 0) {
       newErrors.productos = 'Debe agregar al menos un producto.';
@@ -577,6 +703,12 @@ function OrdersForm() {
         usuarioId: getSessionUserId(user),
         tipoEntrega: formData.tipoEntrega,
         direccionEntrega: formData.direccionEntrega.trim(),
+        deliveryRecipientName: formData.deliveryRecipientName.trim(),
+        departamentoEntregaCodigo: formData.departamentoEntregaCodigo,
+        departamentoEntregaNombre: formData.departamentoEntregaNombre,
+        ciudadEntregaCodigo: formData.ciudadEntregaCodigo,
+        ciudadEntregaNombre: formData.ciudadEntregaNombre,
+        shippingAmount: formData.tipoEntrega === 'domicilio' ? toNumber(formData.shippingAmount) : 0,
         productos: formData.productos,
         estadoLogistico: formData.estadoLogistico,
         origen: ORIGENES.MANUAL,
@@ -592,6 +724,12 @@ function OrdersForm() {
           clienteId: payload.clienteId,
           tipoEntrega: payload.tipoEntrega,
           direccionEntrega: payload.direccionEntrega,
+          deliveryRecipientName: payload.deliveryRecipientName,
+          departamentoEntregaCodigo: payload.departamentoEntregaCodigo,
+          departamentoEntregaNombre: payload.departamentoEntregaNombre,
+          ciudadEntregaCodigo: payload.ciudadEntregaCodigo,
+          ciudadEntregaNombre: payload.ciudadEntregaNombre,
+          shippingAmount: payload.shippingAmount,
           productos: payload.productos,
           estadoLogistico: payload.estadoLogistico,
           motivoCancelacion: formData.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO ? formData.motivoCancelacion : null,
@@ -665,6 +803,11 @@ function OrdersForm() {
               idOrderStatus: 3,
               deliveryType: payload.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Recoge',
               deliveryAddress: payload.direccionEntrega,
+              shippingAmount: payload.shippingAmount,
+              deliveryDepartmentCode: payload.departamentoEntregaCodigo,
+              deliveryDepartmentName: payload.departamentoEntregaNombre,
+              deliveryCityCode: payload.ciudadEntregaCodigo,
+              deliveryCityName: payload.ciudadEntregaNombre,
               items: payload.productos.map((producto) => ({
                 idProduct: producto.id,
                 barcode: producto.codBarras || producto.barcode || '',
@@ -770,14 +913,23 @@ function OrdersForm() {
           formData={formData}
           errors={errors}
           clientes={clientes}
+          departamentos={departamentos}
+          ciudades={ciudades}
+          loadingCiudades={loadingCiudades}
           user={user}
           loading={loading}
           readOnly={pedidoInmutable}
           isEditMode={isEditMode}
           estadoLogisticoOriginal={estadoLogisticoOriginal}
+          showDirectSaleLockedInfo={creaVentaDirecta}
+          highlightShippingAmount={requiereRevisionEnvio}
           onClienteChange={handleClienteChange}
           onTipoEntregaChange={handleTipoEntregaChange}
+          onDepartamentoEntregaChange={handleDepartamentoEntregaChange}
+          onCiudadEntregaChange={handleCiudadEntregaChange}
           onDireccionManualChange={handleDireccionManualChange}
+          onDeliveryRecipientNameChange={handleDeliveryRecipientNameChange}
+          onShippingAmountChange={handleShippingAmountChange}
           onEstadoLogisticoChange={handleEstadoLogisticoChange}
           onMotivoCancelacionChange={handleMotivoCancelacionChange}
           onCreateClient={() => setIsClientModalOpen(true)}
@@ -791,6 +943,8 @@ function OrdersForm() {
           disabled={!productosEditables || loading || pedidoInmutable}
           subtotal={subtotal}
           iva={iva}
+          shippingAmount={shippingAmount}
+          showShippingAmount={formData.tipoEntrega === 'domicilio'}
           total={total}
           onAddProduct={handleAddProduct}
           onUpdateCantidad={handleUpdateCantidad}
@@ -820,16 +974,6 @@ function OrdersForm() {
           disallowDuplicateMethods={creaVentaDirecta}
         />
       </div>
-
-      {/* Aviso para pago completado */}
-      {pagoCompleto && (
-        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm text-green-800">
-            <strong>Pago completado:</strong> {mensajePagoCompleto}
-            {formData.estadoLogistico === ESTADOS_LOGISTICOS.LISTO && ' El pedido está listo para entrega.'}
-          </p>
-        </div>
-      )}
 
       {/* Aviso de productos no editables */}
       {isEditMode && !productosEditables && (
@@ -867,5 +1011,3 @@ function OrdersForm() {
 }
 
 export default OrdersForm;
-
-

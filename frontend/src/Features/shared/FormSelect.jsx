@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Search, X } from 'lucide-react';
 
 function FormSelect({
   value,
@@ -14,16 +14,28 @@ function FormSelect({
   optionClassName = '',
   ariaLabel,
   placement = 'auto',
+  searchable = false,
+  searchPlaceholder = 'Buscar...',
+  noOptionsMessage = 'No se encontraron resultados',
 }) {
   const safeOptions = Array.isArray(options) ? options : [];
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownStyle, setDropdownStyle] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const wrapperRef = useRef(null);
   const dropdownRef = useRef(null);
   const selectedOption = safeOptions.find((option) => String(option.value) === String(value));
   const SelectedIcon = selectedOption?.icon || Icon;
   const selectedIconClassName = selectedOption?.iconClassName || 'text-gray-400';
   const hasIcon = Boolean(SelectedIcon);
+  const normalizeSearch = (textValue) => String(textValue ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  const normalizedSearchTerm = normalizeSearch(searchTerm.trim());
+  const filteredOptions = searchable && normalizedSearchTerm
+    ? safeOptions.filter((option) => normalizeSearch(option.label).includes(normalizedSearchTerm))
+    : safeOptions;
 
   const updateDropdownPosition = useCallback(() => {
     if (!wrapperRef.current) return;
@@ -73,9 +85,20 @@ function FormSelect({
     };
   }, [isOpen, updateDropdownPosition]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      setSearchTerm('');
+    }
+  }, [isOpen]);
+
   const handleSelect = (nextValue) => {
     onChange(nextValue);
+    setSearchTerm('');
     setIsOpen(false);
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
   };
 
   return (
@@ -118,36 +141,66 @@ function FormSelect({
           style={dropdownStyle}
           className="bg-white border border-gray-300 rounded-lg shadow-2xl ring-1 ring-black/5 overflow-y-auto"
         >
-          <ul className="py-1">
-            {safeOptions.map((option) => {
-              const isSelected = String(option.value) === String(value);
-              const OptionIcon = option.icon;
-
-              return (
-                <li key={`${option.value}-${option.label}`}>
+          {searchable && (
+            <div className="sticky top-0 z-10 bg-white border-b border-gray-100 p-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-md outline-none text-gray-700 placeholder-gray-400 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
+                  autoFocus
+                />
+                {searchTerm && (
                   <button
                     type="button"
-                    onClick={() => handleSelect(option.value)}
-                    className={`
-                      w-full px-4 py-2 text-left text-sm transition-colors duration-150
-                      ${isSelected ? 'bg-[#004D77]/10 text-[#004D77] cursor-pointer' : 'text-gray-700 hover:bg-[#004D77]/10 cursor-pointer'}
-                      ${optionClassName}
-                    `}
+                    onClick={handleClearSearch}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label="Limpiar busqueda"
                   >
-                    <div className="font-medium flex items-center gap-2">
-                      {OptionIcon && (
-                        <OptionIcon
-                          className={`w-4 h-4 shrink-0 ${option.iconClassName || 'text-gray-400'}`}
-                          strokeWidth={1.8}
-                        />
-                      )}
-                      {option.label}
-                    </div>
+                    <X className="w-4 h-4" strokeWidth={1.8} />
                   </button>
-                </li>
-              );
-            })}
-          </ul>
+                )}
+              </div>
+            </div>
+          )}
+
+          {filteredOptions.length > 0 ? (
+            <ul className="py-1">
+              {filteredOptions.map((option) => {
+                const isSelected = String(option.value) === String(value);
+                const OptionIcon = option.icon;
+
+                return (
+                  <li key={`${option.value}-${option.label}`}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(option.value)}
+                      className={`
+                        w-full px-4 py-2 text-left text-sm transition-colors duration-150
+                        ${isSelected ? 'bg-[#004D77]/10 text-[#004D77] cursor-pointer' : 'text-gray-700 hover:bg-[#004D77]/10 cursor-pointer'}
+                        ${optionClassName}
+                      `}
+                    >
+                      <div className="font-medium flex items-center gap-2">
+                        {OptionIcon && (
+                          <OptionIcon
+                            className={`w-4 h-4 shrink-0 ${option.iconClassName || 'text-gray-400'}`}
+                            strokeWidth={1.8}
+                          />
+                        )}
+                        {option.label}
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="px-4 py-3 text-sm text-gray-500">{noOptionsMessage}</p>
+          )}
         </div>,
         document.body
       )}

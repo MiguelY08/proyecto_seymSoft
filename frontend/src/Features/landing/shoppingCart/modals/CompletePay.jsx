@@ -1,4 +1,4 @@
-import { Clock, LoaderCircle, MapPin, Store, Upload, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, LoaderCircle, Store, Upload, X, ZoomIn } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import qrMagic from '../../../../assets/QR_Magic.jpg';
 import {
@@ -11,19 +11,6 @@ import { useAlert } from '../../../shared/alerts/useAlert';
 import { getProductBarcode } from '../../orders/helpers/customerOrderHelpers';
 
 const INITIAL_SECONDS = 48 * 60 * 60;
-
-const buildDeliveryAddress = (deliveryInfo = {}) => {
-  const addressParts = [
-    deliveryInfo?.direccion,
-    deliveryInfo?.barrio ? `Barrio ${deliveryInfo.barrio}` : null,
-    deliveryInfo?.ciudad,
-  ]
-    .map((part) => String(part || '').trim())
-    .filter(Boolean);
-
-  const notes = String(deliveryInfo?.notas || '').trim();
-  return `${addressParts.join(', ')}${notes ? ` (${notes})` : ''}`;
-};
 
 function useCountdown() {
   const [secondsLeft, setSecondsLeft] = useState(INITIAL_SECONDS);
@@ -56,7 +43,6 @@ function CompletePay({
   onClose,
   onCompleted,
   totalAmount,
-  deliveryMethod,
   deliveryInfo,
   cartItems,
   clientId,
@@ -66,10 +52,16 @@ function CompletePay({
   const [receipt, setReceipt] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [pendingOrder, setPendingOrder] = useState(null);
+  const [qrOpen, setQrOpen] = useState(false);
+  const fileInputRef = useRef(null);
 
   if (!isOpen) return null;
 
   const handleClose = () => {
+    if (qrOpen) {
+      setQrOpen(false);
+      return;
+    }
     if (submitting) return;
     if (pendingOrder) {
       showWarning(
@@ -98,6 +90,14 @@ function CompletePay({
     }
 
     setReceipt(file);
+  };
+
+  const handleRemoveReceipt = () => {
+    if (submitting) return;
+    setReceipt(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleSubmit = async () => {
@@ -136,11 +136,6 @@ function CompletePay({
       return;
     }
 
-    const isPickup = deliveryMethod === 'tienda';
-    const deliveryAddress = isPickup
-      ? 'El cliente lo recoge'
-      : buildDeliveryAddress(deliveryInfo);
-
     setSubmitting(true);
     let createdOrder = pendingOrder;
 
@@ -148,8 +143,13 @@ function CompletePay({
       if (!createdOrder) {
         createdOrder = await OrdersService.create({
           clienteId: clientId,
-          tipoEntrega: isPickup ? 'recoge' : 'domicilio',
-          direccionEntrega: deliveryAddress,
+          tipoEntrega: 'recoge',
+          direccionEntrega: 'El cliente lo recoge',
+          deliveryRecipientName: String(deliveryInfo?.deliveryRecipientName || '').trim(),
+          departamentoEntregaCodigo: null,
+          departamentoEntregaNombre: null,
+          ciudadEntregaCodigo: null,
+          ciudadEntregaNombre: null,
           productos: products,
           estadoLogistico: ESTADOS_LOGISTICOS.EN_PROCESO,
           origen: ORIGENES.WEB,
@@ -193,6 +193,7 @@ function CompletePay({
   };
 
   return (
+    <>
     <div
       className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm"
       onClick={handleClose}
@@ -231,8 +232,8 @@ function CompletePay({
                 ${(Number(totalAmount) || 0).toLocaleString('es-CO')} COP
               </p>
               <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700">
-                {deliveryMethod === 'domicilio' ? <MapPin size={12} /> : <Store size={12} />}
-                {deliveryMethod === 'domicilio' ? 'Domicilio' : 'Recoger en tienda'}
+                <Store size={12} />
+                Recoger en tienda
               </span>
             </div>
             <div className="text-center">
@@ -240,27 +241,66 @@ function CompletePay({
               <img
                 src={qrMagic}
                 alt="Código QR de pago Magic"
-                className="h-28 w-28 rounded-xl border border-slate-200 bg-white object-contain p-1"
+                onClick={() => setQrOpen(true)}
+                className="h-28 w-28 cursor-pointer rounded-xl border border-slate-200 bg-white object-contain p-1"
               />
+              <button
+                type="button"
+                onClick={() => setQrOpen(true)}
+                className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[#004D77]"
+              >
+                <ZoomIn size={13} /> Ampliar QR
+              </button>
             </div>
+          </div>
+
+          <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-amber-800">
+            <AlertTriangle size={17} className="mt-0.5 shrink-0" />
+            <p className="text-xs font-semibold leading-relaxed">
+              El comprobante debe cubrir el total pendiente del pedido. Si el pago no corresponde al valor completo, la aprobacion puede ser rechazada.
+            </p>
           </div>
 
           <div>
             <p className="mb-2 text-xs font-bold text-slate-700">Comprobante de transferencia</p>
-            <label className="flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed border-slate-300 p-4 text-center transition hover:border-[#004D77] hover:bg-blue-50">
-              <input
-                type="file"
-                accept="image/png,image/jpeg"
-                onChange={handleFileChange}
-                disabled={submitting}
-                className="hidden"
-              />
-              <Upload size={24} className="mb-2 text-slate-400" />
-              <span className="max-w-full break-all text-xs font-semibold text-slate-700">
-                {receipt?.name || 'Haz clic para subir el comprobante'}
-              </span>
-              <span className="mt-1 text-[11px] text-slate-400">PNG, JPG o JPEG · máximo 10 MB</span>
-            </label>
+            <div className="relative">
+              <label className={`flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed p-4 text-center transition ${
+                receipt
+                  ? 'border-emerald-300 bg-emerald-50 hover:border-emerald-500'
+                  : 'border-slate-300 hover:border-[#004D77] hover:bg-blue-50'
+              }`}>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  onChange={handleFileChange}
+                  disabled={submitting}
+                  className="hidden"
+                />
+                {receipt ? (
+                  <CheckCircle size={24} className="mb-2 text-emerald-600" />
+                ) : (
+                  <Upload size={24} className="mb-2 text-slate-400" />
+                )}
+                <span className="max-w-full break-all text-xs font-semibold text-slate-700">
+                  {receipt?.name || 'Haz clic para subir el comprobante'}
+                </span>
+                <span className={`mt-1 text-[11px] ${receipt ? 'text-emerald-700' : 'text-slate-400'}`}>
+                  {receipt ? 'Imagen cargada correctamente' : 'PNG, JPG o JPEG · máximo 10 MB'}
+                </span>
+              </label>
+              {receipt && (
+                <button
+                  type="button"
+                  onClick={handleRemoveReceipt}
+                  disabled={submitting}
+                  className="absolute right-3 top-3 rounded-full bg-white p-1 text-slate-500 shadow-sm transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  aria-label="Quitar comprobante"
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -291,6 +331,33 @@ function CompletePay({
         </div>
       </div>
     </div>
+
+    {qrOpen && (
+      <div
+        className="fixed inset-0 z-[1100] flex items-center justify-center overflow-y-auto bg-black/80 p-3 sm:p-5"
+        onClick={() => setQrOpen(false)}
+      >
+        <div
+          className="relative w-full max-w-[420px] rounded-2xl bg-white p-3 pt-12 shadow-2xl sm:max-w-[520px] sm:rounded-3xl sm:p-4 sm:pt-14"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={() => setQrOpen(false)}
+            className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition hover:bg-slate-200"
+            aria-label="Cerrar QR"
+          >
+            <X size={18} />
+          </button>
+          <img
+            src={qrMagic}
+            alt="Código QR de pago ampliado"
+            className="mx-auto aspect-square max-h-[70vh] w-full max-w-[360px] rounded-2xl object-contain sm:max-w-[440px]"
+          />
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 

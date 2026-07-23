@@ -4,6 +4,7 @@ import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { DollarSign, Package } from 'lucide-react';
 import { ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES } from '../services/ordersService';
 
 // ─── Textos capitalizados para mostrar ───────────────────────────────────────
@@ -100,7 +101,7 @@ export const EstadoLogisticoBadgePill = ({ estado }) => {
       className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold"
       style={{ backgroundColor: s.bg, color: s.color }}
     >
-      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: s.dot }} />
+      <Package className="w-3 h-3 shrink-0" strokeWidth={2} />
       {label}
     </span>
   );
@@ -127,7 +128,7 @@ export const EstadoPagoBadgePill = ({ estado }) => {
       className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold"
       style={{ backgroundColor: s.bg, color: s.color }}
     >
-      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: s.dot }} />
+      <DollarSign className="w-3 h-3 shrink-0" strokeWidth={2} />
       {label}
     </span>
   );
@@ -338,6 +339,7 @@ const formatDateForExcel = (isoString) => {
 
 const getOrderNumber = (order) => normalizeValue(order.numeroPedido ?? order.id, 'Sin numero');
 const getOrderProducts = (order) => order.productos ?? order.details ?? [];
+const getOrderShippingAmount = (order) => Number(order.shippingAmount ?? order.shipping_amount ?? 0) || 0;
 
 const getOriginLabel = (origin) => {
   if (origin === ORIGENES.MANUAL) return 'Manual';
@@ -426,13 +428,16 @@ const applyWorksheetTableSettings = (worksheet, headerRowNumber, lastColumn) => 
 
 const buildOrdersSummarySheet = (workbook, orders, subtitle) => {
   const worksheet = workbook.addWorksheet('Resumen Pedidos');
-  setupWorksheetHeader(worksheet, 'PEDIDOS', subtitle, 'J');
+  setupWorksheetHeader(worksheet, 'PEDIDOS', subtitle, 'M');
 
   worksheet.columns = [
     { key: 'orderNumber', width: 14 },
     { key: 'client', width: 30 },
+    { key: 'deliveryDepartment', width: 22 },
+    { key: 'deliveryCity', width: 26 },
     { key: 'deliveryAddress', width: 40 },
     { key: 'date', width: 16 },
+    { key: 'shippingAmount', width: 16 },
     { key: 'total', width: 16 },
     { key: 'logisticStatus', width: 18 },
     { key: 'paymentStatus', width: 18 },
@@ -444,8 +449,11 @@ const buildOrdersSummarySheet = (workbook, orders, subtitle) => {
   const headerRow = worksheet.addRow([
     'No. Pedido',
     'Cliente',
+    'Departamento',
+    'Municipio/Ciudad',
     'Direccion de entrega',
     'Fecha pedido',
+    'Envio',
     'Total',
     'Estado logistico',
     'Estado de pago',
@@ -459,8 +467,11 @@ const buildOrdersSummarySheet = (workbook, orders, subtitle) => {
     const row = worksheet.addRow({
       orderNumber: getOrderNumber(order),
       client: normalizeValue(order.clienteNombre, 'Cliente no identificado'),
+      deliveryDepartment: normalizeValue(order.departamentoEntregaNombre),
+      deliveryCity: normalizeValue(order.ciudadEntregaNombre),
       deliveryAddress: normalizeValue(order.direccionEntrega),
       date: formatDateForExcel(order.fechaPedido),
+      shippingAmount: getOrderShippingAmount(order),
       total: Number(order.total ?? 0),
       logisticStatus: ESTADO_LOGISTICO_LABELS[order.estadoLogistico] || normalizeValue(order.estadoLogistico),
       paymentStatus: ESTADO_PAGO_LABELS[order.pagoEstado] || normalizeValue(order.pagoEstado),
@@ -469,11 +480,12 @@ const buildOrdersSummarySheet = (workbook, orders, subtitle) => {
       productCount: getOrderProducts(order).length,
     });
 
+    row.getCell('shippingAmount').numFmt = CURRENCY_FORMAT;
     row.getCell('total').numFmt = CURRENCY_FORMAT;
     styleDataRow(row, index);
   });
 
-  applyWorksheetTableSettings(worksheet, 4, 'J');
+  applyWorksheetTableSettings(worksheet, 4, 'M');
 };
 
 const buildOrdersProductsSheet = (workbook, orders, subtitle) => {
@@ -637,6 +649,11 @@ export const exportOrderToPDF = (order, pagos = [], asesorNombre = 'N/A') => {
     return isNaN(date.getTime()) ? isoString : date.toLocaleDateString('es-CO');
   };
 
+  const ubicacionEntrega = [order.ciudadEntregaNombre, order.departamentoEntregaNombre]
+    .filter(Boolean)
+    .join(', ');
+  const isRecoge = String(order.tipoEntrega ?? order.deliveryType ?? '').toLowerCase().includes('recoge');
+  const shippingAmount = getOrderShippingAmount(order);
   const doc = new jsPDF();
   const marginLeft = 15;
   let yPos = 20;
@@ -666,8 +683,14 @@ export const exportOrderToPDF = (order, pagos = [], asesorNombre = 'N/A') => {
   yPos += 5;
   doc.text(`Email: ${order.clienteEmail || 'No registrado'}`, marginLeft, yPos);
   yPos += 5;
+  doc.text(`Ubicacion: ${ubicacionEntrega || 'No registrada'}`, marginLeft, yPos);
+  yPos += 5;
   doc.text(`Dirección de entrega: ${order.direccionEntrega || 'No especificada'}`, marginLeft, yPos);
   yPos += 5;
+  if (!isRecoge) {
+    doc.text(`Envio: ${formatCurrency(shippingAmount)}`, marginLeft, yPos);
+    yPos += 5;
+  }
   doc.text(`Fecha del pedido: ${formatDate(order.fechaPedido)}`, marginLeft, yPos);
   yPos += 10;
 
@@ -704,16 +727,18 @@ export const exportOrderToPDF = (order, pagos = [], asesorNombre = 'N/A') => {
     formatCurrency(prod.subtotal),
   ]);
 
+  const productosFoot = !isRecoge
+    ? [
+        ['', '', 'Envio:', formatCurrency(shippingAmount)],
+        ['', '', 'Total:', formatCurrency(order.total)],
+      ]
+    : [['', '', 'Total:', formatCurrency(order.total)]];
+
   autoTable(doc, {
     startY: yPos,
     head: [['Producto', 'Cant.', 'Precio Unit.', 'Subtotal']],
     body: productosRows,
-    foot: [[
-      '',
-      '',
-      'Total:',
-      formatCurrency(order.total)
-    ]],
+    foot: productosFoot,
     theme: 'grid',
     styles: { fontSize: 9, cellPadding: 2 },
     headStyles: { fillColor: [0, 77, 119], textColor: 255 },

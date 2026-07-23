@@ -1,6 +1,6 @@
 // src/features/orders/components/PaymentsSection.jsx
 import React, { useState } from 'react';
-import { Plus, DollarSign, Tag, FileText, CheckCircle, CreditCard, Lock, Trash2 } from 'lucide-react';
+import { Plus, DollarSign, Tag, FileText, CheckCircle, CreditCard, Lock, Trash2, AlertTriangle } from 'lucide-react';
 import { METODOS_PAGO } from '../services/ordersService';
 import FormSelect from '../../../../shared/FormSelect';
 
@@ -65,6 +65,19 @@ function PaymentsSection({
     }).format(value);
   };
 
+  const cleanMoneyInput = (value) => String(value || '').replace(/\D/g, '');
+
+  const parseMoneyInput = (value) => roundMoney(Number(cleanMoneyInput(value)));
+
+  const formatMoneyInput = (value) => {
+    const cleanValue = cleanMoneyInput(value);
+    if (!cleanValue) return '';
+
+    return new Intl.NumberFormat('es-CO', {
+      maximumFractionDigits: 0,
+    }).format(Number(cleanValue));
+  };
+
   const formatDate = (isoString) => {
     if (!isoString) return '';
     const date = new Date(isoString);
@@ -72,9 +85,13 @@ function PaymentsSection({
   };
 
   const handleMontoChange = (e) => {
-    const value = e.target.value;
-    const amount = roundMoney(value);
+    const value = cleanMoneyInput(e.target.value);
+    const amount = parseMoneyInput(value);
     setNewPayment(prev => ({ ...prev, monto: value }));
+    if (amount > saldoPendiente) {
+      setFormError(`El monto excede el saldo pendiente (${formatCurrency(saldoPendiente)}).`);
+      return;
+    }
     if (isCreditPayment && creditLimit !== null && amount > creditLimit) {
       setFormError(`El monto supera el cupo disponible (${formatCurrency(creditLimit)}).`);
       return;
@@ -84,9 +101,9 @@ function PaymentsSection({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const monto = parseFloat(newPayment.monto);
+    const monto = parseMoneyInput(newPayment.monto);
 
-    if (isNaN(monto) || monto <= 0) {
+    if (monto <= 0) {
       setFormError('El monto debe ser un número mayor a cero.');
       return;
     }
@@ -218,26 +235,40 @@ function PaymentsSection({
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
                   <input
-                    type="number"
-                    min="1"
-                    step="0.01"
-                    value={newPayment.monto}
+                    type="text"
+                    inputMode="numeric"
+                    value={formatMoneyInput(newPayment.monto)}
                     onChange={handleMontoChange}
-                    placeholder="0.00"
+                    placeholder="0"
                     className={inputBaseClass}
                     disabled={loading || disabled}
                   />
                 </div>
-                <p className={`text-xs ${montoPreview > 0 ? 'text-[#004D77] font-semibold' : 'text-gray-400'}`}>
-                  {montoPreview > 0 ? formatCurrency(montoPreview) : 'Ingresa un monto para ver el valor formateado.'}
-                </p>
                 {isCreditPayment && (
-                  <p className={`text-xs ${creditLimit !== null && montoPreview > creditLimit ? 'text-red-500 font-medium' : 'text-emerald-600 font-medium'}`}>
-                    Cupo disponible: {creditLimit !== null ? formatCurrency(creditLimit) : 'No disponible'}
-                    {creditAssigned !== null && creditAssigned !== undefined
-                      ? ` / asignado: ${formatCurrency(creditAssigned)}`
-                      : ''}
-                  </p>
+                  <div className={`flex items-start gap-3 rounded-lg border px-3 py-2 ${
+                    creditLimit !== null && montoPreview > creditLimit
+                      ? 'border-red-200 bg-red-50'
+                      : 'border-emerald-200 bg-emerald-50'
+                  }`}>
+                    <CreditCard
+                      className={`mt-0.5 h-4 w-4 shrink-0 ${
+                        creditLimit !== null && montoPreview > creditLimit
+                          ? 'text-red-700'
+                          : 'text-emerald-700'
+                      }`}
+                      strokeWidth={1.8}
+                    />
+                    <p className={`text-sm font-medium ${
+                      creditLimit !== null && montoPreview > creditLimit
+                        ? 'text-red-800'
+                        : 'text-emerald-800'
+                    }`}>
+                      Cupo disponible: {creditLimit !== null ? formatCurrency(creditLimit) : 'No disponible'}
+                      {creditAssigned !== null && creditAssigned !== undefined
+                        ? ` / asignado: ${formatCurrency(creditAssigned)}`
+                        : ''}
+                    </p>
+                  </div>
                 )}
               </div>
 
@@ -259,7 +290,10 @@ function PaymentsSection({
             </div>
 
             {formError && (
-              <p className="mt-2 text-xs text-red-500">{formError}</p>
+              <div className="mt-3 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-700" strokeWidth={1.8} />
+                <p className="text-sm font-medium text-red-800">{formError}</p>
+              </div>
             )}
 
             <div className="flex justify-end gap-3 mt-4">

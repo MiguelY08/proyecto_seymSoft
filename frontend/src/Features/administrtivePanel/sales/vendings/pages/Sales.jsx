@@ -87,12 +87,18 @@ function Sales() {
     setLoading(true);
     try {
       const service = getSalesServiceByType(activeType);
-      const firstPage = await service({ page: 1, limit: SALES_FETCH_LIMIT });
+      const searchTerm = search.trim();
+      const getParams = (page) => ({
+        page,
+        limit: SALES_FETCH_LIMIT,
+        ...(searchTerm ? { search: searchTerm } : {}),
+      });
+      const firstPage = await service(getParams(1));
       const allSales = [...(firstPage.sales ?? [])];
       const totalPages = firstPage.pagination?.totalPages ?? 1;
 
       for (let page = 2; page <= totalPages; page += 1) {
-        const response = await service({ page, limit: SALES_FETCH_LIMIT });
+        const response = await service(getParams(page));
         allSales.push(...(response.sales ?? []));
       }
 
@@ -103,11 +109,14 @@ function Sales() {
     } finally {
       setLoading(false);
     }
-  }, [activeType]);
+  }, [activeType, search]);
 
   // Recargar datos al volver del formulario, cambiar ruta o cambiar seccion
   useEffect(() => {
-    fetchSales();
+    const debounceMs = search.trim() ? 300 : 0;
+    const timeoutId = window.setTimeout(fetchSales, debounceMs);
+
+    return () => window.clearTimeout(timeoutId);
   }, [fetchSales, location.pathname]);
 
   useEffect(() => {
