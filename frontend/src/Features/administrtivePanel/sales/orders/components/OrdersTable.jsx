@@ -1,6 +1,6 @@
 // src/features/orders/components/OrdersTable.jsx
 import React from 'react';
-import { Info, SquarePen, XCircle, Package } from 'lucide-react';
+import { AlertTriangle, Info, SquarePen, XCircle, Package } from 'lucide-react';
 import {
   highlight,
   EstadoLogisticoBadgeTable,
@@ -41,12 +41,23 @@ function EmptyState({ isSearching }) {
 function getDeliveryText(order = {}) {
   const deliveryType = String(order.tipoEntrega ?? order.deliveryType ?? '').toLowerCase();
   const deliveryAddress = order.direccionEntrega ?? order.deliveryAddress ?? order.address ?? '';
+  const deliveryLocation = [order.ciudadEntregaNombre, order.departamentoEntregaNombre]
+    .filter(Boolean)
+    .join(', ');
 
   if (deliveryType.includes('recoge') || deliveryType.includes('recibe')) {
     return 'Recoger en tienda';
   }
 
-  return deliveryAddress || 'Sin direccion registrada';
+  return [deliveryLocation, deliveryAddress].filter(Boolean).join(' - ') || 'Sin direccion registrada';
+}
+
+
+function requiresShippingAmount(order = {}) {
+  const origin = String(order.origen ?? order.origin ?? '').toLowerCase();
+  const deliveryType = String(order.tipoEntrega ?? order.deliveryType ?? '').toLowerCase();
+  const shippingAmount = Number(order.shippingAmount ?? 0);
+  return origin === 'web' && deliveryType === 'domicilio' && shippingAmount <= 0;
 }
 
 function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', totalOrders = 0 }) {
@@ -133,7 +144,10 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', tota
         </thead>
         <tbody>
           {orders.map((order, index) => {
-            const rowBg = index % 2 === 0 ? 'bg-gray-100 hover:bg-blue-50' : 'bg-white hover:bg-blue-50';
+            const needsShippingAmount = requiresShippingAmount(order);
+            const rowBg = needsShippingAmount
+              ? 'bg-amber-50 hover:bg-amber-100'
+              : index % 2 === 0 ? 'bg-gray-100 hover:bg-blue-50' : 'bg-white hover:bg-blue-50';
             // Llamada corregida con dos parámetros
             const { deshabilitado } = getPermisos(order.estadoLogistico, order.pagoEstado);
             const entregaMostrar = getDeliveryText(order);
@@ -163,7 +177,15 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', tota
                   {highlight(order.fechaPedido ? new Date(order.fechaPedido).toLocaleDateString('es-CO') : '', search)}
                 </td>
                 <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap max-w-xs truncate">
-                  {highlight(entregaMostrar, search)}
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="truncate">{highlight(entregaMostrar, search)}</span>
+                    {needsShippingAmount && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                        <AlertTriangle className="h-3 w-3" strokeWidth={2} />
+                        Envio pendiente
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap font-semibold">
                   {highlight(`$${order.total.toLocaleString()}`, search)}

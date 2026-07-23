@@ -178,6 +178,16 @@ function DetailOrder({
   };
 
   const fechaMostrar = formatDate(order.fechaPedido);
+  const isRecoge = String(order.tipoEntrega ?? order.deliveryType ?? '').toLowerCase().includes('recoge');
+  const entregaMostrar = isRecoge ? 'El cliente lo recoge' : 'Domicilio';
+  const ubicacionEntrega = [order.ciudadEntregaNombre, order.departamentoEntregaNombre]
+    .filter(Boolean)
+    .join(', ');
+  const direccionEntregaCompleta = [
+    ubicacionEntrega,
+    order.direccionEntrega,
+  ].filter(Boolean).join(' - ');
+  const shippingAmount = Number(order.shippingAmount ?? 0);
   const isCancelado = order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO;
   const isEntregado = order.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO;
   const canChangeOrder = !isCancelado && !isEntregado;
@@ -299,9 +309,15 @@ function DetailOrder({
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
-            <h2 className="text-white font-semibold text-lg">
-              {titulo}
-            </h2>
+            <div className="flex items-center gap-3 min-w-0">
+              <h2 className="text-white font-semibold text-lg">
+                {titulo}
+              </h2>
+              <div className="flex items-center gap-2">
+                <EstadoLogisticoBadgePill estado={order.estadoLogistico} />
+                <EstadoPagoBadgePill estado={order.pagoEstado} />
+              </div>
+            </div>
             <button
               onClick={onClose}
               className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
@@ -348,9 +364,8 @@ function DetailOrder({
               {!esModoVenta && (
                 <DetailRow icon={Tag}      label="Origen"     value={order.origen || ORIGENES.MANUAL} />
               )}
-              <DetailRow icon={Truck}      label="Entrega"    value={order.direccionEntrega || 'El cliente lo recoge'} />
-              <DetailRow icon={MapPin}     label="Dirección"  value={order.direccionEntrega || 'No aplica'} />
-              <DetailRow icon={DollarSign} label="Total"      value={formatCurrency(order.total)} highlight />
+              <DetailRow icon={Truck}      label="Entrega"    value={entregaMostrar} />
+              <DetailRow icon={MapPin}     label="Dirección de entrega"  value={direccionEntregaCompleta || 'No aplica'} />
             </div>
 
             {/* ── Columna derecha: Productos y pagos ───────────────────────── */}
@@ -407,12 +422,22 @@ function DetailOrder({
               )}
 
               {/* Pagos */}
-              <div className="mt-2">
-                <div className="flex justify-between items-center px-3 py-2 bg-gray-50 rounded-lg mb-2">
+              <div className="mt-2 border-t border-gray-100 pt-3">
+                <div className="flex justify-between items-center px-1 py-1">
+                  <span className="text-xs font-semibold text-gray-500">Total</span>
+                  <span className="text-sm font-bold text-[#004D77]">{formatCurrency(order.total)}</span>
+                </div>
+                {!isRecoge && (
+                  <div className="flex justify-between items-center px-1 py-1">
+                    <span className="text-xs text-gray-500">Envio</span>
+                    <span className="text-sm font-bold text-gray-700">{formatCurrency(shippingAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center px-1 py-1">
                   <span className="text-xs text-gray-500">Total pagado</span>
                   <span className="text-sm font-bold text-green-600">{formatCurrency(totalPagado)}</span>
                 </div>
-                <div className="flex justify-between items-center px-3 py-2 bg-gray-50 rounded-lg mb-3">
+                <div className="flex justify-between items-center px-1 py-1 mb-3">
                   <span className="text-xs text-gray-500">Saldo pendiente</span>
                   <span className={`text-sm font-bold ${totalPagado >= order.total ? 'text-green-600' : 'text-amber-600'}`}>
                     {formatCurrency(Math.max(0, order.total - totalPagado))}
@@ -443,18 +468,6 @@ function DetailOrder({
                 ) : (
                   <p className="text-xs text-gray-400 italic">No hay pagos registrados.</p>
                 )}
-              </div>
-
-              {/* Estados */}
-              <div className="mt-4 pt-3 border-t border-gray-100">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs text-gray-500">Estado pedido</span>
-                  <EstadoLogisticoBadgePill estado={order.estadoLogistico} />
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-500">Estado de pago</span>
-                  <EstadoPagoBadgePill estado={order.pagoEstado} />
-                </div>
               </div>
             </div>
           </div>

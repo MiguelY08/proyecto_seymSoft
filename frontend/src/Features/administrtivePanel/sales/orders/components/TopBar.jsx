@@ -8,6 +8,7 @@ import {
   Plus,
   Truck,
   CreditCard,
+  AlertTriangle,
   X,
   ChevronDown,
 } from 'lucide-react';
@@ -28,6 +29,8 @@ function TopBar({
   setOrigenFilter,
   pagoEstadoFilter,
   setPagoEstadoFilter,
+  envioFilter,
+  setEnvioFilter,
   setCurrentPage,
   orders,
 }) {
@@ -38,7 +41,7 @@ function TopBar({
   const searchWrapperRef = useRef(null);
   const filtersWrapperRef = useRef(null);
 
-  const hayFiltrosActivos = search || fechaInicial || fechaFinal || origenFilter || pagoEstadoFilter;
+  const hayFiltrosActivos = search || fechaInicial || fechaFinal || origenFilter || pagoEstadoFilter || envioFilter;
 
   const handleClearFilters = () => {
     setSearch('');
@@ -46,6 +49,7 @@ function TopBar({
     setFechaFinal('');
     setOrigenFilter('');
     setPagoEstadoFilter('');
+    setEnvioFilter('');
     setCurrentPage(1);
     setIsSearchOpen(false);
     setOpenFilter(null);
@@ -83,6 +87,12 @@ function TopBar({
     { value: '', label: 'Todos' },
     { value: ESTADOS_PAGO.PENDIENTE, label: 'Pendiente' },
     { value: ESTADOS_PAGO.PAGADO, label: 'Pagado' },
+  ];
+
+  const envioOptions = [
+    { value: '', label: 'Todos' },
+    { value: 'pendiente', label: 'Pendiente' },
+    { value: 'completo', label: 'Completo' },
   ];
 
   useEffect(() => {
@@ -291,6 +301,63 @@ function TopBar({
                       <button
                         type="button"
                         onClick={() => handleSelectFilter(setPagoEstadoFilter, option.value)}
+                        className={`w-full px-4 py-2 text-left text-sm transition-colors duration-150 ${
+                          isSelected
+                            ? 'bg-[#004D77]/10 text-[#004D77] font-medium'
+                            : 'text-gray-700 hover:bg-[#004D77]/10'
+                        }`}
+                      >
+                        <span className="font-medium">{option.label}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+          </div>
+
+          <div
+            className={`relative shrink-0 transition-all duration-300 ${
+              isSearchOpen ? 'w-16' : 'w-36'
+            }`}
+          >
+          <button
+            type="button"
+            onClick={() => setOpenFilter((current) => (current === 'envio' ? null : 'envio'))}
+            className={`w-full h-10 flex items-center rounded-lg border border-gray-300 bg-white text-sm text-gray-600 hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none transition ${
+              isSearchOpen ? 'justify-center gap-1 px-2' : 'justify-between pl-3 pr-2'
+            }`}
+            title="Envio"
+            aria-label="Envio"
+          >
+            <span className={`flex items-center ${isSearchOpen ? 'gap-1.5' : 'gap-2'} min-w-0`}>
+              <AlertTriangle className="w-4 h-4 text-gray-400 shrink-0" strokeWidth={1.8} />
+              {!isSearchOpen && (
+                <span className="truncate">
+                  {envioFilter ? getOptionLabel(envioOptions, envioFilter, 'Envio') : 'Envio'}
+                </span>
+              )}
+            </span>
+            <ChevronDown
+              className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform ${
+                openFilter === 'envio' ? 'rotate-180' : ''
+              }`}
+              strokeWidth={2}
+            />
+          </button>
+
+          {openFilter === 'envio' && (
+            <div className="absolute z-20 left-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              <ul className="py-1">
+                {envioOptions.map((option) => {
+                  const isSelected = envioFilter === option.value;
+
+                  return (
+                    <li key={option.label}>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectFilter(setEnvioFilter, option.value)}
                         className={`w-full px-4 py-2 text-left text-sm transition-colors duration-150 ${
                           isSelected
                             ? 'bg-[#004D77]/10 text-[#004D77] font-medium'

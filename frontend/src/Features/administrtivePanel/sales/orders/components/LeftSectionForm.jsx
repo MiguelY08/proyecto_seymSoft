@@ -1,4 +1,4 @@
-// src/features/orders/components/LeftSectionForm.jsx
+﻿// src/features/orders/components/LeftSectionForm.jsx
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { ESTADOS_LOGISTICOS } from '../services/ordersService';
 import {
@@ -11,14 +11,21 @@ function LeftSectionForm({
   formData,
   errors,
   clientes,
+  departamentos = [],
+  ciudades = [],
+  loadingCiudades = false,
   user,
   loading,
   readOnly = false,
   isEditMode,
   estadoLogisticoOriginal = null,
+  showDirectSaleLockedInfo = false,
   onClienteChange,
   onTipoEntregaChange,
+  onDepartamentoEntregaChange,
+  onCiudadEntregaChange,
   onDireccionManualChange,
+  onShippingAmountChange,
   onEstadoLogisticoChange,
   onMotivoCancelacionChange,
   onCreateClient,
@@ -144,6 +151,14 @@ function LeftSectionForm({
     { value: 'recoge', label: 'El cliente lo recoge' },
     { value: 'domicilio', label: 'Entrega a domicilio' },
   ];
+  const departamentoOptions = departamentos.map((department) => ({
+    value: department.code,
+    label: department.name,
+  }));
+  const ciudadOptions = ciudades.map((city) => ({
+    value: city.code,
+    label: city.name,
+  }));
   const estadoOptions = [
     { value: ESTADOS_LOGISTICOS.EN_PROCESO, label: 'En proceso' },
     { value: ESTADOS_LOGISTICOS.LISTO, label: 'Listo' },
@@ -269,94 +284,187 @@ function LeftSectionForm({
         </div>
 
         {/* Tipo de entrega */}
-        <div className="flex flex-col gap-1.5">
-          <label className="block text-sm font-medium text-gray-700">
-            Tipo de entrega <span className="text-red-500">*</span>
-          </label>
-          <FormSelect
-            value={formData.tipoEntrega}
-            options={tipoEntregaOptions}
-            onChange={(value) => onTipoEntregaChange({ target: { value } })}
-            icon={Truck}
-            disabled={loading || readOnly}
-            error={errors.tipoEntrega}
-            placeholder="Tipo de entrega"
-            ariaLabel="Tipo de entrega"
-          />
-          {errorMsg('tipoEntrega')}
-        </div>
-
-        {/* Dirección (condicional) */}
-        {mostrarDireccionManual ? (
-          <div className="flex flex-col gap-1.5">
-            <label className="block text-sm font-medium text-gray-700">
-              Dirección de entrega <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-              <textarea
-                value={formData.direccionEntrega}
-                onChange={onDireccionManualChange}
-                rows={2}
-                className={textareaClass('direccionEntrega', loading || readOnly)}
-                placeholder="Ej: Calle 123 #45-67"
-                disabled={loading || readOnly}
-              />
+        {showDirectSaleLockedInfo ? (
+          <div className="flex items-start gap-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
+            <Truck className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" strokeWidth={1.8} />
+            <div>
+              <p className="text-sm font-semibold text-blue-900">Venta directa en caja</p>
+              <p className="text-sm text-blue-800">
+                El tipo de entrega queda como Cliente lo recoge porque el cliente se lleva el pedido en el momento.
+              </p>
             </div>
-            {errorMsg('direccionEntrega')}
-            {!isEditMode && !readOnly && formData.clienteId && (
-              <button
-                type="button"
-                onClick={() => {
-                  const cliente = clientes.find(c => c.id === formData.clienteId);
-                  if (cliente) {
-                    const direccionSugerida = cliente.id === 0
-                      ? 'El cliente lo recoge'
-                      : (cliente.address || cliente.direccion || '');
-                    onDireccionManualChange({ target: { value: direccionSugerida } });
-                  }
-                }}
-                className="mt-2 text-sm text-[#004D77] hover:bg-[#004D77]/10 inline-flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors duration-200 w-fit"
-              >
-                <Home className="w-3.5 h-3.5" strokeWidth={1.8} />
-                Usar dirección del cliente
-              </button>
-            )}
           </div>
         ) : (
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-600">
-              <span className="font-medium">Dirección de entrega:</span> El cliente lo recoge
-            </p>
+          <div className={`grid grid-cols-1 ${mostrarDireccionManual ? 'md:grid-cols-2' : ''} gap-4`}>
+            <div className="flex flex-col gap-1.5">
+              <label className="block text-sm font-medium text-gray-700">
+                Tipo de entrega <span className="text-red-500">*</span>
+              </label>
+              <FormSelect
+                value={formData.tipoEntrega}
+                options={tipoEntregaOptions}
+                onChange={(value) => onTipoEntregaChange({ target: { value } })}
+                icon={Truck}
+                disabled={loading || readOnly}
+                error={errors.tipoEntrega}
+                placeholder="Tipo de entrega"
+                ariaLabel="Tipo de entrega"
+              />
+              {errorMsg('tipoEntrega')}
+            </div>
+
+            {mostrarDireccionManual && (
+              <div className="flex flex-col gap-1.5">
+                <label className="block text-sm font-medium text-gray-700">
+                  Total del envío <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Truck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={formData.shippingAmount ?? ''}
+                    onChange={onShippingAmountChange}
+                    placeholder="0"
+                    disabled={loading || readOnly}
+                    className={`w-full pl-10 pr-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200
+                      ${errors.shippingAmount ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'}
+                      ${loading || readOnly ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}
+                    `}
+                  />
+                </div>
+                {errorMsg('shippingAmount')}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Dirección (condicional) */}
+        {mostrarDireccionManual && (
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="block text-sm font-medium text-gray-700">
+                  Departamento <span className="text-red-500">*</span>
+                </label>
+                <FormSelect
+                  value={formData.departamentoEntregaCodigo || ''}
+                  options={departamentoOptions}
+                  onChange={(value) => onDepartamentoEntregaChange({ target: { value } })}
+                  icon={MapPin}
+                  disabled={loading || readOnly}
+                  error={errors.departamentoEntregaCodigo || errors.departamentoEntregaNombre}
+                  placeholder="Seleccione departamento"
+                  searchable
+                  searchPlaceholder="Buscar departamento..."
+                  noOptionsMessage="No se encontraron departamentos"
+                  ariaLabel="Departamento de entrega"
+                />
+                {errorMsg('departamentoEntregaCodigo') || errorMsg('departamentoEntregaNombre')}
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="block text-sm font-medium text-gray-700">
+                  Municipio/Ciudad <span className="text-red-500">*</span>
+                </label>
+                <FormSelect
+                  value={formData.ciudadEntregaCodigo || ''}
+                  options={ciudadOptions}
+                  onChange={(value) => onCiudadEntregaChange({ target: { value } })}
+                  icon={MapPin}
+                  disabled={loading || readOnly || loadingCiudades || !formData.departamentoEntregaCodigo}
+                  error={errors.ciudadEntregaCodigo || errors.ciudadEntregaNombre}
+                  placeholder={loadingCiudades ? 'Cargando municipios...' : 'Seleccione municipio/ciudad'}
+                  searchable
+                  searchPlaceholder="Buscar municipio/ciudad..."
+                  noOptionsMessage="No se encontraron municipios/ciudades"
+                  ariaLabel="Municipio o ciudad de entrega"
+                />
+                {errorMsg('ciudadEntregaCodigo') || errorMsg('ciudadEntregaNombre')}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="block text-sm font-medium text-gray-700">
+                Dirección de entrega <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
+                <textarea
+                  value={formData.direccionEntrega}
+                  onChange={onDireccionManualChange}
+                  rows={2}
+                  className={textareaClass('direccionEntrega', loading || readOnly)}
+                  placeholder="Ej: Calle 123 #45-67"
+                  disabled={loading || readOnly}
+                />
+              </div>
+              {errorMsg('direccionEntrega')}
+              {!isEditMode && !readOnly && formData.clienteId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cliente = clientes.find(c => c.id === formData.clienteId);
+                    if (cliente) {
+                      const direccionSugerida = cliente.id === 0
+                        ? 'El cliente lo recoge'
+                        : (cliente.address || cliente.direccion || '');
+                      onDireccionManualChange({ target: { value: direccionSugerida } });
+                    }
+                  }}
+                  className="mt-2 text-sm text-[#004D77] hover:bg-[#004D77]/10 inline-flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors duration-200 w-fit"
+                >
+                  <Home className="w-3.5 h-3.5" strokeWidth={1.8} />
+                  Usar dirección del cliente
+                </button>
+              )}
+            </div>
           </div>
         )}
 
         {/* Estado Logístico con colores */}
-        <div className="flex flex-col gap-1.5">
-          <label className="block text-sm font-medium text-gray-700">
-            Estado del pedido <span className="text-red-500">*</span>
-          </label>
-          <FormSelect
-            value={formData.estadoLogistico}
-            options={estadoOptions}
-            onChange={(value) => onEstadoLogisticoChange({ target: { value } })}
-            icon={PackageCheck}
-            disabled={isEstadoDisabled}
-            error={errors.estadoLogistico}
-            placeholder="Estado del pedido"
-            className={!isEstadoDisabled ? estadoColorClass : ''}
-            ariaLabel="Estado del pedido"
-          />
-          {errorMsg('estadoLogistico')}
-          {isEditMode && isEstadoPersistidoInmutable && (
-            <p className="mt-0.5 text-xs text-gray-500">Los pedidos entregados o cancelados no se pueden modificar.</p>
-          )}
-          {mostrarAvisoEntregadoPendiente && (
-            <p className="mt-0.5 text-xs text-blue-600">
-              {mensajeEntregadoPendiente}
-            </p>
-          )}
-        </div>
+        {showDirectSaleLockedInfo ? (
+          <div className="flex items-start gap-3 rounded-lg border border-green-100 bg-green-50 px-4 py-3">
+            <PackageCheck className="mt-0.5 h-4 w-4 shrink-0 text-green-700" strokeWidth={1.8} />
+            <div>
+              <p className="text-sm font-semibold text-green-900">Pedido entregado</p>
+              <p className="text-sm text-green-800">
+                El estado del pedido queda como Entregado al registrar una venta directa.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <label className="block text-sm font-medium text-gray-700">
+              Estado del pedido <span className="text-red-500">*</span>
+            </label>
+            <FormSelect
+              value={formData.estadoLogistico}
+              options={estadoOptions}
+              onChange={(value) => onEstadoLogisticoChange({ target: { value } })}
+              icon={PackageCheck}
+              disabled={isEstadoDisabled}
+              error={errors.estadoLogistico}
+              placeholder="Estado del pedido"
+              className={!isEstadoDisabled ? estadoColorClass : ''}
+              ariaLabel="Estado del pedido"
+            />
+            {errorMsg('estadoLogistico')}
+            {isEditMode && isEstadoPersistidoInmutable && (
+              <p className="mt-0.5 text-xs text-gray-500">Los pedidos entregados o cancelados no se pueden modificar.</p>
+            )}
+            {mostrarAvisoEntregadoPendiente && (
+              <div className="mt-2 flex items-start gap-3 rounded-lg border border-green-100 bg-green-50 px-4 py-3">
+                <PackageCheck className="mt-0.5 h-4 w-4 shrink-0 text-green-700" strokeWidth={1.8} />
+                <div>
+                  <p className="text-sm font-semibold text-green-900">Pedido entregado</p>
+                  <p className="text-sm text-green-800">{mensajeEntregadoPendiente}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Motivo de cancelación (condicional) */}
         {formData.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO && (
