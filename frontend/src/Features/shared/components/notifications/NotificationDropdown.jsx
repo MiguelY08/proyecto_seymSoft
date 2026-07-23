@@ -5,6 +5,7 @@ import NotificationSkeleton from "./NotificationSkeleton";
 function NotificationDropdown({
   notifications,
   loading,
+  error,
   unreadCount,
   onMarkAsRead,
   onMarkAllAsRead,
@@ -36,11 +37,17 @@ function NotificationDropdown({
       <div className="max-h-[24rem] overflow-y-auto">
         {loading && <NotificationSkeleton />}
 
-        {!loading && notifications.length === 0 && (
+        {!loading && error && (
+          <div className="px-4 py-5 text-sm text-red-500">
+            {error}
+          </div>
+        )}
+
+        {!loading && !error && notifications.length === 0 && (
           <NotificationEmpty />
         )}
 
-        {!loading && notifications.length > 0 && (
+        {!loading && !error && notifications.length > 0 && (
           notifications.map((notification) => (
             <NotificationItem
               key={notification.id}

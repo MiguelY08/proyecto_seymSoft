@@ -19,10 +19,14 @@ const NAV_ITEMS = [
   }
 ];
 
-function HeaderNav({ isActive }) {
+function HeaderNav({ isActive, showOrders = false }) {
+  const visibleItems = NAV_ITEMS.filter((item) => (
+    item.to !== "/orders-l" || showOrders
+  ));
+
   return (
     <nav className="hidden lg:flex items-center gap-0.5">
-      {NAV_ITEMS.map((item) => (
+      {visibleItems.map((item) => (
         <NavLink
           key={item.to}
           icon={item.icon}

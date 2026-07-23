@@ -3,14 +3,14 @@ import apiClient from "../../../setting/apiClient.js";
 const getData = (response) => response?.data?.data ?? null;
 
 const normalizeNotification = (notification) => ({
-  id: notification?.id,
+  id: notification?.id ?? notification?.id_notification,
   title: notification?.title || "",
   message: notification?.message || "",
   type: notification?.type || "info",
-  isRead: Boolean(notification?.isRead),
-  createdAt: notification?.createdAt || null,
-  updatedAt: notification?.updatedAt || null,
-  actionUrl: notification?.actionUrl || null,
+  isRead: Boolean(notification?.isRead ?? notification?.is_read),
+  createdAt: notification?.createdAt || notification?.created_at || null,
+  updatedAt: notification?.updatedAt || notification?.updated_at || null,
+  actionUrl: notification?.actionUrl || notification?.action_url || null,
   metadata: notification?.metadata || null,
 });
 

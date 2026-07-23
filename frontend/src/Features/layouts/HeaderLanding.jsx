@@ -19,6 +19,7 @@ function HeaderLanding() {
   const {
     user,
     role,
+    isAuthenticated,
     logout
   } = useAuth();
 
@@ -245,7 +246,10 @@ function HeaderLanding() {
               onClose={headerSearch.closeSearch}
               onClear={headerSearch.clearSearch}
             />
-            <HeaderNav isActive={isActive} />
+            <HeaderNav
+              isActive={isActive}
+              showOrders={isAuthenticated}
+            />
             <HeaderActions
               cartCount={cartCount}
               favoritesCount={favoritesCount}
@@ -281,6 +285,7 @@ function HeaderLanding() {
           onClose={() => setMenuOpen(false)}
           onOpenProfileEdit={() => setIsEditProfileOpen(true)}
           role={role}
+          showOrders={isAuthenticated}
           user={user}
         />
       )}

@@ -1449,6 +1449,13 @@ function ShoppingCart() {
                   </button>
                 </div>
 
+                <div className="mt-3 border-t border-[#e2edf5] pt-4">
+                  <h3 className="mb-3 flex items-center gap-2 text-sm font-black text-[#004D77]">
+                    <MapPin size={15} />
+                    Datos de envío
+                  </h3>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <div className="form-group">
                     <label className="form-label">

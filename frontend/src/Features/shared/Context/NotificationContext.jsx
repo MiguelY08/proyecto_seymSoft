@@ -11,6 +11,7 @@ import { useAuth } from "../../access/context/AuthContext";
 import notificationService from "../services/notificationService";
 
 const NotificationContext = createContext();
+const NOTIFICATION_REFRESH_INTERVAL_MS = 60 * 1000;
 
 export const NotificationProvider = ({ children }) => {
   const {
@@ -57,6 +58,9 @@ export const NotificationProvider = ({ children }) => {
 
   const markAsRead = useCallback(async (id) => {
     const notification = await notificationService.markAsRead(id);
+    const wasUnread = notifications.some((currentNotification) => (
+      currentNotification.id === id && !currentNotification.isRead
+    ));
 
     setNotifications((currentNotifications) => (
       currentNotifications.map((currentNotification) => (
@@ -66,9 +70,12 @@ export const NotificationProvider = ({ children }) => {
       ))
     ));
 
-    setUnreadCount((currentCount) => Math.max(0, currentCount - 1));
+    if (wasUnread) {
+      setUnreadCount((currentCount) => Math.max(0, currentCount - 1));
+    }
+
     return notification;
-  }, []);
+  }, [notifications]);
 
   const markAllAsRead = useCallback(async () => {
     const result = await notificationService.markAllAsRead();
@@ -84,6 +91,9 @@ export const NotificationProvider = ({ children }) => {
   }, []);
 
   const deleteNotification = useCallback(async (id) => {
+    const localNotification = notifications.find((notification) => (
+      notification.id === id
+    ));
     const deletedNotification =
       await notificationService.deleteNotification(id);
 
@@ -91,12 +101,12 @@ export const NotificationProvider = ({ children }) => {
       currentNotifications.filter((notification) => notification.id !== id)
     ));
 
-    if (!deletedNotification.isRead) {
+    if (localNotification && !localNotification.isRead) {
       setUnreadCount((currentCount) => Math.max(0, currentCount - 1));
     }
 
     return deletedNotification;
-  }, []);
+  }, [notifications]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -117,6 +127,20 @@ export const NotificationProvider = ({ children }) => {
     user?.id,
     user?.idUser,
     user?.id_user,
+  ]);
+
+  useEffect(() => {
+    if (authLoading || !isAuthenticated) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      refreshNotifications();
+    }, NOTIFICATION_REFRESH_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [
+    authLoading,
+    isAuthenticated,
+    refreshNotifications,
   ]);
 
   const value = useMemo(() => ({

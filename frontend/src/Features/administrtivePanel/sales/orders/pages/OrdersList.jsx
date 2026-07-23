@@ -277,7 +277,10 @@ function OrdersList() {
 
   if (loading && orders.length === 0) {
     return (
-      <Spinner message="Cargando pedidos..." />
+      <Spinner
+        message="Cargando pedidos..."
+        className="min-h-[calc(100dvh-5rem)]"
+      />
     );
   }
 
