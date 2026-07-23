@@ -44,11 +44,11 @@ function NotificationBell() {
   if (!isAuthenticated) return null;
 
   const handleToggle = () => {
-    setOpen((currentOpen) => {
-      const nextOpen = !currentOpen;
-      if (nextOpen) refreshNotifications();
-      return nextOpen;
-    });
+    if (!open) {
+      refreshNotifications();
+    }
+
+    setOpen((currentOpen) => !currentOpen);
   };
 
   return (
@@ -80,4 +80,3 @@ function NotificationBell() {
 }
 
 export default NotificationBell;
-
