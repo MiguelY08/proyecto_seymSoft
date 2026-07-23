@@ -342,6 +342,12 @@ const normalizeOrder = (order = {}) => {
       '',
     fechaPedido: order.fechaPedido ?? order.orderDate ?? order.createdAt ?? order.date,
     direccionEntrega: order.direccionEntrega ?? order.deliveryAddress ?? order.address ?? '',
+    deliveryRecipientName:
+      order.deliveryRecipientName ??
+      order.delivery_recipient_name ??
+      order.recipientName ??
+      order.receiverName ??
+      '',
     shippingAmount,
     departamentoEntregaCodigo: deliveryDepartmentCode,
     departamentoEntregaNombre: deliveryDepartmentName,
@@ -351,6 +357,25 @@ const normalizeOrder = (order = {}) => {
     clienteNombre: order.customer?.user?.fullName ?? order.customer?.name ?? order.clienteNombre ?? order.customerName ?? '',
     clienteTelefono: order.customer?.user?.phone ?? order.customer?.phone ?? order.clienteTelefono ?? order.customerPhone ?? '',
     clienteEmail: order.customer?.user?.email ?? order.customer?.email ?? order.clienteEmail ?? order.customerEmail ?? '',
+    clienteTipoDocumento:
+      order.customer?.documentType ??
+      order.customer?.docType ??
+      order.customer?.doc_type ??
+      order.clienteTipoDocumento ??
+      order.customerDocumentType ??
+      order.documentType ??
+      order.docType ??
+      '',
+    clienteDocumento:
+      order.customer?.document ??
+      order.customer?.docNumber ??
+      order.customer?.doc_number ??
+      order.customer?.documentNumber ??
+      order.clienteDocumento ??
+      order.customerDocument ??
+      order.docNumber ??
+      order.doc_number ??
+      '',
     clienteDireccion: order.customer?.address ?? '',
     productos,
     pagos,
@@ -379,6 +404,12 @@ const normalizeOrder = (order = {}) => {
 const buildCreateOrderPayload = (data = {}) => {
   const isRecoge = data.tipoEntrega === 'recoge' || data.direccionEntrega === 'El cliente lo recoge';
   const saleType = data.saleType ?? data.sale_type ?? data.origen ?? data.origin ?? ORIGENES.MANUAL;
+  const hasShippingAmount = data.shippingAmount !== undefined && data.shippingAmount !== null && String(data.shippingAmount).trim() !== '';
+  const shippingAmount = isRecoge
+    ? 0
+    : saleType === ORIGENES.WEB && !hasShippingAmount
+      ? undefined
+      : toNumber(data.shippingAmount);
 
   return {
     idClient: data.clienteId,
@@ -388,7 +419,8 @@ const buildCreateOrderPayload = (data = {}) => {
     saleType,
     deliveryType: isRecoge ? 'Recoge' : 'Domicilio',
     deliveryAddress: isRecoge ? null : data.direccionEntrega,
-    shippingAmount: isRecoge ? 0 : toNumber(data.shippingAmount),
+    deliveryRecipientName: saleType === 'direct' ? null : data.deliveryRecipientName,
+    shippingAmount,
     deliveryDepartmentCode: isRecoge ? null : data.departamentoEntregaCodigo,
     deliveryDepartmentName: isRecoge ? null : data.departamentoEntregaNombre,
     deliveryCityCode: isRecoge ? null : data.ciudadEntregaCodigo,
@@ -437,6 +469,7 @@ const buildUpdateOrderPayload = (data = {}) => {
   if (
     data.tipoEntrega !== undefined ||
     data.direccionEntrega !== undefined ||
+    data.deliveryRecipientName !== undefined ||
     data.shippingAmount !== undefined ||
     data.departamentoEntregaCodigo !== undefined ||
     data.departamentoEntregaNombre !== undefined ||
@@ -445,6 +478,7 @@ const buildUpdateOrderPayload = (data = {}) => {
   ) {
     payload.deliveryType = isRecoge ? 'Recoge' : 'Domicilio';
     payload.deliveryAddress = isRecoge ? null : data.direccionEntrega;
+    payload.deliveryRecipientName = data.deliveryRecipientName;
     payload.shippingAmount = isRecoge ? 0 : toNumber(data.shippingAmount);
     payload.deliveryDepartmentCode = isRecoge ? null : data.departamentoEntregaCodigo;
     payload.deliveryDepartmentName = isRecoge ? null : data.departamentoEntregaNombre;

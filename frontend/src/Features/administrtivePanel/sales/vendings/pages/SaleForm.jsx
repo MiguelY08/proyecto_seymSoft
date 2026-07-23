@@ -230,6 +230,7 @@ function SaleForm() {
     ciudadEntregaCodigo: '',
     ciudadEntregaNombre: '',
     shippingAmount: 0,
+    deliveryRecipientName: '',
     productos: [],
     estadoLogistico: isDirectSale ? ESTADOS_LOGISTICOS.ENTREGADO : ESTADOS_LOGISTICOS.EN_PROCESO,
     origen: ORIGENES.MANUAL,
@@ -474,6 +475,11 @@ function SaleForm() {
     if (errors.direccionEntrega) setErrors(prev => ({ ...prev, direccionEntrega: null }));
   };
 
+  const handleDeliveryRecipientNameChange = (e) => {
+    setFormData(prev => ({ ...prev, deliveryRecipientName: e.target.value }));
+    if (errors.deliveryRecipientName) setErrors(prev => ({ ...prev, deliveryRecipientName: null }));
+  };
+
   const handleShippingAmountChange = (e) => {
     const value = e.target.value;
     setFormData(prev => ({ ...prev, shippingAmount: value }));
@@ -617,6 +623,9 @@ function SaleForm() {
       newErrors.clienteId = 'Debe seleccionar un cliente.';
     }
     if (!getSessionUserId(user)) newErrors.idUser = 'No se pudo identificar al usuario en sesion.';
+    if (!isDirectSale && !formData.deliveryRecipientName?.trim()) {
+      newErrors.deliveryRecipientName = 'Debe ingresar la persona que recibe o recoge la venta.';
+    }
     if (!formData.direccionEntrega?.trim()) {
       newErrors.direccionEntrega = 'La dirección de entrega es obligatoria.';
     }
@@ -715,6 +724,7 @@ function SaleForm() {
           idOrderStatus: ORDER_STATUS_IDS[formData.estadoLogistico] ?? formData.estadoLogistico,
           deliveryType: formData.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Recoge',
           deliveryAddress: formData.direccionEntrega,
+          deliveryRecipientName: isDirectSale ? null : formData.deliveryRecipientName.trim(),
           shippingAmount,
           deliveryDepartmentCode: formData.tipoEntrega === 'domicilio' ? formData.departamentoEntregaCodigo : null,
           deliveryDepartmentName: formData.tipoEntrega === 'domicilio' ? formData.departamentoEntregaNombre : null,
@@ -831,6 +841,7 @@ function SaleForm() {
           onDepartamentoEntregaChange={handleDepartamentoEntregaChange}
           onCiudadEntregaChange={handleCiudadEntregaChange}
           onDireccionManualChange={handleDireccionManualChange}
+          onDeliveryRecipientNameChange={handleDeliveryRecipientNameChange}
           onShippingAmountChange={handleShippingAmountChange}
           onEstadoLogisticoChange={handleEstadoLogisticoChange}
           onMotivoCancelacionChange={handleMotivoCancelacionChange}

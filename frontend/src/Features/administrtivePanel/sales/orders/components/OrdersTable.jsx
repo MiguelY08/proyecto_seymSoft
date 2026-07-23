@@ -10,6 +10,7 @@ import {
 import { ESTADOS_LOGISTICOS, PaymentService } from '../services/ordersService';
 import OrderPaymentHover from './OrderPaymentHover';
 import Permission from '../../../configuration/roles/components/Permission';
+import { formatDeliveryAddress } from '../helpers/deliveryAddressHelper';
 
 // ─── Empty State ─────────────────────────────────────────────────────────────
 function EmptyState({ isSearching }) {
@@ -40,16 +41,12 @@ function EmptyState({ isSearching }) {
 // ─── OrdersTable ─────────────────────────────────────────────────────────────
 function getDeliveryText(order = {}) {
   const deliveryType = String(order.tipoEntrega ?? order.deliveryType ?? '').toLowerCase();
-  const deliveryAddress = order.direccionEntrega ?? order.deliveryAddress ?? order.address ?? '';
-  const deliveryLocation = [order.ciudadEntregaNombre, order.departamentoEntregaNombre]
-    .filter(Boolean)
-    .join(', ');
 
   if (deliveryType.includes('recoge') || deliveryType.includes('recibe')) {
     return 'Recoger en tienda';
   }
 
-  return [deliveryLocation, deliveryAddress].filter(Boolean).join(' - ') || 'Sin direccion registrada';
+  return formatDeliveryAddress(order) || 'Sin direccion registrada';
 }
 
 
@@ -133,7 +130,7 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', tota
         <thead className="bg-[#004D77] text-white">
           <tr>
             <th className="px-4 py-3 text-center text-sm font-semibold">N° Pedido</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Cliente</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold">Recibe/Cliente</th>
             <th className="px-4 py-3 text-center text-sm font-semibold">Fecha</th>
             <th className="px-4 py-3 text-center text-sm font-semibold">Entrega</th>
             <th className="px-4 py-3 text-center text-sm font-semibold">Total</th>
@@ -151,7 +148,10 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', tota
             // Llamada corregida con dos parámetros
             const { deshabilitado } = getPermisos(order.estadoLogistico, order.pagoEstado);
             const entregaMostrar = getDeliveryText(order);
-            const clienteMostrar = order.clienteNombre || 'Cliente no especificado';
+            const clienteMostrar =
+              order.deliveryRecipientName ||
+              order.clienteNombre ||
+              'Cliente no especificado';
             const cachedPayments = paymentCache[order.id];
             const hoverPosition = paymentHoverPositions[order.id];
 

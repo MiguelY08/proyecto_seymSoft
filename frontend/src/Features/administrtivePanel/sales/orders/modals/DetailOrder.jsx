@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import {
   X, User, Phone, Mail, MapPin, Calendar, CreditCard,
   CheckCircle, XCircle, Edit, AlertTriangle, Tag, DollarSign, FileDown,
-  Hash, UserCheck, Truck
+  IdCard, UserCheck, Truck
 } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import {
@@ -21,9 +21,10 @@ import { UserService } from '../../../users/services/userService';
 import PaymentReceiptsSection from '../components/PaymentReceiptsSection';
 import ApprovePaymentReceiptModal from './ApprovePaymentReceiptModal';
 import RejectPaymentReceiptModal from './RejectPaymentReceiptModal';
+import { formatDeliveryAddress } from '../helpers/deliveryAddressHelper';
 
 // ─── DetailRow ────────────────────────────────────────────────────────────────
-function DetailRow({ icon, label, value, placeholder, highlight = false }) {
+function DetailRow({ icon, label, value, placeholder, highlight = false, multiline = false }) {
   const hasValue = value && String(value).trim() !== '';
   const IconComponent = icon;
   return (
@@ -37,7 +38,9 @@ function DetailRow({ icon, label, value, placeholder, highlight = false }) {
         <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wide leading-none mb-0.5">
           {label}
         </span>
-        <span className={`block text-sm font-medium truncate ${
+        <span className={`block text-sm font-medium ${
+          multiline ? 'whitespace-pre-wrap break-words leading-relaxed' : 'truncate'
+        } ${
           hasValue
             ? highlight ? 'text-[#004D77] font-semibold' : 'text-gray-800'
             : 'text-gray-300 italic font-normal'
@@ -180,13 +183,23 @@ function DetailOrder({
   const fechaMostrar = formatDate(order.fechaPedido);
   const isRecoge = String(order.tipoEntrega ?? order.deliveryType ?? '').toLowerCase().includes('recoge');
   const entregaMostrar = isRecoge ? 'El cliente lo recoge' : 'Domicilio';
-  const ubicacionEntrega = [order.ciudadEntregaNombre, order.departamentoEntregaNombre]
-    .filter(Boolean)
-    .join(', ');
-  const direccionEntregaCompleta = [
-    ubicacionEntrega,
-    order.direccionEntrega,
-  ].filter(Boolean).join(' - ');
+  const direccionEntregaCompleta = formatDeliveryAddress(order);
+  const personaRecibe = order.deliveryRecipientName || order.clienteNombre || 'No especificado';
+  const clienteDocumento =
+    order.clienteDocumento ??
+    order.customerDocument ??
+    order.documentNumber ??
+    order.docNumber ??
+    '';
+  const clienteTipoDocumento =
+    order.clienteTipoDocumento ??
+    order.customerDocumentType ??
+    order.documentType ??
+    order.docType ??
+    '';
+  const documentoCliente = clienteDocumento
+    ? [clienteTipoDocumento, clienteDocumento].filter(Boolean).join(' ')
+    : '';
   const shippingAmount = Number(order.shippingAmount ?? 0);
   const isCancelado = order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO;
   const isEntregado = order.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO;
@@ -330,14 +343,14 @@ function DetailOrder({
           <div className="overflow-y-auto flex-1">
             <StatusBanner order={order} />
 
-            {!esModoVenta && paymentReceipts.length > 0 && (
+            {paymentReceipts.length > 0 && (
               <div className="px-6 pt-5">
                 <PaymentReceiptsSection
                   receipts={paymentReceipts}
                   compact
-                  onApprove={handleOpenApproveReceipt}
-                  onReject={handleOpenRejectReceipt}
-                  reviewingReceiptId={reviewingReceiptId}
+                  onApprove={!esModoVenta ? handleOpenApproveReceipt : undefined}
+                  onReject={!esModoVenta ? handleOpenRejectReceipt : undefined}
+                  reviewingReceiptId={!esModoVenta ? reviewingReceiptId : null}
                 />
               </div>
             )}
@@ -353,9 +366,9 @@ function DetailOrder({
                 <div className="h-px flex-1 bg-gray-100" />
               </div>
 
-              <DetailRow icon={Hash}       label="No."        value={order.numeroPedido || order.id} highlight />
               <DetailRow icon={Calendar}   label="Fecha"      value={fechaMostrar} />
-              <DetailRow icon={User}       label="Cliente"    value={order.clienteNombre || 'No especificado'} />
+              <DetailRow icon={User}       label="Persona que recibe" value={personaRecibe} />
+              <DetailRow icon={IdCard}     label="Documento cliente" value={documentoCliente || 'No registrado'} />
               <DetailRow icon={Phone}      label="Teléfono"   value={order.clienteTelefono || 'No registrado'} />
               <DetailRow icon={Mail}       label="Correo"     value={order.clienteEmail || 'No registrado'} />
               {esModoVenta && (
@@ -365,7 +378,7 @@ function DetailOrder({
                 <DetailRow icon={Tag}      label="Origen"     value={order.origen || ORIGENES.MANUAL} />
               )}
               <DetailRow icon={Truck}      label="Entrega"    value={entregaMostrar} />
-              <DetailRow icon={MapPin}     label="Dirección de entrega"  value={direccionEntregaCompleta || 'No aplica'} />
+              <DetailRow icon={MapPin}     label="Dirección de entrega"  value={direccionEntregaCompleta || 'No aplica'} multiline />
             </div>
 
             {/* ── Columna derecha: Productos y pagos ───────────────────────── */}
@@ -535,7 +548,7 @@ function DetailOrder({
             handleReviewReceipt(
               receiptToApprove,
               payload,
-              'El comprobante fue aprobado y el abono quedo registrado.'
+              'El comprobante fue aprobado y el pago pendiente quedo registrado.'
             )
           }
         />

@@ -111,6 +111,7 @@ function OrdersForm() {
     asesorId: user?.id || null,
     tipoEntrega: 'recoge',
     direccionEntrega: '',
+    deliveryRecipientName: '',
     departamentoEntregaCodigo: '',
     departamentoEntregaNombre: '',
     ciudadEntregaCodigo: '',
@@ -153,6 +154,12 @@ function OrdersForm() {
     ESTADOS_LOGISTICOS.CANCELADO,
   ].includes(estadoLogisticoOriginal);
   const creaVentaDirecta = !isEditMode && formData.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO;
+  const requiereRevisionEnvio = Boolean(
+    isEditMode &&
+    String(formData.origen || '').toLowerCase() === ORIGENES.WEB &&
+    formData.tipoEntrega === 'domicilio' &&
+    toNumber(formData.shippingAmount) <= 0
+  );
   // Determinar si los productos son editables
   const productosEditables = useMemo(() => {
     if (!isEditMode) return true; // en creación siempre editables
@@ -253,6 +260,7 @@ function OrdersForm() {
             asesorId: order.asesorId,
             tipoEntrega,
             direccionEntrega: direccion,
+            deliveryRecipientName: order.deliveryRecipientName || '',
             departamentoEntregaCodigo: order.departamentoEntregaCodigo || '',
             departamentoEntregaNombre: order.departamentoEntregaNombre || '',
             ciudadEntregaCodigo: order.ciudadEntregaCodigo || '',
@@ -456,6 +464,12 @@ function OrdersForm() {
     if (errors.direccionEntrega) setErrors(prev => ({ ...prev, direccionEntrega: null }));
   };
 
+  const handleDeliveryRecipientNameChange = (e) => {
+    if (pedidoInmutable) return;
+    setFormData(prev => ({ ...prev, deliveryRecipientName: e.target.value }));
+    if (errors.deliveryRecipientName) setErrors(prev => ({ ...prev, deliveryRecipientName: null }));
+  };
+
   const handleShippingAmountChange = (e) => {
     if (pedidoInmutable) return;
     const value = e.target.value;
@@ -618,6 +632,9 @@ function OrdersForm() {
     if (formData.clienteId === '' || formData.clienteId === undefined) {
       newErrors.clienteId = 'Debe seleccionar un cliente.';
     }
+    if (!creaVentaDirecta && !formData.deliveryRecipientName?.trim()) {
+      newErrors.deliveryRecipientName = 'Debe ingresar la persona que recibe o recoge el pedido.';
+    }
     if (!formData.direccionEntrega?.trim()) {
       newErrors.direccionEntrega = 'La dirección de entrega es obligatoria.';
     }
@@ -686,6 +703,7 @@ function OrdersForm() {
         usuarioId: getSessionUserId(user),
         tipoEntrega: formData.tipoEntrega,
         direccionEntrega: formData.direccionEntrega.trim(),
+        deliveryRecipientName: formData.deliveryRecipientName.trim(),
         departamentoEntregaCodigo: formData.departamentoEntregaCodigo,
         departamentoEntregaNombre: formData.departamentoEntregaNombre,
         ciudadEntregaCodigo: formData.ciudadEntregaCodigo,
@@ -706,6 +724,7 @@ function OrdersForm() {
           clienteId: payload.clienteId,
           tipoEntrega: payload.tipoEntrega,
           direccionEntrega: payload.direccionEntrega,
+          deliveryRecipientName: payload.deliveryRecipientName,
           departamentoEntregaCodigo: payload.departamentoEntregaCodigo,
           departamentoEntregaNombre: payload.departamentoEntregaNombre,
           ciudadEntregaCodigo: payload.ciudadEntregaCodigo,
@@ -902,11 +921,14 @@ function OrdersForm() {
           readOnly={pedidoInmutable}
           isEditMode={isEditMode}
           estadoLogisticoOriginal={estadoLogisticoOriginal}
+          showDirectSaleLockedInfo={creaVentaDirecta}
+          highlightShippingAmount={requiereRevisionEnvio}
           onClienteChange={handleClienteChange}
           onTipoEntregaChange={handleTipoEntregaChange}
           onDepartamentoEntregaChange={handleDepartamentoEntregaChange}
           onCiudadEntregaChange={handleCiudadEntregaChange}
           onDireccionManualChange={handleDireccionManualChange}
+          onDeliveryRecipientNameChange={handleDeliveryRecipientNameChange}
           onShippingAmountChange={handleShippingAmountChange}
           onEstadoLogisticoChange={handleEstadoLogisticoChange}
           onMotivoCancelacionChange={handleMotivoCancelacionChange}

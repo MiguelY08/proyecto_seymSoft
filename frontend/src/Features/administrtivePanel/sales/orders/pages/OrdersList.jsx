@@ -47,21 +47,15 @@ function OrdersList() {
   const [loading, setLoading] = useState(true);
   const [actionLoadingMessage, setActionLoadingMessage] = useState('');
 
-  // Carga inicial de pedidos y clientes
+  // Carga inicial de clientes
   useEffect(() => {
-  const loadOrders = async () => {
-    setLoading(true);
+  const loadClients = async () => {
     try {
-      // Cargar pedidos
-      const rawOrders = await OrdersService.list();
-      setOrders(rawOrders);
-
-      // Cargar clientes
       const response = await clientsService.getAll();
-      
+
       // Extraer el array dependiendo de la estructura
       const clients = response.data || response || [];
-      
+
       const map = {};
       if (Array.isArray(clients)) {
         clients.forEach(c => {
@@ -69,19 +63,40 @@ function OrdersList() {
             nombre: c.name || c.fullName || 'Sin nombre',
             telefono: c.phone || '',
             email: c.email || '',
+            documento: c.document || c.docNumber || c.doc_number || c.documentNumber || '',
           };
         });
       }
       setClientMap(map);
     } catch (error) {
-      console.error('Error al cargar pedidos y clientes:', error);
+      console.error('Error al cargar clientes:', error);
+    }
+  };
+
+  loadClients();
+}, []);
+
+  // Cargar pedidos y enviar la busqueda al backend cuando aplique
+  useEffect(() => {
+  const loadOrders = async () => {
+    setLoading(true);
+    try {
+      const searchTerm = search.trim();
+      const rawOrders = await OrdersService.list(
+        searchTerm ? { search: searchTerm } : {}
+      );
+      setOrders(rawOrders);
+    } catch (error) {
+      console.error('Error al cargar pedidos:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  loadOrders();
-}, []);
+  const timeoutId = window.setTimeout(loadOrders, 300);
+
+  return () => window.clearTimeout(timeoutId);
+}, [search]);
 
   // Enriquecer pedidos con datos completos del cliente y estado de pago real
   const enrichedOrders = useMemo(() => {
@@ -90,6 +105,7 @@ function OrdersList() {
         nombre: order.clienteNombre || `Cliente ID ${order.clienteId}`,
         telefono: order.clienteTelefono || '',
         email: order.clienteEmail || '',
+        documento: order.clienteDocumento || order.customerDocument || '',
       };
 
       return {
@@ -97,6 +113,7 @@ function OrdersList() {
         clienteNombre: clienteInfo.nombre,
         clienteTelefono: clienteInfo.telefono,
         clienteEmail: clienteInfo.email,
+        clienteDocumento: clienteInfo.documento,
       };
     });
   }, [orders, clientMap]);
@@ -113,6 +130,8 @@ function OrdersList() {
           order.clienteNombre,
           order.clienteTelefono,
           order.clienteEmail,
+          order.clienteDocumento,
+          order.deliveryRecipientName,
           order.departamentoEntregaNombre,
           order.ciudadEntregaNombre,
           order.direccionEntrega,
