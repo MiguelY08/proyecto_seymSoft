@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   CheckCircle,
   CreditCard,
-  DollarSign,
   ExternalLink,
   FileText,
   Image as ImageIcon,
@@ -46,11 +45,9 @@ function ApprovePaymentReceiptModal({
   }, [order]);
 
   const initialReference = receipt?.fileName ? `Comprobante ${receipt.fileName}` : '';
-  const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState(METODOS_PAGO.TRANSFERENCIA);
   const [reference, setReference] = useState(initialReference);
   const [reviewObservations, setReviewObservations] = useState('');
-  const [touched, setTouched] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !receipt) return;
@@ -61,11 +58,8 @@ function ApprovePaymentReceiptModal({
 
   if (!isOpen || !receipt) return null;
 
-  const amountValue = roundMoney(amount);
   const hasNoPendingBalance = pendingBalance <= 0;
-  const hasAmountError = touched && amountValue <= 0;
-  const hasExcessError = pendingBalance > 0 && amountValue > pendingBalance;
-  const canSubmit = amountValue > 0 && !hasNoPendingBalance && amountValue <= pendingBalance;
+  const canSubmit = !hasNoPendingBalance && Boolean(PAYMENT_METHOD_IDS[paymentMethod]);
 
   const handleClose = () => {
     if (isSubmitting) return;
@@ -75,12 +69,10 @@ function ApprovePaymentReceiptModal({
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    setTouched(true);
     if (!canSubmit) return;
 
     const payload = {
       status: 'Aprobado',
-      amount: amountValue,
       idPaymentMethod: PAYMENT_METHOD_IDS[paymentMethod],
       reference: reference.trim() || `Comprobante pedido ${order?.numeroPedido || order?.id || ''}`.trim(),
     };
@@ -152,46 +144,11 @@ function ApprovePaymentReceiptModal({
                 Saldo pendiente: {formatCurrency(pendingBalance)}
               </p>
               <p className="mt-1 text-xs text-[#004D77]/80">
-                Al aprobar, el comprobante se registra como abono del pedido.
+                Al aprobar, el sistema registrara automaticamente el saldo pendiente del pedido.
               </p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-semibold text-gray-700">Monto aprobado</label>
-                <div className="relative">
-                  <DollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="number"
-                    min="1"
-                    step="0.01"
-                    value={amount}
-                    onChange={(event) => setAmount(event.target.value)}
-                    onBlur={() => setTouched(true)}
-                    disabled={isSubmitting}
-                    className={`w-full rounded-lg border bg-white py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none transition focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 disabled:bg-gray-100 ${
-                      hasAmountError || hasExcessError ? 'border-red-400' : 'border-gray-300'
-                    }`}
-                  />
-                </div>
-                {amountValue > 0 && (
-                  <p className="text-xs font-semibold text-[#004D77]">{formatCurrency(amountValue)}</p>
-                )}
-                {hasAmountError && (
-                  <p className="text-xs font-semibold text-red-500">Ingresa un monto mayor a cero.</p>
-                )}
-                {hasExcessError && (
-                  <p className="text-xs font-semibold text-red-500">
-                    El monto no puede superar el saldo pendiente.
-                  </p>
-                )}
-                {hasNoPendingBalance && (
-                  <p className="text-xs font-semibold text-red-500">
-                    Este pedido no tiene saldo pendiente para aprobar.
-                  </p>
-                )}
-              </div>
-
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-semibold text-gray-700">Metodo</label>
                 <FormSelect
@@ -206,6 +163,11 @@ function ApprovePaymentReceiptModal({
                 />
               </div>
             </div>
+            {hasNoPendingBalance && (
+              <p className="text-xs font-semibold text-red-500">
+                Este pedido no tiene saldo pendiente para aprobar.
+              </p>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-semibold text-gray-700">Referencia</label>
@@ -230,7 +192,7 @@ function ApprovePaymentReceiptModal({
                 maxLength={255}
                 rows={3}
                 disabled={isSubmitting}
-                placeholder="Ej: comprobante legible y monto correcto"
+                placeholder="Ej: comprobante legible y pago completo"
                 className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 disabled:bg-gray-100"
               />
               <p className="text-right text-[10px] font-semibold text-gray-400">
@@ -255,7 +217,7 @@ function ApprovePaymentReceiptModal({
             className="inline-flex items-center gap-2 rounded-lg bg-[#004D77] px-5 py-2 text-sm font-bold text-white transition hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-            Aprobar pago
+            Aprobar comprobante
           </button>
         </div>
       </form>

@@ -10,6 +10,8 @@ export default function SidebarItem({
   openItem,
   setOpenItem,
   onNavigate,
+  collapsed = false,
+  onExpandSidebar,
 }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -30,6 +32,12 @@ export default function SidebarItem({
 
   const handleClick = () => {
     if (hasChildren) {
+      if (collapsed) {
+        onExpandSidebar?.();
+        setOpenItem(label);
+        return;
+      }
+
       setOpenItem(isOpen ? null : label);
     } else if (href) {
       setOpenItem(null);
@@ -39,35 +47,39 @@ export default function SidebarItem({
   };
 
   return (
-    <div className="font-lexend text-[15px]">
+    <div className={`group/item relative font-lexend text-[15px] ${collapsed ? "w-12" : "w-full"}`}>
       <button
         type="button"
         onClick={handleClick}
         aria-expanded={hasChildren ? isOpen : undefined}
-        className={`group flex w-full cursor-pointer items-center justify-between rounded-lg px-4 py-2 text-left
-          transition-[background-color,color,box-shadow] duration-200 ease-out
+        aria-label={collapsed ? label : undefined}
+        className={`group flex w-full cursor-pointer items-center rounded-lg py-2 text-left
+          transition-[background-color,color,box-shadow,transform] duration-150 ease-out active:scale-[0.98]
+          ${collapsed ? "justify-center px-0" : "justify-between px-4"}
           ${
             isParentHighlighted
               ? "bg-[#004D77] text-white shadow-md"
               : "text-[#004D77] hover:bg-[#004D77]/10"
           }`}
       >
-        <div className="flex items-center gap-3">
+        <div className={`flex items-center ${collapsed ? "justify-center" : "gap-3"}`}>
           {Icon && (
             <Icon
               size={20}
-              className="text-current transition-transform duration-200 ease-out group-hover:scale-[1.04]"
+              className="text-current transition-transform duration-150 ease-out group-hover:scale-[1.06]"
             />
           )}
-          <span className="font-medium transition-transform duration-200 ease-out group-hover:translate-x-px">
-            {label}
-          </span>
+          {!collapsed && (
+            <span className="font-medium transition-transform duration-150 ease-out group-hover:translate-x-px">
+              {label}
+            </span>
+          )}
         </div>
 
-        {hasChildren && (
+        {hasChildren && !collapsed && (
           <ChevronDown
             size={16}
-            className={`transition-transform duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+            className={`transition-transform duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
               isOpen
                 ? "rotate-180 text-white"
                 : ""
@@ -76,9 +88,18 @@ export default function SidebarItem({
         )}
       </button>
 
-      {hasChildren && (
+      {collapsed && (
+        <span
+          className="pointer-events-none absolute left-full top-1/2 z-[70] ml-3 -translate-y-1/2 whitespace-nowrap rounded-md border border-[#004D77]/15 bg-[#EAF5FB] px-3.5 py-2 text-xs font-semibold text-[#004D77] opacity-0 shadow-[0_14px_30px_rgba(0,77,119,0.18)] ring-1 ring-[#004D77]/10 transition-[opacity,transform] duration-[220ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] before:absolute before:right-full before:top-1/2 before:-translate-y-1/2 before:border-y-[7px] before:border-r-[8px] before:border-y-transparent before:border-r-[#EAF5FB] after:absolute after:left-0 after:top-1/2 after:h-6 after:w-1 after:-translate-y-1/2 after:rounded-r-full after:bg-[#004D77] group-hover/item:translate-x-1 group-hover/item:opacity-100"
+          role="tooltip"
+        >
+          {label}
+        </span>
+      )}
+
+      {hasChildren && !collapsed && (
         <div
-          className={`grid transition-[grid-template-rows,opacity] duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+          className={`grid transition-[grid-template-rows,opacity] duration-[300ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
             isOpen
               ? "grid-rows-[1fr] opacity-100"
               : "pointer-events-none grid-rows-[0fr] opacity-0"
@@ -86,7 +107,7 @@ export default function SidebarItem({
         >
           <div className="overflow-hidden">
             <div
-              className={`ml-6 flex flex-col gap-1 pb-1 transition-[transform,margin] duration-250 ease-out ${
+              className={`ml-6 flex flex-col gap-1 pb-1 transition-[transform,margin] duration-[300ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
                 isOpen ? "mt-2 translate-y-0" : "mt-0 -translate-y-1"
               }`}
             >
@@ -99,10 +120,10 @@ export default function SidebarItem({
                     to={child.href}
                     onClick={() => onNavigate?.()}
                     style={{
-                      transitionDelay: isOpen ? `${index * 35}ms` : "0ms",
+                      transitionDelay: isOpen ? `${index * 30}ms` : "0ms",
                     }}
                     className={`group/child grid grid-cols-[8px_minmax(0,1fr)] items-center gap-2 px-3 py-0.5 text-sm
-                      transition-[background-color,color,transform,opacity] duration-200 ease-out
+                      transition-[background-color,color,transform,opacity] duration-150 ease-out
                       ${
                         isActiveChild
                           ? "text-[#004D77] font-semibold"
@@ -114,7 +135,7 @@ export default function SidebarItem({
                       }`}
                   >
                     <span
-                      className={`h-2 w-2 rounded-full bg-[#004D77] transition-opacity duration-200 ${
+                      className={`h-2 w-2 rounded-full bg-[#004D77] transition-opacity duration-150 ${
                         isActiveChild
                           ? "animate-pulse opacity-100"
                           : "opacity-0 group-hover/child:opacity-35"
@@ -122,7 +143,7 @@ export default function SidebarItem({
                       aria-hidden="true"
                     />
                     <span
-                      className={`flex min-w-0 items-center gap-3 rounded-md px-2.5 py-1.5 transition-colors duration-200 ${
+                      className={`flex min-w-0 items-center gap-3 rounded-md px-2.5 py-1.5 transition-colors duration-150 ${
                         isActiveChild
                           ? "bg-[#004D77]/10"
                           : "group-hover/child:bg-[#004D77]/10"
@@ -131,10 +152,10 @@ export default function SidebarItem({
                       {child.icon && (
                         <child.icon
                           size={18}
-                          className="transition-transform duration-200 ease-out"
+                          className="transition-transform duration-150 ease-out"
                         />
                       )}
-                      <span className="min-w-0 truncate transition-transform duration-200">
+                      <span className="min-w-0 truncate transition-transform duration-150">
                         {child.label}
                       </span>
                     </span>

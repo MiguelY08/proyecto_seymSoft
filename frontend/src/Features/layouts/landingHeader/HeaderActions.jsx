@@ -6,6 +6,7 @@ import {
 
 import HeaderIconButton from "./HeaderIconButton";
 import ProfileMenu from "./ProfileMenu";
+import { NotificationBell } from "../../shared/components/notifications";
 
 function HeaderActions({
   cartCount,
@@ -42,6 +43,10 @@ function HeaderActions({
         active={isActive("/cart")}
         ariaLabel="Carrito"
       />
+
+      {user && (
+        <NotificationBell />
+      )}
 
       <ProfileMenu
         getInitials={getInitials}

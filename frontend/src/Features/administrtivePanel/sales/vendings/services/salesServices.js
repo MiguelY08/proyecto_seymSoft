@@ -156,6 +156,34 @@ const mapSaleFromApi = (sale) => {
     factura: String(sale?.invoiceNumber ?? sale?.factura ?? id),
     fecha: formatDate(getSaleDate(sale)),
     clienteId: sale?.idClient ?? sale?.clienteId ?? order?.clienteId ?? client?.id ?? client?.idClient,
+    clienteTipoDocumento:
+      client?.documentType ??
+      client?.docType ??
+      client?.doc_type ??
+      client?.user?.documentType ??
+      client?.user?.docType ??
+      client?.user?.doc_type ??
+      sale?.clienteTipoDocumento ??
+      sale?.customerDocumentType ??
+      order?.clienteTipoDocumento ??
+      order?.customerDocumentType ??
+      order?.customer?.documentType ??
+      order?.customer?.docType ??
+      '',
+    clienteDocumento:
+      client?.document ??
+      client?.docNumber ??
+      client?.doc_number ??
+      client?.documentNumber ??
+      client?.user?.document ??
+      client?.user?.docNumber ??
+      client?.user?.doc_number ??
+      client?.user?.documentNumber ??
+      sale?.clienteDocumento ??
+      sale?.customerDocument ??
+      order?.clienteDocumento ??
+      order?.customerDocument ??
+      '',
     vendedorId:
       sale?.idEmployee ??
       sale?.idSeller ??
@@ -192,6 +220,14 @@ const mapSaleFromApi = (sale) => {
       order?.status?.idOrderStatus ??
       order?.estadoLogisticoId ??
       null,
+    deliveryRecipientName:
+      sale?.deliveryRecipientName ??
+      sale?.delivery_recipient_name ??
+      order?.deliveryRecipientName ??
+      order?.delivery_recipient_name ??
+      order?.recipientName ??
+      order?.receiverName ??
+      '',
     tipoVenta: getSaleType(sale),
     entrega: order?.deliveryType ?? order?.tipoEntrega ?? order?.direccionEntrega ?? sale?.delivery ?? '-',
     direccion: order?.deliveryAddress ?? order?.direccionEntrega ?? sale?.direccion ?? '',
