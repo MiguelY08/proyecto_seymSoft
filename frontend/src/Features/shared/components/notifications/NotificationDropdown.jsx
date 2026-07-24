@@ -10,6 +10,7 @@ function NotificationDropdown({
   onMarkAllAsRead,
   onDelete,
   onClose,
+  onOpenNotification,
 }) {
   return (
     <div className="absolute right-0 top-full z-50 mt-2 w-[min(22rem,calc(100vw-1rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
@@ -48,6 +49,7 @@ function NotificationDropdown({
               onMarkAsRead={onMarkAsRead}
               onDelete={onDelete}
               onClose={onClose}
+              onOpenNotification={onOpenNotification}
             />
           ))
         )}
@@ -57,4 +59,3 @@ function NotificationDropdown({
 }
 
 export default NotificationDropdown;
-

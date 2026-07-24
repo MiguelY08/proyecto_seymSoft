@@ -12,7 +12,6 @@ import {
   Users,
   Warehouse,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 const typeIconMap = {
   success: CheckCircle2,
@@ -63,21 +62,24 @@ function NotificationItem({
   notification,
   onMarkAsRead,
   onDelete,
-  onClose,
+  onOpenNotification,
 }) {
-  const navigate = useNavigate();
   const Icon = typeIconMap[notification.type] || Bell;
   const iconColor = typeColorMap[notification.type] || typeColorMap.info;
 
   const handleOpen = async () => {
+    let currentNotification = notification;
+
     if (!notification.isRead) {
-      await onMarkAsRead(notification.id);
+      currentNotification =
+        await onMarkAsRead(notification.id) || notification;
     }
 
-    if (notification.actionUrl) {
-      onClose?.();
-      navigate(notification.actionUrl);
-    }
+    onOpenNotification?.({
+      ...notification,
+      ...currentNotification,
+      isRead: true,
+    });
   };
 
   return (
@@ -137,4 +139,3 @@ function NotificationItem({
 }
 
 export default NotificationItem;
-
