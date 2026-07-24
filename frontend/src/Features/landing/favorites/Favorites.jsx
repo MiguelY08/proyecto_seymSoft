@@ -1,7 +1,8 @@
 ﻿import { ShoppingCart, Info, Heart, HeartCrack, ChevronDown, ArrowRight, ImageOff } from 'lucide-react';
 import { useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import BgFavoritos from '../../../assets/BgFavoritos.png';
+import { useAuth } from '../../access/context/AuthContext';
 import { useFavorites } from '../../shared/Context/Favoritescontext';
 import { useCart } from '../../shared/Context/CartContext';
 import { useAlert } from '../../shared/alerts/useAlert';
@@ -594,7 +595,9 @@ function injectStyles() {
 function Favorites() {
   injectStyles();
   const navigate = useNavigate();
+  const location = useLocation();
 
+  const { isAuthenticated } = useAuth();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
   const { addToCart } = useCart();
   const { showSuccess, showConfirm, showError } = useAlert();
@@ -649,6 +652,19 @@ function Favorites() {
     const stock = Number(producto.totalStock ?? producto.stock ?? 0);
     if (!producto.isActive || stock <= 0) {
       showError('Producto no disponible', 'Este producto no tiene stock disponible.');
+      return;
+    }
+
+    if (!isAuthenticated) {
+      showError(
+        'Inicia sesión',
+        'Debes iniciar sesión antes de agregar productos al carrito.'
+      );
+      navigate('/login', {
+        state: {
+          from: `${location.pathname}${location.search}`,
+        },
+      });
       return;
     }
 

@@ -30,6 +30,7 @@ function MobileMenu({
   onClose,
   onOpenProfileEdit,
   role,
+  showOrders = false,
   user
 }) {
   const mobileMenuRef =
@@ -105,13 +106,15 @@ function MobileMenu({
             active={isActive("/shop")}
             onClick={onClose}
           />
-          <MobileNavLink
-            icon={Package}
-            label="Pedidos"
-            to="/orders-l"
-            active={isActive("/orders-l")}
-            onClick={onClose}
-          />
+          {showOrders && (
+            <MobileNavLink
+              icon={Package}
+              label="Pedidos"
+              to="/orders-l"
+              active={isActive("/orders-l")}
+              onClick={onClose}
+            />
+          )}
           <MobileNavLink
             icon={Heart}
             label="Favoritos"

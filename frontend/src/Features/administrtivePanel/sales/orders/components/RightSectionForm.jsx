@@ -11,6 +11,8 @@ function RightSectionForm({
   disabled = false,
   subtotal,
   iva,
+  shippingAmount = 0,
+  showShippingAmount = false,
   total,
   onAddProduct,
   onUpdateCantidad,
@@ -300,6 +302,12 @@ function RightSectionForm({
             <span className="text-gray-600">IVA incluido:</span>
             <span className="font-medium text-gray-800">{formatCurrency(iva)}</span>
           </div>
+          {showShippingAmount && (
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-gray-600">Envío:</span>
+              <span className="font-medium text-gray-800">{formatCurrency(shippingAmount)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-gray-200">
             <span className="text-gray-900">Total:</span>
             <span className="text-gray-900">{formatCurrency(total)}</span>

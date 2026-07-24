@@ -19,6 +19,73 @@ const normalizePaymentStatus = (status, totalPagado, total) => {
   return ESTADOS_PAGO.PENDIENTE;
 };
 
+const normalizePaymentReceipt = (receipt = {}, pedidoId = null) => ({
+  id:
+    receipt.id ??
+    receipt.idPaymentReceipt ??
+    receipt.receiptId ??
+    receipt.id_order_payment_receipt ??
+    receipt.publicId ??
+    receipt.url ??
+    receipt.imageUrl,
+  pedidoId: toNumber(
+    receipt.pedidoId ??
+      receipt.orderId ??
+      receipt.idOrder ??
+      receipt.id_order ??
+      pedidoId,
+    pedidoId
+  ),
+  imageUrl:
+    receipt.imageUrl ??
+    receipt.image_url ??
+    receipt.secureUrl ??
+    receipt.secure_url ??
+    receipt.url ??
+    receipt.path ??
+    '',
+  fileName:
+    receipt.fileName ??
+    receipt.filename ??
+    receipt.originalName ??
+    receipt.original_name ??
+    receipt.name ??
+    '',
+  uploadedAt:
+    receipt.uploadedAt ??
+    receipt.createdAt ??
+    receipt.created_at ??
+    receipt.uploaded_at ??
+    receipt.date ??
+    new Date().toISOString(),
+  status: receipt.status ?? receipt.verificationStatus ?? receipt.verification_status ?? 'pendiente',
+  observations: receipt.observations ?? receipt.observaciones ?? '',
+  reviewObservations:
+    receipt.reviewObservations ??
+    receipt.review_observations ??
+    receipt.reviewNotes ??
+    '',
+  reviewedAt: receipt.reviewedAt ?? receipt.reviewed_at ?? null,
+  reviewedBy: receipt.reviewedBy ?? receipt.reviewed_by ?? null,
+});
+
+const getPaymentReceipts = (sale = {}, order = {}) => {
+  const receipts =
+    order.comprobantesPago ??
+    order.paymentReceipts ??
+    order.paymentProofs ??
+    order.receipts ??
+    sale.comprobantesPago ??
+    sale.paymentReceipts ??
+    sale.paymentProofs ??
+    sale.receipts ??
+    [];
+
+  return receipts.map((receipt) =>
+    normalizePaymentReceipt(receipt, order.idOrder ?? sale.pedidoId ?? sale.id)
+  );
+};
+
 const mapSaleToOrderDetail = (sale) => {
   const order = sale.order ?? {};
   const customerUser = order.customer?.user ?? {};
@@ -49,6 +116,23 @@ const mapSaleToOrderDetail = (sale) => {
     numeroPedido: order.idOrder ?? sale.numeroPedido ?? sale.pedidoId,
     fechaPedido: order.orderDate ?? sale.saleDate,
     clienteNombre: sale.cliente,
+    deliveryRecipientName: sale.deliveryRecipientName ?? order.deliveryRecipientName ?? '',
+    clienteTipoDocumento:
+      sale.clienteTipoDocumento ??
+      order.clienteTipoDocumento ??
+      order.customerDocumentType ??
+      order.customer?.documentType ??
+      order.customer?.docType ??
+      '',
+    clienteDocumento:
+      sale.clienteDocumento ??
+      order.clienteDocumento ??
+      order.customerDocument ??
+      order.customer?.document ??
+      order.customer?.docNumber ??
+      order.customer?.doc_number ??
+      order.customer?.documentNumber ??
+      '',
     clienteTelefono: customerUser.phone ?? '',
     clienteEmail: customerUser.email ?? '',
     asesorId: sale.vendedorId,
@@ -61,6 +145,7 @@ const mapSaleToOrderDetail = (sale) => {
     total,
     productos,
     pagos,
+    comprobantesPago: getPaymentReceipts(sale, order),
     totalPagado,
     estadoLogistico: order.orderStatus?.nameStatus?.toLowerCase() ?? order.estadoLogistico ?? '',
     pagoEstado: normalizePaymentStatus(order.paymentStatus ?? order.pagoEstado, totalPagado, total),

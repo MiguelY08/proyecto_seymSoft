@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import ProductsService from "../../../administrtivePanel/purchases/products/services/productsServices.js";
+import { useAuth } from "../../../access/context/AuthContext";
 import { useAlert } from "../../../shared/alerts/useAlert";
 import { useCart } from "../../../shared/Context/CartContext";
 import useClientType from "../../../shared/hooks/useClientType.js";
@@ -29,7 +30,9 @@ const getProductImages = product =>
 function ShopDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const relatedRef = useRef(null);
+  const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
   const { showError, showSuccess } = useAlert();
   const { clientType } = useClientType();
@@ -153,6 +156,19 @@ function ShopDetail() {
   const handleAddToCart = async () => {
     if (!cartProduct || !available) {
       showError("Producto no disponible", "Este producto no tiene stock.");
+      return;
+    }
+
+    if (!isAuthenticated) {
+      showError(
+        "Inicia sesión",
+        "Debes iniciar sesión antes de agregar productos al carrito."
+      );
+      navigate("/login", {
+        state: {
+          from: `${location.pathname}${location.search}`,
+        },
+      });
       return;
     }
 

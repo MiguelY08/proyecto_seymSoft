@@ -16,6 +16,7 @@ function NotificationBell() {
   const {
     notifications,
     loading,
+    error,
     unreadCount,
     refreshNotifications,
     markAsRead,
@@ -74,6 +75,7 @@ function NotificationBell() {
         <NotificationDropdown
           notifications={notifications}
           loading={loading}
+          error={error}
           unreadCount={unreadCount}
           onMarkAsRead={markAsRead}
           onMarkAllAsRead={markAllAsRead}

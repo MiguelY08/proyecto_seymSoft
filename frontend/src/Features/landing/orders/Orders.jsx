@@ -105,7 +105,7 @@ function Orders() {
   const renderContent = () => {
     if (authLoading || loading) {
       return (
-        <div className="flex min-h-64 items-center justify-center text-[#004D77]">
+        <div className="flex min-h-[55vh] items-center justify-center text-[#004D77]">
           <LoaderCircle className="animate-spin" size={32} />
         </div>
       );
