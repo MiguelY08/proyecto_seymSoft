@@ -20,7 +20,7 @@ function HeaderLogo() {
       <img
         src={horizontalLogo}
         alt="Papelería Magic"
-        className="hidden h-11 max-w-[160px] object-contain transition-all duration-150 md:block lg:max-w-[220px]"
+        className="hidden h-10 max-w-[150px] object-contain transition-all duration-150 md:block lg:h-11 lg:max-w-[200px] xl:max-w-[230px]"
       />
       <h1 className="hidden font-serif italic text-[#004D77] font-semibold tracking-tight transition-all duration-150 text-lg sm:text-2xl">
         Papelería Magic

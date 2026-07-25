@@ -59,7 +59,7 @@ export function ProductCardActions({
   }, []);
 
   return (
-    <div className="px-3 pb-3 pt-0.5 sm:px-3.5">
+    <div className="mt-auto px-3 pb-3 pt-1.5 sm:px-3.5">
       <button
         type="button"
         onClick={handleClick}

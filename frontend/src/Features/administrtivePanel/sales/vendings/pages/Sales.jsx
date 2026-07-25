@@ -161,6 +161,12 @@ function Sales() {
   const endIndex = startIndex + RECORDS_PER_PAGE;
   const visibleSales = filteredSales.slice(startIndex, endIndex);
   const totalRecords = filteredSales.length;
+  const hasActiveFilters = Boolean(
+    search.trim() ||
+    fechaInicial ||
+    fechaFinal ||
+    activeType !== 'all'
+  );
 
   if (loading && sales.length === 0) {
     return (
@@ -185,7 +191,9 @@ function Sales() {
         salesToExport={filteredSales}
       />
 
-      <SalesMetricsCards metrics={metrics} />
+      <div className="hidden md:block">
+        <SalesMetricsCards metrics={metrics} />
+      </div>
 
       {/* Tabla de ventas */}
       <div className="bg-white rounded-xl shadow-md">
@@ -193,6 +201,7 @@ function Sales() {
           data={visibleSales}
           search={search}
           totalData={totalRecords}
+          hasActiveFilters={hasActiveFilters}
         />
       </div>
 

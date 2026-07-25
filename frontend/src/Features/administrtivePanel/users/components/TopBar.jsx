@@ -58,23 +58,23 @@ function TopBar({
   };
 
   return (
-    <div className="flex items-center justify-between gap-3 sm:gap-4 shrink-0">
-      <div className="flex items-center gap-2 sm:gap-3 flex-1 sm:flex-none">
-        <div className="relative flex-1 sm:flex-none sm:w-72 md:w-80">
-          <input
-            type="text"
-            placeholder="Buscar"
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            className="w-full pl-4 pr-10 py-2 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200"
-          />
-          <Search
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-            strokeWidth={2}
-          />
-        </div>
+    <div className="flex flex-col gap-3 shrink-0 lg:flex-row lg:items-end lg:justify-between">
+      <div className="relative w-full lg:max-w-md">
+        <input
+          type="text"
+          placeholder="Buscar"
+          value={search}
+          onChange={(event) => onSearchChange(event.target.value)}
+          className="w-full pl-4 pr-10 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200"
+        />
+        <Search
+          className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+          strokeWidth={2}
+        />
+      </div>
 
-        <div className="w-36 shrink-0">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4 lg:w-auto">
+        <div className="w-full sm:w-48">
           <FormSelect
             value={statusFilter}
             options={statusOptions}
@@ -84,33 +84,33 @@ function TopBar({
             ariaLabel="Estado de usuario"
           />
         </div>
-      </div>
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          {hasPermission("usuarios.exportar") && (
+            <ButtonComponent
+              className="flex-1 sm:flex-none bg-white text-green-600 border-green-600 hover:bg-green-400 px-3 flex items-center justify-center gap-2"
+              onClick={handleDownload}
+              disabled={exporting}
+            >
+              {exporting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="w-4 h-4" />
+              )}
+              <span className="hidden sm:inline">Exportar Excel</span>
+            </ButtonComponent>
+          )}
 
-      <div className="flex items-center gap-2 shrink-0">
-        {hasPermission("usuarios.exportar") && (
-          <ButtonComponent
-            className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-2 flex items-center gap-2"
-            onClick={handleDownload}
-            disabled={exporting}
-          >
-            {exporting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <FileSpreadsheet className="w-4 h-4" />
+          {hasPermission("usuarios.crear") && (
+            <ButtonComponent
+              onClick={() => navigate("/admin/users/form-user")}
+              title="Nuevo"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2"
+            >
+              <span className="hidden sm:inline">Nuevo</span>
+              <Plus className="w-4 h-4" strokeWidth={2} />
+            </ButtonComponent>
             )}
-            <span className="hidden sm:inline">Exportar Excel</span>
-          </ButtonComponent>
-        )}
-
-        {hasPermission("usuarios.crear") && (
-          <ButtonComponent
-            onClick={() => navigate("/admin/users/form-user")}
-            title="Nuevo"
-          >
-            <span className="hidden sm:inline">Nuevo</span>
-            <Plus className="w-4 h-4" strokeWidth={2} />
-          </ButtonComponent>
-        )}
+        </div>
       </div>
     </div>
   );

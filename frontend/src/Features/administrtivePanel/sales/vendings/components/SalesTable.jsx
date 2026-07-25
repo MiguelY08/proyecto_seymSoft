@@ -131,7 +131,7 @@ function TableText({ value, fallback, search, className = "" }) {
   return <span className={className}>{highlight(value, search)}</span>;
 }
 
-function SalesTable({ data = [], search = "", totalData = 0 }) {
+function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = false }) {
   const navigate = useNavigate();
   const { showError } = useAlert();
   const [loadingMessage, setLoadingMessage] = useState("");
@@ -173,7 +173,7 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
 
   if (data.length === 0) {
     return (
-      <EmptyState isSearching={totalData > 0 && search.trim().length > 0} />
+      <EmptyState isSearching={hasActiveFilters || (totalData > 0 && search.trim().length > 0)} />
     );
   }
 

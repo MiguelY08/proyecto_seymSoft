@@ -44,6 +44,14 @@ function ShopDetail() {
   const [loading, setLoading] = useState(true);
   const [addingToCart, setAddingToCart] = useState(false);
   const [error, setError] = useState("");
+  const [canUseImageZoom, setCanUseImageZoom] = useState(false);
+  const [isImageZoomVisible, setIsImageZoomVisible] = useState(false);
+  const [imageZoomPosition, setImageZoomPosition] = useState({
+    x: 50,
+    y: 50,
+    lensX: 50,
+    lensY: 50,
+  });
 
   useEffect(() => {
     let active = true;
@@ -110,6 +118,23 @@ function ShopDetail() {
     };
   }, [id]);
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(
+      "(hover: hover) and (pointer: fine) and (min-width: 1024px)"
+    );
+    const updateZoomAvailability = () => {
+      setCanUseImageZoom(mediaQuery.matches);
+      if (!mediaQuery.matches) setIsImageZoomVisible(false);
+    };
+
+    updateZoomAvailability();
+    mediaQuery.addEventListener("change", updateZoomAvailability);
+
+    return () => {
+      mediaQuery.removeEventListener("change", updateZoomAvailability);
+    };
+  }, []);
+
   const pricing = useMemo(
     () => getDisplayPricing(product, clientType),
     [clientType, product]
@@ -151,6 +176,26 @@ function ShopDetail() {
     setSelectedImageIndex(current =>
       current === images.length - 1 ? 0 : current + 1
     );
+  };
+
+  const handleImageZoomMove = event => {
+    if (!canUseImageZoom || !selectedImage) return;
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = ((event.clientX - bounds.left) / bounds.width) * 100;
+    const y = ((event.clientY - bounds.top) / bounds.height) * 100;
+
+    setImageZoomPosition({
+      x: Math.min(100, Math.max(0, x)),
+      y: Math.min(100, Math.max(0, y)),
+      lensX: Math.min(bounds.width - 140, Math.max(140, event.clientX - bounds.left + 28)),
+      lensY: Math.min(bounds.height - 140, Math.max(140, event.clientY - bounds.top + 28)),
+    });
+    setIsImageZoomVisible(true);
+  };
+
+  const hideImageZoom = () => {
+    setIsImageZoomVisible(false);
   };
 
   const handleAddToCart = async () => {
@@ -196,8 +241,8 @@ function ShopDetail() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#f6f9fc] px-5 py-10">
-        <div className="mx-auto max-w-7xl animate-pulse rounded-3xl bg-white p-10 text-center text-slate-500">
+      <main className="min-h-screen bg-[#f6f9fc] px-[var(--store-content-x)] py-10">
+        <div className="mx-auto max-w-[var(--store-content-max)] animate-pulse rounded-3xl bg-white p-10 text-center text-slate-500">
           Cargando producto...
         </div>
       </main>
@@ -206,7 +251,7 @@ function ShopDetail() {
 
   if (error || !product) {
     return (
-      <main className="min-h-screen bg-[#f6f9fc] px-5 py-10">
+      <main className="min-h-screen bg-[#f6f9fc] px-[var(--store-content-x)] py-10">
         <div className="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white p-10 text-center">
           <h1 className="mb-3 text-2xl font-black text-slate-800">
             Producto no disponible
@@ -225,8 +270,8 @@ function ShopDetail() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f9fc] px-5 py-8 font-['Nunito']">
-      <div className="mx-auto max-w-7xl">
+    <main className="min-h-screen bg-[#f6f9fc] px-[var(--store-content-x)] py-8 font-['Nunito']">
+      <div className="mx-auto max-w-[var(--store-content-max)]">
         <button
           type="button"
           onClick={() => navigate("/shop")}
@@ -238,13 +283,20 @@ function ShopDetail() {
 
         <section className="grid gap-8 lg:grid-cols-2 lg:gap-12">
           <div>
-            <div className="relative flex min-h-[260px] items-center justify-center overflow-hidden rounded-2xl border border-[#dcebf3] bg-gradient-to-br from-[#eef6fb] to-[#dfeef8] p-4 sm:min-h-[340px] sm:rounded-[24px] sm:p-6 lg:min-h-[420px] lg:rounded-[28px] lg:p-8">
+            <div
+              className={`relative flex min-h-[260px] items-center justify-center overflow-hidden rounded-2xl border border-[#dcebf3] bg-gradient-to-br from-[#eef6fb] to-[#dfeef8] p-4 sm:min-h-[340px] sm:rounded-[24px] sm:p-6 lg:min-h-[420px] lg:rounded-[28px] lg:p-8 ${
+                canUseImageZoom && selectedImage ? "lg:cursor-zoom-in" : ""
+              }`}
+              onMouseMove={handleImageZoomMove}
+              onMouseEnter={handleImageZoomMove}
+              onMouseLeave={hideImageZoom}
+            >
               {images.length > 1 && (
                 <button
                   type="button"
                   aria-label="Ver imagen anterior"
                   onClick={showPreviousImage}
-                  className="absolute left-3 rounded-full bg-white p-2.5 text-[#004D77] shadow-md sm:left-4 sm:p-3"
+                  className="absolute left-3 z-40 rounded-full bg-white p-2.5 text-[#004D77] shadow-md sm:left-4 sm:p-3"
                 >
                   <ChevronLeft size={20} />
                 </button>
@@ -268,14 +320,33 @@ function ShopDetail() {
                     type="button"
                     aria-label="Ver imagen siguiente"
                     onClick={showNextImage}
-                    className="absolute right-3 rounded-full bg-white p-2.5 text-[#004D77] shadow-md sm:right-4 sm:p-3"
+                    className="absolute right-3 z-40 rounded-full bg-white p-2.5 text-[#004D77] shadow-md sm:right-4 sm:p-3"
                   >
                     <ChevronRight size={20} />
                   </button>
-                  <span className="absolute bottom-3 right-3 rounded-full bg-[#004D77] px-3 py-1 text-xs font-bold text-white sm:bottom-4 sm:right-4">
+                  <span className="absolute bottom-3 right-3 z-40 rounded-full bg-[#004D77] px-3 py-1 text-xs font-bold text-white sm:bottom-4 sm:right-4">
                     {selectedImageIndex + 1}/{images.length}
                   </span>
                 </>
+              )}
+
+              {canUseImageZoom && selectedImage && isImageZoomVisible && (
+                <div
+                  className="pointer-events-none absolute z-30 hidden h-56 w-56 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full border-4 border-white/80 bg-white shadow-[0_20px_55px_rgba(0,77,119,0.26)] ring-2 ring-[#9bc8df]/70 lg:block xl:h-64 xl:w-64"
+                  style={{
+                    left: imageZoomPosition.lensX,
+                    top: imageZoomPosition.lensY,
+                  }}
+                >
+                  <div
+                    className="h-full w-full bg-no-repeat"
+                    style={{
+                      backgroundImage: `url(${selectedImage.url})`,
+                      backgroundPosition: `${imageZoomPosition.x}% ${imageZoomPosition.y}%`,
+                      backgroundSize: "280%",
+                    }}
+                  />
+                </div>
               )}
             </div>
 

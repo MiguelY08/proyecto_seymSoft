@@ -193,13 +193,13 @@ function AlertItem({ alert, onRemove, position = 'center' }) {
         <div className="flex flex-col gap-2 px-3.5 pb-3.5 sm:flex-row sm:items-center sm:px-4 sm:pb-4">
           <button
             onClick={handleConfirm}
-            className={`flex h-10 flex-1 items-center justify-center rounded-lg px-3 text-sm font-semibold transition-all duration-200 cursor-pointer ${v.confirm}`}
+            className={`flex min-h-11 flex-1 items-center justify-center rounded-xl px-3 py-2.5 text-sm font-semibold leading-snug transition-all duration-200 cursor-pointer sm:min-h-10 sm:rounded-lg sm:py-2 ${v.confirm}`}
           >
             {confirmButtonText}
           </button>
           <button
             onClick={handleCancel}
-            className={`flex h-10 flex-1 items-center justify-center rounded-lg px-3 text-sm font-semibold transition-all duration-200 cursor-pointer ${v.cancel}`}
+            className={`flex min-h-11 flex-1 items-center justify-center rounded-xl px-3 py-2.5 text-sm font-semibold leading-snug transition-all duration-200 cursor-pointer sm:min-h-10 sm:rounded-lg sm:py-2 ${v.cancel}`}
           >
             {cancelButtonText}
           </button>

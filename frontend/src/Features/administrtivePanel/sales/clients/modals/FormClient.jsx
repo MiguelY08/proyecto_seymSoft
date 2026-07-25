@@ -590,44 +590,50 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     { value: 'no', label: 'No' },
   ];
 
+  const selectResponsiveProps = {
+    dropdownClassName: 'max-sm:w-full',
+    maxDropdownWidth: 340,
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center p-0 sm:items-center sm:p-4">
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 hidden bg-black/40 backdrop-blur-sm sm:block"
         onClick={handleClose}
       />
 
-      <div className={`relative bg-white rounded-3xl shadow-2xl overflow-hidden flex transition-all duration-500 ease-in-out max-h-[94vh] ${
-        showGraph ? 'w-[95vw] max-w-325' : 'w-full max-w-2xl'
+      <div className={`relative flex h-dvh w-full min-h-0 overflow-hidden bg-white shadow-2xl transition-all duration-500 ease-in-out sm:h-auto sm:max-h-[94vh] sm:rounded-3xl lg:flex-row ${
+        showGraph ? 'sm:w-[95vw] sm:max-w-[90rem] max-lg:flex-col' : 'sm:max-w-2xl'
       }`}>
         <LoadingOverlay show={saving} message={isEditing ? 'Actualizando cliente...' : 'Creando cliente...'} />
 
         {/* Panel izquierdo - sin borde derecho blanco */}
         <div
-          className="flex flex-col min-w-0 border-r-0"
-          style={{ width: showGraph ? '50%' : '100%', transition: 'width 500ms ease-in-out' }}
+          className={`flex min-h-0 min-w-0 flex-col border-r-0 transition-all duration-500 ease-in-out ${
+            showGraph ? 'w-full lg:w-1/2' : 'w-full'
+          }`}
         >
           {/* CABECERA - sin línea blanca */}
-          <div className="flex items-center justify-between px-5 py-4 bg-[#004D77] shrink-0">
-            <h2 className="text-white font-semibold text-lg">
+          <div className="flex shrink-0 items-center justify-between gap-3 bg-[#004D77] px-4 py-3.5 sm:px-5 sm:py-4">
+            <h2 className="min-w-0 text-lg font-semibold leading-tight text-white">
               {isEditing ? 'Editar cliente' : 'Nuevo cliente'}
             </h2>
             <button
               onClick={handleClose}
-              className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
+              className="cursor-pointer rounded-full p-1.5 text-white transition-colors hover:bg-white/20"
               disabled={saving}
             >
               <X className="w-5 h-5" strokeWidth={2} />
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {isEditing && (
-              <div className="mx-5 mt-2 rounded-xl border border-sky-100 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-800">
+              <div className="mx-4 mt-2 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs font-medium leading-relaxed text-sky-800 sm:mx-5 sm:py-1.5">
                 Modo edición: puedes actualizar contacto, crédito, tipo de cliente, RUT y CIU. La identificación queda protegida.
               </div>
             )}
-            <div className="px-5 py-4 grid grid-cols-2 gap-x-4 gap-y-3 overflow-y-auto">
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-x-4 gap-y-4 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 md:grid-cols-2 md:gap-y-3">
 
               {/* COLUMNA IZQUIERDA */}
               <div className="flex flex-col gap-1.5">
@@ -647,12 +653,13 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     placeholder="Selecciona una opción"
                     ariaLabel="Tipo de persona"
                     className="h-10 rounded-xl py-0 pr-10"
+                    {...selectResponsiveProps}
                   />
                   <ErrorMsg field="personType" />
                 </div>
 
-                <div className="flex gap-2">
-                  <div className="flex flex-col gap-1">
+                <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-[7rem_1fr]">
+                  <div className="flex min-w-0 flex-col gap-1">
                     <Label>Tipo<span className="text-red-500">*</span></Label>
                     <FormSelect
                       value={formData.documentType}
@@ -663,9 +670,10 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                       placeholder="Tipo"
                       ariaLabel="Tipo de documento"
                       className="h-10 rounded-xl py-0 pr-10"
+                      {...selectResponsiveProps}
                     />
                   </div>
-                  <div className="flex flex-col gap-1 flex-1">
+                  <div className="flex min-w-0 flex-col gap-1">
                     <Label required>Documento</Label>
                     <input
                       type="text"
@@ -682,8 +690,8 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                <div className="flex flex-col gap-1">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="flex min-w-0 flex-col gap-1">
                   <Label required>Nombres</Label>
                   <input
                     type="text"
@@ -699,7 +707,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   <ErrorMsg field="firstName" />
                 </div>
 
-                <div className="flex flex-col gap-1">
+                <div className="flex min-w-0 flex-col gap-1">
                   <Label required>Apellidos</Label>
                   <input
                     type="text"
@@ -716,8 +724,8 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                 </div>
                 </div>
 
-                <div className="flex gap-2">
-                  <div className="flex flex-col gap-1 flex-1">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div className="flex min-w-0 flex-col gap-1">
                     <Label required>Teléfono</Label>
                     <input
                       type="tel"
@@ -731,7 +739,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     />
                     <ErrorMsg field="phone" />
                   </div>
-                  <div className="flex flex-col gap-1 flex-1">
+                  <div className="flex min-w-0 flex-col gap-1">
                     <Label required>Dirección</Label>
                     <input
                       type="text"
@@ -747,7 +755,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-1 col-span-2">
+                <div className="flex flex-col gap-1 md:col-span-2">
                   <Label required>Correo</Label>
                   <input
                     type="email"
@@ -770,8 +778,8 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   <div className="flex-1 h-px bg-[#004D77]/15" />
                 </div>
 
-                <div className="flex gap-2">
-                  <div className="flex flex-col gap-1 flex-1">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div className="flex min-w-0 flex-col gap-1">
                     <Label>Persona contacto</Label>
                     <input
                       type="text"
@@ -785,7 +793,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     />
                     <ErrorMsg field="contactName" />
                   </div>
-                  <div className="flex flex-col gap-1 flex-1">
+                  <div className="flex min-w-0 flex-col gap-1">
                     <Label>Tel. contacto</Label>
                     <input
                       type="tel"
@@ -811,6 +819,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     placeholder="Selecciona una opción"
                     ariaLabel="Tipo de cliente"
                     className="h-10 rounded-xl py-0 pr-10"
+                    {...selectResponsiveProps}
                   />
                   <ErrorMsg field="clientType" />
                 </div>
@@ -845,8 +854,8 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   <ErrorMsg field="saldoFavor" />
                 </div>
 
-                <div className="flex gap-2">
-                  <div className="flex flex-col gap-1 flex-1">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div className="flex min-w-0 flex-col gap-1">
                     <Label required>RUT</Label>
                     <FormSelect
                       value={formData.rut}
@@ -856,10 +865,11 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                       placeholder="Seleccione"
                       ariaLabel="RUT"
                       className="h-10 rounded-xl py-0 pr-10"
+                      {...selectResponsiveProps}
                     />
                     <ErrorMsg field="rut" />
                   </div>
-                  <div className="flex flex-col gap-1 flex-1">
+                  <div className="flex min-w-0 flex-col gap-1">
                     <Label>Código CIU {formData.rut === 'si' && <span className="text-red-500">*</span>}</Label>
                     <input
                       type="text"
@@ -884,33 +894,33 @@ function FormClient({ isOpen, onClose, client, onSave }) {
               </div>
             </div>
 
-            <div className="border-t border-slate-100 px-5 py-4 flex items-center justify-between shrink-0">
+            <div className="flex shrink-0 flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:px-5 sm:py-4 md:flex-row md:items-center md:justify-between">
               {isEditing ? (
                 <button
                   type="button"
                   onClick={() => setShowGraph(v => !v)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#004D77] border border-[#004D77]/30 rounded-lg hover:bg-[#004D77]/5 hover:border-[#004D77] transition-all cursor-pointer"
+                  className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#004D77]/30 px-3 py-2 text-xs font-semibold text-[#004D77] transition-all hover:border-[#004D77] hover:bg-[#004D77]/5 md:w-auto md:py-1.5"
                 >
                   <BarChart2 className="w-3.5 h-3.5" strokeWidth={2} />
                   {showGraph ? 'Ocultar gráfica' : 'Ver gráfica'}
                 </button>
               ) : (
-                <span />
+                <span className="hidden md:block" />
               )}
 
-              <div className="flex items-center gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
                 <button
                   type="button"
                   onClick={handleClose}
                   disabled={saving}
-                  className="rounded-full border border-slate-300 px-6 py-2.5 text-sm font-semibold text-slate-600 transition duration-200 hover:-translate-y-0.5 hover:border-[#004D77] hover:bg-sky-50 hover:text-[#004D77] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600 transition duration-200 hover:border-[#004D77] hover:bg-sky-50 hover:text-[#004D77] disabled:cursor-not-allowed disabled:opacity-50 sm:px-6 sm:hover:-translate-y-0.5"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex items-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-semibold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-[#003d61] hover:shadow-lg disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60"
+                  className="flex items-center justify-center gap-2 rounded-full bg-[#004D77] px-4 py-2.5 text-sm font-semibold text-white transition duration-200 hover:bg-[#003d61] disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60 sm:px-6 sm:hover:-translate-y-0.5 sm:hover:shadow-lg"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {saving ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}
@@ -922,10 +932,13 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
         {/* Panel derecho - Gráfica grande con datos reales */}
         <div
-          className="overflow-hidden shrink-0 transition-all duration-500 ease-in-out"
-          style={{ width: showGraph ? '50%' : '0%', opacity: showGraph ? 1 : 0 }}
+          className={`min-h-0 shrink-0 overflow-hidden transition-all duration-500 ease-in-out ${
+            showGraph
+              ? 'w-full border-t border-slate-100 opacity-100 max-lg:h-[58dvh] lg:w-1/2 lg:border-l lg:border-t-0'
+              : 'hidden w-0 opacity-0 lg:block'
+          }`}
         >
-          <div className="w-full h-full flex flex-col" style={{ minWidth: '360px' }}>
+          <div className="flex h-full w-full min-w-0 flex-col">
             {isEditing && <GraphClient clientId={client?.id} clientStartDate={client?.clientSince || '07/05/2023'} />}
           </div>
         </div>

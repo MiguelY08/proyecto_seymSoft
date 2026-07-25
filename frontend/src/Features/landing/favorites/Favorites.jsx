@@ -37,14 +37,15 @@ const STYLES = `
 
   /* ── Banner ── */
   .fav-banner-wrap {
-    width: 100%;
+    width: calc(100% - var(--store-content-x) - var(--store-content-x));
+    max-width: var(--store-content-inner-max);
+    margin: 0 auto;
     position: relative;
     overflow: hidden;
     height: clamp(112px, 34vw, 150px);
   }
   @media (min-width: 640px) {
     .fav-banner-wrap {
-      width: 98%;
       margin: 12px auto 0;
       border-radius: 20px;
       height: clamp(170px, 24vw, 240px);
@@ -52,7 +53,6 @@ const STYLES = `
   }
   @media (min-width: 1024px) {
     .fav-banner-wrap {
-      width: 95%;
       height: clamp(220px, 22vw, 300px);
     }
   }
@@ -101,9 +101,9 @@ const STYLES = `
 
   /* ── Main content ── */
   .fav-main {
-    max-width: 1280px;
+    max-width: var(--store-content-max);
     margin: 0 auto;
-    padding: clamp(24px, 5vw, 52px) clamp(14px, 4vw, 20px) clamp(40px, 6vw, 80px);
+    padding: clamp(24px, 5vw, 52px) var(--store-content-x) clamp(40px, 6vw, 80px);
   }
 
   /* ── Section header ── */

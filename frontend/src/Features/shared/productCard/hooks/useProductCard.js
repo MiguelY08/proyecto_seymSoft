@@ -15,6 +15,8 @@ import {
 } from '../helpers/productCard.helpers';
 import { getDisplayPricing } from '../../utils/shopPricingHelper';
 
+const PRODUCT_CARD_IMAGE_INTERVAL_MS = 2200;
+
 export function useProductCard(productData = {}, clientType = 'DETAL') {
   const navigate = useNavigate();
   const location = useLocation();
@@ -126,7 +128,7 @@ export function useProductCard(productData = {}, clientType = 'DETAL') {
       setActiveImageIndex((currentIndex) =>
         currentIndex === product.images.length - 1 ? 0 : currentIndex + 1
       );
-    }, 1200);
+    }, PRODUCT_CARD_IMAGE_INTERVAL_MS);
   }, [clearCarouselInterval, hasMultipleImages, product.images.length]);
 
   /**

@@ -245,7 +245,7 @@ function OrderDetail() {
         subtitle={`Pedido N.° ${order.numeroPedido || order.id}`}
       />
 
-      <main className="mx-auto max-w-7xl px-3 py-5 sm:px-5 sm:py-8">
+      <main className="mx-auto max-w-[var(--store-content-max)] px-[var(--store-content-x)] py-5 sm:py-8">
         <button
           type="button"
           onClick={() => navigate('/orders-l')}

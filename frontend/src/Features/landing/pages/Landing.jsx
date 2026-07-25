@@ -5,11 +5,13 @@ import Footer from '../../layouts/Footer.jsx'
 
 function Landing() {
   return (
-    <>
+    <div className="flex min-h-screen flex-col bg-[#f6f9fc]">
       <HeaderLanding />
-      <Outlet />
+      <main className="flex-1">
+        <Outlet />
+      </main>
       <Footer />
-    </>
+    </div>
   )
 }
 

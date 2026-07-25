@@ -151,7 +151,7 @@ function HeaderSearch({
   return (
     <form
       onSubmit={onSubmit}
-      className="min-w-0 flex-1 max-w-[13rem] sm:max-w-sm lg:max-w-xl"
+      className="min-w-0 flex-1 lg:max-w-[34rem] xl:max-w-[42rem] 2xl:max-w-[48rem]"
       ref={searchRef}
     >
       <div className="relative group">
@@ -170,7 +170,7 @@ function HeaderSearch({
           aria-autocomplete="list"
           aria-expanded={shouldShowResults || shouldShowRecentSearches}
           aria-controls="header-search-results"
-          className="w-full rounded-full border border-[#e2edf5] bg-[#f8fafc] py-1.5 pl-3 pr-16 text-xs text-gray-700 outline-none transition-all duration-150 placeholder-gray-400 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 sm:pr-[4.25rem] sm:text-sm"
+          className="w-full rounded-full border border-[#e2edf5] bg-[#f8fafc] py-1.5 pl-3 pr-16 text-xs text-gray-700 outline-none transition-all duration-150 placeholder-gray-400 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 sm:py-2 sm:pr-[4.25rem] sm:text-sm"
         />
         {searchQuery && (
           <button

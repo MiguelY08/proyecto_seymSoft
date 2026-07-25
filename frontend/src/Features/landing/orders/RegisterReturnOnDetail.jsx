@@ -21,9 +21,9 @@ const REGISTER_RETURN_STYLES = `
   }
 
   .register-return-container {
-    max-width: 1280px;
+    max-width: var(--store-content-max);
     margin: 0 auto;
-    padding: clamp(24px, 4vw, 40px) 20px;
+    padding: clamp(24px, 4vw, 40px) var(--store-content-x);
   }
 
   .btn-back {
