@@ -151,7 +151,7 @@ function ReturnsPage() {
       }
       await exportReturnsToExcel(filtered);
       showSuccess('Exportación exitosa', 'El archivo Excel se generó correctamente');
-    } catch (error) {
+    } catch {
       showError('Error', 'No se pudo exportar el archivo');
     }
   };
@@ -310,7 +310,9 @@ function ReturnsPage() {
         onExport={handleExport}
       />
 
-      <SalesReturnsMetricsCards returns={returns} />
+      <div className="hidden md:block">
+        <SalesReturnsMetricsCards returns={returns} />
+      </div>
 
       {hasActiveFilters && (
         <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
@@ -328,16 +330,14 @@ function ReturnsPage() {
         </div>
       )}
 
-      <div className="flex-1 min-h-[260px] overflow-hidden rounded-xl bg-white shadow-md">
-        <ReturnsTable
-          data={currentData}
-          startIndex={startIndex}
-          searchTerm={searchTerm}
-          onInfo={handleInfo}
-          onEdit={handleEdit}
-          onCancel={handleCancelClick}
-        />
-      </div>
+      <ReturnsTable
+        data={currentData}
+        startIndex={startIndex}
+        searchTerm={searchTerm}
+        onInfo={handleInfo}
+        onEdit={handleEdit}
+        onCancel={handleCancelClick}
+      />
 
       {filteredReturns.length > 0 && (
         <PaginationAdmin

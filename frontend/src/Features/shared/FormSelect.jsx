@@ -61,12 +61,17 @@ function FormSelect({
     );
     const spaceBelow = window.innerHeight - rect.bottom - gap;
     const spaceAbove = rect.top - gap;
+    const forceBottom = placement === 'bottom';
     const openUp = placement === 'top' || (placement === 'auto' && spaceBelow < 160 && spaceAbove > spaceBelow);
-    const availableHeight = Math.max(120, Math.min(maxHeight, openUp ? spaceAbove : spaceBelow));
+    const availableHeight = forceBottom
+      ? Math.max(72, Math.min(maxHeight, Math.max(spaceBelow, 72)))
+      : Math.max(120, Math.min(maxHeight, openUp ? spaceAbove : spaceBelow));
     const minLeft = viewportLeft + horizontalPadding;
     const maxLeft = viewportLeft + viewportWidth - horizontalPadding - limitedWidth;
     const left = Math.min(Math.max(rect.left, minLeft), Math.max(minLeft, maxLeft));
-    const top = openUp
+    const top = forceBottom
+      ? rect.bottom + gap
+      : openUp
       ? Math.max(viewportTop + gap, rect.top - availableHeight - gap)
       : Math.min(rect.bottom + gap, viewportTop + viewportHeight - gap - availableHeight);
 
@@ -78,7 +83,7 @@ function FormSelect({
       maxHeight: availableHeight,
       zIndex: 9999,
     });
-  }, [maxDropdownWidth, minDropdownWidth, placement]);
+  }, [maxDropdownWidth, minDropdownWidth, placement, setDropdownStyle]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -87,6 +92,7 @@ function FormSelect({
 
       if (!clickedTrigger && !clickedDropdown) {
         setIsOpen(false);
+        setSearchTerm('');
       }
     };
 
@@ -107,11 +113,13 @@ function FormSelect({
     };
   }, [isOpen, updateDropdownPosition]);
 
-  useEffect(() => {
-    if (!isOpen) {
+  const handleToggle = () => {
+    if (disabled) return;
+    if (isOpen) {
       setSearchTerm('');
     }
-  }, [isOpen]);
+    setIsOpen((current) => !current);
+  };
 
   const handleSelect = (nextValue) => {
     onChange(nextValue);
@@ -127,7 +135,7 @@ function FormSelect({
     <div className="relative" ref={wrapperRef}>
       <button
         type="button"
-        onClick={() => !disabled && setIsOpen((current) => !current)}
+        onClick={handleToggle}
         disabled={disabled}
         aria-label={ariaLabel || placeholder}
         className={`

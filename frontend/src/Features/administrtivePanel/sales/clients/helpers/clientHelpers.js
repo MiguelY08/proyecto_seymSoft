@@ -192,19 +192,21 @@ export const validateClientForm = (formData) => {
     errors.document = 'Máximo 19 dígitos permitidos';
   }
 
+  const isLegalPerson = formData.personType === 'juridica';
+
   if (!formData.firstName?.trim()) {
-    errors.firstName = 'El nombre es obligatorio';
+    errors.firstName = isLegalPerson ? 'El nombre de la empresa es obligatorio' : 'El nombre es obligatorio';
   } else if (formData.firstName.trim().length < 2) {
     errors.firstName = 'Debe tener al menos 2 caracteres';
-  } else if (!isOnlyLetters(formData.firstName)) {
+  } else if (!isLegalPerson && !isOnlyLetters(formData.firstName)) {
     errors.firstName = 'Solo se permiten letras';
   }
 
-  if (!formData.lastName?.trim()) {
+  if (!isLegalPerson && !formData.lastName?.trim()) {
     errors.lastName = 'El apellido es obligatorio';
-  } else if (formData.lastName.trim().length < 2) {
+  } else if (!isLegalPerson && formData.lastName.trim().length < 2) {
     errors.lastName = 'Debe tener al menos 2 caracteres';
-  } else if (!isOnlyLetters(formData.lastName)) {
+  } else if (!isLegalPerson && !isOnlyLetters(formData.lastName)) {
     errors.lastName = 'Solo se permiten letras';
   }
 

@@ -1,32 +1,11 @@
-/**
- * Archivo: InfoProvider.jsx
- * 
- * Este archivo contiene un modal que muestra la información detallada completa
- * de un proveedor, con el mismo estilo que InfoClient.
- * 
- * Responsabilidades:
- * - Mostrar todos los datos de un proveedor en un modal
- * - Organizar la información en una cuadrícula de 2 columnas
- * - Formatear datos especiales (RUT, tipo persona, tipo cliente, estado)
- * - Proporcionar un botón para cerrar el modal
- * - Manejar la visibilidad del modal según la prop isOpen
- */
-
 import React from 'react';
-import { X, User, Mail, Phone, MapPin, UserCheck, CalendarDays, Building2, Package, FileText, Hash, Clock } from 'lucide-react';
-import { 
-  formatPersonType, 
-  formatRut, 
-  getStatusBadgeClass,
+import { X, User, Mail, Phone, MapPin, UserCheck, Package, FileText, Hash, Clock } from 'lucide-react';
+import {
+  formatPersonType,
+  formatRut,
   getStatusText
 } from '../utils/providerHelpers';
 
-// ─── Función para formatear categorías ────────────────────────────────────────
-/**
- * Convierte el array de categorías a un string legible
- * @param {Array} categorias - Array de objetos de categorías {id, name}
- * @returns {string} String con nombres de categorías separados por comas
- */
 const formatCategories = (categorias) => {
   if (!categorias || !Array.isArray(categorias) || categorias.length === 0) {
     return '—';
@@ -34,24 +13,26 @@ const formatCategories = (categorias) => {
   return categorias.map(cat => cat.name).join(', ');
 };
 
-// ─── Fila de detalle — estilo InfoUser/InfoClient ────────────────────────────────
-function DetailRow({ icon: Icon, label, value, fullWidth = false }) {
-  // Asegurar que value sea un string (no un objeto)
+function DetailRow({ icon, label, value, fullWidth = false }) {
   let displayValue = value;
   if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
     displayValue = JSON.stringify(value);
   }
-  
+
   return (
-    <div className={`flex items-start gap-3 ${fullWidth ? 'col-span-2' : ''}`}>
-      <div className="w-8 h-8 rounded-lg bg-[#004D77]/8 flex items-center justify-center shrink-0 mt-0.5">
-        <Icon className="w-4 h-4 text-[#004D77]/60" strokeWidth={1.8} />
+    <div className={`flex min-w-0 items-start gap-3 ${fullWidth ? 'md:col-span-2' : ''}`}>
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#004D77]/10 sm:h-10 sm:w-10">
+        {React.createElement(icon, {
+          className: 'h-5 w-5 text-[#004D77]/70',
+          strokeWidth: 1.8
+        })}
       </div>
-      <div className="flex flex-col gap-0.5 min-w-0">
-        <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide leading-none">
+
+      <div className="flex min-w-0 flex-1 flex-col gap-1 pt-0.5">
+        <span className="text-[10px] font-bold uppercase leading-none tracking-widest text-slate-400">
           {label}
         </span>
-        <span className="text-sm font-medium text-gray-800 wrap-break-words leading-snug">
+        <span className="break-words text-sm font-semibold leading-snug text-slate-800 sm:text-[15px]">
           {displayValue || <span className="text-gray-300 italic">—</span>}
         </span>
       </div>
@@ -59,71 +40,58 @@ function DetailRow({ icon: Icon, label, value, fullWidth = false }) {
   );
 }
 
-/**
- * Componente: InfoProvider
- * 
- * Modal que muestra todos los detalles de un proveedor de forma legible
- * en una cuadrícula de 2 columnas, con el mismo estilo que InfoClient.
- * 
- * Props:
- * @param {boolean} isOpen - Controla si el modal está visible
- * @param {Function} onClose - Callback para cerrar el modal
- * @param {Object} provider - Objeto del proveedor con todos sus datos
- */
 function InfoProvider({ isOpen, onClose, provider }) {
-  // No renderiza nada si el modal no está abierto o no hay proveedor
   if (!isOpen || !provider) return null;
 
-  // Obtener iniciales para el avatar
   const initials = (provider.nombre || provider.nombres || '')
-    .trim().split(/\s+/).filter(Boolean)
-    .slice(0, 2).map(w => w[0].toUpperCase()).join('');
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0].toUpperCase())
+    .join('');
 
-  // Color del estado
   const statusColor = provider.activo
     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
     : 'bg-red-50 text-red-500 border-red-200';
 
-  // Formatear categorías para mostrar
   const categoriasTexto = formatCategories(provider.categorias);
   const identificacionCompleta = `${provider.tipo || 'N/A'} ${provider.numero || '—'}`;
+  const providerName = provider.nombre || `${provider.nombres || ''} ${provider.apellidos || ''}`.trim() || 'Sin nombre';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center p-0 sm:items-center sm:p-4">
+      <div className="absolute inset-0 hidden bg-black/40 backdrop-blur-sm sm:block" onClick={onClose} />
 
-      {/* Modal — mismo tamaño que InfoClient */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col">
-
-        {/* Header - mismo estilo que InfoClient */}
-        <div className="relative bg-[#004D77] px-6 py-4 shrink-0">
+      <div className="relative flex h-dvh w-full min-h-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:max-w-2xl sm:rounded-2xl">
+        <div className="relative shrink-0 bg-[#004D77] px-5 py-6 sm:px-7 sm:py-7">
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 text-white/70 hover:text-white hover:bg-white/20 rounded-full p-1.5 transition-all"
+            className="absolute right-3 top-3 rounded-full p-1.5 text-white/70 transition-all hover:bg-white/20 hover:text-white"
           >
-            <X className="w-4 h-4" strokeWidth={2.5} />
+            <X className="h-4 w-4" strokeWidth={2.5} />
           </button>
 
-          <div className="flex items-center gap-4 pr-8">
-            {/* Avatar con iniciales */}
-            <div className="w-14 h-14 rounded-xl bg-white/20 border-2 border-white/30 flex items-center justify-center shrink-0 shadow-lg">
-              <span className="text-lg font-bold text-white tracking-tight leading-none">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-2 border-white/30 bg-white/20 shadow-lg sm:h-20 sm:w-20">
+              <span className="text-2xl font-bold leading-none tracking-tight text-white sm:text-3xl">
                 {initials || 'P'}
               </span>
             </div>
-            <div className="min-w-0">
-              <h2 className="text-white font-bold text-base leading-tight truncate">
-                {provider.nombre || `${provider.nombres || ''} ${provider.apellidos || ''}`.trim() || 'Sin nombre'}
+
+            <div className="min-w-0 max-w-full">
+              <h2 className="text-xl font-bold leading-tight text-white sm:text-2xl">
+                {providerName}
               </h2>
-              <p className="text-white/70 text-[11px] mt-0.5">
+              <p className="mt-1 text-sm text-white/75">
                 Identificación: {identificacionCompleta}
               </p>
-              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusColor}`}>
+
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-bold ${statusColor}`}>
                   {getStatusText(provider.activo)}
                 </span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white border border-white/30">
+                <span className="inline-flex items-center rounded-full border border-white/30 bg-white/20 px-3 py-1 text-[11px] font-bold text-white">
                   {formatPersonType(provider.tipoPersona)}
                 </span>
               </div>
@@ -131,103 +99,38 @@ function InfoProvider({ isOpen, onClose, provider }) {
           </div>
         </div>
 
-        {/* Campos de detalle — grid de 2 columnas como InfoClient */}
-        <div className="px-6 py-5 grid grid-cols-2 gap-x-6 gap-y-4">
-
-          {/* Separador Datos personales */}
-          <div className="col-span-2 flex items-center gap-2">
-            <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Datos personales</span>
-            <div className="flex-1 h-px bg-[#004D77]/15" />
+        <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-y-5 overflow-y-auto bg-white px-5 py-6 sm:px-7 md:grid-cols-2 md:gap-x-10 md:gap-y-6 md:px-8">
+          <div className="md:col-span-2 flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#004D77]">Datos personales</span>
+            <div className="h-px flex-1 bg-[#004D77]/15" />
           </div>
 
-          {/* Nombre completo */}
-            <DetailRow 
-              icon={User} 
-              label="Nombre completo" 
-              value={provider.nombre || `${provider.nombres || ''} ${provider.apellidos || ''}`.trim() || '—'} 
-            />
+          <DetailRow icon={User} label="Nombre completo" value={providerName} fullWidth />
+          <DetailRow icon={Mail} label="Correo electrónico" value={provider.correo || '—'} />
+          <DetailRow icon={Phone} label="Teléfono" value={provider.telefono || '—'} />
+          <DetailRow icon={MapPin} label="Dirección" value={provider.direccion || '—'} fullWidth />
 
-          {/* Correo electrónico */}
-            <DetailRow 
-              icon={Mail} 
-              label="Correo electrónico" 
-              value={provider.correo || '—'} 
-            />
-
-          {/* Teléfono */}
-          <DetailRow 
-            icon={Phone} 
-            label="Teléfono" 
-            value={provider.telefono || '—'} 
-          />
-
-          {/* Dirección */}
-          <DetailRow 
-            icon={MapPin} 
-            label="Dirección" 
-            value={provider.direccion || '—'} 
-          />
-
-          {/* Separador Contacto y registro */}
-          <div className="col-span-2 flex items-center gap-2">
-            <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Contacto y registro</span>
-            <div className="flex-1 h-px bg-[#004D77]/15" />
+          <div className="md:col-span-2 flex items-center gap-2 pt-2">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#004D77]">Contacto y registro</span>
+            <div className="h-px flex-1 bg-[#004D77]/15" />
           </div>
 
-          {/* Persona contacto */}
-          <DetailRow 
-            icon={UserCheck} 
-            label="Persona contacto" 
-            value={provider.pContacto || provider.nombreContacto || '—'} 
-          />
-
-          {/* Teléfono contacto */}
-          <DetailRow 
-            icon={Phone} 
-            label="Tel. contacto" 
-            value={provider.nuContacto || provider.numeroContacto || '—'} 
-          />
-
-          {/* Plazo devoluciones */}
-          <DetailRow 
-            icon={Clock} 
-            label="Plazo devoluciones" 
-            value={provider.plazoDevoluciones ? `${provider.plazoDevoluciones} Dia/s` : '—'} 
-          />
-
-          {/* Categorías - CORREGIDO: usar el string formateado */}
-          <DetailRow 
-            icon={Package} 
-            label="Categorías" 
-            value={categoriasTexto} 
-          />
-
-          {/* RUT */}
-          <DetailRow 
-            icon={FileText} 
-            label="RUT" 
-            value={formatRut(provider.rut)} 
-          />
-
-          {/* Código CIU */}
-          <DetailRow 
-            icon={Hash} 
-            label="Código CIU" 
-            value={provider.codigoCIU || '—'} 
-          />
-
+          <DetailRow icon={UserCheck} label="Persona contacto" value={provider.pContacto || provider.nombreContacto || '—'} />
+          <DetailRow icon={Phone} label="Tel. contacto" value={provider.nuContacto || provider.numeroContacto || '—'} />
+          <DetailRow icon={Clock} label="Plazo devoluciones" value={provider.plazoDevoluciones ? `${provider.plazoDevoluciones} Día/s` : '—'} />
+          <DetailRow icon={Package} label="Categorías" value={categoriasTexto} fullWidth />
+          <DetailRow icon={FileText} label="RUT" value={formatRut(provider.rut)} />
+          <DetailRow icon={Hash} label="Código CIU" value={provider.codigoCIU || '—'} />
         </div>
 
-        {/* Footer - botón cerrar */}
-        <div className="border-t border-gray-100 px-6 py-3 flex items-center justify-end shrink-0">
+        <div className="flex shrink-0 items-center justify-end border-t border-gray-100 bg-white px-4 py-3 sm:px-6">
           <button
             onClick={onClose}
-            className="px-5 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+            className="w-full cursor-pointer rounded-xl bg-gray-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-gray-600 sm:w-auto sm:min-w-32"
           >
             Cerrar
           </button>
         </div>
-
       </div>
     </div>
   );
