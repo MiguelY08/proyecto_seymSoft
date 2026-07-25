@@ -6,21 +6,17 @@ const SHOP_HERO_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito:wght@400;600;700;800;900&display=swap');
 
   .shop-hero-wrap {
-    width: 100%;
+    width: calc(100% - var(--store-content-x) - var(--store-content-x));
+    max-width: var(--store-content-inner-max);
+    margin: 0 auto;
     position: relative;
     overflow: hidden;
     height: clamp(140px, 22vw, 300px);
   }
   @media (min-width: 640px) {
     .shop-hero-wrap {
-      width: 98%;
       margin: 12px auto 0;
       border-radius: 20px;
-    }
-  }
-  @media (min-width: 1024px) {
-    .shop-hero-wrap {
-      width: 95%;
     }
   }
   .shop-hero-bg {

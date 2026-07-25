@@ -142,15 +142,15 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-stretch justify-stretch bg-white sm:items-center sm:justify-center sm:bg-black/40 sm:p-4 sm:backdrop-blur-sm"
     >
       <div
         onClick={(event) => event.stopPropagation()}
-        className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl"
+        className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:max-w-5xl sm:rounded-lg"
       >
-        <div className="flex shrink-0 items-center justify-between bg-[#004D77] px-6 py-4">
+        <div className="flex shrink-0 items-center justify-between gap-3 bg-[#004D77] px-4 py-3 sm:px-6 sm:py-4">
           <div className="min-w-0">
-            <h2 className="truncate text-lg font-semibold text-white">
+            <h2 className="truncate text-base font-semibold text-white sm:text-lg">
               Devolución #{devolucion?.id ?? "-"}
             </h2>
             <p className="mt-0.5 text-xs text-white/60">
@@ -160,16 +160,16 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
           <button
             type="button"
             onClick={onClose}
-            className="cursor-pointer rounded-full p-1 text-white transition-colors hover:bg-white/20"
+            className="shrink-0 cursor-pointer rounded-full p-1 text-white transition-colors hover:bg-white/20"
             title="Cerrar"
           >
             <X className="h-5 w-5" strokeWidth={2} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {isAnnulled && (
-            <div className="mx-4 mt-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 shadow-sm">
+            <div className="mx-4 mt-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-3 shadow-sm sm:px-4">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
               <div>
                 <p className="text-xs font-semibold text-red-600">
@@ -188,7 +188,7 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
           )}
 
           <div className="grid grid-cols-1 divide-y divide-gray-100 md:grid-cols-2 md:divide-x md:divide-y-0">
-            <div className="px-6 py-5">
+            <div className="px-4 py-4 sm:px-6 sm:py-5">
               <SectionTitle>Información general</SectionTitle>
               <DetailRow
                 icon={FileText}
@@ -213,7 +213,7 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
               />
             </div>
 
-            <div className="px-6 py-5">
+            <div className="px-4 py-4 sm:px-6 sm:py-5">
               <SectionTitle>Estado del proceso</SectionTitle>
               <DetailRow
                 icon={PackageCheck}
@@ -239,7 +239,7 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
             </div>
           </div>
 
-          <div className="border-t border-gray-100 px-6 py-5">
+          <div className="border-t border-gray-100 px-4 py-4 sm:px-6 sm:py-5">
             <SectionTitle>Productos devueltos</SectionTitle>
 
             {products.length === 0 ? (
@@ -250,7 +250,7 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <div className="overflow-x-auto rounded-lg border border-gray-200 [-webkit-overflow-scrolling:touch]">
                 <table className="min-w-[920px] w-full">
                   <thead className="bg-[#004D77]/5">
                     <tr>
@@ -352,7 +352,7 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
             )}
 
             {showTotals ? (
-              <div className="mt-3 ml-auto w-full max-w-sm overflow-hidden rounded-lg border border-gray-200">
+              <div className="mt-3 ml-auto w-full overflow-hidden rounded-lg border border-gray-200 sm:max-w-sm">
                 <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-2">
                   <span className="text-xs font-medium text-gray-500">
                     Subtotal
@@ -387,7 +387,7 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
             )}
 
             {totalPages > 1 && (
-              <div className="mt-4 flex items-center justify-between px-1">
+              <div className="mt-4 flex items-center justify-between gap-3 px-1">
                 <span className="text-xs text-gray-400">
                   Página {currentPage} de {totalPages}
                 </span>
@@ -422,11 +422,11 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
+        <div className="flex shrink-0 flex-col-reverse items-stretch gap-2 border-t border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
           <button
             type="button"
             onClick={onClose}
-            className="cursor-pointer rounded-lg bg-gray-500 px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-600"
+            className="w-full cursor-pointer rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 sm:w-auto"
           >
             Cerrar
           </button>
@@ -437,7 +437,7 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
                 onClose();
                 onEdit(devolucion);
               }}
-              className="flex cursor-pointer items-center gap-2 rounded-lg bg-[#004D77] px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-[#003a5c]"
+              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] sm:w-auto"
             >
               <SquarePen className="h-4 w-4" strokeWidth={1.8} />
               Editar devolución

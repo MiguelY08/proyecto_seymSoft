@@ -131,12 +131,12 @@ function TopBar({
   };
 
   return (
-    <div className="flex items-center justify-between gap-2 sm:gap-3 shrink-0 min-w-0">
-      <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+    <div className="flex flex-col gap-3 shrink-0 min-w-0 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-3 min-w-0 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 lg:flex-1">
         <div
           ref={searchWrapperRef}
-          className={`relative shrink-0 transition-all duration-300 ease-out ${
-            isSearchOpen ? 'w-64' : 'w-10'
+          className={`relative w-full transition-all duration-300 ease-out sm:shrink-0 ${
+            isSearchOpen ? 'sm:w-64 lg:w-72' : 'sm:w-10'
           }`}
         >
           {isSearchOpen ? (
@@ -147,7 +147,7 @@ function TopBar({
                 value={search}
                 autoFocus
                 onChange={(event) => onSearchChange(event.target.value)}
-                className="w-full pl-4 pr-10 py-2 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400"
+                className="w-full pl-4 pr-10 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400"
               />
               <button
                 type="button"
@@ -166,7 +166,7 @@ function TopBar({
             <button
               type="button"
               onClick={() => setIsSearchOpen(true)}
-              className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 hover:text-[#004D77] hover:border-[#004D77] transition"
+              className="w-full h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 hover:text-[#004D77] hover:border-[#004D77] transition sm:w-10"
               title="Buscar"
               aria-label="Buscar"
             >
@@ -175,7 +175,7 @@ function TopBar({
           )}
         </div>
 
-        <div className={`relative shrink-0 transition-all duration-300 ${isSearchOpen ? 'w-28 lg:w-32' : 'w-36 lg:w-40'}`} title="Fecha inicial">
+        <div className="relative w-full transition-all duration-300 sm:w-44 lg:w-40" title="Fecha inicial">
           <Calendar
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
             strokeWidth={1.8}
@@ -188,12 +188,12 @@ function TopBar({
               setFechaInicial(event.target.value);
               setCurrentPage(1);
             }}
-            className="pl-9 pr-2 py-2 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-600 w-full"
+            className="pl-9 pr-2 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-600 w-full"
             aria-label="Fecha inicial"
           />
         </div>
 
-        <div className={`relative shrink-0 transition-all duration-300 ${isSearchOpen ? 'w-28 lg:w-32' : 'w-36 lg:w-40'}`} title="Fecha final">
+        <div className="relative w-full transition-all duration-300 sm:w-44 lg:w-40" title="Fecha final">
           <Calendar
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
             strokeWidth={1.8}
@@ -206,12 +206,12 @@ function TopBar({
               setFechaFinal(event.target.value);
               setCurrentPage(1);
             }}
-            className="pl-9 pr-2 py-2 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-600 w-full"
+            className="pl-9 pr-2 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-600 w-full"
             aria-label="Fecha final"
           />
         </div>
 
-        <div className={`shrink-0 transition-all duration-300 ${isSearchOpen ? 'w-16' : 'w-36'}`}>
+        <div className="w-full min-w-0 transition-all duration-300 sm:w-44">
           <FormSelect
             value={activeType}
             options={SALES_TYPE_OPTIONS}
@@ -226,7 +226,7 @@ function TopBar({
           <button
             type="button"
             onClick={handleClearFilters}
-            className="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg text-gray-600 bg-white hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 cursor-pointer shrink-0"
+            className="w-full h-10 flex items-center justify-center border border-gray-300 rounded-lg text-gray-600 bg-white hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 cursor-pointer sm:w-10 sm:shrink-0"
             title="Limpiar filtros"
             aria-label="Limpiar filtros"
           >
@@ -235,10 +235,10 @@ function TopBar({
         )}
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
         <Permission permission="ventas.exportar">
           <ButtonComponent
-            className={`bg-white text-green-600 border-green-600 px-2 flex items-center gap-2 ${
+            className={`flex-1 sm:flex-none bg-white text-green-600 border-green-600 px-3 flex items-center justify-center gap-2 ${
               isExporting
                 ? 'opacity-60 cursor-not-allowed'
                 : 'hover:bg-green-400'
@@ -251,17 +251,18 @@ function TopBar({
         </Permission>
 
         <Permission permission="ventas.crear">
-          <div className="relative">
+          <div className="relative flex-1 sm:flex-none">
             <ButtonComponent
               onClick={() => setShowSaleTypeMenu((prev) => !prev)}
               title="Nueva"
+              className="w-full sm:w-auto flex items-center justify-center gap-2"
             >
               <span className="hidden sm:inline">Nueva</span>
               <Plus className="w-4 h-4" strokeWidth={2} />
             </ButtonComponent>
 
             {showSaleTypeMenu && (
-              <div className="absolute right-0 top-full mt-2 w-44 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden z-20">
+              <div className="absolute right-0 top-full mt-2 w-full min-w-44 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden z-20">
                 <button
                   type="button"
                   onClick={() => handleNewSale('manual')}

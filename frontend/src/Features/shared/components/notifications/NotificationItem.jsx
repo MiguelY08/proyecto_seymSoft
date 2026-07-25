@@ -82,28 +82,28 @@ function NotificationItem({
 
   return (
     <article
-      className={`group flex gap-3 border-b border-slate-100 px-4 py-3 transition-colors hover:bg-slate-50 ${
+      className={`group flex min-w-0 gap-2.5 border-b border-slate-100 px-3 py-2.5 transition-colors hover:bg-slate-50 sm:gap-3 sm:px-4 sm:py-3 ${
         notification.isRead ? "bg-white" : "bg-[#004D77]/[0.03]"
       }`}
     >
       <button
         type="button"
         onClick={handleOpen}
-        className="flex min-w-0 flex-1 gap-3 text-left"
+        className="flex min-w-0 flex-1 gap-2.5 text-left sm:gap-3"
       >
-        <span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${iconColor}`}>
+        <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 ${iconColor}`}>
           <Icon className="h-4 w-4" strokeWidth={1.9} />
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-start justify-between gap-2">
-            <span className="line-clamp-1 text-sm font-semibold text-[#004D77]">
+            <span className="line-clamp-1 min-w-0 break-words text-sm font-semibold text-[#004D77] [overflow-wrap:anywhere]">
               {notification.title}
             </span>
             {!notification.isRead && (
               <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-500" />
             )}
           </span>
-          <span className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">
+          <span className="mt-1 line-clamp-2 min-w-0 break-words text-xs leading-5 text-slate-600 [overflow-wrap:anywhere]">
             {notification.message}
           </span>
           <span className="mt-1 block text-[11px] font-medium text-slate-400">
@@ -112,12 +112,12 @@ function NotificationItem({
         </span>
       </button>
 
-      <div className="flex shrink-0 flex-col gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+      <div className="flex shrink-0 flex-col gap-0.5 opacity-100 sm:gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
         {!notification.isRead && (
           <button
             type="button"
             onClick={() => onMarkAsRead(notification.id)}
-            className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600"
+            className="rounded-md p-1 text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600 sm:p-1.5"
             aria-label="Marcar como leida"
           >
             <Check className="h-4 w-4" />
@@ -126,7 +126,7 @@ function NotificationItem({
         <button
           type="button"
           onClick={() => onDelete(notification.id)}
-          className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+          className="rounded-md p-1 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 sm:p-1.5"
           aria-label="Eliminar notificacion"
         >
           <Trash2 className="h-4 w-4" />

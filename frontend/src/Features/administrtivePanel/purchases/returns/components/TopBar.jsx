@@ -199,14 +199,14 @@ function TopBar({
   };
 
   return (
-    <div className="flex flex-wrap items-end gap-3 shrink-0">
-      <div className="relative w-72">
+    <div className="flex flex-col gap-3 shrink-0 lg:flex-row lg:items-end lg:justify-between">
+      <div className="relative w-full lg:max-w-md">
         <input
           type="text"
           placeholder="Buscar por devolucion, factura, proveedor o estado..."
           value={search}
           onChange={(event) => handleSearchChange(event.target.value)}
-          className="w-full pl-4 pr-10 py-2 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400"
+          className="w-full pl-4 pr-10 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400"
         />
         <Search
           className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
@@ -214,70 +214,70 @@ function TopBar({
         />
       </div>
 
-      <div className="flex flex-col gap-0.5">
-        <label className="text-xs text-gray-500 font-medium pl-0.5">Fecha Inicial</label>
-        <div className="relative">
-          <Calendar
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-            strokeWidth={1.8}
-          />
-          <input
-            type="date"
-            value={fechaInicial}
-            max={fechaFinal || undefined}
-            onChange={(event) => {
-              setFechaInicial(event.target.value);
-              setCurrentPage(1);
-            }}
-            className="pl-9 pr-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-600 w-full sm:w-auto"
-          />
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 lg:w-auto lg:justify-end">
+        <div className="flex flex-col gap-0.5 w-full sm:w-44">
+          <label className="text-xs text-gray-500 font-medium pl-0.5">Fecha Inicial</label>
+          <div className="relative">
+            <Calendar
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+              strokeWidth={1.8}
+            />
+            <input
+              type="date"
+              value={fechaInicial}
+              max={fechaFinal || undefined}
+              onChange={(event) => {
+                setFechaInicial(event.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full pl-9 pr-3 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-600"
+            />
+          </div>
         </div>
-      </div>
 
-      <div className="flex flex-col gap-0.5">
-        <label className="text-xs text-gray-500 font-medium pl-0.5">Fecha Final</label>
-        <div className="relative">
-          <Calendar
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-            strokeWidth={1.8}
-          />
-          <input
-            type="date"
-            value={fechaFinal}
-            min={fechaInicial || undefined}
-            onChange={(event) => {
-              setFechaFinal(event.target.value);
-              setCurrentPage(1);
-            }}
-            className="pl-9 pr-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-600 w-full sm:w-auto"
-          />
+        <div className="flex flex-col gap-0.5 w-full sm:w-44">
+          <label className="text-xs text-gray-500 font-medium pl-0.5">Fecha Final</label>
+          <div className="relative">
+            <Calendar
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+              strokeWidth={1.8}
+            />
+            <input
+              type="date"
+              value={fechaFinal}
+              min={fechaInicial || undefined}
+              onChange={(event) => {
+                setFechaFinal(event.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full pl-9 pr-3 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-600"
+            />
+          </div>
         </div>
-      </div>
 
-      {hayFiltrosActivos && (
-        <div className="flex flex-col gap-0.5">
-          <label className="text-xs text-gray-500 font-medium pl-0.5 invisible">Limpiar</label>
-          <button
-            onClick={handleClearFilters}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-400 rounded-lg text-gray-600 bg-white hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 cursor-pointer whitespace-nowrap"
+        {hayFiltrosActivos && (
+          <div className="flex flex-col gap-0.5 w-full sm:w-auto">
+            <label className="text-xs text-gray-500 font-medium pl-0.5 invisible">Limpiar</label>
+            <button
+              onClick={handleClearFilters}
+              className="flex w-full items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium border border-gray-400 rounded-lg text-gray-600 bg-white hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 cursor-pointer whitespace-nowrap sm:w-auto"
+            >
+              <Eraser className="w-4 h-4" strokeWidth={2} />
+              <span>Limpiar filtros</span>
+            </button>
+          </div>
+        )}
+
+        {canExport && (
+          <ButtonComponent
+            className="w-full sm:w-auto bg-white text-green-600 border-green-600 hover:bg-green-400 px-3 flex items-center justify-center gap-2"
+            onClick={handleDownload}
           >
-            <Eraser className="w-4 h-4" strokeWidth={2} />
-            <span>Limpiar filtros</span>
-          </button>
-        </div>
-      )}
-
-      <div className="flex-1" />
-
-      {canExport && (
-        <ButtonComponent
-          className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-2 flex items-center gap-2"
-          onClick={handleDownload}
-        >
-          <FileSpreadsheet className="w-4 h-4" />
-          Exportar Excel
-        </ButtonComponent>
-      )}
+            <FileSpreadsheet className="w-4 h-4" />
+            Exportar Excel
+          </ButtonComponent>
+        )}
+      </div>
     </div>
   );
 }

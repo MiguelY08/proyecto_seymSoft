@@ -143,7 +143,7 @@ function Banner() {
 
   return (
     <Permission permission="banners.ver">
-      <div className="flex flex-col gap-6 sm:gap-8 p-3 sm:p-4 lg:p-6 max-w-7xl mx-auto w-full">
+      <div className="flex w-full flex-col gap-5 px-3 py-4 sm:gap-6 sm:px-5 lg:gap-8 lg:px-8 lg:py-6">
         {actionMessage && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
             <Spinner message={actionMessage} className="min-h-0" />
@@ -154,12 +154,12 @@ function Banner() {
           <Spinner message="Cargando banners..." />
         ) : (
           <>
-        <div className="flex flex-col gap-1">
-          <h1 className="text-lg sm:text-xl font-bold text-[#004D77]">
+        <div className="flex max-w-3xl flex-col gap-1.5">
+          <h1 className="text-xl font-bold leading-tight text-[#004D77] sm:text-2xl">
             Gestión del carrusel
           </h1>
 
-          <p className="text-xs sm:text-sm text-gray-500">
+          <p className="text-sm leading-relaxed text-gray-500">
             Administre las imágenes que verá el cliente en la tienda. Agrega nuevas
             imágenes, ordénalas y mucho más.
           </p>

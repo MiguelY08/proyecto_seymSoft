@@ -19,7 +19,7 @@ function CardManagement({
     return (
       <div
         onClick={() => fileInputRef.current?.click()}
-        className="relative rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 hover:border-[#004D77] hover:bg-[#004D77]/5 transition-all duration-200 cursor-pointer flex items-center justify-center aspect-video group"
+        className="group relative flex aspect-video cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-4 transition-all duration-200 hover:border-[#004D77] hover:bg-[#004D77]/5"
       >
         <input
           ref={fileInputRef}
@@ -35,12 +35,12 @@ function CardManagement({
           }}
         />
 
-        <div className="flex flex-col items-center gap-1.5 sm:gap-2 text-gray-400 group-hover:text-[#004D77] transition-colors duration-200">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-200 group-hover:bg-[#004D77]/10 flex items-center justify-center transition-colors duration-200">
+        <div className="flex max-w-full flex-col items-center gap-1.5 text-center text-gray-400 transition-colors duration-200 group-hover:text-[#004D77] sm:gap-2">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200 transition-colors duration-200 group-hover:bg-[#004D77]/10 sm:h-12 sm:w-12">
             <span className="text-xl sm:text-2xl font-light leading-none">+</span>
           </div>
-          <p className="text-[11px] sm:text-xs font-medium">Agregar imagen</p>
-          <p className="text-[9px] sm:text-[10px] text-gray-400">
+          <p className="text-xs font-medium leading-tight">Agregar imagen</p>
+          <p className="text-[10px] leading-tight text-gray-400">
             Máx. {MAX_FILE_SIZE / (1024 * 1024)} MB
           </p>
         </div>
@@ -76,15 +76,15 @@ function CardManagement({
       )}
 
       {/* Acciones */}
-      <div className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 flex items-center gap-1 sm:gap-1.5">
+      <div className="absolute right-2 top-2 flex items-center gap-1.5">
         <Permission permission="banners.ampliar_imagen">
           <button
             type="button"
             onClick={() => onExpand?.(slide?.id)}
             title="Ampliar imagen"
-            className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-black/40 hover:bg-black/60 text-white backdrop-blur-sm transition-all duration-200 cursor-pointer"
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg bg-black/45 text-white backdrop-blur-sm transition-all duration-200 hover:bg-black/65 sm:h-7 sm:w-7"
           >
-            <Maximize2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" strokeWidth={2} />
+            <Maximize2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" strokeWidth={2} />
           </button>
         </Permission>
 
@@ -93,35 +93,35 @@ function CardManagement({
             type="button"
             onClick={() => onDelete?.(slide?.id)}
             title="Eliminar imagen"
-            className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-black/40 hover:bg-red-500/80 text-white backdrop-blur-sm transition-all duration-200 cursor-pointer"
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg bg-black/45 text-white backdrop-blur-sm transition-all duration-200 hover:bg-red-500/80 sm:h-7 sm:w-7"
           >
-            <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" strokeWidth={2} />
+            <Trash2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" strokeWidth={2} />
           </button>
         </Permission>
       </div>
 
       {/* Toggle activo/inactivo */}
-      <div className="absolute bottom-1.5 sm:bottom-2 right-1.5 sm:right-2">
+      <div className="absolute bottom-2 right-2">
         <Permission permission="banners.activar_desactivar">
           <button
             type="button"
             onClick={() => onToggle?.(slide?.id)}
             title={isActive ? 'Desactivar imagen' : 'Activar imagen'}
-            className={`relative w-11 h-5 rounded-full transition-colors duration-300 cursor-pointer shadow-md ${
+            className={`relative h-7 w-14 cursor-pointer rounded-full shadow-md transition-colors duration-300 sm:h-6 sm:w-12 ${
               isActive ? 'bg-green-500' : 'bg-red-400'
             }`}
           >
             <span
-              className={`absolute top-1/2 -translate-y-1/2 text-white text-[9px] font-bold transition-all duration-300 ${
-                isActive ? 'left-1.5' : 'right-1.5'
+              className={`absolute top-1/2 -translate-y-1/2 text-[10px] font-bold text-white transition-all duration-300 sm:text-[9px] ${
+                isActive ? 'left-2 sm:left-1.5' : 'right-2 sm:right-1.5'
               }`}
             >
               {isActive ? 'A' : 'I'}
             </span>
 
             <span
-              className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
-                isActive ? 'left-6.5' : 'left-0.5'
+              className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all duration-300 sm:h-5 sm:w-5 ${
+                isActive ? 'left-7 sm:left-6.5' : 'left-0.5'
               }`}
             />
           </button>

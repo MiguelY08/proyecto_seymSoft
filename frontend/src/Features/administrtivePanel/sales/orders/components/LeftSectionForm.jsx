@@ -182,26 +182,26 @@ function LeftSectionForm({
   ];
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
       {/* Header de sección estilo ventas */}
-      <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gray-50">
+      <div className="flex items-center gap-3 border-b border-gray-100 bg-gray-50 px-4 py-3.5 sm:px-5">
         <div className="w-7 h-7 rounded-md bg-[#004D77] flex items-center justify-center shrink-0">
           <FileText className="w-4 h-4 text-white" strokeWidth={2} />
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-sm font-semibold text-gray-800">Información del pedido</p>
           <p className="text-xs text-gray-400">Datos del cliente y entrega</p>
         </div>
       </div>
 
-      <div className="p-5 flex flex-col gap-4">
+      <div className="flex flex-col gap-4 p-4 sm:p-5">
         {/* Cliente con buscador desplegable */}
         <div className="flex flex-col gap-1.5">
           <label className="block text-sm font-medium text-gray-700">
             Cliente <span className="text-red-500">*</span>
           </label>
-          <div className="flex items-stretch gap-2">
-          <div className="relative flex-1 min-w-0" ref={clienteWrapperRef}>
+          <div className="flex flex-col items-stretch gap-2 sm:flex-row">
+          <div className="relative min-w-0 flex-1" ref={clienteWrapperRef}>
             <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" strokeWidth={1.8} />
             <input
               type="text"
@@ -235,7 +235,7 @@ function LeftSectionForm({
 
             {/* Dropdown de clientes */}
             {isClienteDropdownOpen && !isClienteDisabled && (
-              <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              <div className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg overscroll-contain">
                 {clientesFiltrados.length > 0 ? (
                   <ul className="py-1">
                     {clientesFiltrados.map(cliente => (
@@ -287,7 +287,7 @@ function LeftSectionForm({
               onClick={onCreateClient}
               disabled={loading}
               title="Crear cliente"
-              className="w-10 h-10 inline-flex items-center justify-center rounded-lg border border-[#004D77] text-[#004D77] bg-white hover:bg-[#004D77] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-[#004D77] bg-white text-[#004D77] transition-colors hover:bg-[#004D77] hover:text-white disabled:cursor-not-allowed disabled:opacity-50 sm:w-10 sm:shrink-0"
             >
               <Plus className="w-4 h-4" strokeWidth={2} />
             </button>
@@ -324,7 +324,7 @@ function LeftSectionForm({
                   onDeliveryRecipientNameChange({ target: { value: nombreClienteSeleccionado } });
                 }}
                 disabled={loading}
-                className="mt-2 text-sm text-[#004D77] hover:bg-[#004D77]/10 inline-flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors duration-200 w-fit disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md px-2 py-2 text-sm text-[#004D77] transition-colors duration-200 hover:bg-[#004D77]/10 disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit sm:justify-start sm:py-1"
               >
                 <Users className="w-3.5 h-3.5" strokeWidth={1.8} />
                 Usar nombre del cliente
@@ -335,7 +335,7 @@ function LeftSectionForm({
 
         {/* Tipo de entrega */}
         {showDirectSaleLockedInfo ? (
-          <div className="flex items-start gap-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
+          <div className="flex items-start gap-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-3 sm:px-4">
             <Truck className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" strokeWidth={1.8} />
             <div>
               <p className="text-sm font-semibold text-blue-900">Venta directa en caja</p>
@@ -415,7 +415,7 @@ function LeftSectionForm({
         {/* Dirección (condicional) */}
         {mostrarDireccionManual && (
           <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <label className="block text-sm font-medium text-gray-700">
                   Departamento <span className="text-red-500">*</span>
@@ -485,7 +485,7 @@ function LeftSectionForm({
                       onDireccionManualChange({ target: { value: direccionSugerida } });
                     }
                   }}
-                  className="mt-2 text-sm text-[#004D77] hover:bg-[#004D77]/10 inline-flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors duration-200 w-fit"
+                  className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md px-2 py-2 text-sm text-[#004D77] transition-colors duration-200 hover:bg-[#004D77]/10 sm:w-fit sm:justify-start sm:py-1"
                 >
                   <Home className="w-3.5 h-3.5" strokeWidth={1.8} />
                   Usar dirección del cliente
@@ -497,7 +497,7 @@ function LeftSectionForm({
 
         {/* Estado Logístico con colores */}
         {showDirectSaleLockedInfo ? (
-          <div className="flex items-start gap-3 rounded-lg border border-green-100 bg-green-50 px-4 py-3">
+          <div className="flex items-start gap-3 rounded-lg border border-green-100 bg-green-50 px-3 py-3 sm:px-4">
             <PackageCheck className="mt-0.5 h-4 w-4 shrink-0 text-green-700" strokeWidth={1.8} />
             <div>
               <p className="text-sm font-semibold text-green-900">Pedido entregado</p>
@@ -527,7 +527,7 @@ function LeftSectionForm({
               <p className="mt-0.5 text-xs text-gray-500">Los pedidos entregados o cancelados no se pueden modificar.</p>
             )}
             {mostrarAvisoEntregadoPendiente && (
-              <div className="mt-2 flex items-start gap-3 rounded-lg border border-green-100 bg-green-50 px-4 py-3">
+              <div className="mt-2 flex items-start gap-3 rounded-lg border border-green-100 bg-green-50 px-3 py-3 sm:px-4">
                 <PackageCheck className="mt-0.5 h-4 w-4 shrink-0 text-green-700" strokeWidth={1.8} />
                 <div>
                   <p className="text-sm font-semibold text-green-900">Pedido entregado</p>

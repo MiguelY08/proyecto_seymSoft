@@ -336,7 +336,7 @@ function InfoCard({ label, value }) {
 function PageShell({ children }) {
   return (
     <div className="min-h-screen bg-[#f6f9fc]" style={{ fontFamily: ORDER_FONT_FAMILY }}>
-      <main className="mx-auto max-w-7xl px-5 py-8">{children}</main>
+      <main className="mx-auto max-w-[var(--store-content-max)] px-[var(--store-content-x)] py-8">{children}</main>
     </div>
   );
 }

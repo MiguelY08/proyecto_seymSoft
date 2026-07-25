@@ -95,6 +95,22 @@ function OrderSection({ slides, onReorder, loading }) {
     reset();
   };
 
+  const handleMove = async (id, direction) => {
+    const currentIndex = slidesVisibles.findIndex((slide) => slide.id === id);
+    const targetIndex = currentIndex + direction;
+
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= slidesVisibles.length) {
+      return;
+    }
+
+    const newOrderIds = slidesVisibles.map((slide) => slide.id);
+    const [movedId] = newOrderIds.splice(currentIndex, 1);
+    newOrderIds.splice(targetIndex, 0, movedId);
+
+    await onReorder(newOrderIds);
+    reset();
+  };
+
   const reset = () => {
     setDraggingId(null);
     setOverId(null);
@@ -103,15 +119,15 @@ function OrderSection({ slides, onReorder, loading }) {
 
   return (
     <Permission permission="banners.ordenar">
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 bg-gray-50">
-          <div className="w-8 h-8 rounded-md bg-[#004D77] flex items-center justify-center shrink-0">
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <div className="flex items-start gap-3 border-b border-gray-100 bg-gray-50 px-4 py-3.5 sm:items-center sm:px-5 sm:py-4">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#004D77]">
             <ArrowLeftRight className="w-4 h-4 text-white" strokeWidth={2} />
           </div>
 
-          <div>
-            <p className="text-sm font-semibold text-gray-800">Orden</p>
-            <p className="text-xs text-gray-400">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold leading-tight text-gray-800">Orden</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-gray-400">
               Gestione el orden en el que se mostrarán las imágenes. Arrastre para reordenar.
             </p>
           </div>
@@ -119,7 +135,7 @@ function OrderSection({ slides, onReorder, loading }) {
 
         <div
           ref={containerRef}
-          className="px-5 py-5 overflow-x-auto"
+          className="overflow-x-auto overscroll-x-contain px-3 py-4 [-webkit-overflow-scrolling:touch] sm:px-5 sm:py-5"
           onDragOver={handleContainerDragOver}
           onDrop={stopAutoScroll}
           onDragEnd={handleDragEnd}
@@ -127,16 +143,16 @@ function OrderSection({ slides, onReorder, loading }) {
           {loading ? (
             <Spinner message="Cargando orden de banners..." className="min-h-[180px]" />
           ) : slidesVisibles.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 gap-2 text-gray-400">
+            <div className="flex flex-col items-center justify-center gap-2 px-4 py-10 text-center text-gray-400">
               <ArrowLeftRight className="w-8 h-8 opacity-30" strokeWidth={1.5} />
-              <p className="text-sm">No hay imágenes activas para ordenar.</p>
-              <p className="text-xs">
+              <p className="text-sm font-medium">No hay imágenes activas para ordenar.</p>
+              <p className="max-w-xs text-xs leading-relaxed">
                 Activa al menos una imagen en la sección de administración.
               </p>
             </div>
           ) : (
             <div
-              className="flex gap-4"
+              className="flex min-w-max gap-3 sm:gap-4"
               onDragLeave={(e) => {
                 if (!e.currentTarget.contains(e.relatedTarget)) {
                   setOverId(null);
@@ -157,10 +173,14 @@ function OrderSection({ slides, onReorder, loading }) {
                     slide={slide}
                     index={index}
                     isDragging={draggingId === slide.id}
+                    canMoveLeft={index > 0}
+                    canMoveRight={index < slidesVisibles.length - 1}
                     onDragStart={handleDragStart}
                     onDragOver={handleDragOver}
                     onDrop={handleDrop}
                     onDragEnd={handleDragEnd}
+                    onMoveLeft={() => handleMove(slide.id, -1)}
+                    onMoveRight={() => handleMove(slide.id, 1)}
                   />
                 </div>
               ))}

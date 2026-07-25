@@ -780,32 +780,32 @@ function SaleForm() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="w-full px-3 py-4 sm:px-6 lg:px-8">
       {/* Cabecera */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <button
             onClick={handleCancel}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="shrink-0 rounded-full p-2 transition-colors hover:bg-gray-100"
             title="Volver a ventas"
           >
             <ChevronLeft className="w-5 h-5 text-gray-600" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="min-w-0 truncate text-xl font-bold text-gray-900 sm:text-2xl">
             Nueva Venta {vendingTypeLabel}
           </h1>
         </div>
-        <div className="flex gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
           <button
             onClick={handleCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 sm:w-auto"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
             disabled={loading}
-            className="px-4 py-2 text-sm font-medium text-white bg-[#004D77] rounded-lg hover:bg-[#003b5c] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#003b5c] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             {loading ? (
               <>
@@ -823,7 +823,7 @@ function SaleForm() {
       </div>
 
       {/* Contenido en dos columnas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <LeftSectionForm
           formData={formData}
           errors={errors}
@@ -868,7 +868,7 @@ function SaleForm() {
       </div>
 
       {/* Sección de pagos */}
-      <div className="mt-6">
+      <div className="mt-5">
         <PaymentsSection
           pedidoId={null}
           total={total}

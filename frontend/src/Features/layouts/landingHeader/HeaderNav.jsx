@@ -25,7 +25,7 @@ function HeaderNav({ isActive, showOrders = false }) {
   ));
 
   return (
-    <nav className="hidden lg:flex items-center gap-0.5">
+    <nav className="ml-auto hidden shrink-0 items-center gap-1 lg:flex xl:gap-1.5">
       {visibleItems.map((item) => (
         <NavLink
           key={item.to}
@@ -48,14 +48,14 @@ const NavLink = ({
   <Link
     to={to}
     aria-current={active ? "page" : undefined}
-    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-all duration-150 ${
+    className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 transition-all duration-150 xl:px-3.5 ${
       active
         ? "text-[#004D77] font-semibold bg-[#004D77]/10"
         : "text-gray-700 hover:text-[#004D77] hover:bg-[#004D77]/5"
     }`}
   >
     <Icon className="h-4 w-4" />
-    <span className="text-[0.8rem]">
+    <span className="text-[0.8rem] xl:text-[0.84rem]">
       {label}
     </span>
   </Link>

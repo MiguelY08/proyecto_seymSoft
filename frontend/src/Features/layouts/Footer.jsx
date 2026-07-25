@@ -40,7 +40,7 @@ function Footer() {
       {/* Top accent line */}
       <div style={{ height: '3px', background: 'linear-gradient(90deg, #3b82f6, #60a5fa, #93c5fd, #3b82f6)' }} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+      <div className="mx-auto max-w-[var(--store-content-max)] px-[var(--store-content-x)] py-10 sm:py-14">
 
         {/* Main grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-6">

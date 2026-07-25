@@ -60,6 +60,16 @@ const buildCheckoutProducts = (items = []) =>
     precioUnitario: Number(item.price || 0),
   }));
 
+const PICKUP_STORE_LOCATION = {
+  name: 'Papelería Magic',
+  city: 'Medellín, Colombia',
+  address: 'Cra. 55 #46-64 (La Candelaria)',
+  place: 'CC Manhattan Plaza',
+  details: 'Local 112 · Ventas 1102',
+  mapUrl:
+    'https://www.google.com/maps/place/Centro+Comercial+Manhatan+Plaza/@6.2491669,-75.5729839,360m/data=!3m1!1e3!4m6!3m5!1s0x8e4428fff68501a1:0x23df4219000eef2d!8m2!3d6.249001!4d-75.5731081!16s%2Fg%2F1v4k7kjj?entry=ttu&g_ep=EgoyMDI2MDMxOC4xIKXMDSoASAFQAw%3D%3D',
+};
+
 /* ── Estilos (coherentes con Home/Favorites) ── */
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,600&family=Nunito:wght@400;600;700;800;900&display=swap');
@@ -80,9 +90,9 @@ const STYLES = `
   }
 
   .cart-container {
-    max-width: 1280px;
+    max-width: var(--store-content-max);
     margin: 0 auto;
-    padding: clamp(18px, 3vw, 30px) 18px;
+    padding: clamp(18px, 3vw, 30px) var(--store-content-x);
   }
 
   /* Header */
@@ -477,6 +487,64 @@ const STYLES = `
     flex: 0 0 auto;
     margin-top: 1px;
   }
+  .pickup-store-info {
+    display: flex;
+    gap: 10px;
+    background: linear-gradient(140deg, #f2f9fd 0%, #ffffff 100%);
+    border: 1.5px solid #d9eaf4;
+    border-radius: 14px;
+    padding: 12px;
+    margin: 2px 0 14px;
+  }
+  .pickup-store-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: #e6f3fb;
+    color: #004D77;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+  .pickup-store-content {
+    min-width: 0;
+    color: #466474;
+    font-size: 0.72rem;
+    line-height: 1.45;
+  }
+  .pickup-store-title {
+    color: #0c2a3a;
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    margin: 0 0 5px;
+    text-transform: uppercase;
+  }
+  .pickup-store-line {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .pickup-store-line strong {
+    color: #1e4060;
+    font-weight: 900;
+  }
+  .pickup-store-map {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #004D77;
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    margin-top: 8px;
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+  .pickup-store-map:hover {
+    color: #0c5c88;
+    text-decoration: underline;
+  }
   .btn-checkout {
     width: 100%;
     background: #004D77;
@@ -578,6 +646,14 @@ const STYLES = `
     }
     .delivery-method-grid {
       grid-template-columns: 1fr;
+    }
+    .pickup-store-info {
+      padding: 11px;
+    }
+    .pickup-store-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
     }
   }
 `;
@@ -1267,6 +1343,30 @@ function ShoppingCart() {
     );
   }
 
+  if (!isAuthenticated) {
+    return (
+      <div className="cart-page">
+        <div className="cart-container">
+          <div className="cart-empty">
+            <div className="cart-empty-icon">
+              <UserRound size={26} color="#004D77" strokeWidth={1.5} />
+            </div>
+            <h3 className="cart-empty-title">Inicia sesión para ver tu carrito</h3>
+            <p className="cart-empty-sub">
+              Tu carrito de compras está asociado a tu cuenta. Ingresa para revisar tus productos y finalizar tu pedido.
+            </p>
+            <button
+              onClick={() => navigate('/login', { state: { from: '/cart' } })}
+              className="btn-outline"
+            >
+              Iniciar sesión <ArrowRight size={12} strokeWidth={3} />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (cartItems.length === 0) {
     return (
       <div className="cart-page">
@@ -1598,6 +1698,30 @@ function ShoppingCart() {
                 </div>
 
                 {renderDeliveryRecipientField()}
+
+                <div className="pickup-store-info">
+                  <div className="pickup-store-icon" aria-hidden="true">
+                    <MapPin size={18} />
+                  </div>
+                  <div className="pickup-store-content">
+                    <p className="pickup-store-title">Punto de recogida</p>
+                    <p className="pickup-store-line">
+                      <strong>{PICKUP_STORE_LOCATION.name}</strong>
+                    </p>
+                    <p className="pickup-store-line">{PICKUP_STORE_LOCATION.address}</p>
+                    <p className="pickup-store-line">{PICKUP_STORE_LOCATION.place}</p>
+                    <p className="pickup-store-line">{PICKUP_STORE_LOCATION.details}</p>
+                    <p className="pickup-store-line">{PICKUP_STORE_LOCATION.city}</p>
+                    <a
+                      className="pickup-store-map"
+                      href={PICKUP_STORE_LOCATION.mapUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Ver ubicación <ArrowRight size={14} />
+                    </a>
+                  </div>
+                </div>
 
                 <div className="price-row">
                   <span>Subtotal</span>
