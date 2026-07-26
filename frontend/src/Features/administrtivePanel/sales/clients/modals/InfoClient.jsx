@@ -27,7 +27,7 @@ function DetailRow({ icon, label, value, fullWidth = false }) {
           {label}
         </span>
         <span className="text-sm font-medium text-gray-800 wrap-break-words leading-snug">
-          {value || <span className="text-gray-300 italic">—</span>}
+          {value || <span className="text-gray-300 italic">-</span>}
         </span>
       </div>
     </div>
@@ -80,7 +80,7 @@ function MiniGraphClient({ clientId, onExpand }) {
         setData([]);
         setTotalValue(0);
       }
-    } catch (error) {
+    } catch {
       setData([]);
       setTotalValue(0);
     } finally {
@@ -174,7 +174,7 @@ function MiniGraphClient({ clientId, onExpand }) {
       </div>
       
       <p className="text-[9px] text-gray-400 text-center mt-2">
-        Haz clic para ver gráfica completa
+        Haz clic para ver grafica completa
       </p>
     </div>
   );
@@ -221,7 +221,15 @@ function InfoClient({ isOpen, onClose, client }) {
 
   if (!isOpen || !client) return null;
 
-  const initials = (client.fullName || '')
+  const isLegalPerson = client.personType === 'juridica';
+  const displayName = isLegalPerson
+    ? (client.firstName || client.fullName || 'Sin nombre')
+    : (client.fullName || 'Sin nombre');
+  const primarySectionTitle = isLegalPerson ? 'Datos empresariales' : 'Datos personales';
+  const contactSectionTitle = isLegalPerson ? 'Encargado y registro' : 'Contacto y registro';
+  const identificationLabel = isLegalPerson ? 'NIT' : 'Identificacion';
+
+  const initials = displayName
     .trim().split(/\s+/).filter(Boolean)
     .slice(0, 2).map(w => w[0].toUpperCase()).join('');
 
@@ -242,8 +250,7 @@ function InfoClient({ isOpen, onClose, client }) {
   const disponible = financialData?.availableCredit ?? 0;
   const creditosActivos = financialData?.activeCreditsCount ?? 0;
   
-  // ✅ SALDO A FAVOR: viene DIRECTAMENTE del cliente (tabla clients)
-  // ⚠️ NO viene de financialData, sino de client.credit_balance
+  // Saldo a favor: viene directamente del cliente.
   const saldoFavor = client.credit_balance ?? 0;
   const visibleCreditEvents = creditBalanceEvents.filter(
     (event) => !dismissedCreditEvents.includes(event.id)
@@ -258,7 +265,7 @@ function InfoClient({ isOpen, onClose, client }) {
     );
   };
   
-  const identificacionCompleta = `${client.documentType || 'N/A'} ${client.document || '—'}`;
+  const identificacionCompleta = `${client.documentType || 'N/A'} ${client.document || '-'}`;
 
   // ✅ Badge de estado financiero (viene de financialData)
   const getFinancialStatusBadge = () => {
@@ -267,24 +274,26 @@ function InfoClient({ isOpen, onClose, client }) {
     if (status === 'VENCIDO') {
       return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border bg-red-50 text-red-500 border-red-200">Moroso</span>;
     } else if (status === 'PENDIENTE') {
-      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border bg-yellow-50 text-yellow-600 border-yellow-200">Con créditos</span>;
+      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border bg-yellow-50 text-yellow-600 border-yellow-200">Con creditos</span>;
     } else {
-      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border bg-green-50 text-green-700 border-green-200">Al día</span>;
+      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border bg-green-50 text-green-700 border-green-200">Al dia</span>;
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center p-0 sm:items-center sm:p-4">
+      <div className="absolute inset-0 hidden bg-black/40 backdrop-blur-sm sm:block" onClick={onClose} />
 
-      <div className={`relative max-h-[92vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex transition-all duration-500 ease-in-out ${
-        showGraph ? 'w-[95vw] max-w-350' : 'w-full max-w-xl'
+      <div className={`relative flex h-dvh w-full min-h-0 overflow-hidden bg-white shadow-2xl transition-all duration-500 ease-in-out sm:h-auto sm:max-h-[92vh] sm:rounded-2xl ${
+        showGraph ? 'sm:w-[95vw] sm:max-w-[90rem] lg:flex-row' : 'sm:max-w-xl'
       }`}>
 
-        <div className="flex min-h-0 flex-col w-full min-w-360px shrink-0" style={{ width: showGraph ? '50%' : '100%', transition: 'width 500ms ease-in-out' }}>
+        <div className={`flex min-h-0 min-w-0 flex-col shrink-0 transition-all duration-500 ease-in-out ${
+          showGraph ? 'w-full lg:w-1/2' : 'w-full'
+        }`}>
 
           {/* CABECERA */}
-          <div className="relative bg-[#004D77] px-6 py-4 shrink-0">
+          <div className="relative bg-[#004D77] px-4 py-3.5 shrink-0 sm:px-6 sm:py-4">
             <button
               onClick={onClose}
               className="absolute top-3 right-3 text-white/70 hover:text-white hover:bg-white/20 rounded-full p-1.5 transition-all"
@@ -292,18 +301,18 @@ function InfoClient({ isOpen, onClose, client }) {
               <X className="w-4 h-4" strokeWidth={2.5} />
             </button>
 
-            <div className="flex items-center gap-4 pr-8">
-              <div className="w-14 h-14 rounded-xl bg-white/20 border-2 border-white/30 flex items-center justify-center shrink-0 shadow-lg">
+            <div className="flex items-center gap-3 pr-8 sm:gap-4">
+              <div className="w-12 h-12 rounded-xl bg-white/20 border-2 border-white/30 flex items-center justify-center shrink-0 shadow-lg sm:w-14 sm:h-14">
                 <span className="text-lg font-bold text-white tracking-tight leading-none">
                   {initials}
                 </span>
               </div>
               <div className="min-w-0">
                 <h2 className="text-white font-bold text-base leading-tight truncate">
-                  {client.fullName || 'Sin nombre'}
+                  {displayName}
                 </h2>
                 <p className="text-white/70 text-[11px] mt-0.5">
-                  Identificación: {identificacionCompleta}
+                  {identificationLabel}: {identificacionCompleta}
                 </p>
                 <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusColor}`}>
@@ -324,15 +333,15 @@ function InfoClient({ isOpen, onClose, client }) {
 
           {/* TARJETA DE CRÉDITO */}
           <div className="mx-4 mt-3 shrink-0">
-            <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-2.5">
+            <div className="bg-gray-50 rounded-xl border border-gray-200 px-3 py-2.5 sm:px-4">
               
-              <div className="flex items-center justify-between">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-[#004D77]/10 flex items-center justify-center">
                     <CreditCard className="w-3.5 h-3.5 text-[#004D77]" strokeWidth={1.8} />
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Crédito</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Credito</p>
                     <p className="text-sm font-bold text-gray-800">
                       {creditoTotal ? formatCurrency(creditoTotal) : '$ 0'}
                     </p>
@@ -344,7 +353,7 @@ function InfoClient({ isOpen, onClose, client }) {
                     <CreditCard className="w-3.5 h-3.5 text-blue-600" strokeWidth={1.8} />
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Crédito disponible</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Credito disponible</p>
                     <p className="text-sm font-bold text-blue-600">
                       {formatCurrency(disponible)}
                     </p>
@@ -366,7 +375,7 @@ function InfoClient({ isOpen, onClose, client }) {
 
               <div className="border-t border-gray-200 my-2" />
 
-              <div className="flex items-center justify-between">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center">
                     <span className="text-[10px] font-bold text-gray-500">RUT</span>
@@ -382,8 +391,8 @@ function InfoClient({ isOpen, onClose, client }) {
                     <span className="text-[10px] font-bold text-gray-500">CIU</span>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Cód. CIU</p>
-                    <p className="text-sm font-bold text-gray-800">{client.ciuCode || '—'}</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Cod. CIU</p>
+                    <p className="text-sm font-bold text-gray-800">{client.ciuCode || '-'}</p>
                   </div>
                 </div>
 
@@ -408,18 +417,18 @@ function InfoClient({ isOpen, onClose, client }) {
           </div>
 
           {/* CONTENIDO PRINCIPAL */}
-          <div className="px-5 py-4 flex-1 min-h-0 overflow-y-auto">
+          <div className="px-4 py-4 flex-1 min-h-0 overflow-y-auto sm:px-5">
             
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Datos personales</span>
+              <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">{primarySectionTitle}</span>
               <div className="flex-1 h-px bg-[#004D77]/15" />
             </div>
 
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-              <DetailRow icon={User} label="Nombre completo" value={client.fullName || '—'} />
-              <DetailRow icon={Mail} label="Correo" value={client.email || '—'} />
-              <DetailRow icon={Phone} label="Teléfono" value={client.phone || '—'} />
-              <DetailRow icon={MapPin} label="Dirección" value={client.address || '—'} />
+            <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+              <DetailRow icon={User} label={isLegalPerson ? 'Nombre empresa' : 'Nombre completo'} value={displayName || '-'} />
+              <DetailRow icon={Mail} label={isLegalPerson ? 'Correo empresarial' : 'Correo'} value={client.email || '-'} />
+              <DetailRow icon={Phone} label={isLegalPerson ? 'Telefono empresa' : 'Telefono'} value={client.phone || '-'} />
+              <DetailRow icon={MapPin} label={isLegalPerson ? 'Direccion empresa' : 'Direccion'} value={client.address || '-'} />
             </div>
 
             <div className="mt-4">
@@ -481,39 +490,50 @@ function InfoClient({ isOpen, onClose, client }) {
             )}
 
             <div className="flex items-center gap-2 mt-4 mb-3">
-              <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Contacto y registro</span>
+              <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">{contactSectionTitle}</span>
               <div className="flex-1 h-px bg-[#004D77]/15" />
             </div>
 
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-              <DetailRow icon={UserCheck} label="Persona contacto" value={client.contactName || '—'} />
-              <DetailRow icon={Phone} label="Tel. contacto" value={client.contactPhone || '—'} />
-              <DetailRow icon={CalendarDays} label="Cliente desde" value={client.clientSince || '—'} />
+            <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+              <DetailRow icon={UserCheck} label={isLegalPerson ? 'Persona encargada' : 'Persona contacto'} value={client.contactName || '-'} />
+              <DetailRow icon={Phone} label={isLegalPerson ? 'Numero persona encargada' : 'Tel. contacto'} value={client.contactPhone || '-'} />
+              <DetailRow icon={CalendarDays} label="Cliente desde" value={client.clientSince || '-'} />
               <DetailRow icon={IdCard} label="ID Cliente" value={`#${client.id}`} />
             </div>
+
+
+            {showGraph && (
+              <div className="mt-4 rounded-xl border border-gray-100 bg-white lg:hidden">
+                <div className="h-[58dvh] min-h-[28rem] w-full">
+                  <GraphClient clientId={client.id} clientStartDate={client.clientSince || '07/05/2023'} />
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="border-t border-gray-100 px-5 py-3 flex items-center justify-between shrink-0">
+
+          <div className="border-t border-gray-100 px-4 py-3 flex shrink-0 flex-col gap-2 sm:px-5 sm:flex-row sm:items-center sm:justify-between">
             <button
               onClick={() => setShowGraph(v => !v)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#004D77] border border-[#004D77]/30 rounded-lg hover:bg-[#004D77]/10 hover:border-[#004D77] hover:cursor-pointer transition-all"
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#004D77]/30 px-3 py-2 text-xs font-semibold text-[#004D77] transition-all hover:border-[#004D77] hover:bg-[#004D77]/10 hover:cursor-pointer sm:w-auto sm:py-1.5"
             >
               <BarChart2 className="w-3.5 h-3.5" strokeWidth={2} />
-              {showGraph ? 'Ocultar gráfica' : 'Ver gráfica'}
+              {showGraph ? 'Ocultar grafica' : 'Ver grafica'}
             </button>
             <button
               onClick={onClose}
-              className="px-5 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 hover:cursor-pointer rounded-lg transition-colors"
+              className="w-full rounded-lg bg-gray-500 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 hover:cursor-pointer sm:w-auto sm:py-2"
             >
               Cerrar
             </button>
           </div>
         </div>
 
-        {/* PANEL DE GRÁFICA GRANDE */}
+        {/* PANEL DE GRÃƒÆ’Ã†â€™Ãƒâ€šÃ‚ÂFICA GRANDE */}
         <div
-          className="overflow-hidden shrink-0 transition-all duration-500 ease-in-out border-l border-gray-100"
-          style={{ width: showGraph ? '50%' : '0%', opacity: showGraph ? 1 : 0 }}
+          className={`hidden min-h-0 shrink-0 overflow-hidden transition-all duration-500 ease-in-out border-l border-gray-100 lg:block ${
+            showGraph ? 'w-1/2 opacity-100' : 'w-0 opacity-0'
+          }`}
         >
           <div className="w-full h-full flex flex-col" style={{ minWidth: '360px' }}>
             <GraphClient clientId={client.id} clientStartDate={client.clientSince || '07/05/2023'} />

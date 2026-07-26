@@ -1411,7 +1411,7 @@ function ShoppingCart() {
           <div className="lg:col-span-2 space-y-2.5">
             {displayCartItems.map((item, idx) => (
               <div
-                key={item.id}
+                key={`${item.id}-${item.idBarcode || item.barcode || item.presentation || idx}`}
                 className="cart-item-card"
                 style={{ animationDelay: `${idx * 0.05}s` }}
               >
@@ -1782,4 +1782,3 @@ function ShoppingCart() {
 }
 
 export default ShoppingCart;
-

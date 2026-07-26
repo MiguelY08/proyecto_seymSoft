@@ -151,7 +151,7 @@ function Evidence({
       setDeletedIds([]);
       setLocalFiles([]);
       onClose?.();
-    } catch (error) {
+    } catch {
       alert('Error al guardar evidencias');
     } finally {
       setSaving(false);
@@ -166,8 +166,8 @@ function Evidence({
     : '';
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-[520px] overflow-hidden rounded-2xl bg-white shadow-2xl">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-0 backdrop-blur-sm sm:p-4">
+      <div className="flex h-dvh w-full max-w-[520px] flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-2xl">
         <div className="flex items-center justify-between bg-[#004D77] px-5 py-3.5">
           <h2 className="text-[15px] font-bold tracking-wide text-white">
             {isEdit ? 'Gestionar evidencias' : 'Evidencias'}
@@ -182,7 +182,7 @@ function Evidence({
           </button>
         </div>
 
-        <div className="flex flex-col gap-4 px-6 py-5">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-5 sm:px-6">
           <div className="text-center">
             <p className="text-sm leading-snug text-gray-600">
               Adjunta fotos que demuestren el estado del producto o el motivo de la devolución.
@@ -293,13 +293,13 @@ function Evidence({
           </div>
         </div>
 
-        <div className="border-t border-gray-100 px-6 py-4">
+        <div className="shrink-0 border-t border-gray-100 px-4 py-4 sm:px-6">
           <p className={`mb-3 text-center text-xs font-medium ${allFiles.length > 0 ? 'text-green-700' : 'text-gray-400'}`}>
             {allFiles.length > 0
               ? `${allFiles.length} evidencia(s) listas. Presiona Guardar para adjuntarlas a la devolución.`
               : 'No hay evidencias seleccionadas.'}
           </p>
-          <div className="flex gap-3">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row">
             <button
               type="button"
               onClick={handleSave}

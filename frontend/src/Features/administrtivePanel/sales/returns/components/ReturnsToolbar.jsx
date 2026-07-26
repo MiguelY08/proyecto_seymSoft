@@ -1,36 +1,8 @@
-/**
- * Archivo: ReturnsToolbar.jsx
- *
- * Barra de herramientas ubicada en la parte superior de la página de devoluciones.
- * Contiene los controles principales para búsqueda, filtro por fechas, creación
- * de nuevas devoluciones y exportación a Excel.
- *
- * Responsabilidades:
- * - Renderizar campo de búsqueda
- * - Renderizar filtros de Fecha Inicial y Fecha Final
- * - Renderizar botón para limpiar filtros
- * - Renderizar botón para crear nueva devolución
- * - Renderizar botón para exportar a Excel
- * - Pasarle los eventos al componente padre
- */
 import React from 'react';
 import { Search, Plus, FileSpreadsheet, Eraser } from 'lucide-react';
 import Permission from '../../../configuration/roles/components/Permission';
+import ButtonComponent from '../../../../shared/ButtonComponent';
 
-/**
- * Componente: ReturnsToolbar
- *
- * Props:
- * @param {string}   search          - Valor actual del campo de búsqueda
- * @param {Function} onSearchChange  - Se ejecuta cuando el usuario digita en la búsqueda
- * @param {string}   startDate       - Fecha inicial (formato YYYY-MM-DD o '')
- * @param {Function} onStartDate     - Se ejecuta cuando cambia la fecha inicial
- * @param {string}   endDate         - Fecha final (formato YYYY-MM-DD o '')
- * @param {Function} onEndDate       - Se ejecuta cuando cambia la fecha final
- * @param {Function} onClearFilters  - Se ejecuta cuando presiona limpiar filtros
- * @param {Function} onNew           - Se ejecuta cuando presiona "Nueva devolución"
- * @param {Function} onExport        - Se ejecuta cuando presiona exportar
- */
 function ReturnsToolbar({
   search,
   onSearchChange,
@@ -42,105 +14,92 @@ function ReturnsToolbar({
   onNew,
   onExport,
 }) {
-  // Verificar si hay filtros activos para mostrar el botón limpiar
   const hasActiveFilters = search !== '' || startDate !== '' || endDate !== '';
 
   return (
-    <div className="flex flex-wrap items-end gap-3 shrink-0">
+    <div className="flex shrink-0 flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
+        <div className="relative w-full md:w-[360px]">
+          <input
+            type="text"
+            placeholder="Buscar por número, factura, cliente..."
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="h-11 w-full rounded-xl border border-slate-300 bg-white py-2 pl-4 pr-10 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
+            aria-label="Buscar devoluciones"
+          />
+          <Search
+            className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            strokeWidth={2}
+            aria-hidden="true"
+          />
+        </div>
 
-      {/* ===== CAMPO DE BÚSQUEDA ===== */}
-      <div className="relative w-72">
-        <input
-          type="text"
-          placeholder="Buscar por número, factura, cliente..."
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-4 pr-10 py-2 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400"
-          aria-label="Buscar devoluciones"
-        />
-        <Search
-          className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
-          strokeWidth={2}
-          aria-hidden="true"
-        />
-      </div>
-
-      {/* ===== FILTRO FECHA INICIAL ===== */}
-      <div className="flex flex-col gap-0.5">
-        <label className="text-xs text-gray-500 font-medium pl-0.5">
-          Fecha Inicial
-        </label>
-        <input
-          type="date"
-          value={startDate}
-          max={endDate || undefined}
-          onChange={(e) => onStartDate(e.target.value)}
-          className="px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 cursor-pointer"
-          aria-label="Fecha inicial"
-        />
-      </div>
-
-      {/* ===== FILTRO FECHA FINAL ===== */}
-      <div className="flex flex-col gap-0.5">
-        <label className="text-xs text-gray-500 font-medium pl-0.5">
-          Fecha Final
-        </label>
-        <input
-          type="date"
-          value={endDate}
-          min={startDate || undefined}
-          onChange={(e) => onEndDate(e.target.value)}
-          className="px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 cursor-pointer"
-          aria-label="Fecha final"
-        />
-      </div>
-
-      {/* ===== BOTÓN LIMPIAR FILTROS (solo visible si hay filtros activos) ===== */}
-      {hasActiveFilters && (
-        <div className="flex flex-col gap-0.5">
-          <label className="text-xs text-gray-500 font-medium pl-0.5 invisible">
-            Limpiar
+        <div className="flex w-full flex-col gap-1 md:w-44">
+          <label className="pl-0.5 text-xs font-medium text-slate-500">
+            Fecha Inicial
           </label>
+          <input
+            type="date"
+            value={startDate}
+            max={endDate || undefined}
+            onChange={(e) => onStartDate(e.target.value)}
+            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
+            aria-label="Fecha inicial"
+          />
+        </div>
+
+        <div className="flex w-full flex-col gap-1 md:w-44">
+          <label className="pl-0.5 text-xs font-medium text-slate-500">
+            Fecha Final
+          </label>
+          <input
+            type="date"
+            value={endDate}
+            min={startDate || undefined}
+            onChange={(e) => onEndDate(e.target.value)}
+            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
+            aria-label="Fecha final"
+          />
+        </div>
+
+        {hasActiveFilters && (
           <button
             onClick={onClearFilters}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-400 rounded-lg text-gray-600 bg-white hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 cursor-pointer whitespace-nowrap"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-800 active:scale-95 md:w-auto"
             aria-label="Limpiar filtros"
             title="Limpiar todos los filtros"
           >
-            <Eraser className="w-4 h-4" strokeWidth={2} />
+            <Eraser className="h-4 w-4" strokeWidth={2} />
             <span>Limpiar filtros</span>
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* ===== ESPACIADOR ===== */}
-      <div className="flex-1" />
-
-      {/* ===== BOTONES DE ACCIONES ===== */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex w-full items-center gap-2 sm:w-auto">
         <Permission permission="devoluciones_en_ventas.exportar">
-          <button
+          <ButtonComponent
             onClick={onExport}
-            className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
+            className="flex-1 bg-white text-green-600 border-green-600 hover:bg-green-400 px-3 flex items-center justify-center gap-2 sm:flex-none"
             aria-label="Exportar a Excel"
           >
-            <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
-            <span className="hidden sm:inline">Export Excel</span>
-          </button>
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="hidden sm:inline">Exportar Excel</span>
+          </ButtonComponent>
         </Permission>
 
         <Permission permission="devoluciones_en_ventas.crear">
-          <button
+          <ButtonComponent
             onClick={onNew}
-            className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-sky-700 rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
+            title="Nuevo"
+            className="flex-1 flex items-center justify-center gap-2 sm:flex-none"
             aria-label="Nuevo"
           >
             <span className="hidden sm:inline">Nuevo</span>
             <Plus className="w-4 h-4" strokeWidth={2} />
-          </button>
+          </ButtonComponent>
         </Permission>
       </div>
-
     </div>
   );
 }

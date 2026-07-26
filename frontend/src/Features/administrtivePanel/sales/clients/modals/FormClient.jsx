@@ -17,7 +17,13 @@ const onlyDigits = (value, maxLength = 10) =>
 
 const onlyLetters = (value, maxLength = 80) =>
   String(value ?? '')
-    .replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'-]/g, '')
+    .replace(/[^A-Za-zÃƒÂÃƒâ€°ÃƒÂÃƒâ€œÃƒÅ¡ÃƒÅ“Ãƒâ€˜ÃƒÂ¡ÃƒÂ©ÃƒÂ­ÃƒÂ³ÃƒÂºÃƒÂ¼ÃƒÂ±\s'-]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .slice(0, maxLength);
+
+const cleanCompanyName = (value, maxLength = 120) =>
+  String(value ?? '')
+    .replace(/[^A-Za-z0-9ÃƒÆ’Ã‚ÂÃƒÆ’Ã¢â‚¬Â°ÃƒÆ’Ã‚ÂÃƒÆ’Ã¢â‚¬Å“ÃƒÆ’Ã…Â¡ÃƒÆ’Ã…â€œÃƒÆ’Ã¢â‚¬ËœÃƒÆ’Ã‚Â¡ÃƒÆ’Ã‚Â©ÃƒÆ’Ã‚Â­ÃƒÆ’Ã‚Â³ÃƒÆ’Ã‚ÂºÃƒÆ’Ã‚Â¼ÃƒÆ’Ã‚Â±\s&.,#'-]/g, '')
     .replace(/\s{2,}/g, ' ')
     .slice(0, maxLength);
 
@@ -80,7 +86,7 @@ function MiniFormGraph({ clientId, onExpand }) {
         setData([]);
         setTotalValue(0);
       }
-    } catch (error) {
+    } catch {
       setData([]);
       setTotalValue(0);
     } finally {
@@ -107,7 +113,7 @@ function MiniFormGraph({ clientId, onExpand }) {
 
   if (loading) {
     return (
-      <div className="bg-gray-50 rounded-xl border border-gray-200 p-2 h-24 flex items-center justify-center mt-1">
+      <div className="mt-1 flex h-24 w-full items-center justify-center rounded-xl border border-gray-200 bg-gray-50 p-2">
         <Loader2 className="w-5 h-5 text-[#004D77] animate-spin" />
         <span className="ml-2 text-xs text-gray-400">Cargando...</span>
       </div>
@@ -116,7 +122,7 @@ function MiniFormGraph({ clientId, onExpand }) {
 
   if (!loading && data.length === 0) {
     return (
-      <div className="bg-gray-50 rounded-xl border border-gray-200 p-2 cursor-pointer hover:shadow-md transition-shadow mt-1" onClick={onExpand}>
+      <div className="mt-1 w-full cursor-pointer rounded-xl border border-gray-200 bg-gray-50 p-2 transition-shadow hover:shadow-md" onClick={onExpand}>
         <div className="flex items-center justify-center h-12">
           <p className="text-xs text-gray-400">Sin compras registradas</p>
         </div>
@@ -130,7 +136,7 @@ function MiniFormGraph({ clientId, onExpand }) {
   const maxValue = Math.max(...data.map(d => d.value), 1);
 
   return (
-    <div className="bg-gray-50 rounded-xl border border-gray-200 p-2 cursor-pointer hover:shadow-md transition-shadow mt-1" onClick={onExpand}>
+    <div className="mt-1 w-full cursor-pointer rounded-xl border border-gray-200 bg-gray-50 p-2 transition-shadow hover:shadow-md" onClick={onExpand}>
       <div className="flex items-center justify-between mb-1">
         <div>
           <p className="text-[9px] text-gray-400 uppercase tracking-wide">Compras {selectedYear}</p>
@@ -381,7 +387,9 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     if (name === 'phone' || name === 'contactPhone') {
       nextValue = onlyDigits(value, 10);
     }
-    if (name === 'firstName' || name === 'lastName' || name === 'contactName') {
+    if (name === 'firstName' && formData.personType === 'juridica') {
+      nextValue = cleanCompanyName(value);
+    } else if (name === 'firstName' || name === 'lastName' || name === 'contactName') {
       nextValue = onlyLetters(value, name === 'contactName' ? 100 : 80);
     }
     if (name === 'document') {
@@ -403,6 +411,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
     if (name === 'personType' && value === 'juridica') {
       newFormData.documentType = 'NIT';
+      newFormData.lastName = '';
     }
     if (name === 'personType' && value === 'natural') {
       newFormData.documentType = 'CC';
@@ -508,7 +517,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       documentType: formData.documentType,
       document: formData.document,
       firstName: formData.firstName,
-      lastName: formData.lastName,
+      lastName: formData.personType === 'juridica' ? 'Empresa' : formData.lastName,
       address: formData.address,
       phone: formData.phone,
       email: formData.email,
@@ -531,12 +540,6 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     }
   };
 
-  const liveValidationErrors = validateClientForm(formData);
-  const hasLiveErrors =
-    Object.keys(liveValidationErrors).length > 0 ||
-    Boolean(validateNumeric10_2(formData.clientCredit, 'Crédito cliente')) ||
-    Boolean(validateNumeric10_2(formData.saldoFavor, 'Saldo a favor')) ||
-    Boolean(validateCiuCode(formData.ciuCode, formData.rut));
 
   if (!isOpen) return null;
 
@@ -560,12 +563,13 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       : null;
 
   const Label = ({ children, required }) => (
-    <label className="block text-xs font-semibold text-gray-600">
+    <label className="flex min-h-8 items-end text-xs font-semibold leading-tight text-gray-600">
       {children}{required && <span className="text-red-500">*</span>}
     </label>
   );
 
   const isEditing = !!client;
+  const isLegalPerson = formData.personType === 'juridica';
   const personTypeOptions = [
     { value: '', label: 'Selecciona una opción' },
     { value: 'natural', label: 'Persona Natural' },
@@ -593,6 +597,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
   const selectResponsiveProps = {
     dropdownClassName: 'max-sm:w-full',
     maxDropdownWidth: 340,
+    placement: 'bottom',
   };
 
   return (
@@ -690,16 +695,16 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className={`grid grid-cols-1 gap-2 ${isLegalPerson ? '' : 'sm:grid-cols-2'}`}>
                 <div className="flex min-w-0 flex-col gap-1">
-                  <Label required>Nombres</Label>
+                  <Label required>{isLegalPerson ? 'Nombre empresa' : 'Nombres'}</Label>
                   <input
                     type="text"
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="Ej: Juan Carlos"
+                    placeholder={isLegalPerson ? 'Ej: Papelería Magic SAS' : 'Ej: Juan Carlos'}
                     autoComplete="off"
                     className={isEditing ? disabledInputClass('firstName') : inputClass('firstName')}
                     disabled={isEditing}
@@ -707,6 +712,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   <ErrorMsg field="firstName" />
                 </div>
 
+                  {!isLegalPerson && (
                 <div className="flex min-w-0 flex-col gap-1">
                   <Label required>Apellidos</Label>
                   <input
@@ -722,6 +728,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   />
                   <ErrorMsg field="lastName" />
                 </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -780,7 +787,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div className="flex min-w-0 flex-col gap-1">
-                    <Label>Persona contacto</Label>
+                    <Label>{isLegalPerson ? 'Persona encargada' : 'Persona contacto'}</Label>
                     <input
                       type="text"
                       name="contactName"
@@ -794,7 +801,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     <ErrorMsg field="contactName" />
                   </div>
                   <div className="flex min-w-0 flex-col gap-1">
-                    <Label>Tel. contacto</Label>
+                    <Label>{isLegalPerson ? 'Numero persona encargada' : 'Tel. contacto'}</Label>
                     <input
                       type="tel"
                       name="contactPhone"
@@ -887,12 +894,21 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   </div>
                 </div>
 
-                {/* MINI GRÁFICA - SOLO EN MODO EDICIÓN (toggle) CON DATOS REALES */}
-                {isEditing && (
-                  <MiniFormGraph clientId={client?.id} onExpand={() => setShowGraph(!showGraph)} />
-                )}
               </div>
+              {isEditing && (
+                <div className="md:col-span-2">
+                  <MiniFormGraph clientId={client?.id} onExpand={() => setShowGraph(!showGraph)} />
+                </div>
+              )}
             </div>
+
+            {isEditing && showGraph && (
+              <div className="shrink-0 border-t border-slate-100 bg-white lg:hidden">
+                <div className="h-[58dvh] min-h-[28rem] w-full">
+                  <GraphClient clientId={client?.id} clientStartDate={client?.clientSince || '07/05/2023'} />
+                </div>
+              </div>
+            )}
 
             <div className="flex shrink-0 flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:px-5 sm:py-4 md:flex-row md:items-center md:justify-between">
               {isEditing ? (
@@ -934,7 +950,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
         <div
           className={`min-h-0 shrink-0 overflow-hidden transition-all duration-500 ease-in-out ${
             showGraph
-              ? 'w-full border-t border-slate-100 opacity-100 max-lg:h-[58dvh] lg:w-1/2 lg:border-l lg:border-t-0'
+              ? 'hidden border-t border-slate-100 opacity-100 lg:block lg:w-1/2 lg:border-l lg:border-t-0'
               : 'hidden w-0 opacity-0 lg:block'
           }`}
         >
