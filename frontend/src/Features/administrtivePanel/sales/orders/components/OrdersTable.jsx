@@ -133,18 +133,18 @@ function OrdersTable({
   }
 
   return (
-    <div className="flex-1 overflow-x-auto rounded-xl shadow-md min-h-0">
-      <table className="min-w-max w-full">
-        <thead className="bg-[#004D77] text-white">
+    <div className="h-full min-h-0 min-w-0 w-full flex-1 overflow-auto overscroll-contain rounded-xl [-webkit-overflow-scrolling:touch]">
+      <table className="w-full min-w-[760px] table-auto lg:min-w-[820px] xl:min-w-[900px]">
+        <thead className="sticky top-0 z-20 bg-[#004D77] text-white">
           <tr>
-            <th className="sticky left-0 z-10 bg-[#004D77] px-4 py-3 text-center text-sm font-semibold">N° Pedido</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Recibe/Cliente</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Fecha</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Entrega</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Total</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Estado</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Pago</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Acciones</th>
+            <th className="sticky left-0 z-30 bg-[#004D77] px-3 py-3 text-center text-xs font-semibold lg:px-4 lg:text-sm">N° Pedido</th>
+            <th className="px-3 py-3 text-center text-xs font-semibold lg:px-4 lg:text-sm">Recibe/Cliente</th>
+            <th className="px-3 py-3 text-center text-xs font-semibold lg:px-4 lg:text-sm">Fecha</th>
+            <th className="px-3 py-3 text-center text-xs font-semibold lg:px-4 lg:text-sm">Entrega</th>
+            <th className="px-3 py-3 text-center text-xs font-semibold lg:px-4 lg:text-sm">Total</th>
+            <th className="px-3 py-3 text-center text-xs font-semibold lg:px-4 lg:text-sm">Estado</th>
+            <th className="px-3 py-3 text-center text-xs font-semibold lg:px-4 lg:text-sm">Pago</th>
+            <th className="px-3 py-3 text-center text-xs font-semibold lg:px-4 lg:text-sm">Acciones</th>
           </tr>
         </thead>
         <tbody>

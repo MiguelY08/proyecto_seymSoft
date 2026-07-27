@@ -641,9 +641,6 @@ function Products() {
                       Categoría/Sub
                     </th>
                     <th className="px-4 py-3 text-center text-sm font-semibold">
-                      Unidad
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold">
                       Stock
                     </th>
                     <th className="px-4 py-3 text-center text-sm font-semibold">
@@ -669,9 +666,6 @@ function Products() {
                         : row.categories?.length > 0
                           ? row.categories.map((cat) => cat.name).join(", ")
                           : "";
-                    const unitMeasureDisplay = row.unitMeasure
-                      ? `${row.unitMeasure.name || ""}${row.unitMeasure.abbreviation ? ` (${row.unitMeasure.abbreviation})` : ""}`.trim()
-                      : "N/A";
                     return (
                       <tr
                         key={row.id}
@@ -695,12 +689,6 @@ function Products() {
                         <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                           <HighlightText
                             text={subcategoriaDisplay}
-                            highlight={search}
-                          />
-                        </td>
-                        <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
-                          <HighlightText
-                            text={unitMeasureDisplay}
                             highlight={search}
                           />
                         </td>
