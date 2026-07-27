@@ -293,7 +293,7 @@ function OrdersList() {
   }
 
   return (
-    <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-hidden p-3 sm:p-4">
       {actionLoadingMessage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
           <Spinner message={actionLoadingMessage} className="min-h-0" />
@@ -339,7 +339,7 @@ function OrdersList() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-md">
+      <div className="flex min-h-0 w-full min-w-0 flex-1 overflow-hidden rounded-xl bg-white shadow-md">
         <OrdersTable
           orders={currentOrders}
           onViewDetail={handleViewDetail}
@@ -353,12 +353,14 @@ function OrdersList() {
       </div>
 
       {filteredOrders.length > 0 && (
-        <PaginationAdmin
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          totalRecords={filteredOrders.length}
-          recordsPerPage={RECORDS_PER_PAGE}
-        />
+        <div className="shrink-0">
+          <PaginationAdmin
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            totalRecords={filteredOrders.length}
+            recordsPerPage={RECORDS_PER_PAGE}
+          />
+        </div>
       )}
 
       {/* Modales (detalle y cancelación) */}
