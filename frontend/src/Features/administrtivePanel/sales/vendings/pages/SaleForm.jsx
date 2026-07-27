@@ -22,7 +22,7 @@ import FormClient from '../../clients/modals/FormClient';
 
 // Helpers
 import { getInitialPaymentAmounts } from '../helpers/salesHelpers';
-import { ESTADOS_LOGISTICOS, ORIGENES } from '../../orders/services/ordersService';
+import { ESTADOS_LOGISTICOS, LocationService, ORIGENES } from '../../orders/services/ordersService';
 
 const PAYMENT_METHOD_IDS = {
   transferencia: 1,
@@ -225,6 +225,12 @@ function SaleForm() {
     clienteId: location.state?.newUserId ?? '',
     tipoEntrega: 'recoge',
     direccionEntrega: '',
+    departamentoEntregaCodigo: '',
+    departamentoEntregaNombre: '',
+    ciudadEntregaCodigo: '',
+    ciudadEntregaNombre: '',
+    shippingAmount: 0,
+    deliveryRecipientName: '',
     productos: [],
     estadoLogistico: isDirectSale ? ESTADOS_LOGISTICOS.ENTREGADO : ESTADOS_LOGISTICOS.EN_PROCESO,
     origen: ORIGENES.MANUAL,
@@ -236,6 +242,9 @@ function SaleForm() {
   const [clientes, setClientes] = useState([]);
   const [creditAccounts, setCreditAccounts] = useState([]);
   const [productosCatalogo, setProductosCatalogo] = useState([]);
+  const [departamentos, setDepartamentos] = useState([]);
+  const [ciudades, setCiudades] = useState([]);
+  const [loadingCiudades, setLoadingCiudades] = useState(false);
 
   // Pagos (abonos)
   const [pagos, setPagos] = useState([]);
@@ -249,9 +258,11 @@ function SaleForm() {
     ...product,
     precioDetalle: getProductPriceForClient(product, selectedClient),
   }));
-  const total = roundMoney(formData.productos.reduce((sum, p) => sum + (p.subtotal || 0), 0));
+  const productosTotal = roundMoney(formData.productos.reduce((sum, p) => sum + (p.subtotal || 0), 0));
+  const shippingAmount = formData.tipoEntrega === 'domicilio' ? roundMoney(formData.shippingAmount) : 0;
+  const total = roundMoney(productosTotal + shippingAmount);
   const iva = formData.productos.reduce((sum, p) => sum + (p.ivaAmount || 0), 0);
-  const subtotal = roundMoney(total - iva);
+  const subtotal = roundMoney(productosTotal - iva);
   const saldoPendiente = Math.max(0, total - totalPagado);
   const creditValidationInfo = useMemo(
     () => getCreditValidationInfo(selectedCreditAccount, selectedClient),
@@ -268,6 +279,9 @@ function SaleForm() {
         const creditCustomers = await getCreditCustomers();
         setCreditAccounts(mapCreditCustomers(creditCustomers));
 
+        const departments = await LocationService.getDepartments();
+        setDepartamentos(departments);
+
         const products = await ProductsService.list();
         setProductosCatalogo((products ?? []).map(normalizeProduct));
       } catch (error) {
@@ -278,6 +292,42 @@ function SaleForm() {
 
     loadCatalogs();
   }, [showError]);
+
+  useEffect(() => {
+    if (formData.tipoEntrega !== 'domicilio' || !formData.departamentoEntregaCodigo) {
+      setCiudades([]);
+      setLoadingCiudades(false);
+      return;
+    }
+
+    let active = true;
+
+    const loadCiudades = async () => {
+      setLoadingCiudades(true);
+      try {
+        const cities = await LocationService.getCitiesByDepartment(formData.departamentoEntregaCodigo);
+        if (active) {
+          setCiudades(cities);
+        }
+      } catch (error) {
+        if (active) {
+          setCiudades([]);
+          showError('Error', 'No se pudieron cargar los municipios del departamento.');
+        }
+        console.error(error);
+      } finally {
+        if (active) {
+          setLoadingCiudades(false);
+        }
+      }
+    };
+
+    loadCiudades();
+
+    return () => {
+      active = false;
+    };
+  }, [formData.departamentoEntregaCodigo, formData.tipoEntrega, showError]);
 
   useEffect(() => {
     if (formData.productos.length === 0) return;
@@ -362,15 +412,78 @@ function SaleForm() {
 
   const handleTipoEntregaChange = (e) => {
     const nuevoTipo = e.target.value;
+    if (nuevoTipo === 'recoge') {
+      setCiudades([]);
+    }
     setFormData(prev => {
       const nuevaDireccion = nuevoTipo === 'recoge' ? 'El cliente lo recoge' : prev.direccionEntrega;
-      return { ...prev, tipoEntrega: nuevoTipo, direccionEntrega: nuevaDireccion };
+      return {
+        ...prev,
+        tipoEntrega: nuevoTipo,
+        direccionEntrega: nuevaDireccion,
+        ...(nuevoTipo === 'recoge' && {
+          departamentoEntregaCodigo: '',
+          departamentoEntregaNombre: '',
+          ciudadEntregaCodigo: '',
+          ciudadEntregaNombre: '',
+          shippingAmount: 0,
+        }),
+      };
     });
+  };
+
+  const handleDepartamentoEntregaChange = (e) => {
+    const departmentCode = e.target.value;
+    const selectedDepartment = departamentos.find((department) => department.code === departmentCode);
+
+    setFormData(prev => ({
+      ...prev,
+      departamentoEntregaCodigo: departmentCode,
+      departamentoEntregaNombre: selectedDepartment?.name || '',
+      ciudadEntregaCodigo: '',
+      ciudadEntregaNombre: '',
+    }));
+
+    setErrors(prev => ({
+      ...prev,
+      departamentoEntregaCodigo: null,
+      departamentoEntregaNombre: null,
+      ciudadEntregaCodigo: null,
+      ciudadEntregaNombre: null,
+    }));
+  };
+
+  const handleCiudadEntregaChange = (e) => {
+    const cityCode = e.target.value;
+    const selectedCity = ciudades.find((city) => city.code === cityCode);
+
+    setFormData(prev => ({
+      ...prev,
+      ciudadEntregaCodigo: cityCode,
+      ciudadEntregaNombre: selectedCity?.name || '',
+    }));
+
+    setErrors(prev => ({
+      ...prev,
+      ciudadEntregaCodigo: null,
+      ciudadEntregaNombre: null,
+    }));
   };
 
   const handleDireccionManualChange = (e) => {
     setFormData(prev => ({ ...prev, direccionEntrega: e.target.value }));
     if (errors.direccionEntrega) setErrors(prev => ({ ...prev, direccionEntrega: null }));
+  };
+
+  const handleDeliveryRecipientNameChange = (e) => {
+    setFormData(prev => ({ ...prev, deliveryRecipientName: e.target.value }));
+    if (errors.deliveryRecipientName) setErrors(prev => ({ ...prev, deliveryRecipientName: null }));
+  };
+
+  const handleShippingAmountChange = (e) => {
+    const value = e.target.value;
+    setFormData(prev => ({ ...prev, shippingAmount: value }));
+    if (errors.shippingAmount) setErrors(prev => ({ ...prev, shippingAmount: null }));
   };
 
   const handleEstadoLogisticoChange = (e) => {
@@ -510,8 +623,22 @@ function SaleForm() {
       newErrors.clienteId = 'Debe seleccionar un cliente.';
     }
     if (!getSessionUserId(user)) newErrors.idUser = 'No se pudo identificar al usuario en sesion.';
+    if (!isDirectSale && !formData.deliveryRecipientName?.trim()) {
+      newErrors.deliveryRecipientName = 'Debe ingresar la persona que recibe o recoge la venta.';
+    }
     if (!formData.direccionEntrega?.trim()) {
       newErrors.direccionEntrega = 'La dirección de entrega es obligatoria.';
+    }
+    if (formData.tipoEntrega === 'domicilio') {
+      if (!formData.departamentoEntregaCodigo || !formData.departamentoEntregaNombre) {
+        newErrors.departamentoEntregaCodigo = 'Debe seleccionar un departamento.';
+      }
+      if (!formData.ciudadEntregaCodigo || !formData.ciudadEntregaNombre) {
+        newErrors.ciudadEntregaCodigo = 'Debe seleccionar un municipio/ciudad.';
+      }
+      if (roundMoney(formData.shippingAmount) <= 0) {
+        newErrors.shippingAmount = 'Debe ingresar un valor de envio mayor a cero.';
+      }
     }
     if (formData.productos.length === 0) {
       newErrors.productos = 'Debe agregar al menos un producto.';
@@ -597,6 +724,12 @@ function SaleForm() {
           idOrderStatus: ORDER_STATUS_IDS[formData.estadoLogistico] ?? formData.estadoLogistico,
           deliveryType: formData.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Recoge',
           deliveryAddress: formData.direccionEntrega,
+          deliveryRecipientName: isDirectSale ? null : formData.deliveryRecipientName.trim(),
+          shippingAmount,
+          deliveryDepartmentCode: formData.tipoEntrega === 'domicilio' ? formData.departamentoEntregaCodigo : null,
+          deliveryDepartmentName: formData.tipoEntrega === 'domicilio' ? formData.departamentoEntregaNombre : null,
+          deliveryCityCode: formData.tipoEntrega === 'domicilio' ? formData.ciudadEntregaCodigo : null,
+          deliveryCityName: formData.tipoEntrega === 'domicilio' ? formData.ciudadEntregaNombre : null,
           items: formData.productos.map((producto) => ({
             idProduct: producto.id,
             barcode: producto.barcode,
@@ -647,32 +780,32 @@ function SaleForm() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="w-full px-3 py-4 sm:px-6 lg:px-8">
       {/* Cabecera */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <button
             onClick={handleCancel}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="shrink-0 rounded-full p-2 transition-colors hover:bg-gray-100"
             title="Volver a ventas"
           >
             <ChevronLeft className="w-5 h-5 text-gray-600" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="min-w-0 truncate text-xl font-bold text-gray-900 sm:text-2xl">
             Nueva Venta {vendingTypeLabel}
           </h1>
         </div>
-        <div className="flex gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
           <button
             onClick={handleCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 sm:w-auto"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
             disabled={loading}
-            className="px-4 py-2 text-sm font-medium text-white bg-[#004D77] rounded-lg hover:bg-[#003b5c] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#003b5c] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             {loading ? (
               <>
@@ -690,18 +823,26 @@ function SaleForm() {
       </div>
 
       {/* Contenido en dos columnas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <LeftSectionForm
           formData={formData}
           errors={errors}
           clientes={clientes}
+          departamentos={departamentos}
+          ciudades={ciudades}
+          loadingCiudades={loadingCiudades}
           user={user}
           loading={loading}
           isEditMode={false}
           estadoLogisticoOriginal={isDirectSale ? ESTADOS_LOGISTICOS.ENTREGADO : null}
+          showDirectSaleLockedInfo={isDirectSale}
           onClienteChange={handleClienteChange}
           onTipoEntregaChange={handleTipoEntregaChange}
+          onDepartamentoEntregaChange={handleDepartamentoEntregaChange}
+          onCiudadEntregaChange={handleCiudadEntregaChange}
           onDireccionManualChange={handleDireccionManualChange}
+          onDeliveryRecipientNameChange={handleDeliveryRecipientNameChange}
+          onShippingAmountChange={handleShippingAmountChange}
           onEstadoLogisticoChange={handleEstadoLogisticoChange}
           onMotivoCancelacionChange={handleMotivoCancelacionChange}
           onCreateClient={() => setIsClientModalOpen(true)}
@@ -715,6 +856,8 @@ function SaleForm() {
           disabled={loading}
           subtotal={subtotal}
           iva={iva}
+          shippingAmount={shippingAmount}
+          showShippingAmount={formData.tipoEntrega === 'domicilio'}
           total={total}
           onAddProduct={handleAddProduct}
           onUpdateCantidad={handleUpdateCantidad}
@@ -725,7 +868,7 @@ function SaleForm() {
       </div>
 
       {/* Sección de pagos */}
-      <div className="mt-6">
+      <div className="mt-5">
         <PaymentsSection
           pedidoId={null}
           total={total}
@@ -740,15 +883,6 @@ function SaleForm() {
           creditAssigned={creditValidationInfo.assignedCredit}
         />
       </div>
-
-      {/* Aviso de pago completado */}
-      {totalPagado >= total && total > 0 && (
-        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm text-green-800">
-            <strong>Pago completado:</strong> La venta está lista para ser registrada.
-          </p>
-        </div>
-      )}
 
       <FormClient
         isOpen={isClientModalOpen}

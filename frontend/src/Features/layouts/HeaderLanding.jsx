@@ -19,6 +19,7 @@ function HeaderLanding() {
   const {
     user,
     role,
+    isAuthenticated,
     logout
   } = useAuth();
 
@@ -223,8 +224,8 @@ function HeaderLanding() {
             "#e2edf5"
         }}
       >
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
-          <div className="flex h-14 items-center justify-between gap-2 transition-all duration-150 sm:h-16 sm:gap-4">
+        <div className="mx-auto max-w-[var(--store-content-max)] px-3 sm:px-[var(--store-content-x)]">
+          <div className="flex h-14 items-center gap-2 transition-all duration-150 sm:h-16 sm:gap-3 lg:gap-4">
             <HeaderLogo />
             <HeaderSearch
               searchQuery={headerSearch.query}
@@ -245,7 +246,10 @@ function HeaderLanding() {
               onClose={headerSearch.closeSearch}
               onClear={headerSearch.clearSearch}
             />
-            <HeaderNav isActive={isActive} />
+            <HeaderNav
+              isActive={isActive}
+              showOrders={isAuthenticated}
+            />
             <HeaderActions
               cartCount={cartCount}
               favoritesCount={favoritesCount}
@@ -281,6 +285,7 @@ function HeaderLanding() {
           onClose={() => setMenuOpen(false)}
           onOpenProfileEdit={() => setIsEditProfileOpen(true)}
           role={role}
+          showOrders={isAuthenticated}
           user={user}
         />
       )}

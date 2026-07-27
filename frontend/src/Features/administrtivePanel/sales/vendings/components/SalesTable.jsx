@@ -131,7 +131,7 @@ function TableText({ value, fallback, search, className = "" }) {
   return <span className={className}>{highlight(value, search)}</span>;
 }
 
-function SalesTable({ data = [], search = "", totalData = 0 }) {
+function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = false }) {
   const navigate = useNavigate();
   const { showError } = useAlert();
   const [loadingMessage, setLoadingMessage] = useState("");
@@ -173,7 +173,7 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
 
   if (data.length === 0) {
     return (
-      <EmptyState isSearching={totalData > 0 && search.trim().length > 0} />
+      <EmptyState isSearching={hasActiveFilters || (totalData > 0 && search.trim().length > 0)} />
     );
   }
 
@@ -192,7 +192,7 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
               No. Factura
             </th>
             <th className="px-4 py-3 text-center text-sm font-semibold">
-              Cliente
+              Recibe/Cliente
             </th>
             <th className="px-4 py-3 text-center text-sm font-semibold">
               Vendedor
@@ -221,6 +221,10 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
         <tbody>
           {data.map((row, index) => {
             const baseRowBg = index % 2 === 0 ? "bg-gray-100" : "bg-white";
+            const clienteMostrar =
+              row.deliveryRecipientName ||
+              row.cliente ||
+              "Cliente no disponible";
             const { puedeDevolver, puedeAnular, deshabilitado } = getPermisos(
               row.estado,
             );
@@ -238,7 +242,7 @@ function SalesTable({ data = [], search = "", totalData = 0 }) {
 
                 <td className="px-4 py-2.5 text-center text-sm text-gray-800 whitespace-nowrap">
                   <TableText
-                    value={row.cliente}
+                    value={clienteMostrar}
                     fallback="Cliente no disponible"
                     search={search}
                   />

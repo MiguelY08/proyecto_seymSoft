@@ -1,1 +1,7 @@
 @import "tailwindcss";
+
+:root {
+  --store-content-max: 1536px;
+  --store-content-x: clamp(16px, 3vw, 32px);
+  --store-content-inner-max: calc(var(--store-content-max) - var(--store-content-x) - var(--store-content-x));
+}

@@ -11,6 +11,8 @@ function RightSectionForm({
   disabled = false,
   subtotal,
   iva,
+  shippingAmount = 0,
+  showShippingAmount = false,
   total,
   onAddProduct,
   onUpdateCantidad,
@@ -133,9 +135,9 @@ function RightSectionForm({
   }, [scannerMessage]);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
       {/* Header de sección estilo ventas */}
-      <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gray-50">
+      <div className="flex items-center gap-3 border-b border-gray-100 bg-gray-50 px-4 py-3.5 sm:px-5">
         <div className="w-7 h-7 rounded-md bg-[#004D77] flex items-center justify-center shrink-0">
           <ShoppingBag className="w-4 h-4 text-white" strokeWidth={2} />
         </div>
@@ -145,7 +147,7 @@ function RightSectionForm({
         </div>
       </div>
 
-      <div className="p-5 flex flex-col gap-4">
+      <div className="flex flex-col gap-4 p-4 sm:p-5">
         {/* Buscador con dropdown */}
         <div className="relative" ref={wrapperRef}>
           <div className="relative">
@@ -180,7 +182,7 @@ function RightSectionForm({
 
           {/* Dropdown de productos */}
           {isDropdownOpen && !isDisabled && (
-            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            <div className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg overscroll-contain">
               {productosMostrados.length > 0 ? (
                 <ul className="py-1">
                   {productosMostrados.map(prod => {
@@ -234,8 +236,8 @@ function RightSectionForm({
 
         {/* Tabla de productos agregados */}
         {productos.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div className="overflow-x-auto rounded-lg border border-gray-200 [-webkit-overflow-scrolling:touch]">
+            <table className="min-w-[720px] divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
@@ -249,7 +251,7 @@ function RightSectionForm({
               <tbody className="bg-white divide-y divide-gray-200">
                 {productos.map((prod) => (
                   <tr key={prod.id} className="hover:bg-gray-50 transition-colors duration-150">
-                    <td className="px-3 py-2 text-sm text-gray-800">{prod.nombre}</td>
+                    <td className="min-w-[220px] px-3 py-2 text-sm text-gray-800">{prod.nombre}</td>
                     <td className="px-3 py-2 text-sm text-gray-700">{prod.stock ?? 0}</td>
                     <td className="px-3 py-2">
                       <input
@@ -270,8 +272,9 @@ function RightSectionForm({
                     </td>
                     <td className="px-3 py-2 text-right">
                       <button
+                        type="button"
                         onClick={() => onRemoveProduct(prod.id)}
-                        className="text-red-500 hover:text-red-700 transition-colors duration-200 disabled:text-gray-300 disabled:hover:text-gray-300 disabled:cursor-not-allowed"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-500 transition-colors duration-200 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:bg-transparent disabled:hover:text-gray-300"
                         title="Eliminar"
                         disabled={isDisabled}
                       >
@@ -284,14 +287,14 @@ function RightSectionForm({
             </table>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-10 gap-2 border-2 border-dashed border-gray-200 rounded-lg">
+          <div className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-200 px-4 py-10 text-center">
             <ShoppingBag className="w-8 h-8 text-gray-300" strokeWidth={1.5} />
             <p className="text-sm text-gray-400">Busca y agrega productos al pedido</p>
           </div>
         )}
 
         {/* Totales */}
-        <div className="border-t border-gray-200 pt-4 mt-2">
+        <div className="mt-2 border-t border-gray-200 pt-4">
           <div className="flex justify-between text-sm mb-1">
             <span className="text-gray-600">Subtotal:</span>
             <span className="font-medium text-gray-800">{formatCurrency(subtotal)}</span>
@@ -300,7 +303,13 @@ function RightSectionForm({
             <span className="text-gray-600">IVA incluido:</span>
             <span className="font-medium text-gray-800">{formatCurrency(iva)}</span>
           </div>
-          <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-gray-200">
+          {showShippingAmount && (
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-gray-600">Envío:</span>
+              <span className="font-medium text-gray-800">{formatCurrency(shippingAmount)}</span>
+            </div>
+          )}
+          <div className="mt-2 flex justify-between gap-3 border-t border-gray-200 pt-2 text-lg font-bold">
             <span className="text-gray-900">Total:</span>
             <span className="text-gray-900">{formatCurrency(total)}</span>
           </div>

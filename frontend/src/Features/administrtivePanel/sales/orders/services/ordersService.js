@@ -256,12 +256,13 @@ const getAdvisor = (order = {}) =>
 const normalizeOrder = (order = {}) => {
   const productos = (order.productos ?? order.products ?? order.items ?? order.details ?? []).map(normalizeProduct);
   const productsTotal = productos.reduce((sum, product) => sum + product.subtotal, 0);
-  const total = toNumber(order.total ?? order.totalAmount, productsTotal);
+  const shippingAmount = toNumber(order.shippingAmount ?? order.shipping_amount ?? order.deliveryShippingAmount ?? order.delivery_shipping_amount);
+  const total = toNumber(order.total ?? order.totalAmount, roundMoney(productsTotal + shippingAmount));
   const iva = toNumber(
     order.iva ?? order.ivaAmount ?? order.tax,
     productos.reduce((sum, product) => sum + product.iva, 0)
   );
-  const subtotal = toNumber(order.subtotal, roundMoney(total - iva));
+  const subtotal = toNumber(order.subtotal, roundMoney(productsTotal - iva));
   const pagos = getPaymentsFromOrder(order);
   const comprobantesPago = getPaymentReceiptsFromOrder(order);
   const paymentReceiptSummary = getPaymentReceiptSummary(order, comprobantesPago);
@@ -271,6 +272,44 @@ const normalizeOrder = (order = {}) => {
   );
   const id = toNumber(order.id ?? order.orderId ?? order.idOrder);
   const advisor = getAdvisor(order);
+  const deliveryDepartment =
+    order.deliveryDepartment ??
+    order.deliveryLocation?.department ??
+    order.delivery_location?.department ??
+    {};
+  const deliveryCity =
+    order.deliveryCity ??
+    order.deliveryLocation?.city ??
+    order.delivery_location?.city ??
+    {};
+  const deliveryDepartmentCode = String(
+    order.departamentoEntregaCodigo ??
+    order.deliveryDepartmentCode ??
+    order.delivery_department_code ??
+    deliveryDepartment?.code ??
+    ''
+  ).trim();
+  const deliveryDepartmentName = String(
+    order.departamentoEntregaNombre ??
+    order.deliveryDepartmentName ??
+    order.delivery_department_name ??
+    deliveryDepartment?.name ??
+    ''
+  ).trim();
+  const deliveryCityCode = String(
+    order.ciudadEntregaCodigo ??
+    order.deliveryCityCode ??
+    order.delivery_city_code ??
+    deliveryCity?.code ??
+    ''
+  ).trim();
+  const deliveryCityName = String(
+    order.ciudadEntregaNombre ??
+    order.deliveryCityName ??
+    order.delivery_city_name ??
+    deliveryCity?.name ??
+    ''
+  ).trim();
 
   return {
     ...order,
@@ -303,10 +342,40 @@ const normalizeOrder = (order = {}) => {
       '',
     fechaPedido: order.fechaPedido ?? order.orderDate ?? order.createdAt ?? order.date,
     direccionEntrega: order.direccionEntrega ?? order.deliveryAddress ?? order.address ?? '',
+    deliveryRecipientName:
+      order.deliveryRecipientName ??
+      order.delivery_recipient_name ??
+      order.recipientName ??
+      order.receiverName ??
+      '',
+    shippingAmount,
+    departamentoEntregaCodigo: deliveryDepartmentCode,
+    departamentoEntregaNombre: deliveryDepartmentName,
+    ciudadEntregaCodigo: deliveryCityCode,
+    ciudadEntregaNombre: deliveryCityName,
     tipoEntrega: normalizeTipoEntrega(order),
     clienteNombre: order.customer?.user?.fullName ?? order.customer?.name ?? order.clienteNombre ?? order.customerName ?? '',
     clienteTelefono: order.customer?.user?.phone ?? order.customer?.phone ?? order.clienteTelefono ?? order.customerPhone ?? '',
     clienteEmail: order.customer?.user?.email ?? order.customer?.email ?? order.clienteEmail ?? order.customerEmail ?? '',
+    clienteTipoDocumento:
+      order.customer?.documentType ??
+      order.customer?.docType ??
+      order.customer?.doc_type ??
+      order.clienteTipoDocumento ??
+      order.customerDocumentType ??
+      order.documentType ??
+      order.docType ??
+      '',
+    clienteDocumento:
+      order.customer?.document ??
+      order.customer?.docNumber ??
+      order.customer?.doc_number ??
+      order.customer?.documentNumber ??
+      order.clienteDocumento ??
+      order.customerDocument ??
+      order.docNumber ??
+      order.doc_number ??
+      '',
     clienteDireccion: order.customer?.address ?? '',
     productos,
     pagos,
@@ -335,6 +404,12 @@ const normalizeOrder = (order = {}) => {
 const buildCreateOrderPayload = (data = {}) => {
   const isRecoge = data.tipoEntrega === 'recoge' || data.direccionEntrega === 'El cliente lo recoge';
   const saleType = data.saleType ?? data.sale_type ?? data.origen ?? data.origin ?? ORIGENES.MANUAL;
+  const hasShippingAmount = data.shippingAmount !== undefined && data.shippingAmount !== null && String(data.shippingAmount).trim() !== '';
+  const shippingAmount = isRecoge
+    ? 0
+    : saleType === ORIGENES.WEB && !hasShippingAmount
+      ? undefined
+      : toNumber(data.shippingAmount);
 
   return {
     idClient: data.clienteId,
@@ -344,6 +419,12 @@ const buildCreateOrderPayload = (data = {}) => {
     saleType,
     deliveryType: isRecoge ? 'Recoge' : 'Domicilio',
     deliveryAddress: isRecoge ? null : data.direccionEntrega,
+    deliveryRecipientName: saleType === 'direct' ? null : data.deliveryRecipientName,
+    shippingAmount,
+    deliveryDepartmentCode: isRecoge ? null : data.departamentoEntregaCodigo,
+    deliveryDepartmentName: isRecoge ? null : data.departamentoEntregaNombre,
+    deliveryCityCode: isRecoge ? null : data.ciudadEntregaCodigo,
+    deliveryCityName: isRecoge ? null : data.ciudadEntregaNombre,
     items: (data.productos || []).map((product) => ({
       idProduct: product.id,
       barcode: product.codBarras || product.barcode || '',
@@ -385,9 +466,24 @@ const buildUpdateOrderPayload = (data = {}) => {
     payload.idClient = data.clienteId;
   }
 
-  if (data.tipoEntrega !== undefined || data.direccionEntrega !== undefined) {
+  if (
+    data.tipoEntrega !== undefined ||
+    data.direccionEntrega !== undefined ||
+    data.deliveryRecipientName !== undefined ||
+    data.shippingAmount !== undefined ||
+    data.departamentoEntregaCodigo !== undefined ||
+    data.departamentoEntregaNombre !== undefined ||
+    data.ciudadEntregaCodigo !== undefined ||
+    data.ciudadEntregaNombre !== undefined
+  ) {
     payload.deliveryType = isRecoge ? 'Recoge' : 'Domicilio';
     payload.deliveryAddress = isRecoge ? null : data.direccionEntrega;
+    payload.deliveryRecipientName = data.deliveryRecipientName;
+    payload.shippingAmount = isRecoge ? 0 : toNumber(data.shippingAmount);
+    payload.deliveryDepartmentCode = isRecoge ? null : data.departamentoEntregaCodigo;
+    payload.deliveryDepartmentName = isRecoge ? null : data.departamentoEntregaNombre;
+    payload.deliveryCityCode = isRecoge ? null : data.ciudadEntregaCodigo;
+    payload.deliveryCityName = isRecoge ? null : data.ciudadEntregaNombre;
   }
 
   if (data.estadoLogistico !== undefined) {
@@ -408,6 +504,41 @@ const buildUpdateOrderPayload = (data = {}) => {
   return payload;
 };
 
+export const LocationService = {
+  async getDepartments() {
+    const response = await apiClient.get('/locations/departments');
+    const payload = unwrap(response);
+    const departments = Array.isArray(payload)
+      ? payload
+      : payload?.departments ?? payload?.data ?? [];
+
+    return departments.map((department) => ({
+      code: String(department.code ?? department.id ?? department.departmentCode ?? '').trim(),
+      name: String(department.name ?? department.departmentName ?? '').trim(),
+    })).filter((department) => department.code && department.name);
+  },
+
+  async getCitiesByDepartment(departmentCode) {
+    const normalizedDepartmentCode = String(departmentCode || '').trim();
+
+    if (!normalizedDepartmentCode) {
+      return [];
+    }
+
+    const response = await apiClient.get(
+      `/locations/departments/${normalizedDepartmentCode}/cities`
+    );
+    const payload = unwrap(response);
+    const cities = Array.isArray(payload)
+      ? payload
+      : payload?.cities ?? payload?.municipalities ?? payload?.data ?? [];
+
+    return cities.map((city) => ({
+      code: String(city.code ?? city.id ?? city.cityCode ?? city.municipalityCode ?? '').trim(),
+      name: String(city.name ?? city.cityName ?? city.municipalityName ?? '').trim(),
+    })).filter((city) => city.code && city.name);
+  },
+};
 export const OrdersService = {
   async list(params = {}) {
     const response = await apiClient.get('/orders', { params });
@@ -453,7 +584,7 @@ export const OrdersService = {
     const totalPagado = await PaymentService.getTotalPagado(orderId);
     const subtotal = newProductos.reduce((sum, p) => sum + (p.subtotal || 0), 0);
     const iva = newProductos.reduce((sum, p) => sum + toNumber(p.iva), 0);
-    const newTotal = subtotal;
+    const newTotal = roundMoney(subtotal + toNumber(order.shippingAmount));
 
     const updatedOrder = await this.update({
       ...order,

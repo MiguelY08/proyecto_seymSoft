@@ -14,7 +14,6 @@ import InfoProvider from '../components/InfoProvider';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import { providersService } from '../data/providersService';
 import Spinner from '../../../../shared/spinner';
-import { downloadProvidersExcel } from '../utils/excelHelper';
 
 const RECORDS_PER_PAGE = 13;
 const SEARCH_FETCH_LIMIT = 10000;
@@ -62,6 +61,7 @@ const providerMatchesSearch = (provider, searchTerm) => {
 function ProvidersPage() {
   const [providers, setProviders] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -75,7 +75,7 @@ function ProvidersPage() {
   const loadProviders = useCallback(async () => {
     setLoading(true);
     try {
-      const hasSearch = debouncedSearchTerm.trim() !== '';
+      const hasSearch = debouncedSearchTerm.trim() !== '' || statusFilter !== '';
       const result = await providersService.getAll({
         page: hasSearch ? 1 : currentPage,
         limit: hasSearch ? SEARCH_FETCH_LIMIT : RECORDS_PER_PAGE,
@@ -83,7 +83,13 @@ function ProvidersPage() {
       });
 
       if (hasSearch) {
-        const filtered = result.data.filter((provider) => providerMatchesSearch(provider, debouncedSearchTerm));
+        const filtered = result.data
+          .filter((provider) => providerMatchesSearch(provider, debouncedSearchTerm))
+          .filter((provider) => {
+            if (statusFilter === 'activo') return provider.activo === true;
+            if (statusFilter === 'inactivo') return provider.activo === false;
+            return true;
+          });
         const start = (currentPage - 1) * RECORDS_PER_PAGE;
         setProviders(filtered.slice(start, start + RECORDS_PER_PAGE));
         setTotalRecords(filtered.length);
@@ -96,7 +102,7 @@ function ProvidersPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, debouncedSearchTerm, showError]);
+  }, [currentPage, debouncedSearchTerm, statusFilter, showError]);
 
   useEffect(() => {
     loadProviders();
@@ -141,16 +147,6 @@ function ProvidersPage() {
     setIsFormModalOpen(true);
   };
 
-  const handleExportProviders = async () => {
-    const result = await providersService.getAll({
-      page: 1,
-      limit: totalRecords || RECORDS_PER_PAGE,
-      search: searchTerm,
-    });
-
-    return downloadProvidersExcel(result.data);
-  };
-
   const mapProviderFormToService = (formData) => ({
     tipoPersona: formData.personType ?? formData.tipoPersona,
     tipo: formData.documentType ?? formData.tipo,
@@ -184,8 +180,8 @@ function ProvidersPage() {
         const newProvider = await providersService.create(providerPayload);
         
         setProviders(prev => [...prev, newProvider]);
-        showSuccess('Proveedor creado', 'El nuevo proveedor se creó exitosamente');
         loadProviders(); // Recargar para tener datos actualizados
+        showSuccess('Proveedor creado', 'El nuevo proveedor se creó exitosamente');
       }
       //  No cerrar el modal aquí, se cierra en FormProvider después del éxito
     } catch (error) {
@@ -226,6 +222,11 @@ function ProvidersPage() {
     setCurrentPage(1);
   };
 
+  const handleStatusChange = (nextStatus) => {
+    setStatusFilter(nextStatus);
+    setCurrentPage(1);
+  };
+
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
 
   if (loading && providers.length === 0) {
@@ -239,9 +240,9 @@ function ProvidersPage() {
       <ProvidersToolbar
         searchTerm={searchTerm}
         onSearchChange={handleSearchChange}
+        statusFilter={statusFilter}
+        onStatusChange={handleStatusChange}
         onNewClick={handleNewProvider}
-        onExport={handleExportProviders}
-        totalProviders={totalRecords}
       />
 
       <div className="bg-white rounded-xl shadow-md">
@@ -249,6 +250,7 @@ function ProvidersPage() {
           providers={providers}
           startIndex={startIndex}
           searchTerm={searchTerm}
+          totalData={totalRecords}
           onInfo={handleInfo}
           onEdit={handleEdit}
           onToggleActive={handleToggleActive}

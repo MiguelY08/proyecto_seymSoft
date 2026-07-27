@@ -1,6 +1,6 @@
 // src/features/orders/components/PaymentsSection.jsx
 import React, { useState } from 'react';
-import { Plus, DollarSign, Tag, FileText, CheckCircle, CreditCard, Lock, Trash2 } from 'lucide-react';
+import { Plus, DollarSign, Tag, FileText, CheckCircle, CreditCard, Lock, Trash2, AlertTriangle } from 'lucide-react';
 import { METODOS_PAGO } from '../services/ordersService';
 import FormSelect from '../../../../shared/FormSelect';
 
@@ -65,6 +65,19 @@ function PaymentsSection({
     }).format(value);
   };
 
+  const cleanMoneyInput = (value) => String(value || '').replace(/\D/g, '');
+
+  const parseMoneyInput = (value) => roundMoney(Number(cleanMoneyInput(value)));
+
+  const formatMoneyInput = (value) => {
+    const cleanValue = cleanMoneyInput(value);
+    if (!cleanValue) return '';
+
+    return new Intl.NumberFormat('es-CO', {
+      maximumFractionDigits: 0,
+    }).format(Number(cleanValue));
+  };
+
   const formatDate = (isoString) => {
     if (!isoString) return '';
     const date = new Date(isoString);
@@ -72,9 +85,13 @@ function PaymentsSection({
   };
 
   const handleMontoChange = (e) => {
-    const value = e.target.value;
-    const amount = roundMoney(value);
+    const value = cleanMoneyInput(e.target.value);
+    const amount = parseMoneyInput(value);
     setNewPayment(prev => ({ ...prev, monto: value }));
+    if (amount > saldoPendiente) {
+      setFormError(`El monto excede el saldo pendiente (${formatCurrency(saldoPendiente)}).`);
+      return;
+    }
     if (isCreditPayment && creditLimit !== null && amount > creditLimit) {
       setFormError(`El monto supera el cupo disponible (${formatCurrency(creditLimit)}).`);
       return;
@@ -84,9 +101,9 @@ function PaymentsSection({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const monto = parseFloat(newPayment.monto);
+    const monto = parseMoneyInput(newPayment.monto);
 
-    if (isNaN(monto) || monto <= 0) {
+    if (monto <= 0) {
       setFormError('El monto debe ser un número mayor a cero.');
       return;
     }
@@ -138,14 +155,14 @@ function PaymentsSection({
   const inputBaseClass = "w-full pl-10 pr-3 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 focus:ring-2 focus:ring-[#004D77]/20 focus:border-[#004D77]";
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
       {/* Header de sección estilo ventas */}
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-gray-50">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 border-b border-gray-100 bg-gray-50 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
           <div className="w-7 h-7 rounded-md bg-[#004D77] flex items-center justify-center shrink-0">
             <CreditCard className="w-4 h-4 text-white" strokeWidth={2} />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-gray-800">Pagos y Abonos</p>
             <p className="text-xs text-gray-400">Gestión de pagos del pedido</p>
           </div>
@@ -154,7 +171,7 @@ function PaymentsSection({
           <button
             onClick={() => setShowForm(!showForm)}
             disabled={loading || disabled}
-            className="text-sm text-[#004D77] hover:bg-[#004D77]/10 transition-colors duration-200 flex items-center gap-1 px-2 py-1 rounded-md"
+            className="flex w-full items-center justify-center gap-1 rounded-md px-2 py-2 text-sm text-[#004D77] transition-colors duration-200 hover:bg-[#004D77]/10 sm:w-auto sm:py-1"
           >
             <Plus className="w-4 h-4" strokeWidth={1.8} />
             Agregar abono
@@ -162,20 +179,20 @@ function PaymentsSection({
         )}
       </div>
 
-      <div className="p-5 flex flex-col gap-4">
+      <div className="flex flex-col gap-4 p-4 sm:p-5">
         {/* Resumen de montos */}
-        <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+        <div className="grid grid-cols-1 gap-3 rounded-lg bg-gray-50 p-4 sm:grid-cols-3 sm:gap-4">
           <div>
             <p className="text-xs text-gray-500">Total del pedido</p>
-            <p className="text-lg font-semibold">{formatCurrency(total)}</p>
+            <p className="text-base font-semibold sm:text-lg">{formatCurrency(total)}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500">Total pagado</p>
-            <p className="text-lg font-semibold text-green-600">{formatCurrency(totalPagado)}</p>
+            <p className="text-base font-semibold text-green-600 sm:text-lg">{formatCurrency(totalPagado)}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500">Saldo pendiente</p>
-            <p className={`text-lg font-semibold ${saldoPendiente > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+            <p className={`text-base font-semibold sm:text-lg ${saldoPendiente > 0 ? 'text-amber-600' : 'text-green-600'}`}>
               {formatCurrency(saldoPendiente)}
             </p>
           </div>
@@ -183,10 +200,10 @@ function PaymentsSection({
 
         {/* Formulario para agregar pago */}
         {showForm && !estaCompletado && !disabled && (
-          <form onSubmit={handleSubmit} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+          <form onSubmit={handleSubmit} className="rounded-lg border border-gray-200 bg-gray-50 p-4">
             <h3 className="text-sm font-medium mb-3">Nuevo abono</h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {/* Método de pago */}
               <div className="flex flex-col gap-1.5">
                 <label className={labelClass}>Método</label>
@@ -218,26 +235,40 @@ function PaymentsSection({
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
                   <input
-                    type="number"
-                    min="1"
-                    step="0.01"
-                    value={newPayment.monto}
+                    type="text"
+                    inputMode="numeric"
+                    value={formatMoneyInput(newPayment.monto)}
                     onChange={handleMontoChange}
-                    placeholder="0.00"
+                    placeholder="0"
                     className={inputBaseClass}
                     disabled={loading || disabled}
                   />
                 </div>
-                <p className={`text-xs ${montoPreview > 0 ? 'text-[#004D77] font-semibold' : 'text-gray-400'}`}>
-                  {montoPreview > 0 ? formatCurrency(montoPreview) : 'Ingresa un monto para ver el valor formateado.'}
-                </p>
                 {isCreditPayment && (
-                  <p className={`text-xs ${creditLimit !== null && montoPreview > creditLimit ? 'text-red-500 font-medium' : 'text-emerald-600 font-medium'}`}>
-                    Cupo disponible: {creditLimit !== null ? formatCurrency(creditLimit) : 'No disponible'}
-                    {creditAssigned !== null && creditAssigned !== undefined
-                      ? ` / asignado: ${formatCurrency(creditAssigned)}`
-                      : ''}
-                  </p>
+                  <div className={`flex items-start gap-3 rounded-lg border px-3 py-2 ${
+                    creditLimit !== null && montoPreview > creditLimit
+                      ? 'border-red-200 bg-red-50'
+                      : 'border-emerald-200 bg-emerald-50'
+                  }`}>
+                    <CreditCard
+                      className={`mt-0.5 h-4 w-4 shrink-0 ${
+                        creditLimit !== null && montoPreview > creditLimit
+                          ? 'text-red-700'
+                          : 'text-emerald-700'
+                      }`}
+                      strokeWidth={1.8}
+                    />
+                    <p className={`text-sm font-medium ${
+                      creditLimit !== null && montoPreview > creditLimit
+                        ? 'text-red-800'
+                        : 'text-emerald-800'
+                    }`}>
+                      Cupo disponible: {creditLimit !== null ? formatCurrency(creditLimit) : 'No disponible'}
+                      {creditAssigned !== null && creditAssigned !== undefined
+                        ? ` / asignado: ${formatCurrency(creditAssigned)}`
+                        : ''}
+                    </p>
+                  </div>
                 )}
               </div>
 
@@ -259,14 +290,17 @@ function PaymentsSection({
             </div>
 
             {formError && (
-              <p className="mt-2 text-xs text-red-500">{formError}</p>
+              <div className="mt-3 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-700" strokeWidth={1.8} />
+                <p className="text-sm font-medium text-red-800">{formError}</p>
+              </div>
             )}
 
-            <div className="flex justify-end gap-3 mt-4">
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
               <button
                 type="button"
                 onClick={() => { setShowForm(false); setFormError(''); }}
-                className="px-4 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+                className="w-full rounded-lg bg-gray-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 cursor-pointer sm:w-auto"
                 disabled={loading || disabled}
               >
                 Cancelar
@@ -274,7 +308,7 @@ function PaymentsSection({
               <button
                 type="submit"
                 disabled={loading || disabled || Boolean(formError)}
-                className="px-4 py-2 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full rounded-lg bg-[#004D77] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto"
               >
                 {loading ? 'Guardando...' : 'Agregar abono'}
               </button>
@@ -288,8 +322,8 @@ function PaymentsSection({
           {pagos.length === 0 ? (
             <p className="text-sm text-gray-500 italic">No hay pagos registrados.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
+            <div className="overflow-x-auto rounded-lg border border-gray-200 [-webkit-overflow-scrolling:touch]">
+              <table className="min-w-[680px] divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
@@ -361,7 +395,7 @@ function PaymentsSection({
 
         {/* Mensaje de pago completado */}
         {estaCompletado && (
-          <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+          <div className="mt-2 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3">
             <CheckCircle className="w-5 h-5 text-green-600" strokeWidth={1.8} />
             <p className="text-sm text-green-800">
               Este pedido ha sido pagado en su totalidad.

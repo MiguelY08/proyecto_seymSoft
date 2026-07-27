@@ -67,7 +67,7 @@ function InfoUser() {
   return (
     <div
       style={{ transition: 'opacity 250ms ease' }}
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm
+      className={`fixed inset-0 z-50 flex items-stretch justify-center bg-white sm:items-center sm:bg-black/40 sm:p-4 sm:backdrop-blur-sm
         ${visible ? 'opacity-100' : 'opacity-0'}`}
     >
       <div
@@ -76,11 +76,11 @@ function InfoUser() {
           transformOrigin,
           transition: 'transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 200ms ease',
         }}
-        className={`bg-white rounded-lg shadow-2xl w-full max-w-xs sm:max-w-sm md:max-w-md overflow-hidden flex flex-col
+        className={`flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-sm sm:rounded-lg md:max-w-md
           ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
       >
         {/* Header del modal */}
-        <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
+        <div className="flex items-center justify-between bg-[#004D77] px-4 py-4 shrink-0 sm:px-6">
           <h2 className="text-white font-semibold text-lg">Detalles</h2>
           <button
             onClick={handleClose}
@@ -91,17 +91,17 @@ function InfoUser() {
         </div>
 
         {/* Cuerpo */}
-        <div className="px-6 pt-6 pb-4 flex flex-col gap-5 overflow-y-auto">
+        <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-4 pb-5 pt-6 sm:px-6 sm:pb-4">
 
           {/* Avatar + nombre + estado */}
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-[#004D77]/10 border-2 border-[#004D77]/20 flex items-center justify-center shrink-0">
-              <span className="text-lg font-bold text-[#004D77] tracking-tight leading-none">
+          <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:gap-4 sm:text-left">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-2 border-[#004D77]/20 bg-[#004D77]/10 sm:h-14 sm:w-14">
+              <span className="text-2xl font-bold leading-none tracking-tight text-[#004D77] sm:text-lg">
                 {initials}
               </span>
             </div>
-            <div className="flex flex-col gap-1 min-w-0">
-              <p className="text-base font-semibold text-gray-800 leading-tight truncate">
+            <div className="flex min-w-0 flex-col items-center gap-1 sm:items-start">
+              <p className="max-w-full text-lg font-semibold leading-tight text-gray-800 sm:text-base sm:truncate">
                 {user.name}
               </p>
               <span className={`self-start px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
@@ -120,7 +120,7 @@ function InfoUser() {
           {/* Lista de campos */}
           <div className="flex flex-col gap-3">
             {fields.map(({ icon: Icon, label, value }) => (
-              <div key={label} className="flex items-start gap-3">
+              <div key={label} className="flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50/70 p-3 sm:border-0 sm:bg-transparent sm:p-0">
                 <div className="w-8 h-8 rounded-lg bg-[#004D77]/8 flex items-center justify-center shrink-0 mt-0.5">
                   <Icon className="w-4 h-4 text-[#004D77]/60" strokeWidth={1.8} />
                 </div>
@@ -138,10 +138,10 @@ function InfoUser() {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
+        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-gray-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
           <button
             onClick={handleClose}
-            className="px-6 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+            className="w-full rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 cursor-pointer sm:w-auto sm:py-2"
           >
             Cerrar
           </button>
@@ -149,7 +149,7 @@ function InfoUser() {
           {!isSystemUser && !isSelf && (
             <button
               onClick={handleEdit}
-              className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] cursor-pointer sm:w-auto sm:py-2"
             >
               <SquarePen className="w-4 h-4" strokeWidth={1.8} />
               Editar usuario

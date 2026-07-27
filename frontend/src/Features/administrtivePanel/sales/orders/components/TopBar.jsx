@@ -8,6 +8,7 @@ import {
   Plus,
   Truck,
   CreditCard,
+  AlertTriangle,
   X,
   ChevronDown,
 } from 'lucide-react';
@@ -28,6 +29,8 @@ function TopBar({
   setOrigenFilter,
   pagoEstadoFilter,
   setPagoEstadoFilter,
+  envioFilter,
+  setEnvioFilter,
   setCurrentPage,
   orders,
 }) {
@@ -38,7 +41,7 @@ function TopBar({
   const searchWrapperRef = useRef(null);
   const filtersWrapperRef = useRef(null);
 
-  const hayFiltrosActivos = search || fechaInicial || fechaFinal || origenFilter || pagoEstadoFilter;
+  const hayFiltrosActivos = search || fechaInicial || fechaFinal || origenFilter || pagoEstadoFilter || envioFilter;
 
   const handleClearFilters = () => {
     setSearch('');
@@ -46,6 +49,7 @@ function TopBar({
     setFechaFinal('');
     setOrigenFilter('');
     setPagoEstadoFilter('');
+    setEnvioFilter('');
     setCurrentPage(1);
     setIsSearchOpen(false);
     setOpenFilter(null);
@@ -85,6 +89,12 @@ function TopBar({
     { value: ESTADOS_PAGO.PAGADO, label: 'Pagado' },
   ];
 
+  const envioOptions = [
+    { value: '', label: 'Todos' },
+    { value: 'pendiente', label: 'Pendiente' },
+    { value: 'completo', label: 'Completo' },
+  ];
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (filtersWrapperRef.current && !filtersWrapperRef.current.contains(event.target)) {
@@ -106,14 +116,14 @@ function TopBar({
   }, [isSearchOpen, search]);
 
   return (
-    <div className="flex items-center justify-between gap-2 sm:gap-3 shrink-0 min-w-0">
-      <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+    <div className="flex flex-col gap-3 shrink-0 min-w-0 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-3 min-w-0 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 lg:flex-1">
         <div
           ref={searchWrapperRef}
-          className={`relative shrink-0 transition-all duration-300 ease-out ${
+          className={`relative w-full transition-all duration-300 ease-out sm:shrink-0 ${
             isSearchOpen
-              ? 'w-64'
-              : 'w-10'
+              ? 'sm:w-64 lg:w-72'
+              : 'sm:w-10'
           }`}
         >
           {isSearchOpen ? (
@@ -127,7 +137,7 @@ function TopBar({
                   setSearch(event.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full pl-4 pr-10 py-2 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400"
+                className="w-full pl-4 pr-10 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400"
               />
               <button
                 type="button"
@@ -147,7 +157,7 @@ function TopBar({
             <button
               type="button"
               onClick={() => setIsSearchOpen(true)}
-              className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 hover:text-[#004D77] hover:border-[#004D77] transition"
+              className="w-full h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 hover:text-[#004D77] hover:border-[#004D77] transition sm:w-10"
               title="Buscar"
               aria-label="Buscar"
             >
@@ -156,7 +166,7 @@ function TopBar({
           )}
         </div>
 
-        <div className={`relative shrink-0 transition-all duration-300 ${isSearchOpen ? 'w-28 lg:w-32' : 'w-36 lg:w-40'}`} title="Fecha inicial">
+        <div className="relative w-full transition-all duration-300 sm:w-44 lg:w-40" title="Fecha inicial">
           <Calendar
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
             strokeWidth={1.8}
@@ -169,12 +179,12 @@ function TopBar({
               setFechaInicial(event.target.value);
               setCurrentPage(1);
             }}
-            className="pl-9 pr-2 py-2 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-600 w-full"
+            className="pl-9 pr-2 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-600 w-full"
             aria-label="Fecha inicial"
           />
         </div>
 
-        <div className={`relative shrink-0 transition-all duration-300 ${isSearchOpen ? 'w-28 lg:w-32' : 'w-36 lg:w-40'}`} title="Fecha final">
+        <div className="relative w-full transition-all duration-300 sm:w-44 lg:w-40" title="Fecha final">
           <Calendar
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
             strokeWidth={1.8}
@@ -187,33 +197,27 @@ function TopBar({
               setFechaFinal(event.target.value);
               setCurrentPage(1);
             }}
-            className="pl-9 pr-2 py-2 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-600 w-full"
+            className="pl-9 pr-2 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-600 w-full"
             aria-label="Fecha final"
           />
         </div>
 
-        <div ref={filtersWrapperRef} className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <div ref={filtersWrapperRef} className="grid w-full grid-cols-2 gap-3 sm:w-auto sm:flex sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
           <div
-            className={`relative shrink-0 transition-all duration-300 ${
-              isSearchOpen ? 'w-16' : 'w-32'
-            }`}
+            className="relative w-full min-w-0 transition-all duration-300 sm:w-40"
           >
           <button
             type="button"
             onClick={() => setOpenFilter((current) => (current === 'origen' ? null : 'origen'))}
-            className={`w-full h-10 flex items-center rounded-lg border border-gray-300 bg-white text-sm text-gray-600 hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none transition ${
-              isSearchOpen ? 'justify-center gap-1 px-2' : 'justify-between pl-3 pr-2'
-            }`}
+            className="w-full h-10 flex items-center justify-between rounded-lg border border-gray-300 bg-white pl-3 pr-2 text-sm text-gray-600 hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none transition"
             title="Origen"
             aria-label="Origen"
           >
-            <span className={`flex items-center ${isSearchOpen ? 'gap-1.5' : 'gap-2'} min-w-0`}>
+            <span className="flex items-center gap-2 min-w-0">
               <Truck className="w-4 h-4 text-gray-400 shrink-0" strokeWidth={1.8} />
-              {!isSearchOpen && (
-                <span className="truncate">
-                  {origenFilter ? getOptionLabel(origenOptions, origenFilter, 'Origen') : 'Origen'}
-                </span>
-              )}
+              <span className="truncate">
+                {origenFilter ? getOptionLabel(origenOptions, origenFilter, 'Origen') : 'Origen'}
+              </span>
             </span>
             <ChevronDown
               className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform ${
@@ -224,7 +228,7 @@ function TopBar({
           </button>
 
           {openFilter === 'origen' && (
-            <div className="absolute z-20 left-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            <div className="absolute z-20 left-0 top-full mt-1 w-full min-w-44 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
               <ul className="py-1">
                 {origenOptions.map((option) => {
                   const isSelected = origenFilter === option.value;
@@ -251,26 +255,20 @@ function TopBar({
           </div>
 
           <div
-            className={`relative shrink-0 transition-all duration-300 ${
-              isSearchOpen ? 'w-16' : 'w-36'
-            }`}
+            className="relative w-full min-w-0 transition-all duration-300 sm:w-44"
           >
           <button
             type="button"
             onClick={() => setOpenFilter((current) => (current === 'pago' ? null : 'pago'))}
-            className={`w-full h-10 flex items-center rounded-lg border border-gray-300 bg-white text-sm text-gray-600 hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none transition ${
-              isSearchOpen ? 'justify-center gap-1 px-2' : 'justify-between pl-3 pr-2'
-            }`}
+            className="w-full h-10 flex items-center justify-between rounded-lg border border-gray-300 bg-white pl-3 pr-2 text-sm text-gray-600 hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none transition"
             title="Estado de pago"
             aria-label="Estado de pago"
           >
-            <span className={`flex items-center ${isSearchOpen ? 'gap-1.5' : 'gap-2'} min-w-0`}>
+            <span className="flex items-center gap-2 min-w-0">
               <CreditCard className="w-4 h-4 text-gray-400 shrink-0" strokeWidth={1.8} />
-              {!isSearchOpen && (
-                <span className="truncate">
-                  {pagoEstadoFilter ? getOptionLabel(pagoOptions, pagoEstadoFilter, 'Pago') : 'Pago'}
-                </span>
-              )}
+              <span className="truncate">
+                {pagoEstadoFilter ? getOptionLabel(pagoOptions, pagoEstadoFilter, 'Pago') : 'Pago'}
+              </span>
             </span>
             <ChevronDown
               className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform ${
@@ -281,7 +279,7 @@ function TopBar({
           </button>
 
           {openFilter === 'pago' && (
-            <div className="absolute z-20 left-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            <div className="absolute z-20 right-0 top-full mt-1 w-full min-w-48 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
               <ul className="py-1">
                 {pagoOptions.map((option) => {
                   const isSelected = pagoEstadoFilter === option.value;
@@ -306,12 +304,63 @@ function TopBar({
             </div>
           )}
           </div>
+
+          <div
+            className="relative col-span-2 w-full min-w-0 transition-all duration-300 sm:col-span-1 sm:w-44"
+          >
+          <button
+            type="button"
+            onClick={() => setOpenFilter((current) => (current === 'envio' ? null : 'envio'))}
+            className="w-full h-10 flex items-center justify-between rounded-lg border border-gray-300 bg-white pl-3 pr-2 text-sm text-gray-600 hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none transition"
+            title="Envio"
+            aria-label="Envio"
+          >
+            <span className="flex items-center gap-2 min-w-0">
+              <AlertTriangle className="w-4 h-4 text-gray-400 shrink-0" strokeWidth={1.8} />
+              <span className="truncate">
+                {envioFilter ? getOptionLabel(envioOptions, envioFilter, 'Envio') : 'Envio'}
+              </span>
+            </span>
+            <ChevronDown
+              className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform ${
+                openFilter === 'envio' ? 'rotate-180' : ''
+              }`}
+              strokeWidth={2}
+            />
+          </button>
+
+          {openFilter === 'envio' && (
+            <div className="absolute z-20 left-0 top-full mt-1 w-full min-w-48 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              <ul className="py-1">
+                {envioOptions.map((option) => {
+                  const isSelected = envioFilter === option.value;
+
+                  return (
+                    <li key={option.label}>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectFilter(setEnvioFilter, option.value)}
+                        className={`w-full px-4 py-2 text-left text-sm transition-colors duration-150 ${
+                          isSelected
+                            ? 'bg-[#004D77]/10 text-[#004D77] font-medium'
+                            : 'text-gray-700 hover:bg-[#004D77]/10'
+                        }`}
+                      >
+                        <span className="font-medium">{option.label}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+          </div>
         </div>
 
         {hayFiltrosActivos && (
           <button
             onClick={handleClearFilters}
-            className="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg text-gray-600 bg-white hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 cursor-pointer shrink-0"
+            className="w-full h-10 flex items-center justify-center border border-gray-300 rounded-lg text-gray-600 bg-white hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 cursor-pointer sm:w-10 sm:shrink-0"
             title="Limpiar filtros"
             aria-label="Limpiar filtros"
           >
@@ -320,10 +369,10 @@ function TopBar({
         )}
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
         <Permission permission="pedidos.exportar">
           <ButtonComponent
-            className="bg-white text-green-600 border-green-600 hover:bg-green-400 px-2 flex items-center gap-2"
+            className="flex-1 sm:flex-none bg-white text-green-600 border-green-600 hover:bg-green-400 px-3 flex items-center justify-center gap-2"
             onClick={handleDownloadExcel}
           >
             <FileSpreadsheet className="w-4 h-4" />
@@ -335,6 +384,7 @@ function TopBar({
           <ButtonComponent
             onClick={() => navigate('new-order')}
             title="Nuevo"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2"
           >
             <span className="hidden sm:inline">Nuevo</span>
             <Plus className="w-4 h-4" strokeWidth={2} />

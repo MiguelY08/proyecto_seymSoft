@@ -8,6 +8,7 @@ import {
   Trash2,
   Package,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -29,6 +30,7 @@ import {
 } from "../../../../shared/scanner";
 
 const RECORDS_PER_PAGE = 13;
+const LOW_STOCK_THRESHOLD = 10;
 const COMPANY_COLOR = "004D77";
 const LIGHT_BLUE = "DCEBF3";
 const LIGHT_GRAY = "F3F4F6";
@@ -45,6 +47,12 @@ const getProductCategoryNames = (product) =>
 
 const getProductSubcategoryNames = (product) =>
   getProductSubcategories(product).map((subcategory) => subcategory.name).filter(Boolean);
+
+const getProductTotalStock = (product) =>
+  Number(product?.totalStock ?? product?.stock ?? 0) || 0;
+
+const hasLowStock = (product) =>
+  getProductTotalStock(product) < LOW_STOCK_THRESHOLD;
 
 function EmptyState({ onCreateProduct, canCreate }) {
   return (
@@ -95,6 +103,7 @@ function Products() {
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterSubcategory, setFilterSubcategory] = useState("all");
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -124,7 +133,7 @@ function Products() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, filterCategory, filterSubcategory]);
+  }, [search, filterCategory, filterSubcategory, showLowStockOnly]);
 
   // Resetear subcategoría cuando cambia la categoría
   useEffect(() => {
@@ -197,7 +206,12 @@ function Products() {
   }, [data, filterCategory]);
   // Verificar si hay filtros activos
   const hasActiveFilters =
-    filterCategory !== "all" || filterSubcategory !== "all";
+    filterCategory !== "all" || filterSubcategory !== "all" || showLowStockOnly;
+
+  const lowStockCount = useMemo(
+    () => data.filter(hasLowStock).length,
+    [data],
+  );
 
   const filteredData = useMemo(() => {
     return data.filter((row) => {
@@ -229,9 +243,12 @@ function Products() {
         filterSubcategory === "all" ||
         subcategoryNames.includes(filterSubcategory);
 
-      return matchesSearch && matchesCategory && matchesSubcategory;
+      const matchesLowStock =
+        !showLowStockOnly || hasLowStock(row);
+
+      return matchesSearch && matchesCategory && matchesSubcategory && matchesLowStock;
     });
-  }, [data, search, filterCategory, filterSubcategory]);
+  }, [data, search, filterCategory, filterSubcategory, showLowStockOnly]);
 
   const totalPages = Math.max(
     1,
@@ -499,6 +516,12 @@ function Products() {
   const resetFilters = () => {
     setFilterCategory("all");
     setFilterSubcategory("all");
+    setShowLowStockOnly(false);
+  };
+
+  const handleShowLowStockProducts = () => {
+    setShowLowStockOnly(true);
+    setCurrentPage(1);
   };
 
   return (
@@ -526,6 +549,28 @@ function Products() {
               canCreate={canCreate}
               onCreate={() => navigate('/admin/purchases/products/new')}
             />
+          </div>
+        )}
+
+        {!loading && canView && lowStockCount > 0 && (
+          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800 shadow-sm">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">Productos con stock bajo</p>
+              <p className="text-xs leading-relaxed text-amber-700">
+                {lowStockCount === 1
+                  ? "Hay 1 producto con menos de 10 unidades disponibles."
+                  : `Hay ${lowStockCount} productos con menos de 10 unidades disponibles.`}
+                {" Revisa el inventario para programar una compra o reposicion."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleShowLowStockProducts}
+              className="ml-auto shrink-0 rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-100"
+            >
+              Ver stock bajo
+            </button>
           </div>
         )}
 
@@ -611,8 +656,11 @@ function Products() {
                 </thead>
                 <tbody>
                   {currentData.map((row, index) => {
+                    const lowStock = hasLowStock(row);
                     const rowBg =
-                      index % 2 === 0
+                      lowStock
+                        ? "bg-amber-50 hover:bg-amber-100"
+                        : index % 2 === 0
                         ? "bg-gray-100 hover:bg-blue-50"
                         : "bg-white hover:bg-blue-50";
                     const subcategoriaDisplay =
@@ -657,18 +705,30 @@ function Products() {
                           />
                         </td>
                         <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
-                          <div className="mx-auto flex h-8 w-28 items-center justify-center gap-2 rounded-md border border-[#004D77]/15 bg-white px-2.5 shadow-sm">
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[#004D77]/10 text-[#004D77]">
-                              <Package className="h-4 w-4" strokeWidth={2} />
-                            </span>
-                            <span className="min-w-0 truncate font-semibold text-gray-800">
-                              <HighlightText
-                                text={Number(row.totalStock || 0).toLocaleString(
-                                  "es-CO",
+                          <div className="flex items-center justify-center gap-2">
+                            <div className={`flex h-8 w-28 items-center justify-center gap-2 rounded-md border bg-white px-2.5 shadow-sm ${
+                              lowStock ? "border-amber-300" : "border-[#004D77]/15"
+                            }`}>
+                              <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded ${
+                                lowStock ? "bg-amber-100 text-amber-700" : "bg-[#004D77]/10 text-[#004D77]"
+                              }`}>
+                                {lowStock ? (
+                                  <AlertTriangle className="h-4 w-4" strokeWidth={2} />
+                                ) : (
+                                  <Package className="h-4 w-4" strokeWidth={2} />
                                 )}
-                                highlight={search}
-                              />
-                            </span>
+                              </span>
+                              <span className={`min-w-0 truncate font-semibold ${
+                                lowStock ? "text-amber-800" : "text-gray-800"
+                              }`}>
+                                <HighlightText
+                                  text={getProductTotalStock(row).toLocaleString(
+                                    "es-CO",
+                                  )}
+                                  highlight={search}
+                                />
+                              </span>
+                            </div>
                           </div>
                         </td>
                         <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">

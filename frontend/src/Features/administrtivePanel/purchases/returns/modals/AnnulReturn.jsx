@@ -80,13 +80,13 @@ const AnnulReturn = ({ devolucion, onClose, onConfirm, loading = false }) => {
   return (
     <div
       onClick={loading ? undefined : onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-stretch justify-stretch bg-white sm:items-center sm:justify-center sm:bg-black/40 sm:p-4 sm:backdrop-blur-sm"
     >
       <div
         onClick={(event) => event.stopPropagation()}
-        className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl"
+        className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:max-w-2xl sm:rounded-lg"
       >
-        <div className="flex shrink-0 items-center justify-between bg-[#004D77] px-6 py-4">
+        <div className="flex shrink-0 items-center justify-between gap-3 bg-[#004D77] px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex min-w-0 items-center gap-2.5">
             <XCircle className="h-5 w-5 shrink-0 text-white" strokeWidth={2} />
             <div className="min-w-0">
@@ -109,7 +109,7 @@ const AnnulReturn = ({ devolucion, onClose, onConfirm, loading = false }) => {
           </button>
         </div>
 
-        <div className="flex shrink-0 items-start gap-3 border-b border-yellow-100 bg-yellow-50 px-6 py-3">
+        <div className="flex shrink-0 items-start gap-3 border-b border-yellow-100 bg-yellow-50 px-4 py-3 sm:px-6">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-600" />
           <p className="text-xs leading-relaxed text-yellow-800">
             Esta acción es <strong>permanente e irreversible</strong>. La
@@ -118,9 +118,9 @@ const AnnulReturn = ({ devolucion, onClose, onConfirm, loading = false }) => {
           </p>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="grid grid-cols-1 divide-y divide-gray-100 md:grid-cols-2 md:divide-x md:divide-y-0">
-            <div className="px-6 py-5">
+            <div className="px-4 py-4 sm:px-6 sm:py-5">
               <SectionTitle>Detalles de la devolución</SectionTitle>
               <DetailRow
                 icon={FileText}
@@ -156,7 +156,7 @@ const AnnulReturn = ({ devolucion, onClose, onConfirm, loading = false }) => {
               />
             </div>
 
-            <div className="px-6 py-5">
+            <div className="px-4 py-4 sm:px-6 sm:py-5">
               <SectionTitle>Motivo</SectionTitle>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">
                 Motivo de anulación <span className="text-red-500">*</span>
@@ -170,7 +170,7 @@ const AnnulReturn = ({ devolucion, onClose, onConfirm, loading = false }) => {
                   rows={7}
                   disabled={loading}
                   placeholder="Describe el motivo por el cual se anula esta devolución..."
-                  className="w-full resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 outline-none transition-colors placeholder:text-gray-400 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-70"
+                  className="min-h-40 w-full resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 outline-none transition-colors placeholder:text-gray-400 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-70"
                 />
                 <span
                   className={`absolute bottom-2 right-3 text-[10px] ${
@@ -186,12 +186,12 @@ const AnnulReturn = ({ devolucion, onClose, onConfirm, loading = false }) => {
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
+        <div className="flex shrink-0 flex-col-reverse items-stretch gap-2 border-t border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="cursor-pointer rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full cursor-pointer rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >
             Cancelar
           </button>
@@ -199,7 +199,7 @@ const AnnulReturn = ({ devolucion, onClose, onConfirm, loading = false }) => {
             type="button"
             onClick={handleSubmit}
             disabled={loading}
-            className="flex cursor-pointer items-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#003D5e] disabled:cursor-not-allowed disabled:bg-[#004D77]/50"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#003D5e] disabled:cursor-not-allowed disabled:bg-[#004D77]/50 sm:w-auto"
           >
             {loading ? (
               <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />

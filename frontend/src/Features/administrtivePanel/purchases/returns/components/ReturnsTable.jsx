@@ -303,12 +303,12 @@ function ReturnsTable({
   }
 
   return (
-    <div className="flex-1 overflow-x-auto rounded-xl shadow-md min-h-0">
+    <div className="w-full min-w-0 overflow-x-auto rounded-xl shadow-md [-webkit-overflow-scrolling:touch]">
       <table className="min-w-max w-full">
 
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="px-4 py-3 text-center text-sm font-semibold">No. Devolución</th>
+            <th className="sticky left-0 z-10 bg-[#004D77] px-4 py-3 text-center text-sm font-semibold">No. Devolución</th>
             <th className="px-4 py-3 text-center text-sm font-semibold">Compra</th>
             <th className="px-4 py-3 text-center text-sm font-semibold">Proveedor</th>
             <th className="px-4 py-3 text-center text-sm font-semibold">F. Devolución</th>
@@ -322,6 +322,7 @@ function ReturnsTable({
         <tbody>
           {currentData.map((devolucion, index) => {
             const rowBg         = index % 2 === 0 ? "bg-gray-100 hover:bg-blue-50" : "bg-white hover:bg-blue-50";
+            const stickyCellBg  = index % 2 === 0 ? "bg-gray-100 group-hover:bg-blue-50" : "bg-white group-hover:bg-blue-50";
             const proveedor     = devolucion.proveedor ?? devolucion.provider?.name ?? proveedorMap[devolucion.idCompra] ?? "—";
             const progress      = devolucion.progress ?? {};
             const totalUnidades = (devolucion.productos ?? []).reduce(
@@ -330,10 +331,10 @@ function ReturnsTable({
             const progressLabel = progress.label ?? `${devolucion.completedDetails ?? progress.completed ?? 0}/${devolucion.totalDetails ?? progress.total ?? 0}`;
 
             return (
-              <tr key={devolucion.id} className={`transition-colors duration-150 ${rowBg}`}>
+              <tr key={devolucion.id} className={`group transition-colors duration-150 ${rowBg}`}>
 
                 {/* No. Devolución */}
-                <td className="px-4 py-2.5 text-center text-sm text-gray-800 whitespace-nowrap font-medium">
+                <td className={`sticky left-0 z-10 px-4 py-2.5 text-center text-sm text-gray-800 whitespace-nowrap font-medium transition-colors duration-150 ${stickyCellBg}`}>
                   {highlight(devolucion.id, search)}
                 </td>
 

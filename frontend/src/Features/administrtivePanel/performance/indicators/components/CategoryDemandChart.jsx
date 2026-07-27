@@ -28,11 +28,11 @@ function CategoryDemandChart({ data = [] }) {
   }));
 
   return (
-    <div style={{ ...chartCard, display: "flex", flexDirection: "column" }}>
+    <div style={{ ...chartCard, display: "flex", flexDirection: "column", minWidth: 0 }}>
       <h3 style={cardTitle}>Categorías Demandadas</h3>
 
-      <div style={{ width: "100%", height: isMobile ? 180 : 150 }}>
-        <ResponsiveContainer width="100%" height="100%">
+      <div style={{ width: "100%", minWidth: 0, height: isMobile ? 180 : 150, minHeight: isMobile ? 180 : 150 }}>
+        <ResponsiveContainer width="100%" height={isMobile ? 180 : 150} minWidth={0}>
           <PieChart>
             <Pie
               data={categories}
@@ -44,8 +44,8 @@ function CategoryDemandChart({ data = [] }) {
               dataKey="percentage"
               strokeWidth={0}
             >
-              {categories.map((category) => (
-                <Cell key={category.idCategory} fill={category.color} />
+              {categories.map((category, index) => (
+                <Cell key={`${category.idCategory ?? category.name}-${index}`} fill={category.color} />
               ))}
             </Pie>
             <Tooltip
@@ -58,9 +58,9 @@ function CategoryDemandChart({ data = [] }) {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "12px" }}>
-        {categories.map((category) => (
+        {categories.map((category, index) => (
           <div
-            key={category.idCategory}
+            key={`${category.idCategory ?? category.name}-${index}`}
             style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
@@ -98,4 +98,3 @@ function CategoryDemandChart({ data = [] }) {
 }
 
 export default CategoryDemandChart;
-

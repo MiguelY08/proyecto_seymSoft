@@ -1,8 +1,9 @@
 // useProductCard.js
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
+import { useAuth } from '../../../access/context/AuthContext';
 import { useCart } from '../../Context/CartContext';
 import { useFavorites } from '../../Context/Favoritescontext';
 import { useAlert } from '../../alerts/useAlert';
@@ -14,9 +15,13 @@ import {
 } from '../helpers/productCard.helpers';
 import { getDisplayPricing } from '../../utils/shopPricingHelper';
 
+const PRODUCT_CARD_IMAGE_INTERVAL_MS = 2200;
+
 export function useProductCard(productData = {}, clientType = 'DETAL') {
   const navigate = useNavigate();
+  const location = useLocation();
 
+  const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
   const { toggleFavorite, isFavorite } = useFavorites();
   const { showError, showSuccess } = useAlert();
@@ -123,7 +128,7 @@ export function useProductCard(productData = {}, clientType = 'DETAL') {
       setActiveImageIndex((currentIndex) =>
         currentIndex === product.images.length - 1 ? 0 : currentIndex + 1
       );
-    }, 1200);
+    }, PRODUCT_CARD_IMAGE_INTERVAL_MS);
   }, [clearCarouselInterval, hasMultipleImages, product.images.length]);
 
   /**
@@ -195,6 +200,19 @@ export function useProductCard(productData = {}, clientType = 'DETAL') {
         return;
       }
 
+      if (!isAuthenticated) {
+        showError(
+          'Inicia sesión',
+          'Debes iniciar sesión antes de agregar productos al carrito.'
+        );
+        navigate('/login', {
+          state: {
+            from: `${location.pathname}${location.search}`,
+          },
+        });
+        return;
+      }
+
       const wasAdded = await addToCart(product, 1);
 
       if (!wasAdded) {
@@ -210,7 +228,17 @@ export function useProductCard(productData = {}, clientType = 'DETAL') {
         `${product.name} se ha agregado al carrito.`
       );
     },
-    [addToCart, available, product, showError, showSuccess]
+    [
+      addToCart,
+      available,
+      isAuthenticated,
+      location.pathname,
+      location.search,
+      navigate,
+      product,
+      showError,
+      showSuccess,
+    ]
   );
 
   /**

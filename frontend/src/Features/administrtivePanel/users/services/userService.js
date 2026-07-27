@@ -67,6 +67,11 @@ const mapUserFromApi = (apiUser) => ({
   permissions: apiUser.permissions || [],
 });
 
+const getResponseMeta = (responseData = {}) => ({
+  warning: responseData.warning ?? responseData.data?.warning ?? null,
+  errorCode: responseData.errorCode ?? responseData.data?.errorCode ?? null,
+});
+
 // ---------------------------------------------------------------------
 // Servicio de usuarios (API REST)
 // ---------------------------------------------------------------------
@@ -148,21 +153,32 @@ export const UserService = {
 
     const response = await apiClient.post('/users', payload);
 
-    const createdData = response.data.data ?? response.data.user ?? response.data;
-    const createdUser = createdData?.user ?? createdData;
+    const responseData = response.data ?? {};
+    const createdData = responseData.data ?? responseData.user ?? responseData;
+    const createdUser =
+      createdData?.user ??
+      createdData?.createdUser ??
+      createdData?.data?.user ??
+      createdData ??
+      {};
+    const { warning, errorCode } = getResponseMeta(responseData);
 
     return {
-      id: createdUser.idUser ?? createdUser.id,
-      name: createdUser.fullName ?? createdUser.name,
-      email: createdUser.email,
-      phone: createdUser.phone ?? null,
+      id: createdUser.idUser ?? createdUser.id ?? null,
+      name: createdUser.fullName ?? createdUser.name ?? userData.name,
+      email: createdUser.email ?? userData.email,
+      phone: createdUser.phone ?? userData.phone ?? null,
       active:
         createdUser.idStatus === 1 ||
         createdUser.status?.id === 1 ||
-        createdUser.status?.name === 'Activo',
-      createdAt: createdUser.creationDate ?? createdUser.createdAt,
+        createdUser.status?.name === 'Activo' ||
+        createdUser.status === 'Activo' ||
+        createdUser.active === true,
+      createdAt: createdUser.creationDate ?? createdUser.createdAt ?? null,
       role: normalizeRole(createdData?.role ?? createdUser.role),
       permissions: createdData?.permissions || [],
+      warning,
+      errorCode,
     };
   },
 

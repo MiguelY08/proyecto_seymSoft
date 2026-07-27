@@ -1,6 +1,6 @@
 // src/features/orders/components/OrdersTable.jsx
 import React from 'react';
-import { Info, SquarePen, XCircle, Package } from 'lucide-react';
+import { AlertTriangle, Info, SquarePen, XCircle, Package } from 'lucide-react';
 import {
   highlight,
   EstadoLogisticoBadgeTable,
@@ -10,6 +10,7 @@ import {
 import { ESTADOS_LOGISTICOS, PaymentService } from '../services/ordersService';
 import OrderPaymentHover from './OrderPaymentHover';
 import Permission from '../../../configuration/roles/components/Permission';
+import { formatDeliveryAddress } from '../helpers/deliveryAddressHelper';
 
 // ─── Empty State ─────────────────────────────────────────────────────────────
 function EmptyState({ isSearching }) {
@@ -40,17 +41,32 @@ function EmptyState({ isSearching }) {
 // ─── OrdersTable ─────────────────────────────────────────────────────────────
 function getDeliveryText(order = {}) {
   const deliveryType = String(order.tipoEntrega ?? order.deliveryType ?? '').toLowerCase();
-  const deliveryAddress = order.direccionEntrega ?? order.deliveryAddress ?? order.address ?? '';
 
   if (deliveryType.includes('recoge') || deliveryType.includes('recibe')) {
     return 'Recoger en tienda';
   }
 
-  return deliveryAddress || 'Sin direccion registrada';
+  return formatDeliveryAddress(order) || 'Sin direccion registrada';
 }
 
-function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', totalOrders = 0 }) {
-  const isSearching = totalOrders > 0 && search.trim().length > 0;
+
+function requiresShippingAmount(order = {}) {
+  const origin = String(order.origen ?? order.origin ?? '').toLowerCase();
+  const deliveryType = String(order.tipoEntrega ?? order.deliveryType ?? '').toLowerCase();
+  const shippingAmount = Number(order.shippingAmount ?? 0);
+  return origin === 'web' && deliveryType === 'domicilio' && shippingAmount <= 0;
+}
+
+function OrdersTable({
+  orders,
+  onViewDetail,
+  onEdit,
+  onCancel,
+  search = '',
+  totalOrders = 0,
+  hasActiveFilters = false,
+}) {
+  const isSearching = hasActiveFilters || (totalOrders > 0 && search.trim().length > 0);
   const [paymentCache, setPaymentCache] = React.useState({});
   const [paymentHoverPositions, setPaymentHoverPositions] = React.useState({});
 
@@ -121,8 +137,8 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', tota
       <table className="min-w-max w-full">
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="px-4 py-3 text-center text-sm font-semibold">N° Pedido</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Cliente</th>
+            <th className="sticky left-0 z-10 bg-[#004D77] px-4 py-3 text-center text-sm font-semibold">N° Pedido</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold">Recibe/Cliente</th>
             <th className="px-4 py-3 text-center text-sm font-semibold">Fecha</th>
             <th className="px-4 py-3 text-center text-sm font-semibold">Entrega</th>
             <th className="px-4 py-3 text-center text-sm font-semibold">Total</th>
@@ -133,11 +149,22 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', tota
         </thead>
         <tbody>
           {orders.map((order, index) => {
-            const rowBg = index % 2 === 0 ? 'bg-gray-100 hover:bg-blue-50' : 'bg-white hover:bg-blue-50';
+            const needsShippingAmount = requiresShippingAmount(order);
+            const rowBg = needsShippingAmount
+              ? 'bg-amber-50 hover:bg-amber-100'
+              : index % 2 === 0 ? 'bg-gray-100 hover:bg-blue-50' : 'bg-white hover:bg-blue-50';
+            const stickyCellBg = needsShippingAmount
+              ? 'bg-amber-50 group-hover:bg-amber-100'
+              : index % 2 === 0
+                ? 'bg-gray-100 group-hover:bg-blue-50'
+                : 'bg-white group-hover:bg-blue-50';
             // Llamada corregida con dos parámetros
             const { deshabilitado } = getPermisos(order.estadoLogistico, order.pagoEstado);
             const entregaMostrar = getDeliveryText(order);
-            const clienteMostrar = order.clienteNombre || 'Cliente no especificado';
+            const clienteMostrar =
+              order.deliveryRecipientName ||
+              order.clienteNombre ||
+              'Cliente no especificado';
             const cachedPayments = paymentCache[order.id];
             const hoverPosition = paymentHoverPositions[order.id];
 
@@ -152,8 +179,8 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', tota
             }
 
             return (
-              <tr key={order.id} className={`transition-colors duration-150 ${rowBg}`}>
-                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap font-mono">
+              <tr key={order.id} className={`group transition-colors duration-150 ${rowBg}`}>
+                <td className={`sticky left-0 z-10 px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap font-mono transition-colors duration-150 ${stickyCellBg}`}>
                   {highlight(order.numeroPedido || String(order.id), search)}
                 </td>
                 <td className="px-4 py-2.5 text-center text-sm text-gray-800 whitespace-nowrap">
@@ -163,7 +190,15 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', tota
                   {highlight(order.fechaPedido ? new Date(order.fechaPedido).toLocaleDateString('es-CO') : '', search)}
                 </td>
                 <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap max-w-xs truncate">
-                  {highlight(entregaMostrar, search)}
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="truncate">{highlight(entregaMostrar, search)}</span>
+                    {needsShippingAmount && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                        <AlertTriangle className="h-3 w-3" strokeWidth={2} />
+                        Envio pendiente
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap font-semibold">
                   {highlight(`$${order.total.toLocaleString()}`, search)}

@@ -430,33 +430,33 @@ function SaleEditForm() {
     ));
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4 min-w-0">
+    <div className="w-full px-3 py-4 sm:px-5 lg:px-8 lg:py-6">
+      <div className="mb-5 flex flex-col gap-4 sm:mb-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
           <button
             type="button"
             onClick={handleCancel}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors shrink-0"
+            className="shrink-0 rounded-full p-2 transition-colors hover:bg-gray-100"
             title="Volver a ventas"
           >
             <ChevronLeft className="w-5 h-5 text-gray-600" />
           </button>
 
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-gray-900 truncate">
+            <h1 className="text-xl font-bold leading-tight text-gray-900 sm:text-2xl">
               {title}
             </h1>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-gray-500">
               Actualiza los datos permitidos según el estado actual de la venta.
             </p>
           </div>
         </div>
 
-        <div className="flex gap-3 shrink-0">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3 lg:shrink-0">
           <button
             type="button"
             onClick={handleCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 sm:w-auto sm:px-4"
           >
             Cancelar
           </button>
@@ -465,7 +465,7 @@ function SaleEditForm() {
             type="button"
             onClick={handleSave}
             disabled={loading || annulledSale}
-            className="px-4 py-2 text-sm font-medium text-white bg-[#004D77] rounded-lg hover:bg-[#003b5c] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-3 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003b5c] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-4"
           >
             {loading ? (
               <>
@@ -482,7 +482,7 @@ function SaleEditForm() {
         </div>
       </div>
 
-      <div className="mb-6 space-y-3">
+      <div className="mb-5 space-y-3 sm:mb-6">
         {!approvedSale && !annulledSale && (
           <Notice tone="blue">
             Mientras la venta no este aprobada, el pedido no puede avanzar.
@@ -509,16 +509,16 @@ function SaleEditForm() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-visible">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2 lg:gap-6">
+        <section className="overflow-visible rounded-lg border border-gray-200 bg-white shadow-sm">
           <SectionHeader
             icon={FileText}
             title="Información editable"
             description="Estado, entrega y pedido relacionado"
           />
 
-          <div className="p-5 flex flex-col gap-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-4 p-4 sm:p-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <label className="block text-sm font-medium text-gray-700">
                   Estado de la venta <span className="text-red-500">*</span>
@@ -534,10 +534,12 @@ function SaleEditForm() {
                     error={errors.idSaleStatus}
                     placeholder="Estado de la venta"
                     ariaLabel="Estado de la venta"
+                    dropdownClassName="max-sm:w-full"
+                    maxDropdownWidth={340}
                   />
 
                   {approvedSale && (
-                    <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 hidden w-full min-w-[260px] rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 shadow-lg group-hover:block">
+                    <div className="mt-2 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 sm:pointer-events-none sm:absolute sm:left-0 sm:top-full sm:z-20 sm:mt-2 sm:hidden sm:w-full sm:min-w-[260px] sm:shadow-lg sm:group-hover:block">
                       <p className="text-xs leading-relaxed text-yellow-800">
                         La venta ya esta aprobada y su estado no se puede cambiar;
                         para anularla se usa el flujo especial de anulación.
@@ -565,6 +567,8 @@ function SaleEditForm() {
                   error={errors.deliveryType}
                   placeholder="Tipo de entrega"
                   ariaLabel="Tipo de entrega"
+                  dropdownClassName="max-sm:w-full"
+                  maxDropdownWidth={340}
                 />
 
                 {errors.deliveryType && (
@@ -608,7 +612,7 @@ function SaleEditForm() {
                     type="button"
                     onClick={handleUseClientAddress}
                     disabled={loading}
-                    className="mt-2 text-sm text-[#004D77] hover:bg-[#004D77]/10 inline-flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors duration-200 w-fit disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md px-2 py-2 text-sm text-[#004D77] transition-colors duration-200 hover:bg-[#004D77]/10 disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit sm:justify-start sm:py-1"
                   >
                     <Home className="w-3.5 h-3.5" strokeWidth={1.8} />
                     Usar dirección del cliente
@@ -637,6 +641,8 @@ function SaleEditForm() {
                 error={errors.idOrderStatus}
                 placeholder="Estado del pedido"
                 ariaLabel="Estado del pedido"
+                dropdownClassName="max-sm:w-full"
+                maxDropdownWidth={340}
               />
 
               {!canChangeOrderStatus && !annulledSale && (
@@ -654,21 +660,21 @@ function SaleEditForm() {
           </div>
         </section>
 
-        <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <section className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
           <SectionHeader
             icon={Info}
             title="Información general"
             description="Resumen actual de la venta y el pedido"
           />
 
-          <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 sm:gap-4 sm:p-5">
             <InfoItem label="Cliente" value={sale.cliente ?? '-'} />
             <InfoItem label="Vendedor" value={sale.vendedor ?? '-'} />
             <InfoItem label="Estado venta" value={sale.estado ?? '-'} />
             <InfoItem label="Total" value={sale.total ?? '-'} />
           </div>
 
-          <div className="px-5 pb-5">
+          <div className="px-4 pb-4 sm:px-5 sm:pb-5">
             <div className="p-3 bg-gray-100 rounded-lg border border-gray-200">
               <p className="text-sm text-gray-600">
                 Productos, pagos, vendedor, subtotal y tipo de venta no se editan desde este formulario.
@@ -683,13 +689,13 @@ function SaleEditForm() {
 
 function SectionHeader({ icon: Icon, title, description }) {
   return (
-    <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gray-50">
-      <div className="w-7 h-7 rounded-md bg-[#004D77] flex items-center justify-center shrink-0">
+    <div className="flex items-start gap-3 border-b border-gray-100 bg-gray-50 px-4 py-3 sm:items-center sm:px-5 sm:py-3.5">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#004D77]">
         <Icon className="w-4 h-4 text-white" strokeWidth={2} />
       </div>
-      <div>
-        <p className="text-sm font-semibold text-gray-800">{title}</p>
-        <p className="text-xs text-gray-400">{description}</p>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold leading-tight text-gray-800">{title}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-gray-400">{description}</p>
       </div>
     </div>
   );
@@ -697,9 +703,9 @@ function SectionHeader({ icon: Icon, title, description }) {
 
 function InfoItem({ label, value }) {
   return (
-    <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
       <p className="text-xs text-gray-400">{label}</p>
-      <p className="text-sm font-semibold text-gray-700 mt-1">{value}</p>
+      <p className="mt-1 break-words text-sm font-semibold text-gray-700">{value}</p>
     </div>
   );
 }
@@ -712,8 +718,8 @@ function Notice({ tone, children }) {
   };
 
   return (
-    <div className={`p-3 border rounded-lg ${classes[tone]}`}>
-      <p className="text-sm">{children}</p>
+    <div className={`rounded-lg border p-3 sm:p-3.5 ${classes[tone]}`}>
+      <p className="text-sm leading-relaxed">{children}</p>
     </div>
   );
 }

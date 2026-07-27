@@ -6,6 +6,7 @@ import {
 
 import HeaderIconButton from "./HeaderIconButton";
 import ProfileMenu from "./ProfileMenu";
+import { NotificationBell } from "../../shared/components/notifications";
 
 function HeaderActions({
   cartCount,
@@ -26,7 +27,7 @@ function HeaderActions({
   user
 }) {
   return (
-    <div className="flex items-center gap-0.5 sm:gap-1">
+    <div className="flex shrink-0 items-center gap-0.5 sm:gap-1 xl:gap-1.5">
       <HeaderIconButton
         icon={Heart}
         to="/favorites"
@@ -42,6 +43,10 @@ function HeaderActions({
         active={isActive("/cart")}
         ariaLabel="Carrito"
       />
+
+      {user && (
+        <NotificationBell />
+      )}
 
       <ProfileMenu
         getInitials={getInitials}
@@ -60,7 +65,7 @@ function HeaderActions({
       <button
         type="button"
         onClick={onOpenMobileMenu}
-        className="lg:hidden p-1.5 rounded-full hover:bg-[#004D77]/10 transition-colors"
+        className="-mr-1 flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-[#004D77]/10 lg:hidden"
         aria-label="Abrir menú"
         aria-expanded={menuOpen}
       >

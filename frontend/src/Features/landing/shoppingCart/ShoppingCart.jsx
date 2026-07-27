@@ -15,6 +15,8 @@ import {
   CheckCircle,
   ArrowRight,
   SquarePen,
+  UserRound,
+  LoaderCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../shared/Context/CartContext';
@@ -25,6 +27,48 @@ import CompletePay from './modals/CompletePay.jsx';
 import CompleteClientProfile from './modals/CompleteClientProfile.jsx';
 import { useAuth } from '../../access/context/AuthContext';
 import { getSession, saveSession } from '../../access/helpers/authStorage';
+import FormSelect from '../../shared/FormSelect';
+import {
+  ESTADOS_LOGISTICOS,
+  LocationService,
+  ORIGENES,
+  OrdersService,
+} from '../../administrtivePanel/sales/orders/services/ordersService';
+import { getProductBarcode } from '../orders/helpers/customerOrderHelpers';
+
+const buildDeliveryAddress = (deliveryInfo = {}) => {
+  const addressParts = [
+    deliveryInfo?.direccion,
+    deliveryInfo?.ciudadEntregaNombre || deliveryInfo?.ciudad,
+    deliveryInfo?.departamentoEntregaNombre,
+  ]
+    .map((part) => String(part || '').trim())
+    .filter(Boolean);
+
+  const notes = String(deliveryInfo?.notas || '').trim();
+  const address = addressParts.join(', ');
+
+  if (!address) return notes;
+  return notes ? `${address} (${notes})` : address;
+};
+
+const buildCheckoutProducts = (items = []) =>
+  items.map((item) => ({
+    id: Number(item.id),
+    codBarras: getProductBarcode(item),
+    cantidad: Number(item.quantity || 0),
+    precioUnitario: Number(item.price || 0),
+  }));
+
+const PICKUP_STORE_LOCATION = {
+  name: 'Papelería Magic',
+  city: 'Medellín, Colombia',
+  address: 'Cra. 55 #46-64 (La Candelaria)',
+  place: 'CC Manhattan Plaza',
+  details: 'Local 112 · Ventas 1102',
+  mapUrl:
+    'https://www.google.com/maps/place/Centro+Comercial+Manhatan+Plaza/@6.2491669,-75.5729839,360m/data=!3m1!1e3!4m6!3m5!1s0x8e4428fff68501a1:0x23df4219000eef2d!8m2!3d6.249001!4d-75.5731081!16s%2Fg%2F1v4k7kjj?entry=ttu&g_ep=EgoyMDI2MDMxOC4xIKXMDSoASAFQAw%3D%3D',
+};
 
 /* ── Estilos (coherentes con Home/Favorites) ── */
 const STYLES = `
@@ -46,9 +90,9 @@ const STYLES = `
   }
 
   .cart-container {
-    max-width: 1280px;
+    max-width: var(--store-content-max);
     margin: 0 auto;
-    padding: clamp(18px, 3vw, 30px) 18px;
+    padding: clamp(18px, 3vw, 30px) var(--store-content-x);
   }
 
   /* Header */
@@ -312,6 +356,40 @@ const STYLES = `
     color: #1e4060;
     margin-bottom: 6px;
   }
+  .recipient-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .recipient-label-row .form-label {
+    margin-bottom: 0;
+  }
+  .btn-recipient-helper {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 1.5px solid #d8e8f2;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #004D77;
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 5px 9px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+  }
+  .btn-recipient-helper:hover:not(:disabled) {
+    background: #f0f8ff;
+    border-color: #afd0e6;
+    transform: translateY(-1px);
+  }
+  .btn-recipient-helper:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
   .form-input {
     width: 100%;
     padding: 8px 12px;
@@ -386,6 +464,87 @@ const STYLES = `
     font-weight: 900;
     font-size: 1rem;
   }
+  .shipping-pending-value {
+    color: #b45309;
+    font-weight: 900;
+    text-align: right;
+  }
+  .shipping-pending-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: #fff7ed;
+    border: 1.5px solid #fed7aa;
+    border-radius: 12px;
+    color: #92400e;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1.35;
+    padding: 10px 12px;
+    margin: 12px 0 4px;
+  }
+  .shipping-pending-note svg {
+    flex: 0 0 auto;
+    margin-top: 1px;
+  }
+  .pickup-store-info {
+    display: flex;
+    gap: 10px;
+    background: linear-gradient(140deg, #f2f9fd 0%, #ffffff 100%);
+    border: 1.5px solid #d9eaf4;
+    border-radius: 14px;
+    padding: 12px;
+    margin: 2px 0 14px;
+  }
+  .pickup-store-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: #e6f3fb;
+    color: #004D77;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+  .pickup-store-content {
+    min-width: 0;
+    color: #466474;
+    font-size: 0.72rem;
+    line-height: 1.45;
+  }
+  .pickup-store-title {
+    color: #0c2a3a;
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    margin: 0 0 5px;
+    text-transform: uppercase;
+  }
+  .pickup-store-line {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .pickup-store-line strong {
+    color: #1e4060;
+    font-weight: 900;
+  }
+  .pickup-store-map {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #004D77;
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    margin-top: 8px;
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+  .pickup-store-map:hover {
+    color: #0c5c88;
+    text-decoration: underline;
+  }
   .btn-checkout {
     width: 100%;
     background: #004D77;
@@ -407,6 +566,11 @@ const STYLES = `
   .btn-checkout:hover {
     background: #0c5c88;
     transform: translateY(-2px);
+  }
+  .btn-checkout:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
   }
 
   /* Empty state (estilo Favorites) */
@@ -483,6 +647,14 @@ const STYLES = `
     .delivery-method-grid {
       grid-template-columns: 1fr;
     }
+    .pickup-store-info {
+      padding: 11px;
+    }
+    .pickup-store-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+    }
   }
 `;
 
@@ -527,7 +699,7 @@ const getProfileAddress = (user, client) => firstText(
 function ShoppingCart() {
   injectStyles();
   const navigate = useNavigate();
-  const { showConfirm, showError } = useAlert();
+  const { showConfirm, showError, showSuccess } = useAlert();
   const { user, client, setClient } = useAuth();
   const {
     clientId,
@@ -550,10 +722,16 @@ function ShoppingCart() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showClientModal, setShowClientModal] = useState(false);
   const [resumeCheckout, setResumeCheckout] = useState(false);
+  const [isDeliverySubmitting, setIsDeliverySubmitting] = useState(false);
   const [formData, setFormData] = useState({
     nombreCompleto: '',
     correo: '',
     telefono: '',
+    deliveryRecipientName: '',
+    departamentoEntregaCodigo: '',
+    departamentoEntregaNombre: '',
+    ciudadEntregaCodigo: '',
+    ciudadEntregaNombre: '',
     ciudad: '',
     barrio: '',
     direccion: '',
@@ -563,6 +741,9 @@ function ShoppingCart() {
     nombreCompleto: '',
     correo: '',
     telefono: '',
+    deliveryRecipientName: '',
+    departamentoEntregaCodigo: '',
+    ciudadEntregaCodigo: '',
     ciudad: '',
     barrio: '',
     direccion: '',
@@ -571,10 +752,17 @@ function ShoppingCart() {
     nombreCompleto: false,
     correo: false,
     telefono: false,
+    deliveryRecipientName: false,
+    departamentoEntregaCodigo: false,
+    ciudadEntregaCodigo: false,
     ciudad: false,
     barrio: false,
     direccion: false,
   });
+  const [departamentos, setDepartamentos] = useState([]);
+  const [ciudades, setCiudades] = useState([]);
+  const [loadingDepartamentos, setLoadingDepartamentos] = useState(false);
+  const [loadingCiudades, setLoadingCiudades] = useState(false);
 
   const preloadedCustomerData = useMemo(() => ({
     nombreCompleto: String(user?.fullName || getClientFullName(client) || '').trim(),
@@ -589,6 +777,31 @@ function ShoppingCart() {
   const profileAddress = preloadedCustomerData.direccionPerfil;
 
   useEffect(() => {
+    let isMounted = true;
+
+    const loadDepartments = async () => {
+      try {
+        setLoadingDepartamentos(true);
+        const departments = await LocationService.getDepartments();
+        if (isMounted) setDepartamentos(departments);
+      } catch {
+        if (isMounted) {
+          setDepartamentos([]);
+          showError('Error', 'No se pudieron cargar los departamentos.');
+        }
+      } finally {
+        if (isMounted) setLoadingDepartamentos(false);
+      }
+    };
+
+    loadDepartments();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [showError]);
+
+  useEffect(() => {
     setFormData((prev) => ({
       ...prev,
       ...preloadedCustomerData,
@@ -597,13 +810,47 @@ function ShoppingCart() {
   }, [preloadedCustomerData, profileAddress, touched.direccion]);
 
   useEffect(() => {
+    if (deliveryMethod !== 'domicilio' || !formData.departamentoEntregaCodigo) {
+      setCiudades([]);
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    const loadCities = async () => {
+      try {
+        setLoadingCiudades(true);
+        const cities = await LocationService.getCitiesByDepartment(formData.departamentoEntregaCodigo);
+        if (isMounted) setCiudades(cities);
+      } catch {
+        if (isMounted) {
+          setCiudades([]);
+          showError('Error', 'No se pudieron cargar los municipios del departamento.');
+        }
+      } finally {
+        if (isMounted) setLoadingCiudades(false);
+      }
+    };
+
+    loadCities();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [deliveryMethod, formData.departamentoEntregaCodigo, showError]);
+
+  useEffect(() => {
     if (!resumeCheckout || !clientId || cartLoading || cartItems.length === 0) return;
     const timer = window.setTimeout(() => {
       setResumeCheckout(false);
+      if (deliveryMethod === 'domicilio') {
+        handleDeliveryCheckout();
+        return;
+      }
       setShowPaymentModal(true);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [cartItems.length, cartLoading, clientId, resumeCheckout]);
+  }, [cartItems.length, cartLoading, clientId, deliveryMethod, resumeCheckout]);
 
   // Validaciones (idénticas al original)
   const validateNombreCompleto = (value) => {
@@ -628,15 +875,23 @@ function ShoppingCart() {
     if (digitsOnly.length > 10) return 'Máximo 10 dígitos';
     return '';
   };
+  const validateDeliveryRecipientName = (value) => {
+    if (!value.trim()) return 'La persona que recibe o recoge es obligatoria';
+    if (value.trim().length < 3) return 'Mínimo 3 caracteres';
+    return '';
+  };
+  const validateDepartamentoEntrega = (value) => {
+    if (!String(value || '').trim()) return 'El departamento es obligatorio';
+    return '';
+  };
+  const validateCiudadEntrega = (value) => {
+    if (!String(value || '').trim()) return 'El municipio/ciudad es obligatorio';
+    return '';
+  };
   const validateCiudad = (value) => {
     if (!value.trim()) return 'La ciudad es obligatoria';
     if (value.trim().length < 3) return 'Mínimo 3 caracteres';
     if (!/^[a-záéíóúñA-ZÁÉÍÓÚÑ\s]+$/.test(value)) return 'Solo letras';
-    return '';
-  };
-  const validateBarrio = (value) => {
-    if (!value.trim()) return 'El barrio es obligatorio';
-    if (value.trim().length < 3) return 'Mínimo 3 caracteres';
     return '';
   };
   const validateDireccion = (value) => {
@@ -665,11 +920,11 @@ function ShoppingCart() {
         case 'correo':
           error = validateCorreo(value);
           break;
+        case 'deliveryRecipientName':
+          error = validateDeliveryRecipientName(value);
+          break;
         case 'ciudad':
           error = validateCiudad(value);
-          break;
-        case 'barrio':
-          error = validateBarrio(value);
           break;
         case 'direccion':
           error = validateDireccion(value);
@@ -694,11 +949,17 @@ function ShoppingCart() {
       case 'telefono':
         error = validateTelefono(formData.telefono);
         break;
+      case 'deliveryRecipientName':
+        error = validateDeliveryRecipientName(formData.deliveryRecipientName);
+        break;
+      case 'departamentoEntregaCodigo':
+        error = validateDepartamentoEntrega(formData.departamentoEntregaCodigo);
+        break;
+      case 'ciudadEntregaCodigo':
+        error = validateCiudadEntrega(formData.ciudadEntregaCodigo);
+        break;
       case 'ciudad':
         error = validateCiudad(formData.ciudad);
-        break;
-      case 'barrio':
-        error = validateBarrio(formData.barrio);
         break;
       case 'direccion':
         error = validateDireccion(formData.direccion);
@@ -711,23 +972,150 @@ function ShoppingCart() {
 
   const validateForm = () => {
     const newErrors = {
-      nombreCompleto: validateNombreCompleto(preloadedCustomerData.nombreCompleto),
-      correo: validateCorreo(preloadedCustomerData.correo),
-      telefono: validateTelefono(preloadedCustomerData.telefono),
-      ciudad: validateCiudad(formData.ciudad),
-      barrio: validateBarrio(formData.barrio),
-      direccion: validateDireccion(formData.direccion),
+      deliveryRecipientName: validateDeliveryRecipientName(formData.deliveryRecipientName),
+      ...(deliveryMethod === 'domicilio'
+        ? {
+            departamentoEntregaCodigo: validateDepartamentoEntrega(formData.departamentoEntregaCodigo),
+            ciudadEntregaCodigo: validateCiudadEntrega(formData.ciudadEntregaCodigo),
+            direccion: validateDireccion(formData.direccion),
+          }
+        : {}),
     };
-    setErrors(newErrors);
-    setTouched({
-      nombreCompleto: true,
-      correo: true,
-      telefono: true,
-      ciudad: true,
-      barrio: true,
-      direccion: true,
-    });
+    setErrors((prev) => ({ ...prev, ...newErrors }));
+    setTouched((prev) => ({
+      ...prev,
+      deliveryRecipientName: true,
+      ...(deliveryMethod === 'domicilio'
+        ? {
+            departamentoEntregaCodigo: true,
+            ciudadEntregaCodigo: true,
+            direccion: true,
+          }
+        : {}),
+    }));
     return !Object.values(newErrors).some((error) => error !== '');
+  };
+
+  const handleDepartamentoEntregaChange = (departmentCode) => {
+    const selectedDepartment = departamentos.find((department) => String(department.code) === String(departmentCode));
+
+    setFormData((prev) => ({
+      ...prev,
+      departamentoEntregaCodigo: departmentCode,
+      departamentoEntregaNombre: selectedDepartment?.name || '',
+      ciudadEntregaCodigo: '',
+      ciudadEntregaNombre: '',
+      ciudad: '',
+    }));
+    setTouched((prev) => ({
+      ...prev,
+      departamentoEntregaCodigo: true,
+      ciudadEntregaCodigo: false,
+    }));
+    setErrors((prev) => ({
+      ...prev,
+      departamentoEntregaCodigo: validateDepartamentoEntrega(departmentCode),
+      ciudadEntregaCodigo: '',
+      ciudad: '',
+    }));
+  };
+
+  const handleCiudadEntregaChange = (cityCode) => {
+    const selectedCity = ciudades.find((city) => String(city.code) === String(cityCode));
+
+    setFormData((prev) => ({
+      ...prev,
+      ciudadEntregaCodigo: cityCode,
+      ciudadEntregaNombre: selectedCity?.name || '',
+      ciudad: selectedCity?.name || '',
+    }));
+    setTouched((prev) => ({ ...prev, ciudadEntregaCodigo: true }));
+    setErrors((prev) => ({
+      ...prev,
+      ciudadEntregaCodigo: validateCiudadEntrega(cityCode),
+      ciudad: '',
+    }));
+  };
+
+  const handleDeliveryMethodChange = (method) => {
+    setDeliveryMethod(method);
+
+    if (method === 'domicilio') {
+      setShowPaymentModal(false);
+    }
+
+    if (method === 'tienda') {
+      setCiudades([]);
+      setFormData((prev) => ({
+        ...prev,
+        departamentoEntregaCodigo: '',
+        departamentoEntregaNombre: '',
+        ciudadEntregaCodigo: '',
+        ciudadEntregaNombre: '',
+        ciudad: '',
+        barrio: '',
+        direccion: '',
+      }));
+      setErrors((prev) => ({
+        ...prev,
+        departamentoEntregaCodigo: '',
+        ciudadEntregaCodigo: '',
+        ciudad: '',
+        barrio: '',
+        direccion: '',
+      }));
+      setTouched((prev) => ({
+        ...prev,
+        departamentoEntregaCodigo: false,
+        ciudadEntregaCodigo: false,
+        ciudad: false,
+        barrio: false,
+        direccion: false,
+      }));
+    }
+  };
+
+  const handlePickupCheckout = () => {
+    setShowPaymentModal(true);
+  };
+
+  const handleDeliveryCheckout = async () => {
+    const payload = buildCheckoutOrderPayload();
+    const productWithoutBarcode = payload.productos.some((product) => !product.codBarras);
+
+    if (productWithoutBarcode) {
+      showError(
+        'Producto sin código de barras',
+        'Uno de los productos no tiene código de barras y no puede agregarse al pedido.'
+      );
+      return;
+    }
+
+    setIsDeliverySubmitting(true);
+
+    try {
+      const createdOrder = await OrdersService.create(payload);
+      const createdOrderId = createdOrder?.id ?? createdOrder?.pedidoId ?? createdOrder?.orderId;
+
+      if (!createdOrderId) {
+        throw new Error('El pedido fue creado, pero no se recibió el identificador para consultarlo.');
+      }
+
+      await clearCart();
+      showSuccess(
+        'Pedido enviado',
+        'Tu pedido quedó pendiente de asignación del valor de envío. Un asesor lo revisará y te indicará el total a pagar.'
+      );
+      navigate(`/orders-l/${createdOrderId}`);
+    } catch (error) {
+      console.error('Error creando pedido a domicilio:', error);
+      showError(
+        'No se pudo crear el pedido',
+        error?.response?.data?.message || error?.message || 'Intenta nuevamente en unos minutos.'
+      );
+    } finally {
+      setIsDeliverySubmitting(false);
+    }
   };
 
   const getIncompleteProfileFields = () => {
@@ -812,14 +1200,17 @@ function ShoppingCart() {
       return;
     }
 
-    if (deliveryMethod === 'domicilio') {
-      if (!validateForm()) {
-        showError('Formulario incompleto', 'Por favor completa todos los campos correctamente.');
-        return;
-      }
+    if (!validateForm()) {
+      showError('Formulario incompleto', 'Por favor completa todos los campos correctamente.');
+      return;
     }
 
-    setShowPaymentModal(true);
+    if (deliveryMethod === 'domicilio') {
+      await handleDeliveryCheckout();
+      return;
+    }
+
+    handlePickupCheckout();
   };
 
   const displayCartItems = useMemo(
@@ -841,17 +1232,97 @@ function ShoppingCart() {
     () => ({
       ...formData,
       ...preloadedCustomerData,
+      deliveryRecipientName: formData.deliveryRecipientName,
       ciudad: formData.ciudad,
-      barrio: formData.barrio,
       direccion: formData.direccion,
       notas: formData.notas,
     }),
     [formData, preloadedCustomerData]
   );
 
+  const buildCheckoutOrderPayload = () => {
+    const isPickup = deliveryMethod === 'tienda';
+
+    return {
+      clienteId: clientId,
+      tipoEntrega: isPickup ? 'recoge' : 'domicilio',
+      direccionEntrega: isPickup ? 'El cliente lo recoge' : buildDeliveryAddress(checkoutDeliveryInfo),
+      deliveryRecipientName: String(checkoutDeliveryInfo?.deliveryRecipientName || '').trim(),
+      departamentoEntregaCodigo: isPickup ? null : checkoutDeliveryInfo?.departamentoEntregaCodigo,
+      departamentoEntregaNombre: isPickup ? null : checkoutDeliveryInfo?.departamentoEntregaNombre,
+      ciudadEntregaCodigo: isPickup ? null : checkoutDeliveryInfo?.ciudadEntregaCodigo,
+      ciudadEntregaNombre: isPickup ? null : checkoutDeliveryInfo?.ciudadEntregaNombre,
+      productos: buildCheckoutProducts(displayCartItems),
+      estadoLogistico: ESTADOS_LOGISTICOS.EN_PROCESO,
+      origen: ORIGENES.WEB,
+      saleType: ORIGENES.WEB,
+    };
+  };
+
   const subtotal = displayCartItems.reduce(
     (total, item) => total + item.price * item.quantity,
     0
+  );
+
+  const departamentoOptions = departamentos.map((department) => ({
+    value: department.code,
+    label: department.name,
+  }));
+  const ciudadOptions = ciudades.map((city) => ({
+    value: city.code,
+    label: city.name,
+  }));
+
+  const handleUseSessionNameForRecipient = () => {
+    const sessionName = String(preloadedCustomerData.nombreCompleto || '').trim();
+    if (!sessionName) return;
+
+    setFormData((prev) => ({ ...prev, deliveryRecipientName: sessionName }));
+    setTouched((prev) => ({ ...prev, deliveryRecipientName: true }));
+    setErrors((prev) => ({
+      ...prev,
+      deliveryRecipientName: validateDeliveryRecipientName(sessionName),
+    }));
+  };
+
+  const renderDeliveryRecipientField = () => (
+    <div className="form-group">
+      <div className="recipient-label-row">
+        <label className="form-label">
+          <UserRound size={12} /> Persona que recibe/recoge <span className="text-red-500">*</span>
+        </label>
+        <button
+          type="button"
+          className="btn-recipient-helper"
+          onClick={handleUseSessionNameForRecipient}
+          disabled={!preloadedCustomerData.nombreCompleto}
+          title="Usar el nombre del cliente en sesión"
+        >
+          <UserRound size={12} /> Usar cliente
+        </button>
+      </div>
+      <input
+        type="text"
+        name="deliveryRecipientName"
+        value={formData.deliveryRecipientName}
+        onChange={handleInputChange}
+        onBlur={() => handleBlur('deliveryRecipientName')}
+        placeholder="Nombre completo de quien recibe o recoge"
+        maxLength={255}
+        className={`form-input ${
+          errors.deliveryRecipientName && touched.deliveryRecipientName
+            ? 'error'
+            : formData.deliveryRecipientName && !errors.deliveryRecipientName && touched.deliveryRecipientName
+            ? 'success'
+            : ''
+        }`}
+      />
+      {errors.deliveryRecipientName && touched.deliveryRecipientName && (
+        <div className="error-message">
+          <AlertCircle size={11} /> {errors.deliveryRecipientName}
+        </div>
+      )}
+    </div>
   );
 
   if (cartLoading) {
@@ -866,6 +1337,30 @@ function ShoppingCart() {
             <p className="cart-empty-sub">
               Estamos sincronizando tus productos.
             </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="cart-page">
+        <div className="cart-container">
+          <div className="cart-empty">
+            <div className="cart-empty-icon">
+              <UserRound size={26} color="#004D77" strokeWidth={1.5} />
+            </div>
+            <h3 className="cart-empty-title">Inicia sesión para ver tu carrito</h3>
+            <p className="cart-empty-sub">
+              Tu carrito de compras está asociado a tu cuenta. Ingresa para revisar tus productos y finalizar tu pedido.
+            </p>
+            <button
+              onClick={() => navigate('/login', { state: { from: '/cart' } })}
+              className="btn-outline"
+            >
+              Iniciar sesión <ArrowRight size={12} strokeWidth={3} />
+            </button>
           </div>
         </div>
       </div>
@@ -916,7 +1411,7 @@ function ShoppingCart() {
           <div className="lg:col-span-2 space-y-2.5">
             {displayCartItems.map((item, idx) => (
               <div
-                key={item.id}
+                key={`${item.id}-${item.idBarcode || item.barcode || item.presentation || idx}`}
                 className="cart-item-card"
                 style={{ animationDelay: `${idx * 0.05}s` }}
               >
@@ -996,22 +1491,23 @@ function ShoppingCart() {
                 <div className="delivery-method-grid">
                   <div
                     className={`method-option ${deliveryMethod === 'domicilio' ? 'active' : ''}`}
-                    onClick={() => setDeliveryMethod('domicilio')}
+                    onClick={() => handleDeliveryMethodChange('domicilio')}
                   >
                     <MapPin className="method-icon" />
                     <span className="method-label">Domicilio</span>
                   </div>
                   <div
                     className={`method-option ${deliveryMethod === 'tienda' ? 'active' : ''}`}
-                    onClick={() => setDeliveryMethod('tienda')}
+                    onClick={() => handleDeliveryMethodChange('tienda')}
                   >
                     <Store className="method-icon" />
                     <span className="method-label">Recoger en tienda</span>
                   </div>
                 </div>
 
+                {renderDeliveryRecipientField()}
+
                 {[
-                  { name: 'nombreCompleto', label: 'Nombre completo', icon: HomeIcon, type: 'text', placeholder: 'Juan Pérez' },
                   { name: 'correo', label: 'Correo electrónico', icon: Mail, type: 'email', placeholder: 'ejemplo@correo.com' },
                   { name: 'telefono', label: 'Teléfono', icon: Phone, type: 'tel', placeholder: '300 123 4567' },
                 ].map((field) => (
@@ -1053,40 +1549,59 @@ function ShoppingCart() {
                   </button>
                 </div>
 
+                <div className="mt-3 border-t border-[#e2edf5] pt-4">
+                  <h3 className="mb-3 flex items-center gap-2 text-sm font-black text-[#004D77]">
+                    <MapPin size={15} />
+                    Datos de envío
+                  </h3>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <div className="form-group">
                     <label className="form-label">
-                      <MapPin size={12} /> Ciudad <span className="text-red-500">*</span>
+                      <MapPin size={12} /> Departamento <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
-                      name="ciudad"
-                      value={formData.ciudad}
-                      onChange={handleInputChange}
-                      onBlur={() => handleBlur('ciudad')}
-                      placeholder="Medellín"
-                      className={`form-input ${
-                        errors.ciudad && touched.ciudad ? 'error' : formData.ciudad && !errors.ciudad && touched.ciudad ? 'success' : ''
-                      }`}
+                    <FormSelect
+                      value={formData.departamentoEntregaCodigo}
+                      options={departamentoOptions}
+                      onChange={handleDepartamentoEntregaChange}
+                      disabled={loadingDepartamentos}
+                      error={errors.departamentoEntregaCodigo && touched.departamentoEntregaCodigo}
+                      placeholder={loadingDepartamentos ? 'Cargando departamentos...' : 'Seleccione departamento'}
+                      searchable
+                      searchPlaceholder="Buscar departamento..."
+                      noOptionsMessage="No se encontraron departamentos"
+                      ariaLabel="Departamento de entrega"
+                      className="rounded-[11px] border-[#e2edf5] py-2 text-xs"
                     />
-                    {errors.ciudad && touched.ciudad && <div className="error-message"><AlertCircle size={11} /> {errors.ciudad}</div>}
+                    {errors.departamentoEntregaCodigo && touched.departamentoEntregaCodigo && (
+                      <div className="error-message">
+                        <AlertCircle size={11} /> {errors.departamentoEntregaCodigo}
+                      </div>
+                    )}
                   </div>
                   <div className="form-group">
                     <label className="form-label">
-                      <HomeIcon size={12} /> Barrio <span className="text-red-500">*</span>
+                      <MapPin size={12} /> Municipio/Ciudad <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
-                      name="barrio"
-                      value={formData.barrio}
-                      onChange={handleInputChange}
-                      onBlur={() => handleBlur('barrio')}
-                      placeholder="El Poblado"
-                      className={`form-input ${
-                        errors.barrio && touched.barrio ? 'error' : formData.barrio && !errors.barrio && touched.barrio ? 'success' : ''
-                      }`}
+                    <FormSelect
+                      value={formData.ciudadEntregaCodigo}
+                      options={ciudadOptions}
+                      onChange={handleCiudadEntregaChange}
+                      disabled={loadingCiudades || !formData.departamentoEntregaCodigo}
+                      error={errors.ciudadEntregaCodigo && touched.ciudadEntregaCodigo}
+                      placeholder={loadingCiudades ? 'Cargando municipios...' : 'Seleccione municipio/ciudad'}
+                      searchable
+                      searchPlaceholder="Buscar municipio/ciudad..."
+                      noOptionsMessage="No se encontraron municipios/ciudades"
+                      ariaLabel="Municipio o ciudad de entrega"
+                      className="rounded-[11px] border-[#e2edf5] py-2 text-xs"
                     />
-                    {errors.barrio && touched.barrio && <div className="error-message"><AlertCircle size={11} /> {errors.barrio}</div>}
+                    {errors.ciudadEntregaCodigo && touched.ciudadEntregaCodigo && (
+                      <div className="error-message">
+                        <AlertCircle size={11} /> {errors.ciudadEntregaCodigo}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1118,7 +1633,7 @@ function ShoppingCart() {
                     onChange={handleInputChange}
                     rows="2"
                     className="form-input"
-                    placeholder="Instrucciones especiales..."
+                    placeholder="Barrio, apartamento, torre, referencias o instrucciones para la entrega..."
                   />
                 </div>
 
@@ -1130,15 +1645,33 @@ function ShoppingCart() {
                   </div>
                   <div className="price-row">
                     <span>Envío</span>
-                    <span>N/A</span>
+                    <span className="shipping-pending-value">Pendiente por asesor</span>
                   </div>
                   <div className="price-row total-row">
-                    <span>Total</span>
+                    <span>Total productos</span>
                     <span className="text-[#004D77] text-lg">${subtotal.toLocaleString()} COP</span>
                   </div>
-                  <button className="btn-checkout" onClick={handleProcederPago}>
-                    <CreditCard size={16} /> Proceder al pago
-                  </button>
+                  <div className="shipping-pending-note">
+                    <AlertCircle size={15} />
+                    <span>
+                      Al enviar tu pedido, un asesor asignará el valor del envío y te indicará el total final a pagar.
+                    </span>
+                  </div>
+              <button
+                className="btn-checkout"
+                onClick={handleProcederPago}
+                disabled={isDeliverySubmitting}
+              >
+                {isDeliverySubmitting ? (
+                  <>
+                    <LoaderCircle size={16} className="animate-spin" /> Enviando pedido...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard size={16} /> Enviar pedido
+                  </>
+                )}
+              </button>
                 </div>
               </div>
             ) : (
@@ -1150,17 +1683,43 @@ function ShoppingCart() {
                 <div className="delivery-method-grid">
                   <div
                     className={`method-option ${deliveryMethod === 'domicilio' ? 'active' : ''}`}
-                    onClick={() => setDeliveryMethod('domicilio')}
+                    onClick={() => handleDeliveryMethodChange('domicilio')}
                   >
                     <MapPin className="method-icon" />
                     <span className="method-label">Domicilio</span>
                   </div>
                   <div
                     className={`method-option ${deliveryMethod === 'tienda' ? 'active' : ''}`}
-                    onClick={() => setDeliveryMethod('tienda')}
+                    onClick={() => handleDeliveryMethodChange('tienda')}
                   >
                     <Store className="method-icon" />
                     <span className="method-label">Recoger en tienda</span>
+                  </div>
+                </div>
+
+                {renderDeliveryRecipientField()}
+
+                <div className="pickup-store-info">
+                  <div className="pickup-store-icon" aria-hidden="true">
+                    <MapPin size={18} />
+                  </div>
+                  <div className="pickup-store-content">
+                    <p className="pickup-store-title">Punto de recogida</p>
+                    <p className="pickup-store-line">
+                      <strong>{PICKUP_STORE_LOCATION.name}</strong>
+                    </p>
+                    <p className="pickup-store-line">{PICKUP_STORE_LOCATION.address}</p>
+                    <p className="pickup-store-line">{PICKUP_STORE_LOCATION.place}</p>
+                    <p className="pickup-store-line">{PICKUP_STORE_LOCATION.details}</p>
+                    <p className="pickup-store-line">{PICKUP_STORE_LOCATION.city}</p>
+                    <a
+                      className="pickup-store-map"
+                      href={PICKUP_STORE_LOCATION.mapUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Ver ubicación <ArrowRight size={14} />
+                    </a>
                   </div>
                 </div>
 
@@ -1185,7 +1744,7 @@ function ShoppingCart() {
         </div>
       </div>
 
-      {showPaymentModal && (
+      {showPaymentModal && deliveryMethod === 'tienda' && (
         <CompletePay
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
@@ -1195,8 +1754,7 @@ function ShoppingCart() {
             navigate(`/orders-l/${order.id}`);
           }}
           totalAmount={subtotal}
-          deliveryMethod={deliveryMethod}
-          deliveryInfo={deliveryMethod === 'domicilio' ? checkoutDeliveryInfo : null}
+          deliveryInfo={checkoutDeliveryInfo}
           cartItems={displayCartItems}
           clientId={clientId}
         />
@@ -1224,4 +1782,3 @@ function ShoppingCart() {
 }
 
 export default ShoppingCart;
-

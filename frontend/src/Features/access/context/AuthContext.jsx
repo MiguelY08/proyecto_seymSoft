@@ -5,14 +5,19 @@ import { login as loginService, register as registerService, logout as logoutSer
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [role, setRole] = useState(null);
-  const [permissions, setPermissions] = useState([]);
-  const [client, setClient] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [initialSession] = useState(() => getSession());
+  const [user, setUser] = useState(() => initialSession?.user || null);
+  const [role, setRole] = useState(() => initialSession?.role || null);
+  const [permissions, setPermissions] = useState(() => initialSession?.permissions || []);
+  const [client, setClient] = useState(() => initialSession?.client || null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [requiresPasswordSetup, setRequiresPasswordSetup] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() =>
+    Boolean(initialSession?.user && initialSession?.accessToken)
+  );
+  const [requiresPasswordSetup, setRequiresPasswordSetup] = useState(() =>
+    initialSession?.requiresPasswordSetup || false
+  );
 
   // ═══════════════════════════════════════════════════════════
   // INICIALIZAR CONTEXTO
@@ -22,7 +27,7 @@ export const AuthProvider = ({ children }) => {
     const initializeAuth = async () => {
       try {
         setLoading(true);
-        const session = getSession();
+        const session = initialSession;
 
         if (session && session.user) {
           setUser(session.user);
@@ -48,6 +53,13 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(false);
             setRequiresPasswordSetup(false);
           }
+        } else {
+          setUser(null);
+          setRole(null);
+          setPermissions([]);
+          setClient(null);
+          setIsAuthenticated(false);
+          setRequiresPasswordSetup(false);
         }
       } catch (err) {
         console.error("Error inicializando auth:", err);
@@ -63,7 +75,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     initializeAuth();
-  }, []);
+  }, [initialSession]);
 
   // Mantener sincronizada la identidad entre pestañas del mismo navegador.
   // Evita que el panel conserve un usuario administrador en memoria mientras
@@ -153,7 +165,7 @@ const login = async (email, password) => {
       };
     }
 
-  } catch (err) {
+  } catch {
     const errorMessage = "Error al iniciar sesión";
     setError(errorMessage);
 
@@ -200,7 +212,7 @@ const login = async (email, password) => {
         };
       }
 
-    } catch (err) {
+    } catch {
       const errorMessage = "Error al registrarse";
       setError(errorMessage);
 
@@ -319,7 +331,7 @@ const logout = async () => {
         };
       }
 
-    } catch (err) {
+    } catch {
       const errorMessage = "Error al actualizar perfil";
       setError(errorMessage);
 

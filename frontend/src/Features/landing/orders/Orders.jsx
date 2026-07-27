@@ -105,7 +105,7 @@ function Orders() {
   const renderContent = () => {
     if (authLoading || loading) {
       return (
-        <div className="flex min-h-64 items-center justify-center text-[#004D77]">
+        <div className="flex min-h-[55vh] items-center justify-center text-[#004D77]">
           <LoaderCircle className="animate-spin" size={32} />
         </div>
       );
@@ -230,7 +230,7 @@ function Orders() {
     <div className="min-h-screen bg-[#f6f9fc]" style={{ fontFamily: ORDER_FONT_FAMILY }}>
       <ShopHero image={BgPedidos} title="Pedidos" tag="Historial" subtitle="Revisa el estado de tus compras" />
 
-      <main className="mx-auto max-w-7xl px-5 py-8">
+      <main className="mx-auto max-w-[var(--store-content-max)] px-[var(--store-content-x)] py-8">
         <div className="mb-7 flex flex-wrap items-center gap-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
           <label className="flex min-w-56 flex-1 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2">
             <Search size={16} className="text-slate-400" />
