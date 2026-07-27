@@ -57,8 +57,16 @@ function requiresShippingAmount(order = {}) {
   return origin === 'web' && deliveryType === 'domicilio' && shippingAmount <= 0;
 }
 
-function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', totalOrders = 0 }) {
-  const isSearching = totalOrders > 0 && search.trim().length > 0;
+function OrdersTable({
+  orders,
+  onViewDetail,
+  onEdit,
+  onCancel,
+  search = '',
+  totalOrders = 0,
+  hasActiveFilters = false,
+}) {
+  const isSearching = hasActiveFilters || (totalOrders > 0 && search.trim().length > 0);
   const [paymentCache, setPaymentCache] = React.useState({});
   const [paymentHoverPositions, setPaymentHoverPositions] = React.useState({});
 
@@ -129,7 +137,7 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', tota
       <table className="min-w-max w-full">
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="px-4 py-3 text-center text-sm font-semibold">N° Pedido</th>
+            <th className="sticky left-0 z-10 bg-[#004D77] px-4 py-3 text-center text-sm font-semibold">N° Pedido</th>
             <th className="px-4 py-3 text-center text-sm font-semibold">Recibe/Cliente</th>
             <th className="px-4 py-3 text-center text-sm font-semibold">Fecha</th>
             <th className="px-4 py-3 text-center text-sm font-semibold">Entrega</th>
@@ -145,6 +153,11 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', tota
             const rowBg = needsShippingAmount
               ? 'bg-amber-50 hover:bg-amber-100'
               : index % 2 === 0 ? 'bg-gray-100 hover:bg-blue-50' : 'bg-white hover:bg-blue-50';
+            const stickyCellBg = needsShippingAmount
+              ? 'bg-amber-50 group-hover:bg-amber-100'
+              : index % 2 === 0
+                ? 'bg-gray-100 group-hover:bg-blue-50'
+                : 'bg-white group-hover:bg-blue-50';
             // Llamada corregida con dos parámetros
             const { deshabilitado } = getPermisos(order.estadoLogistico, order.pagoEstado);
             const entregaMostrar = getDeliveryText(order);
@@ -166,8 +179,8 @@ function OrdersTable({ orders, onViewDetail, onEdit, onCancel, search = '', tota
             }
 
             return (
-              <tr key={order.id} className={`transition-colors duration-150 ${rowBg}`}>
-                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap font-mono">
+              <tr key={order.id} className={`group transition-colors duration-150 ${rowBg}`}>
+                <td className={`sticky left-0 z-10 px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap font-mono transition-colors duration-150 ${stickyCellBg}`}>
                   {highlight(order.numeroPedido || String(order.id), search)}
                 </td>
                 <td className="px-4 py-2.5 text-center text-sm text-gray-800 whitespace-nowrap">

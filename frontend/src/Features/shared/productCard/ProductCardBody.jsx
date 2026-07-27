@@ -13,7 +13,7 @@ export function ProductCardBody({ product, available }) {
   const discountPercentage = getDiscountPercentage(product);
 
   return (
-    <div className="flex flex-1 flex-col gap-2 px-3 pb-3 pt-2.5 sm:gap-2.5 sm:px-3.5 sm:pt-3">
+    <div className="flex flex-col gap-1.5 px-3 pb-2.5 pt-2.5 sm:gap-2 sm:px-3.5 sm:pt-3">
       {/* Categoría */}
       <div className="hidden items-center justify-between gap-1.5 sm:flex">
         <span
@@ -55,7 +55,7 @@ export function ProductCardBody({ product, available }) {
       </div>
 
       {/* Nombre */}
-      <div className="min-h-[2.45rem] sm:min-h-[2.55rem]">
+      <div>
         <h3
           className="
             line-clamp-2
@@ -76,21 +76,14 @@ export function ProductCardBody({ product, available }) {
       {/* Descripción corta */}
       {product.description && (
         <p
-          className="
-            hidden
-            line-clamp-2
-            text-[0.66rem]
-            leading-[1.45]
-            text-[#6f8795]
-            sm:block
-          "
+          className="hidden h-[2.88rem] overflow-hidden text-[0.66rem] leading-[1.45] text-[#6f8795] sm:[-webkit-box-orient:vertical] sm:[-webkit-line-clamp:3] sm:[display:-webkit-box]"
         >
           {product.description}
         </p>
       )}
 
       {/* Precios */}
-      <div className="mt-auto flex flex-col gap-1">
+      <div className="flex flex-col gap-1">
         {product.priceLabel && (
           <span className="text-[0.58rem] font-extrabold uppercase tracking-[0.1em] text-[#6f8795]">
             {product.priceLabel}

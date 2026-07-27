@@ -45,7 +45,7 @@ const ViewEvidence = ({
       } else {
         alert('No se puede descargar esta imagen');
       }
-    } catch (error) {
+    } catch {
       alert('Error al descargar la imagen');
     }
   };
@@ -61,8 +61,8 @@ const ViewEvidence = ({
   const currentDescription = currentEvidence?.image_description || '';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] w-full max-w-5xl max-h-[95vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-0 backdrop-blur-sm sm:p-4">
+      <div className="flex h-dvh w-full max-w-5xl flex-col overflow-hidden bg-white shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] sm:h-auto sm:max-h-[95vh] sm:rounded-3xl">
 
         <div className="flex items-center justify-between px-6 py-3.5 flex-shrink-0 bg-gradient-to-r from-[#004D77] to-[#006699]">
           <div>
@@ -76,14 +76,14 @@ const ViewEvidence = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-hidden relative min-h-[400px] bg-gray-50">
-          <div className="flex items-center justify-center h-full p-6">
+        <div className="relative min-h-0 flex-1 overflow-hidden bg-gray-50">
+          <div className="flex h-full items-center justify-center p-3 sm:p-6">
             <div className="relative w-full h-full flex items-center justify-center">
               {currentImageUrl ? (
                 <img
                   src={currentImageUrl}
                   alt={`Evidencia ${currentIndex + 1}`}
-                  className="max-w-full max-h-[65vh] w-auto h-auto object-contain rounded-2xl shadow-lg"
+                  className="h-auto max-h-[58vh] w-auto max-w-full rounded-2xl object-contain shadow-lg sm:max-h-[65vh]"
                   onError={(e) => {
                     e.target.src = '';
                     e.target.alt = 'Error al cargar imagen';
@@ -110,7 +110,7 @@ const ViewEvidence = ({
           </div>
 
           {evidenciasOrdenadas.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-black/50 p-2 rounded-xl backdrop-blur-sm border border-white/20">
+            <div className="absolute bottom-4 left-1/2 flex max-w-[90vw] -translate-x-1/2 gap-2 overflow-x-auto rounded-xl border border-white/20 bg-black/50 p-2 backdrop-blur-sm">
               {evidenciasOrdenadas.map((ev, index) => {
                 const thumbUrl = ev?.imageUrl || ev?.image_path || ev?.preview || ev?.url || '';
                 return (
@@ -118,7 +118,7 @@ const ViewEvidence = ({
                     key={index}
                     onClick={() => setCurrentIndex(index)}
                     className={`
-                      w-14 h-14 rounded-xl overflow-hidden border-2 transition-all duration-200
+                      h-12 w-12 overflow-hidden rounded-xl border-2 transition-all duration-200 sm:h-14 sm:w-14
                       ${index === currentIndex ? 'border-[#004D77] shadow-lg scale-110' : 'border-white/30 opacity-60 hover:opacity-100 hover:scale-105'}
                     `}
                   >
@@ -141,7 +141,7 @@ const ViewEvidence = ({
           )}
         </div>
 
-        <div className="flex items-center justify-between px-6 py-3.5 border-t border-gray-200 flex-shrink-0 bg-white">
+        <div className="flex flex-shrink-0 flex-col gap-3 border-t border-gray-200 bg-white px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex-1 min-w-0">
             {currentDescription ? (
               <p className="text-xs text-gray-600 truncate">{currentDescription}</p>
@@ -150,7 +150,7 @@ const ViewEvidence = ({
             )}
           </div>
           
-          <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+          <div className="flex flex-shrink-0 flex-col gap-2 sm:ml-4 sm:flex-row sm:items-center sm:gap-3">
             <span className="text-xs text-gray-400 font-medium">
               {currentIndex + 1} / {evidences.length}
             </span>
@@ -172,7 +172,7 @@ const ViewEvidence = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+              className="rounded-lg bg-gray-500 px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-600"
             >
               Cancelar
             </button>

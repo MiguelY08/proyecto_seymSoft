@@ -22,6 +22,7 @@ import {
   calculateGeneralStatus
 } from '../utils/returnsHelpers';
 import { getAvailableInvoices, getReturnableSales } from '../data/returnsService';
+import { clientsService } from '../../clients/services/clientsService';
 
 // ======================= DATOS DE REFERENCIA =======================
 
@@ -271,6 +272,101 @@ function DisabledDeliveryToggle({ isDelivery }) {
 }
 
 const generateTempId = () => Date.now() + Math.random();
+
+const normalizeSearchText = (value) => String(value ?? '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .trim();
+
+const normalizeCompactSearchText = (value) =>
+  normalizeSearchText(value).replace(/[^a-z0-9]/g, '');
+
+const getInvoiceDateValue = (invoice = {}) => {
+  const rawDate = invoice.saleDate || invoice.createdAt || invoice.date || invoice.fechaVenta;
+  const time = rawDate ? new Date(rawDate).getTime() : 0;
+  return Number.isNaN(time) ? 0 : time;
+};
+
+const getInvoiceClientDocument = (invoice = {}) => (
+  invoice.clientDocument ||
+  invoice.clienteDocumento ||
+  invoice.customerDocument ||
+  invoice.document ||
+  invoice.documentNumber ||
+  invoice.clientDocumentNumber ||
+  invoice.client_document ||
+  invoice.client_document_number ||
+  invoice.identification ||
+  invoice.clientIdentification ||
+  invoice.client_identification ||
+  ''
+);
+
+const getClientDocument = (client = {}) => (
+  client.document ||
+  client.documentNumber ||
+  client.numberDocument ||
+  client.identification ||
+  ''
+);
+
+const getClientFullName = (client = {}) => (
+  client.fullName ||
+  [client.firstName, client.lastName].filter(Boolean).join(' ') ||
+  ''
+).trim();
+
+const findClientsByDocument = async (search) => {
+  const compactSearch = normalizeCompactSearchText(search);
+  if (compactSearch.length < 3) return [];
+
+  const response = await clientsService.getAll({ page: 1, limit: 10000, search: '' });
+  const clients = Array.isArray(response?.data) ? response.data : [];
+
+  return clients.filter((client) => {
+    const compactDocument = normalizeCompactSearchText(getClientDocument(client));
+    return compactDocument.includes(compactSearch) || compactSearch.includes(compactDocument);
+  });
+};
+
+const mergeAvailableInvoices = (...groups) => {
+  const merged = new Map();
+
+  groups.flat().filter(Boolean).forEach((invoice) => {
+    const key = [
+      invoice.idSale || invoice.id_sale || invoice.id || '',
+      invoice.invoiceNumber || invoice.invoice_number || invoice.noFactura || '',
+      invoice.clientId || invoice.client_id || '',
+    ].join('-');
+
+    if (!merged.has(key)) {
+      merged.set(key, invoice);
+    }
+  });
+
+  return Array.from(merged.values());
+};
+
+const isClientHistorySearch = (term, invoice = {}) => {
+  const normalizedTerm = normalizeSearchText(term);
+  const compactTerm = normalizeCompactSearchText(term);
+  if (normalizedTerm.length < 2) return false;
+
+  return [
+    invoice.clientName,
+    invoice.client_name,
+    invoice.clientId,
+    invoice.client_id,
+    getInvoiceClientDocument(invoice),
+  ].some((value) => {
+    const normalizedValue = normalizeSearchText(value);
+    const compactValue = normalizeCompactSearchText(value);
+    return normalizedValue.includes(normalizedTerm) || (
+      compactTerm.length >= 2 && compactValue.includes(compactTerm)
+    );
+  });
+};
 
 // ======================= COMPONENTE: PRODUCTO SELECCIONADO (EDICIÓN) =======================
 
@@ -828,12 +924,26 @@ useEffect(() => {
 
     try {
       setCargandoFacturas(true);
-      const facturas = await getAvailableInvoices(search);
+      const normalizedSearch = String(search ?? '').trim();
+      const facturas = await getAvailableInvoices(normalizedSearch);
+      const documentClients = normalizedSearch
+        ? await findClientsByDocument(normalizedSearch)
+        : [];
+      const invoicesByDocument = await Promise.all(
+        documentClients
+          .map(getClientFullName)
+          .filter(Boolean)
+          .map((clientName) => getAvailableInvoices(clientName))
+      );
       if (requestId !== facturaRequestIdRef.current) return;
 
-      setFacturasDisponibles(facturas || []);
-      setShowDropdownFactura(facturas && facturas.length > 0);
-    } catch (error) {
+      const normalizedInvoices = mergeAvailableInvoices(
+        Array.isArray(facturas) ? facturas : [],
+        ...invoicesByDocument.map((items) => Array.isArray(items) ? items : [])
+      );
+      setFacturasDisponibles(normalizedInvoices);
+      setShowDropdownFactura(normalizedInvoices.length > 0);
+    } catch {
       if (requestId !== facturaRequestIdRef.current) return;
       setFacturasDisponibles([]);
       setShowDropdownFactura(false);
@@ -871,8 +981,13 @@ useEffect(() => {
       const sale = saleDetails.find(s => String(s.invoiceNumber) === String(factura.invoiceNumber));
       
       if (sale && sale.details && sale.details.length > 0) {
-        const productos = sale.details.map(detail => ({
-          id: detail.idProduct,
+        const productos = sale.details.map((detail, index) => ({
+          id: detail.idSaleDetail ||
+            detail.id_sale_detail ||
+            detail.idSaleProduct ||
+            detail.id_sale_product ||
+            `${detail.idProduct}-${detail.idBarcode || detail.barcode || index}`,
+          idProduct: detail.idProduct,
           nombre: detail.productName,
           cantidad: detail.quantity,
           precioUnit: detail.unitPrice || 0,
@@ -893,17 +1008,18 @@ useEffect(() => {
       }
 
       showSuccess('Factura cargada', `Factura #${factura.invoiceNumber} cargada correctamente`);
-    } catch (error) {
+    } catch {
       setProductosDisponibles([]);
       setSeleccionados({});
     }
   };
   // ==================== FILTRAR FACTURAS ====================
-  const facturasFiltradas = useMemo(() => facturasDisponibles.filter(factura => {
-    const term = searchTermFactura.toLowerCase();
-    return String(factura.invoiceNumber).includes(term) ||
-           factura.clientName?.toLowerCase().includes(term);
-  }), [facturasDisponibles, searchTermFactura]);
+  const facturasFiltradas = useMemo(() => {
+    const term = normalizeSearchText(searchTermFactura);
+    return [...facturasDisponibles]
+      .sort((a, b) => getInvoiceDateValue(b) - getInvoiceDateValue(a))
+      .slice(0, term ? facturasDisponibles.length : 5);
+  }, [facturasDisponibles, searchTermFactura]);
 
   useEffect(() => () => {
     if (facturaSearchTimeoutRef.current) {
@@ -927,7 +1043,7 @@ useEffect(() => {
   useEffect(() => {
     const productosDevueltosData = Object.entries(seleccionados)
       .flatMap(([id, configs]) => {
-        const producto = productosDisponibles.find(p => p.id === Number(id));
+        const producto = productosDisponibles.find(p => String(p.id) === String(id));
         if (!producto || !configs) return [];
 
         return configs.map((config) => ({
@@ -993,7 +1109,7 @@ useEffect(() => {
     }
     
     for (const [productId, configs] of productosConConfigs) {
-      const product = productosDisponibles.find((item) => item.id === Number(productId));
+      const product = productosDisponibles.find((item) => String(item.id) === String(productId));
       const configuredQuantity = configs.reduce(
         (total, config) => total + Number(config.cantidad || 0),
         0
@@ -1130,7 +1246,7 @@ useEffect(() => {
   const productosDevueltos = Object.entries(seleccionados)
     .filter((entry) => entry[1] && entry[1].length > 0)
     .map(([id, configs]) => {
-      const producto = productosDisponibles.find(p => p.id === Number(id));
+      const producto = productosDisponibles.find(p => String(p.id) === String(id));
       return { producto, configs };
     })
     .filter(item => item.producto !== undefined);
@@ -1173,7 +1289,7 @@ useEffect(() => {
   const productosDevueltosData = [];
   
   Object.entries(seleccionados).forEach(([id, configs]) => {
-    const producto = productosDisponibles.find(p => p.id === Number(id));
+    const producto = productosDisponibles.find(p => String(p.id) === String(id));
     if (!producto) return;
     
     configs.forEach((config) => {
@@ -1252,12 +1368,12 @@ useEffect(() => {
     const productosDevueltosData = [];
     
     Object.entries(seleccionados).forEach(([id, configs]) => {
-      const producto = productosDisponibles.find(p => p.id === Number(id));
+      const producto = productosDisponibles.find(p => String(p.id) === String(id));
       if (!producto) return;
       
       configs.forEach((config) => {
         productosDevueltosData.push({
-          idProduct: producto.id,
+          idProduct: producto.idProduct || producto.id,
           productName: producto.nombre,
           quantity: config.cantidad || 1,
           unitPrice: producto.precioUnit || 0,
@@ -1372,17 +1488,16 @@ useEffect(() => {
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="relative bg-white rounded-3xl shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] w-full flex flex-col overflow-hidden"
-        style={{ maxWidth: 1240, maxHeight: '92vh' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-0 backdrop-blur-sm sm:p-4">
+      <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-white shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] sm:h-auto sm:max-h-[92vh] sm:max-w-[1240px] sm:rounded-3xl">
         <LoadingOverlay show={saving} message={isEdit ? 'Guardando cambios...' : 'Creando devolución...'} />
 
-        <div className="bg-gradient-to-r from-[#004D77] to-[#006699] px-6 py-3.5 flex items-center justify-between flex-shrink-0 rounded-t-3xl">
-          <h2 className="text-white font-bold text-[15px] tracking-wide">
+        <div className="flex flex-shrink-0 items-center justify-between bg-gradient-to-r from-[#004D77] to-[#006699] px-4 py-3.5 sm:rounded-t-3xl sm:px-6">
+          <h2 className="min-w-0 truncate pr-3 text-[15px] font-bold tracking-wide text-white">
             {isEdit ? `Editar devolución — ${returnData?.returnNumber || returnData?.numeroDevolucion || ''}` : 'Nueva devolución'}
           </h2>
           {isEdit && (
-            <div className="flex items-center gap-2 bg-white/20 rounded-xl px-3 py-1">
+            <div className="hidden items-center gap-2 rounded-xl bg-white/20 px-3 py-1 md:flex">
               <span className="text-white text-[10px] font-medium">Modo edición: solo estados</span>
             </div>
           )}
@@ -1392,10 +1507,10 @@ useEffect(() => {
           </button>
         </div>
 
-        <div className="flex flex-1 min-h-0 divide-x divide-gray-200">
+        <div className="flex min-h-0 flex-1 flex-col divide-y divide-gray-200 overflow-y-auto lg:flex-row lg:divide-x lg:divide-y-0 lg:overflow-hidden">
 
           {/* COL 1 - Datos generales */}
-          <div className="w-[330px] flex-shrink-0 flex flex-col gap-3 p-5 overflow-y-auto">
+          <div className="flex w-full flex-shrink-0 flex-col gap-3 p-4 sm:p-5 lg:w-[330px] lg:overflow-y-auto">
             {isEdit ? (
               <>
                 <DisabledField label="No. Factura" value={noFactura} required />
@@ -1456,20 +1571,15 @@ useEffect(() => {
                               window.clearTimeout(facturaSearchTimeoutRef.current);
                             }
 
-                            if (e.target.value.trim().length >= 1) {
-                              const searchValue = e.target.value;
-                              facturaSearchTimeoutRef.current = window.setTimeout(() => {
-                                cargarFacturas(searchValue);
-                              }, 350);
-                            } else {
-                              setShowDropdownFactura(false);
-                              setFacturasDisponibles([]);
-                            }
+                            const searchValue = e.target.value;
+                            facturaSearchTimeoutRef.current = window.setTimeout(() => {
+                              cargarFacturas(searchValue.trim());
+                            }, searchValue.trim().length >= 1 ? 350 : 0);
                           }}
                           onFocus={() => {
                             cargarFacturas('');
                           }}
-                          placeholder="Buscar factura o cliente"
+                          placeholder="Buscar venta"
                           className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-700 outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
                           disabled={isEdit}
                         />
@@ -1489,13 +1599,15 @@ useEffect(() => {
                     
                     {showDropdownFactura && facturasFiltradas.length > 0 && (
                       <div ref={dropdownRef} className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                        {facturasFiltradas.map((factura) => {
+                        {facturasFiltradas.map((factura, index) => {
                           const isAnnulled = factura.isAnnulled || factura.statusId === 4;
                           const isUnavailable = factura.canReturn === false;
+                          const clientDocument = getInvoiceClientDocument(factura);
+                          const showClientHistory = isClientHistorySearch(searchTermFactura, factura);
                           
                           return (
                             <button
-                              key={factura.idSale}
+                              key={`${factura.idSale || factura.invoiceNumber}-${clientDocument || index}`}
                               type="button"
                               onClick={() => {
                                 if (isAnnulled) {
@@ -1511,12 +1623,29 @@ useEffect(() => {
                                 }
                                 seleccionarFactura(factura);
                               }}
-                              className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition flex justify-between items-center border-b border-gray-100 last:border-0 ${(factura.hasReturn || isAnnulled || isUnavailable) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              className={`flex w-full items-start justify-between gap-3 border-b border-gray-100 px-4 py-2.5 text-left transition last:border-0 hover:bg-gray-50 ${(factura.hasReturn || isAnnulled || isUnavailable) ? 'opacity-50 cursor-not-allowed' : ''}`}
                               disabled={factura.hasReturn || isAnnulled || isUnavailable}
                             >
-                              <div>
-                                <span className="font-medium text-gray-800">#{factura.invoiceNumber}</span>
-                                <span className="text-xs text-gray-500 ml-2">{factura.clientName}</span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                  <span className="font-semibold text-gray-800">Factura #{factura.invoiceNumber}</span>
+                                  <span className="rounded-full bg-[#004D77]/10 px-2 py-0.5 text-[10px] font-semibold text-[#004D77]">
+                                    Venta ID {factura.idSale || factura.id_sale || 'N/A'}
+                                  </span>
+                                  {showClientHistory && (
+                                    <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                                      Historial del cliente
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="mt-1 truncate text-xs font-medium text-gray-600">
+                                  {factura.clientName || 'Cliente sin nombre'}
+                                </p>
+                                {clientDocument && (
+                                  <p className="mt-0.5 text-[10px] text-gray-400">
+                                    Doc. {clientDocument}
+                                  </p>
+                                )}
                                 {factura.hasReturn && (
                                   <span className="text-xs text-red-400 ml-2">(Ya tiene devolución)</span>
                                 )}
@@ -1529,7 +1658,7 @@ useEffect(() => {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-right">
+                              <div className="flex-shrink-0 text-right">
                                 <span className="text-xs text-gray-400 block">${formatCOP(factura.total || 0)}</span>
                                 <span className="text-[10px] text-gray-300">
                                   {factura.saleDate ? new Date(factura.saleDate).toLocaleDateString('es-CO') : ''}
@@ -1554,9 +1683,6 @@ useEffect(() => {
                       </div>
                     )}
                   </div>
-                  <p className="text-[10px] text-gray-400 mt-1">
-                    Escribe para buscar facturas
-                  </p>
                 </div>
 
                 <div>
@@ -1714,7 +1840,7 @@ useEffect(() => {
           </div>
 
           {/* COL 2 - Selección de productos */}
-          <div className="flex-1 flex flex-col p-5 overflow-hidden min-w-0">
+          <div className="flex min-w-0 flex-1 flex-col p-4 sm:p-5 lg:overflow-hidden">
             <p className="text-sm font-bold text-gray-800 mb-0.5">1. Productos</p>
             <p className="text-xs text-gray-400 mb-3">Selecciona los productos a devolver</p>
             
@@ -1748,11 +1874,11 @@ useEffect(() => {
               <p className="mb-2 text-xs text-red-600">{errors.productos}</p>
             )}
             
-            <div className="flex-1 overflow-y-auto pr-1 space-y-2">
-              {productosDisponibles.map((prod) => {
+            <div className="max-h-[60vh] flex-1 space-y-2 overflow-y-auto pr-1 lg:max-h-none">
+              {productosDisponibles.map((prod, index) => {
                 const isSelected = Boolean(seleccionados[prod.id] && seleccionados[prod.id].length > 0);
                 return (
-                  <div key={prod.id}>
+                  <div key={`${prod.id}-${prod.idBarcode || prod.barcode || index}`}>
                     {!isSelected ? (
                       <div onClick={() => !isEdit && toggleProducto(prod)}
                         className={`flex items-center gap-2.5 border border-gray-200 rounded-xl px-3 py-2.5 ${!isEdit ? 'cursor-pointer hover:border-gray-300 hover:bg-gray-50' : 'cursor-default bg-gray-50 opacity-70'} transition`}>
@@ -1794,7 +1920,7 @@ useEffect(() => {
           </div>
 
           {/* COL 3 - Resumen y cálculo */}
-          <div className="w-[320px] flex-shrink-0 flex flex-col p-5 overflow-hidden">
+          <div className="flex w-full flex-shrink-0 flex-col p-4 sm:p-5 lg:w-[320px] lg:overflow-hidden">
             <p className="text-sm font-bold text-gray-800 mb-0.5">2. Productos devueltos</p>
             <p className="text-xs text-gray-400 mb-3">Cantidad a devolver</p>
             
@@ -1834,11 +1960,11 @@ useEffect(() => {
             <p className="text-sm font-bold text-gray-800 mb-0.5">3. Cálculo</p>
             <p className="text-xs text-gray-400 mb-2">Resumen de devolución</p>
             
-            <div className="flex-1 overflow-y-auto min-h-0 mb-2">
+            <div className="mb-2 min-h-0 flex-1 overflow-x-auto overflow-y-auto">
               {productosDevueltos.length === 0 ? (
                 <p className="text-xs text-gray-300 italic text-center py-4">—</p>
               ) : (
-                <table className="w-full table-fixed text-[10px]">
+                <table className="w-full min-w-[300px] table-fixed text-[10px]">
                   <colgroup>
                     <col className="w-[46%]" />
                     <col className="w-[10%]" />
@@ -1891,15 +2017,15 @@ useEffect(() => {
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 flex-shrink-0 bg-gray-50 rounded-b-3xl">
+        <div className="flex flex-shrink-0 flex-col-reverse gap-3 border-t border-gray-200 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:rounded-b-3xl sm:px-6 sm:py-4">
           <button type="button" onClick={handleSubmit}
             disabled={saving}
-            className="px-7 py-2.5 bg-[#004D77] hover:bg-[#003d61] text-white text-sm font-bold rounded-xl transition cursor-pointer hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none">
+            className="w-full rounded-xl bg-[#004D77] px-7 py-2.5 text-sm font-bold text-white transition hover:bg-[#003d61] hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none sm:w-auto">
             {isEdit ? 'Guardar cambios' : 'Crear devolución'}
           </button>
           <button type="button" onClick={handleClose}
             disabled={saving}
-            className="px-7 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-bold rounded-xl transition cursor-pointer hover:shadow-md active:scale-95 disabled:cursor-not-allowed disabled:opacity-50">
+            className="w-full rounded-xl bg-gray-200 px-7 py-2.5 text-sm font-bold text-gray-700 transition hover:bg-gray-300 hover:shadow-md active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
             Cancelar
           </button>
         </div>

@@ -222,7 +222,7 @@ function FormUser() {
   return (
     <div
       style={{ transition: 'opacity 250ms ease' }}
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4
+      className={`fixed inset-0 z-50 flex items-stretch justify-center bg-white sm:items-center sm:bg-black/40 sm:p-4 sm:backdrop-blur-sm
         ${visible ? 'opacity-100' : 'opacity-0'}`}
     >
       <div
@@ -231,11 +231,11 @@ function FormUser() {
           transformOrigin,
           transition: 'transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 200ms ease',
         }}
-        className={`bg-white rounded-lg shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-lg overflow-hidden flex flex-col
+        className={`flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-md sm:rounded-lg md:max-w-lg
           ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
+        <div className="flex items-center justify-between bg-[#004D77] px-4 py-4 shrink-0 sm:px-6">
           <h2 className="text-white font-semibold text-lg">
             {isEditing ? 'Editar usuario' : 'Nuevo usuario'}
           </h2>
@@ -248,7 +248,7 @@ function FormUser() {
         </div>
 
         {/* Cuerpo */}
-        <div className="px-6 py-3 flex flex-col gap-3 overflow-y-auto">
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-5 sm:px-6 sm:py-4">
           {/* Nombre completo */}
           <div className="flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
@@ -329,17 +329,17 @@ function FormUser() {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
+        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-gray-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
           <button
             onClick={handleCancel}
-            className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+            className="w-full rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 cursor-pointer sm:w-auto"
           >
             Cerrar
           </button>
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className={`px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] rounded-lg transition-colors cursor-pointer flex items-center gap-2 ${
+            className={`flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors cursor-pointer sm:w-auto ${
               isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#003a5c]'
             }`}
           >

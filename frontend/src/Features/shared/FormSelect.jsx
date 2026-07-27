@@ -11,12 +11,16 @@ function FormSelect({
   error = false,
   placeholder = 'Seleccionar',
   className = '',
+  triggerClassName = '',
+  dropdownClassName = '',
   optionClassName = '',
   ariaLabel,
   placement = 'auto',
   searchable = false,
   searchPlaceholder = 'Buscar...',
   noOptionsMessage = 'No se encontraron resultados',
+  minDropdownWidth = 0,
+  maxDropdownWidth,
 }) {
   const safeOptions = Array.isArray(options) ? options : [];
   const [isOpen, setIsOpen] = useState(false);
@@ -41,22 +45,45 @@ function FormSelect({
     if (!wrapperRef.current) return;
 
     const rect = wrapperRef.current.getBoundingClientRect();
-    const gap = 1;
+    const gap = 8;
     const maxHeight = 240;
+    const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const viewportLeft = window.visualViewport?.offsetLeft ?? 0;
+    const viewportTop = window.visualViewport?.offsetTop ?? 0;
+    const horizontalPadding = 8;
+    const availableWidth = Math.max(120, viewportWidth - horizontalPadding * 2);
+    const desiredWidth = Math.max(rect.width, Number(minDropdownWidth) || 0);
+    const limitedWidth = Math.min(
+      desiredWidth,
+      Number(maxDropdownWidth) || availableWidth,
+      availableWidth
+    );
     const spaceBelow = window.innerHeight - rect.bottom - gap;
     const spaceAbove = rect.top - gap;
+    const forceBottom = placement === 'bottom';
     const openUp = placement === 'top' || (placement === 'auto' && spaceBelow < 160 && spaceAbove > spaceBelow);
-    const availableHeight = Math.max(120, Math.min(maxHeight, openUp ? spaceAbove : spaceBelow));
+    const availableHeight = forceBottom
+      ? Math.max(72, Math.min(maxHeight, Math.max(spaceBelow, 72)))
+      : Math.max(120, Math.min(maxHeight, openUp ? spaceAbove : spaceBelow));
+    const minLeft = viewportLeft + horizontalPadding;
+    const maxLeft = viewportLeft + viewportWidth - horizontalPadding - limitedWidth;
+    const left = Math.min(Math.max(rect.left, minLeft), Math.max(minLeft, maxLeft));
+    const top = forceBottom
+      ? rect.bottom + gap
+      : openUp
+      ? Math.max(viewportTop + gap, rect.top - availableHeight - gap)
+      : Math.min(rect.bottom + gap, viewportTop + viewportHeight - gap - availableHeight);
 
     setDropdownStyle({
       position: 'fixed',
-      top: openUp ? Math.max(gap, rect.top - availableHeight - gap) : rect.bottom + gap,
-      left: rect.left,
-      width: rect.width,
+      top,
+      left,
+      width: limitedWidth,
       maxHeight: availableHeight,
       zIndex: 9999,
     });
-  }, [placement]);
+  }, [maxDropdownWidth, minDropdownWidth, placement, setDropdownStyle]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -65,6 +92,7 @@ function FormSelect({
 
       if (!clickedTrigger && !clickedDropdown) {
         setIsOpen(false);
+        setSearchTerm('');
       }
     };
 
@@ -85,11 +113,13 @@ function FormSelect({
     };
   }, [isOpen, updateDropdownPosition]);
 
-  useEffect(() => {
-    if (!isOpen) {
+  const handleToggle = () => {
+    if (disabled) return;
+    if (isOpen) {
       setSearchTerm('');
     }
-  }, [isOpen]);
+    setIsOpen((current) => !current);
+  };
 
   const handleSelect = (nextValue) => {
     onChange(nextValue);
@@ -105,7 +135,7 @@ function FormSelect({
     <div className="relative" ref={wrapperRef}>
       <button
         type="button"
-        onClick={() => !disabled && setIsOpen((current) => !current)}
+        onClick={handleToggle}
         disabled={disabled}
         aria-label={ariaLabel || placeholder}
         className={`
@@ -113,7 +143,7 @@ function FormSelect({
           transition-colors duration-200 flex items-center justify-between gap-2
           ${error ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'}
           ${disabled ? 'bg-gray-100 text-gray-600 border-gray-300 cursor-not-allowed' : 'bg-white text-gray-700 cursor-pointer hover:border-[#004D77]'}
-          ${className}
+          ${className} ${triggerClassName}
         `}
       >
         {SelectedIcon && (
@@ -139,7 +169,7 @@ function FormSelect({
         <div
           ref={dropdownRef}
           style={dropdownStyle}
-          className="bg-white border border-gray-300 rounded-lg shadow-2xl ring-1 ring-black/5 overflow-y-auto"
+          className={`bg-white border border-gray-300 rounded-lg shadow-2xl ring-1 ring-black/5 overflow-y-auto overscroll-contain ${dropdownClassName}`}
         >
           {searchable && (
             <div className="sticky top-0 z-10 bg-white border-b border-gray-100 p-2">

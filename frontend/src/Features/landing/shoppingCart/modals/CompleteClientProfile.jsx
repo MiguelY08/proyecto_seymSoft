@@ -27,10 +27,7 @@ const cleanDocument = (value, documentType) => {
   if (documentType === 'NIT') {
     return String(value ?? '').replace(/[^0-9-]/g, '').slice(0, maxLength);
   }
-  if (['CC', 'CE', 'NIT'].includes(documentType)) {
-    return onlyDigits(value, maxLength);
-  }
-  return String(value ?? '').replace(/[^A-Za-z0-9-]/g, '').slice(0, maxLength);
+  return onlyDigits(value, maxLength);
 };
 
 const cleanCiuCode = (value) =>
@@ -38,6 +35,8 @@ const cleanCiuCode = (value) =>
 
 const validateField = (name, value, form) => {
   const clean = String(value ?? '').trim();
+
+  if (name === 'lastName' && form.personType === 'juridica') return '';
 
   if (name === 'ciuCode') {
     if (form.rut !== 'si') return '';
@@ -51,6 +50,7 @@ const validateField = (name, value, form) => {
     const pair = name === 'contactName' ? form.contactPhone : form.contactName;
     return pair ? 'Completa también este campo' : '';
   }
+
   if (!clean) return 'Este campo es obligatorio';
 
   if (['firstName', 'lastName', 'contactName'].includes(name)) {
@@ -78,6 +78,7 @@ const SELECT_OPTIONS = {
   naturalDocument: [
     { value: 'CC', label: 'Cédula de ciudadanía' },
     { value: 'CE', label: 'Cédula de extranjería' },
+    { value: 'NIT', label: 'NIT' },
   ],
   legalDocument: [{ value: 'NIT', label: 'NIT' }],
   rut: [
@@ -112,6 +113,11 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState('');
 
+  const isLegalPerson = form.personType === 'juridica';
+  const documentOptions = isLegalPerson
+    ? SELECT_OPTIONS.legalDocument
+    : SELECT_OPTIONS.naturalDocument;
+
   const isDirty = useMemo(
     () => Object.keys(initialForm).some(
       (key) => String(form[key] ?? '') !== String(initialForm[key] ?? '')
@@ -120,12 +126,11 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
   );
 
   useEffect(() => {
-    if (isOpen) {
-      setForm(initialForm);
-      setErrors({});
-      setTouched({});
-      setServerError('');
-    }
+    if (!isOpen) return;
+    setForm(initialForm);
+    setErrors({});
+    setTouched({});
+    setServerError('');
   }, [initialForm, isOpen]);
 
   if (!isOpen) return null;
@@ -139,7 +144,7 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
 
     const confirmed = await showConfirm(
       'warning',
-      'Salir sin guardar?',
+      '¿Salir sin guardar?',
       'Los datos que ya escribiste se perderán.',
       { confirmButtonText: 'Sí, salir', cancelButtonText: 'Continuar editando' }
     );
@@ -164,7 +169,11 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
 
     let nextForm = { ...form, [name]: nextValue };
     if (name === 'personType') {
-      nextForm.documentType = nextValue === 'juridica' ? 'NIT' : 'CC';
+      nextForm = {
+        ...nextForm,
+        documentType: nextValue === 'juridica' ? 'NIT' : 'CC',
+        lastName: nextValue === 'juridica' ? '' : form.lastName,
+      };
     }
     if (name === 'rut' && nextValue === 'no') {
       nextForm.ciuCode = '';
@@ -174,14 +183,17 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
     setTouched((current) => ({
       ...current,
       [name]: true,
-      ...(name === 'personType' ? { documentType: true } : {}),
+      ...(name === 'personType' ? { documentType: true, lastName: true } : {}),
       ...(name === 'rut' ? { ciuCode: true } : {}),
     }));
     setErrors((current) => ({
       ...current,
       [name]: validateField(name, nextValue, nextForm),
       ...(name === 'personType'
-        ? { documentType: validateField('documentType', nextForm.documentType, nextForm) }
+        ? {
+            documentType: validateField('documentType', nextForm.documentType, nextForm),
+            lastName: validateField('lastName', nextForm.lastName, nextForm),
+          }
         : {}),
       ...(name === 'rut'
         ? { ciuCode: validateField('ciuCode', nextForm.ciuCode, nextForm) }
@@ -212,7 +224,7 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
         ...form,
         document: form.document.trim(),
         firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
+        lastName: isLegalPerson ? '' : form.lastName.trim(),
         email: form.email.trim().toLowerCase(),
         phone: form.phone.replace(/\D/g, ''),
         contactPhone: form.contactPhone.replace(/\D/g, ''),
@@ -236,13 +248,14 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
         ? 'border-red-400 bg-red-50'
         : 'border-slate-200 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/10'
     }`;
+
   const errorMessage = (name) =>
     touched[name] && errors[name] ? (
       <span className="mt-1 block text-[11px] text-red-500">{errors[name]}</span>
     ) : null;
 
   const renderInput = (name, label, options = {}) => (
-    <label className={options.full ? 'sm:col-span-2' : ''}>
+    <label className={`flex min-w-0 flex-col gap-1 ${options.full ? 'sm:col-span-2' : ''}`}>
       <span className="mb-1 block text-xs font-bold text-slate-600">
         {label} {!options.optional && <span className="text-red-500">*</span>}
       </span>
@@ -261,7 +274,7 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
   );
 
   const renderSelect = (name, label, options, fieldOptions = {}) => (
-    <label className={fieldOptions.full ? 'sm:col-span-2' : ''}>
+    <label className={`flex min-w-0 flex-col gap-1 ${fieldOptions.full ? 'sm:col-span-2' : ''}`}>
       <span className="mb-1 block text-xs font-bold text-slate-600">
         {label} <span className="text-red-500">*</span>
       </span>
@@ -272,20 +285,21 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
         error={Boolean(touched[name] && errors[name])}
         ariaLabel={label}
         className="h-10 rounded-xl py-0 pr-10"
+        placement="bottom"
       />
       {errorMessage(name)}
     </label>
   );
 
   return (
-    <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm">
-      <div className="relative flex max-h-[94vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+    <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/50 p-0 backdrop-blur-sm sm:p-3">
+      <div className="relative flex h-dvh w-full max-w-2xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[94vh] sm:rounded-3xl">
         <LoadingOverlay show={submitting} message="Guardando tus datos..." />
-        <header className="flex items-center justify-between bg-[#004D77] px-5 py-4 text-white">
-          <div className="flex items-center gap-3">
+        <header className="flex shrink-0 items-center justify-between bg-[#004D77] px-4 py-4 text-white sm:px-5">
+          <div className="flex min-w-0 items-center gap-3">
             <span className="rounded-xl bg-white/15 p-2"><UserRound size={19} /></span>
-            <div>
-              <h2 className="font-serif text-xl font-bold">Completa tus datos</h2>
+            <div className="min-w-0">
+              <h2 className="truncate font-serif text-xl font-bold">Completa tus datos</h2>
               <p className="text-xs text-white/75">Los necesitamos para registrar tu compra.</p>
             </div>
           </div>
@@ -300,46 +314,64 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
           </button>
         </header>
 
-        <form onSubmit={handleSubmit} className="overflow-y-auto p-5">
-          <div className="mb-4 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs text-sky-800">
-            Tu perfil se creará automáticamente como cliente <strong>Detal</strong>, sin crédito ni saldo a favor inicial.
-          </div>
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-5">
+            <div className="mb-4 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+              Tu perfil se creará automáticamente como cliente <strong>Detal</strong>, sin crédito ni saldo a favor inicial.
+            </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            {renderSelect('personType', 'Tipo de persona', SELECT_OPTIONS.personType, { full: true })}
-            {renderSelect(
-              'documentType',
-              'Tipo de documento',
-              form.personType === 'juridica'
-                ? SELECT_OPTIONS.legalDocument
-                : SELECT_OPTIONS.naturalDocument,
+            <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
+              <div className="flex items-center gap-2 sm:col-span-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#004D77]">Datos personales</span>
+                <div className="h-px flex-1 bg-[#004D77]/15" />
+              </div>
+
+              {renderSelect('personType', 'Tipo de persona', SELECT_OPTIONS.personType, { full: true })}
+
+              <div className="grid grid-cols-1 gap-2 sm:col-span-2 min-[360px]:grid-cols-[8rem_1fr]">
+                {renderSelect('documentType', 'Tipo', documentOptions)}
+                {renderInput('document', 'Documento', { maxLength: 20 })}
+              </div>
+
+              {renderInput('firstName', isLegalPerson ? 'Nombre empresa' : 'Nombres', {
+                full: isLegalPerson,
+                maxLength: 80,
+                placeholder: isLegalPerson ? 'Ej: Papelería Magic SAS' : 'Ej: Juan Carlos',
+              })}
+              {!isLegalPerson && renderInput('lastName', 'Apellidos', {
+                maxLength: 80,
+                placeholder: 'Ej: Pérez Gómez',
+              })}
+              {renderInput('phone', 'Teléfono', { type: 'tel', maxLength: 10, placeholder: 'Ej: 3001234567' })}
+              {renderInput('address', 'Dirección', { maxLength: 255, placeholder: 'Ej: Calle 10 # 15-25' })}
+              {renderInput('email', 'Correo', { full: true, type: 'email', maxLength: 255, placeholder: 'Ej: cliente@email.com' })}
+
+              <div className="mt-1 flex items-center gap-2 sm:col-span-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#004D77]">Información adicional</span>
+                <div className="h-px flex-1 bg-[#004D77]/15" />
+              </div>
+
+              {renderSelect('rut', 'RUT', SELECT_OPTIONS.rut)}
+              {renderInput('ciuCode', 'Código CIU', {
+                optional: form.rut !== 'si',
+                maxLength: 25,
+                placeholder: form.rut === 'si' ? 'Ej: 4711' : 'No aplica',
+                disabled: form.rut !== 'si',
+              })}
+              {renderInput('contactName', isLegalPerson ? 'Persona encargada' : 'Persona de contacto', { optional: true, maxLength: 100 })}
+              {renderInput('contactPhone', isLegalPerson ? 'Número persona encargada' : 'Teléfono de contacto', {
+                optional: true,
+                type: 'tel',
+                maxLength: 10,
+              })}
+            </div>
+
+            {serverError && (
+              <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{serverError}</p>
             )}
-            {renderInput('document', 'Documento', { maxLength: 20 })}
-            {renderInput('firstName', 'Nombres', { maxLength: 80 })}
-            {renderInput('lastName', 'Apellidos', { maxLength: 80 })}
-            {renderInput('phone', 'Teléfono', { type: 'tel', maxLength: 10 })}
-            {renderInput('email', 'Correo', { type: 'email', maxLength: 255 })}
-            {renderInput('address', 'Dirección', { full: true, maxLength: 255 })}
-            {renderSelect('rut', 'RUT', SELECT_OPTIONS.rut)}
-            {renderInput('ciuCode', 'Código CIU', {
-              optional: form.rut !== 'si',
-              maxLength: 25,
-              placeholder: form.rut === 'si' ? 'Ej: 4711' : 'No aplica',
-              disabled: form.rut !== 'si',
-            })}
-            {renderInput('contactName', 'Persona de contacto', { optional: true, maxLength: 100 })}
-            {renderInput('contactPhone', 'Teléfono de contacto', {
-              optional: true,
-              type: 'tel',
-              maxLength: 10,
-            })}
           </div>
 
-          {serverError && (
-            <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{serverError}</p>
-          )}
-
-          <div className="mt-5 flex justify-end gap-3 border-t border-slate-100 pt-4">
+          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-100 px-4 py-4 sm:flex-row sm:justify-end sm:px-5">
             <button
               type="button"
               onClick={handleClose}
@@ -351,7 +383,7 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
             <button
               type="submit"
               disabled={submitting}
-              className="flex items-center gap-2 rounded-full bg-[#004D77] px-5 py-2.5 text-xs font-bold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-[#003d61] hover:shadow-lg disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60"
+              className="flex items-center justify-center gap-2 rounded-full bg-[#004D77] px-5 py-2.5 text-xs font-bold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-[#003d61] hover:shadow-lg disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60"
             >
               {submitting && <LoaderCircle size={15} className="animate-spin" />}
               {submitting ? 'Guardando...' : 'Guardar y continuar'}

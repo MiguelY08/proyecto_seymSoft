@@ -184,6 +184,14 @@ function OrdersList() {
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
   const endIndex = startIndex + RECORDS_PER_PAGE;
   const currentOrders = filteredOrders.slice(startIndex, endIndex);
+  const hasActiveFilters = Boolean(
+    search.trim() ||
+    fechaInicial ||
+    fechaFinal ||
+    origenFilter ||
+    pagoEstadoFilter ||
+    envioFilter
+  );
 
   // Resetear página al cambiar filtros
   useEffect(() => {
@@ -340,6 +348,7 @@ function OrdersList() {
           search={search}
           offset={startIndex}
           totalOrders={filteredOrders.length}
+          hasActiveFilters={hasActiveFilters}
         />
       </div>
 

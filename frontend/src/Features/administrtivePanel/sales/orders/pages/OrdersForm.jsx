@@ -864,33 +864,32 @@ function OrdersForm() {
   }
 
   return (
-    // ✅ Cambio principal: se reemplaza max-w-7xl mx-auto por w-full
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
+    <div className="w-full px-3 py-4 sm:px-6 lg:px-8">
       {/* Cabecera */}
-      <div className="mb-5 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <button
             onClick={handleCancel}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+            className="shrink-0 rounded-full p-2 transition-colors duration-200 hover:bg-gray-100"
             title="Volver a pedidos"
           >
             <ArrowLeft className="w-5 h-5 text-gray-600" strokeWidth={1.8} />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="min-w-0 truncate text-xl font-bold text-gray-900 sm:text-2xl">
             {isEditMode ? `Editando Pedido #${id}` : 'Nuevo Pedido'}
           </h1>
         </div>
-        <div className="flex gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
           <button
             onClick={handleCancel}
-            className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+            className="w-full rounded-lg bg-gray-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 cursor-pointer sm:w-auto sm:px-6"
           >
             Cancelar
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading || pedidoInmutable}
-            className="px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto sm:px-6"
           >
             {loading ? (
               <>
@@ -908,7 +907,7 @@ function OrdersForm() {
       </div>
 
       {/* Contenido del formulario en dos columnas principales */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <LeftSectionForm
           formData={formData}
           errors={errors}

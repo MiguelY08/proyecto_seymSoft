@@ -308,7 +308,7 @@ function DetailOrder({
     <>
       <div
         style={{ transition: 'opacity 250ms ease' }}
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm
+        className={`fixed inset-0 z-50 flex items-stretch justify-stretch bg-white sm:items-center sm:justify-center sm:bg-black/40 sm:p-4 sm:backdrop-blur-sm
           ${visible ? 'opacity-100' : 'opacity-0'}`}
       >
         <div
@@ -317,34 +317,34 @@ function DetailOrder({
             transformOrigin: 'center center',
             transition: 'transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 200ms ease',
           }}
-          className={`bg-white rounded-lg shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden max-h-[90vh]
+          className={`flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:max-w-3xl sm:rounded-lg
             ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
-            <div className="flex items-center gap-3 min-w-0">
-              <h2 className="text-white font-semibold text-lg">
+          <div className="flex shrink-0 items-start justify-between gap-3 bg-[#004D77] px-4 py-3 sm:items-center sm:px-6 sm:py-4">
+            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <h2 className="truncate text-base font-semibold text-white sm:text-lg">
                 {titulo}
               </h2>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <EstadoLogisticoBadgePill estado={order.estadoLogistico} />
                 <EstadoPagoBadgePill estado={order.pagoEstado} />
               </div>
             </div>
             <button
               onClick={onClose}
-              className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
+              className="shrink-0 rounded-full p-1 text-white transition-colors hover:bg-white/20 cursor-pointer"
             >
               <X className="w-5 h-5" strokeWidth={2} />
             </button>
           </div>
 
           {/* Cuerpo */}
-          <div className="overflow-y-auto flex-1">
+          <div className="min-h-0 flex-1 overflow-y-auto">
             <StatusBanner order={order} />
 
             {paymentReceipts.length > 0 && (
-              <div className="px-6 pt-5">
+              <div className="px-4 pt-4 sm:px-6 sm:pt-5">
                 <PaymentReceiptsSection
                   receipts={paymentReceipts}
                   compact
@@ -357,7 +357,7 @@ function DetailOrder({
 
           <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
             {/* ── Columna izquierda: Detalles ─────────────────── */}
-            <div className="px-6 py-5">
+            <div className="px-4 py-4 sm:px-6 sm:py-5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="h-px flex-1 bg-gray-100" />
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">
@@ -382,7 +382,7 @@ function DetailOrder({
             </div>
 
             {/* ── Columna derecha: Productos y pagos ───────────────────────── */}
-            <div className="px-6 py-5 flex flex-col">
+            <div className="flex flex-col px-4 py-4 sm:px-6 sm:py-5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="h-px flex-1 bg-gray-100" />
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">
@@ -394,37 +394,41 @@ function DetailOrder({
               {/* Productos */}
               {order.productos?.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-2 py-1.5 rounded-md bg-[#004D77]/5 mb-1">
-                    <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide">Producto</span>
-                    <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide text-right">Cant</span>
-                    <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide text-right">P. Unit</span>
-                    <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide text-right">Subtotal</span>
-                  </div>
-                  <div className="flex flex-col mb-3 flex-1">
-                    {order.productos.map((producto, idx) => (
-                      <div
-                        key={idx}
-                        className={`grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-2 py-2 items-start rounded-md ${
-                          idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                        }`}
-                      >
-                        <div className="flex items-start gap-2 min-w-0">
-                          <div className="w-5 h-5 rounded bg-[#004D77]/10 flex items-center justify-center shrink-0 mt-0.5">
-                            <CreditCard className="w-3 h-3 text-[#004D77]/60" strokeWidth={1.5} />
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-xs text-gray-700">{producto.nombre}</span>
-                          </div>
-                        </div>
-                        <span className="text-xs text-gray-500 text-right tabular-nums font-medium">{producto.cantidad}</span>
-                        <span className="text-xs text-gray-500 text-right tabular-nums">
-                          {formatCurrency(producto.precioUnitario)}
-                        </span>
-                        <span className="text-xs font-semibold text-gray-700 text-right tabular-nums">
-                          {formatCurrency(producto.subtotal)}
-                        </span>
+                  <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
+                    <div className="min-w-[420px]">
+                      <div className="grid grid-cols-[minmax(140px,1fr)_auto_auto_auto] gap-x-3 px-2 py-1.5 rounded-md bg-[#004D77]/5 mb-1">
+                        <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide">Producto</span>
+                        <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide text-right">Cant</span>
+                        <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide text-right">P. Unit</span>
+                        <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide text-right">Subtotal</span>
                       </div>
-                    ))}
+                      <div className="flex flex-col mb-3 flex-1">
+                        {order.productos.map((producto, idx) => (
+                          <div
+                            key={idx}
+                            className={`grid grid-cols-[minmax(140px,1fr)_auto_auto_auto] gap-x-3 px-2 py-2 items-start rounded-md ${
+                              idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                            }`}
+                          >
+                            <div className="flex items-start gap-2 min-w-0">
+                              <div className="w-5 h-5 rounded bg-[#004D77]/10 flex items-center justify-center shrink-0 mt-0.5">
+                                <CreditCard className="w-3 h-3 text-[#004D77]/60" strokeWidth={1.5} />
+                              </div>
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-xs text-gray-700">{producto.nombre}</span>
+                              </div>
+                            </div>
+                            <span className="text-xs text-gray-500 text-right tabular-nums font-medium">{producto.cantidad}</span>
+                            <span className="text-xs text-gray-500 text-right tabular-nums">
+                              {formatCurrency(producto.precioUnitario)}
+                            </span>
+                            <span className="text-xs font-semibold text-gray-700 text-right tabular-nums">
+                              {formatCurrency(producto.subtotal)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </>
               ) : (
@@ -458,7 +462,7 @@ function DetailOrder({
                 </div>
 
                 {pagos.length > 0 ? (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
@@ -487,17 +491,17 @@ function DetailOrder({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
+        <div className="flex shrink-0 flex-col-reverse items-stretch gap-2 border-t border-gray-200 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
           <button
             onClick={handleDownloadPDF}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 border border-gray-400 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-400 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200 cursor-pointer sm:w-auto"
           >
             <FileDown className="w-4 h-4" strokeWidth={1.8} />
             Exportar PDF
           </button>
           <button
             onClick={onClose}
-            className="px-6 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+            className="w-full rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 cursor-pointer sm:w-auto"
           >
             Cerrar
           </button>
@@ -508,7 +512,7 @@ function DetailOrder({
                   <>
                     <button
                       onClick={handleMarcarListo}
-                      className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-1"
+                      className="flex w-full items-center justify-center gap-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 sm:w-auto"
                     >
                       <CheckCircle className="w-4 h-4" />
                       Marcar listo
@@ -518,14 +522,14 @@ function DetailOrder({
                 {canChangeOrder && (
                   <button
                     onClick={handleCancelar}
-                    className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors flex items-center gap-1"
+                    className="flex w-full items-center justify-center gap-1 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-600 sm:w-auto"
                   >
                     <XCircle className="w-4 h-4" />
                     Cancelar
                   </button>
                 )}
                 {showEditButton && (
-                  <button onClick={handleEditClick} className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors">
+                  <button onClick={handleEditClick} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] sm:w-auto">
                     <Edit className="w-4 h-4" strokeWidth={1.8} />
                     Editar pedido
                   </button>

@@ -97,13 +97,17 @@ function EstadoDropdown({ value, disabled, estados, onChange, hasError, allowEmp
     if (!open && btnRef.current) {
       const r          = btnRef.current.getBoundingClientRect();
       const listH      = Math.min(estados.length * 38 + 8, 200);
-      const spaceBelow = window.innerHeight - r.bottom;
+      const viewportW  = window.visualViewport?.width ?? window.innerWidth;
+      const viewportH  = window.visualViewport?.height ?? window.innerHeight;
+      const width      = Math.min(Math.max(r.width, 160), viewportW - 16);
+      const left       = Math.min(Math.max(8, r.left), viewportW - width - 8);
+      const spaceBelow = viewportH - r.bottom;
       const openUp     = spaceBelow < listH && r.top > spaceBelow;
       setPos({
-        left:   r.left,
-        width:  r.width,
+        left,
+        width,
         top:    openUp ? undefined : r.bottom + 2,
-        bottom: openUp ? window.innerHeight - r.top + 2 : undefined,
+        bottom: openUp ? viewportH - r.top + 2 : undefined,
       });
     }
     setOpen((o) => !o);
@@ -150,7 +154,7 @@ function EstadoDropdown({ value, disabled, estados, onChange, hasError, allowEmp
       {open && pos && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-[9999] bg-white border border-gray-200 rounded-lg shadow-2xl overflow-hidden py-1"
+          className="fixed z-[9999] max-h-52 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-2xl overscroll-contain"
           style={{ left: pos.left, width: pos.width, top: pos.top, bottom: pos.bottom }}
         >
           {allowEmpty && (
@@ -323,7 +327,7 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
             Proceso completado - inmutable
           </span>
         </div>
-        <div className="grid grid-cols-3 gap-x-3 text-[10px]">
+        <div className="grid grid-cols-1 gap-2 text-[10px] sm:grid-cols-3 sm:gap-x-3">
           <div>
             <span className="font-medium text-gray-500">Motivo</span>
             <p className="text-gray-700 mt-0.5">{linea.motivo || '-'}</p>
@@ -362,7 +366,7 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {/* Motivo */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-gray-600">Motivo <span className="text-red-500">*</span></label>
@@ -468,7 +472,7 @@ const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, err
               {estadoPrincipal}
             </span>
           </div>
-          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
             <span>Devolucion: {totalUsado}/{cantidadLimite} u.</span>
             <span>Disponible: {getReturnAvailableQuantity(producto)} u.</span>
             <span>Tipo: {producto.lineas?.[0]?.tipoDevolucion || '-'}</span>
@@ -521,12 +525,12 @@ const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, err
               <button
                 type="button"
                 onClick={onAddLinea}
-                className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium
+                className="flex w-full min-w-0 items-center justify-center gap-1.5 px-2 py-1.5 text-center text-xs font-medium leading-tight whitespace-normal
                            text-[#004D77] border border-dashed border-[#004D77]/40 rounded-lg
                            hover:bg-[#004D77]/5 hover:border-[#004D77] transition-colors cursor-pointer"
               >
-                <Plus className="w-3 h-3" strokeWidth={2.5} />
-                Agregar linea ({cantidadRestante} u. disponibles)
+                <Plus className="h-3 w-3 shrink-0" strokeWidth={2.5} />
+                <span className="min-w-0">Agregar linea ({cantidadRestante} u. disponibles)</span>
               </button>
             )}
           </div>
@@ -903,7 +907,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
   return (
     <div
       onClick={handleCerrar}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-stretch justify-stretch bg-white sm:items-center sm:justify-center sm:bg-black/40 sm:p-4 sm:backdrop-blur-sm"
     >
       {isSaving && (
         <FullScreenSpinner
@@ -913,13 +917,12 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
 
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-lg shadow-2xl flex flex-col overflow-hidden"
-        style={{ width: '920px', maxWidth: '96vw', maxHeight: '92vh' }}
+        className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:w-[min(920px,96vw)] sm:rounded-lg"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
-          <div>
-            <h2 className="text-white font-semibold text-lg leading-tight">
+        <div className="flex shrink-0 items-center justify-between gap-3 bg-[#004D77] px-4 py-3 sm:px-6 sm:py-4">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold leading-tight text-white sm:text-lg">
               {isEdit
                 ? `Editando devolución ${devolucion?.id}`
                 : `Nueva devolución - ${purchase?.numeroFacturacion ?? ''}`}
@@ -930,16 +933,16 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
           </div>
           <button
             onClick={handleCerrar}
-            className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
+            className="shrink-0 rounded-full p-1 text-white transition-colors hover:bg-white/20 cursor-pointer"
           >
             <X className="w-5 h-5" strokeWidth={2} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="flex flex-1 overflow-hidden divide-x divide-gray-200">
-          <div className="w-[40%] shrink-0 flex flex-col overflow-hidden">
-              <div className="px-5 pt-4 pb-2 shrink-0">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden lg:divide-x lg:divide-gray-200">
+          <div className="flex min-h-0 w-full shrink-0 flex-col border-b border-gray-200 lg:w-[40%] lg:border-b-0">
+              <div className="shrink-0 px-4 pb-2 pt-3 sm:px-5 sm:pt-4">
                 <p className="text-sm font-medium text-gray-700 mb-0.5">
                   {isEdit ? 'Productos de la compra' : 'Productos a devolver'}
                 </p>
@@ -956,7 +959,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
                   Seleccionar todos
                 </label>
               </div>
-              <div className="flex-1 overflow-y-auto px-5 pb-4 flex flex-col gap-1.5">
+              <div className="flex max-h-[34dvh] flex-col gap-1.5 overflow-y-auto px-4 pb-3 sm:px-5 lg:max-h-none lg:flex-1 lg:pb-4">
                 {productosCompra.map((p) => {
                   const isSelected = seleccionados.has(p.codigoBarras);
                   const tieneError = productoTieneErrorConLineas(p.codigoBarras, erroresProducto);
@@ -1008,13 +1011,13 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
               </div>
             </div>
 
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="px-5 pt-4 pb-2 shrink-0">
+          <div className="flex min-h-0 flex-none flex-col overflow-visible lg:flex-1 lg:overflow-hidden">
+            <div className="shrink-0 px-4 pb-2 pt-3 sm:px-5 sm:pt-4">
               <p className="text-sm font-medium text-gray-700 mb-0.5">Configurar productos</p>
             </div>
 
             {erroresGenerales.length > 0 && (
-              <div className="mx-5 mb-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+              <div className="mx-4 mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 sm:mx-5">
                 {erroresGenerales.map((e, i) => (
                   <p key={i} className="text-xs text-red-500 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" /> {e}
@@ -1023,7 +1026,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto px-5 pb-4 flex flex-col gap-3">
+            <div className="flex flex-none flex-col gap-3 overflow-visible px-4 pb-4 sm:px-5 lg:flex-1 lg:overflow-y-auto">
               {productosSeleccionadosArray.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 gap-2">
                   <p className="text-sm">Ningun producto seleccionado</p>
@@ -1049,18 +1052,18 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
+        <div className="flex shrink-0 flex-col-reverse items-stretch gap-2 border-t border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
           <button
             onClick={handleCerrar}
             disabled={isSaving}
-            className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed sm:w-auto"
           >
             Cancelar
           </button>
           <button
             onClick={handleGuardar}
             disabled={isSaving}
-            className="px-6 py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed sm:w-auto"
           >
             {isSaving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Guardar'}
           </button>

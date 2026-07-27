@@ -6,31 +6,31 @@ function Lightbox({ imageUrl, nombre, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 backdrop-blur-sm sm:p-4"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-xs sm:max-w-2xl lg:max-w-5xl"
+        className="relative flex max-h-[92dvh] w-full max-w-[calc(100vw-24px)] flex-col items-center sm:max-w-2xl lg:max-w-5xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Cerrar vista ampliada"
-          className="absolute -top-9 sm:-top-10 right-0 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+          className="absolute right-0 top-0 z-10 flex h-9 w-9 -translate-y-11 cursor-pointer items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 sm:h-10 sm:w-10 sm:-translate-y-12"
         >
-          <X className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2} />
+          <X className="h-5 w-5" strokeWidth={2} />
         </button>
 
         <img
           src={imageUrl}
           alt={nombre ?? 'Vista ampliada del banner'}
-          className="w-full h-auto rounded-xl shadow-2xl"
+          className="max-h-[82dvh] w-full rounded-xl object-contain shadow-2xl"
           draggable={false}
         />
 
         {nombre && (
-          <p className="mt-2 sm:mt-3 text-center text-[10px] sm:text-xs text-white/60 truncate px-4">
+          <p className="mt-2 max-w-full truncate px-4 text-center text-[10px] text-white/60 sm:mt-3 sm:text-xs">
             {nombre}
           </p>
         )}

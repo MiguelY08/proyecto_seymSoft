@@ -226,17 +226,19 @@ const PAGE_STYLES = `
 
   /* ─ Carousel ─ */
   .carousel-wrap {
-    width: 100%;
+    width: calc(100% - var(--store-content-x) - var(--store-content-x));
+    max-width: var(--store-content-inner-max);
+    margin: 0 auto;
     border-radius: 0;
     overflow: hidden;
     position: relative;
     box-shadow: 0 8px 40px rgba(0,0,0,0.12);
   }
   @media (min-width: 640px) {
-    .carousel-wrap { border-radius: 16px; width: 98%; margin: 0 auto; }
+    .carousel-wrap { border-radius: 16px; }
   }
   @media (min-width: 1024px) {
-    .carousel-wrap { border-radius: 20px; width: 95%; }
+    .carousel-wrap { border-radius: 20px; }
   }
 
   /* ─ Staggered card reveal ─ */
@@ -278,6 +280,8 @@ const PAGE_STYLES = `
   .products-grid .pm-card:nth-child(6)  { animation-delay: 0.29s; }
   .products-grid .pm-card:nth-child(7)  { animation-delay: 0.34s; }
   .products-grid .pm-card:nth-child(8)  { animation-delay: 0.39s; }
+  .products-grid .pm-card:nth-child(9)  { animation-delay: 0.44s; }
+  .products-grid .pm-card:nth-child(10) { animation-delay: 0.49s; }
 
   /* ─ Loading skeleton ─ */
   .loading-skeleton {
@@ -292,16 +296,18 @@ const PAGE_STYLES = `
 
   /* ─ Mayoristas section ─ */
   .mayoristas-wrap {
-    width: 100%;
+    width: calc(100% - var(--store-content-x) - var(--store-content-x));
+    max-width: var(--store-content-inner-max);
+    margin: 0 auto;
     position: relative;
     overflow: hidden;
     min-height: 50vh;
   }
   @media (min-width: 640px) {
-    .mayoristas-wrap { width: 98%; margin: 0 auto; border-radius: 16px; min-height: 58vh; }
+    .mayoristas-wrap { border-radius: 16px; min-height: 58vh; }
   }
   @media (min-width: 1024px) {
-    .mayoristas-wrap { width: 95%; border-radius: 20px; min-height: 72vh; }
+    .mayoristas-wrap { border-radius: 20px; min-height: 72vh; }
   }
   .mayoristas-content {
     position: relative;
@@ -448,7 +454,7 @@ function Home() {
     const loadFeaturedProducts = async () => {
       try {
         setLoadingProducts(true);
-        const featuredProducts = await ProductsService.getFeatured(8);
+        const featuredProducts = await ProductsService.getFeatured(10);
         setProducts(featuredProducts);
       } catch (error) {
         console.error('Error cargando productos destacados:', error);
@@ -596,7 +602,7 @@ function Home() {
       )}
 
       {/* ══ Categorías ══ */}
-      <section style={{ maxWidth: 1280, margin: '0 auto', padding: 'clamp(32px,5vw,56px) 20px 0' }}>
+      <section style={{ maxWidth: 'var(--store-content-max)', margin: '0 auto', padding: 'clamp(32px,5vw,56px) var(--store-content-x) 0' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 28 }}>
           <div>
             <p className="section-eyebrow">Explora</p>
@@ -654,7 +660,7 @@ function Home() {
       </section>
 
       {/* ══ Productos destacados ══ */}
-      <section style={{ maxWidth: 1280, margin: '0 auto', padding: 'clamp(32px,5vw,56px) 20px 0' }}>
+      <section style={{ maxWidth: 'var(--store-content-max)', margin: '0 auto', padding: 'clamp(32px,5vw,56px) var(--store-content-x) 0' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 28 }}>
           <div>
             <p className="section-eyebrow">Destacados</p>
@@ -671,12 +677,13 @@ function Home() {
         >
           {loadingProducts || loadingClientType ? (
             // Skeleton loaders
-            Array.from({ length: 8 }).map((_, i) => (
+            Array.from({ length: 10 }).map((_, i) => (
               <div key={`skeleton-${i}`} className="loading-skeleton" style={{ minHeight: '300px', borderRadius: '16px' }} />
             ))
           ) : products.length > 0 ? (
             products
               .filter((product) => product.isActive)
+              .slice(0, 10)
               .map((product) => (
                 <div key={product.id} className="pm-card">
                   <ProductCard

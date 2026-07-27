@@ -246,7 +246,7 @@ function Returns() {
   }
 
   return (
-    <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
+    <div className="h-full min-w-0 flex flex-col gap-4 p-3 sm:p-4">
       <TopBar
         search={search}
         setSearch={(value) => {
@@ -261,9 +261,11 @@ function Returns() {
         returns={returns}
       />
 
-      <PurchaseReturnsMetricsCards metrics={metricsLoading ? DEFAULT_METRICS : metrics} />
+      <div className="hidden md:block">
+        <PurchaseReturnsMetricsCards metrics={metricsLoading ? DEFAULT_METRICS : metrics} />
+      </div>
 
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
+      <div className="w-full min-w-0 rounded-xl bg-white shadow-md">
         <ReturnsTable
           currentData={returns}
           search={search}

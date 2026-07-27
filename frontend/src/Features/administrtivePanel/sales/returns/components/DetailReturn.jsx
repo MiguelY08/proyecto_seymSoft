@@ -61,16 +61,16 @@ const buildNonConformingReason = (detail = {}, info = {}, returnNumber = '') => 
 const actionButtonClass = 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 border border-gray-400 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer';
 const evidenceButtonClass = 'flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-[#004D77]/10 text-[#004D77] hover:bg-[#004D77]/20 transition cursor-pointer';
 
-const DetailDataRow = ({ icon: Icon, label, value, valueClassName = 'text-gray-800' }) => {
+const DetailDataRow = ({ icon, label, value, valueClassName = 'text-gray-800' }) => {
   const hasValue = value !== undefined && value !== null && String(value).trim().length > 0;
 
   return (
     <div className="flex min-w-0 items-start gap-2.5 py-1.5">
       <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${hasValue ? 'bg-[#004D77]/10' : 'bg-gray-100'}`}>
-        <Icon
-          className={`h-4 w-4 ${hasValue ? 'text-[#004D77]' : 'text-gray-300'}`}
-          strokeWidth={1.8}
-        />
+        {React.createElement(icon, {
+          className: `h-4 w-4 ${hasValue ? 'text-[#004D77]' : 'text-gray-300'}`,
+          strokeWidth: 1.8,
+        })}
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{label}</p>
@@ -344,8 +344,8 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-        <div className="bg-white rounded-3xl shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] w-full overflow-hidden" style={{ maxWidth: 920, maxHeight: '92vh' }}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-0 backdrop-blur-sm sm:p-4">
+        <div className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] sm:h-auto sm:max-h-[92vh] sm:max-w-[920px] sm:rounded-3xl">
 
           <div className="bg-[#004D77] px-6 py-3.5 flex items-center justify-between flex-shrink-0">
             <h2 className="text-white font-bold text-[15px] tracking-wide">Detalles de la devolución</h2>
@@ -356,7 +356,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
             </div>
           </div>
 
-          <div className="px-6 py-5 overflow-y-auto" style={{ maxHeight: 'calc(92vh - 148px)' }}>
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
 
             {status === 'Anulado' && (
               <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-2xl">
@@ -379,7 +379,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
               </div>
             )}
 
-            <div className="flex items-start justify-between mb-4">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <h1 className="text-2xl font-black text-gray-900" style={{ fontFamily: 'Georgia, serif' }}>Devolución</h1>
               <div className="border-2 border-[#004D77] rounded-xl px-5 py-2 text-center bg-[#004D77]/5">
                 <p className="text-[10px] font-black text-gray-600 uppercase tracking-wider">Número de Devolución</p>
@@ -422,8 +422,8 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
             {details.length > 0 && (
               <div className="mb-4">
                 <h3 className="text-sm font-bold text-gray-800 mb-2">Productos devueltos</h3>
-                <div className="rounded-xl overflow-hidden border border-gray-200">
-                  <table className="w-full text-xs">
+                <div className="overflow-x-auto rounded-xl border border-gray-200">
+                  <table className="w-full min-w-[720px] text-xs">
                     <thead>
                       <tr className="bg-[#004D77] text-white">
                         <th className="px-3 py-2.5 text-left font-semibold">Producto</th>
@@ -508,12 +508,12 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
             </div>
 
           </div>
-          <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0 bg-white">
+          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6 sm:py-4">
             <button
               type="button"
               onClick={handleExportPDF}
               disabled={exportingPdf}
-              className={`${actionButtonClass} disabled:cursor-not-allowed disabled:opacity-60`}
+              className={`${actionButtonClass} w-full justify-center disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto`}
             >
               {exportingPdf
                 ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -523,7 +523,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+              className="w-full rounded-lg bg-gray-500 px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-600 sm:w-auto"
             >
               Cancelar
             </button>
