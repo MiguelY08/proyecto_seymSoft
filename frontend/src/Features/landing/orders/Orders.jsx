@@ -10,8 +10,10 @@ import {
   formatOrderDate,
   getOrderStatusClasses,
 } from './helpers/customerOrderHelpers';
+import { ORDER_FONT_FAMILY, injectOrderTypography } from './orderTypography';
 
 function Orders() {
+  injectOrderTypography();
   const navigate = useNavigate();
   const {
     clientId,
@@ -40,10 +42,28 @@ function Orders() {
         setError('');
         const response = await OrdersService.list({ clientId });
         if (!active) return;
+
+        const clientOrders = response.filter(
+          (order) => Number(order.clienteId) === Number(clientId)
+        );
+        const detailedOrders = await Promise.all(
+          clientOrders.map(async (order) => {
+            if (order.productos?.length) return order;
+
+            try {
+              const detailedOrder = await OrdersService.findById(order.id);
+              return detailedOrder && Number(detailedOrder.clienteId) === Number(clientId)
+                ? detailedOrder
+                : order;
+            } catch {
+              return order;
+            }
+          })
+        );
+
+        if (!active) return;
         setOrders(
-          response
-            .filter((order) => Number(order.clienteId) === Number(clientId))
-            .sort((a, b) => new Date(b.fechaPedido || 0) - new Date(a.fechaPedido || 0))
+          detailedOrders.sort((a, b) => new Date(b.fechaPedido || 0) - new Date(a.fechaPedido || 0))
         );
       } catch (requestError) {
         if (!active) return;
@@ -207,7 +227,7 @@ function Orders() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f9fc]">
+    <div className="min-h-screen bg-[#f6f9fc]" style={{ fontFamily: ORDER_FONT_FAMILY }}>
       <ShopHero image={BgPedidos} title="Pedidos" tag="Historial" subtitle="Revisa el estado de tus compras" />
 
       <main className="mx-auto max-w-7xl px-5 py-8">

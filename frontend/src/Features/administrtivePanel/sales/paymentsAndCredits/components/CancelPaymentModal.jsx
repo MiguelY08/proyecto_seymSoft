@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Eye, EyeOff } from "lucide-react"
 import { cancelInstallment } from "../services/paymentsServices";
 import { useAlert } from "../../../../shared/alerts/useAlert"
@@ -18,8 +18,6 @@ import { useAlert } from "../../../../shared/alerts/useAlert"
 export default function CancelPaymentModal({
   isOpen,
   onClose,
-  clienteId,
-  facturaId,
   account,
   payment,
   onSuccess
@@ -33,7 +31,62 @@ export default function CancelPaymentModal({
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const submitLockRef = useRef(false)
+
   if (!isOpen) return null
+
+  const getUserName = (user) => {
+    if (!user) return null
+    if (typeof user === "string") return user
+
+    const composedName =
+      [user.firstName, user.lastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim()
+
+    const directName =
+      user.nombre ??
+      user.fullName ??
+      user.name ??
+      user.userName ??
+      user.username ??
+      composedName
+
+    return directName || getUserName(user.user) || user.email || null
+  }
+
+  const formatDateTime = (dateString) => {
+    if (!dateString) return "Sin registro"
+
+    const date = new Date(dateString)
+    if (Number.isNaN(date.getTime())) return dateString
+
+    return date.toLocaleString("es-CO", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
+  const paymentIsCancelled =
+    payment?.isCancelled ??
+    payment?.anulado
+
+  const registeredBy =
+    getUserName(payment?.registeredBy) ??
+    "Sin registro"
+
+  const cancelledBy =
+    getUserName(payment?.cancelledBy) ??
+    "Sin registro"
+
+  const cancellationReason =
+    payment?.cancellationReason ??
+    payment?.motivoCancelacion ??
+    "Sin registro"
 
   const validateReason = (value) => {
     const trimmed = value.trim()
@@ -55,7 +108,12 @@ export default function CancelPaymentModal({
   }
 
 const handleSubmit = async () => {
-  if (isSubmitting) return;
+  if (
+    isSubmitting ||
+    submitLockRef.current
+  ) return;
+
+  submitLockRef.current = true;
 
   const reasonError =
     validateReason(reason);
@@ -65,10 +123,12 @@ const handleSubmit = async () => {
       reason: reasonError,
     });
 
-    showWarning(
+    await showWarning(
       "Motivo inválido",
       reasonError
     );
+
+    submitLockRef.current = false;
 
     return;
   }
@@ -86,8 +146,11 @@ const handleSubmit = async () => {
       }
     );
 
-  if (!confirm.isConfirmed)
+  if (!confirm.isConfirmed) {
+    submitLockRef.current = false;
+
     return;
+  }
 
   try {
     setIsSubmitting(true);
@@ -132,27 +195,28 @@ const handleSubmit = async () => {
     );
   } finally {
     setIsSubmitting(false);
+    submitLockRef.current = false;
   }
 };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-      <div className="bg-white w-full max-w-md rounded-2xl shadow-xl font-lexend">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-2 sm:p-4 z-50">
+      <div className="bg-white w-full max-w-md max-h-[94vh] rounded-2xl shadow-xl font-lexend overflow-hidden flex flex-col">
 
         {/* HEADER */}
-        <div className="bg-[#0E3B5F] text-white px-6 py-4 rounded-t-2xl flex justify-between items-center">
-          <h2 className="text-lg font-semibold">Anular Abono</h2>
+        <div className="bg-[#0E3B5F] text-white px-4 sm:px-6 py-3 sm:py-4 rounded-t-2xl flex justify-between items-center gap-3">
+          <h2 className="text-base sm:text-lg font-semibold">Anular Abono</h2>
           <button onClick={onClose} className="cursor-pointer">✕</button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto">
 
           <p className="text-sm text-gray-600">
             Esta acción marcará el abono como anulado. El saldo de la factura será recalculado automáticamente.
           </p>
 
           {/* DATOS DEL ABONO */}
-          <div className="bg-gray-100 p-4 rounded-xl text-sm space-y-2">
+          <div className="bg-gray-100 p-3 sm:p-4 rounded-xl text-sm space-y-2 break-words">
             <p><strong>Nro Abono:</strong> #{payment?.nroAbono ?? "-"}</p>
             <p><strong>Cliente:</strong> {account?.nombre ?? "-"}</p>
             <p><strong>Fecha:</strong> {payment?.fecha ?? "-"}</p>
@@ -161,7 +225,15 @@ const handleSubmit = async () => {
               ${new Intl.NumberFormat("es-CO").format(payment?.monto ?? 0)}
             </p>
             <p><strong>Medio de pago:</strong> {payment?.medioPago ?? "-"}</p>
-            <p><strong>Estado:</strong> {payment?.anulado ? "Anulado" : "Activo"}</p>
+            <p><strong>Registrado por:</strong> {registeredBy}</p>
+            <p><strong>Estado:</strong> {paymentIsCancelled ? "Anulado" : "Activo"}</p>
+            {paymentIsCancelled && (
+              <>
+                <p><strong>Anulado por:</strong> {cancelledBy}</p>
+                <p><strong>Fecha de anulación:</strong> {formatDateTime(payment?.cancelledAt)}</p>
+                <p><strong>Motivo de anulación:</strong> {cancellationReason}</p>
+              </>
+            )}
           </div>
 
           {/* MOTIVO */}

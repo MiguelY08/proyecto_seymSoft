@@ -12,6 +12,24 @@ const unwrapProduct = (entry) => {
   };
 };
 
+const unwrapCartResponse = (data) => {
+  const response = data && typeof data === 'object' ? data : {};
+  const items = Array.isArray(response.items) ? response.items : [];
+
+  return {
+    ...response,
+    items: items.map(unwrapProduct),
+    changedItem: response.changedItem
+      ? unwrapProduct(response.changedItem)
+      : null,
+    summary: {
+      totalItems: Number(response.summary?.totalItems) || 0,
+      distinctItems: Number(response.summary?.distinctItems) || 0,
+      isEmpty: Boolean(response.summary?.isEmpty ?? items.length === 0),
+    },
+  };
+};
+
 export const storefrontService = {
   async getFavorites() {
     const response = await apiClient.get('/storefront/favorites');
@@ -30,24 +48,24 @@ export const storefrontService = {
 
   async getCart() {
     const response = await apiClient.get('/storefront/cart');
-    return (getData(response) || []).map(unwrapProduct);
+    return unwrapCartResponse(getData(response));
   },
 
   async setCartItem(productId, quantity) {
     const response = await apiClient.put(`/storefront/cart/${productId}`, {
       quantity,
     });
-    return unwrapProduct(getData(response));
+    return unwrapCartResponse(getData(response));
   },
 
   async removeCartItem(productId) {
     const response = await apiClient.delete(`/storefront/cart/${productId}`);
-    return getData(response);
+    return unwrapCartResponse(getData(response));
   },
 
   async clearCart() {
     const response = await apiClient.delete('/storefront/cart');
-    return getData(response);
+    return unwrapCartResponse(getData(response));
   },
 
   async mergeCart(items) {
@@ -57,7 +75,7 @@ export const storefrontService = {
         quantity: Math.max(1, Number(item.quantity) || 1),
       })),
     });
-    return (getData(response) || []).map(unwrapProduct);
+    return unwrapCartResponse(getData(response));
   },
 };
 

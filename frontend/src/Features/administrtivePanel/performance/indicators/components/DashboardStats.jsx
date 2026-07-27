@@ -1,6 +1,6 @@
-import { ShoppingCart, Users, Package } from "lucide-react";
+﻿import { ShoppingCart, Users, Package } from "lucide-react";
 import { createElement } from "react";
-import useBreakpoint from "../hooks/useBreakpoint";
+import useBreakpoint from "../hooks/useBreakPoint";
 
 const StatCard = ({
   icon: Icon,
@@ -186,3 +186,4 @@ function DashboardStats({
 }
 
 export default DashboardStats;
+

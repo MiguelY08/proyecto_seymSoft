@@ -68,12 +68,12 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
     <div onClick={onClose} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden max-h-[90vh]">
         
-        <div className="flex items-center justify-between px-6 py-4 bg-red-600 shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
           <div className="flex items-center gap-2.5">
             <XCircle className="w-5 h-5 text-white" strokeWidth={2} />
             <div>
               <h2 className="text-white font-semibold text-base leading-tight">Anular devolución</h2>
-              <p className="text-red-200 text-xs">Devolución No. {returnData.returnNumber}</p>
+              <p className="text-white/75 text-xs">Devolución No. {returnData.returnNumber}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer">
@@ -81,9 +81,9 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
           </button>
         </div>
 
-        <div className="flex items-start gap-3 px-6 py-3 bg-red-50 border-b border-red-100 shrink-0">
-          <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" strokeWidth={2} />
-          <p className="text-xs text-red-700 leading-relaxed">
+        <div className="flex items-start gap-3 px-6 py-3 bg-yellow-50 border-b border-yellow-100 shrink-0">
+          <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 shrink-0" strokeWidth={2} />
+          <p className="text-xs text-yellow-800 leading-relaxed">
             Esta acción es <strong>permanente e irreversible</strong>. La devolución quedará anulada
             y no podrá modificarse su estado posteriormente.
           </p>
@@ -128,7 +128,7 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
                     className={`w-full px-4 py-2.5 text-sm border rounded-xl outline-none resize-none text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
                       motivoError
                         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-                        : 'border-gray-300 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+                        : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
                     }`}
                   />
                   <span className={`absolute bottom-2 right-3 text-[10px] ${
@@ -202,7 +202,7 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
           <button
             onClick={handleConfirm}
             disabled={Boolean(validateMotivo(motivo)) || submitting}
-            className="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-[#004D77] hover:bg-[#003D5e] rounded-xl transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
             <XCircle className="w-4 h-4" strokeWidth={2} />
             {submitting ? 'Anulando...' : 'Confirmar anulación'}

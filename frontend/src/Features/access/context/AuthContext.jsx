@@ -119,12 +119,26 @@ const login = async (email, password) => {
     if (result.success) {
       console.log("RESULT LOGIN:", result);
 
-      setUser(result.user);
-      setRole(result.role);
-      setPermissions(result.permissions || []);
+      const profileResult = await getProfile();
+      const resolvedUser =
+        profileResult.success ? profileResult.user : result.user;
+      const resolvedRole =
+        profileResult.success ? profileResult.role : result.role;
+      const resolvedPermissions =
+        profileResult.success ? profileResult.permissions || [] : result.permissions || [];
+      const resolvedClient =
+        profileResult.success ? profileResult.client || null : result.client || null;
+      const resolvedRequiresPasswordSetup =
+        profileResult.success
+          ? profileResult.requiresPasswordSetup || false
+          : result.requiresPasswordSetup || false;
+
+      setUser(resolvedUser);
+      setRole(resolvedRole);
+      setPermissions(resolvedPermissions);
       setIsAuthenticated(true);
-      setClient(result.client || null);
-      setRequiresPasswordSetup(result.requiresPasswordSetup || false);
+      setClient(resolvedClient);
+      setRequiresPasswordSetup(resolvedRequiresPasswordSetup);
 
       return {
         success: true,
@@ -248,6 +262,18 @@ const logout = async () => {
   // UPDATE PROFILE
   // ═══════════════════════════════════════════════════════════
 
+  const clearLocalSession = () => {
+    clearSession();
+    sessionStorage.removeItem('recovery_email');
+    setUser(null);
+    setRole(null);
+    setPermissions([]);
+    setIsAuthenticated(false);
+    setError(null);
+    setClient(null);
+    setRequiresPasswordSetup(false);
+  };
+
   const updateProfile = async (changes) => {
     try {
       setLoading(true);
@@ -256,6 +282,17 @@ const logout = async () => {
       const result = await updateProfileService(changes);
 
       if (result.success) {
+        if (result.requiresReLogin) {
+          clearLocalSession();
+
+          return {
+            success: true,
+            requiresReLogin: true,
+            unchangedFields: result.unchangedFields || {},
+            message: result.message,
+          };
+        }
+
         setUser(result.user);
         setRole(result.role);
         setPermissions(result.permissions || []);
@@ -266,6 +303,10 @@ const logout = async () => {
         return {
           success: true,
           user: result.user,
+          client: result.client,
+          unchangedFields: result.unchangedFields || {},
+          message: result.message,
+          requiresReLogin: false,
         };
       } else {
         setError(result.error);
@@ -273,6 +314,8 @@ const logout = async () => {
         return {
           success: false,
           error: result.error,
+          status: result.status,
+          data: result.data,
         };
       }
 
@@ -317,6 +360,7 @@ const logout = async () => {
     login,
     register,
     logout,
+    clearLocalSession,
     updateProfile,
     setUser,
     setRole,

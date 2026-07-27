@@ -18,10 +18,12 @@ import {
   getReturnSignature,
   getStatusClasses,
 } from './salesReturnTracking';
+import { ORDER_FONT_FAMILY, injectOrderTypography } from './orderTypography';
 
 const POLL_INTERVAL = 30000;
 
 function ReturnsOnOrders() {
+  injectOrderTypography();
   const navigate = useNavigate();
   const { clientId, isAuthenticated, loading: authLoading } = useAuthenticatedClient();
   const { showTimer } = useAlert();
@@ -257,7 +259,7 @@ function ReturnsOnOrders() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f9fc]">
+    <div className="min-h-screen bg-[#f6f9fc]" style={{ fontFamily: ORDER_FONT_FAMILY }}>
       <ShopHero
         image={BgPedidos}
         title="Devoluciones"

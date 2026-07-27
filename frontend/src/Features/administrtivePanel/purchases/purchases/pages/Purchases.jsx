@@ -1,13 +1,13 @@
-// features/administrtivePanel/purchases/purchases/pages/Purchases.jsx
+﻿// features/administrtivePanel/purchases/purchases/pages/Purchases.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PurchasesFilters } from "../../../../shared/DateFilter";
-import PurchasesTable from "../components/TablePurchases";
+import PurchasesTable from "../Components/TablePurchases";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import DetailPurchases from "../pages/DetailPurchases";
 import Anulatepurchase from "../pages/Anulatepurchase";
 import { Plus, FileSpreadsheet } from "lucide-react";
-import { getAllPurchases, annulPurchase, getPurchaseById } from "../data/purchasesService";
+import { getAllPurchases, annulPurchase, getPurchaseById } from "../data/PurchasesService";
 import Spinner from "../../../../shared/spinner"; // ← IMPORTAR SPINNER
 import * as XLSX from "xlsx";
 import PaginationAdmin from "../../../../shared/PaginationAdmin";
@@ -315,3 +315,5 @@ export const Purchases = () => {
 };
 
 export default Purchases;
+
+

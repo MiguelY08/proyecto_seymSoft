@@ -1,5 +1,26 @@
 // src/features/sales/paymentsAndCredits/mappers/paymentsMapper.js
 
+const getPersonName = (person) => {
+  if (!person) return null;
+  if (typeof person === "string") return person;
+
+  const composedName =
+    [person.firstName, person.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+  const directName =
+    person.nombre ??
+    person.fullName ??
+    person.name ??
+    person.userName ??
+    person.username ??
+    composedName;
+
+  return directName || getPersonName(person.user) || person.email || null;
+};
+
 /**
  * =====================================================
  * CUSTOMER
@@ -138,6 +159,12 @@ export const mapInstallment = (installment) => ({
 
   fecha: installment.installmentDate,
 
+  createdAt:
+    installment.createdAt ??
+    installment.creationDate ??
+    installment.created_at ??
+    installment.installmentDate,
+
   monto: Number(installment.installmentAmount ?? 0),
 
   capitalPagado: Number(installment.capitalPaid ?? 0),
@@ -148,9 +175,24 @@ export const mapInstallment = (installment) => ({
 
   observacion: installment.observations,
 
+  isCancelled: installment.isCancelled,
+
   anulado: installment.isCancelled,
 
+  registeredBy: installment.registeredBy
+    ? {
+        id:
+          installment.registeredBy.id ??
+          installment.registeredBy.idUser ??
+          installment.registeredBy.user?.id ??
+          installment.registeredBy.user?.idUser,
+        nombre: getPersonName(installment.registeredBy),
+      }
+    : null,
+
   cancelledAt: installment.cancelledAt,
+
+  cancellationReason: installment.cancellationReason,
 
   motivoCancelacion: installment.cancellationReason,
 

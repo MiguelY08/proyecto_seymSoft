@@ -13,11 +13,12 @@ export function ProductCardBody({ product, available }) {
   const discountPercentage = getDiscountPercentage(product);
 
   return (
-    <div className="flex flex-1 flex-col gap-2.5 px-3.5 pb-3 pt-3">
+    <div className="flex flex-1 flex-col gap-2 px-3 pb-3 pt-2.5 sm:gap-2.5 sm:px-3.5 sm:pt-3">
       {/* Categoría */}
-      <div className="flex items-center justify-between gap-1.5">
+      <div className="hidden items-center justify-between gap-1.5 sm:flex">
         <span
           className="
+            inline-flex
             rounded-full
             bg-[#eef6fb]
             px-2
@@ -54,17 +55,18 @@ export function ProductCardBody({ product, available }) {
       </div>
 
       {/* Nombre */}
-      <div className="min-h-[2.55rem]">
+      <div className="min-h-[2.45rem] sm:min-h-[2.55rem]">
         <h3
           className="
             line-clamp-2
-            text-[0.84rem]
+            text-[0.82rem]
             font-black
             leading-[1.35]
             text-[#0c2a3a]
             transition-colors
             duration-300
             group-hover:text-[#004D77]
+            sm:text-[0.84rem]
           "
         >
           {product.name}
@@ -75,10 +77,12 @@ export function ProductCardBody({ product, available }) {
       {product.description && (
         <p
           className="
+            hidden
             line-clamp-2
             text-[0.66rem]
             leading-[1.45]
             text-[#6f8795]
+            sm:block
           "
         >
           {product.description}
@@ -124,13 +128,14 @@ export function ProductCardBody({ product, available }) {
         )}
 
         {/* Precio actual */}
-        <div className="flex items-end justify-between gap-2">
+        <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-2">
           <div className="flex items-end gap-1">
             <span
               className="
-                text-[1.28rem]
+                text-[1.22rem]
                 font-black
                 text-[#004D77]
+                sm:text-[1.28rem]
               "
             >
               ${formatPrice(product.price)}
@@ -153,13 +158,14 @@ export function ProductCardBody({ product, available }) {
           {/* Cantidad stock */}
           <div
             className="
-              flex
+              hidden
               items-center
               gap-1
               rounded-full
               bg-[#f4f8fb]
               px-2
               py-0.5
+              sm:flex
             "
           >
             <span
@@ -184,6 +190,31 @@ export function ProductCardBody({ product, available }) {
               {product.stock}
             </span>
           </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 sm:hidden">
+          <span
+            className={`
+              rounded-full
+              px-2
+              py-0.5
+              text-[0.5rem]
+              font-black
+              uppercase
+              tracking-[0.1em]
+              ${
+                available
+                  ? 'bg-[#edfdf3] text-[#12a150]'
+                  : 'bg-[#fff1f0] text-[#ff4d4f]'
+              }
+            `}
+          >
+            {available ? 'Disponible' : 'Agotado'}
+          </span>
+
+          <span className="rounded-full bg-[#f4f8fb] px-2 py-0.5 text-[0.5rem] font-black uppercase tracking-[0.08em] text-[#6f8795]">
+            Stock: <span className="text-[#004D77]">{product.stock}</span>
+          </span>
         </div>
       </div>
     </div>

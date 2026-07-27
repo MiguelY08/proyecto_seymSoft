@@ -1,14 +1,14 @@
-// features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx
+﻿// features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-import CreateSidebar from "../components/CreatePurchaseSideBar";
-import CreatePagination from "../components/CreatePagination";
-import CreateTable from "../components/TableCreate";
+import CreateSidebar from "../Components/CreatePurchaseSideBar";
+import CreatePagination from "../Components/CreatePagination";
+import CreateTable from "../Components/TableCreate";
 import CreateProduct from "../../products/modals/CreateProduct";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import FormProvider from "../../providers/components/FormProvider";
-import { createPurchase, getProducts, getProviders } from "../data/purchasesService";
+import { createPurchase, getProducts, getProviders } from "../data/PurchasesService";
 import { providersService } from "../../providers/data/providersService";
 import { findProductByBarcode, productMatchesBarcodeSearch } from "../../../../shared/scanner";
 import Spinner from "../../../../shared/spinner";
@@ -477,3 +477,7 @@ const CreatePurchase = () => {
 };
 
 export default CreatePurchase;
+
+
+
+

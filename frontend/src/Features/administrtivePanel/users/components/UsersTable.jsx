@@ -76,12 +76,12 @@ function ClientUserBadge() {
     <>
       <div
         ref={ref}
-        className="w-5 h-5 rounded-full bg-[#004D77]/15 flex items-center justify-center"
+        className="w-6 h-6 rounded-full bg-[#004D77]/15 flex items-center justify-center"
         onMouseEnter={show}
         onMouseLeave={hide}
       >
         <ShoppingBag
-          className="w-3 h-3 text-[#004D77]"
+          className="w-3.5 h-3.5 text-[#004D77]"
           strokeWidth={1.8}
         />
       </div>
@@ -116,7 +116,8 @@ function ActiveToggle({
 
     showConfirm,
     showSuccess,
-    showError
+    showError,
+    showWarning
 
   } = useAlert();
 
@@ -188,10 +189,10 @@ function ActiveToggle({
   };
 
   return (
-    <div className="flex flex-col items-center gap-0.5">
+    <div className="flex flex-col items-center gap-1">
       {
         estadoResaltado && (
-          <span className="text-[9px] font-semibold">
+          <span className="text-[10px] font-semibold">
             {estadoResaltado}
           </span>
         )
@@ -201,7 +202,7 @@ function ActiveToggle({
         onClick={handleClick}
         disabled={isLoading || disabled}
         title={disabled ? disabledMessage : undefined}
-        className={`relative w-11 h-5 rounded-full transition-colors duration-300 cursor-pointer shrink-0 ${
+        className={`relative w-12 h-6 rounded-full transition-colors duration-300 cursor-pointer shrink-0 ${
           activo
             ? "bg-green-500"
             : "bg-red-400"
@@ -214,11 +215,11 @@ function ActiveToggle({
         {
           isLoading
             ?
-            <Loader2 className="absolute inset-0 m-auto w-4 h-4 text-white animate-spin" />
+            <Loader2 className="absolute inset-0 m-auto w-4.5 h-4.5 text-white animate-spin" />
             :
             <>
               <span
-                className={`absolute top-1/2 -translate-y-1/2 text-white text-[9px] font-bold transition-all duration-300 ${
+                className={`absolute top-1/2 -translate-y-1/2 text-white text-[10px] font-bold transition-all duration-300 ${
                   activo
                     ? "left-1.5"
                     : "right-1.5"
@@ -227,9 +228,9 @@ function ActiveToggle({
                 {activo ? "A" : "I"}
               </span>
               <span
-                className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
+                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-300 ${
                   activo
-                    ? "left-5.75"
+                    ? "left-6"
                     : "left-0.5"
                 }`}
               />
@@ -433,22 +434,22 @@ function UsersTable({
       <table className="min-w-max w-full">
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               Nombre
             </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               Correo electrónico
             </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               Teléfono
             </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               Registrado desde
             </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               Rol
             </th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">
+            <th className="px-4 py-3 text-center text-sm font-semibold">
               Acciones
             </th>
           </tr>
@@ -476,8 +477,8 @@ function UsersTable({
                   key={row.id}
                   className={`transition-colors duration-150 ${rowBg}`}
                 >
-                  <td className="px-3 py-1.5 text-center text-xs text-gray-800 whitespace-nowrap">
-                    <div className="flex items-center justify-center gap-1.5">
+                  <td className="px-4 py-2.5 text-center text-sm text-gray-800 whitespace-nowrap">
+                    <div className="flex items-center justify-center gap-2">
                       {
                         highlight(
                           row.name,
@@ -491,7 +492,7 @@ function UsersTable({
                       }
                     </div>
                   </td>
-                  <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                  <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                     {
                       highlight(
                         row.email,
@@ -499,7 +500,7 @@ function UsersTable({
                       )
                     }
                   </td>
-                  <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                  <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                     {
                       highlight(
                         row.phone,
@@ -507,7 +508,7 @@ function UsersTable({
                       )
                     }
                   </td>
-                  <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                  <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                     {
                       highlight(
                         formattedDate,
@@ -515,7 +516,7 @@ function UsersTable({
                       )
                     }
                   </td>
-                  <td className="px-3 py-1.5 text-center text-xs text-gray-700 whitespace-nowrap">
+                  <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                     {
                       highlight(
                         row.role?.nameRole || row.role?.name || "Sin rol",
@@ -523,17 +524,17 @@ function UsersTable({
                       )
                     }
                   </td>
-                  <td className="px-3 py-1.5">
+                  <td className="px-4 py-2.5">
                     {
                       isSystemUser
                         ?
                         <div className="flex items-center justify-center">
-                          <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-blue-100 text-[#004D77] border border-blue-200">
+                          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-[#004D77] border border-blue-200">
                             Sistema
                           </span>
                         </div>
                         :
-                        <div className="flex items-center justify-center gap-1 sm:gap-1.5">
+                        <div className="flex items-center justify-center gap-1.5 sm:gap-2">
 
                           {/* ACTIVO */}
                           <Permission permission="usuarios.activar_desactivar">
@@ -576,7 +577,7 @@ function UsersTable({
                               title="Información"
                             >
                               <Info
-                                className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                                className="w-4 h-4 sm:w-4.5 sm:h-4.5"
                                 strokeWidth={1.5}
                               />
                             </button>
@@ -626,7 +627,7 @@ function UsersTable({
                               }
                             >
                               <SquarePen
-                                className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                                className="w-4 h-4 sm:w-4.5 sm:h-4.5"
                                 strokeWidth={1.5}
                               />
                             </button>
@@ -653,10 +654,10 @@ function UsersTable({
                               {
                                 isDeleting
                                   ?
-                                  <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
+                                  <Loader2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 animate-spin" />
                                   :
                                   <Trash2
-                                    className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                                    className="w-4 h-4 sm:w-4.5 sm:h-4.5"
                                     strokeWidth={1.5}
                                   />
                               }

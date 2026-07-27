@@ -3,6 +3,22 @@ import { Info, XCircle, Ban } from "lucide-react";
 import Pagination from "../../../../shared/PaginationAdmin";
 import Permission from "../../../configuration/roles/components/Permission";
 
+const EstadoBadge = ({ estado }) => {
+  const isAnulado = estado === "Anulado";
+
+  return (
+    <span
+      className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+        isAnulado
+          ? "bg-red-100 text-red-700"
+          : "bg-emerald-100 text-emerald-700"
+      }`}
+    >
+      {estado || "Activo"}
+    </span>
+  );
+};
+
 export const NonConformingProductsTable = ({
   currentData,
   filteredReports,
@@ -13,13 +29,13 @@ export const NonConformingProductsTable = ({
   endIndex,
   handleCancel,
   highlightText,
-  handleViewDetails
+  handleViewDetails,
 }) => {
   return (
     <>
-      <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
+      <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
         <div className="overflow-x-auto">
-          <table className="min-w-full w-full text-xs">
+          <table className="min-w-max w-full">
             <thead className="bg-[#004D77] text-white">
               <tr>
                 <th className="px-3 py-2 text-center font-semibold">#</th>

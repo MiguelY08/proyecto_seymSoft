@@ -21,15 +21,15 @@ const DetailRow = ({ icon: Icon, label, value, highlight = false }) => {
     <div className="flex items-start gap-3 border-b border-gray-50 py-2 last:border-0">
       <div
         className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${
-          hasValue ? "bg-red-50" : "bg-gray-100"
+          hasValue ? "bg-[#004D77]/10" : "bg-gray-100"
         }`}
       >
-        <Icon
-          className={`h-3.5 w-3.5 ${
-            hasValue ? "text-red-500" : "text-gray-300"
-          }`}
-          strokeWidth={1.8}
-        />
+        {React.createElement(Icon, {
+          className: `h-3.5 w-3.5 ${
+            hasValue ? "text-[#004D77]" : "text-gray-300"
+          }`,
+          strokeWidth: 1.8,
+        })}
       </div>
       <div className="min-w-0 flex-1">
         <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide leading-none text-gray-400">
@@ -39,7 +39,7 @@ const DetailRow = ({ icon: Icon, label, value, highlight = false }) => {
           className={`block truncate text-sm font-medium ${
             hasValue
               ? highlight
-                ? "font-semibold text-red-600"
+                ? "font-semibold text-[#004D77]"
                 : "text-gray-800"
               : "font-normal italic text-gray-300"
           }`}
@@ -89,7 +89,7 @@ const AnulatePurchase = ({ purchase, onClose, onConfirm }) => {
       >
         <div
           className={`flex shrink-0 items-center justify-between px-6 py-4 ${
-            isAlreadyAnnulled ? "bg-gray-600" : "bg-red-600"
+            isAlreadyAnnulled ? "bg-slate-600" : "bg-[#004D77]"
           }`}
         >
           <div className="flex min-w-0 items-center gap-2.5">
@@ -100,7 +100,7 @@ const AnulatePurchase = ({ purchase, onClose, onConfirm }) => {
               </h2>
               <p
                 className={`truncate text-xs ${
-                  isAlreadyAnnulled ? "text-gray-200" : "text-red-200"
+                  isAlreadyAnnulled ? "text-slate-200" : "text-white/75"
                 }`}
               >
                 Factura {purchase?.numeroFacturacion ?? "-"}
@@ -118,9 +118,9 @@ const AnulatePurchase = ({ purchase, onClose, onConfirm }) => {
         </div>
 
         {!isAlreadyAnnulled && (
-          <div className="flex shrink-0 items-start gap-3 border-b border-red-100 bg-red-50 px-6 py-3">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
-            <p className="text-xs leading-relaxed text-red-700">
+          <div className="flex shrink-0 items-start gap-3 border-b border-yellow-100 bg-yellow-50 px-6 py-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-600" />
+            <p className="text-xs leading-relaxed text-yellow-800">
               Esta acción es <strong>permanente e irreversible</strong>. La
               compra quedará anulada y no podrá gestionarse nuevamente.
             </p>
@@ -160,17 +160,17 @@ const AnulatePurchase = ({ purchase, onClose, onConfirm }) => {
               </SectionTitle>
 
               {isAlreadyAnnulled ? (
-                <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+                <div className="flex items-start gap-3 rounded-lg border border-[#004D77]/15 bg-[#004D77]/5 px-4 py-3">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#004D77]" />
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-red-600">
+                    <p className="text-xs font-semibold text-[#004D77]">
                       Motivo registrado
                     </p>
-                    <p className="mt-1 text-sm leading-relaxed text-red-700">
+                    <p className="mt-1 text-sm leading-relaxed text-gray-700">
                       {purchase?.motivoAnulacion || "Sin motivo registrado."}
                     </p>
                     {purchase?.fechaAnulacion && (
-                      <p className="mt-2 text-xs text-red-400">
+                      <p className="mt-2 text-xs text-[#004D77]/60">
                         Anulada el {purchase.fechaAnulacion}
                       </p>
                     )}
@@ -191,7 +191,7 @@ const AnulatePurchase = ({ purchase, onClose, onConfirm }) => {
                       }
                       rows={6}
                       placeholder="Describe el motivo por el cual se anula esta compra..."
-                      className="w-full resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 outline-none transition-colors placeholder:text-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                      className="w-full resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 outline-none transition-colors placeholder:text-gray-400 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
                     />
                     <span
                       className={`absolute bottom-2 right-3 text-[10px] ${
@@ -222,7 +222,7 @@ const AnulatePurchase = ({ purchase, onClose, onConfirm }) => {
             <button
               type="button"
               onClick={handleSubmit}
-              className="flex cursor-pointer items-center gap-2 rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+              className="flex cursor-pointer items-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#003D5e]"
             >
               <XCircle className="h-4 w-4" strokeWidth={2} />
               Confirmar anulación

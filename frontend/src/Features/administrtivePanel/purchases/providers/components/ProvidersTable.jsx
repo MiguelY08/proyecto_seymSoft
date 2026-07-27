@@ -68,14 +68,14 @@ function ProvidersTable({
         <table className="min-w-max w-full">
           <thead className="bg-[#004D77] text-white">
             <tr>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">#</th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Tipo</th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Número</th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Nombre</th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">P.Contacto</th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Nu.Contacto</th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Categorías</th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Acciones</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">#</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Tipo</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Número</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Nombre</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">P.Contacto</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Nu.Contacto</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Categorías</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -105,14 +105,14 @@ function ProvidersTable({
       <table className="min-w-max w-full">
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="sticky left-0 z-10 bg-[#004D77] px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">#</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Tipo</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Número</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Nombre</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">P.Contacto</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Nu.Contacto</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Categorías</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Acciones</th>
+            <th className="sticky left-0 z-10 bg-[#004D77] px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">#</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Tipo</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Número</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Nombre</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">P.Contacto</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Nu.Contacto</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Categorías</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Acciones</th>
           </tr>
         </thead>
 
@@ -125,29 +125,29 @@ function ProvidersTable({
 
             return (
               <tr key={provider.id} className={`group transition-colors duration-150 ${rowBg}`}>
-                <td className={`sticky left-0 z-10 ${stickyBg} group-hover:bg-blue-50 px-3 py-2 text-center text-xs text-gray-500 font-medium whitespace-nowrap`}>
+                <td className={`sticky left-0 z-10 ${stickyBg} group-hover:bg-blue-50 px-4 py-2.5 text-center text-sm text-gray-500 font-medium whitespace-nowrap`}>
                   {String(recordNumber)}
                 </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                   {provider.tipo}
                 </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                   {highlightText(provider.numero, searchTerm)}
                 </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-800 font-medium whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center text-sm text-gray-800 font-medium whitespace-nowrap">
                   {highlightText(provider.nombre, searchTerm)}
                 </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                   {highlightText(fallbackText(provider.pContacto), searchTerm)}
                 </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                   {highlightText(fallbackText(formatPhoneNumber(provider.nuContacto)), searchTerm)}
                 </td>
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
+                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                   {highlightText(categoriasTexto, searchTerm)}
                 </td>
-                <td className="px-3 py-2">
-                  <div className="flex items-center justify-center gap-1.5">
+                <td className="px-4 py-2.5">
+                  <div className="flex items-center justify-center gap-2">
                     {canToggle && (
                       <ActiveToggle
                         activo={provider.activo}
@@ -162,7 +162,7 @@ function ProvidersTable({
                           className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                           title="Información del proveedor"
                         >
-                          <Info className="w-4 h-4" strokeWidth={1.5} />
+                          <Info className="w-4.5 h-4.5" strokeWidth={1.5} />
                         </button>
                       </Permission>
                     )}
@@ -174,7 +174,7 @@ function ProvidersTable({
                           className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                           title="Editar proveedor"
                         >
-                          <SquarePen className="w-4 h-4" strokeWidth={1.5} />
+                          <SquarePen className="w-4.5 h-4.5" strokeWidth={1.5} />
                         </button>
                       </Permission>
                     )}
@@ -186,7 +186,7 @@ function ProvidersTable({
                         className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
                         title="Eliminar proveedor"
                       >
-                        <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                        <Trash2 className="w-4.5 h-4.5" strokeWidth={1.5} />
                       </button>
                     </Permission>
                     )}

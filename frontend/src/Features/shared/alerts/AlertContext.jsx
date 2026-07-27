@@ -4,6 +4,18 @@ import AlertContainer from './AlertContainer';
 export const AlertContext = createContext(null);
 
 let alertId = 0;
+const MAX_ALERTS = 3;
+const DISMISSED_ALERT_RESULT = { isConfirmed: false, isDismissed: true };
+
+const isSameAlert = (currentAlert, nextAlert) => (
+  currentAlert.type === nextAlert.type
+  && currentAlert.title === nextAlert.title
+  && currentAlert.text === nextAlert.text
+  && currentAlert.html === nextAlert.html
+  && Boolean(currentAlert.isConfirm) === Boolean(nextAlert.isConfirm)
+  && currentAlert.confirmButtonText === nextAlert.confirmButtonText
+  && currentAlert.cancelButtonText === nextAlert.cancelButtonText
+);
 
 export function AlertProvider({ children }) {
   const [alerts, setAlerts] = useState([]);
@@ -16,7 +28,23 @@ export function AlertProvider({ children }) {
   const push = useCallback((config) => {
     const id = ++alertId;
     return new Promise((resolve) => {
-      setAlerts((prev) => [...prev, { ...config, id, resolve }]);
+      const nextAlert = { ...config, id, resolve };
+
+      setAlerts((prev) => {
+        if (prev.some((alert) => isSameAlert(alert, nextAlert))) {
+          resolve(DISMISSED_ALERT_RESULT);
+          return prev;
+        }
+
+        const nextAlerts = [...prev, nextAlert];
+        const discardedAlerts = nextAlerts.slice(0, Math.max(nextAlerts.length - MAX_ALERTS, 0));
+
+        discardedAlerts.forEach((alert) => {
+          alert.resolve?.(DISMISSED_ALERT_RESULT);
+        });
+
+        return nextAlerts.slice(-MAX_ALERTS);
+      });
     });
   }, []);
 
