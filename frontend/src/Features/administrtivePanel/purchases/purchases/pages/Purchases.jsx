@@ -268,7 +268,7 @@ export const Purchases = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md">
+        <div className="w-full min-w-0 overflow-hidden rounded-xl bg-white shadow-md">
           <PurchasesTable
             currentData={currentData}
             handleCancel={handleCancel}

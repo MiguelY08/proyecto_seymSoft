@@ -89,8 +89,8 @@ function ClientsTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl shadow-md min-h-0">
-      <table className="min-w-[980px] w-full table-auto">
+    <div className="min-h-0 min-w-0 w-full overflow-x-auto overscroll-x-contain rounded-xl shadow-md [-webkit-overflow-scrolling:touch]">
+      <table className="w-full min-w-[840px] table-auto lg:min-w-[940px]">
         <TableHeader />
 
         <tbody>

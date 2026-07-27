@@ -265,7 +265,7 @@ function Returns() {
         <PurchaseReturnsMetricsCards metrics={metricsLoading ? DEFAULT_METRICS : metrics} />
       </div>
 
-      <div className="w-full min-w-0 rounded-xl bg-white shadow-md">
+      <div className="w-full min-w-0 overflow-hidden rounded-xl bg-white shadow-md">
         <ReturnsTable
           currentData={returns}
           search={search}

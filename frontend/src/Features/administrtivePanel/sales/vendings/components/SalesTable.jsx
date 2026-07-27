@@ -178,14 +178,14 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
   }
 
   return (
-    <div className="flex-1 overflow-x-auto rounded-xl shadow-md min-h-0">
+    <div className="min-h-0 min-w-0 w-full flex-1 overflow-x-auto overscroll-x-contain rounded-xl shadow-md [-webkit-overflow-scrolling:touch]">
       {loadingMessage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
           <Spinner message={loadingMessage} className="min-h-0" />
         </div>
       )}
 
-      <table className="min-w-max w-full">
+      <table className="w-full min-w-[980px] table-auto lg:min-w-[1060px]">
         <thead className="bg-[#004D77] text-white">
           <tr>
             <th className="sticky left-0 z-10 bg-[#004D77] px-4 py-3 text-center text-sm font-semibold">

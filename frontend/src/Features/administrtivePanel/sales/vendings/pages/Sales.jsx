@@ -196,7 +196,7 @@ function Sales() {
       </div>
 
       {/* Tabla de ventas */}
-      <div className="bg-white rounded-xl shadow-md">
+      <div className="w-full min-w-0 overflow-hidden rounded-xl bg-white shadow-md">
         <SalesTable
           data={visibleSales}
           search={search}

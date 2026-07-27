@@ -101,8 +101,8 @@ export const PurchasesTable = ({
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-x-auto rounded-xl shadow-md">
-      <table className="min-w-max w-full">
+    <div className="min-h-0 min-w-0 w-full flex-1 overflow-x-auto overscroll-x-contain rounded-xl shadow-md [-webkit-overflow-scrolling:touch]">
+      <table className="w-full min-w-[860px] table-auto lg:min-w-[940px]">
         <thead className="bg-[#004D77] text-white">
           <tr>
             <th className="sticky left-0 z-10 bg-[#004D77] px-4 py-3 text-center text-sm font-semibold">

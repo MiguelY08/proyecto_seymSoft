@@ -36,7 +36,7 @@ export default function PaymentsTable({
   };
 
   return (
-    <div className="font-lexend">
+    <div className="min-w-0 font-lexend">
       <div className="grid gap-3 md:hidden">
         {data.length === 0 && (
           <div className="rounded-xl border border-gray-200 bg-white py-6 text-center text-xs text-gray-400 shadow-sm">
@@ -145,8 +145,8 @@ export default function PaymentsTable({
         })}
       </div>
 
-      <div className="hidden md:block flex-1 overflow-x-auto rounded-xl shadow-md">
-      <table className="min-w-[820px] w-full">
+      <div className="hidden min-h-0 min-w-0 w-full flex-1 overflow-x-auto overscroll-x-contain rounded-xl shadow-md [-webkit-overflow-scrolling:touch] md:block">
+      <table className="w-full min-w-[760px] table-auto lg:min-w-[860px]">
         <thead className="bg-[#004D77] text-white">
           <tr>
             <th className="px-4 py-3 text-center text-sm font-semibold">#</th>
