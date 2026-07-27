@@ -101,11 +101,11 @@ export const PurchasesTable = ({
   }
 
   return (
-    <div className="min-h-0 min-w-0 w-full flex-1 overflow-x-auto overscroll-x-contain rounded-xl shadow-md [-webkit-overflow-scrolling:touch]">
+    <div className="h-full min-h-0 min-w-0 w-full flex-1 overflow-auto overscroll-contain rounded-xl [-webkit-overflow-scrolling:touch]">
       <table className="w-full min-w-[860px] table-auto lg:min-w-[940px]">
-        <thead className="bg-[#004D77] text-white">
+        <thead className="sticky top-0 z-20 bg-[#004D77] text-white">
           <tr>
-            <th className="sticky left-0 z-10 bg-[#004D77] px-4 py-3 text-center text-sm font-semibold">
+            <th className="sticky left-0 z-30 bg-[#004D77] px-4 py-3 text-center text-sm font-semibold">
               No. Facturación
             </th>
             <th className="px-4 py-3 text-center text-sm font-semibold">Fecha compra</th>

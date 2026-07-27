@@ -285,7 +285,7 @@ const handleDelete = async (client) => {
 
   return (
     <Permission permission="clientes.ver">
-      <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-hidden p-3 sm:p-4">
         <ClientsToolbar
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
@@ -294,7 +294,7 @@ const handleDelete = async (client) => {
           onNewClick={handleNewClient}
         />
 
-        <div className="w-full min-w-0 overflow-hidden rounded-xl bg-white shadow-md">
+        <div className="flex min-h-0 w-full min-w-0 flex-1 overflow-hidden rounded-xl bg-white shadow-md">
           <ClientsTable
             clients={clients}
             startIndex={startIndex}
@@ -308,12 +308,14 @@ const handleDelete = async (client) => {
         </div>
 
         {totalRecords > 0 && (
-          <PaginationAdmin
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            totalRecords={totalRecords}
-            recordsPerPage={RECORDS_PER_PAGE}
-          />
+          <div className="shrink-0">
+            <PaginationAdmin
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              totalRecords={totalRecords}
+              recordsPerPage={RECORDS_PER_PAGE}
+            />
+          </div>
         )}
 
         <FormClient

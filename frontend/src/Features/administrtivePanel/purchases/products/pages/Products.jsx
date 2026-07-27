@@ -624,8 +624,8 @@ function Products() {
           </div>
         ) : (
           <>
-            <div className="flex-1 overflow-x-auto rounded-xl bg-white shadow-md min-h-0">
-              <table className="min-w-max w-full">
+            <div className="min-h-0 min-w-0 w-full flex-1 overflow-auto overscroll-contain rounded-xl bg-white shadow-md [-webkit-overflow-scrolling:touch]">
+              <table className="w-full min-w-[820px] table-auto lg:min-w-[900px]">
                 <thead className="bg-[#004D77] text-white">
                   <tr>
                     <th className="px-4 py-3 text-center text-sm font-semibold">
