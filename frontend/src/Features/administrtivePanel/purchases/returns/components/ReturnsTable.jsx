@@ -303,8 +303,8 @@ function ReturnsTable({
   }
 
   return (
-    <div className="w-full min-w-0 overflow-x-auto rounded-xl shadow-md [-webkit-overflow-scrolling:touch]">
-      <table className="min-w-max w-full">
+    <div className="min-h-0 min-w-0 w-full overflow-x-auto overscroll-x-contain rounded-xl shadow-md [-webkit-overflow-scrolling:touch]">
+      <table className="w-full min-w-[900px] table-auto lg:min-w-[980px]">
 
         <thead className="bg-[#004D77] text-white">
           <tr>
