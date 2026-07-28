@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { LoaderCircle, UserRound, X } from 'lucide-react';
 import { clientsService } from '../../../administrtivePanel/sales/clients/services/clientsService';
+import { getEmailValidationError } from '../../../administrtivePanel/sales/clients/helpers/clientHelpers';
 import FormSelect from '../../../shared/FormSelect';
 import LoadingOverlay from '../../../shared/LoadingOverlay';
 import { useAlert } from '../../../shared/alerts/useAlert';
@@ -57,8 +58,8 @@ const validateField = (name, value, form) => {
     if (clean.length < 2) return 'Mínimo 2 caracteres';
     if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'-]+$/.test(clean)) return 'Usa solo letras';
   }
-  if (name === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
-    return 'Correo inválido';
+  if (name === 'email') {
+    return getEmailValidationError(value);
   }
   if (['phone', 'contactPhone'].includes(name) && !/^\d{7,10}$/.test(clean)) {
     return 'Debe tener entre 7 y 10 números';
@@ -111,6 +112,7 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
   const [serverError, setServerError] = useState('');
 
   const isLegalPerson = form.personType === 'juridica';
@@ -131,7 +133,73 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
     setErrors({});
     setTouched({});
     setServerError('');
+    setCheckingEmail(false);
   }, [initialForm, isOpen]);
+
+  const findClientByEmail = async (email) => {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!normalizedEmail) return null;
+
+    const result = await clientsService.getAll({
+      page: 1,
+      limit: 10000,
+      search: normalizedEmail,
+    });
+
+    return (result.data || []).find(
+      (client) => String(client.email || '').trim().toLowerCase() === normalizedEmail
+    ) || null;
+  };
+
+  const getDuplicateEmailError = async (email) => {
+    const localError = getEmailValidationError(email);
+    if (localError) return '';
+
+    const duplicate = await findClientByEmail(email);
+    return duplicate ? 'Este correo ya está registrado' : '';
+  };
+
+  useEffect(() => {
+    if (!isOpen || !touched.email) return undefined;
+
+    const email = String(form.email || '').trim();
+    const localError = getEmailValidationError(form.email);
+
+    if (localError) {
+      setCheckingEmail(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setCheckingEmail(true);
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const duplicateError = await getDuplicateEmailError(email);
+        if (cancelled) return;
+
+        setErrors((current) => {
+          const currentLocalError = getEmailValidationError(form.email);
+          if (currentLocalError) return { ...current, email: currentLocalError };
+          return { ...current, email: duplicateError };
+        });
+      } catch {
+        if (!cancelled) {
+          setErrors((current) => ({
+            ...current,
+            email: current.email === 'Este correo ya está registrado' ? '' : current.email,
+          }));
+        }
+      } finally {
+        if (!cancelled) setCheckingEmail(false);
+      }
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [form.email, isOpen, touched.email]);
 
   if (!isOpen) return null;
 
@@ -217,6 +285,13 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
     setErrors(nextErrors);
     if (Object.values(nextErrors).some(Boolean)) return;
 
+    const duplicateEmailError = await getDuplicateEmailError(form.email);
+    if (duplicateEmailError) {
+      setTouched((current) => ({ ...current, email: true }));
+      setErrors((current) => ({ ...current, email: duplicateEmailError }));
+      return;
+    }
+
     try {
       setSubmitting(true);
       setServerError('');
@@ -269,6 +344,11 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
         className={`${inputClass(name)} ${options.disabled ? 'cursor-not-allowed bg-slate-100 text-slate-500' : ''}`}
         placeholder={options.placeholder}
       />
+      {name === 'email' && checkingEmail && touched.email && !errors.email && (
+        <span className="mt-1 block text-[11px] text-[#004D77]">
+          Verificando si el correo ya está registrado...
+        </span>
+      )}
       {errorMessage(name)}
     </label>
   );

@@ -49,6 +49,7 @@ export const buildProductTracking = (detail) => {
   ];
   const cancelled = normalize(detail.status).includes('anulad');
   const currentIndex = statusIndex(detail.method, detail.status, detail.creditApplied);
+  const finalStepCompleted = method === 'saldo a favor' && detail.creditApplied === true;
 
   return {
     cancelled,
@@ -59,6 +60,8 @@ export const buildProductTracking = (detail) => {
       ...step,
       state: cancelled
         ? 'cancelled'
+        : finalStepCompleted && index <= currentIndex
+          ? 'completed'
         : index < currentIndex
           ? 'completed'
           : index === currentIndex

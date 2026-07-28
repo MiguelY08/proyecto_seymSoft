@@ -348,6 +348,40 @@ const mergeAvailableInvoices = (...groups) => {
   return Array.from(merged.values());
 };
 
+const getReturnableProductKey = (product = {}) => [
+  normalizeSearchText(product.nombre || product.productName || ''),
+  Number(product.cantidad ?? product.quantity ?? 0),
+  Number(product.precioUnit ?? product.unitPrice ?? 0),
+].join('|');
+
+const normalizeReturnableProducts = (details = []) => {
+  const productsByKey = new Map();
+
+  details.forEach((detail, index) => {
+    const product = {
+      id: detail.idSaleDetail ||
+        detail.id_sale_detail ||
+        detail.idSaleProduct ||
+        detail.id_sale_product ||
+        `${detail.idProduct || detail.productName || 'product'}-${detail.idBarcode || detail.barcode || index}`,
+      idProduct: detail.idProduct,
+      nombre: detail.productName,
+      cantidad: detail.quantity,
+      precioUnit: detail.unitPrice || 0,
+      imagen: detail.imageUrl || null,
+      barcode: detail.barcode,
+      idBarcode: detail.idBarcode
+    };
+    const key = getReturnableProductKey(product);
+
+    if (!productsByKey.has(key)) {
+      productsByKey.set(key, product);
+    }
+  });
+
+  return Array.from(productsByKey.values());
+};
+
 const isClientHistorySearch = (term, invoice = {}) => {
   const normalizedTerm = normalizeSearchText(term);
   const compactTerm = normalizeCompactSearchText(term);
@@ -802,6 +836,7 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
   const [saving, setSaving] = useState(false);
   
   const [productosDisponibles, setProductosDisponibles] = useState([]);
+  const [cargandoProductos, setCargandoProductos] = useState(false);
   
   // ==================== ESTADOS PARA BUSCADOR DE FACTURAS ====================
   const [facturasDisponibles, setFacturasDisponibles] = useState([]);
@@ -882,6 +917,7 @@ useEffect(() => {
     }
 
     setProductosDisponibles(productosDisponiblesList);
+    setCargandoProductos(false);
     setSeleccionados(seleccionadosIniciales);
   } else {
     setNoFactura(''); setCliente(''); setIdVentaSeleccionada(null);
@@ -895,6 +931,7 @@ useEffect(() => {
     setDescripcion('');
     setSeleccionados({});
     setProductosDisponibles([]);
+    setCargandoProductos(false);
     setFacturasDisponibles([]);
     setSearchTermFactura('');
     setShowDropdownFactura(false);
@@ -977,24 +1014,12 @@ useEffect(() => {
     }));
 
     try {
+      setCargandoProductos(true);
       const saleDetails = await getReturnableSales(factura.clientId);
       const sale = saleDetails.find(s => String(s.invoiceNumber) === String(factura.invoiceNumber));
       
       if (sale && sale.details && sale.details.length > 0) {
-        const productos = sale.details.map((detail, index) => ({
-          id: detail.idSaleDetail ||
-            detail.id_sale_detail ||
-            detail.idSaleProduct ||
-            detail.id_sale_product ||
-            `${detail.idProduct}-${detail.idBarcode || detail.barcode || index}`,
-          idProduct: detail.idProduct,
-          nombre: detail.productName,
-          cantidad: detail.quantity,
-          precioUnit: detail.unitPrice || 0,
-          imagen: detail.imageUrl || null,
-          barcode: detail.barcode,
-          idBarcode: detail.idBarcode
-        }));
+        const productos = normalizeReturnableProducts(sale.details);
         
         setProductosDisponibles(productos);
         setSeleccionados({});
@@ -1011,6 +1036,8 @@ useEffect(() => {
     } catch {
       setProductosDisponibles([]);
       setSeleccionados({});
+    } finally {
+      setCargandoProductos(false);
     }
   };
   // ==================== FILTRAR FACTURAS ====================
@@ -1849,8 +1876,18 @@ useEffect(() => {
     <p className="text-[12px] text-gray-400 text-center">Selecciona una factura</p>
   </div>
 )}
+
+            {!isEdit && cargandoProductos && (
+              <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#004D77]/25 bg-[#004D77]/5 px-3 py-6 text-center">
+                <Loader className="h-6 w-6 animate-spin text-[#004D77]" />
+                <div>
+                  <p className="text-sm font-semibold text-[#004D77]">Cargando productos</p>
+                  <p className="text-[12px] text-gray-500">Estamos consultando los productos de la factura seleccionada</p>
+                </div>
+              </div>
+            )}
             
-            {!isEdit && productosDisponibles.length === 0 && noFactura && (
+            {!isEdit && productosDisponibles.length === 0 && noFactura && !cargandoProductos && (
   <div className="flex items-center justify-center bg-gray-50 rounded-xl border border-dashed border-gray-300 py-2 px-3">
     <p className="text-[12px] text-gray-400 text-center">Sin productos disponibles</p>
   </div>
@@ -1862,7 +1899,7 @@ useEffect(() => {
   </div>
 )}
             
-            {!isEdit && Object.keys(seleccionados).length > 0 && (
+            {!isEdit && !cargandoProductos && Object.keys(seleccionados).length > 0 && (
               <label className="flex items-center gap-2 text-xs text-gray-600 font-medium mb-3 cursor-pointer">
                 <input type="checkbox" checked={Object.keys(seleccionados).length === productosDisponibles.length}
                   onChange={toggleAll} className="accent-[#004D77] w-3.5 h-3.5" />
@@ -1875,7 +1912,7 @@ useEffect(() => {
             )}
             
             <div className="max-h-[60vh] flex-1 space-y-2 overflow-y-auto pr-1 lg:max-h-none">
-              {productosDisponibles.map((prod, index) => {
+              {!cargandoProductos && productosDisponibles.map((prod, index) => {
                 const isSelected = Boolean(seleccionados[prod.id] && seleccionados[prod.id].length > 0);
                 return (
                   <div key={`${prod.id}-${prod.idBarcode || prod.barcode || index}`}>

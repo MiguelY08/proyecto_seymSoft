@@ -59,7 +59,7 @@ function ProvidersTable({
   if (!providers.length) {
     const isSearching = totalData > 0 || searchTerm.trim().length > 0;
     return (
-      <div className="flex flex-col items-center justify-center py-16 px-4 gap-4">
+      <div className="flex h-full min-h-[420px] w-full flex-1 flex-col items-center justify-center px-4 py-16 gap-4">
         <div className="w-20 h-20 rounded-full bg-[#004D77]/10 flex items-center justify-center">
           <PackageCheck className="w-10 h-10 text-[#004D77]/40" strokeWidth={1.5} />
         </div>
@@ -74,18 +74,28 @@ function ProvidersTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl shadow-md min-h-0">
-      <table className="min-w-[1080px] w-full table-auto">
+    <div className="max-h-[calc(100vh-170px)] min-w-0 w-full overflow-auto overscroll-contain rounded-xl [-webkit-overflow-scrolling:touch]">
+      <table className="min-w-[1080px] w-full table-fixed">
+        <colgroup>
+          <col className="w-[6%]" />
+          <col className="w-[10%]" />
+          <col className="w-[14%]" />
+          <col className="w-[18%]" />
+          <col className="w-[13%]" />
+          <col className="w-[13%]" />
+          <col className="w-[14%]" />
+          <col className="w-[12%]" />
+        </colgroup>
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">#</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Tipo</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Número</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Nombre</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">P.Contacto</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Nu.Contacto</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Categorías</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Acciones</th>
+            <th className="px-2.5 py-2 text-center text-xs font-semibold whitespace-nowrap">#</th>
+            <th className="px-2.5 py-2 text-center text-xs font-semibold whitespace-nowrap">Tipo</th>
+            <th className="px-2.5 py-2 text-center text-xs font-semibold whitespace-nowrap">Número</th>
+            <th className="px-2.5 py-2 text-center text-xs font-semibold whitespace-nowrap">Nombre</th>
+            <th className="px-2.5 py-2 text-center text-xs font-semibold whitespace-nowrap">P.Contacto</th>
+            <th className="px-2.5 py-2 text-center text-xs font-semibold whitespace-nowrap">Nu.Contacto</th>
+            <th className="px-2.5 py-2 text-center text-xs font-semibold whitespace-nowrap">Categorías</th>
+            <th className="px-2.5 py-2 text-center text-xs font-semibold whitespace-nowrap">Acciones</th>
           </tr>
         </thead>
 
@@ -96,30 +106,30 @@ function ProvidersTable({
             const categoriasTexto = formatCategories(provider.categorias);
 
             return (
-              <tr key={provider.id} className={`group transition-colors duration-150 ${rowBg}`}>
-                <td className="px-4 py-2.5 text-center text-sm text-gray-500 font-medium whitespace-nowrap">
+              <tr key={provider.id} className={`group h-[38px] transition-colors duration-150 ${rowBg}`}>
+                <td className="overflow-hidden text-ellipsis whitespace-nowrap px-2.5 py-1.5 text-center text-xs text-gray-500 font-medium">
                   {String(recordNumber)}
                 </td>
-                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                <td className="overflow-hidden text-ellipsis whitespace-nowrap px-2.5 py-1.5 text-center text-xs text-gray-700">
                   {provider.tipo}
                 </td>
-                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                <td className="overflow-hidden text-ellipsis whitespace-nowrap px-2.5 py-1.5 text-center text-xs text-gray-700">
                   {highlightText(provider.numero, searchTerm)}
                 </td>
-                <td className="px-4 py-2.5 text-center text-sm text-gray-800 font-medium whitespace-nowrap">
+                <td className="overflow-hidden text-ellipsis whitespace-nowrap px-2.5 py-1.5 text-center text-xs text-gray-800 font-medium">
                   {highlightText(provider.nombre, searchTerm)}
                 </td>
-                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                <td className="overflow-hidden text-ellipsis whitespace-nowrap px-2.5 py-1.5 text-center text-xs text-gray-700">
                   {highlightText(fallbackText(provider.pContacto), searchTerm)}
                 </td>
-                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                <td className="overflow-hidden text-ellipsis whitespace-nowrap px-2.5 py-1.5 text-center text-xs text-gray-700">
                   {highlightText(fallbackText(formatPhoneNumber(provider.nuContacto)), searchTerm)}
                 </td>
-                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                <td className="overflow-hidden text-ellipsis whitespace-nowrap px-2.5 py-1.5 text-center text-xs text-gray-700">
                   {highlightText(categoriasTexto, searchTerm)}
                 </td>
-                <td className="px-4 py-2.5">
-                  <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                <td className="px-2.5 py-1.5">
+                  <div className="flex items-center justify-center gap-1.5">
                     {canToggle && (
                       <ActiveToggle
                         activo={provider.activo}
@@ -134,7 +144,7 @@ function ProvidersTable({
                           className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                           title="Información del proveedor"
                         >
-                          <Info className="w-4 h-4 sm:w-4.5 sm:h-4.5" strokeWidth={1.5} />
+                          <Info className="h-4 w-4" strokeWidth={1.5} />
                         </button>
                       </Permission>
                     )}
@@ -146,7 +156,7 @@ function ProvidersTable({
                           className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                           title="Editar proveedor"
                         >
-                          <SquarePen className="w-4 h-4 sm:w-4.5 sm:h-4.5" strokeWidth={1.5} />
+                          <SquarePen className="h-4 w-4" strokeWidth={1.5} />
                         </button>
                       </Permission>
                     )}
@@ -158,7 +168,7 @@ function ProvidersTable({
                           className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
                           title="Eliminar proveedor"
                         >
-                          <Trash2 className="w-4 h-4 sm:w-4.5 sm:h-4.5" strokeWidth={1.5} />
+                          <Trash2 className="h-4 w-4" strokeWidth={1.5} />
                         </button>
                       </Permission>
                     )}
@@ -174,3 +184,4 @@ function ProvidersTable({
 }
 
 export default ProvidersTable;
+

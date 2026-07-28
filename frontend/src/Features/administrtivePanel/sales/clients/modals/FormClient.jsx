@@ -6,7 +6,7 @@ import {
   FileText, Hash, BarChart2, TrendingUp, Loader2,
 } from 'lucide-react';
 import GraphClient from '../components/GraphClient';
-import { validateClientForm } from '../helpers/clientHelpers';
+import { getEmailValidationError, validateClientForm } from '../helpers/clientHelpers';
 import FormSelect from '../../../../shared/FormSelect';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import LoadingOverlay from '../../../../shared/LoadingOverlay';
@@ -214,6 +214,36 @@ function FormClient({ isOpen, onClose, client, onSave }) {
   const [formData, setFormData] = useState(initialState);
   const [errors,   setErrors]   = useState({});
   const [touched,  setTouched]  = useState({});
+  const [checkingEmail, setCheckingEmail] = useState(false);
+
+  const findClientByEmail = async (email) => {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!normalizedEmail) return null;
+
+    const result = await clientsService.getAll({
+      page: 1,
+      limit: 10000,
+      search: '',
+    });
+
+    return result.data.find((item) => {
+      const sameEmail = String(item.email || '').trim().toLowerCase() === normalizedEmail;
+      const sameClient = client?.id && Number(item.id) === Number(client.id);
+      return sameEmail && !sameClient;
+    }) || null;
+  };
+
+  const getDuplicateEmailError = async (email) => {
+    const localError = getEmailValidationError(email);
+    if (localError) return '';
+
+    const currentEmail = String(client?.email || '').trim().toLowerCase();
+    const nextEmail = String(email || '').trim().toLowerCase();
+    if (currentEmail && currentEmail === nextEmail) return '';
+
+    const duplicate = await findClientByEmail(email);
+    return duplicate ? 'Este correo ya está registrado' : '';
+  };
 
   // ============================================
   // VALIDACIÓN PARA numeric(10,2) DE POSTGRESQL
@@ -324,6 +354,58 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     setErrors({});
     setShowGraph(false);
   }, [client, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !touched.email) return undefined;
+
+    const email = String(formData.email || '').trim();
+    const localError = getEmailValidationError(formData.email);
+
+    if (localError) {
+      setCheckingEmail(false);
+      return undefined;
+    }
+
+    const currentEmail = String(client?.email || '').trim().toLowerCase();
+    if (currentEmail && currentEmail === email.toLowerCase()) {
+      setCheckingEmail(false);
+      setErrors((prev) => ({
+        ...prev,
+        email: prev.email === 'Este correo ya está registrado' ? '' : prev.email,
+      }));
+      return undefined;
+    }
+
+    let cancelled = false;
+    setCheckingEmail(true);
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const duplicateError = await getDuplicateEmailError(email);
+        if (cancelled) return;
+
+        setErrors((prev) => {
+          const currentLocalError = getEmailValidationError(formData.email);
+          if (currentLocalError) return { ...prev, email: currentLocalError };
+          return { ...prev, email: duplicateError };
+        });
+      } catch {
+        if (!cancelled) {
+          setErrors((prev) => ({
+            ...prev,
+            email: prev.email === 'Este correo ya está registrado' ? '' : prev.email,
+          }));
+        }
+      } finally {
+        if (!cancelled) setCheckingEmail(false);
+      }
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [client?.email, client?.id, formData.email, isOpen, touched.email]);
 
   const resetForm = () => {
     setFormData(initialState);
@@ -512,12 +594,19 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       return;
     }
 
+    const duplicateEmailError = await getDuplicateEmailError(formData.email);
+    if (duplicateEmailError) {
+      setErrors((prev) => ({ ...prev, email: duplicateEmailError }));
+      setTouched((prev) => ({ ...prev, email: true }));
+      return;
+    }
+
     const submitData = {
       personType: formData.personType,
       documentType: formData.documentType,
       document: formData.document,
       firstName: formData.firstName,
-      lastName: formData.personType === 'juridica' ? 'Empresa' : formData.lastName,
+      lastName: formData.personType === 'juridica' ? 'N/A' : formData.lastName,
       address: formData.address,
       phone: formData.phone,
       email: formData.email,
@@ -772,10 +861,13 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     onBlur={handleBlur}
                     placeholder="Ej: cliente@email.com"
                     autoComplete="off"
-                    className={inputClass('email')}
-                  />
-                  <ErrorMsg field="email" />
-                </div>
+                  className={inputClass('email')}
+                />
+                {checkingEmail && touched.email && !errors.email && (
+                  <p className="mt-0.5 text-xs text-[#004D77]">Verificando si el correo ya está registrado...</p>
+                )}
+                <ErrorMsg field="email" />
+              </div>
               </div>
 
               {/* COLUMNA DERECHA */}
@@ -900,15 +992,12 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   <MiniFormGraph clientId={client?.id} onExpand={() => setShowGraph(!showGraph)} />
                 </div>
               )}
-            </div>
-
-            {isEditing && showGraph && (
-              <div className="shrink-0 border-t border-slate-100 bg-white lg:hidden">
-                <div className="h-[58dvh] min-h-[28rem] w-full">
+              {isEditing && showGraph && (
+                <div className="md:col-span-2 lg:hidden">
                   <GraphClient clientId={client?.id} clientStartDate={client?.clientSince || '07/05/2023'} />
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             <div className="flex shrink-0 flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:px-5 sm:py-4 md:flex-row md:items-center md:justify-between">
               {isEditing ? (
@@ -944,6 +1033,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
               </div>
             </div>
           </form>
+
         </div>
 
         {/* Panel derecho - Gráfica grande con datos reales */}
