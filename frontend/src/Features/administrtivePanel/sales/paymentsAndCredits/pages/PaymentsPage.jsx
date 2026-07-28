@@ -298,7 +298,7 @@ export default function PaymentsPage() {
       </div>
 
       {/* TABLA */}
-      <div className="mt-3">
+      <div className="mt-3 w-full min-w-0">
         <PaymentsTable
           data={paginatedData}
           onView={handleView}

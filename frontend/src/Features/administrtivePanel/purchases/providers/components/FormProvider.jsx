@@ -31,6 +31,12 @@ const onlyLetters = (value, maxLength = 80) =>
     .replace(/\s{2,}/g, ' ')
     .slice(0, maxLength);
 
+const cleanCompanyName = (value, maxLength = 120) =>
+  String(value ?? '')
+    .replace(/[^A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ\s&.,#'-]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .slice(0, maxLength);
+
 const cleanDocument = (value, documentType) => {
   const maxLength = documentType === 'NIT' ? 20 : 15;
   if (documentType === 'NIT') {
@@ -98,7 +104,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
         const result = await categoriesService.getAll();
         categoriesCache = result.data || [];
         setCategoriesList(categoriesCache);
-      } catch (error) {
+      } catch {
         showError('Error', 'No se pudieron cargar las categorías');
       } finally {
         setLoadingCategories(false);
@@ -206,7 +212,9 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     if (name === 'telefono' || name === 'numeroContacto') {
       nextValue = onlyDigits(value, 10);
     }
-    if (name === 'nombres' || name === 'apellidos' || name === 'nombreContacto') {
+    if (name === 'nombres' && formData.tipoPersona === 'juridica') {
+      nextValue = cleanCompanyName(value);
+    } else if (name === 'nombres' || name === 'apellidos' || name === 'nombreContacto') {
       nextValue = onlyLetters(value, name === 'nombreContacto' ? 100 : 80);
     }
     if (name === 'numero') {
@@ -224,6 +232,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     if (name === 'tipoPersona') {
       if (value === 'juridica') {
         newFormData.tipo = 'NIT';
+        newFormData.apellidos = '';
         setIsDocumentTypeDisabled(true);
       } else if (value === 'natural') {
         newFormData.tipo = 'CC';
@@ -252,7 +261,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       return next;
     });
 
-    const validationErrors = validateProviderForm(newFormData);
+    const validationErrors = validateForm(newFormData);
     const fieldsToRefresh = [name];
     if (name === 'tipoPersona') fieldsToRefresh.push('tipo');
     if (name === 'rut') fieldsToRefresh.push('codigoCIU');
@@ -287,7 +296,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     }));
 
     setTouched((prev) => ({ ...prev, categoryIds: true }));
-    const validationErrors = validateProviderForm({
+    const validationErrors = validateForm({
       ...formData,
       categoryIds: updatedCategoryIds,
     });
@@ -305,7 +314,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       [name]: true,
     }));
 
-    const validationErrors = validateProviderForm(formData);
+    const validationErrors = validateForm(formData);
     setErrors((prev) => ({
       ...prev,
       [name]: validationErrors[name] || '',
@@ -324,6 +333,28 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
         categoryIds: 'Seleccione al menos una categoría',
       }));
     }
+  };
+
+  const validateForm = (data) => {
+    const dataToValidate = data.tipoPersona === 'juridica'
+      ? { ...data, apellidos: data.apellidos || 'Empresa' }
+      : data;
+
+    const validationErrors = validateProviderForm(dataToValidate);
+
+    if (data.tipoPersona === 'juridica') {
+      delete validationErrors.apellidos;
+
+      if (!data.nombres?.trim()) {
+        validationErrors.nombres = 'El nombre de la empresa es obligatorio';
+      } else if (data.nombres.trim().length < 2) {
+        validationErrors.nombres = 'Debe tener al menos 2 caracteres';
+      } else {
+        delete validationErrors.nombres;
+      }
+    }
+
+    return validationErrors;
   };
 
   const handleSubmit = async (e) => {
@@ -358,7 +389,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       return;
     }
 
-    const validationErrors = validateProviderForm(formData);
+    const validationErrors = validateForm(formData);
     setErrors(validationErrors);
     setTouched(
       Object.keys(formData).reduce((acc, key) => ({ ...acc, [key]: true }), {})
@@ -375,7 +406,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       documentType: formData.tipo,
       documentNumber: formData.numero,
       nameProvider: formData.nombres,
-      lastname: formData.apellidos,
+      lastname: formData.tipoPersona === 'juridica' ? 'Empresa' : formData.apellidos,
       email: formData.correo,
       phone: formData.telefono,
       address: formData.direccion,
@@ -402,7 +433,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     }
 };
 
-  const liveValidationErrors = validateProviderForm(formData);
+  const liveValidationErrors = validateForm(formData);
   const hasLiveErrors = Object.keys(liveValidationErrors).length > 0;
 
   const inputClass = (field) =>
@@ -421,10 +452,12 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
 
   const renderError = (field) =>
     errors[field] && touched[field] && (
-      <p className="mt-0.5 text-xs text-red-600 flex items-start gap-1">
+      <p className="mt-0.5 text-xs text-red-500">
         <span>{errors[field]}</span>
       </p>
     );
+
+  const labelClass = 'flex min-h-8 items-end text-xs font-semibold leading-tight text-gray-600';
 
   const getSelectedCategoryNames = () => {
     const selectedCategories = categoriesList.filter(cat => formData.categoryIds.includes(cat.id));
@@ -464,6 +497,13 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
 
   if (!isOpen) return null;
 
+  const isLegalPerson = formData.tipoPersona === 'juridica';
+  const selectResponsiveProps = {
+    dropdownClassName: 'max-sm:w-full',
+    maxDropdownWidth: 340,
+    placement: 'bottom',
+  };
+
   const personTypeOptions = [
     { value: '', label: 'Selecciona una opción' },
     { value: 'natural', label: 'Persona Natural' },
@@ -482,17 +522,17 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center p-0 sm:items-center sm:p-4">
       
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 hidden bg-black/40 backdrop-blur-sm sm:block"
         onClick={handleClose}
       />
 
-      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[94vh] overflow-hidden flex flex-col">
+      <div className="relative flex h-dvh w-full min-h-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[94vh] sm:max-w-2xl sm:rounded-3xl">
         <LoadingOverlay show={saving} message={isEditing ? 'Actualizando proveedor...' : 'Creando proveedor...'} />
         
-        <div className="bg-[#004D77] text-white px-5 py-4 flex items-center justify-between shrink-0">
+          <div className="bg-[#004D77] text-white px-4 py-3.5 sm:px-5 sm:py-4 flex items-center justify-between shrink-0">
           <h2 className="text-white font-semibold text-lg">
             {isEditing ? 'Editar proveedor' : 'Nuevo proveedor'}
           </h2>
@@ -505,14 +545,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-5">
+          <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5">
             {isEditing && (
               <div className="mb-4 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-800">
                 Modo edición: puedes actualizar contacto, plazo de devolución, categorías, RUT y CIU. La identificación queda protegida.
               </div>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 max-w-6xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 max-w-6xl mx-auto">
 
               {/* COLUMNA IZQUIERDA: DATOS PERSONALES */}
               <div className="flex flex-col gap-1.5">
@@ -523,36 +563,38 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="block text-xs font-semibold text-gray-600">Tipo de persona<span className="text-red-500">*</span></label>
+                  <label className={labelClass}>Tipo de persona<span className="text-red-500">*</span></label>
                   <FormSelect
                     value={formData.tipoPersona}
                     options={personTypeOptions}
                     onChange={(value) => handleSelectChange('tipoPersona', value)}
                     disabled={isEditing}
                     error={errors.tipoPersona && touched.tipoPersona}
-                    placeholder="Selecciona una opción"
-                    ariaLabel="Tipo de persona"
-                    className="h-10 rounded-xl py-0 pr-10"
-                  />
+              placeholder="Selecciona una opción"
+              ariaLabel="Tipo de persona"
+              className="h-10 rounded-xl py-0 pr-10"
+              {...selectResponsiveProps}
+            />
                   {renderError('tipoPersona')}
                 </div>
 
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1">
-                    <label className="block text-xs font-semibold text-gray-600">Tipo<span className="text-red-500">*</span></label>
+                    <label className={labelClass}>Tipo<span className="text-red-500">*</span></label>
                     <FormSelect
                       value={formData.tipo}
                       options={documentTypeOptions}
                       onChange={(value) => handleSelectChange('tipo', value)}
                       disabled={isEditing || isDocumentTypeDisabled}
                       error={errors.tipo && touched.tipo}
-                      placeholder="Tipo"
-                      ariaLabel="Tipo de documento"
-                      className="h-10 rounded-xl py-0 pr-10"
-                    />
+                placeholder="Tipo"
+                ariaLabel="Tipo de documento"
+                className="h-10 rounded-xl py-0 pr-10"
+                {...selectResponsiveProps}
+              />
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
-                    <label className="block text-xs font-semibold text-gray-600">Número<span className="text-red-500">*</span></label>
+                    <label className={labelClass}>Número<span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       name="numero"
@@ -568,16 +610,16 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                <div className="flex flex-col gap-1">
-                  <label className="block text-xs font-semibold text-gray-600">Nombres<span className="text-red-500">*</span></label>
+                <div className={`grid grid-cols-1 gap-2 ${isLegalPerson ? '' : 'sm:grid-cols-2'}`}>
+                <div className="flex min-w-0 flex-col gap-1">
+                  <label className={labelClass}>{isLegalPerson ? 'Nombre empresa' : 'Nombres'}<span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     name="nombres"
                     value={formData.nombres}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="Ej: Juan Carlos"
+                    placeholder={isLegalPerson ? 'Ej: PapelerÃ­a Magic SAS' : 'Ej: Juan Carlos'}
                     autoComplete="off"
                     className={isEditing ? disabledInputClass('nombres') : inputClass('nombres')}
                     disabled={isEditing}
@@ -585,8 +627,9 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                   {renderError('nombres')}
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <label className="block text-xs font-semibold text-gray-600">Apellidos<span className="text-red-500">*</span></label>
+                {!isLegalPerson && (
+                <div className="flex min-w-0 flex-col gap-1">
+                  <label className={labelClass}>Apellidos<span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     name="apellidos"
@@ -600,11 +643,12 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                   />
                   {renderError('apellidos')}
                 </div>
+                )}
                 </div>
 
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1 flex-1">
-                    <label className="block text-xs font-semibold text-gray-600">Teléfono<span className="text-red-500">*</span></label>
+                    <label className={labelClass}>Teléfono<span className="text-red-500">*</span></label>
                     <input
                       type="tel"
                       name="telefono"
@@ -618,7 +662,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     {renderError('telefono')}
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
-                    <label className="block text-xs font-semibold text-gray-600">Dirección<span className="text-red-500">*</span></label>
+                    <label className={labelClass}>Dirección<span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       name="direccion"
@@ -634,7 +678,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="block text-xs font-semibold text-gray-600">Correo<span className="text-red-500">*</span></label>
+                  <label className={labelClass}>Correo<span className="text-red-500">*</span></label>
                   <input
                     type="email"
                     name="correo"
@@ -660,7 +704,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
 
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1 flex-1">
-                    <label className="block text-xs font-semibold text-gray-600">Persona contacto</label>
+                    <label className={labelClass}>{isLegalPerson ? 'Persona encargada' : 'Persona contacto'}</label>
                     <input
                       type="text"
                       name="nombreContacto"
@@ -674,7 +718,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     {renderError('nombreContacto')}
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
-                    <label className="block text-xs font-semibold text-gray-600">Tel. contacto</label>
+                    <label className={labelClass}>{isLegalPerson ? 'Número persona encargada' : 'Tel. contacto'}</label>
                     <input
                       type="tel"
                       name="numeroContacto"
@@ -690,7 +734,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="block text-xs font-semibold text-gray-600">Plazo devoluciones</label>
+                  <label className={labelClass}>Plazo devoluciones</label>
                   <input
                     type="text"
                     name="plazoDevoluciones"
@@ -706,7 +750,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                 </div>
 
                 <div ref={categoriasRef} className="flex flex-col gap-1">
-                  <label className="block text-xs font-semibold text-gray-600">Categorías<span className="text-red-500">*</span></label>
+                  <label className={labelClass}>Categorías<span className="text-red-500">*</span></label>
                   <div className="relative">
                     <button
                       type="button"
@@ -752,20 +796,21 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
 
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1 flex-1">
-                    <label className="block text-xs font-semibold text-gray-600">RUT<span className="text-red-500">*</span></label>
+                    <label className={labelClass}>RUT<span className="text-red-500">*</span></label>
                     <FormSelect
                       value={formData.rut}
                       options={rutOptions}
                       onChange={(value) => handleSelectChange('rut', value)}
                       error={errors.rut && touched.rut}
-                      placeholder="Seleccione"
-                      ariaLabel="RUT"
-                    className="h-10 rounded-xl py-0 pr-10"
-                    />
+                placeholder="Seleccione"
+                ariaLabel="RUT"
+              className="h-10 rounded-xl py-0 pr-10"
+                {...selectResponsiveProps}
+              />
                     {renderError('rut')}
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
-                    <label className="block text-xs font-semibold text-gray-600">Código CIU {formData.rut === 'si' && <span className="text-red-500">*</span>}</label>
+                    <label className={labelClass}>Código CIU {formData.rut === 'si' && <span className="text-red-500">*</span>}</label>
                     <input
                       type="text"
                       name="codigoCIU"
@@ -786,19 +831,19 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
             </div>
           </div>
 
-          <div className="border-t border-slate-100 px-5 py-4 flex items-center justify-end gap-3 shrink-0">
+          <div className="border-t border-slate-100 px-4 py-3 sm:px-5 sm:py-4 flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
             <button
               type="button"
               onClick={handleClose}
               disabled={saving}
-              className="rounded-full border border-slate-300 px-6 py-2.5 text-sm font-semibold text-slate-600 transition duration-200 hover:-translate-y-0.5 hover:border-[#004D77] hover:bg-sky-50 hover:text-[#004D77] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full rounded-full border border-slate-300 px-6 py-2.5 text-sm font-semibold text-slate-600 transition duration-200 hover:border-[#004D77] hover:bg-sky-50 hover:text-[#004D77] disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto sm:hover:-translate-y-0.5"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={saving || hasLiveErrors}
-              className="flex items-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-semibold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-[#003d61] hover:shadow-lg disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-semibold text-white transition duration-200 hover:bg-[#003d61] disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60 sm:w-auto sm:hover:-translate-y-0.5 sm:hover:shadow-lg"
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               {saving ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}
@@ -812,3 +857,4 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
 }
 
 export default FormProvider;
+

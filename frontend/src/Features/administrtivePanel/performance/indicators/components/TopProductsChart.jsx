@@ -141,7 +141,7 @@ function TopProductsChart({
       >
         {sorted.map((product, i) => (
           <div
-            key={product.idProduct}
+            key={`${product.idProduct ?? product.name}-${i}`}
             style={{
               display: "flex",
               alignItems: "center",

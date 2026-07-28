@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, X, Loader2 } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import LoadingOverlay from '../../../../shared/LoadingOverlay';
+import FormSelect from '../../../../shared/FormSelect';
 import { resolveDefectiveProduct } from '../data/returnsService';
 import { formatCurrency } from '../utils/returnsHelpers';
 
@@ -17,6 +18,16 @@ const RETURN_METHODS = [
   { id: 2, label: 'Reembolso' },
   { id: 3, label: 'Saldo a favor' },
 ];
+
+const RETURN_REASON_OPTIONS = RETURN_REASONS.map((reason) => ({
+  value: reason.id,
+  label: reason.label,
+}));
+
+const RETURN_METHOD_OPTIONS = RETURN_METHODS.map((method) => ({
+  value: method.id,
+  label: method.label,
+}));
 
 const getMethodId = (method) => (
   RETURN_METHODS.find((option) => option.label === method)?.id ?? 1
@@ -127,8 +138,8 @@ function PurchaseReturnModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="relative flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-0 backdrop-blur-sm sm:p-4">
+      <div className="relative flex h-dvh w-full max-w-xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:rounded-2xl">
         <LoadingOverlay show={loading} message="Generando devolución de compra..." />
         <header className="flex items-center justify-between bg-[#004D77] px-5 py-4">
           <div>
@@ -146,7 +157,7 @@ function PurchaseReturnModal({
           </button>
         </header>
 
-        <div className="flex-1 space-y-4 overflow-y-auto p-5">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
           <div className="flex gap-3 rounded-xl border border-green-200 bg-green-50 p-3">
             <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
             <div>
@@ -169,8 +180,8 @@ function PurchaseReturnModal({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4 rounded-xl border border-gray-200 p-4 text-sm">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 gap-4 rounded-xl border border-gray-200 p-4 text-sm sm:grid-cols-2">
+            <div className="sm:col-span-2">
               <p className="text-xs font-semibold uppercase text-gray-400">Producto</p>
               <p className="mt-1 font-semibold text-gray-800">{productData.productName}</p>
             </div>
@@ -217,41 +228,41 @@ function PurchaseReturnModal({
               <label className="mb-1 block text-sm font-semibold text-gray-700">
                 Motivo <span className="text-red-500">*</span>
               </label>
-              <select
+              <FormSelect
                 value={formData.idReturnReason}
-                onChange={(event) => setFormData((current) => ({
+                options={RETURN_REASON_OPTIONS}
+                onChange={(value) => setFormData((current) => ({
                   ...current,
-                  idReturnReason: Number(event.target.value),
+                  idReturnReason: Number(value),
                 }))}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-[#004D77]"
-              >
-                {RETURN_REASONS.map((reason) => (
-                  <option key={reason.id} value={reason.id}>{reason.label}</option>
-                ))}
-              </select>
+                ariaLabel="Motivo de devolución de compra"
+                placeholder="Seleccione un motivo"
+                className="rounded-xl"
+                placement="bottom"
+              />
             </div>
 
             <div>
               <label className="mb-1 block text-sm font-semibold text-gray-700">
                 Método <span className="text-red-500">*</span>
               </label>
-              <select
+              <FormSelect
                 value={formData.idReturnMethod}
-                onChange={(event) => setFormData((current) => ({
+                options={RETURN_METHOD_OPTIONS}
+                onChange={(value) => setFormData((current) => ({
                   ...current,
-                  idReturnMethod: Number(event.target.value),
+                  idReturnMethod: Number(value),
                 }))}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-[#004D77]"
-              >
-                {RETURN_METHODS.map((method) => (
-                  <option key={method.id} value={method.id}>{method.label}</option>
-                ))}
-              </select>
+                ariaLabel="Método de devolución de compra"
+                placeholder="Seleccione un método"
+                className="rounded-xl"
+                placement="bottom"
+              />
             </div>
           </div>
         </div>
 
-        <footer className="flex gap-3 border-t border-gray-200 p-4">
+        <footer className="flex flex-col-reverse gap-3 border-t border-gray-200 p-4 sm:flex-row">
           <button
             type="button"
             onClick={onClose}

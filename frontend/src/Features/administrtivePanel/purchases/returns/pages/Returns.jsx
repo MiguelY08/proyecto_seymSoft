@@ -246,7 +246,7 @@ function Returns() {
   }
 
   return (
-    <div className="h-full min-w-0 flex flex-col gap-4 p-3 sm:p-4">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-hidden p-3 sm:p-4">
       <TopBar
         search={search}
         setSearch={(value) => {
@@ -265,7 +265,7 @@ function Returns() {
         <PurchaseReturnsMetricsCards metrics={metricsLoading ? DEFAULT_METRICS : metrics} />
       </div>
 
-      <div className="w-full min-w-0 rounded-xl bg-white shadow-md">
+      <div className="flex min-h-0 w-full min-w-0 flex-1 overflow-hidden rounded-xl bg-white shadow-md">
         <ReturnsTable
           currentData={returns}
           search={search}
@@ -278,12 +278,14 @@ function Returns() {
       </div>
 
       {pagination.total > 0 && (
-        <PaginationAdmin
-          currentPage={currentPage}
-          onPageChange={handlePageChange}
-          totalRecords={pagination.total}
-          recordsPerPage={RECORDS_PER_PAGE}
-        />
+        <div className="shrink-0">
+          <PaginationAdmin
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            totalRecords={pagination.total}
+            recordsPerPage={RECORDS_PER_PAGE}
+          />
+        </div>
       )}
 
       {detailLoading && (

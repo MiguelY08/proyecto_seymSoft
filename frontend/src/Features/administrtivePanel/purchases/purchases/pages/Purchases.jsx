@@ -233,7 +233,7 @@ export const Purchases = () => {
 
   return (
     <>
-      <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-hidden p-3 sm:p-4">
         <div className="flex flex-wrap items-end gap-3">
           <PurchasesFilters
             search={search}
@@ -268,7 +268,7 @@ export const Purchases = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md">
+        <div className="flex min-h-0 w-full min-w-0 flex-1 overflow-hidden rounded-xl bg-white shadow-md">
           <PurchasesTable
             currentData={currentData}
             handleCancel={handleCancel}
@@ -280,12 +280,14 @@ export const Purchases = () => {
         </div>
 
         {totalRecords > 0 && (
-          <PaginationAdmin
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            totalRecords={totalRecords}
-            recordsPerPage={13}
-          />
+          <div className="shrink-0">
+            <PaginationAdmin
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              totalRecords={totalRecords}
+              recordsPerPage={13}
+            />
+          </div>
         )}
       </div>
 

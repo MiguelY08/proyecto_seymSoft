@@ -215,8 +215,8 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
   const canAnnul = hasPermission('devoluciones_en_ventas.anular');
 
   return (
-    <div className="h-full min-h-0 w-full overflow-auto rounded-xl bg-white shadow-md">
-      <table className="min-w-[1100px] w-full table-fixed">
+    <div className="w-full overflow-x-auto rounded-xl bg-white shadow-md">
+      <table className="min-w-[1180px] w-full table-fixed">
         <colgroup>
           <col className="w-[4%]" />
           <col className="w-[13%]" />
@@ -225,8 +225,8 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
           <col className="w-[17%]" />
           <col className="w-[10%]" />
           <col className="w-[11%]" />
+          <col className="w-[12%]" />
           <col className="w-[10%]" />
-          <col className="w-[7%]" />
         </colgroup>
 
         <thead className="sticky top-0 z-10 bg-[#004D77] text-white">
@@ -288,8 +288,8 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
                   <td className="px-4 py-2.5 text-center">
                     <StatusProcessTooltip row={row} status={status} />
                   </td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex items-center justify-center gap-2">
+                  <td className="px-3 py-2.5">
+                    <div className="mx-auto flex min-w-[92px] items-center justify-center gap-2.5">
                       {canView && (
                         <button
                           type="button"

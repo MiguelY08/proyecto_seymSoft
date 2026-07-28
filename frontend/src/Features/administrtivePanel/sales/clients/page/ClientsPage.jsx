@@ -8,7 +8,6 @@ import { useAlert }      from '../../../../shared/alerts/useAlert';
 import { clientsService } from '../services/clientsService';
 import Permission from "../../../configuration/roles/components/Permission";
 import Spinner from '../../../../shared/spinner';
-import { downloadClientsExcel } from '../helpers/excelHelper';
 
 
 const RECORDS_PER_PAGE = 13;
@@ -59,6 +58,7 @@ const clientMatchesSearch = (client, searchTerm) => {
 function ClientsPage() {
   const [clients,         setClients]         = useState([]);
   const [searchTerm,      setSearchTerm]      = useState('');
+  const [statusFilter,    setStatusFilter]    = useState('');
   const [currentPage,     setCurrentPage]     = useState(1);
   const [totalRecords,    setTotalRecords]    = useState(0);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -105,7 +105,7 @@ function ClientsPage() {
   const loadClients = useCallback(async () => {
     setLoading(true);
     try {
-      const hasSearch = debouncedSearchTerm.trim() !== '';
+      const hasSearch = debouncedSearchTerm.trim() !== '' || statusFilter !== '';
       const result = await clientsService.getAll({
         page: hasSearch ? 1 : currentPage,
         limit: hasSearch ? SEARCH_FETCH_LIMIT : RECORDS_PER_PAGE,
@@ -113,20 +113,31 @@ function ClientsPage() {
       });
 
       if (hasSearch) {
-        const filtered = result.data.filter((client) => clientMatchesSearch(client, debouncedSearchTerm));
+        const filtered = result.data
+          .filter((client) => clientMatchesSearch(client, debouncedSearchTerm))
+          .filter((client) => {
+            if (statusFilter === 'activo') return client.active === true;
+            if (statusFilter === 'inactivo') return client.active === false;
+            return true;
+          });
         const start = (currentPage - 1) * RECORDS_PER_PAGE;
         setClients(filtered.slice(start, start + RECORDS_PER_PAGE));
         setTotalRecords(filtered.length);
       } else {
-        setClients(result.data);
-        setTotalRecords(result.pagination.total);
+        const filtered = result.data.filter((client) => {
+          if (statusFilter === 'activo') return client.active === true;
+          if (statusFilter === 'inactivo') return client.active === false;
+          return true;
+        });
+        setClients(filtered);
+        setTotalRecords(statusFilter ? filtered.length : result.pagination.total);
       }
     } catch (error) {
       showError('Error', error.message || 'No se pudieron cargar los clientes');
     } finally {
       setLoading(false);
     }
-  }, [currentPage, debouncedSearchTerm, showError]);
+  }, [currentPage, debouncedSearchTerm, statusFilter, showError]);
 
   useEffect(() => {
     loadClients();
@@ -169,16 +180,6 @@ function ClientsPage() {
   const handleNewClient = () => {
     setSelectedClient(null);
     setIsFormModalOpen(true);
-  };
-
-  const handleExportClients = async () => {
-    const result = await clientsService.getAll({
-      page: 1,
-      limit: totalRecords || RECORDS_PER_PAGE,
-      search: searchTerm,
-    });
-
-    return downloadClientsExcel(result.data);
   };
 
 const handleSave = async (formData) => {
@@ -269,6 +270,11 @@ const handleDelete = async (client) => {
     setCurrentPage(1);
   };
 
+  const handleStatusChange = (nextStatus) => {
+    setStatusFilter(nextStatus);
+    setCurrentPage(1);
+  };
+
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
 
   if (loading && clients.length === 0) {
@@ -279,20 +285,21 @@ const handleDelete = async (client) => {
 
   return (
     <Permission permission="clientes.ver">
-      <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-hidden p-3 sm:p-4">
         <ClientsToolbar
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
+          statusFilter={statusFilter}
+          onStatusChange={handleStatusChange}
           onNewClick={handleNewClient}
-          onExport={handleExportClients}
-          totalClients={totalRecords}
         />
 
-        <div className="bg-white rounded-xl shadow-md">
+        <div className="flex min-h-0 w-full min-w-0 flex-1 overflow-hidden rounded-xl bg-white shadow-md">
           <ClientsTable
             clients={clients}
             startIndex={startIndex}
             searchTerm={searchTerm}
+            totalData={totalRecords}
             onInfo={handleInfo}
             onEdit={handleEdit}
             onToggleActive={handleToggleActive}
@@ -301,12 +308,14 @@ const handleDelete = async (client) => {
         </div>
 
         {totalRecords > 0 && (
-          <PaginationAdmin
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            totalRecords={totalRecords}
-            recordsPerPage={RECORDS_PER_PAGE}
-          />
+          <div className="shrink-0">
+            <PaginationAdmin
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              totalRecords={totalRecords}
+              recordsPerPage={RECORDS_PER_PAGE}
+            />
+          </div>
         )}
 
         <FormClient

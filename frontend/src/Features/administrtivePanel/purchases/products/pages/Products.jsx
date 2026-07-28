@@ -624,8 +624,8 @@ function Products() {
           </div>
         ) : (
           <>
-            <div className="flex-1 overflow-x-auto rounded-xl bg-white shadow-md min-h-0">
-              <table className="min-w-max w-full">
+            <div className="min-h-0 min-w-0 w-full flex-1 overflow-auto overscroll-contain rounded-xl bg-white shadow-md [-webkit-overflow-scrolling:touch]">
+              <table className="w-full min-w-[820px] table-auto lg:min-w-[900px]">
                 <thead className="bg-[#004D77] text-white">
                   <tr>
                     <th className="px-4 py-3 text-center text-sm font-semibold">
@@ -639,9 +639,6 @@ function Products() {
                     </th>
                     <th className="px-4 py-3 text-center text-sm font-semibold">
                       Categoría/Sub
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold">
-                      Unidad
                     </th>
                     <th className="px-4 py-3 text-center text-sm font-semibold">
                       Stock
@@ -669,9 +666,6 @@ function Products() {
                         : row.categories?.length > 0
                           ? row.categories.map((cat) => cat.name).join(", ")
                           : "";
-                    const unitMeasureDisplay = row.unitMeasure
-                      ? `${row.unitMeasure.name || ""}${row.unitMeasure.abbreviation ? ` (${row.unitMeasure.abbreviation})` : ""}`.trim()
-                      : "N/A";
                     return (
                       <tr
                         key={row.id}
@@ -695,12 +689,6 @@ function Products() {
                         <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
                           <HighlightText
                             text={subcategoriaDisplay}
-                            highlight={search}
-                          />
-                        </td>
-                        <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
-                          <HighlightText
-                            text={unitMeasureDisplay}
                             highlight={search}
                           />
                         </td>
