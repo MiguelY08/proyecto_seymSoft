@@ -96,6 +96,8 @@ const clampQuantity = (product, quantity) => {
   return stock > 0 ? Math.min(requested, stock) : requested;
 };
 
+const getCartItemKey = (productId) => String(productId);
+
 // Se conserva esta exportación por compatibilidad con los consumidores actuales.
 // eslint-disable-next-line react-refresh/only-export-components
 export const useCart = () => {
@@ -129,12 +131,14 @@ export const CartProvider = ({ children }) => {
   const requestVersion = useRef(0);
   const synchronizationRef = useRef(null);
   const activeIdentityRef = useRef(cartIdentity);
+  const cartItemRequestVersions = useRef(new Map());
 
   useEffect(() => {
     if (authLoading) return undefined;
 
     const version = ++requestVersion.current;
     activeIdentityRef.current = cartIdentity;
+    cartItemRequestVersions.current.clear();
     let active = true;
     const timer = window.setTimeout(() => {
       if (!active) return;
@@ -227,6 +231,21 @@ export const CartProvider = ({ children }) => {
     [clientId, localCartKey],
   );
 
+  const createCartItemRequest = useCallback((productId) => {
+    const key = getCartItemKey(productId);
+    const version = (cartItemRequestVersions.current.get(key) || 0) + 1;
+    cartItemRequestVersions.current.set(key, version);
+    return { key, version };
+  }, []);
+
+  const isLatestCartItemRequest = useCallback(
+    (request, requestedIdentity) => (
+      activeIdentityRef.current === requestedIdentity
+      && cartItemRequestVersions.current.get(request.key) === request.version
+    ),
+    [],
+  );
+
   const addToCart = useCallback(async (product, quantity = 1) => {
     const requestedQuantity = Math.max(1, Number(quantity) || 1);
 
@@ -250,6 +269,7 @@ export const CartProvider = ({ children }) => {
     }
 
     const requestedIdentity = cartIdentity;
+    const cartItemRequest = createCartItemRequest(product.id);
     const existing = cartItems.find((item) => item.id === product.id);
     const nextQuantity = clampQuantity(
       product,
@@ -263,12 +283,12 @@ export const CartProvider = ({ children }) => {
         nextQuantity,
       );
 
-      if (activeIdentityRef.current !== requestedIdentity) return false;
+      if (!isLatestCartItemRequest(cartItemRequest, requestedIdentity)) return false;
 
       setCartItems(normalizeItems(cartResponse?.items));
       return true;
     } catch (requestError) {
-      if (activeIdentityRef.current === requestedIdentity) {
+      if (isLatestCartItemRequest(cartItemRequest, requestedIdentity)) {
         setError(
           requestError?.response?.data?.message
           || 'No fue posible actualizar el carrito.',
@@ -276,7 +296,14 @@ export const CartProvider = ({ children }) => {
       }
       return false;
     }
-  }, [cartIdentity, cartItems, clientId, updateItems]);
+  }, [
+    cartIdentity,
+    cartItems,
+    clientId,
+    createCartItemRequest,
+    isLatestCartItemRequest,
+    updateItems,
+  ]);
 
   const updateQuantity = useCallback((productId, newQuantity) => {
     updateItems(
@@ -290,13 +317,14 @@ export const CartProvider = ({ children }) => {
         if (!item) return;
 
         const requestedIdentity = cartIdentity;
+        const cartItemRequest = createCartItemRequest(productId);
         storefrontService.setCartItem(productId, item.quantity)
           .then((cartResponse) => {
-            if (activeIdentityRef.current !== requestedIdentity) return;
+            if (!isLatestCartItemRequest(cartItemRequest, requestedIdentity)) return;
             setCartItems(normalizeItems(cartResponse?.items));
           })
           .catch((requestError) => {
-            if (activeIdentityRef.current !== requestedIdentity) return;
+            if (!isLatestCartItemRequest(cartItemRequest, requestedIdentity)) return;
 
             setCartItems(previousItems);
             setError(
@@ -306,7 +334,12 @@ export const CartProvider = ({ children }) => {
           });
       },
     );
-  }, [cartIdentity, updateItems]);
+  }, [
+    cartIdentity,
+    createCartItemRequest,
+    isLatestCartItemRequest,
+    updateItems,
+  ]);
 
   const increaseQuantity = useCallback((productId) => {
     const item = cartItems.find((entry) => entry.id === productId);
@@ -322,17 +355,18 @@ export const CartProvider = ({ children }) => {
 
   const removeFromCart = useCallback((productId) => {
     const requestedIdentity = cartIdentity;
+    const cartItemRequest = createCartItemRequest(productId);
 
     updateItems(
       (previousItems) => previousItems.filter((item) => item.id !== productId),
       (_nextItems, previousItems) => {
         storefrontService.removeCartItem(productId)
           .then((cartResponse) => {
-            if (activeIdentityRef.current !== requestedIdentity) return;
+            if (!isLatestCartItemRequest(cartItemRequest, requestedIdentity)) return;
             setCartItems(normalizeItems(cartResponse?.items));
           })
           .catch((requestError) => {
-            if (activeIdentityRef.current !== requestedIdentity) return;
+            if (!isLatestCartItemRequest(cartItemRequest, requestedIdentity)) return;
 
             setCartItems(previousItems);
             setError(
@@ -342,11 +376,17 @@ export const CartProvider = ({ children }) => {
           });
       },
     );
-  }, [cartIdentity, updateItems]);
+  }, [
+    cartIdentity,
+    createCartItemRequest,
+    isLatestCartItemRequest,
+    updateItems,
+  ]);
 
   const clearCart = useCallback(async () => {
     const previousItems = cartItems;
     const requestedIdentity = cartIdentity;
+    cartItemRequestVersions.current.clear();
     setCartItems([]);
     setError(null);
 

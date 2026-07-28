@@ -208,7 +208,7 @@ function OrdersTable({
                 </td>
                 <td className="px-4 py-2.5 text-center whitespace-nowrap">
                   <div
-                    className="group relative inline-flex justify-center"
+                    className="group/payment relative inline-flex justify-center"
                     onMouseEnter={(event) => {
                       updatePaymentHoverPosition(order.id, event.currentTarget);
                       loadPaymentsOnHover(order);
