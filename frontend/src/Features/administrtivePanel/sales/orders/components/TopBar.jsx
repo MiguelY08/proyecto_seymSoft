@@ -42,6 +42,7 @@ function TopBar({
   const filtersWrapperRef = useRef(null);
 
   const hayFiltrosActivos = search || fechaInicial || fechaFinal || origenFilter || pagoEstadoFilter || envioFilter;
+  const compactFilters = isSearchOpen;
 
   const handleClearFilters = () => {
     setSearch('');
@@ -204,18 +205,22 @@ function TopBar({
 
         <div ref={filtersWrapperRef} className="grid w-full grid-cols-2 gap-3 sm:w-auto sm:flex sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
           <div
-            className="relative w-full min-w-0 transition-all duration-300 sm:w-40"
+            className={`relative w-full min-w-0 transition-all duration-300 sm:w-40 ${
+              compactFilters ? 'lg:w-14' : 'lg:w-40'
+            }`}
           >
           <button
             type="button"
             onClick={() => setOpenFilter((current) => (current === 'origen' ? null : 'origen'))}
-            className="w-full h-10 flex items-center justify-between rounded-lg border border-gray-300 bg-white pl-3 pr-2 text-sm text-gray-600 hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none transition"
+            className={`w-full h-10 flex items-center justify-between rounded-lg border border-gray-300 bg-white pl-3 pr-2 text-sm text-gray-600 hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none transition ${
+              compactFilters ? 'lg:px-2' : ''
+            }`}
             title="Origen"
             aria-label="Origen"
           >
             <span className="flex items-center gap-2 min-w-0">
               <Truck className="w-4 h-4 text-gray-400 shrink-0" strokeWidth={1.8} />
-              <span className="truncate">
+              <span className={`truncate ${compactFilters ? 'lg:hidden' : ''}`}>
                 {origenFilter ? getOptionLabel(origenOptions, origenFilter, 'Origen') : 'Origen'}
               </span>
             </span>
@@ -228,7 +233,7 @@ function TopBar({
           </button>
 
           {openFilter === 'origen' && (
-            <div className="absolute z-20 left-0 top-full mt-1 w-full min-w-44 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            <div className="absolute z-[9999] left-0 top-full mt-1 w-full min-w-44 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
               <ul className="py-1">
                 {origenOptions.map((option) => {
                   const isSelected = origenFilter === option.value;
@@ -255,18 +260,22 @@ function TopBar({
           </div>
 
           <div
-            className="relative w-full min-w-0 transition-all duration-300 sm:w-44"
+            className={`relative w-full min-w-0 transition-all duration-300 sm:w-44 ${
+              compactFilters ? 'lg:w-14' : 'lg:w-44'
+            }`}
           >
           <button
             type="button"
             onClick={() => setOpenFilter((current) => (current === 'pago' ? null : 'pago'))}
-            className="w-full h-10 flex items-center justify-between rounded-lg border border-gray-300 bg-white pl-3 pr-2 text-sm text-gray-600 hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none transition"
+            className={`w-full h-10 flex items-center justify-between rounded-lg border border-gray-300 bg-white pl-3 pr-2 text-sm text-gray-600 hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none transition ${
+              compactFilters ? 'lg:px-2' : ''
+            }`}
             title="Estado de pago"
             aria-label="Estado de pago"
           >
             <span className="flex items-center gap-2 min-w-0">
               <CreditCard className="w-4 h-4 text-gray-400 shrink-0" strokeWidth={1.8} />
-              <span className="truncate">
+              <span className={`truncate ${compactFilters ? 'lg:hidden' : ''}`}>
                 {pagoEstadoFilter ? getOptionLabel(pagoOptions, pagoEstadoFilter, 'Pago') : 'Pago'}
               </span>
             </span>
@@ -279,7 +288,7 @@ function TopBar({
           </button>
 
           {openFilter === 'pago' && (
-            <div className="absolute z-20 right-0 top-full mt-1 w-full min-w-48 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            <div className="absolute z-[9999] right-0 top-full mt-1 w-full min-w-48 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
               <ul className="py-1">
                 {pagoOptions.map((option) => {
                   const isSelected = pagoEstadoFilter === option.value;
@@ -306,18 +315,22 @@ function TopBar({
           </div>
 
           <div
-            className="relative col-span-2 w-full min-w-0 transition-all duration-300 sm:col-span-1 sm:w-44"
+            className={`relative col-span-2 w-full min-w-0 transition-all duration-300 sm:col-span-1 sm:w-44 ${
+              compactFilters ? 'lg:w-14' : 'lg:w-44'
+            }`}
           >
           <button
             type="button"
             onClick={() => setOpenFilter((current) => (current === 'envio' ? null : 'envio'))}
-            className="w-full h-10 flex items-center justify-between rounded-lg border border-gray-300 bg-white pl-3 pr-2 text-sm text-gray-600 hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none transition"
+            className={`w-full h-10 flex items-center justify-between rounded-lg border border-gray-300 bg-white pl-3 pr-2 text-sm text-gray-600 hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none transition ${
+              compactFilters ? 'lg:px-2' : ''
+            }`}
             title="Envio"
             aria-label="Envio"
           >
             <span className="flex items-center gap-2 min-w-0">
               <AlertTriangle className="w-4 h-4 text-gray-400 shrink-0" strokeWidth={1.8} />
-              <span className="truncate">
+              <span className={`truncate ${compactFilters ? 'lg:hidden' : ''}`}>
                 {envioFilter ? getOptionLabel(envioOptions, envioFilter, 'Envio') : 'Envio'}
               </span>
             </span>
@@ -330,7 +343,7 @@ function TopBar({
           </button>
 
           {openFilter === 'envio' && (
-            <div className="absolute z-20 left-0 top-full mt-1 w-full min-w-48 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            <div className="absolute z-[9999] left-0 top-full mt-1 w-full min-w-48 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
               <ul className="py-1">
                 {envioOptions.map((option) => {
                   const isSelected = envioFilter === option.value;
