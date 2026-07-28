@@ -44,6 +44,7 @@ function ProvidersToolbar({
             placeholder="Estado"
             ariaLabel="Estado de proveedor"
             placement="bottom"
+            className="h-10 rounded-lg"
           />
         </div>
 
@@ -52,7 +53,7 @@ function ProvidersToolbar({
             <ButtonComponent
               onClick={onNewClick}
               title="Nuevo"
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2"
+              className="h-10 flex-1 sm:flex-none flex items-center justify-center gap-2"
             >
               <span className="hidden sm:inline">Nuevo</span>
               <Plus className="w-4 h-4" strokeWidth={2} aria-hidden="true" />

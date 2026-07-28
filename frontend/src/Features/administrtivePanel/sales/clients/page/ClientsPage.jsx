@@ -55,6 +55,15 @@ const clientMatchesSearch = (client, searchTerm) => {
   return searchable.some((value) => normalizeSearch(value).includes(term));
 };
 
+const sortClientsWithSystemFirst = (clients) =>
+  [...clients].sort((a, b) => {
+    if (a.isSystem && !b.isSystem) return -1;
+    if (!a.isSystem && b.isSystem) return 1;
+    if (a.id === 999999999 && b.id !== 999999999) return -1;
+    if (a.id !== 999999999 && b.id === 999999999) return 1;
+    return Number(a.id || 0) - Number(b.id || 0);
+  });
+
 function ClientsPage() {
   const [clients,         setClients]         = useState([]);
   const [searchTerm,      setSearchTerm]      = useState('');
@@ -107,31 +116,22 @@ function ClientsPage() {
     try {
       const hasSearch = debouncedSearchTerm.trim() !== '' || statusFilter !== '';
       const result = await clientsService.getAll({
-        page: hasSearch ? 1 : currentPage,
-        limit: hasSearch ? SEARCH_FETCH_LIMIT : RECORDS_PER_PAGE,
+        page: 1,
+        limit: SEARCH_FETCH_LIMIT,
         search: ''
       });
 
-      if (hasSearch) {
-        const filtered = result.data
-          .filter((client) => clientMatchesSearch(client, debouncedSearchTerm))
-          .filter((client) => {
-            if (statusFilter === 'activo') return client.active === true;
-            if (statusFilter === 'inactivo') return client.active === false;
-            return true;
-          });
-        const start = (currentPage - 1) * RECORDS_PER_PAGE;
-        setClients(filtered.slice(start, start + RECORDS_PER_PAGE));
-        setTotalRecords(filtered.length);
-      } else {
-        const filtered = result.data.filter((client) => {
+      const filtered = sortClientsWithSystemFirst(result.data)
+        .filter((client) => {
+          if (hasSearch && !clientMatchesSearch(client, debouncedSearchTerm)) return false;
           if (statusFilter === 'activo') return client.active === true;
           if (statusFilter === 'inactivo') return client.active === false;
           return true;
         });
-        setClients(filtered);
-        setTotalRecords(statusFilter ? filtered.length : result.pagination.total);
-      }
+
+      const start = (currentPage - 1) * RECORDS_PER_PAGE;
+      setClients(filtered.slice(start, start + RECORDS_PER_PAGE));
+      setTotalRecords(filtered.length);
     } catch (error) {
       showError('Error', error.message || 'No se pudieron cargar los clientes');
     } finally {
@@ -285,7 +285,7 @@ const handleDelete = async (client) => {
 
   return (
     <Permission permission="clientes.ver">
-      <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-hidden p-3 sm:p-4">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-2 overflow-y-auto overflow-x-hidden p-2.5 sm:overflow-hidden sm:p-3">
         <ClientsToolbar
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
@@ -294,7 +294,7 @@ const handleDelete = async (client) => {
           onNewClick={handleNewClient}
         />
 
-        <div className="flex min-h-0 w-full min-w-0 flex-1 overflow-hidden rounded-xl bg-white shadow-md">
+        <div className="w-full min-w-0 shrink-0 overflow-hidden rounded-xl bg-white shadow-md">
           <ClientsTable
             clients={clients}
             startIndex={startIndex}

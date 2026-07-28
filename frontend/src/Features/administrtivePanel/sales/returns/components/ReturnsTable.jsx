@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Info, SquarePen, XCircle } from 'lucide-react';
+import { Info, RotateCcw, SquarePen, XCircle } from 'lucide-react';
 import { usePermissions } from '../../../configuration/roles/hooks/usePermissions';
 import {
   formatCurrency,
@@ -214,9 +214,29 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
   const canEdit = hasPermission('devoluciones_en_ventas.editar');
   const canAnnul = hasPermission('devoluciones_en_ventas.anular');
 
+  if (!data?.length) {
+    const isSearching = searchTerm?.trim?.().length > 0;
+
+    return (
+      <div className="flex h-full min-h-[420px] w-full flex-1 flex-col items-center justify-center gap-4 rounded-xl bg-white px-4 py-16 shadow-md lg:min-h-0 lg:shadow-none">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#004D77]/10">
+          <RotateCcw className="h-10 w-10 text-[#004D77]/40" strokeWidth={1.5} />
+        </div>
+        <p className="text-center text-base font-semibold text-gray-500">
+          {isSearching ? 'No se encontraron resultados' : 'No hay devoluciones registradas'}
+        </p>
+        <p className="max-w-xs text-center text-sm text-gray-400">
+          {isSearching
+            ? 'Ninguna devolución coincide con la búsqueda actual.'
+            : 'Aún no se han registrado devoluciones de ventas.'}
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full overflow-x-auto rounded-xl bg-white shadow-md">
-      <table className="min-w-[1180px] w-full table-fixed">
+    <div className="w-full overflow-x-auto rounded-xl bg-white shadow-md lg:max-h-[calc(100vh-330px)] lg:min-w-0 lg:overflow-auto lg:overscroll-contain lg:shadow-none lg:[-webkit-overflow-scrolling:touch]">
+      <table className="min-w-[1180px] w-full table-fixed lg:min-w-[1060px] lg:table-auto">
         <colgroup>
           <col className="w-[4%]" />
           <col className="w-[13%]" />
@@ -244,14 +264,7 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
         </thead>
 
         <tbody>
-          {!data?.length ? (
-            <tr>
-              <td colSpan={9} className="py-8 text-center text-sm text-gray-400">
-                No se encontraron devoluciones.
-              </td>
-            </tr>
-          ) : (
-            data.map((row, index) => {
+          {data.map((row, index) => {
               const rowBg = index % 2 === 0 ? 'bg-gray-100 hover:bg-blue-50' : 'bg-white hover:bg-blue-50';
               const returnNumber = getField(row, ['numeroDevolucion', 'returnNumber']);
               const invoiceNumber = getField(row, ['numeroFactura', 'invoiceNumber']);
@@ -326,8 +339,7 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
                   </td>
                 </tr>
               );
-            })
-          )}
+            })}
         </tbody>
       </table>
     </div>

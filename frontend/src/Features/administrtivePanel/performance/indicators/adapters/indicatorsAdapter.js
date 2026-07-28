@@ -68,5 +68,10 @@ export const adaptIndicatorsDashboard = (
       })) ?? [],
 
     activeClients: Number(dashboardData?.activeClients ?? 0),
+
+    meta: {
+      firstMetricDate: dashboardData?.meta?.firstMetricDate ?? null,
+      appliedRange: dashboardData?.meta?.appliedRange ?? null,
+    },
   };
 };

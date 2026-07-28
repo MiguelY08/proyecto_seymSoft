@@ -17,14 +17,14 @@ function ClientsToolbar({
   ];
 
   return (
-    <div className="flex flex-col gap-3 shrink-0 lg:flex-row lg:items-end lg:justify-between">
-      <div className="relative w-full lg:max-w-md">
+    <div className="flex flex-col gap-2.5 shrink-0 lg:flex-row lg:items-end lg:justify-between">
+      <div className="relative w-full lg:max-w-sm">
         <input
           type="text"
           placeholder="Buscar"
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-4 pr-10 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200"
+          className="h-10 w-full rounded-lg border border-gray-300 bg-white pl-4 pr-10 text-sm text-gray-700 placeholder-gray-400 outline-none transition-colors duration-200 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
         />
         <Search
           className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
@@ -32,8 +32,8 @@ function ClientsToolbar({
         />
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4 lg:w-auto">
-        <div className="w-full sm:w-48">
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end sm:gap-3 lg:w-auto">
+        <div className="w-full sm:w-44">
           <FormSelect
             value={statusFilter}
             options={statusOptions}
@@ -42,6 +42,7 @@ function ClientsToolbar({
             placeholder="Estado"
             ariaLabel="Estado de cliente"
             placement="bottom"
+            className="h-10 rounded-lg"
           />
         </div>
 
@@ -50,7 +51,7 @@ function ClientsToolbar({
             <ButtonComponent
               onClick={onNewClick}
               title="Nuevo"
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2"
+              className="h-10 flex-1 sm:flex-none flex items-center justify-center gap-2 px-5"
             >
               <span className="hidden sm:inline">Nuevo</span>
               <Plus className="w-4 h-4" strokeWidth={2} />
