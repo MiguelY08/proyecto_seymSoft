@@ -136,7 +136,7 @@ function OrderPaymentHover({
 
   return (
     <div
-      className={`pointer-events-none fixed z-[9999] min-w-[260px] max-w-[320px] -translate-x-1/2 translate-y-1 rounded-xl p-3 opacity-0 shadow-2xl transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 ${className}`}
+      className={`pointer-events-none fixed z-[9999] min-w-[260px] max-w-[320px] -translate-x-1/2 translate-y-1 rounded-xl p-3 opacity-0 shadow-2xl transition-all duration-150 group-hover/payment:translate-y-0 group-hover/payment:opacity-100 ${className}`}
       style={{ background: '#1e293b', ...positionStyle }}
     >
       <div className="mb-2 flex items-center justify-between gap-3">
