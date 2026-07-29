@@ -9,6 +9,25 @@
 export const PHONE_MIN = 7;
 export const PHONE_MAX = 10;
 
+export const normalizeFullNameInput = (value) =>
+  String(value ?? '')
+    .replace(/^\s+/, '')
+    .replace(/\s{2,}/g, ' ');
+
+export const toTitleCaseName = (value) =>
+  normalizeFullNameInput(value)
+    .trim()
+    .toLowerCase()
+    .replace(/\p{L}+/gu, (word) =>
+      word.charAt(0).toUpperCase() + word.slice(1),
+    );
+
+export const normalizeEmailInput = (value) =>
+  String(value ?? '').trim().toLowerCase();
+
+export const normalizeDigits = (value, maxLength = PHONE_MAX) =>
+  String(value ?? '').replace(/\D/g, '').slice(0, maxLength);
+
 // ─── Validación de campo individual ──────────────────────────────────────────
 /**
  * Valida un campo específico del formulario de usuario.

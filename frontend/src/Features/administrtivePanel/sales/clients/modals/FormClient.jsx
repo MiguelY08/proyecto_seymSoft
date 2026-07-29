@@ -15,19 +15,33 @@ import { clientsService } from '../services/clientsService';
 const onlyDigits = (value, maxLength = 10) =>
   String(value ?? '').replace(/\D/g, '').slice(0, maxLength);
 
-const onlyLetters = (value, maxLength = 80) =>
+const normalizeNameInput = (value) =>
+  String(value ?? '')
+    .replace(/^\s+/, '')
+    .replace(/\s{2,}/g, ' ');
+
+const toTitleCaseName = (value) =>
+  normalizeNameInput(value)
+    .trim()
+    .toLowerCase()
+    .replace(/\p{L}+/gu, (word) => word.charAt(0).toUpperCase() + word.slice(1));
+
+const normalizeEmailInput = (value) =>
+  String(value ?? '').trim().toLowerCase();
+
+const ONLY_LETTERS = (value, maxLength = 80) =>
   String(value ?? '')
     .replace(/[^A-Za-zÃƒÂÃƒâ€°ÃƒÂÃƒâ€œÃƒÅ¡ÃƒÅ“Ãƒâ€˜ÃƒÂ¡ÃƒÂ©ÃƒÂ­ÃƒÂ³ÃƒÂºÃƒÂ¼ÃƒÂ±\s'-]/g, '')
     .replace(/\s{2,}/g, ' ')
     .slice(0, maxLength);
 
-const cleanCompanyName = (value, maxLength = 120) =>
+const CLEAN_COMPANY_NAME = (value, maxLength = 120) =>
   String(value ?? '')
     .replace(/[^A-Za-z0-9ÃƒÆ’Ã‚ÂÃƒÆ’Ã¢â‚¬Â°ÃƒÆ’Ã‚ÂÃƒÆ’Ã¢â‚¬Å“ÃƒÆ’Ã…Â¡ÃƒÆ’Ã…â€œÃƒÆ’Ã¢â‚¬ËœÃƒÆ’Ã‚Â¡ÃƒÆ’Ã‚Â©ÃƒÆ’Ã‚Â­ÃƒÆ’Ã‚Â³ÃƒÆ’Ã‚ÂºÃƒÆ’Ã‚Â¼ÃƒÆ’Ã‚Â±\s&.,#'-]/g, '')
     .replace(/\s{2,}/g, ' ')
     .slice(0, maxLength);
 
-const cleanDocument = (value, documentType) => {
+const CLEAN_DOCUMENT = (value, documentType) => {
   const maxLength = documentType === 'NIT' ? 20 : 15;
   if (documentType === 'NIT') {
     return String(value ?? '').replace(/[^0-9-]/g, '').slice(0, maxLength);
@@ -40,6 +54,17 @@ const cleanDocument = (value, documentType) => {
 
 const cleanCiuCode = (value) =>
   String(value ?? '').replace(/[^A-Za-z0-9-]/g, '').slice(0, 25);
+
+const cleanPersonName = (value, maxLength = 80) =>
+  normalizeNameInput(String(value ?? '').replace(/[^\p{L}\s'-]/gu, ''))
+    .slice(0, maxLength);
+
+const cleanBusinessName = (value, maxLength = 120) =>
+  normalizeNameInput(String(value ?? '').replace(/[^\p{L}0-9\s&.,#'-]/gu, ''))
+    .slice(0, maxLength);
+
+const cleanNumericDocument = (value, documentType) =>
+  onlyDigits(value, documentType === 'NIT' ? 20 : 15);
 
 // Componente Mini Gráfica para el formulario (solo edición) - CON DATOS REALES
 function MiniFormGraph({ clientId, onExpand }) {
@@ -384,16 +409,28 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     const { name, value } = e.target;
 
     let nextValue = value;
+    let forcedError = '';
     if (name === 'phone' || name === 'contactPhone') {
       nextValue = onlyDigits(value, 10);
+      if (/\D/.test(String(value))) forcedError = 'Solo se permiten números.';
     }
     if (name === 'firstName' && formData.personType === 'juridica') {
-      nextValue = cleanCompanyName(value);
+      nextValue = cleanBusinessName(value);
+      if (/[^\p{L}0-9\s&.,#'-]/u.test(String(value))) {
+        forcedError = 'Solo se permiten letras, números y caracteres básicos.';
+      }
     } else if (name === 'firstName' || name === 'lastName' || name === 'contactName') {
-      nextValue = onlyLetters(value, name === 'contactName' ? 100 : 80);
+      nextValue = cleanPersonName(value, name === 'contactName' ? 100 : 80);
+      if (/[^\p{L}\s'-]/u.test(String(value))) {
+        forcedError = 'Solo se permiten letras y espacios.';
+      }
     }
     if (name === 'document') {
-      nextValue = cleanDocument(value, formData.documentType);
+      nextValue = cleanNumericDocument(value, formData.documentType);
+      if (/\D/.test(String(value))) forcedError = 'Solo se permiten números.';
+    }
+    if (name === 'email') {
+      nextValue = normalizeEmailInput(value);
     }
     if (name === 'ciuCode') {
       nextValue = cleanCiuCode(value);
@@ -443,6 +480,9 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       fieldsToRefresh.forEach((field) => {
         next[field] = validationErrors[field] || '';
       });
+      if (forcedError) {
+        next[name] = forcedError;
+      }
       if (name === 'clientCredit' || name === 'saldoFavor') {
         next[name] = validateNumeric10_2(
           newFormData[name],
@@ -465,28 +505,62 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     const { name } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
 
+    let blurredFormData = formData;
+    if (name === 'firstName' && formData.personType === 'juridica') {
+      blurredFormData = { ...formData, firstName: normalizeNameInput(formData.firstName).trim() };
+    } else if (name === 'firstName' || name === 'lastName' || name === 'contactName') {
+      blurredFormData = { ...formData, [name]: toTitleCaseName(formData[name]) };
+    } else if (name === 'email') {
+      blurredFormData = { ...formData, email: normalizeEmailInput(formData.email) };
+    } else if (name === 'document') {
+      blurredFormData = { ...formData, document: cleanNumericDocument(formData.document, formData.documentType) };
+    } else if (name === 'phone' || name === 'contactPhone') {
+      blurredFormData = { ...formData, [name]: onlyDigits(formData[name], 10) };
+    }
+
+    if (blurredFormData !== formData) {
+      setFormData(blurredFormData);
+    }
+
     if (name === 'clientCredit' || name === 'saldoFavor') {
-      const numericError = validateNumeric10_2(formData[name], name === 'clientCredit' ? 'Crédito cliente' : 'Saldo a favor');
+      const numericError = validateNumeric10_2(blurredFormData[name], name === 'clientCredit' ? 'Crédito cliente' : 'Saldo a favor');
       setErrors(prev => ({ ...prev, [name]: numericError }));
       if (numericError) return;
     }
 
     if (name === 'ciuCode') {
-      const ciuError = validateCiuCode(formData.ciuCode, formData.rut);
+      const ciuError = validateCiuCode(blurredFormData.ciuCode, blurredFormData.rut);
       setErrors(prev => ({ ...prev, ciuCode: ciuError }));
       if (ciuError) return;
     }
 
-    const validationErrors = validateClientForm(formData);
+    const validationErrors = validateClientForm(blurredFormData);
     setErrors(prev => ({ ...prev, [name]: validationErrors[name] || '' }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const normalizedFormData = {
+      ...formData,
+      document: cleanNumericDocument(formData.document, formData.documentType),
+      firstName: formData.personType === 'juridica'
+        ? normalizeNameInput(cleanBusinessName(formData.firstName)).trim()
+        : toTitleCaseName(cleanPersonName(formData.firstName)),
+      lastName: formData.personType === 'juridica'
+        ? formData.lastName
+        : toTitleCaseName(cleanPersonName(formData.lastName)),
+      phone: onlyDigits(formData.phone, 10),
+      email: normalizeEmailInput(formData.email),
+      contactName: formData.contactName ? toTitleCaseName(cleanPersonName(formData.contactName, 100)) : '',
+      contactPhone: onlyDigits(formData.contactPhone, 10),
+    };
+
+    setFormData(normalizedFormData);
+
     // Validar campos numéricos
-    const creditError = validateNumeric10_2(formData.clientCredit, 'Crédito cliente');
-    const saldoError = validateNumeric10_2(formData.saldoFavor, 'Saldo a favor');
+    const creditError = validateNumeric10_2(normalizedFormData.clientCredit, 'Crédito cliente');
+    const saldoError = validateNumeric10_2(normalizedFormData.saldoFavor, 'Saldo a favor');
 
     if (creditError || saldoError) {
       setErrors({
@@ -498,36 +572,36 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       return;
     }
 
-    const ciuError = validateCiuCode(formData.ciuCode, formData.rut);
+    const ciuError = validateCiuCode(normalizedFormData.ciuCode, normalizedFormData.rut);
     if (ciuError) {
       setErrors(prev => ({ ...prev, ciuCode: ciuError }));
       setTouched(prev => ({ ...prev, ciuCode: true }));
       return;
     }
 
-    const validationErrors = validateClientForm(formData);
+    const validationErrors = validateClientForm(normalizedFormData);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      setTouched(Object.keys(formData).reduce((acc, k) => ({ ...acc, [k]: true }), {}));
+      setTouched(Object.keys(normalizedFormData).reduce((acc, k) => ({ ...acc, [k]: true }), {}));
       return;
     }
 
     const submitData = {
-      personType: formData.personType,
-      documentType: formData.documentType,
-      document: formData.document,
-      firstName: formData.firstName,
-      lastName: formData.personType === 'juridica' ? 'Empresa' : formData.lastName,
-      address: formData.address,
-      phone: formData.phone,
-      email: formData.email,
-      contactName: formData.contactName,
-      contactPhone: formData.contactPhone,
-      clientType: formData.clientType,
-      clientCredit: formData.clientCredit || '0',
-      saldoFavor: formData.saldoFavor || '',
-      rut: formData.rut,
-      ciuCode: formData.rut === 'no' ? '' : (formData.ciuCode || '')
+      personType: normalizedFormData.personType,
+      documentType: normalizedFormData.documentType,
+      document: normalizedFormData.document,
+      firstName: normalizedFormData.firstName,
+      lastName: normalizedFormData.personType === 'juridica' ? 'Empresa' : normalizedFormData.lastName,
+      address: normalizedFormData.address,
+      phone: normalizedFormData.phone,
+      email: normalizedFormData.email,
+      contactName: normalizedFormData.contactName,
+      contactPhone: normalizedFormData.contactPhone,
+      clientType: normalizedFormData.clientType,
+      clientCredit: normalizedFormData.clientCredit || '0',
+      saldoFavor: normalizedFormData.saldoFavor || '',
+      rut: normalizedFormData.rut,
+      ciuCode: normalizedFormData.rut === 'no' ? '' : (normalizedFormData.ciuCode || '')
     };
 
     try {

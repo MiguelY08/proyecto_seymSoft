@@ -14,10 +14,14 @@ import { isSelfUser } from '../helpers/selfUser';
 import {
   PHONE_MIN,
   PHONE_MAX,
+  normalizeDigits,
+  normalizeEmailInput,
+  normalizeFullNameInput,
+  toTitleCaseName,
 } from '../validators/usersValidators';
 
 // Funciones de validación (sin cambios)
-const validateField = (name, value, form, context) => {
+const validateField = (name, value) => {
   if (name === 'nombreCompleto') {
     if (!value.trim()) return 'El nombre completo es obligatorio.';
     if (value.trim().length < 3) return 'Mínimo 3 caracteres.';
@@ -45,7 +49,7 @@ const validateUserForm = (form) => {
   errors.nombreCompleto = validateField('nombreCompleto', form.nombreCompleto, form, {});
   errors.correo = validateField('correo', form.correo, form, {});
   errors.telefono = validateField('telefono', form.telefono, form, {});
-  return Object.fromEntries(Object.entries(errors).filter(([_, v]) => v));
+  return Object.fromEntries(Object.entries(errors).filter((entry) => entry[1]));
 };
 
 function FormUser() {
@@ -104,16 +108,37 @@ function FormUser() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     let filtered = value;
+    let forcedError = '';
     if (name === 'telefono') {
-      filtered = value.replace(/\D/g, '');
+      filtered = normalizeDigits(value, PHONE_MAX);
+      if (/\D/.test(String(value))) forcedError = 'Solo se permiten números.';
     } else if (name === 'nombreCompleto') {
-      filtered = value.replace(/[^\p{L}\s]/gu, '');
+      const lettersOnly = value.replace(/[^\p{L}\s]/gu, '');
+      filtered = normalizeFullNameInput(lettersOnly);
+      if (value !== lettersOnly) forcedError = 'Solo letras y espacios.';
+    } else if (name === 'correo') {
+      filtered = normalizeEmailInput(value);
     }
     const updatedForm = { ...form, [name]: filtered };
     setForm(updatedForm);
     setTouched((prev) => ({ ...prev, [name]: true }));
-    const errorMsg = validateField(name, filtered, updatedForm, {});
+    const errorMsg = forcedError || validateField(name, filtered);
     setErrors((prev) => ({ ...prev, [name]: errorMsg || '' }));
+  };
+
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    if (name !== 'nombreCompleto') return;
+
+    const formattedName = toTitleCaseName(form.nombreCompleto);
+    const updatedForm = { ...form, nombreCompleto: formattedName };
+
+    setForm(updatedForm);
+    setTouched((prev) => ({ ...prev, nombreCompleto: true }));
+    setErrors((prev) => ({
+      ...prev,
+      nombreCompleto: validateField('nombreCompleto', formattedName) || '',
+    }));
   };
 
   const handleSubmit = async () => {
@@ -128,10 +153,18 @@ function FormUser() {
       return;
     }
 
+    const normalizedForm = {
+      ...form,
+      nombreCompleto: toTitleCaseName(form.nombreCompleto),
+      correo: normalizeEmailInput(form.correo),
+      telefono: normalizeDigits(form.telefono, PHONE_MAX),
+    };
+    setForm(normalizedForm);
+
     // Validar campos
-    const allTouched = Object.keys(form).reduce((acc, k) => ({ ...acc, [k]: true }), {});
+    const allTouched = Object.keys(normalizedForm).reduce((acc, k) => ({ ...acc, [k]: true }), {});
     setTouched(allTouched);
-    const newErrors = validateUserForm(form);
+    const newErrors = validateUserForm(normalizedForm);
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       showWarning('Formulario incompleto', 'Revisa los campos marcados en rojo.');
@@ -140,10 +173,10 @@ function FormUser() {
 
     // Preparar datos
     const userData = {
-      name: form.nombreCompleto.trim(),
-      email: form.correo.trim(),
-      phone: form.telefono ? Number(form.telefono) : null,
-      roleId: form.rol ? Number(form.rol) : null,
+      name: normalizedForm.nombreCompleto,
+      email: normalizedForm.correo,
+      phone: normalizedForm.telefono ? Number(normalizedForm.telefono) : null,
+      roleId: normalizedForm.rol ? Number(normalizedForm.rol) : null,
     };
 
     setIsSubmitting(true);
@@ -261,6 +294,7 @@ function FormUser() {
                 name="nombreCompleto"
                 value={form.nombreCompleto}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 placeholder="Mín. 3 letras"
                 autoComplete="off"
                 className={inputClass('nombreCompleto')}

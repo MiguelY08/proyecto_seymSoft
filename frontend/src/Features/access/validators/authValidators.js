@@ -16,6 +16,27 @@ export const patterns = {
   password: /^(?=.*[A-Z]).{6,}$/ // 6+ chars + al menos 1 mayúscula
 };
 
+export const normalizeNameInput = (value) =>
+  String(value ?? "")
+    .replace(/^\s+/, "")
+    .replace(/\s{2,}/g, " ");
+
+export const toTitleCaseName = (value) =>
+  normalizeNameInput(value)
+    .trim()
+    .toLowerCase()
+    .replace(/\p{L}+/gu, (word) =>
+      word.charAt(0).toUpperCase() + word.slice(1),
+    );
+
+export const normalizeEmailInput = (value) =>
+  String(value ?? "").trim().toLowerCase();
+
+export const normalizeDigits = (value, maxLength) => {
+  const digits = String(value ?? "").replace(/\D/g, "");
+  return maxLength ? digits.slice(0, maxLength) : digits;
+};
+
 // ─── VALIDACIÓN REGISTER ───────────────────────────────────────────
 export const validateRegister = (formData) => {
   let errors = {};
@@ -108,12 +129,16 @@ export const validateResetPassword = (formData) => {
 export const sanitizeInput = (name, value) => {
   // Solo números para teléfono
   if (name === "phone") {
-    return value.replace(/\D/g, "");
+    return normalizeDigits(value, 10);
   }
 
   // Trim y lowercase para email
   if (name === "email") {
-    return value.trim().toLowerCase();
+    return normalizeEmailInput(value);
+  }
+
+  if (name === "fullName") {
+    return normalizeNameInput(value);
   }
 
   return value;

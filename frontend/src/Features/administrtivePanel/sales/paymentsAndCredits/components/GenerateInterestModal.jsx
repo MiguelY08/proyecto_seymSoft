@@ -19,6 +19,14 @@ export default function GenerateInterestModal({
     return Number.isFinite(value) ? value : 0;
   }, [percentage]);
 
+  const isValidPercentage =
+    Number.isInteger(percentageNumber) &&
+    percentageNumber >= 1 &&
+    percentageNumber <= 99;
+
+  const percentageErrorMessage =
+    "El porcentaje de interés debe estar entre 1% y 99%.";
+
   const interestGenerated = useMemo(() => {
     const balance = Number(factura?.remainingBalance ?? 0);
     if (percentageNumber <= 0) return 0;
@@ -40,11 +48,11 @@ export default function GenerateInterestModal({
 
     submitLockRef.current = true;
 
-    if (percentageNumber <= 0) {
-      setError("Ingrese un porcentaje valido mayor a 0");
+    if (!isValidPercentage) {
+      setError(percentageErrorMessage);
       await showWarning(
-        "Porcentaje invalido",
-        "Ingrese un porcentaje de interes mayor a 0.",
+        "Porcentaje inválido",
+        percentageErrorMessage,
       );
       submitLockRef.current = false;
       return;
@@ -121,12 +129,23 @@ export default function GenerateInterestModal({
             <div className="mt-1 flex items-center gap-2">
               <input
                 type="number"
-                min="0"
-                step="0.01"
+                min="1"
+                max="99"
+                step="1"
                 value={percentage}
                 onChange={(e) => {
-                  setPercentage(e.target.value);
-                  if (error) setError("");
+                  const { value } = e.target;
+                  const numericValue = Number(value);
+                  const isValidValue =
+                    value === "" ||
+                    (
+                      Number.isInteger(numericValue) &&
+                      numericValue >= 1 &&
+                      numericValue <= 99
+                    );
+
+                  setPercentage(value);
+                  setError(isValidValue ? "" : percentageErrorMessage);
                 }}
                 placeholder="Ej. 5"
                 className={`w-full p-3 rounded-lg border outline-none transition ${
@@ -168,7 +187,7 @@ export default function GenerateInterestModal({
 
             <button
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isValidPercentage}
               className="flex-1 text-white py-2 rounded-xl cursor-pointer bg-[#004D77] hover:bg-[#003D5e] transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "Aplicando..." : "Aplicar interes"}

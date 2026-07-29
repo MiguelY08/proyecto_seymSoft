@@ -10,11 +10,22 @@ export default function GeneratePaymentModal({
 }) {
   const { showError, showWarning, showConfirm } = useAlert();
 
-  const capitalPendiente = factura?.saldo ?? 0;
+  const capitalPendiente =
+    factura?.capitalPendiente ??
+    factura?.remainingCapital ??
+    factura?.saldo ??
+    0;
 
-  const interesPendiente = factura?.interes ?? 0;
+  const interesPendiente =
+    factura?.interesPendiente ??
+    factura?.interes ??
+    factura?.pendingInterest ??
+    0;
 
-  const deudaTotal = factura?.deudaTotal ?? 0;
+  const deudaTotal =
+    factura?.deudaTotal ??
+    factura?.saldoPendiente ??
+    Number(capitalPendiente) + Number(interesPendiente);
 
   const [monto, setMonto] = useState("");
 
@@ -27,6 +38,8 @@ export default function GeneratePaymentModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const submitLockRef = useRef(false);
+
+  const minimumInstallmentAmount = 1000;
 
   const formatNumber = (value) => {
     if (!value) return "";
@@ -59,25 +72,29 @@ export default function GeneratePaymentModal({
 
     if (!monto) {
       newErrors.monto = "Ingrese un monto";
-    } else if (numericMonto <= 0) {
-      newErrors.monto = "Debe ser mayor a 0";
+    } else if (numericMonto < minimumInstallmentAmount) {
+      newErrors.monto = "El valor mínimo permitido para un abono es de $1.000.";
     } else if (numericMonto > deudaTotal) {
       newErrors.monto = "El monto no puede ser mayor a la deuda";
     }
 
-    if (!trimmedObs) {
-      newErrors.observacion = "La observación es obligatoria";
-    } else if (trimmedObs.length < 10) {
-      newErrors.observacion = "Debe contener mínimo 10 caracteres";
-    } else if (/^[0-9]/.test(trimmedObs)) {
-      newErrors.observacion = "No puede iniciar con números";
-    } else if (trimmedObs.length > 255) {
+    if (trimmedObs.length > 255) {
       newErrors.observacion = "Máximo 255 caracteres";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  const numericMonto = parseNumber(monto);
+  const isValidAmount =
+    Number(numericMonto) >= minimumInstallmentAmount &&
+    Number(numericMonto) <= Number(deudaTotal);
+  const canSubmit =
+    isValidAmount &&
+    !errors.monto &&
+    !errors.observacion &&
+    !isSubmitting;
 
   const handleSubmit = async () => {
     if (
@@ -170,15 +187,17 @@ export default function GeneratePaymentModal({
               </span>
             </p>
 
-            <p className="text-gray-500">
-              Interés pendiente:
-              <span className="font-semibold text-amber-600 ml-1">
-                ${formatNumber(interesPendiente)}
-              </span>
-            </p>
+            {Number(interesPendiente) > 0 && (
+              <p className="text-gray-500">
+                Interés pendiente:
+                <span className="font-semibold text-amber-600 ml-1">
+                  ${formatNumber(interesPendiente)}
+                </span>
+              </p>
+            )}
 
             <p className="text-gray-500">
-              Total a pagar:
+              Saldo pendiente:
               <span className="font-semibold text-red-600 ml-1">
                 ${formatNumber(deudaTotal)}
               </span>
@@ -203,6 +222,11 @@ export default function GeneratePaymentModal({
                     setErrors((prev) => ({
                       ...prev,
                       monto: "Ingrese un monto",
+                    }));
+                  } else if (numeric < minimumInstallmentAmount) {
+                    setErrors((prev) => ({
+                      ...prev,
+                      monto: "El valor mínimo permitido para un abono es de $1.000.",
                     }));
                   } else if (numeric > deudaTotal) {
                     setErrors((prev) => ({
@@ -245,7 +269,7 @@ export default function GeneratePaymentModal({
           </div>
 
           <div>
-            <label className="text-xs text-gray-500">Observación</label>
+            <label className="text-xs text-gray-500">Observación (opcional)</label>
 
             <textarea
               rows={3}
@@ -253,28 +277,11 @@ export default function GeneratePaymentModal({
               onChange={(e) => {
                 const value = e.target.value;
 
-                if (/^[0-9]/.test(value) && value.length > 0) return;
-
                 setObservacion(value);
 
                 const trimmed = value.trim();
 
-                if (!trimmed) {
-                  setErrors((prev) => ({
-                    ...prev,
-                    observacion: "La observación es obligatoria",
-                  }));
-                } else if (trimmed.length < 10) {
-                  setErrors((prev) => ({
-                    ...prev,
-                    observacion: "Debe contener mínimo 10 caracteres",
-                  }));
-                } else if (/^[0-9]/.test(trimmed)) {
-                  setErrors((prev) => ({
-                    ...prev,
-                    observacion: "No puede iniciar con números",
-                  }));
-                } else if (trimmed.length > 255) {
+                if (trimmed.length > 255) {
                   setErrors((prev) => ({
                     ...prev,
                     observacion: "Máximo 255 caracteres",
@@ -323,7 +330,7 @@ export default function GeneratePaymentModal({
 
             <button
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={!canSubmit}
               className="w-full sm:w-auto px-4 py-2 rounded-lg text-white transition bg-[#004D77] hover:bg-[#003D5e] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "Guardando..." : "Guardar Abono"}

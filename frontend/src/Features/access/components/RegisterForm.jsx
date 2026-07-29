@@ -2,9 +2,22 @@ import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 
-import { validateRegister, sanitizeInput } from "../validators/authValidators.js";
+import {
+  normalizeEmailInput,
+  normalizeDigits,
+  sanitizeInput,
+  toTitleCaseName,
+  validateRegister,
+} from "../validators/authValidators.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useAlert } from "../../shared/alerts/useAlert.js";
+
+const Label = ({ text, htmlFor }) => (
+  <label htmlFor={htmlFor} className="flex items-center gap-1 mb-1 text-sm font-medium text-gray-700">
+    {text}
+    <span className="text-red-500">*</span>
+  </label>
+);
 
 export default function RegisterForm() {
 
@@ -30,6 +43,7 @@ export default function RegisterForm() {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     let newValue = type === "checkbox" ? checked : value;
+    const hasInvalidPhoneChars = name === "phone" && /\D/.test(String(newValue));
     newValue = sanitizeInput(name, newValue);
     
     const updatedForm = { ...formData, [name]: newValue };
@@ -38,18 +52,42 @@ export default function RegisterForm() {
 
     // Validar en tiempo real
     const validationErrors = validateRegister(updatedForm);
-    setErrors((prev) => ({ ...prev, [name]: validationErrors[name] }));
+    setErrors((prev) => ({
+      ...prev,
+      [name]: hasInvalidPhoneChars ? "Solo se permiten números." : validationErrors[name],
+    }));
+  };
+
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    if (name !== "fullName") return;
+
+    const formattedName = toTitleCaseName(formData.fullName);
+    const updatedForm = { ...formData, fullName: formattedName };
+    const validationErrors = validateRegister(updatedForm);
+
+    setFormData(updatedForm);
+    setTouched((prev) => ({ ...prev, fullName: true }));
+    setErrors((prev) => ({ ...prev, fullName: validationErrors.fullName }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const normalizedForm = {
+      ...formData,
+      fullName: toTitleCaseName(formData.fullName),
+      email: normalizeEmailInput(formData.email),
+      phone: normalizeDigits(formData.phone, 10),
+    };
+
+    setFormData(normalizedForm);
 
     // Marcar todos como tocados
     const allFields = ["fullName", "email", "phone", "password", "confirmPassword", "terms"];
     setTouched(allFields.reduce((acc, f) => ({ ...acc, [f]: true }), {}));
 
     // Validar formulario completo
-    const validationErrors = validateRegister(formData);
+    const validationErrors = validateRegister(normalizedForm);
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -60,10 +98,10 @@ export default function RegisterForm() {
     try {
       // Llamar register con objeto correcto
       const result = await register({
-        fullName: formData.fullName.trim(),
-        email: formData.email.trim().toLowerCase(),
+        fullName: normalizedForm.fullName,
+        email: normalizedForm.email,
         password: formData.password,
-        phone: parseInt(formData.phone.replace(/\D/g, ""), 10)
+        phone: parseInt(normalizedForm.phone, 10)
       });
 
       if (result.success) {
@@ -80,13 +118,6 @@ export default function RegisterForm() {
       setErrors({ general: "Error inesperado" });
     }
   };
-
-  const Label = ({ text, htmlFor }) => (
-    <label htmlFor={htmlFor} className="flex items-center gap-1 mb-1 text-sm font-medium text-gray-700">
-      {text}
-      <span className="text-red-500">*</span>
-    </label>
-  );
 
   const inputStyle = (field) =>
     `w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors
@@ -116,6 +147,7 @@ export default function RegisterForm() {
               name="fullName"
               value={formData.fullName}
               onChange={handleChange}
+              onBlur={handleBlur}
               placeholder="Juan Pérez García"
               className={inputStyle("fullName")}
               disabled={loading}

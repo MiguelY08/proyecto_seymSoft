@@ -217,7 +217,7 @@ const handleSubmit = async () => {
 
           {/* DATOS DEL ABONO */}
           <div className="bg-gray-100 p-3 sm:p-4 rounded-xl text-sm space-y-2 break-words">
-            <p><strong>Nro Abono:</strong> #{payment?.nroAbono ?? "-"}</p>
+            <p><strong>Nro Abono:</strong> #{payment?.displayId ?? payment?.nroAbono ?? "-"}</p>
             <p><strong>Cliente:</strong> {account?.nombre ?? "-"}</p>
             <p><strong>Fecha:</strong> {payment?.fecha ?? "-"}</p>
             <p>

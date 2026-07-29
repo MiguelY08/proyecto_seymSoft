@@ -49,7 +49,7 @@ export const isValidPhone = (phone) => {
 
 // Comprueba que una cadena contenga solo números (o guiones para NIT)
 export const isOnlyNumbers = (value) => {
-  const numbersRegex = /^[0-9-]+$/;
+  const numbersRegex = /^[0-9]+$/;
   return numbersRegex.test(value);
 };
 
@@ -185,7 +185,7 @@ export const validateClientForm = (formData) => {
   if (!formData.document || String(formData.document).trim() === '') {
     errors.document = 'El número es obligatorio';
   } else if (!isOnlyNumbers(String(formData.document))) {
-    errors.document = 'Solo se permiten números y guiones';
+    errors.document = 'Solo se permiten números';
   } else if (String(formData.document).length < 6) {
     errors.document = 'Debe tener al menos 6 caracteres';
   } else if (String(formData.document).replace(/\D/g, '').length > 19) {

@@ -9,7 +9,6 @@ export default function PaymentsTable({
   onAbonar,
   onContact,
   search = "",
-  startIndex = 0, // para numeración correcta con paginación
 }) {
 
   // Formato COP
@@ -44,8 +43,8 @@ export default function PaymentsTable({
           </div>
         )}
 
-        {data.map((item, index) => {
-          const recordNumber = startIndex + index + 1
+        {data.map((item) => {
+          const documentNumber = item.documento ?? item.document ?? item.doc_number ?? "-"
           const status          = item.estado
           const cupoOcupado     = item.saldo ?? 0
           const creditoAsignado = item.creditoAsignado ?? 0
@@ -62,10 +61,10 @@ export default function PaymentsTable({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[11px] font-semibold text-gray-400">
-                    #{recordNumber}
+                    Documento
                   </p>
                   <h3 className="mt-1 break-words text-sm font-semibold text-[#004D77]">
-                    {highlight(item.nombre, search)}
+                    {highlight(documentNumber, search)}
                   </h3>
                 </div>
 
@@ -149,8 +148,7 @@ export default function PaymentsTable({
       <table className="w-full min-w-[760px] table-auto lg:min-w-[860px]">
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="px-4 py-3 text-center text-sm font-semibold">#</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold">Nombre</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold">Documento</th>
             <th className="px-4 py-3 text-center text-sm font-semibold">Crédito Asignado</th>
             <th className="px-4 py-3 text-center text-sm font-semibold">Cupo Ocupado</th>
             <th className="px-4 py-3 text-center text-sm font-semibold">Cupo Disponible</th>
@@ -161,13 +159,13 @@ export default function PaymentsTable({
         <tbody>
           {data.length === 0 && (
             <tr>
-              <td colSpan={7} className="text-center py-8 text-gray-400 text-sm">
+              <td colSpan={6} className="text-center py-8 text-gray-400 text-sm">
                 No hay registros para mostrar
               </td>
             </tr>
           )}
           {data.map((item, index) => {
-            const recordNumber = startIndex + index + 1
+            const documentNumber = item.documento ?? item.document ?? item.doc_number ?? "-"
             const status          = item.estado
             const cupoOcupado     = item.saldo ?? 0
             const creditoAsignado = item.creditoAsignado ?? 0
@@ -181,14 +179,9 @@ export default function PaymentsTable({
                 key={item.id}
                 className={`transition-colors duration-150 ${index % 2 === 0 ? "bg-gray-100" : "bg-white"} hover:bg-blue-50 cursor-pointer`}
               >
-                {/* # */}
-                <td className="px-4 py-2.5 text-sm text-center text-gray-700 font-medium">
-                  {recordNumber}
-                </td>
-
-                {/* Nombre */}
+                {/* Documento */}
                 <td className="px-3 py-1 text-[11px] font-medium text-gray-700 max-w-[220px] break-words">
-                  {highlight(item.nombre, search)}
+                  {highlight(documentNumber, search)}
                 </td>
 
                 {/* Crédito Asignado */}
