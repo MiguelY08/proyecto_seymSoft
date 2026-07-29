@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import {
   X, ChevronDown, ChevronRight,
   UserCircle, Users, IdCard, MapPin, Phone,
@@ -6,11 +6,12 @@ import {
   FileText, Hash, BarChart2, TrendingUp, Loader2,
 } from 'lucide-react';
 import GraphClient from '../components/GraphClient';
-import { validateClientForm } from '../helpers/clientHelpers';
+import { getEmailValidationError, validateClientForm } from '../helpers/clientHelpers';
 import FormSelect from '../../../../shared/FormSelect';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import LoadingOverlay from '../../../../shared/LoadingOverlay';
 import { clientsService } from '../services/clientsService';
+import { checkEmailAvailability } from '../../../../access/services/authService';
 
 const onlyDigits = (value, maxLength = 10) =>
   String(value ?? '').replace(/\D/g, '').slice(0, maxLength);
@@ -31,13 +32,13 @@ const normalizeEmailInput = (value) =>
 
 const ONLY_LETTERS = (value, maxLength = 80) =>
   String(value ?? '')
-    .replace(/[^A-Za-zÃƒÂÃƒâ€°ÃƒÂÃƒâ€œÃƒÅ¡ÃƒÅ“Ãƒâ€˜ÃƒÂ¡ÃƒÂ©ÃƒÂ­ÃƒÂ³ÃƒÂºÃƒÂ¼ÃƒÂ±\s'-]/g, '')
+    .replace(/[^\p{L}\s'-]/gu, '')
     .replace(/\s{2,}/g, ' ')
     .slice(0, maxLength);
 
 const CLEAN_COMPANY_NAME = (value, maxLength = 120) =>
   String(value ?? '')
-    .replace(/[^A-Za-z0-9ÃƒÆ’Ã‚ÂÃƒÆ’Ã¢â‚¬Â°ÃƒÆ’Ã‚ÂÃƒÆ’Ã¢â‚¬Å“ÃƒÆ’Ã…Â¡ÃƒÆ’Ã…â€œÃƒÆ’Ã¢â‚¬ËœÃƒÆ’Ã‚Â¡ÃƒÆ’Ã‚Â©ÃƒÆ’Ã‚Â­ÃƒÆ’Ã‚Â³ÃƒÆ’Ã‚ÂºÃƒÆ’Ã‚Â¼ÃƒÆ’Ã‚Â±\s&.,#'-]/g, '')
+    .replace(/[^\p{L}0-9\s&.,#'-]/gu, '')
     .replace(/\s{2,}/g, ' ')
     .slice(0, maxLength);
 
@@ -65,6 +66,13 @@ const cleanBusinessName = (value, maxLength = 120) =>
 
 const cleanNumericDocument = (value, documentType) =>
   onlyDigits(value, documentType === 'NIT' ? 20 : 15);
+
+const buildSanitizedInputValue = (target, input, sanitizer) => {
+  const value = String(target.value ?? '');
+  const start = target.selectionStart ?? value.length;
+  const end = target.selectionEnd ?? value.length;
+  return sanitizer(`${value.slice(0, start)}${input}${value.slice(end)}`);
+};
 
 // Componente Mini Gráfica para el formulario (solo edición) - CON DATOS REALES
 function MiniFormGraph({ clientId, onExpand }) {
@@ -239,6 +247,20 @@ function FormClient({ isOpen, onClose, client, onSave }) {
   const [formData, setFormData] = useState(initialState);
   const [errors,   setErrors]   = useState({});
   const [touched,  setTouched]  = useState({});
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  const isEditing = !!client;
+
+  const getDuplicateEmailError = async (email) => {
+    const localError = getEmailValidationError(email);
+    if (localError) return '';
+
+    const currentEmail = String(client?.email || '').trim().toLowerCase();
+    const nextEmail = String(email || '').trim().toLowerCase();
+    if (currentEmail && currentEmail === nextEmail) return '';
+
+    const data = await checkEmailAvailability(nextEmail);
+    return data?.exists ? 'El correo ya está registrado' : '';
+  };
 
   // ============================================
   // VALIDACIÓN PARA numeric(10,2) DE POSTGRESQL
@@ -347,13 +369,67 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       setTouched({});
     }
     setErrors({});
+    setCheckingEmail(false);
     setShowGraph(false);
   }, [client, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !touched.email) return undefined;
+
+    const email = String(formData.email || '').trim();
+    const localError = getEmailValidationError(formData.email);
+
+    if (localError) {
+      setCheckingEmail(false);
+      return undefined;
+    }
+
+    const currentEmail = String(client?.email || '').trim().toLowerCase();
+    if (currentEmail && currentEmail === email.toLowerCase()) {
+      setCheckingEmail(false);
+      setErrors((prev) => ({
+        ...prev,
+        email: prev.email === 'Este correo ya está registrado' ? '' : prev.email,
+      }));
+      return undefined;
+    }
+
+    let cancelled = false;
+    setCheckingEmail(true);
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const duplicateError = await getDuplicateEmailError(email);
+        if (cancelled) return;
+
+        setErrors((prev) => {
+          const currentLocalError = getEmailValidationError(formData.email);
+          if (currentLocalError) return { ...prev, email: currentLocalError };
+          return { ...prev, email: duplicateError };
+        });
+      } catch {
+        if (!cancelled) {
+          setErrors((prev) => ({
+            ...prev,
+            email: prev.email === 'Este correo ya está registrado' ? '' : prev.email,
+          }));
+        }
+      } finally {
+        if (!cancelled) setCheckingEmail(false);
+      }
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [client?.email, client?.id, formData.email, isOpen, touched.email]);
 
   const resetForm = () => {
     setFormData(initialState);
     setErrors({});
     setTouched({});
+    setCheckingEmail(false);
     setShowGraph(false);
   };
 
@@ -411,8 +487,12 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     let nextValue = value;
     let forcedError = '';
     if (name === 'phone' || name === 'contactPhone') {
+      if (/\D/.test(String(value))) {
+        setTouched((prev) => ({ ...prev, [name]: true }));
+        setErrors((prev) => ({ ...prev, [name]: 'El teléfono solo debe contener números' }));
+        return;
+      }
       nextValue = onlyDigits(value, 10);
-      if (/\D/.test(String(value))) forcedError = 'Solo se permiten números.';
     }
     if (name === 'firstName' && formData.personType === 'juridica') {
       nextValue = cleanBusinessName(value);
@@ -494,6 +574,64 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       }
       return next;
     });
+  };
+
+  const setRealtimeFieldError = (field, message) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    setErrors((prev) => ({ ...prev, [field]: message }));
+  };
+
+  const handleNumericBeforeInput = (e) => {
+    if (!e.data || /^\d+$/.test(e.data)) return;
+    e.preventDefault();
+    setRealtimeFieldError(e.currentTarget.name, 'El teléfono solo debe contener números');
+  };
+
+  const handleNumericPaste = (e) => {
+    e.preventDefault();
+    const { name } = e.currentTarget;
+    const pastedValue = e.clipboardData.getData('text');
+
+    if ((name === 'phone' || name === 'contactPhone') && /\D/.test(pastedValue)) {
+      setRealtimeFieldError(name, 'El teléfono solo debe contener números');
+      return;
+    }
+
+    const sanitizer = name === 'document'
+      ? (value) => cleanNumericDocument(value, formData.documentType)
+      : (value) => onlyDigits(value, 10);
+    const nextValue = buildSanitizedInputValue(
+      e.currentTarget,
+      pastedValue,
+      sanitizer,
+    );
+    const newFormData = { ...formData, [name]: nextValue };
+    const validationErrors = validateClientForm(newFormData);
+
+    setFormData(newFormData);
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    setErrors((prev) => ({ ...prev, [name]: validationErrors[name] || '' }));
+  };
+
+  const handleEmailBeforeInput = (e) => {
+    if (!e.data || !/\s/.test(e.data)) return;
+    e.preventDefault();
+    setRealtimeFieldError(e.currentTarget.name, 'El correo no debe contener espacios.');
+  };
+
+  const handleEmailPaste = (e) => {
+    e.preventDefault();
+    const nextValue = buildSanitizedInputValue(
+      e.currentTarget,
+      e.clipboardData.getData('text'),
+      normalizeEmailInput,
+    );
+    const newFormData = { ...formData, email: nextValue };
+    const validationErrors = validateClientForm(newFormData);
+
+    setFormData(newFormData);
+    setTouched((prev) => ({ ...prev, email: true }));
+    setErrors((prev) => ({ ...prev, email: validationErrors.email || '' }));
   };
 
   const handleSelectChange = (name, value) => {
@@ -586,6 +724,13 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       return;
     }
 
+    const duplicateEmailError = await getDuplicateEmailError(normalizedFormData.email);
+    if (duplicateEmailError) {
+      setErrors((prev) => ({ ...prev, email: duplicateEmailError }));
+      setTouched((prev) => ({ ...prev, email: true }));
+      return;
+    }
+
     const submitData = {
       personType: normalizedFormData.personType,
       documentType: normalizedFormData.documentType,
@@ -642,7 +787,8 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     </label>
   );
 
-  const isEditing = !!client;
+  const hasBlockingErrors = Boolean(errors.email || errors.phone || errors.document);
+
   const isLegalPerson = formData.personType === 'juridica';
   const personTypeOptions = [
     { value: '', label: 'Selecciona una opción' },
@@ -759,9 +905,13 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                       name="document"
                       value={formData.document}
                       onChange={handleChange}
+                      onBeforeInput={handleNumericBeforeInput}
+                      onPaste={handleNumericPaste}
                       onBlur={handleBlur}
                       placeholder="Ej: 123456789"
                       autoComplete="off"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       className={isEditing ? disabledInputClass('document') : inputClass('document')}
                       disabled={isEditing}
                     />
@@ -813,9 +963,13 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
+                      onBeforeInput={handleNumericBeforeInput}
+                      onPaste={handleNumericPaste}
                       onBlur={handleBlur}
                       placeholder="Ej: 3001234567"
                       autoComplete="off"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       className={inputClass('phone')}
                     />
                     <ErrorMsg field="phone" />
@@ -843,13 +997,18 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
+                    onBeforeInput={handleEmailBeforeInput}
+                    onPaste={handleEmailPaste}
                     onBlur={handleBlur}
                     placeholder="Ej: cliente@email.com"
                     autoComplete="off"
-                    className={inputClass('email')}
-                  />
-                  <ErrorMsg field="email" />
-                </div>
+                  className={inputClass('email')}
+                />
+                {checkingEmail && touched.email && !errors.email && (
+                  <p className="mt-0.5 text-xs text-[#004D77]">Verificando si el correo ya está registrado...</p>
+                )}
+                <ErrorMsg field="email" />
+              </div>
               </div>
 
               {/* COLUMNA DERECHA */}
@@ -881,9 +1040,13 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                       name="contactPhone"
                       value={formData.contactPhone}
                       onChange={handleChange}
+                      onBeforeInput={handleNumericBeforeInput}
+                      onPaste={handleNumericPaste}
                       onBlur={handleBlur}
                       placeholder="Ej: 3009876543"
                       autoComplete="off"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       className={inputClass('contactPhone')}
                     />
                     <ErrorMsg field="contactPhone" />
@@ -974,15 +1137,12 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                   <MiniFormGraph clientId={client?.id} onExpand={() => setShowGraph(!showGraph)} />
                 </div>
               )}
-            </div>
-
-            {isEditing && showGraph && (
-              <div className="shrink-0 border-t border-slate-100 bg-white lg:hidden">
-                <div className="h-[58dvh] min-h-[28rem] w-full">
+              {isEditing && showGraph && (
+                <div className="md:col-span-2 lg:hidden">
                   <GraphClient clientId={client?.id} clientStartDate={client?.clientSince || '07/05/2023'} />
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             <div className="flex shrink-0 flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:px-5 sm:py-4 md:flex-row md:items-center md:justify-between">
               {isEditing ? (
@@ -1009,7 +1169,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || checkingEmail || hasBlockingErrors}
                   className="flex items-center justify-center gap-2 rounded-full bg-[#004D77] px-4 py-2.5 text-sm font-semibold text-white transition duration-200 hover:bg-[#003d61] disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60 sm:px-6 sm:hover:-translate-y-0.5 sm:hover:shadow-lg"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -1018,6 +1178,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
               </div>
             </div>
           </form>
+
         </div>
 
         {/* Panel derecho - Gráfica grande con datos reales */}
@@ -1039,3 +1200,4 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 }
 
 export default FormClient;
+

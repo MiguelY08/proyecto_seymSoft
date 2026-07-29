@@ -3,6 +3,7 @@
  * Página principal del módulo de gestión de devoluciones de ventas.
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ReturnsToolbar from '../components/ReturnsToolbar';
 import ReturnsTable from '../components/ReturnsTable';
 import SalesReturnsMetricsCards from '../components/SalesReturnsMetricsCards';
@@ -87,6 +88,7 @@ const normalizeReturn = (item = {}) => {
 };
 
 function ReturnsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [returns, setReturns] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -196,6 +198,20 @@ function ReturnsPage() {
     }
   };
 
+  useEffect(() => {
+    const returnId = searchParams.get('returnId');
+    if (!returnId || loading || detailOpen) return;
+
+    const targetReturn = returns.find((item) => String(item.id) === String(returnId)) || {
+      id: Number(returnId) || returnId
+    };
+
+    handleInfo(targetReturn);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('returnId');
+    setSearchParams(nextParams, { replace: true });
+  }, [detailOpen, loading, returns, searchParams, setSearchParams]);
+
   const handleCancelClick = async (returnData) => {
     if (returnData.status === 'Anulado') {
       showError('Error', 'La devolución ya está anulada');
@@ -297,7 +313,7 @@ function ReturnsPage() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 p-3 sm:p-4">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-4 p-3 sm:p-4 lg:gap-3 lg:overflow-hidden">
       <ReturnsToolbar
         search={searchTerm}
         onSearchChange={handleSearchChange}
@@ -330,22 +346,26 @@ function ReturnsPage() {
         </div>
       )}
 
-      <ReturnsTable
-        data={currentData}
-        startIndex={startIndex}
-        searchTerm={searchTerm}
-        onInfo={handleInfo}
-        onEdit={handleEdit}
-        onCancel={handleCancelClick}
-      />
+      <div className="lg:w-full lg:min-w-0 lg:rounded-xl lg:bg-white lg:shadow-md">
+        <ReturnsTable
+          data={currentData}
+          startIndex={startIndex}
+          searchTerm={searchTerm}
+          onInfo={handleInfo}
+          onEdit={handleEdit}
+          onCancel={handleCancelClick}
+        />
+      </div>
 
       {filteredReturns.length > 0 && (
-        <PaginationAdmin
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          totalRecords={filteredReturns.length}
-          recordsPerPage={RECORDS_PER_PAGE}
-        />
+        <div className="lg:shrink-0">
+          <PaginationAdmin
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            totalRecords={filteredReturns.length}
+            recordsPerPage={RECORDS_PER_PAGE}
+          />
+        </div>
       )}
 
       <FormReturn

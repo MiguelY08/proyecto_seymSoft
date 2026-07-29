@@ -151,6 +151,8 @@ apiClient.interceptors.response.use(
 const authEndpoints = [
   "/auth/login",
   "/auth/register",
+  "/auth/check-email",
+  "/auth/validate-phone",
   "/auth/logout",
   "/auth/refresh",
   "/auth/forgot-password",

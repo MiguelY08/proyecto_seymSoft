@@ -20,19 +20,19 @@ function DetailRow({ icon, label, value, fullWidth = false }) {
   }
 
   return (
-    <div className={`flex min-w-0 items-start gap-3 ${fullWidth ? 'md:col-span-2' : ''}`}>
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#004D77]/10 sm:h-10 sm:w-10">
+    <div className={`flex min-w-0 items-start gap-3 ${fullWidth ? 'md:col-span-2 lg:col-span-1' : ''}`}>
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#004D77]/10 sm:h-10 sm:w-10 lg:h-8 lg:w-8 lg:rounded-lg">
         {React.createElement(icon, {
-          className: 'h-5 w-5 text-[#004D77]/70',
+          className: 'h-5 w-5 text-[#004D77]/70 lg:h-4 lg:w-4 lg:text-[#004D77]/60',
           strokeWidth: 1.8
         })}
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-1 pt-0.5">
-        <span className="text-[10px] font-bold uppercase leading-none tracking-widest text-slate-400">
+      <div className="flex min-w-0 flex-1 flex-col gap-1 pt-0.5 lg:gap-0.5">
+        <span className="text-[10px] font-bold uppercase leading-none tracking-widest text-slate-400 lg:font-semibold lg:tracking-wide">
           {label}
         </span>
-        <span className="break-words text-sm font-semibold leading-snug text-slate-800 sm:text-[15px]">
+        <span className="break-words text-sm font-semibold leading-snug text-slate-800 sm:text-[15px] lg:font-medium">
           {displayValue || <span className="text-gray-300 italic">—</span>}
         </span>
       </div>
@@ -63,8 +63,8 @@ function InfoProvider({ isOpen, onClose, provider }) {
     <div className="fixed inset-0 z-50 flex items-stretch justify-center p-0 sm:items-center sm:p-4">
       <div className="absolute inset-0 hidden bg-black/40 backdrop-blur-sm sm:block" onClick={onClose} />
 
-      <div className="relative flex h-dvh w-full min-h-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:max-w-2xl sm:rounded-2xl">
-        <div className="relative shrink-0 bg-[#004D77] px-5 py-6 sm:px-7 sm:py-7">
+      <div className="relative flex h-dvh w-full min-h-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:max-w-2xl sm:rounded-2xl lg:max-w-xl">
+        <div className="relative shrink-0 bg-[#004D77] px-5 py-6 sm:px-7 sm:py-7 lg:px-6 lg:py-4">
           <button
             onClick={onClose}
             className="absolute right-3 top-3 rounded-full p-1.5 text-white/70 transition-all hover:bg-white/20 hover:text-white"
@@ -72,26 +72,26 @@ function InfoProvider({ isOpen, onClose, provider }) {
             <X className="h-4 w-4" strokeWidth={2.5} />
           </button>
 
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-2 border-white/30 bg-white/20 shadow-lg sm:h-20 sm:w-20">
-              <span className="text-2xl font-bold leading-none tracking-tight text-white sm:text-3xl">
+          <div className="flex flex-col items-center gap-3 text-center lg:flex-row lg:items-center lg:gap-4 lg:pr-8 lg:text-left">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-2 border-white/30 bg-white/20 shadow-lg sm:h-20 sm:w-20 lg:h-14 lg:w-14 lg:rounded-xl">
+              <span className="text-2xl font-bold leading-none tracking-tight text-white sm:text-3xl lg:text-lg">
                 {initials || 'P'}
               </span>
             </div>
 
             <div className="min-w-0 max-w-full">
-              <h2 className="text-xl font-bold leading-tight text-white sm:text-2xl">
+              <h2 className="text-xl font-bold leading-tight text-white sm:text-2xl lg:truncate lg:text-base">
                 {providerName}
               </h2>
-              <p className="mt-1 text-sm text-white/75">
+              <p className="mt-1 text-sm text-white/75 lg:text-[11px]">
                 Identificación: {identificacionCompleta}
               </p>
 
-              <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-                <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-bold ${statusColor}`}>
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2 lg:mt-1.5 lg:justify-start lg:gap-1.5">
+                <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-bold lg:px-2 lg:py-0.5 lg:text-[10px] ${statusColor}`}>
                   {getStatusText(provider.activo)}
                 </span>
-                <span className="inline-flex items-center rounded-full border border-white/30 bg-white/20 px-3 py-1 text-[11px] font-bold text-white">
+                <span className="inline-flex items-center rounded-full border border-white/30 bg-white/20 px-3 py-1 text-[11px] font-bold text-white lg:px-2 lg:py-0.5 lg:text-[10px]">
                   {formatPersonType(provider.tipoPersona)}
                 </span>
               </div>
@@ -99,8 +99,8 @@ function InfoProvider({ isOpen, onClose, provider }) {
           </div>
         </div>
 
-        <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-y-5 overflow-y-auto bg-white px-5 py-6 sm:px-7 md:grid-cols-2 md:gap-x-10 md:gap-y-6 md:px-8">
-          <div className="md:col-span-2 flex items-center gap-2">
+        <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-y-5 overflow-y-auto bg-white px-5 py-6 sm:px-7 md:grid-cols-2 md:gap-x-10 md:gap-y-6 md:px-8 lg:gap-x-4 lg:gap-y-3 lg:px-5 lg:py-4">
+          <div className="md:col-span-2 flex items-center gap-2 lg:mb-0">
             <span className="text-[10px] font-bold uppercase tracking-widest text-[#004D77]">Datos personales</span>
             <div className="h-px flex-1 bg-[#004D77]/15" />
           </div>
@@ -110,7 +110,7 @@ function InfoProvider({ isOpen, onClose, provider }) {
           <DetailRow icon={Phone} label="Teléfono" value={provider.telefono || '—'} />
           <DetailRow icon={MapPin} label="Dirección" value={provider.direccion || '—'} fullWidth />
 
-          <div className="md:col-span-2 flex items-center gap-2 pt-2">
+          <div className="md:col-span-2 flex items-center gap-2 pt-2 lg:mt-1 lg:pt-1">
             <span className="text-[10px] font-bold uppercase tracking-widest text-[#004D77]">Contacto y registro</span>
             <div className="h-px flex-1 bg-[#004D77]/15" />
           </div>
@@ -123,10 +123,10 @@ function InfoProvider({ isOpen, onClose, provider }) {
           <DetailRow icon={Hash} label="Código CIU" value={provider.codigoCIU || '—'} />
         </div>
 
-        <div className="flex shrink-0 items-center justify-end border-t border-gray-100 bg-white px-4 py-3 sm:px-6">
+        <div className="flex shrink-0 items-center justify-end border-t border-gray-100 bg-white px-4 py-3 sm:px-6 lg:px-5">
           <button
             onClick={onClose}
-            className="w-full cursor-pointer rounded-xl bg-gray-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-gray-600 sm:w-auto sm:min-w-32"
+            className="w-full cursor-pointer rounded-xl bg-gray-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-gray-600 sm:w-auto sm:min-w-32 lg:rounded-lg lg:py-2 lg:font-medium"
           >
             Cerrar
           </button>

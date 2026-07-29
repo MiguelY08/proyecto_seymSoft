@@ -36,10 +36,46 @@ export const formatContactPhone = (phone) => {
 };
 
 // Verifica que el correo tenga formato válido
-export const isValidEmail = (email) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
+export const getEmailValidationError = (email) => {
+  const value = String(email || '');
+  const trimmed = value.trim();
+
+  if (!trimmed) return 'El correo es obligatorio';
+  if (value !== trimmed) return 'El correo no debe empezar ni terminar con espacios';
+  if (/\s/.test(trimmed)) return 'El correo no debe contener espacios';
+
+  const atMatches = trimmed.match(/@/g) || [];
+  if (atMatches.length === 0) return 'Al correo le falta el signo @';
+  if (atMatches.length > 1) return 'El correo solo debe tener un signo @';
+
+  const [localPart, domainPart] = trimmed.split('@');
+  if (!localPart) return 'Al correo le falta el usuario antes del @';
+  if (!domainPart) return 'Al correo le falta el dominio después del @';
+
+  if (localPart.startsWith('.') || localPart.endsWith('.')) {
+    return 'El usuario del correo no debe empezar ni terminar con punto';
+  }
+
+  if (domainPart.startsWith('.') || domainPart.endsWith('.')) {
+    return 'El dominio no debe empezar ni terminar con punto';
+  }
+
+  if (trimmed.includes('..')) return 'El correo no debe tener puntos seguidos';
+  if (!domainPart.includes('.')) return 'Al dominio le falta la extensión, por ejemplo .com';
+
+  const domainParts = domainPart.split('.');
+  if (domainParts.some((part) => !part)) return 'El dominio tiene puntos mal ubicados';
+
+  const extension = domainParts[domainParts.length - 1];
+  if (extension.length < 2) return 'La extensión del correo debe tener mínimo 2 letras';
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  if (!emailRegex.test(trimmed)) return 'El correo tiene caracteres o formato no permitido';
+
+  return '';
 };
+
+export const isValidEmail = (email) => !getEmailValidationError(email);
 
 // Verifica que el teléfono sea numérico entre 7 y 10 dígitos
 export const isValidPhone = (phone) => {
@@ -185,7 +221,7 @@ export const validateClientForm = (formData) => {
   if (!formData.document || String(formData.document).trim() === '') {
     errors.document = 'El número es obligatorio';
   } else if (!isOnlyNumbers(String(formData.document))) {
-    errors.document = 'Solo se permiten números';
+    errors.document = 'El documento solo debe contener números.';
   } else if (String(formData.document).length < 6) {
     errors.document = 'Debe tener al menos 6 caracteres';
   } else if (String(formData.document).replace(/\D/g, '').length > 19) {
@@ -219,13 +255,12 @@ export const validateClientForm = (formData) => {
   if (!formData.phone?.trim()) {
     errors.phone = 'El teléfono es obligatorio';
   } else if (!isValidPhone(formData.phone)) {
-    errors.phone = 'Teléfono inválido (7-10 dígitos)';
+    errors.phone = 'El teléfono debe contener entre 7 y 10 dígitos numéricos.';
   }
 
-  if (!formData.email?.trim()) {
-    errors.email = 'El correo es obligatorio';
-  } else if (!isValidEmail(formData.email)) {
-    errors.email = 'Correo inválido';
+  const emailError = getEmailValidationError(formData.email);
+  if (emailError) {
+    errors.email = emailError;
   }
 
   if (formData.contactName && formData.contactName.trim().length < 3) {
@@ -233,7 +268,7 @@ export const validateClientForm = (formData) => {
   }
 
   if (formData.contactPhone && !isValidPhone(formData.contactPhone)) {
-    errors.contactPhone = 'Teléfono inválido (7-10 dígitos)';
+    errors.contactPhone = 'El teléfono debe contener entre 7 y 10 dígitos numéricos.';
   }
 
   if (formData.clientCredit?.trim() && !/^\d+([.,]\d{0,2})?$/.test(formData.clientCredit)) {

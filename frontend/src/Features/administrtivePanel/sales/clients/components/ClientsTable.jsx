@@ -41,16 +41,24 @@ const parseSearchTerm = (term) => {
   return { isCombined: false, tipoTerm: term, numTerm: term };
 };
 
+const getClientDisplayName = (client) => {
+  if (client.personType === 'juridica') {
+    return client.firstName || String(client.fullName || '').replace(/\s+(Empresa|N\/A)$/i, '').trim();
+  }
+
+  return client.fullName;
+};
+
 const TableHeader = () => (
   <thead className="sticky top-0 z-20 bg-[#004D77] text-white">
     <tr>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">#</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Tipo y Documento</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Nombre</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Crédito</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Teléfono</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Tipo cliente</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Acciones</th>
+      <th className="px-2.5 py-2 text-center text-xs font-semibold whitespace-nowrap">#</th>
+      <th className="px-2.5 py-2 text-center text-xs font-semibold whitespace-nowrap">Tipo y Documento</th>
+      <th className="px-2.5 py-2 text-center text-xs font-semibold whitespace-nowrap">Nombre</th>
+      <th className="px-2.5 py-2 text-center text-xs font-semibold whitespace-nowrap">Crédito</th>
+      <th className="px-2.5 py-2 text-center text-xs font-semibold whitespace-nowrap">Teléfono</th>
+      <th className="px-2.5 py-2 text-center text-xs font-semibold whitespace-nowrap">Tipo cliente</th>
+      <th className="px-2.5 py-2 text-center text-xs font-semibold whitespace-nowrap">Acciones</th>
     </tr>
   </thead>
 );
@@ -65,16 +73,10 @@ function ClientsTable({
   onToggleActive,
   onDelete,
 }) {
-  const sortedClients = [...clients].sort((a, b) => {
-    if (a.id === 999999999) return -1;
-    if (b.id === 999999999) return 1;
-    return 0;
-  });
-
   if (!clients.length) {
     const isSearching = totalData > 0 || searchTerm.trim().length > 0;
     return (
-      <div className="flex flex-col items-center justify-center py-16 px-4 gap-4">
+      <div className="flex h-full min-h-[420px] w-full flex-1 flex-col items-center justify-center px-4 py-16 gap-4">
         <div className="w-20 h-20 rounded-full bg-[#004D77]/10 flex items-center justify-center">
           <Users className="w-10 h-10 text-[#004D77]/40" strokeWidth={1.5} />
         </div>
@@ -89,24 +91,33 @@ function ClientsTable({
   }
 
   return (
-    <div className="h-full min-h-0 min-w-0 w-full flex-1 overflow-auto overscroll-contain rounded-xl [-webkit-overflow-scrolling:touch]">
-      <table className="w-full min-w-[840px] table-auto lg:min-w-[940px]">
+    <div className="max-h-none min-w-0 w-full overflow-x-scroll overflow-y-hidden overscroll-x-contain rounded-xl pb-2 sm:max-h-[calc(100vh-170px)] sm:overflow-auto sm:pb-0 [-webkit-overflow-scrolling:touch]">
+      <table className="w-full min-w-[940px] table-fixed">
+        <colgroup>
+          <col className="w-[6%]" />
+          <col className="w-[17%]" />
+          <col className="w-[19%]" />
+          <col className="w-[14%]" />
+          <col className="w-[14%]" />
+          <col className="w-[14%]" />
+          <col className="w-[16%]" />
+        </colgroup>
         <TableHeader />
 
         <tbody>
-          {sortedClients.map((client, index) => {
+          {clients.map((client, index) => {
             const rowBg = index % 2 === 0 ? 'bg-gray-100 hover:bg-blue-50' : 'bg-white hover:bg-blue-50';
             const { isCombined, tipoTerm, numTerm } = parseSearchTerm(searchTerm);
             const recordNumber = (startIndex || 0) + index + 1;
             const isSystemClient = client.id === 999999999;
 
             return (
-              <tr key={client.id} className={`transition-colors duration-150 ${rowBg}`}>
-                <td className="px-4 py-2.5 text-center text-sm text-gray-500 font-medium whitespace-nowrap">
+              <tr key={client.id} className={`h-[38px] transition-colors duration-150 ${rowBg}`}>
+                <td className="px-2.5 py-1.5 text-center text-xs text-gray-500 font-medium whitespace-nowrap">
                   {recordNumber}
                 </td>
 
-                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                <td className="overflow-hidden text-ellipsis whitespace-nowrap px-2.5 py-1.5 text-center text-xs text-gray-700">
                   {isSystemClient ? '—' : (
                     <>
                       <span className="font-medium">
@@ -117,31 +128,31 @@ function ClientsTable({
                   )}
                 </td>
 
-                <td className="px-4 py-2.5 text-center text-sm text-gray-800 font-medium whitespace-nowrap">
-                  {isSystemClient ? 'Cliente Sistema' : highlightText(client.fullName, searchTerm)}
+                <td className="overflow-hidden text-ellipsis whitespace-nowrap px-2.5 py-1.5 text-center text-xs text-gray-800 font-medium">
+                  {isSystemClient ? 'Cliente Sistema' : highlightText(getClientDisplayName(client), searchTerm)}
                 </td>
 
-                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                <td className="overflow-hidden text-ellipsis whitespace-nowrap px-2.5 py-1.5 text-center text-xs text-gray-700">
                   {isSystemClient ? '—' : highlightText(formatCurrency(parseInt(client.clientCredit, 10) || 0), searchTerm)}
                 </td>
 
-                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                <td className="overflow-hidden text-ellipsis whitespace-nowrap px-2.5 py-1.5 text-center text-xs text-gray-700">
                   {isSystemClient ? '—' : highlightText(client.phone || '—', searchTerm)}
                 </td>
 
-                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                <td className="overflow-hidden text-ellipsis whitespace-nowrap px-2.5 py-1.5 text-center text-xs text-gray-700">
                   {isSystemClient ? '—' : highlightText(formatClientType(client.clientType), searchTerm)}
                 </td>
 
-                <td className="px-4 py-2.5">
+                <td className="px-2.5 py-1.5">
                   {isSystemClient ? (
                     <div className="flex items-center justify-center">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#004D77]/10 text-[#004D77] border border-[#004D77]/20 whitespace-nowrap">
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#004D77]/10 text-[#004D77] border border-[#004D77]/20 whitespace-nowrap">
                         Sistema
                       </span>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                    <div className="flex items-center justify-center gap-1.5">
                       <Permission permission="clientes.activar_desactivar">
                         <ActiveToggle
                           activo={client.active}
@@ -155,7 +166,7 @@ function ClientsTable({
                           className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                           title="Información del cliente"
                         >
-                          <Info className="w-4 h-4 sm:w-4.5 sm:h-4.5" strokeWidth={1.5} />
+                          <Info className="h-4 w-4" strokeWidth={1.5} />
                         </button>
                       </Permission>
 
@@ -165,7 +176,7 @@ function ClientsTable({
                           className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                           title="Editar cliente"
                         >
-                          <SquarePen className="w-4 h-4 sm:w-4.5 sm:h-4.5" strokeWidth={1.5} />
+                          <SquarePen className="h-4 w-4" strokeWidth={1.5} />
                         </button>
                       </Permission>
 
@@ -175,7 +186,7 @@ function ClientsTable({
                           className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
                           title="Eliminar cliente"
                         >
-                          <Trash2 className="w-4 h-4 sm:w-4.5 sm:h-4.5" strokeWidth={1.5} />
+                          <Trash2 className="h-4 w-4" strokeWidth={1.5} />
                         </button>
                       </Permission>
                     </div>

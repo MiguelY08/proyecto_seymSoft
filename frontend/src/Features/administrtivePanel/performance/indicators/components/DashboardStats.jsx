@@ -112,6 +112,7 @@ function DashboardStats({
   monthlySales,
   stock,
   activeClients = 0,
+  salesLabel = "Ventas del mes",
 }) {
   const { isMobile } = useBreakpoint();
 
@@ -135,7 +136,7 @@ function DashboardStats({
       value: formatCurrency(
         monthlySales?.currentMonthSales || 0
       ),
-      label: "Ventas del mes",
+      label: salesLabel,
       iconColor: "#2563eb",
       iconBg: "rgba(37,99,235,0.1)",
       trend: `${growth}%`,
@@ -186,4 +187,3 @@ function DashboardStats({
 }
 
 export default DashboardStats;
-

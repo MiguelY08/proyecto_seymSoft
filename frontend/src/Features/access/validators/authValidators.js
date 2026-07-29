@@ -4,13 +4,13 @@
  * Validaciones que coinciden con el backend
  * - Nombre: 3-50 caracteres
  * - Email: formato válido
- * - Teléfono: exactamente 10 números
+ * - Teléfono: 7-10 números
  * - Contraseña: 6+ caracteres y al menos 1 mayúscula
  */
 
 // ─── REGEX CENTRALIZADAS ───────────────────────────────────────────
 export const patterns = {
-  phone: /^[0-9]{10}$/,
+  phone: /^[0-9]{7,10}$/,
   email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   fullName: /^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]{3,50}$/,
   password: /^(?=.*[A-Z]).{6,}$/ // 6+ chars + al menos 1 mayúscula
@@ -53,7 +53,7 @@ export const validateRegister = (formData) => {
 
   // Teléfono
   if (!formData.phone || !patterns.phone.test(formData.phone.toString())) {
-    errors.phone = "Teléfono inválido (10 números)";
+    errors.phone = "El teléfono debe contener entre 7 y 10 dígitos numéricos.";
   }
 
   // Contraseña - 6+ caracteres y al menos 1 mayúscula
@@ -161,7 +161,7 @@ export const validateField = (name, value, formData = {}) => {
 
     case "phone":
       if (!value || !patterns.phone.test(value.toString())) {
-        return "Teléfono inválido (10 números)";
+        return "El teléfono debe contener entre 7 y 10 dígitos numéricos.";
       }
       return "";
 
