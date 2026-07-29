@@ -728,6 +728,7 @@ function ShoppingCart() {
     correo: '',
     telefono: '',
     deliveryRecipientName: '',
+    deliveryRecipientPhone: '',
     departamentoEntregaCodigo: '',
     departamentoEntregaNombre: '',
     ciudadEntregaCodigo: '',
@@ -742,6 +743,7 @@ function ShoppingCart() {
     correo: '',
     telefono: '',
     deliveryRecipientName: '',
+    deliveryRecipientPhone: '',
     departamentoEntregaCodigo: '',
     ciudadEntregaCodigo: '',
     ciudad: '',
@@ -753,6 +755,7 @@ function ShoppingCart() {
     correo: false,
     telefono: false,
     deliveryRecipientName: false,
+    deliveryRecipientPhone: false,
     departamentoEntregaCodigo: false,
     ciudadEntregaCodigo: false,
     ciudad: false,
@@ -902,7 +905,7 @@ function ShoppingCart() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'telefono') {
+    if (name === 'telefono' || name === 'deliveryRecipientPhone') {
       const cleaned = value.replace(/[^\d\s]/g, '');
       setFormData((prev) => ({ ...prev, [name]: cleaned }));
       if (touched[name]) {
@@ -952,6 +955,9 @@ function ShoppingCart() {
       case 'deliveryRecipientName':
         error = validateDeliveryRecipientName(formData.deliveryRecipientName);
         break;
+      case 'deliveryRecipientPhone':
+        error = validateTelefono(formData.deliveryRecipientPhone);
+        break;
       case 'departamentoEntregaCodigo':
         error = validateDepartamentoEntrega(formData.departamentoEntregaCodigo);
         break;
@@ -972,9 +978,10 @@ function ShoppingCart() {
 
   const validateForm = () => {
     const newErrors = {
-      deliveryRecipientName: validateDeliveryRecipientName(formData.deliveryRecipientName),
       ...(deliveryMethod === 'domicilio'
         ? {
+            deliveryRecipientName: validateDeliveryRecipientName(formData.deliveryRecipientName),
+            deliveryRecipientPhone: validateTelefono(formData.deliveryRecipientPhone),
             departamentoEntregaCodigo: validateDepartamentoEntrega(formData.departamentoEntregaCodigo),
             ciudadEntregaCodigo: validateCiudadEntrega(formData.ciudadEntregaCodigo),
             direccion: validateDireccion(formData.direccion),
@@ -984,9 +991,10 @@ function ShoppingCart() {
     setErrors((prev) => ({ ...prev, ...newErrors }));
     setTouched((prev) => ({
       ...prev,
-      deliveryRecipientName: true,
       ...(deliveryMethod === 'domicilio'
         ? {
+            deliveryRecipientName: true,
+            deliveryRecipientPhone: true,
             departamentoEntregaCodigo: true,
             ciudadEntregaCodigo: true,
             direccion: true,
@@ -1233,6 +1241,7 @@ function ShoppingCart() {
       ...formData,
       ...preloadedCustomerData,
       deliveryRecipientName: formData.deliveryRecipientName,
+      deliveryRecipientPhone: formData.deliveryRecipientPhone,
       ciudad: formData.ciudad,
       direccion: formData.direccion,
       notas: formData.notas,
@@ -1247,7 +1256,12 @@ function ShoppingCart() {
       clienteId: clientId,
       tipoEntrega: isPickup ? 'recoge' : 'domicilio',
       direccionEntrega: isPickup ? 'El cliente lo recoge' : buildDeliveryAddress(checkoutDeliveryInfo),
-      deliveryRecipientName: String(checkoutDeliveryInfo?.deliveryRecipientName || '').trim(),
+      deliveryRecipientName: isPickup
+        ? null
+        : String(checkoutDeliveryInfo?.deliveryRecipientName || '').trim(),
+      deliveryRecipientPhone: isPickup
+        ? null
+        : String(checkoutDeliveryInfo?.deliveryRecipientPhone || '').trim(),
       departamentoEntregaCodigo: isPickup ? null : checkoutDeliveryInfo?.departamentoEntregaCodigo,
       departamentoEntregaNombre: isPickup ? null : checkoutDeliveryInfo?.departamentoEntregaNombre,
       ciudadEntregaCodigo: isPickup ? null : checkoutDeliveryInfo?.ciudadEntregaCodigo,
@@ -1320,6 +1334,31 @@ function ShoppingCart() {
       {errors.deliveryRecipientName && touched.deliveryRecipientName && (
         <div className="error-message">
           <AlertCircle size={11} /> {errors.deliveryRecipientName}
+        </div>
+      )}
+
+      <label className="form-label mt-3">
+        <Phone size={12} /> Telefono de quien recibe <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="tel"
+        name="deliveryRecipientPhone"
+        value={formData.deliveryRecipientPhone}
+        onChange={handleInputChange}
+        onBlur={() => handleBlur('deliveryRecipientPhone')}
+        placeholder="Ej: 300 123 4567"
+        maxLength={30}
+        className={`form-input ${
+          errors.deliveryRecipientPhone && touched.deliveryRecipientPhone
+            ? 'error'
+            : formData.deliveryRecipientPhone && !errors.deliveryRecipientPhone && touched.deliveryRecipientPhone
+            ? 'success'
+            : ''
+        }`}
+      />
+      {errors.deliveryRecipientPhone && touched.deliveryRecipientPhone && (
+        <div className="error-message">
+          <AlertCircle size={11} /> {errors.deliveryRecipientPhone}
         </div>
       )}
     </div>
@@ -1505,7 +1544,7 @@ function ShoppingCart() {
                   </div>
                 </div>
 
-                {renderDeliveryRecipientField()}
+                {deliveryMethod === 'domicilio' && renderDeliveryRecipientField()}
 
                 {[
                   { name: 'correo', label: 'Correo electrónico', icon: Mail, type: 'email', placeholder: 'ejemplo@correo.com' },
@@ -1697,7 +1736,7 @@ function ShoppingCart() {
                   </div>
                 </div>
 
-                {renderDeliveryRecipientField()}
+                {deliveryMethod === 'domicilio' && renderDeliveryRecipientField()}
 
                 <div className="pickup-store-info">
                   <div className="pickup-store-icon" aria-hidden="true">
