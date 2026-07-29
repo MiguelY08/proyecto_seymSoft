@@ -81,10 +81,11 @@ export default function AccountReceipt({ account }) {
         </div>
       )}
 
-      {facturas.map((factura, fi) => {
+      {facturas.map((factura) => {
         const saldoFac =
-          Number(factura.deudaTotal ?? 0) ||
-          Number(factura.saldo ?? 0) + Number(factura.interes ?? 0);
+          Number(factura.saldoPendiente ?? factura.deudaTotal ?? 0) ||
+          Number(factura.capitalPendiente ?? factura.saldo ?? 0) +
+            Number(factura.interesPendiente ?? factura.interes ?? 0);
         const abonadoFac = getTotalAbonadoFactura(factura);
         const fechaVencimiento = factura.fechaVencimiento
           ? new Date(factura.fechaVencimiento)
@@ -138,7 +139,7 @@ export default function AccountReceipt({ account }) {
                           index % 2 === 0 ? "#FFFFFF" : "#F9FAFB",
                       }}
                     >
-                      <td style={tdStyle}>#{a.nroAbono}</td>
+                      <td style={tdStyle}>#{a.displayId ?? a.nroAbono}</td>
                       <td style={tdStyle}>{a.fecha}</td>
                       <td style={tdStyle}>{formatCOP(a.monto)}</td>
                       <td style={tdStyle}>{a.medioPago ?? "-"}</td>

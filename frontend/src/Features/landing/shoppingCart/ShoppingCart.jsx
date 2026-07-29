@@ -869,10 +869,8 @@ function ShoppingCart() {
   };
   const validateTelefono = (value) => {
     if (!value.trim()) return 'El teléfono es obligatorio';
-    if (!/^[\d\s]+$/.test(value)) return 'Solo números';
-    const digitsOnly = value.replace(/\s/g, '');
-    if (digitsOnly.length < 10) return 'Mínimo 10 dígitos';
-    if (digitsOnly.length > 10) return 'Máximo 10 dígitos';
+    if (!/^\d+$/.test(value)) return 'El teléfono solo debe contener números';
+    if (!/^\d{7,10}$/.test(value)) return 'El teléfono debe contener entre 7 y 10 dígitos numéricos.';
     return '';
   };
   const validateDeliveryRecipientName = (value) => {
@@ -903,7 +901,13 @@ function ShoppingCart() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (name === 'telefono') {
-      const cleaned = value.replace(/[^\d\s]/g, '');
+      if (/\D/.test(value)) {
+        setTouched((prev) => ({ ...prev, [name]: true }));
+        setErrors((prev) => ({ ...prev, [name]: 'El teléfono solo debe contener números' }));
+        return;
+      }
+
+      const cleaned = value.slice(0, 10);
       setFormData((prev) => ({ ...prev, [name]: cleaned }));
       if (touched[name]) {
         setErrors((prev) => ({ ...prev, [name]: validateTelefono(cleaned) }));
@@ -1509,7 +1513,7 @@ function ShoppingCart() {
 
                 {[
                   { name: 'correo', label: 'Correo electrónico', icon: Mail, type: 'email', placeholder: 'ejemplo@correo.com' },
-                  { name: 'telefono', label: 'Teléfono', icon: Phone, type: 'tel', placeholder: '300 123 4567' },
+                  { name: 'telefono', label: 'Teléfono', icon: Phone, type: 'tel', placeholder: '3001234567' },
                 ].map((field) => (
                   <div className="form-group" key={field.name}>
                     <label className="form-label">

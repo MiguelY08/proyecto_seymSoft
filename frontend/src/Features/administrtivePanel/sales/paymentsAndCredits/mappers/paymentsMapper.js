@@ -94,6 +94,30 @@ export const mapInvoice = (invoice) => {
 
     saldo:
       Number(
+        invoice.saldoPendiente ??
+        invoice.saldo_pendiente ??
+        invoice.remainingBalance ??
+        invoice.remaining_balance ??
+        0
+      ),
+
+    saldoPendiente:
+      Number(
+        invoice.saldoPendiente ??
+        invoice.saldo_pendiente ??
+        invoice.totalDebt ??
+        invoice.total_debt ??
+        invoice.remainingBalance ??
+        invoice.remaining_balance ??
+        0
+      ),
+
+    capitalPendiente:
+      Number(
+        invoice.capitalPendiente ??
+        invoice.capital_pendiente ??
+        invoice.remainingCapital ??
+        invoice.remaining_capital ??
         invoice.remainingBalance ??
         invoice.remaining_balance ??
         0
@@ -101,6 +125,17 @@ export const mapInvoice = (invoice) => {
 
     interes:
       Number(
+        invoice.interesPendiente ??
+        invoice.interes_pendiente ??
+        invoice.pendingInterest ??
+        invoice.pending_interest ??
+        0
+      ),
+
+    interesPendiente:
+      Number(
+        invoice.interesPendiente ??
+        invoice.interes_pendiente ??
         invoice.pendingInterest ??
         invoice.pending_interest ??
         0
@@ -108,6 +143,8 @@ export const mapInvoice = (invoice) => {
 
     deudaTotal:
       Number(
+        invoice.saldoPendiente ??
+        invoice.saldo_pendiente ??
         invoice.totalDebt ??
         invoice.total_debt ??
         0
@@ -155,7 +192,9 @@ export const mapInvoice = (invoice) => {
 export const mapInstallment = (installment) => ({
   id: installment.idInstallment,
 
-  nroAbono: installment.idInstallment,
+  nroAbono: installment.displayId ?? installment.idInstallment,
+
+  displayId: installment.displayId ?? installment.idInstallment,
 
   fecha: installment.installmentDate,
 

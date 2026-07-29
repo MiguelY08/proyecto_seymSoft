@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { LoaderCircle, UserRound, X } from 'lucide-react';
 import { clientsService } from '../../../administrtivePanel/sales/clients/services/clientsService';
 import { getEmailValidationError } from '../../../administrtivePanel/sales/clients/helpers/clientHelpers';
@@ -19,7 +19,7 @@ const onlyDigits = (value, maxLength = 10) =>
 
 const onlyLetters = (value, maxLength = 80) =>
   String(value ?? '')
-    .replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'-]/g, '')
+    .replace(/[^\p{L}\s'-]/gu, '')
     .replace(/\s{2,}/g, ' ')
     .slice(0, maxLength);
 
@@ -56,13 +56,13 @@ const validateField = (name, value, form) => {
 
   if (['firstName', 'lastName', 'contactName'].includes(name)) {
     if (clean.length < 2) return 'Mínimo 2 caracteres';
-    if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'-]+$/.test(clean)) return 'Usa solo letras';
+    if (!/^[\p{L}\s'-]+$/u.test(clean)) return 'Usa solo letras';
   }
   if (name === 'email') {
     return getEmailValidationError(value);
   }
   if (['phone', 'contactPhone'].includes(name) && !/^\d{7,10}$/.test(clean)) {
-    return 'Debe tener entre 7 y 10 números';
+    return 'El teléfono debe contener entre 7 y 10 dígitos numéricos.';
   }
   if (name === 'document' && !/^[A-Za-z0-9-]{6,20}$/.test(clean)) {
     return 'Debe tener entre 6 y 20 caracteres';
@@ -223,6 +223,11 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
   const updateField = (name, value) => {
     let nextValue = value;
     if (name === 'phone' || name === 'contactPhone') {
+      if (/\D/.test(String(value))) {
+        setTouched((current) => ({ ...current, [name]: true }));
+        setErrors((current) => ({ ...current, [name]: 'El teléfono solo debe contener números' }));
+        return;
+      }
       nextValue = onlyDigits(value, 10);
     }
     if (name === 'firstName' || name === 'lastName' || name === 'contactName') {
@@ -341,6 +346,8 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
         disabled={options.disabled}
         onChange={(event) => updateField(name, event.target.value)}
         onBlur={() => updateField(name, form[name])}
+        inputMode={['phone', 'contactPhone'].includes(name) ? 'numeric' : undefined}
+        pattern={['phone', 'contactPhone'].includes(name) ? '[0-9]*' : undefined}
         className={`${inputClass(name)} ${options.disabled ? 'cursor-not-allowed bg-slate-100 text-slate-500' : ''}`}
         placeholder={options.placeholder}
       />

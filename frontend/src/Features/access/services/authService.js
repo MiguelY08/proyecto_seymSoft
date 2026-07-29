@@ -739,3 +739,24 @@ export const changePassword = async ({
 
   }
 };
+
+export const checkEmailAvailability = async (email) => {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const response = await apiClient.get('/auth/check-email', {
+    params: { email: normalizedEmail },
+  });
+
+  return response.data.data;
+};
+
+export const validatePhone = async (phone, context = 'client') => {
+  const normalizedPhone = String(phone || '').replace(/\D/g, '');
+  const response = await apiClient.get('/auth/validate-phone', {
+    params: {
+      phone: normalizedPhone,
+      context,
+    },
+  });
+
+  return response.data.data;
+};

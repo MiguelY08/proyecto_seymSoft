@@ -8,6 +8,7 @@ import {
 import { useAuth } from "../../../access/context/AuthContext";
 import { useNotifications } from "../../hooks/useNotifications";
 import NotificationBadge from "./NotificationBadge";
+import NotificationDetailModal from "./NotificationDetailModal";
 import NotificationDropdown from "./NotificationDropdown";
 
 function NotificationBell() {
@@ -24,6 +25,7 @@ function NotificationBell() {
   } = useNotifications();
 
   const [open, setOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState(null);
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -52,6 +54,10 @@ function NotificationBell() {
     setOpen((currentOpen) => !currentOpen);
   };
 
+  const handleOpenNotification = (notification) => {
+    setSelectedNotification(notification);
+  };
+
   return (
     <div ref={containerRef} className="relative">
       <button
@@ -75,8 +81,14 @@ function NotificationBell() {
           onMarkAllAsRead={markAllAsRead}
           onDelete={deleteNotification}
           onClose={() => setOpen(false)}
+          onOpenNotification={handleOpenNotification}
         />
       )}
+
+      <NotificationDetailModal
+        notification={selectedNotification}
+        onClose={() => setSelectedNotification(null)}
+      />
     </div>
   );
 }

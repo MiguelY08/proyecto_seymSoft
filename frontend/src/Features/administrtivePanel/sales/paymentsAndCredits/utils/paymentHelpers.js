@@ -370,10 +370,15 @@ export const exportAccountsToExcel = async (accounts = []) => {
       facturas.forEach((factura) => {
         const saldoCapital = Math.max(
           0,
-          (factura.saldo ?? 0) - (factura.interes ?? 0),
+          factura.capitalPendiente ??
+          ((factura.saldo ?? 0) - (factura.interes ?? 0)),
         );
-        const saldoInteres = factura.interes ?? 0;
-        const saldoTotal = factura.saldo ?? 0;
+        const saldoInteres = factura.interesPendiente ?? factura.interes ?? 0;
+        const saldoTotal =
+          factura.saldoPendiente ??
+          factura.deudaTotal ??
+          factura.saldo ??
+          0;
         const aboCapital = getTotalAbonadoCapital(factura);
         const aboInteres = getTotalAbonadoInteres(factura);
         const estado = factura.estado ?? "al_dia";
