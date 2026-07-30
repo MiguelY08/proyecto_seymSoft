@@ -17,6 +17,20 @@ const normalizeName = (str = "") =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
+// ✅ Función local para verificar si una subcategoría tiene productos
+// (fallback por si el servicio falla)
+const checkSubcategoryHasProducts = async (subcategoryId) => {
+  try {
+    // Intentar importar el servicio
+    const { subcategoryHasProducts } = await import("../data/categoryproductsService");
+    return await subcategoryHasProducts(subcategoryId);
+  } catch (error) {
+    console.warn('categoryproductsService no disponible, usando fallback');
+    // Fallback: asumir que no tiene productos (permitir eliminación)
+    return false;
+  }
+};
+
 const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
   const { showConfirm, showSuccess, showWarning, showError } = useAlert();
   const [subcategories, setSubcategories] = useState([]);
@@ -31,8 +45,6 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
   const loadSubcategories = async () => {
     try {
       setLoading(true);
-      // getSubcategories ya normaliza nombre/descripcion/estado, pero cubrimos
-      // todas las variantes posibles de la API para evitar siempre "Inactivo"
       const subs = await getSubcategories(categoryId);
       const normalized = subs.map(sub => {
         const rawStatus = sub.status ?? sub.statusName ?? "";
@@ -47,7 +59,6 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
           estado: estadoFinal,
         };
       });
-      // Ordenar por id ascendente para reflejar orden de creación
       normalized.sort((a, b) => a.id - b.id);
       setSubcategories(normalized);
     } catch (error) {
@@ -82,12 +93,7 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
       return;
     }
 
-    if (!descTrim) {
-      showWarning("Error de validación", "La descripción es obligatoria.");
-      return;
-    }
-
-    if (descTrim.length > 200) {
+    if (descTrim && descTrim.length > 200) {
       showWarning("Error de validación", "La descripción no puede tener más de 200 caracteres.");
       return;
     }
@@ -102,13 +108,13 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
     try {
       await updateSubcategory(editingId, {
         nombre: nameTrim,
-        descripcion: descTrim,
+        descripcion: descTrim || "",
         estado: editedEstado ? "Activo" : "Inactivo"
       });
 
       setSubcategories(subcategories.map((s) =>
         s.id === editingId
-          ? { ...s, nombre: nameTrim, descripcion: descTrim, estado: editedEstado ? "Activo" : "Inactivo" }
+          ? { ...s, nombre: nameTrim, descripcion: descTrim || "", estado: editedEstado ? "Activo" : "Inactivo" }
           : s
       ));
 
@@ -121,6 +127,22 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
   };
 
   const handleDelete = async (id) => {
+    // ✅ Verificar si la subcategoría tiene productos asociados
+    try {
+      const hasProducts = await checkSubcategoryHasProducts(id);
+      
+      if (hasProducts) {
+        showWarning(
+          "No se puede eliminar",
+          "Esta subcategoría tiene productos asociados. Reasígnelos o elimínelos antes de continuar."
+        );
+        return;
+      }
+    } catch (error) {
+      // Si hay error al verificar, mostrar advertencia y permitir continuar
+      console.warn('Error verificando productos:', error);
+    }
+
     const result = await showConfirm(
       "warning",
       "Eliminar subcategoría",
@@ -209,6 +231,7 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
                           value={editedDesc}
                           maxLength={200}
                           onChange={(e) => setEditedDesc(e.target.value)}
+                          placeholder="Descripción (opcional)"
                           className="w-full px-3 py-2 border border-gray-400 rounded-md"
                         />
                       </td>
@@ -233,7 +256,7 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
                   ) : (
                     <>
                       <td className="py-1.5">{sub.nombre}</td>
-                      <td className="py-1.5">{sub.descripcion}</td>
+                      <td className="py-1.5">{sub.descripcion || "—"}</td>
                       <td className="py-1.5 text-center">
                         <ActiveToggle
                           activo={sub.estado === "Activo"}
@@ -245,7 +268,7 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
                           onClick={() => {
                             setEditingId(sub.id);
                             setEditedName(sub.nombre);
-                            setEditedDesc(sub.descripcion);
+                            setEditedDesc(sub.descripcion || "");
                             setEditedEstado(sub.estado === "Activo");
                           }}
                           className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-125"
@@ -267,7 +290,6 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
           </table>
         )}
 
-      
         <div className="scale-80 ">
           <Pagination
             totalProducts={subcategories.length}

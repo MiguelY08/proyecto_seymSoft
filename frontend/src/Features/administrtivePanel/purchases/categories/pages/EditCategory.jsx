@@ -21,6 +21,7 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
   const { showWarning, showSuccess } = useAlert();
   const [subForm, setSubForm] = useState({ nombre: "", descripcion: "", activo: true });
   const [nombreTouched, setNombreTouched] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const nombreError = (() => {
     if (!nombreTouched) return null;
@@ -38,6 +39,9 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
     }`;
 
   const handleGuardar = async () => {
+    // ✅ DESHABILITAR INMEDIATAMENTE - antes de cualquier validación
+    setIsSubmitting(true);
+
     setNombreTouched(true);
     const err =
       !subForm.nombre.trim() ? "El nombre es obligatorio"
@@ -45,34 +49,49 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
       : subForm.nombre.trim().length < 3 ? "Mínimo 3 caracteres"
       : null;
 
-    if (err) return;
-
-    const existingSubs = await getSubcategories(categoryId);
-    const duplicate = existingSubs.some(
-      (s) => normalizeName(s.nombre) === normalizeName(subForm.nombre)
-    );
-
-    if (duplicate) {
-      showWarning("Nombre duplicado", "Ya existe una subcategoría con ese nombre.");
+    if (err) {
+      setIsSubmitting(false);
+      showWarning("Error de validación", err);
       return;
     }
 
-    await createSubcategory({
-      nombre: subForm.nombre.trim(),
-      descripcion: subForm.descripcion,
-      categoriaId: categoryId,
-      activo: subForm.activo,
-    });
+    try {
+      const existingSubs = await getSubcategories(categoryId);
+      const duplicate = existingSubs.some(
+        (s) => normalizeName(s.nombre) === normalizeName(subForm.nombre)
+      );
 
-    showSuccess("Subcategoría creada", `"${subForm.nombre.trim()}" fue creada correctamente.`);
-    onCreated();
+      if (duplicate) {
+        setIsSubmitting(false);
+        showWarning("Nombre duplicado", "Ya existe una subcategoría con ese nombre.");
+        return;
+      }
+
+      await createSubcategory({
+        nombre: subForm.nombre.trim(),
+        descripcion: subForm.descripcion,
+        categoriaId: categoryId,
+        activo: subForm.activo,
+      });
+
+      showSuccess("Subcategoría creada", `"${subForm.nombre.trim()}" fue creada correctamente.`);
+      onCreated();
+      onClose();
+    } catch (error) {
+      setIsSubmitting(false);
+      showWarning("Error", error.message || "No se pudo crear la subcategoría.");
+    }
+  };
+
+  const handleCancel = () => {
+    if (isSubmitting) return;
     onClose();
   };
 
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-      onClick={onClose}
+      onClick={handleCancel}
     >
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden"
@@ -83,7 +102,7 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
             <h2 className="text-white font-semibold text-base">Nueva Subcategoría</h2>
             <p className="text-white/60 text-xs mt-0.5">en {categoryNombre}</p>
           </div>
-          <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
+          <button onClick={handleCancel} className="text-white hover:bg-white/20 rounded-full p-1">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -100,6 +119,7 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
                 placeholder="Nombre de la subcategoría"
                 className={inputClass(nombreError)}
                 autoFocus
+                disabled={isSubmitting}
               />
               {nombreTouched && nombreError && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -122,6 +142,7 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
               onChange={(e) => setSubForm({ ...subForm, descripcion: e.target.value })}
               placeholder="Descripción (opcional)"
               className="mt-1 w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-gray-100 resize-none outline-none focus:ring-2 focus:ring-[#004D77]/20"
+              disabled={isSubmitting}
             />
           </div>
 
@@ -137,12 +158,18 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
         <div className="px-6 pb-6 flex flex-col gap-3">
           <button
             onClick={handleGuardar}
-            className="w-full py-2.5 text-sm font-medium text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors"
+            disabled={isSubmitting}
+            className={`w-full py-2.5 text-sm font-medium text-white rounded-lg transition-colors ${
+              isSubmitting
+                ? "bg-gray-400 cursor-not-allowed opacity-70"
+                : "bg-[#004D77] hover:bg-[#003a5c]"
+            }`}
           >
-            Crear subcategoría
+            {isSubmitting ? "Creando..." : "Crear subcategoría"}
           </button>
           <button
-            onClick={onClose}
+            onClick={handleCancel}
+            disabled={isSubmitting}
             className="w-full py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors"
           >
             Cancelar
