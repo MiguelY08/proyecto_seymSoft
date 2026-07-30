@@ -1,14 +1,35 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { X, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useAlert } from "../../shared/alerts/useAlert.js";
 import { getSession } from "../helpers/authStorage.js";
+import { checkEmailAvailability, validatePhone } from "../services/authService.js";
+import { normalizeDigits, normalizeEmailInput, normalizeNameInput } from "../validators/authValidators.js";
 
 const ErrorMsg = ({ field, touched, errors }) =>
   touched[field] && errors[field]
     ? <p className="mt-1 text-xs text-red-500">{errors[field]}</p>
     : null;
+
+const buildSanitizedInputValue = (target, input, sanitizer) => {
+  const value = String(target.value ?? "");
+  const start = target.selectionStart ?? value.length;
+  const end = target.selectionEnd ?? value.length;
+  return sanitizer(`${value.slice(0, start)}${input}${value.slice(end)}`);
+};
+
+const getPhoneValidationError = (data) => {
+  if (!data?.valid) {
+    return "El telefono debe contener entre 7 y 10 digitos numericos.";
+  }
+
+  if (data?.exists === true || data?.available === false) {
+    return "El telefono ya esta registrado";
+  }
+
+  return null;
+};
 
 const PasswordField = ({ label, name, value, onChange, show, onToggle, touched, errors, disabled, required }) => (
   <div className="flex flex-col gap-1.5">
@@ -74,53 +95,58 @@ function EditProfileForm({ onClose, isModal = false }) {
 
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  const [checkingPhone, setCheckingPhone] = useState(false);
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const emailTimeoutRef = useRef(null);
+  const phoneTimeoutRef = useRef(null);
 
   const validateField = (name, value, currentForm = form) => {
-    const v = value.trim();
+    const v = String(value ?? "").trim();
 
     switch (name) {
       case "fullName":
         if (!v) return "El nombre es obligatorio.";
         if (v.length < 3) return "El nombre debe tener al menos 3 caracteres.";
+        if (!/^[\p{L}\s]+$/u.test(v)) return "El nombre solo debe contener letras.";
         return "";
 
       case "email":
         if (!v) return "El correo es obligatorio.";
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return "Correo inválido.";
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return "Correo invalido.";
         return "";
 
       case "phone":
-        if (!v) return "El teléfono es obligatorio.";
-        if (!/^\d{10}$/.test(v.replace(/\D/g, ""))) {
-          return "Teléfono inválido (10 dígitos).";
+        if (!v) return "El telefono es obligatorio.";
+        if (!/^\d{7,10}$/.test(v.replace(/\D/g, ""))) {
+          return "El telefono debe contener entre 7 y 10 digitos numericos.";
         }
         return "";
 
       case "address":
-        if (v && v.length < 5) return "La dirección debe tener al menos 5 caracteres.";
+        if (v && v.length < 5) return "La direccion debe tener al menos 5 caracteres.";
         return "";
 
       case "currentPassword":
         if (currentForm.newPassword && !v) {
-          return "Ingresa tu contraseña actual para cambiarla.";
+          return "Ingresa tu contrasena actual para cambiarla.";
         }
         return "";
 
       case "newPassword":
         if (v && v.length < 8) {
-          return "La contraseña debe tener al menos 8 caracteres.";
+          return "La contrasena debe tener al menos 8 caracteres.";
         }
         return "";
 
       case "confirmPassword":
         if (currentForm.newPassword && !v) {
-          return "Confirma tu nueva contraseña.";
+          return "Confirma tu nueva contrasena.";
         }
         if (v && v !== currentForm.newPassword) {
-          return "Las contraseñas no coinciden.";
+          return "Las contrasenas no coinciden.";
         }
         return "";
 
@@ -131,10 +157,25 @@ function EditProfileForm({ onClose, isModal = false }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    const hasInvalidPhoneChars = name === "phone" && /\D/.test(String(value));
+
+    if (hasInvalidPhoneChars) {
+      setTouched((prev) => ({ ...prev, phone: true }));
+      setErrors((prev) => ({ ...prev, phone: "El telefono solo debe contener numeros" }));
+      return;
+    }
 
     let filtered = value;
     if (name === "phone") {
-      filtered = value.replace(/\D/g, "");
+      filtered = normalizeDigits(value, 10);
+    }
+
+    if (name === "email") {
+      filtered = normalizeEmailInput(value);
+    }
+
+    if (name === "fullName") {
+      filtered = normalizeNameInput(value);
     }
 
     const updatedForm = { ...form, [name]: filtered };
@@ -156,6 +197,157 @@ function EditProfileForm({ onClose, isModal = false }) {
     }
   };
 
+  useEffect(() => {
+    if (!touched.email) return undefined;
+
+    clearTimeout(emailTimeoutRef.current);
+    const email = normalizeEmailInput(form.email);
+    const currentEmail = normalizeEmailInput(user?.email ?? "");
+
+    if (!email) {
+      setCheckingEmail(false);
+      setErrors((prev) => ({ ...prev, email: "El correo es obligatorio." }));
+      return undefined;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setCheckingEmail(false);
+      setErrors((prev) => ({ ...prev, email: "Correo invalido." }));
+      return undefined;
+    }
+
+    if (email === currentEmail) {
+      setCheckingEmail(false);
+      setErrors((prev) => ({ ...prev, email: "" }));
+      return undefined;
+    }
+
+    setCheckingEmail(true);
+    let cancelled = false;
+
+    emailTimeoutRef.current = setTimeout(async () => {
+      try {
+        const data = await checkEmailAvailability(email);
+        if (cancelled) return;
+
+        setErrors((prev) => ({
+          ...prev,
+          email: data?.exists ? "El correo ya esta registrado" : "",
+        }));
+      } catch {
+        if (!cancelled) {
+          setErrors((prev) => ({ ...prev, email: "" }));
+        }
+      } finally {
+        if (!cancelled) setCheckingEmail(false);
+      }
+    }, 500);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(emailTimeoutRef.current);
+    };
+  }, [form.email, touched.email, user?.email]);
+
+  useEffect(() => {
+    if (!touched.phone) return undefined;
+
+    clearTimeout(phoneTimeoutRef.current);
+    const phone = normalizeDigits(form.phone, 10);
+    const currentPhone = normalizeDigits(user?.phone ?? "", 10);
+    const localError = /^\d{7,10}$/.test(phone)
+      ? ""
+      : "El telefono debe contener entre 7 y 10 digitos numericos.";
+
+    if (localError) {
+      setCheckingPhone(false);
+      setErrors((prev) => ({ ...prev, phone: localError }));
+      return undefined;
+    }
+
+    if (phone === currentPhone) {
+      setCheckingPhone(false);
+      setErrors((prev) => ({ ...prev, phone: "" }));
+      return undefined;
+    }
+
+    setCheckingPhone(true);
+    let cancelled = false;
+
+    phoneTimeoutRef.current = setTimeout(async () => {
+      try {
+        const data = await validatePhone(phone, "client");
+        if (cancelled) return;
+
+        setErrors((prev) => ({
+          ...prev,
+          phone: getPhoneValidationError(data) || "",
+        }));
+      } catch {
+        if (!cancelled) {
+          setErrors((prev) => ({ ...prev, phone: "" }));
+        }
+      } finally {
+        if (!cancelled) setCheckingPhone(false);
+      }
+    }, 500);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(phoneTimeoutRef.current);
+    };
+  }, [form.phone, touched.phone, user?.phone]);
+
+  const handleNumericBeforeInput = (e) => {
+    if (!e.data || /^\d+$/.test(e.data)) return;
+    e.preventDefault();
+    setTouched((prev) => ({ ...prev, [e.currentTarget.name]: true }));
+    setErrors((prev) => ({ ...prev, [e.currentTarget.name]: "El telefono solo debe contener numeros" }));
+  };
+
+  const handlePhonePaste = (e) => {
+    e.preventDefault();
+    const pastedValue = e.clipboardData.getData("text");
+
+    if (/\D/.test(pastedValue)) {
+      setTouched((prev) => ({ ...prev, phone: true }));
+      setErrors((prev) => ({ ...prev, phone: "El telefono solo debe contener numeros" }));
+      return;
+    }
+
+    const nextPhone = buildSanitizedInputValue(
+      e.currentTarget,
+      pastedValue,
+      (nextValue) => normalizeDigits(nextValue, 10),
+    );
+    const updatedForm = { ...form, phone: nextPhone };
+
+    setForm(updatedForm);
+    setTouched((prev) => ({ ...prev, phone: true }));
+    setErrors((prev) => ({ ...prev, phone: validateField("phone", nextPhone, updatedForm) }));
+  };
+
+  const handleEmailBeforeInput = (e) => {
+    if (!e.data || !/\s/.test(e.data)) return;
+    e.preventDefault();
+    setTouched((prev) => ({ ...prev, [e.currentTarget.name]: true }));
+    setErrors((prev) => ({ ...prev, [e.currentTarget.name]: "El correo no debe contener espacios." }));
+  };
+
+  const handleEmailPaste = (e) => {
+    e.preventDefault();
+    const nextEmail = buildSanitizedInputValue(
+      e.currentTarget,
+      e.clipboardData.getData("text"),
+      normalizeEmailInput,
+    );
+    const updatedForm = { ...form, email: nextEmail };
+
+    setForm(updatedForm);
+    setTouched((prev) => ({ ...prev, email: true }));
+    setErrors((prev) => ({ ...prev, email: validateField("email", nextEmail, updatedForm) }));
+  };
+
   const isDirty =
     form.fullName !== (user?.fullName ?? "") ||
     form.email !== (user?.email ?? "") ||
@@ -169,13 +361,13 @@ function EditProfileForm({ onClose, isModal = false }) {
       if (isModal || isAdminContext) {
         onClose?.();
       } else {
-        // Si es página, navega atrás
+        // Si es pagina, navega atras
         navigate(-1);
       }
       return;
     }
 
-    showWarning("Cambios sin guardar", "Los cambios serán descartados");
+    showWarning("Cambios sin guardar", "Los cambios seran descartados");
     setTimeout(() => {
       if (isModal || isAdminContext) {
         onClose?.();
@@ -253,13 +445,71 @@ function EditProfileForm({ onClose, isModal = false }) {
 
     showWarning(
       "Campos con error",
-      "Revisa la información"
+      "Revisa la informacion"
+    );
+
+    return;
+  }
+
+  if (checkingEmail || checkingPhone) {
+    showWarning(
+      "Validando datos",
+      "Espera a que termine la validacion de correo y telefono"
+    );
+
+    return;
+  }
+
+  if (errors.email || errors.phone) {
+    showWarning(
+      "Campos con error",
+      "Revisa la informacion"
     );
 
     return;
   }
 
   try {
+    const normalizedEmail =
+      normalizeEmailInput(form.email);
+    const normalizedPhone =
+      normalizeDigits(form.phone, 10);
+    const currentEmail =
+      normalizeEmailInput(user?.email ?? "");
+    const currentPhone =
+      normalizeDigits(user?.phone ?? "", 10);
+
+    setForm((prev) => ({
+      ...prev,
+      email: normalizedEmail,
+      phone: normalizedPhone,
+    }));
+
+    if (normalizedEmail !== currentEmail) {
+      const emailCheck =
+        await checkEmailAvailability(normalizedEmail);
+
+      if (emailCheck?.exists) {
+        setErrors((prev) => ({ ...prev, email: "El correo ya esta registrado" }));
+        setTouched((prev) => ({ ...prev, email: true }));
+        showWarning("Correo registrado", "El correo ya esta registrado");
+        return;
+      }
+    }
+
+    if (normalizedPhone !== currentPhone) {
+      const phoneValidation =
+        await validatePhone(normalizedPhone, "client");
+      const phoneValidationError =
+        getPhoneValidationError(phoneValidation);
+
+      if (phoneValidationError) {
+        setErrors((prev) => ({ ...prev, phone: phoneValidationError }));
+        setTouched((prev) => ({ ...prev, phone: true }));
+        showWarning("Telefono invalido", phoneValidationError);
+        return;
+      }
+    }
 
     const profileChanged =
 
@@ -267,11 +517,11 @@ function EditProfileForm({ onClose, isModal = false }) {
 
       ||
 
-      form.email.trim() !== (user?.email ?? "")
+      normalizedEmail !== currentEmail
 
       ||
 
-      form.phone.trim() !== (user?.phone ?? "")
+      normalizedPhone !== currentPhone
 
       ||
 
@@ -300,8 +550,8 @@ function EditProfileForm({ onClose, isModal = false }) {
 
     const profileChanges = {
       fullName: form.fullName.trim(),
-      email: form.email.trim(),
-      phone: form.phone.trim(),
+      email: normalizedEmail,
+      phone: normalizedPhone,
     };
 
     if (canEditAddress) {
@@ -360,7 +610,7 @@ function EditProfileForm({ onClose, isModal = false }) {
 
         showSuccess(
           "Perfil actualizado",
-          "Por seguridad, inicia sesión nuevamente."
+          "Por seguridad, inicia sesion nuevamente."
         );
 
         clearLocalSession?.();
@@ -391,7 +641,7 @@ function EditProfileForm({ onClose, isModal = false }) {
       });
 
       showSuccess(
-        passwordChanged ? "Contraseña actualizada" : "Perfil actualizado",
+        passwordChanged ? "Contrasena actualizada" : "Perfil actualizado",
         "Los cambios se guardaron correctamente"
       );
 
@@ -419,7 +669,7 @@ function EditProfileForm({ onClose, isModal = false }) {
     }
 
     // =====================================
-    // CAMBIO DE CONTRASEÑA
+    // CAMBIO DE CONTRASENA
     // =====================================
 
     if (passwordChanged) {
@@ -471,7 +721,7 @@ function EditProfileForm({ onClose, isModal = false }) {
 
         showSuccess(
           "Perfil actualizado",
-          "Por seguridad, inicia sesión nuevamente."
+          "Por seguridad, inicia sesion nuevamente."
         );
 
         clearLocalSession?.();
@@ -490,7 +740,7 @@ function EditProfileForm({ onClose, isModal = false }) {
       }
 
       showSuccess(
-        "Contraseña actualizada",
+        "Contrasena actualizada",
         "Los cambios se guardaron correctamente"
       );
 
@@ -558,7 +808,7 @@ function EditProfileForm({ onClose, isModal = false }) {
 
     showError(
       "Error",
-      "Ocurrió un error inesperado"
+      "Ocurrio un error inesperado"
     );
   }
 };
@@ -569,6 +819,8 @@ function EditProfileForm({ onClose, isModal = false }) {
       ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200"
       : "border-gray-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
     }`;
+
+  const hasBlockingErrors = Boolean(errors.email || errors.phone);
 
   const formContent = (
     <>
@@ -595,7 +847,7 @@ function EditProfileForm({ onClose, isModal = false }) {
               name="fullName"
               value={form.fullName}
               onChange={handleChange}
-              placeholder="Juan Pérez García"
+              placeholder="Juan Perez Garcia"
               className={inputClass("fullName")}
               disabled={loading}
             />
@@ -604,49 +856,61 @@ function EditProfileForm({ onClose, isModal = false }) {
 
           <div className="sm:col-span-2 flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
-              Correo Electrónico <span className="text-red-500">*</span>
+              Correo Electronico <span className="text-red-500">*</span>
             </label>
             <input
               type="email"
               name="email"
               value={form.email}
               onChange={handleChange}
+              onBeforeInput={handleEmailBeforeInput}
+              onPaste={handleEmailPaste}
               placeholder="ejemplo@mail.com"
               className={inputClass("email")}
               disabled={loading}
               autoComplete="email"
             />
             <ErrorMsg field="email" touched={touched} errors={errors} />
+            {checkingEmail && touched.email && !errors.email && (
+              <p className="mt-1 text-xs text-[#004D77]">Verificando correo...</p>
+            )}
           </div>
 
           <div className="sm:col-span-2 flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
-              Teléfono <span className="text-red-500">*</span>
+              Telefono <span className="text-red-500">*</span>
             </label>
             <input
               type="tel"
               name="phone"
               value={form.phone}
               onChange={handleChange}
+              onBeforeInput={handleNumericBeforeInput}
+              onPaste={handlePhonePaste}
               placeholder="3001234567"
               maxLength={10}
+              inputMode="numeric"
+              pattern="[0-9]*"
               className={inputClass("phone")}
               disabled={loading}
             />
             <ErrorMsg field="phone" touched={touched} errors={errors} />
+            {checkingPhone && touched.phone && !errors.phone && (
+              <p className="mt-1 text-xs text-[#004D77]">Verificando telefono...</p>
+            )}
           </div>
 
           {canEditAddress && (
             <div className="sm:col-span-2 flex flex-col gap-1.5">
               <label className="block text-sm font-medium text-gray-700">
-                Dirección
+                Direccion
               </label>
               <input
                 type="text"
                 name="address"
                 value={form.address}
                 onChange={handleChange}
-                placeholder="Nueva dirección"
+                placeholder="Nueva direccion"
                 maxLength={255}
                 className={inputClass("address")}
                 disabled={loading}
@@ -657,13 +921,13 @@ function EditProfileForm({ onClose, isModal = false }) {
 
           <div className="sm:col-span-2 border-t border-gray-200 pt-4">
             <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">
-              Cambio de contraseña (opcional)
+              Cambio de contrasena (opcional)
             </p>
           </div>
 
           <div className="sm:col-span-2">
             <PasswordField
-              label="Contraseña Actual"
+              label="Contrasena Actual"
               name="currentPassword"
               value={form.currentPassword}
               onChange={handleChange}
@@ -678,7 +942,7 @@ function EditProfileForm({ onClose, isModal = false }) {
 
           <div className="sm:col-span-2">
             <PasswordField
-              label="Nueva Contraseña"
+              label="Nueva Contrasena"
               name="newPassword"
               value={form.newPassword}
               onChange={handleChange}
@@ -693,7 +957,7 @@ function EditProfileForm({ onClose, isModal = false }) {
 
           <div className="sm:col-span-2">
             <PasswordField
-              label="Confirmar Contraseña"
+              label="Confirmar Contrasena"
               name="confirmPassword"
               value={form.confirmPassword}
               onChange={handleChange}
@@ -712,9 +976,9 @@ function EditProfileForm({ onClose, isModal = false }) {
       <div className="border-t border-gray-200 px-6 py-4 flex items-center gap-3 shrink-0">
         <button
           onClick={handleSubmit}
-          disabled={loading}
+          disabled={loading || checkingEmail || checkingPhone || hasBlockingErrors}
           className={`flex-1 py-2.5 text-sm font-medium text-white bg-[#004D77] rounded-lg transition-colors cursor-pointer
-            ${loading ? "opacity-70 cursor-not-allowed" : "hover:bg-[#003A5C]"}
+            ${loading || checkingEmail || checkingPhone || hasBlockingErrors ? "opacity-70 cursor-not-allowed" : "hover:bg-[#003A5C]"}
           `}
         >
           {loading ? "Guardando..." : "Guardar Cambios"}
@@ -732,17 +996,15 @@ function EditProfileForm({ onClose, isModal = false }) {
     </>
   );
 
-  // ✅ Renderiza como modal si isModal=true O si está en ruta /admin
+  // Renderiza como modal si isModal=true O si esta en ruta /admin
   const shouldRenderAsModal = isModal || isAdminContext;
 
   if (shouldRenderAsModal) {
     return (
       <div
-        onClick={handleCancel}
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
       >
         <div
-          onClick={(e) => e.stopPropagation()}
           className="bg-white rounded-lg shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
         >
           {formContent}
@@ -751,7 +1013,7 @@ function EditProfileForm({ onClose, isModal = false }) {
     );
   }
 
-  // Renderiza como página completa
+  // Renderiza como pagina completa
   return (
     <div className="max-w-2xl w-full mx-auto bg-white rounded-2xl shadow-xl overflow-hidden my-6">
       {formContent}

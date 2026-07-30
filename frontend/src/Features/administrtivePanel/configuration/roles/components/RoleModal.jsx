@@ -570,7 +570,6 @@ useEffect(() => {
 
 <div
 className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-onClick={onClose}
 />
 
 <div className="relative w-full max-w-6xl max-h-[94vh] sm:max-h-[90vh] bg-white rounded-xl shadow-2xl flex flex-col font-lexend z-10">
