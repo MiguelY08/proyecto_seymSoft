@@ -46,6 +46,7 @@ function CompletePay({
   deliveryInfo,
   cartItems,
   clientId,
+  favorBalance = 0,
 }) {
   const { showError, showSuccess, showWarning } = useAlert();
   const { hours, minutes, seconds, expired } = useCountdown();
@@ -53,9 +54,36 @@ function CompletePay({
   const [submitting, setSubmitting] = useState(false);
   const [pendingOrder, setPendingOrder] = useState(null);
   const [qrOpen, setQrOpen] = useState(false);
+  const [favorBalanceAmount, setFavorBalanceAmount] = useState('');
   const fileInputRef = useRef(null);
 
+  const orderTotal = Number(totalAmount) || 0;
+  const availableFavorBalance = Math.max(0, Number(favorBalance) || 0);
+  const appliedFavorBalance = Math.min(
+    Math.max(0, Number(favorBalanceAmount) || 0),
+    availableFavorBalance,
+    orderTotal,
+  );
+  const pendingTransferAmount = Math.max(0, orderTotal - appliedFavorBalance);
+  const requiresReceipt = pendingTransferAmount > 0;
+
   if (!isOpen) return null;
+
+  const handleFavorBalanceChange = (event) => {
+    const rawValue = event.target.value.replace(/[^\d]/g, '');
+    const amount = Number(rawValue || 0);
+    const maxAmount = Math.min(availableFavorBalance, orderTotal);
+
+    setFavorBalanceAmount(
+      amount > maxAmount
+        ? String(maxAmount)
+        : rawValue
+    );
+  };
+
+  const handleUseAllFavorBalance = () => {
+    setFavorBalanceAmount(String(Math.min(availableFavorBalance, orderTotal)));
+  };
 
   const handleClose = () => {
     if (qrOpen) {
@@ -113,7 +141,7 @@ function CompletePay({
       );
       return;
     }
-    if (!receipt) {
+    if (requiresReceipt && !receipt) {
       showWarning('Falta el comprobante', 'Selecciona la imagen del comprobante de pago.');
       return;
     }
@@ -154,25 +182,32 @@ function CompletePay({
           estadoLogistico: ESTADOS_LOGISTICOS.EN_PROCESO,
           origen: ORIGENES.WEB,
           saleType: ORIGENES.WEB,
+          favorBalanceAmount: appliedFavorBalance,
         });
         setPendingOrder(createdOrder);
       }
 
-      await PaymentReceiptService.upload(
-        createdOrder.id,
-        receipt,
-        [
-          'Comprobante enviado desde la tienda web.',
-          deliveryInfo?.notas ? `Notas: ${deliveryInfo.notas}` : null,
-        ].filter(Boolean).join(' ')
-      );
+      if (requiresReceipt) {
+        await PaymentReceiptService.upload(
+          createdOrder.id,
+          receipt,
+          [
+            'Comprobante enviado desde la tienda web.',
+            appliedFavorBalance > 0 ? `Saldo a favor aplicado: $${appliedFavorBalance.toLocaleString('es-CO')}.` : null,
+            deliveryInfo?.notas ? `Notas: ${deliveryInfo.notas}` : null,
+          ].filter(Boolean).join(' ')
+        );
+      }
 
       showSuccess(
         'Pedido creado',
         `Recibimos tu pedido #${createdOrder.numeroPedido || createdOrder.id}.`
       );
       setPendingOrder(null);
-      onCompleted?.(createdOrder);
+      onCompleted?.({
+        ...createdOrder,
+        favorBalanceAmountUsed: appliedFavorBalance,
+      });
     } catch (error) {
       const message =
         error?.response?.data?.message ??
@@ -199,7 +234,7 @@ function CompletePay({
       onClick={handleClose}
     >
       <div
-        className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl"
+        className="w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <header className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
@@ -215,7 +250,8 @@ function CompletePay({
           </button>
         </header>
 
-        <div className="space-y-4 p-5">
+        <div className="grid max-h-[92vh] gap-4 overflow-y-auto p-5 md:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] md:overflow-visible">
+          <div className="space-y-4">
           <div className={`flex items-center gap-3 rounded-2xl border p-3 ${
             expired ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-800'
           }`}>
@@ -229,8 +265,13 @@ function CompletePay({
             <div>
               <p className="text-xs text-slate-500">Total a pagar</p>
               <p className="mt-1 text-xl font-black text-[#004D77]">
-                ${(Number(totalAmount) || 0).toLocaleString('es-CO')} COP
+                ${pendingTransferAmount.toLocaleString('es-CO')} COP
               </p>
+              {appliedFavorBalance > 0 && (
+                <p className="mt-1 text-[11px] font-semibold text-emerald-700">
+                  Saldo aplicado: ${appliedFavorBalance.toLocaleString('es-CO')} COP
+                </p>
+              )}
               <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700">
                 <Store size={12} />
                 Recoger en tienda
@@ -254,14 +295,66 @@ function CompletePay({
             </div>
           </div>
 
-          <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-amber-800">
+          {availableFavorBalance > 0 && (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black text-emerald-900">Usar saldo a favor</p>
+                  <p className="text-[11px] font-semibold text-emerald-700">
+                    Disponible: ${availableFavorBalance.toLocaleString('es-CO')} COP
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleUseAllFavorBalance}
+                  disabled={submitting}
+                  className="rounded-full bg-white px-3 py-1 text-[11px] font-extrabold text-emerald-700 shadow-sm disabled:opacity-50"
+                >
+                  Usar máximo
+                </button>
+              </div>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={favorBalanceAmount}
+                onChange={handleFavorBalanceChange}
+                disabled={submitting || pendingOrder}
+                placeholder="0"
+                className="w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60"
+              />
+              <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] font-bold">
+                <div className="rounded-xl bg-white px-3 py-2 text-slate-600">
+                  Total pedido
+                  <p className="text-slate-900">${orderTotal.toLocaleString('es-CO')}</p>
+                </div>
+                <div className="rounded-xl bg-white px-3 py-2 text-slate-600">
+                  Pendiente
+                  <p className="text-[#004D77]">${pendingTransferAmount.toLocaleString('es-CO')}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {requiresReceipt ? (
+            <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-amber-800">
             <AlertTriangle size={17} className="mt-0.5 shrink-0" />
             <p className="text-xs font-semibold leading-relaxed">
-              El comprobante debe cubrir el total pendiente del pedido. Si el pago no corresponde al valor completo, la aprobacion puede ser rechazada.
+              El comprobante debe cubrir el total pendiente del pedido. Si aplicas saldo a favor, transfiere solo el valor restante.
             </p>
+            </div>
+          ) : (
+            <div className="flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-800">
+              <CheckCircle size={17} className="mt-0.5 shrink-0" />
+              <p className="text-xs font-semibold leading-relaxed">
+                Tu saldo a favor cubre el total del pedido. No necesitas subir comprobante.
+              </p>
+            </div>
+          )}
           </div>
 
-          <div>
+          <div className="space-y-4">
+          {requiresReceipt && (
+            <div>
             <p className="mb-2 text-xs font-bold text-slate-700">Comprobante de transferencia</p>
             <div className="relative">
               <label className={`flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed p-4 text-center transition ${
@@ -301,7 +394,8 @@ function CompletePay({
                 </button>
               )}
             </div>
-          </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -315,7 +409,7 @@ function CompletePay({
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={!receipt || expired || submitting}
+              disabled={(requiresReceipt && !receipt) || expired || submitting}
               className="flex items-center justify-center gap-2 rounded-full bg-[#004D77] px-4 py-3 text-xs font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting && <LoaderCircle size={16} className="animate-spin" />}
@@ -325,8 +419,18 @@ function CompletePay({
                   : 'Creando pedido...'
                 : pendingOrder
                   ? 'Reintentar comprobante'
-                  : 'Enviar comprobante'}
+                  : requiresReceipt
+                    ? 'Enviar comprobante'
+                    : 'Crear pedido'}
             </button>
+          </div>
+
+          <div className="rounded-2xl border border-sky-200 bg-sky-50 p-3 text-sky-800">
+            <p className="text-xs font-black text-sky-900">Uso de cupo de crédito</p>
+            <p className="mt-1 text-xs font-semibold leading-relaxed">
+              Si tienes cupo de crédito disponible, solo podrás utilizarlo acercándote al punto físico para que un asesor valide y registre la compra.
+            </p>
+          </div>
           </div>
         </div>
       </div>

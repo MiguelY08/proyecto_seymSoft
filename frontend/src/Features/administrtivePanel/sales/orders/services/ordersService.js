@@ -26,7 +26,7 @@ export const METODOS_PAGO = {
   EFECTIVO: 'Efectivo',
   TRANSFERENCIA: 'Transferencia',
   CREDITO: 'Crédito',
-  DEVOLUCION: 'Devolución',
+  DEVOLUCION: 'Saldo a favor',
 };
 
 const unwrap = (response) => {
@@ -348,6 +348,12 @@ const normalizeOrder = (order = {}) => {
       order.recipientName ??
       order.receiverName ??
       '',
+    deliveryRecipientPhone:
+      order.deliveryRecipientPhone ??
+      order.delivery_recipient_phone ??
+      order.recipientPhone ??
+      order.receiverPhone ??
+      '',
     shippingAmount,
     departamentoEntregaCodigo: deliveryDepartmentCode,
     departamentoEntregaNombre: deliveryDepartmentName,
@@ -419,12 +425,18 @@ const buildCreateOrderPayload = (data = {}) => {
     saleType,
     deliveryType: isRecoge ? 'Recoge' : 'Domicilio',
     deliveryAddress: isRecoge ? null : data.direccionEntrega,
-    deliveryRecipientName: saleType === 'direct' ? null : data.deliveryRecipientName,
+    deliveryRecipientName: isRecoge || saleType === 'direct' ? null : data.deliveryRecipientName,
+    deliveryRecipientPhone: isRecoge || saleType === 'direct' ? null : data.deliveryRecipientPhone,
     shippingAmount,
     deliveryDepartmentCode: isRecoge ? null : data.departamentoEntregaCodigo,
     deliveryDepartmentName: isRecoge ? null : data.departamentoEntregaNombre,
     deliveryCityCode: isRecoge ? null : data.ciudadEntregaCodigo,
     deliveryCityName: isRecoge ? null : data.ciudadEntregaNombre,
+    favorBalanceAmount: toNumber(
+      data.favorBalanceAmount ??
+      data.saldoFavorUsado ??
+      data.creditBalanceAmount
+    ),
     items: (data.productos || []).map((product) => ({
       idProduct: product.id,
       barcode: product.codBarras || product.barcode || '',
@@ -470,6 +482,7 @@ const buildUpdateOrderPayload = (data = {}) => {
     data.tipoEntrega !== undefined ||
     data.direccionEntrega !== undefined ||
     data.deliveryRecipientName !== undefined ||
+    data.deliveryRecipientPhone !== undefined ||
     data.shippingAmount !== undefined ||
     data.departamentoEntregaCodigo !== undefined ||
     data.departamentoEntregaNombre !== undefined ||
@@ -478,7 +491,8 @@ const buildUpdateOrderPayload = (data = {}) => {
   ) {
     payload.deliveryType = isRecoge ? 'Recoge' : 'Domicilio';
     payload.deliveryAddress = isRecoge ? null : data.direccionEntrega;
-    payload.deliveryRecipientName = data.deliveryRecipientName;
+    payload.deliveryRecipientName = isRecoge ? null : data.deliveryRecipientName;
+    payload.deliveryRecipientPhone = isRecoge ? null : data.deliveryRecipientPhone;
     payload.shippingAmount = isRecoge ? 0 : toNumber(data.shippingAmount);
     payload.deliveryDepartmentCode = isRecoge ? null : data.departamentoEntregaCodigo;
     payload.deliveryDepartmentName = isRecoge ? null : data.departamentoEntregaNombre;
@@ -612,10 +626,18 @@ export const OrdersService = {
     if (!current) return null;
 
     return this.update({
-      ...current,
       id: orderId,
+      clienteId: current.clienteId,
+      tipoEntrega: current.tipoEntrega,
+      direccionEntrega: current.direccionEntrega,
+      deliveryRecipientName: current.deliveryRecipientName,
+      deliveryRecipientPhone: current.deliveryRecipientPhone,
+      departamentoEntregaCodigo: current.departamentoEntregaCodigo,
+      departamentoEntregaNombre: current.departamentoEntregaNombre,
+      ciudadEntregaCodigo: current.ciudadEntregaCodigo,
+      ciudadEntregaNombre: current.ciudadEntregaNombre,
+      shippingAmount: current.shippingAmount,
       estadoLogistico: newEstadoLogistico,
-      motivoCancelacion: null,
     });
   },
 

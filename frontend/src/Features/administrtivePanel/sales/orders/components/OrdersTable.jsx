@@ -15,7 +15,7 @@ import { formatDeliveryAddress } from '../helpers/deliveryAddressHelper';
 // ─── Empty State ─────────────────────────────────────────────────────────────
 function EmptyState({ isSearching }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 gap-4">
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col items-center justify-center gap-4 px-4 py-8">
       <div className="w-20 h-20 rounded-full bg-[#004D77]/10 flex items-center justify-center">
         <Package className="w-10 h-10 text-[#004D77]/40" strokeWidth={1.5} />
       </div>

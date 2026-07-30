@@ -28,6 +28,7 @@ import CompleteClientProfile from './modals/CompleteClientProfile.jsx';
 import { useAuth } from '../../access/context/AuthContext';
 import { getSession, saveSession } from '../../access/helpers/authStorage';
 import FormSelect from '../../shared/FormSelect';
+import { getProfileSummary } from '../../shared/services/profileService';
 import {
   ESTADOS_LOGISTICOS,
   LocationService,
@@ -59,6 +60,15 @@ const buildCheckoutProducts = (items = []) =>
     cantidad: Number(item.quantity || 0),
     precioUnitario: Number(item.price || 0),
   }));
+
+const pickNumber = (source, keys = []) => {
+  for (const key of keys) {
+    const parsed = Number(source?.[key]);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+
+  return 0;
+};
 
 const PICKUP_STORE_LOCATION = {
   name: 'Papelería Magic',
@@ -728,6 +738,7 @@ function ShoppingCart() {
     correo: '',
     telefono: '',
     deliveryRecipientName: '',
+    deliveryRecipientPhone: '',
     departamentoEntregaCodigo: '',
     departamentoEntregaNombre: '',
     ciudadEntregaCodigo: '',
@@ -742,6 +753,7 @@ function ShoppingCart() {
     correo: '',
     telefono: '',
     deliveryRecipientName: '',
+    deliveryRecipientPhone: '',
     departamentoEntregaCodigo: '',
     ciudadEntregaCodigo: '',
     ciudad: '',
@@ -753,6 +765,7 @@ function ShoppingCart() {
     correo: false,
     telefono: false,
     deliveryRecipientName: false,
+    deliveryRecipientPhone: false,
     departamentoEntregaCodigo: false,
     ciudadEntregaCodigo: false,
     ciudad: false,
@@ -763,6 +776,7 @@ function ShoppingCart() {
   const [ciudades, setCiudades] = useState([]);
   const [loadingDepartamentos, setLoadingDepartamentos] = useState(false);
   const [loadingCiudades, setLoadingCiudades] = useState(false);
+  const [favorBalance, setFavorBalance] = useState(0);
 
   const preloadedCustomerData = useMemo(() => ({
     nombreCompleto: String(user?.fullName || getClientFullName(client) || '').trim(),
@@ -852,6 +866,44 @@ function ShoppingCart() {
     return () => window.clearTimeout(timer);
   }, [cartItems.length, cartLoading, clientId, deliveryMethod, resumeCheckout]);
 
+  useEffect(() => {
+    if (!isAuthenticated || !clientId) {
+      setFavorBalance(0);
+      return;
+    }
+
+    let alive = true;
+
+    const loadFavorBalance = async () => {
+      try {
+        const profile = await getProfileSummary();
+        const financialSummary = profile?.financialSummary || profile || {};
+        const balance = pickNumber(financialSummary, [
+          'favorBalance',
+          'saldoFavor',
+          'credit_balance',
+          'saldo_a_favor',
+          'balance',
+        ]);
+
+        if (alive) {
+          setFavorBalance(Math.max(0, balance));
+        }
+      } catch (error) {
+        console.error('No fue posible cargar el saldo a favor:', error);
+        if (alive) {
+          setFavorBalance(0);
+        }
+      }
+    };
+
+    void loadFavorBalance();
+
+    return () => {
+      alive = false;
+    };
+  }, [clientId, isAuthenticated]);
+
   // Validaciones (idénticas al original)
   const validateNombreCompleto = (value) => {
     if (!value.trim()) return 'El nombre completo es obligatorio';
@@ -900,7 +952,7 @@ function ShoppingCart() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'telefono') {
+    if (name === 'telefono' || name === 'deliveryRecipientPhone') {
       if (/\D/.test(value)) {
         setTouched((prev) => ({ ...prev, [name]: true }));
         setErrors((prev) => ({ ...prev, [name]: 'El teléfono solo debe contener números' }));
@@ -956,6 +1008,9 @@ function ShoppingCart() {
       case 'deliveryRecipientName':
         error = validateDeliveryRecipientName(formData.deliveryRecipientName);
         break;
+      case 'deliveryRecipientPhone':
+        error = validateTelefono(formData.deliveryRecipientPhone);
+        break;
       case 'departamentoEntregaCodigo':
         error = validateDepartamentoEntrega(formData.departamentoEntregaCodigo);
         break;
@@ -976,9 +1031,10 @@ function ShoppingCart() {
 
   const validateForm = () => {
     const newErrors = {
-      deliveryRecipientName: validateDeliveryRecipientName(formData.deliveryRecipientName),
       ...(deliveryMethod === 'domicilio'
         ? {
+            deliveryRecipientName: validateDeliveryRecipientName(formData.deliveryRecipientName),
+            deliveryRecipientPhone: validateTelefono(formData.deliveryRecipientPhone),
             departamentoEntregaCodigo: validateDepartamentoEntrega(formData.departamentoEntregaCodigo),
             ciudadEntregaCodigo: validateCiudadEntrega(formData.ciudadEntregaCodigo),
             direccion: validateDireccion(formData.direccion),
@@ -988,9 +1044,10 @@ function ShoppingCart() {
     setErrors((prev) => ({ ...prev, ...newErrors }));
     setTouched((prev) => ({
       ...prev,
-      deliveryRecipientName: true,
       ...(deliveryMethod === 'domicilio'
         ? {
+            deliveryRecipientName: true,
+            deliveryRecipientPhone: true,
             departamentoEntregaCodigo: true,
             ciudadEntregaCodigo: true,
             direccion: true,
@@ -1237,6 +1294,7 @@ function ShoppingCart() {
       ...formData,
       ...preloadedCustomerData,
       deliveryRecipientName: formData.deliveryRecipientName,
+      deliveryRecipientPhone: formData.deliveryRecipientPhone,
       ciudad: formData.ciudad,
       direccion: formData.direccion,
       notas: formData.notas,
@@ -1251,7 +1309,12 @@ function ShoppingCart() {
       clienteId: clientId,
       tipoEntrega: isPickup ? 'recoge' : 'domicilio',
       direccionEntrega: isPickup ? 'El cliente lo recoge' : buildDeliveryAddress(checkoutDeliveryInfo),
-      deliveryRecipientName: String(checkoutDeliveryInfo?.deliveryRecipientName || '').trim(),
+      deliveryRecipientName: isPickup
+        ? null
+        : String(checkoutDeliveryInfo?.deliveryRecipientName || '').trim(),
+      deliveryRecipientPhone: isPickup
+        ? null
+        : String(checkoutDeliveryInfo?.deliveryRecipientPhone || '').trim(),
       departamentoEntregaCodigo: isPickup ? null : checkoutDeliveryInfo?.departamentoEntregaCodigo,
       departamentoEntregaNombre: isPickup ? null : checkoutDeliveryInfo?.departamentoEntregaNombre,
       ciudadEntregaCodigo: isPickup ? null : checkoutDeliveryInfo?.ciudadEntregaCodigo,
@@ -1324,6 +1387,31 @@ function ShoppingCart() {
       {errors.deliveryRecipientName && touched.deliveryRecipientName && (
         <div className="error-message">
           <AlertCircle size={11} /> {errors.deliveryRecipientName}
+        </div>
+      )}
+
+      <label className="form-label mt-3">
+        <Phone size={12} /> Telefono de quien recibe <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="tel"
+        name="deliveryRecipientPhone"
+        value={formData.deliveryRecipientPhone}
+        onChange={handleInputChange}
+        onBlur={() => handleBlur('deliveryRecipientPhone')}
+        placeholder="Ej: 3001234567"
+        maxLength={10}
+        className={`form-input ${
+          errors.deliveryRecipientPhone && touched.deliveryRecipientPhone
+            ? 'error'
+            : formData.deliveryRecipientPhone && !errors.deliveryRecipientPhone && touched.deliveryRecipientPhone
+            ? 'success'
+            : ''
+        }`}
+      />
+      {errors.deliveryRecipientPhone && touched.deliveryRecipientPhone && (
+        <div className="error-message">
+          <AlertCircle size={11} /> {errors.deliveryRecipientPhone}
         </div>
       )}
     </div>
@@ -1509,7 +1597,7 @@ function ShoppingCart() {
                   </div>
                 </div>
 
-                {renderDeliveryRecipientField()}
+                {deliveryMethod === 'domicilio' && renderDeliveryRecipientField()}
 
                 {[
                   { name: 'correo', label: 'Correo electrónico', icon: Mail, type: 'email', placeholder: 'ejemplo@correo.com' },
@@ -1701,7 +1789,7 @@ function ShoppingCart() {
                   </div>
                 </div>
 
-                {renderDeliveryRecipientField()}
+                {deliveryMethod === 'domicilio' && renderDeliveryRecipientField()}
 
                 <div className="pickup-store-info">
                   <div className="pickup-store-icon" aria-hidden="true">
@@ -1754,6 +1842,9 @@ function ShoppingCart() {
           onClose={() => setShowPaymentModal(false)}
           onCompleted={async (order) => {
             await clearCart();
+            setFavorBalance((current) =>
+              Math.max(0, current - Number(order?.favorBalanceAmountUsed || order?.favorBalanceUsed || 0))
+            );
             setShowPaymentModal(false);
             navigate(`/orders-l/${order.id}`);
           }}
@@ -1761,6 +1852,7 @@ function ShoppingCart() {
           deliveryInfo={checkoutDeliveryInfo}
           cartItems={displayCartItems}
           clientId={clientId}
+          favorBalance={favorBalance}
         />
       )}
 
