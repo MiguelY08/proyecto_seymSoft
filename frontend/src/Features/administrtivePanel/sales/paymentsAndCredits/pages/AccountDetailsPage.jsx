@@ -233,12 +233,25 @@ export default function AccountDetailsPage({ mode }) {
   const estadoGeneral = account.estado ?? "al_dia";
 
   const getFacturaDebtTotal = (factura) => {
-    const backendDebt = Number(factura.deudaTotal ?? 0);
+    const backendDebt = Number(
+      factura.saldoPendiente ??
+      factura.deudaTotal ??
+      0,
+    );
     if (backendDebt > 0) return backendDebt;
 
     return (
-      Number(factura.saldo ?? factura.remainingBalance ?? 0) +
-      Number(factura.interes ?? 0)
+      Number(
+        factura.capitalPendiente ??
+        factura.saldo ??
+        factura.remainingBalance ??
+        0,
+      ) +
+      Number(
+        factura.interesPendiente ??
+        factura.interes ??
+        0,
+      )
     );
   };
 
@@ -447,11 +460,14 @@ export default function AccountDetailsPage({ mode }) {
           )}
 
           {facturas.map((factura) => {
-            const interes = factura.interes ?? 0;
+            const interes = factura.interesPendiente ?? factura.interes ?? 0;
             const saldoCapital = Number(
-              factura.saldo ?? factura.remainingBalance ?? 0,
+              factura.capitalPendiente ??
+              factura.saldo ??
+              factura.remainingBalance ??
+              0,
             );
-            const saldoInt = factura.interes ?? 0;
+            const saldoInt = factura.interesPendiente ?? factura.interes ?? 0;
             const totalAPagar = saldoCapital;
             const saldoFac = getFacturaDebtTotal(factura);
             const estadoFac = factura.estado ?? "al_dia";

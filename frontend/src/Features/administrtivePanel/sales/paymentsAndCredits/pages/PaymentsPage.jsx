@@ -90,13 +90,16 @@ export default function PaymentsPage() {
         const searchLower = search.toLowerCase();
 
         const matchNombre = item.nombre?.toLowerCase().includes(searchLower);
+        const matchDocumento = String(item.documento ?? "")
+          .toLowerCase()
+          .includes(searchLower);
 
         const matchNumeros =
           saldo.toString().includes(search) ||
           credito.toString().includes(search) ||
           disponible.toString().includes(search);
 
-        if (!matchNombre && !matchNumeros) {
+        if (!matchNombre && !matchDocumento && !matchNumeros) {
           return false;
         }
       }
@@ -236,7 +239,7 @@ export default function PaymentsPage() {
         <div className="relative w-full lg:max-w-md">
           <input
             type="text"
-            placeholder="Buscar cliente o monto..."
+            placeholder="Buscar documento, cliente o monto..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);

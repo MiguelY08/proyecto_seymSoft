@@ -85,7 +85,7 @@ export const isValidPhone = (phone) => {
 
 // Comprueba que una cadena contenga solo números (o guiones para NIT)
 export const isOnlyNumbers = (value) => {
-  const numbersRegex = /^[0-9-]+$/;
+  const numbersRegex = /^[0-9]+$/;
   return numbersRegex.test(value);
 };
 
@@ -221,7 +221,7 @@ export const validateClientForm = (formData) => {
   if (!formData.document || String(formData.document).trim() === '') {
     errors.document = 'El número es obligatorio';
   } else if (!isOnlyNumbers(String(formData.document))) {
-    errors.document = 'Solo se permiten números y guiones';
+    errors.document = 'El documento solo debe contener números.';
   } else if (String(formData.document).length < 6) {
     errors.document = 'Debe tener al menos 6 caracteres';
   } else if (String(formData.document).replace(/\D/g, '').length > 19) {
@@ -255,7 +255,7 @@ export const validateClientForm = (formData) => {
   if (!formData.phone?.trim()) {
     errors.phone = 'El teléfono es obligatorio';
   } else if (!isValidPhone(formData.phone)) {
-    errors.phone = 'Teléfono inválido (7-10 dígitos)';
+    errors.phone = 'El teléfono debe contener entre 7 y 10 dígitos numéricos.';
   }
 
   const emailError = getEmailValidationError(formData.email);
@@ -268,7 +268,7 @@ export const validateClientForm = (formData) => {
   }
 
   if (formData.contactPhone && !isValidPhone(formData.contactPhone)) {
-    errors.contactPhone = 'Teléfono inválido (7-10 dígitos)';
+    errors.contactPhone = 'El teléfono debe contener entre 7 y 10 dígitos numéricos.';
   }
 
   if (formData.clientCredit?.trim() && !/^\d+([.,]\d{0,2})?$/.test(formData.clientCredit)) {

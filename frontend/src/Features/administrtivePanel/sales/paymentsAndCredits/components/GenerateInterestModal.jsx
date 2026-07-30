@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+﻿import { useState, useMemo, useRef } from "react";
 import { X } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 
@@ -18,6 +18,89 @@ export default function GenerateInterestModal({
     const value = Number(percentage);
     return Number.isFinite(value) ? value : 0;
   }, [percentage]);
+
+  const isValidPercentage =
+    Number.isInteger(percentageNumber) &&
+    percentageNumber >= 1 &&
+    percentageNumber <= 99;
+
+  const percentageErrorMessage =
+    "El porcentaje de interés debe estar entre 1% y 99%.";
+
+  const normalizePercentageInput = (value) => {
+    const nextValue = String(value ?? "");
+    if (nextValue === "") return "";
+    if (!/^\d+$/.test(nextValue)) return percentage;
+
+    const nextNumber = Number(nextValue);
+    if (!Number.isInteger(nextNumber) || nextNumber < 1 || nextNumber > 99) {
+      return percentage;
+    }
+
+    return String(nextNumber);
+  };
+
+  const handlePercentageChange = (e) => {
+    const nextValue = normalizePercentageInput(e.target.value);
+    setPercentage(nextValue);
+    setError(nextValue === "" ? percentageErrorMessage : "");
+  };
+
+  const handlePercentageBeforeInput = (e) => {
+    if (!e.data || /^\d+$/.test(e.data)) return;
+    e.preventDefault();
+    setError("Solo se permiten números entre 1 y 99.");
+  };
+
+  const handlePercentageKeyDown = (e) => {
+    const allowedControlKeys = [
+      "Backspace",
+      "Delete",
+      "Tab",
+      "ArrowLeft",
+      "ArrowRight",
+      "Home",
+      "End",
+    ];
+
+    if (allowedControlKeys.includes(e.key) || e.ctrlKey || e.metaKey) return;
+
+    if (!/^\d$/.test(e.key)) {
+      e.preventDefault();
+      setError("Solo se permiten números entre 1 y 99.");
+      return;
+    }
+
+    const { value, selectionStart, selectionEnd } = e.currentTarget;
+    const start = selectionStart ?? value.length;
+    const end = selectionEnd ?? value.length;
+    const nextValue = value.slice(0, start) + e.key + value.slice(end);
+    const nextNumber = Number(nextValue);
+
+    if (!Number.isInteger(nextNumber) || nextNumber < 1 || nextNumber > 99) {
+      e.preventDefault();
+      setError(percentageErrorMessage);
+    }
+  };
+
+  const handlePercentagePaste = (e) => {
+    e.preventDefault();
+    const pastedValue = e.clipboardData.getData("text").trim();
+
+    if (!/^\d+$/.test(pastedValue)) {
+      setError("Solo se permiten números entre 1 y 99.");
+      return;
+    }
+
+    const nextValue = normalizePercentageInput(pastedValue);
+    if (nextValue === percentage && pastedValue !== percentage) {
+      setError(percentageErrorMessage);
+      return;
+    }
+
+    setPercentage(nextValue);
+    setError(nextValue === "" ? percentageErrorMessage : "");
+  };
 
   const interestGenerated = useMemo(() => {
     const balance = Number(factura?.remainingBalance ?? 0);
@@ -40,11 +123,11 @@ export default function GenerateInterestModal({
 
     submitLockRef.current = true;
 
-    if (percentageNumber <= 0) {
-      setError("Ingrese un porcentaje valido mayor a 0");
+    if (!isValidPercentage) {
+      setError(percentageErrorMessage);
       await showWarning(
-        "Porcentaje invalido",
-        "Ingrese un porcentaje de interes mayor a 0.",
+        "Porcentaje inválido",
+        percentageErrorMessage,
       );
       submitLockRef.current = false;
       return;
@@ -54,12 +137,12 @@ export default function GenerateInterestModal({
 
     const confirm = await showConfirm(
       "question",
-      "Aplicar interes?",
-      `Se generara un interes de $${formatCOP(
+      "Aplicar interés?",
+      `Se generarÃ¡ un interes de $${formatCOP(
         interestGenerated,
-      )} para el credito #${factura?.idCredit}.`,
+      )} para el crédito #${factura?.idCredit}.`,
       {
-        confirmButtonText: "Si, aplicar",
+        confirmButtonText: "SÃ­, aplicar",
         cancelButtonText: "Revisar",
       },
     );
@@ -89,7 +172,7 @@ export default function GenerateInterestModal({
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-2 sm:p-4 z-50">
       <div className="bg-white w-full max-w-md max-h-[94vh] rounded-2xl shadow-xl font-lexend overflow-hidden flex flex-col">
         <div className="bg-[#004D77] text-white px-4 sm:px-6 py-3 sm:py-4 rounded-t-2xl flex justify-between items-center gap-3">
-          <h2 className="text-base sm:text-lg font-semibold">Aplicar interes</h2>
+          <h2 className="text-base sm:text-lg font-semibold">Aplicar interés</h2>
           <button onClick={onClose} className="cursor-pointer">
             <X size={18} />
           </button>
@@ -98,7 +181,7 @@ export default function GenerateInterestModal({
         <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto">
           <div className="bg-gray-100 p-4 rounded-xl text-sm space-y-2">
             <p>
-              <strong>Credito:</strong> #{factura.idCredit}
+              <strong>Crédito:</strong> #{factura.idCredit}
             </p>
 
             <p>
@@ -112,23 +195,25 @@ export default function GenerateInterestModal({
             </p>
 
             <p>
-              <strong>Mora:</strong> {factura.overdueDays ?? 0} dias
+              <strong>Mora:</strong> {factura.overdueDays ?? 0} días
             </p>
           </div>
 
           <div>
-            <label className="text-sm font-medium">Porcentaje de interes</label>
+            <label className="text-sm font-medium">Porcentaje de interés</label>
             <div className="mt-1 flex items-center gap-2">
               <input
-                type="number"
-                min="0"
-                step="0.01"
+                type="text"
                 value={percentage}
-                onChange={(e) => {
-                  setPercentage(e.target.value);
-                  if (error) setError("");
-                }}
+                onChange={handlePercentageChange}
+                onBeforeInput={handlePercentageBeforeInput}
+                onKeyDown={handlePercentageKeyDown}
+                onWheel={(e) => e.currentTarget.blur()}
+                onPaste={handlePercentagePaste}
                 placeholder="Ej. 5"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={2}
                 className={`w-full p-3 rounded-lg border outline-none transition ${
                   error ? "border-red-500" : "border-gray-300"
                 }`}
@@ -139,7 +224,7 @@ export default function GenerateInterestModal({
           </div>
 
           <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-sm space-y-2">
-            <p className="font-medium">Resumen de interes</p>
+            <p className="font-medium">Resumen de interés</p>
             <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-3">
               <span className="text-gray-600">Saldo pendiente</span>
               <span className="font-medium">
@@ -147,7 +232,7 @@ export default function GenerateInterestModal({
               </span>
             </div>
             <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-3">
-              <span className="text-gray-600">Interes generado</span>
+              <span className="text-gray-600">InterÃ©s generado</span>
               <span className="font-medium text-green-600">
                 ${formatCOP(interestGenerated)}
               </span>
@@ -168,10 +253,10 @@ export default function GenerateInterestModal({
 
             <button
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isValidPercentage}
               className="flex-1 text-white py-2 rounded-xl cursor-pointer bg-[#004D77] hover:bg-[#003D5e] transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? "Aplicando..." : "Aplicar interes"}
+              {isSubmitting ? "Aplicando..." : "Aplicar interés"}
             </button>
           </div>
         </div>
@@ -179,3 +264,4 @@ export default function GenerateInterestModal({
     </div>
   );
 }
+

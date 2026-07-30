@@ -1,8 +1,4 @@
-import {
-  Heart,
-  Menu,
-  ShoppingCart
-} from "lucide-react";
+import { Heart, Menu, ShoppingCart } from "lucide-react";
 
 import HeaderIconButton from "./HeaderIconButton";
 import ProfileMenu from "./ProfileMenu";
@@ -19,12 +15,13 @@ function HeaderActions({
   menuOpen,
   modalRef,
   onOpenMobileMenu,
+  onOpenProfileSummary,
   onOpenProfileEdit,
   profileModal,
   role,
   roleName,
   setProfileModal,
-  user
+  user,
 }) {
   return (
     <div className="flex shrink-0 items-center gap-0.5 sm:gap-1 xl:gap-1.5">
@@ -44,9 +41,7 @@ function HeaderActions({
         ariaLabel="Carrito"
       />
 
-      {user && (
-        <NotificationBell />
-      )}
+      {user && <NotificationBell />}
 
       <ProfileMenu
         getInitials={getInitials}
@@ -54,6 +49,7 @@ function HeaderActions({
         handleLogout={handleLogout}
         isLoggingOut={isLoggingOut}
         modalRef={modalRef}
+        onOpenProfileSummary={onOpenProfileSummary}
         onOpenProfileEdit={onOpenProfileEdit}
         profileModal={profileModal}
         role={role}

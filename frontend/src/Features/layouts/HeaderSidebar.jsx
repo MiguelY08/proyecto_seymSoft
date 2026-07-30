@@ -4,54 +4,39 @@ import {
   ChevronDown,
   Menu,
   UserCircle2,
+  User,
   SquarePen,
   LogOut,
-  Store
+  Store,
 } from "lucide-react";
 
 import { useAuth } from "../access/context/AuthContext";
 import { useAlert } from "../shared/alerts/useAlert";
 import EditProfileForm from "../access/components/EditProfileForm";
+import ProfileSummaryModal from "../shared/components/profile/ProfileSummaryModal.jsx";
 import { NotificationBell } from "../shared/components/notifications";
 
 export default function HeaderSidebar({
   onToggleSidebar,
   isSidebarOpen,
   isSidebarCollapsed,
-  isDesktop
+  isDesktop,
 }) {
+  const { user, role, logout } = useAuth();
 
-  const {
-    user,
-    role,
-    logout
-  } = useAuth();
+  const { showConfirm } = useAlert();
 
-  const {
-    showConfirm
-  } = useAlert();
+  const navigate = useNavigate();
 
-  const navigate =
-    useNavigate();
+  const location = useLocation();
 
-  const location =
-    useLocation();
+  const { pathname } = location;
 
-  const { pathname } =
-    location;
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const [
-    menuOpen,
-    setMenuOpen
-  ] = useState(false);
-
-  const [
-    showEditModal,
-    setShowEditModal
-  ] = useState(false);
-  
-  const dropdownRef =
-    useRef(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showProfileSummaryModal, setShowProfileSummaryModal] = useState(false);
+  const dropdownRef = useRef(null);
 
   // ─────────────────────────────
   // LOGOUT
@@ -67,25 +52,19 @@ export default function HeaderSidebar({
   const handleGoToStore = async () => {
     setMenuOpen(false);
 
-    const result =
-      await showConfirm(
-        "info",
-        "¿Ir a la Tienda?",
-        "Saldrás del panel administrativo e irás a la tienda.",
-        {
-          confirmButtonText:
-            "Sí, ir a tienda",
-          cancelButtonText:
-            "Cancelar"
-        }
-      );
+    const result = await showConfirm(
+      "info",
+      "¿Ir a la Tienda?",
+      "Saldrás del panel administrativo e irás a la tienda.",
+      {
+        confirmButtonText: "Sí, ir a tienda",
+        cancelButtonText: "Cancelar",
+      },
+    );
 
     if (result?.isConfirmed) {
-
       navigate("/");
-
     }
-
   };
 
   // ─────────────────────────────
@@ -93,44 +72,24 @@ export default function HeaderSidebar({
   // ─────────────────────────────
 
   useEffect(() => {
-
     function handleClickOutside(e) {
-
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target)
-      ) {
-
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setMenuOpen(false);
-
       }
-
     }
 
-    document.addEventListener(
-      "mousedown",
-      handleClickOutside
-    );
+    document.addEventListener("mousedown", handleClickOutside);
 
     return () => {
-
-      document.removeEventListener(
-        "mousedown",
-        handleClickOutside
-      );
-
+      document.removeEventListener("mousedown", handleClickOutside);
     };
-
   }, []);
 
   // ─────────────────────────────
   // BREADCRUMB
   // ─────────────────────────────
 
-  const segments =
-    pathname
-      .split("/")
-      .filter(Boolean);
+  const segments = pathname.split("/").filter(Boolean);
 
   const breadcrumbLabels = {
     dashboard: "Métricas",
@@ -157,41 +116,26 @@ export default function HeaderSidebar({
     payment: "Pago",
     configuration: "Configuracion",
     roles: "Roles",
-    banners: "Carrusel"
+    banners: "Carrusel",
   };
 
   const formatText = (text) =>
     breadcrumbLabels[text] ??
-    text
-      .replace(/-/g, " ")
-      .replace(
-        /\b\w/g,
-        (l) => l.toUpperCase()
-      );
+    text.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 
-  const moduleName =
-    segments[1]
-      ? formatText(segments[1])
-      : "Inicio";
+  const moduleName = segments[1] ? formatText(segments[1]) : "Inicio";
 
-  const subModuleName =
-    segments[2]
-      ? formatText(segments[2])
-      : "";
+  const subModuleName = segments[2] ? formatText(segments[2]) : "";
 
   // ─────────────────────────────
   // DATOS USUARIO
   // ─────────────────────────────
-  const fullName =
-    user?.fullName || "Usuario";
+  const fullName = user?.fullName || "Usuario";
 
-  const roleName =
-    role?.nameRole || "Sin rol";
+  const roleName = role?.nameRole || "Sin rol";
 
   const shortName =
-    fullName.length > 18
-      ? fullName.slice(0, 16) + "..."
-      : fullName;
+    fullName.length > 18 ? fullName.slice(0, 16) + "..." : fullName;
 
   return (
     <>
@@ -213,15 +157,11 @@ export default function HeaderSidebar({
                   ? "Cerrar menú de navegación"
                   : "Abrir menú de navegación"
             }
-            aria-expanded={
-              isDesktop
-                ? !isSidebarCollapsed
-                : isSidebarOpen
-            }
+            aria-expanded={isDesktop ? !isSidebarCollapsed : isSidebarOpen}
           >
             <Menu
               size={22}
-              className={`transition-transform duration-[320ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] group-hover:scale-105 ${
+              className={`transition-transform duration-320 ease-[cubic-bezier(0.2,0.8,0.2,1)] group-hover:scale-105 ${
                 isDesktop
                   ? isSidebarCollapsed
                     ? "-rotate-90"
@@ -234,14 +174,10 @@ export default function HeaderSidebar({
           </button>
 
           <div className="flex min-w-0 items-center gap-2 text-[#004D77] text-sm md:text-base font-medium truncate">
-            <span className="truncate">
-              {moduleName}
-            </span>
+            <span className="truncate">{moduleName}</span>
             {subModuleName && (
               <>
-                <span className="text-slate-400 hidden sm:block">
-                  /
-                </span>
+                <span className="text-slate-400 hidden sm:block">/</span>
                 <span className="truncate hidden sm:block">
                   {subModuleName}
                 </span>
@@ -256,140 +192,131 @@ export default function HeaderSidebar({
         <div className="flex items-center gap-2">
           <NotificationBell />
 
-          <div
-            className="relative"
-            ref={dropdownRef}
-          >
-          <button
-            onClick={()=>
-              setMenuOpen(!menuOpen)
-            }
-            className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden text-slate-500">
-              {user?.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt={fullName}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <UserCircle2
-                  size={26}
-                  strokeWidth={1.5}
-                />
-              )}
-            </div>
-            <div className="hidden sm:block text-left">
-              <p className="text-sm font-medium text-[#004D77] leading-tight">
-                {shortName}
-              </p>
-              <p className="text-xs text-slate-500">
-                {roleName}
-              </p>
-            </div>
-            <ChevronDown
-              size={15}
-              className={`transition-transform duration-200 ${
-                menuOpen
-                  ? "rotate-180"
-                  : ""
-              }`}
-            />
-          </button>
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden text-slate-500">
+                {user?.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={fullName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <UserCircle2 size={26} strokeWidth={1.5} />
+                )}
+              </div>
+              <div className="hidden sm:block text-left">
+                <p className="text-sm font-medium text-[#004D77] leading-tight">
+                  {shortName}
+                </p>
+                <p className="text-xs text-slate-500">{roleName}</p>
+              </div>
+              <ChevronDown
+                size={15}
+                className={`transition-transform duration-200 ${
+                  menuOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
 
-          {/* ─────────────────────────────
+            {/* ─────────────────────────────
           DROPDOWN
           ───────────────────────────── */}
-          {menuOpen && (
-            <div className="absolute right-0 mt-2 w-64 sm:w-72 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
-              {/* HEADER */}
-              <div className="flex flex-col items-center gap-1 px-5 py-5 bg-slate-50 border-b border-slate-200">
-                <div className="w-14 h-14 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 overflow-hidden mb-1">
-                  {user?.avatarUrl ? (
-                    <img
-                      src={user.avatarUrl}
-                      alt={fullName}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <UserCircle2
-                      size={48}
-                      strokeWidth={1.2}
-                    />
-                  )}
+            {menuOpen && (
+              <div className="absolute right-0 mt-2 w-64 sm:w-72 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
+                {/* HEADER */}
+                <div className="flex flex-col items-center gap-1 px-5 py-5 bg-slate-50 border-b border-slate-200">
+                  <div className="w-14 h-14 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 overflow-hidden mb-1">
+                    {user?.avatarUrl ? (
+                      <img
+                        src={user.avatarUrl}
+                        alt={fullName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <UserCircle2 size={48} strokeWidth={1.2} />
+                    )}
+                  </div>
+                  <p className="text-sm font-semibold text-[#004D77] text-center leading-tight">
+                    {fullName}
+                  </p>
+                  <p className="text-xs text-[#004D77] break-all">
+                    {user?.email}
+                  </p>
+                  <p className="text-xs font-semibold text-slate-600 mt-0.5">
+                    {roleName}
+                  </p>
                 </div>
-                <p className="text-sm font-semibold text-[#004D77] text-center leading-tight">
-                  {fullName}
-                </p>
-                <p className="text-xs text-[#004D77] break-all">
-                  {user?.email}
-                </p>
-                <p className="text-xs font-semibold text-slate-600 mt-0.5">
-                  {roleName}
-                </p>
-              </div>
 
-              {/* ACCIONES */}
-              <div className="py-1.5">
+                {/* ACCIONES */}
+                <div className="py-1.5">
+                  {/* IR A TIENDA */}
+                  {role && (
+                    <button
+                      onClick={handleGoToStore}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#004D77] hover:bg-gray-200 transition-colors cursor-pointer"
+                    >
+                      <Store size={16} strokeWidth={1.8} />
+                      Ir a Tienda
+                    </button>
+                  )}
 
-                {/* IR A TIENDA */}
-                {role && (
+                  {/* VER MI PERFIL */}
                   <button
-                    onClick={handleGoToStore}
+                    type="button"
+                    aria-label="Datos Financieros"
+                    title="Datos Financieros"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setShowProfileSummaryModal(true);
+                    }}
+                    className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-sm text-[#004D77] transition-colors hover:bg-gray-200"
+                  >
+                    <User size={16} strokeWidth={1.8} />
+                    Datos Financieros
+                  </button>
+
+                  {/* EDITAR PERFIL */}
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setShowEditModal(true);
+                    }}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#004D77] hover:bg-gray-200 transition-colors cursor-pointer"
                   >
-                    <Store
-                      size={16}
-                      strokeWidth={1.8}
-                    />
-                    Ir a Tienda
+                    <SquarePen size={16} strokeWidth={1.8} />
+                    Editar Mi Perfil
                   </button>
-                )}
 
-                {/* EDITAR PERFIL */}
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    setShowEditModal(true);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#004D77] hover:bg-gray-200 transition-colors cursor-pointer"
-                >
-                  <SquarePen
-                    size={16}
-                    strokeWidth={1.8}
-                  />
-                  Editar Mi Perfil
-                </button>
-
-                {/* LOGOUT */}
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
-                >
-                  <LogOut
-                    size={16}
-                    strokeWidth={1.8}
-                  />
-                  Cerrar sesión
-                </button>
+                  {/* LOGOUT */}
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+                  >
+                    <LogOut size={16} strokeWidth={1.8} />
+                    Cerrar sesión
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
           </div>
         </div>
       </header>
-
       {/* ─────────────────────────────
       MODAL PERFIL
       ───────────────────────────── */}
       {showEditModal && (
-        <EditProfileForm
-          onClose={()=>
-            setShowEditModal(false)
-          }
+        <EditProfileForm onClose={() => setShowEditModal(false)} />
+      )}{" "}
+      {showProfileSummaryModal && (
+        <ProfileSummaryModal
+          isOpen={showProfileSummaryModal}
+          onClose={() => setShowProfileSummaryModal(false)}
         />
-      )}
+      )}{" "}
     </>
   );
 }

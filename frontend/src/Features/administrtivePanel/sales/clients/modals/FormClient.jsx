@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import {
   X, ChevronDown, ChevronRight,
   UserCircle, Users, IdCard, MapPin, Phone,
@@ -11,23 +11,38 @@ import FormSelect from '../../../../shared/FormSelect';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import LoadingOverlay from '../../../../shared/LoadingOverlay';
 import { clientsService } from '../services/clientsService';
+import { checkEmailAvailability } from '../../../../access/services/authService';
 
 const onlyDigits = (value, maxLength = 10) =>
   String(value ?? '').replace(/\D/g, '').slice(0, maxLength);
 
-const onlyLetters = (value, maxLength = 80) =>
+const normalizeNameInput = (value) =>
   String(value ?? '')
-    .replace(/[^A-Za-zÃƒÂÃƒâ€°ÃƒÂÃƒâ€œÃƒÅ¡ÃƒÅ“Ãƒâ€˜ÃƒÂ¡ÃƒÂ©ÃƒÂ­ÃƒÂ³ÃƒÂºÃƒÂ¼ÃƒÂ±\s'-]/g, '')
+    .replace(/^\s+/, '')
+    .replace(/\s{2,}/g, ' ');
+
+const toTitleCaseName = (value) =>
+  normalizeNameInput(value)
+    .trim()
+    .toLowerCase()
+    .replace(/\p{L}+/gu, (word) => word.charAt(0).toUpperCase() + word.slice(1));
+
+const normalizeEmailInput = (value) =>
+  String(value ?? '').trim().toLowerCase();
+
+const ONLY_LETTERS = (value, maxLength = 80) =>
+  String(value ?? '')
+    .replace(/[^\p{L}\s'-]/gu, '')
     .replace(/\s{2,}/g, ' ')
     .slice(0, maxLength);
 
-const cleanCompanyName = (value, maxLength = 120) =>
+const CLEAN_COMPANY_NAME = (value, maxLength = 120) =>
   String(value ?? '')
-    .replace(/[^A-Za-z0-9ÃƒÆ’Ã‚ÂÃƒÆ’Ã¢â‚¬Â°ÃƒÆ’Ã‚ÂÃƒÆ’Ã¢â‚¬Å“ÃƒÆ’Ã…Â¡ÃƒÆ’Ã…â€œÃƒÆ’Ã¢â‚¬ËœÃƒÆ’Ã‚Â¡ÃƒÆ’Ã‚Â©ÃƒÆ’Ã‚Â­ÃƒÆ’Ã‚Â³ÃƒÆ’Ã‚ÂºÃƒÆ’Ã‚Â¼ÃƒÆ’Ã‚Â±\s&.,#'-]/g, '')
+    .replace(/[^\p{L}0-9\s&.,#'-]/gu, '')
     .replace(/\s{2,}/g, ' ')
     .slice(0, maxLength);
 
-const cleanDocument = (value, documentType) => {
+const CLEAN_DOCUMENT = (value, documentType) => {
   const maxLength = documentType === 'NIT' ? 20 : 15;
   if (documentType === 'NIT') {
     return String(value ?? '').replace(/[^0-9-]/g, '').slice(0, maxLength);
@@ -40,6 +55,24 @@ const cleanDocument = (value, documentType) => {
 
 const cleanCiuCode = (value) =>
   String(value ?? '').replace(/[^A-Za-z0-9-]/g, '').slice(0, 25);
+
+const cleanPersonName = (value, maxLength = 80) =>
+  normalizeNameInput(String(value ?? '').replace(/[^\p{L}\s'-]/gu, ''))
+    .slice(0, maxLength);
+
+const cleanBusinessName = (value, maxLength = 120) =>
+  normalizeNameInput(String(value ?? '').replace(/[^\p{L}0-9\s&.,#'-]/gu, ''))
+    .slice(0, maxLength);
+
+const cleanNumericDocument = (value, documentType) =>
+  onlyDigits(value, documentType === 'NIT' ? 20 : 15);
+
+const buildSanitizedInputValue = (target, input, sanitizer) => {
+  const value = String(target.value ?? '');
+  const start = target.selectionStart ?? value.length;
+  const end = target.selectionEnd ?? value.length;
+  return sanitizer(`${value.slice(0, start)}${input}${value.slice(end)}`);
+};
 
 // Componente Mini Gráfica para el formulario (solo edición) - CON DATOS REALES
 function MiniFormGraph({ clientId, onExpand }) {
@@ -215,23 +248,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
   const [errors,   setErrors]   = useState({});
   const [touched,  setTouched]  = useState({});
   const [checkingEmail, setCheckingEmail] = useState(false);
-
-  const findClientByEmail = async (email) => {
-    const normalizedEmail = String(email || '').trim().toLowerCase();
-    if (!normalizedEmail) return null;
-
-    const result = await clientsService.getAll({
-      page: 1,
-      limit: 10000,
-      search: '',
-    });
-
-    return result.data.find((item) => {
-      const sameEmail = String(item.email || '').trim().toLowerCase() === normalizedEmail;
-      const sameClient = client?.id && Number(item.id) === Number(client.id);
-      return sameEmail && !sameClient;
-    }) || null;
-  };
+  const isEditing = !!client;
 
   const getDuplicateEmailError = async (email) => {
     const localError = getEmailValidationError(email);
@@ -241,8 +258,8 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     const nextEmail = String(email || '').trim().toLowerCase();
     if (currentEmail && currentEmail === nextEmail) return '';
 
-    const duplicate = await findClientByEmail(email);
-    return duplicate ? 'Este correo ya está registrado' : '';
+    const data = await checkEmailAvailability(nextEmail);
+    return data?.exists ? 'El correo ya está registrado' : '';
   };
 
   // ============================================
@@ -352,6 +369,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       setTouched({});
     }
     setErrors({});
+    setCheckingEmail(false);
     setShowGraph(false);
   }, [client, isOpen]);
 
@@ -411,6 +429,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     setFormData(initialState);
     setErrors({});
     setTouched({});
+    setCheckingEmail(false);
     setShowGraph(false);
   };
 
@@ -466,16 +485,32 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     const { name, value } = e.target;
 
     let nextValue = value;
+    let forcedError = '';
     if (name === 'phone' || name === 'contactPhone') {
+      if (/\D/.test(String(value))) {
+        setTouched((prev) => ({ ...prev, [name]: true }));
+        setErrors((prev) => ({ ...prev, [name]: 'El teléfono solo debe contener números' }));
+        return;
+      }
       nextValue = onlyDigits(value, 10);
     }
     if (name === 'firstName' && formData.personType === 'juridica') {
-      nextValue = cleanCompanyName(value);
+      nextValue = cleanBusinessName(value);
+      if (/[^\p{L}0-9\s&.,#'-]/u.test(String(value))) {
+        forcedError = 'Solo se permiten letras, números y caracteres básicos.';
+      }
     } else if (name === 'firstName' || name === 'lastName' || name === 'contactName') {
-      nextValue = onlyLetters(value, name === 'contactName' ? 100 : 80);
+      nextValue = cleanPersonName(value, name === 'contactName' ? 100 : 80);
+      if (/[^\p{L}\s'-]/u.test(String(value))) {
+        forcedError = 'Solo se permiten letras y espacios.';
+      }
     }
     if (name === 'document') {
-      nextValue = cleanDocument(value, formData.documentType);
+      nextValue = cleanNumericDocument(value, formData.documentType);
+      if (/\D/.test(String(value))) forcedError = 'Solo se permiten números.';
+    }
+    if (name === 'email') {
+      nextValue = normalizeEmailInput(value);
     }
     if (name === 'ciuCode') {
       nextValue = cleanCiuCode(value);
@@ -525,6 +560,9 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       fieldsToRefresh.forEach((field) => {
         next[field] = validationErrors[field] || '';
       });
+      if (forcedError) {
+        next[name] = forcedError;
+      }
       if (name === 'clientCredit' || name === 'saldoFavor') {
         next[name] = validateNumeric10_2(
           newFormData[name],
@@ -538,6 +576,64 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     });
   };
 
+  const setRealtimeFieldError = (field, message) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    setErrors((prev) => ({ ...prev, [field]: message }));
+  };
+
+  const handleNumericBeforeInput = (e) => {
+    if (!e.data || /^\d+$/.test(e.data)) return;
+    e.preventDefault();
+    setRealtimeFieldError(e.currentTarget.name, 'El teléfono solo debe contener números');
+  };
+
+  const handleNumericPaste = (e) => {
+    e.preventDefault();
+    const { name } = e.currentTarget;
+    const pastedValue = e.clipboardData.getData('text');
+
+    if ((name === 'phone' || name === 'contactPhone') && /\D/.test(pastedValue)) {
+      setRealtimeFieldError(name, 'El teléfono solo debe contener números');
+      return;
+    }
+
+    const sanitizer = name === 'document'
+      ? (value) => cleanNumericDocument(value, formData.documentType)
+      : (value) => onlyDigits(value, 10);
+    const nextValue = buildSanitizedInputValue(
+      e.currentTarget,
+      pastedValue,
+      sanitizer,
+    );
+    const newFormData = { ...formData, [name]: nextValue };
+    const validationErrors = validateClientForm(newFormData);
+
+    setFormData(newFormData);
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    setErrors((prev) => ({ ...prev, [name]: validationErrors[name] || '' }));
+  };
+
+  const handleEmailBeforeInput = (e) => {
+    if (!e.data || !/\s/.test(e.data)) return;
+    e.preventDefault();
+    setRealtimeFieldError(e.currentTarget.name, 'El correo no debe contener espacios.');
+  };
+
+  const handleEmailPaste = (e) => {
+    e.preventDefault();
+    const nextValue = buildSanitizedInputValue(
+      e.currentTarget,
+      e.clipboardData.getData('text'),
+      normalizeEmailInput,
+    );
+    const newFormData = { ...formData, email: nextValue };
+    const validationErrors = validateClientForm(newFormData);
+
+    setFormData(newFormData);
+    setTouched((prev) => ({ ...prev, email: true }));
+    setErrors((prev) => ({ ...prev, email: validationErrors.email || '' }));
+  };
+
   const handleSelectChange = (name, value) => {
     setTouched(prev => ({ ...prev, [name]: true }));
     handleChange({ target: { name, value } });
@@ -547,28 +643,62 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     const { name } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
 
+    let blurredFormData = formData;
+    if (name === 'firstName' && formData.personType === 'juridica') {
+      blurredFormData = { ...formData, firstName: normalizeNameInput(formData.firstName).trim() };
+    } else if (name === 'firstName' || name === 'lastName' || name === 'contactName') {
+      blurredFormData = { ...formData, [name]: toTitleCaseName(formData[name]) };
+    } else if (name === 'email') {
+      blurredFormData = { ...formData, email: normalizeEmailInput(formData.email) };
+    } else if (name === 'document') {
+      blurredFormData = { ...formData, document: cleanNumericDocument(formData.document, formData.documentType) };
+    } else if (name === 'phone' || name === 'contactPhone') {
+      blurredFormData = { ...formData, [name]: onlyDigits(formData[name], 10) };
+    }
+
+    if (blurredFormData !== formData) {
+      setFormData(blurredFormData);
+    }
+
     if (name === 'clientCredit' || name === 'saldoFavor') {
-      const numericError = validateNumeric10_2(formData[name], name === 'clientCredit' ? 'Crédito cliente' : 'Saldo a favor');
+      const numericError = validateNumeric10_2(blurredFormData[name], name === 'clientCredit' ? 'Crédito cliente' : 'Saldo a favor');
       setErrors(prev => ({ ...prev, [name]: numericError }));
       if (numericError) return;
     }
 
     if (name === 'ciuCode') {
-      const ciuError = validateCiuCode(formData.ciuCode, formData.rut);
+      const ciuError = validateCiuCode(blurredFormData.ciuCode, blurredFormData.rut);
       setErrors(prev => ({ ...prev, ciuCode: ciuError }));
       if (ciuError) return;
     }
 
-    const validationErrors = validateClientForm(formData);
+    const validationErrors = validateClientForm(blurredFormData);
     setErrors(prev => ({ ...prev, [name]: validationErrors[name] || '' }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const normalizedFormData = {
+      ...formData,
+      document: cleanNumericDocument(formData.document, formData.documentType),
+      firstName: formData.personType === 'juridica'
+        ? normalizeNameInput(cleanBusinessName(formData.firstName)).trim()
+        : toTitleCaseName(cleanPersonName(formData.firstName)),
+      lastName: formData.personType === 'juridica'
+        ? formData.lastName
+        : toTitleCaseName(cleanPersonName(formData.lastName)),
+      phone: onlyDigits(formData.phone, 10),
+      email: normalizeEmailInput(formData.email),
+      contactName: formData.contactName ? toTitleCaseName(cleanPersonName(formData.contactName, 100)) : '',
+      contactPhone: onlyDigits(formData.contactPhone, 10),
+    };
+
+    setFormData(normalizedFormData);
+
     // Validar campos numéricos
-    const creditError = validateNumeric10_2(formData.clientCredit, 'Crédito cliente');
-    const saldoError = validateNumeric10_2(formData.saldoFavor, 'Saldo a favor');
+    const creditError = validateNumeric10_2(normalizedFormData.clientCredit, 'Crédito cliente');
+    const saldoError = validateNumeric10_2(normalizedFormData.saldoFavor, 'Saldo a favor');
 
     if (creditError || saldoError) {
       setErrors({
@@ -580,21 +710,21 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       return;
     }
 
-    const ciuError = validateCiuCode(formData.ciuCode, formData.rut);
+    const ciuError = validateCiuCode(normalizedFormData.ciuCode, normalizedFormData.rut);
     if (ciuError) {
       setErrors(prev => ({ ...prev, ciuCode: ciuError }));
       setTouched(prev => ({ ...prev, ciuCode: true }));
       return;
     }
 
-    const validationErrors = validateClientForm(formData);
+    const validationErrors = validateClientForm(normalizedFormData);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      setTouched(Object.keys(formData).reduce((acc, k) => ({ ...acc, [k]: true }), {}));
+      setTouched(Object.keys(normalizedFormData).reduce((acc, k) => ({ ...acc, [k]: true }), {}));
       return;
     }
 
-    const duplicateEmailError = await getDuplicateEmailError(formData.email);
+    const duplicateEmailError = await getDuplicateEmailError(normalizedFormData.email);
     if (duplicateEmailError) {
       setErrors((prev) => ({ ...prev, email: duplicateEmailError }));
       setTouched((prev) => ({ ...prev, email: true }));
@@ -602,21 +732,21 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     }
 
     const submitData = {
-      personType: formData.personType,
-      documentType: formData.documentType,
-      document: formData.document,
-      firstName: formData.firstName,
-      lastName: formData.personType === 'juridica' ? 'N/A' : formData.lastName,
-      address: formData.address,
-      phone: formData.phone,
-      email: formData.email,
-      contactName: formData.contactName,
-      contactPhone: formData.contactPhone,
-      clientType: formData.clientType,
-      clientCredit: formData.clientCredit || '0',
-      saldoFavor: formData.saldoFavor || '',
-      rut: formData.rut,
-      ciuCode: formData.rut === 'no' ? '' : (formData.ciuCode || '')
+      personType: normalizedFormData.personType,
+      documentType: normalizedFormData.documentType,
+      document: normalizedFormData.document,
+      firstName: normalizedFormData.firstName,
+      lastName: normalizedFormData.personType === 'juridica' ? 'Empresa' : normalizedFormData.lastName,
+      address: normalizedFormData.address,
+      phone: normalizedFormData.phone,
+      email: normalizedFormData.email,
+      contactName: normalizedFormData.contactName,
+      contactPhone: normalizedFormData.contactPhone,
+      clientType: normalizedFormData.clientType,
+      clientCredit: normalizedFormData.clientCredit || '0',
+      saldoFavor: normalizedFormData.saldoFavor || '',
+      rut: normalizedFormData.rut,
+      ciuCode: normalizedFormData.rut === 'no' ? '' : (normalizedFormData.ciuCode || '')
     };
 
     try {
@@ -657,7 +787,8 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     </label>
   );
 
-  const isEditing = !!client;
+  const hasBlockingErrors = Boolean(errors.email || errors.phone || errors.document);
+
   const isLegalPerson = formData.personType === 'juridica';
   const personTypeOptions = [
     { value: '', label: 'Selecciona una opción' },
@@ -774,9 +905,13 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                       name="document"
                       value={formData.document}
                       onChange={handleChange}
+                      onBeforeInput={handleNumericBeforeInput}
+                      onPaste={handleNumericPaste}
                       onBlur={handleBlur}
                       placeholder="Ej: 123456789"
                       autoComplete="off"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       className={isEditing ? disabledInputClass('document') : inputClass('document')}
                       disabled={isEditing}
                     />
@@ -828,9 +963,13 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
+                      onBeforeInput={handleNumericBeforeInput}
+                      onPaste={handleNumericPaste}
                       onBlur={handleBlur}
                       placeholder="Ej: 3001234567"
                       autoComplete="off"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       className={inputClass('phone')}
                     />
                     <ErrorMsg field="phone" />
@@ -858,6 +997,8 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
+                    onBeforeInput={handleEmailBeforeInput}
+                    onPaste={handleEmailPaste}
                     onBlur={handleBlur}
                     placeholder="Ej: cliente@email.com"
                     autoComplete="off"
@@ -899,9 +1040,13 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                       name="contactPhone"
                       value={formData.contactPhone}
                       onChange={handleChange}
+                      onBeforeInput={handleNumericBeforeInput}
+                      onPaste={handleNumericPaste}
                       onBlur={handleBlur}
                       placeholder="Ej: 3009876543"
                       autoComplete="off"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       className={inputClass('contactPhone')}
                     />
                     <ErrorMsg field="contactPhone" />
@@ -1024,7 +1169,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || checkingEmail || hasBlockingErrors}
                   className="flex items-center justify-center gap-2 rounded-full bg-[#004D77] px-4 py-2.5 text-sm font-semibold text-white transition duration-200 hover:bg-[#003d61] disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60 sm:px-6 sm:hover:-translate-y-0.5 sm:hover:shadow-lg"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -1055,3 +1200,4 @@ function FormClient({ isOpen, onClose, client, onSave }) {
 }
 
 export default FormClient;
+

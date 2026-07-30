@@ -26,7 +26,7 @@ export const METODOS_PAGO = {
   EFECTIVO: 'Efectivo',
   TRANSFERENCIA: 'Transferencia',
   CREDITO: 'Crédito',
-  DEVOLUCION: 'Devolución',
+  DEVOLUCION: 'Saldo a favor',
 };
 
 const unwrap = (response) => {
@@ -432,6 +432,11 @@ const buildCreateOrderPayload = (data = {}) => {
     deliveryDepartmentName: isRecoge ? null : data.departamentoEntregaNombre,
     deliveryCityCode: isRecoge ? null : data.ciudadEntregaCodigo,
     deliveryCityName: isRecoge ? null : data.ciudadEntregaNombre,
+    favorBalanceAmount: toNumber(
+      data.favorBalanceAmount ??
+      data.saldoFavorUsado ??
+      data.creditBalanceAmount
+    ),
     items: (data.productos || []).map((product) => ({
       idProduct: product.id,
       barcode: product.codBarras || product.barcode || '',
@@ -622,8 +627,17 @@ export const OrdersService = {
 
     return this.update({
       id: orderId,
+      clienteId: current.clienteId,
+      tipoEntrega: current.tipoEntrega,
+      direccionEntrega: current.direccionEntrega,
+      deliveryRecipientName: current.deliveryRecipientName,
+      deliveryRecipientPhone: current.deliveryRecipientPhone,
+      departamentoEntregaCodigo: current.departamentoEntregaCodigo,
+      departamentoEntregaNombre: current.departamentoEntregaNombre,
+      ciudadEntregaCodigo: current.ciudadEntregaCodigo,
+      ciudadEntregaNombre: current.ciudadEntregaNombre,
+      shippingAmount: current.shippingAmount,
       estadoLogistico: newEstadoLogistico,
-      motivoCancelacion: null,
     });
   },
 

@@ -251,6 +251,9 @@ function OrderDetail() {
   const hasRejectedReceipt = order.comprobantesPago?.some(
     (proof) => normalizeReceiptStatus(proof.status) === 'rechazado'
   );
+  const hasPendingReceipt = order.comprobantesPago?.some(
+    (proof) => normalizeReceiptStatus(proof.status) === 'pendiente'
+  );
   const orderNumber = order.numeroPedido || order.id;
   const returnWhatsAppUrl = `https://api.whatsapp.com/send/?phone=%2B573212828628&text=${encodeURIComponent(
     `Hola, necesito ayuda con una devolución de mi pedido No. ${orderNumber}`
@@ -383,6 +386,18 @@ function OrderDetail() {
                   </p>
                 )}
 
+                {hasPendingReceipt ? (
+                  <div className="mt-5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+                    <Clock size={18} className="mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-black uppercase">Comprobante en revisión</p>
+                      <p className="mt-1 text-xs font-semibold leading-relaxed">
+                        Ya tienes un comprobante pendiente. Debes esperar a que el administrador lo apruebe o rechace antes de enviar otro.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
                 <div className="mt-5 grid gap-4 sm:grid-cols-2 sm:gap-5">
                   <div className="text-center">
                     <img
@@ -451,6 +466,8 @@ function OrderDetail() {
                   {submitting && <LoaderCircle size={16} className="animate-spin" />}
                   {submitting ? 'Registrando...' : 'Enviar comprobante'}
                 </button>
+                  </>
+                )}
               </section>
             )}
 

@@ -28,6 +28,7 @@ import CompleteClientProfile from './modals/CompleteClientProfile.jsx';
 import { useAuth } from '../../access/context/AuthContext';
 import { getSession, saveSession } from '../../access/helpers/authStorage';
 import FormSelect from '../../shared/FormSelect';
+import { getProfileSummary } from '../../shared/services/profileService';
 import {
   ESTADOS_LOGISTICOS,
   LocationService,
@@ -59,6 +60,15 @@ const buildCheckoutProducts = (items = []) =>
     cantidad: Number(item.quantity || 0),
     precioUnitario: Number(item.price || 0),
   }));
+
+const pickNumber = (source, keys = []) => {
+  for (const key of keys) {
+    const parsed = Number(source?.[key]);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+
+  return 0;
+};
 
 const PICKUP_STORE_LOCATION = {
   name: 'Papelería Magic',
@@ -766,6 +776,7 @@ function ShoppingCart() {
   const [ciudades, setCiudades] = useState([]);
   const [loadingDepartamentos, setLoadingDepartamentos] = useState(false);
   const [loadingCiudades, setLoadingCiudades] = useState(false);
+  const [favorBalance, setFavorBalance] = useState(0);
 
   const preloadedCustomerData = useMemo(() => ({
     nombreCompleto: String(user?.fullName || getClientFullName(client) || '').trim(),
@@ -855,6 +866,44 @@ function ShoppingCart() {
     return () => window.clearTimeout(timer);
   }, [cartItems.length, cartLoading, clientId, deliveryMethod, resumeCheckout]);
 
+  useEffect(() => {
+    if (!isAuthenticated || !clientId) {
+      setFavorBalance(0);
+      return;
+    }
+
+    let alive = true;
+
+    const loadFavorBalance = async () => {
+      try {
+        const profile = await getProfileSummary();
+        const financialSummary = profile?.financialSummary || profile || {};
+        const balance = pickNumber(financialSummary, [
+          'favorBalance',
+          'saldoFavor',
+          'credit_balance',
+          'saldo_a_favor',
+          'balance',
+        ]);
+
+        if (alive) {
+          setFavorBalance(Math.max(0, balance));
+        }
+      } catch (error) {
+        console.error('No fue posible cargar el saldo a favor:', error);
+        if (alive) {
+          setFavorBalance(0);
+        }
+      }
+    };
+
+    void loadFavorBalance();
+
+    return () => {
+      alive = false;
+    };
+  }, [clientId, isAuthenticated]);
+
   // Validaciones (idénticas al original)
   const validateNombreCompleto = (value) => {
     if (!value.trim()) return 'El nombre completo es obligatorio';
@@ -872,10 +921,8 @@ function ShoppingCart() {
   };
   const validateTelefono = (value) => {
     if (!value.trim()) return 'El teléfono es obligatorio';
-    if (!/^[\d\s]+$/.test(value)) return 'Solo números';
-    const digitsOnly = value.replace(/\s/g, '');
-    if (digitsOnly.length < 10) return 'Mínimo 10 dígitos';
-    if (digitsOnly.length > 10) return 'Máximo 10 dígitos';
+    if (!/^\d+$/.test(value)) return 'El teléfono solo debe contener números';
+    if (!/^\d{7,10}$/.test(value)) return 'El teléfono debe contener entre 7 y 10 dígitos numéricos.';
     return '';
   };
   const validateDeliveryRecipientName = (value) => {
@@ -906,7 +953,13 @@ function ShoppingCart() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (name === 'telefono' || name === 'deliveryRecipientPhone') {
-      const cleaned = value.replace(/[^\d\s]/g, '');
+      if (/\D/.test(value)) {
+        setTouched((prev) => ({ ...prev, [name]: true }));
+        setErrors((prev) => ({ ...prev, [name]: 'El teléfono solo debe contener números' }));
+        return;
+      }
+
+      const cleaned = value.slice(0, 10);
       setFormData((prev) => ({ ...prev, [name]: cleaned }));
       if (touched[name]) {
         setErrors((prev) => ({ ...prev, [name]: validateTelefono(cleaned) }));
@@ -1346,8 +1399,8 @@ function ShoppingCart() {
         value={formData.deliveryRecipientPhone}
         onChange={handleInputChange}
         onBlur={() => handleBlur('deliveryRecipientPhone')}
-        placeholder="Ej: 300 123 4567"
-        maxLength={30}
+        placeholder="Ej: 3001234567"
+        maxLength={10}
         className={`form-input ${
           errors.deliveryRecipientPhone && touched.deliveryRecipientPhone
             ? 'error'
@@ -1548,7 +1601,7 @@ function ShoppingCart() {
 
                 {[
                   { name: 'correo', label: 'Correo electrónico', icon: Mail, type: 'email', placeholder: 'ejemplo@correo.com' },
-                  { name: 'telefono', label: 'Teléfono', icon: Phone, type: 'tel', placeholder: '300 123 4567' },
+                  { name: 'telefono', label: 'Teléfono', icon: Phone, type: 'tel', placeholder: '3001234567' },
                 ].map((field) => (
                   <div className="form-group" key={field.name}>
                     <label className="form-label">
@@ -1789,6 +1842,9 @@ function ShoppingCart() {
           onClose={() => setShowPaymentModal(false)}
           onCompleted={async (order) => {
             await clearCart();
+            setFavorBalance((current) =>
+              Math.max(0, current - Number(order?.favorBalanceAmountUsed || order?.favorBalanceUsed || 0))
+            );
             setShowPaymentModal(false);
             navigate(`/orders-l/${order.id}`);
           }}
@@ -1796,6 +1852,7 @@ function ShoppingCart() {
           deliveryInfo={checkoutDeliveryInfo}
           cartItems={displayCartItems}
           clientId={clientId}
+          favorBalance={favorBalance}
         />
       )}
 

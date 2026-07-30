@@ -6,213 +6,122 @@ import { useAlert } from "../shared/alerts/useAlert";
 import { useCart } from "../shared/Context/CartContext";
 import { useFavorites } from "../shared/Context/Favoritescontext";
 import EditProfileForm from "../access/components/EditProfileForm";
+import ProfileSummaryModal from "../shared/components/profile/ProfileSummaryModal.jsx";
 import {
   HeaderActions,
   HeaderLogo,
   HeaderNav,
   HeaderSearch,
   MobileMenu,
-  useHeaderSearch
+  useHeaderSearch,
 } from "./landingHeader";
 
 function HeaderLanding() {
-  const {
-    user,
-    role,
-    isAuthenticated,
-    logout
-  } = useAuth();
+  const { user, role, isAuthenticated, logout } = useAuth();
 
-  const {
-    showConfirm,
-    showSuccess
-  } = useAlert();
+  const { showConfirm, showSuccess } = useAlert();
 
-  const {
-    cartCount
-  } = useCart();
+  const { cartCount } = useCart();
 
-  const {
-    favoritesCount
-  } = useFavorites();
+  const { favoritesCount } = useFavorites();
 
-  const navigate =
-    useNavigate();
+  const navigate = useNavigate();
 
-  const location =
-    useLocation();
+  const location = useLocation();
 
-  const headerSearch =
-    useHeaderSearch();
+  const headerSearch = useHeaderSearch();
 
-  const [
-    menuOpen,
-    setMenuOpen
-  ] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const [
-    profileModal,
-    setProfileModal
-  ] = useState(false);
+  const [profileModal, setProfileModal] = useState(false);
 
-  const [
-    isEditProfileOpen,
-    setIsEditProfileOpen
-  ] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
-  const [
-    isLoggingOut,
-    setIsLoggingOut
-  ] = useState(false);
+  const [showProfileSummaryModal, setShowProfileSummaryModal] = useState(false);
 
-  const modalRef =
-    useRef(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const isActive =
-    (path) =>
-      location.pathname === path;
+  const modalRef = useRef(null);
 
-  const handleLogout =
-  useCallback(async () => {
-    setIsLoggingOut(
-      true
-    );
+  const isActive = (path) => location.pathname === path;
+
+  const handleLogout = useCallback(async () => {
+    setIsLoggingOut(true);
     try {
       await logout();
-      showSuccess(
-        "Sesión cerrada",
-        "Has cerrado Sesión correctamente"
-      );
-      setProfileModal(
-        false
-      );
-      navigate(
-        "/login"
-      );
+      showSuccess("Sesión cerrada", "Has cerrado Sesión correctamente");
+      setProfileModal(false);
+      navigate("/login");
     } catch (error) {
-      console.error(
-        "Error logout:",
-        error
-      );
+      console.error("Error logout:", error);
     } finally {
-      setIsLoggingOut(
-        false
-      );
+      setIsLoggingOut(false);
     }
-  }, [
-    logout,
-    navigate,
-    showSuccess
-  ]);
+  }, [logout, navigate, showSuccess]);
 
-  const handleGoToAdmin =
-  async () => {
-    setProfileModal(
-      false
-    );
-    const result =
-    await showConfirm(
+  const handleGoToAdmin = async () => {
+    setProfileModal(false);
+    const result = await showConfirm(
       "info",
       "¿Ir al panel administrativo?",
       "Entrarás al panel administrativo",
       {
-        confirmButtonText:
-          "Ir",
-        cancelButtonText:
-          "Cancelar"
-      }
+        confirmButtonText: "Ir",
+        cancelButtonText: "Cancelar",
+      },
     );
-    if (
-      result?.isConfirmed
-    ) {
-      navigate(
-        "/admin"
-      );
+    if (result?.isConfirmed) {
+      navigate("/admin");
     }
   };
 
   useEffect(() => {
-    const handleClickOutside =
-    (e) => {
-      if (
-        modalRef.current
-        &&
-        !modalRef.current.contains(
-          e.target
-        )
-      ) {
-        setProfileModal(
-          false
-        );
+    const handleClickOutside = (e) => {
+      if (modalRef.current && !modalRef.current.contains(e.target)) {
+        setProfileModal(false);
       }
     };
     if (profileModal) {
-      document.addEventListener(
-        "mousedown",
-        handleClickOutside
-      );
+      document.addEventListener("mousedown", handleClickOutside);
     }
-    return () =>
-      document.removeEventListener(
-        "mousedown",
-        handleClickOutside
-      );
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [profileModal]);
 
   useEffect(() => {
-    setProfileModal(
-      false
-    );
-    setMenuOpen(
-      false
-    );
+    setProfileModal(false);
+    setMenuOpen(false);
   }, [location]);
 
   useEffect(() => {
     if (menuOpen) {
-      document.body.style.overflow =
-        "hidden";
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow =
-        "";
+      document.body.style.overflow = "";
     }
     return () => {
-      document.body.style.overflow =
-        "";
+      document.body.style.overflow = "";
     };
   }, [menuOpen]);
 
-  const getInitials =
-  useCallback((name) => {
-    if (!name)
-      return "";
-    const words =
-      name.trim().split(/\s+/);
+  const getInitials = useCallback((name) => {
+    if (!name) return "";
+    const words = name.trim().split(/\s+/);
     return words
       .slice(0, 2)
-      .map(
-        (word) =>
-          word
-          .charAt(0)
-          .toUpperCase()
-      )
+      .map((word) => word.charAt(0).toUpperCase())
       .join("");
   }, []);
 
-  const roleName =
-    role?.nameRole
-    ||
-    role?.name_role
-    ||
-    "Cliente";
+  const roleName = role?.nameRole || role?.name_role || "Cliente";
+
+  const openProfileSummary = () => {
+    setShowProfileSummaryModal(true);
+    setProfileModal(false);
+  };
 
   const openProfileEdit = () => {
-    setIsEditProfileOpen(
-      true
-    );
-    setProfileModal(
-      false
-    );
+    setIsEditProfileOpen(true);
+    setProfileModal(false);
   };
 
   return (
@@ -220,11 +129,10 @@ function HeaderLanding() {
       <header
         className="fixed top-0 left-0 right-0 z-50 border-b bg-white/85 shadow-md backdrop-blur-md transition-all duration-150"
         style={{
-          borderBottomColor:
-            "#e2edf5"
+          borderBottomColor: "#e2edf5",
         }}
       >
-        <div className="mx-auto max-w-[var(--store-content-max)] px-3 sm:px-[var(--store-content-x)]">
+        <div className="mx-auto max-w-(--store-content-max) px-3 sm:px-(--store-content-x)">
           <div className="flex h-14 items-center gap-2 transition-all duration-150 sm:h-16 sm:gap-3 lg:gap-4">
             <HeaderLogo />
             <HeaderSearch
@@ -246,10 +154,7 @@ function HeaderLanding() {
               onClose={headerSearch.closeSearch}
               onClear={headerSearch.clearSearch}
             />
-            <HeaderNav
-              isActive={isActive}
-              showOrders={isAuthenticated}
-            />
+            <HeaderNav isActive={isActive} showOrders={isAuthenticated} />
             <HeaderActions
               cartCount={cartCount}
               favoritesCount={favoritesCount}
@@ -261,6 +166,7 @@ function HeaderLanding() {
               menuOpen={menuOpen}
               modalRef={modalRef}
               onOpenMobileMenu={() => setMenuOpen(true)}
+              onOpenProfileSummary={openProfileSummary}
               onOpenProfileEdit={openProfileEdit}
               profileModal={profileModal}
               role={role}
@@ -283,6 +189,10 @@ function HeaderLanding() {
           isActive={isActive}
           isLoggingOut={isLoggingOut}
           onClose={() => setMenuOpen(false)}
+          onOpenProfileSummary={() => {
+            setMenuOpen(false);
+            setShowProfileSummaryModal(true);
+          }}
           onOpenProfileEdit={() => setIsEditProfileOpen(true)}
           role={role}
           showOrders={isAuthenticated}
@@ -294,6 +204,13 @@ function HeaderLanding() {
         <EditProfileForm
           onClose={() => setIsEditProfileOpen(false)}
           isModal={true}
+        />
+      )}
+
+      {showProfileSummaryModal && (
+        <ProfileSummaryModal
+          isOpen={showProfileSummaryModal}
+          onClose={() => setShowProfileSummaryModal(false)}
         />
       )}
     </>

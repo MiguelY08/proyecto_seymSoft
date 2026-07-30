@@ -216,7 +216,8 @@ function DetailOrder({
       { confirmButtonText: 'Sí, marcar listo', cancelButtonText: 'Cancelar' }
     );
     if (!result?.isConfirmed) return;
-    onEstadoChange(order, ESTADOS_LOGISTICOS.LISTO);
+    await onEstadoChange?.(order, ESTADOS_LOGISTICOS.LISTO);
+    return;
     showSuccess('Pedido actualizado', `El pedido #${order.numeroPedido || order.id} ahora está listo.`);
   };
 

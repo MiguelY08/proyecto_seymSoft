@@ -1,5 +1,5 @@
 import React from "react";
-import { Info, SquarePen, Trash2 } from "lucide-react";
+import { Info, Loader2, SquarePen, Trash2 } from "lucide-react";
 
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import { usePermissions } from "../hooks/usePermissions";
@@ -65,6 +65,75 @@ const formatDate = (dateString) => {
     year: "numeric",
   });
 };
+
+const highlightRoleStatus = (active, term) => {
+  const statusText = active ? "Activo" : "Inactivo";
+  const normalizedTerm = String(term || "").trim().toLowerCase();
+  const statusTerms = ["activo", "activos", "inactivo", "inactivos"];
+
+  if (
+    !statusTerms.includes(normalizedTerm) ||
+    !statusText.toLowerCase().startsWith(normalizedTerm.replace(/s$/, ""))
+  ) {
+    return null;
+  }
+
+  return (
+    <mark className="bg-[#004d7726] text-[#004D77] rounded px-0.5">
+      {statusText}
+    </mark>
+  );
+};
+
+function RoleActiveToggle({
+  active,
+  disabled = false,
+  loading = false,
+  onClick,
+  search = "",
+}) {
+  const highlightedStatus = highlightRoleStatus(active, search);
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      {highlightedStatus && (
+        <span className="text-[10px] font-semibold">{highlightedStatus}</span>
+      )}
+
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled || loading}
+        className={`relative h-6 w-12 shrink-0 rounded-full transition-colors duration-300 ${
+          active ? "bg-green-500" : "bg-red-400"
+        } ${
+          disabled || loading
+            ? `opacity-50 ${loading ? "cursor-wait" : "cursor-not-allowed"}`
+            : "cursor-pointer"
+        }`}
+      >
+        {loading ? (
+          <Loader2 className="absolute inset-0 m-auto h-4.5 w-4.5 animate-spin text-white" />
+        ) : (
+          <>
+            <span
+              className={`absolute top-1/2 -translate-y-1/2 text-[10px] font-bold text-white transition-all duration-300 ${
+                active ? "left-1.5" : "right-1.5"
+              }`}
+            >
+              {active ? "A" : "I"}
+            </span>
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-300 ${
+                active ? "left-6" : "left-0.5"
+              }`}
+            />
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
 
 export default function RolesTable({
 
@@ -192,11 +261,7 @@ export default function RolesTable({
     }
 
     pendingActionRef.current =
-      actionKey;
-
-    setPendingActionKey(
-      actionKey
-    );
+      `confirm-${role.id}`;
 
     try {
 
@@ -238,6 +303,13 @@ export default function RolesTable({
       if (!result.isConfirmed) {
         return;
       }
+
+      pendingActionRef.current =
+        actionKey;
+
+      setPendingActionKey(
+        actionKey
+      );
 
       // ✅ FIX REAL
       await toggleRoleStatus(
@@ -449,41 +521,18 @@ export default function RolesTable({
 
                     &&
 
-                    <button
-                      disabled={hasPendingAction}
+                    <RoleActiveToggle
+                      active={role.active}
+                      disabled={
+                        hasPendingAction &&
+                        pendingActionKey !== `toggle-${role.id}`
+                      }
+                      loading={pendingActionKey === `toggle-${role.id}`}
+                      search={search}
                       onClick={() =>
                         handleToggleActive(role)
                       }
-                      className={`relative h-6 w-12 shrink-0 rounded-full transition-colors duration-300 ${
-                        hasPendingAction
-                          ? "opacity-60 cursor-not-allowed"
-                          : "cursor-pointer"
-                      } ${
-                        role.active
-                          ? "bg-green-500"
-                          : "bg-red-400"
-                      }`}
-                    >
-
-                      <span
-                        className={`absolute top-1/2 -translate-y-1/2 text-white text-[9px] font-bold transition-all duration-300 ${
-                          role.active
-                            ? "left-1.5"
-                            : "right-1.5"
-                        }`}
-                      >
-                        {role.active ? "A" : "I"}
-                      </span>
-
-                      <span
-                        className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-all duration-300 ${
-                          role.active
-                            ? "left-7"
-                            : "left-1"
-                        }`}
-                      />
-
-                    </button>
+                    />
 
                   }
                 </div>
@@ -683,43 +732,18 @@ export default function RolesTable({
 
                         &&
 
-                        <button
-                          disabled={hasPendingAction}
+                        <RoleActiveToggle
+                          active={role.active}
+                          disabled={
+                            hasPendingAction &&
+                            pendingActionKey !== `toggle-${role.id}`
+                          }
+                          loading={pendingActionKey === `toggle-${role.id}`}
+                          search={search}
                           onClick={() =>
                             handleToggleActive(role)
                           }
-                          className={`relative w-11 h-5 rounded-full transition-colors duration-300 ${
-                            hasPendingAction
-                              ? "opacity-60 cursor-not-allowed"
-                              : "cursor-pointer"
-                          } ${
-                            role.active
-                              ? "bg-green-500"
-                              : "bg-red-400"
-                          }`}
-                        >
-
-                          <span
-                            className={`absolute top-1/2 -translate-y-1/2 text-white text-[10px] font-bold transition-all duration-300 ${
-                              role.active
-                                ? "left-2"
-                                : "right-2"
-                            }`}
-                          >
-
-                            {role.active ? "A" : "I"}
-
-                          </span>
-
-                          <span
-                            className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-300 ${
-                              role.active
-                                ? "left-[26px]"
-                                : "left-0.5"
-                            }`}
-                          />
-
-                        </button>
+                        />
 
                       }
 

@@ -142,6 +142,7 @@ export default function PaymentHistoryTable({
 
             {abonos.map((abono, index) => {
               const allowed = canCancel(abono);
+              const displayId = abono.displayId ?? abono.nroAbono ?? "-";
 
               return (
                 <tr
@@ -153,7 +154,7 @@ export default function PaymentHistoryTable({
                   } hover:bg-[#004d7708]`}
                 >
                   <td className="px-3 py-2 text-xs text-center font-medium">
-                    #{abono.nroAbono}
+                    #{displayId}
                   </td>
 
                   <td className="px-3 py-2 text-xs text-center">
