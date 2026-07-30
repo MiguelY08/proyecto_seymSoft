@@ -112,6 +112,7 @@ function OrdersForm() {
     tipoEntrega: 'recoge',
     direccionEntrega: '',
     deliveryRecipientName: '',
+    deliveryRecipientPhone: '',
     departamentoEntregaCodigo: '',
     departamentoEntregaNombre: '',
     ciudadEntregaCodigo: '',
@@ -126,6 +127,7 @@ function OrdersForm() {
   const [errors, setErrors] = useState({});
   const [estadoLogisticoOriginal, setEstadoLogisticoOriginal] = useState(null);
   const [itemsChangedFromReady, setItemsChangedFromReady] = useState(false);
+  const [productosModificados, setProductosModificados] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
 
   const [clientes, setClientes] = useState([]);
@@ -261,6 +263,7 @@ function OrdersForm() {
             tipoEntrega,
             direccionEntrega: direccion,
             deliveryRecipientName: order.deliveryRecipientName || '',
+            deliveryRecipientPhone: order.deliveryRecipientPhone || '',
             departamentoEntregaCodigo: order.departamentoEntregaCodigo || '',
             departamentoEntregaNombre: order.departamentoEntregaNombre || '',
             ciudadEntregaCodigo: order.ciudadEntregaCodigo || '',
@@ -274,6 +277,7 @@ function OrdersForm() {
             motivoCancelacion: order.motivoCancelacion || '',
           });
           setEstadoLogisticoOriginal(order.estadoLogistico);
+          setProductosModificados(false);
         }
       } catch (error) {
         showError('Error', 'No se pudieron cargar los datos iniciales.');
@@ -469,6 +473,14 @@ function OrdersForm() {
     setFormData(prev => ({ ...prev, deliveryRecipientName: e.target.value }));
     if (errors.deliveryRecipientName) setErrors(prev => ({ ...prev, deliveryRecipientName: null }));
   };
+  const handleDeliveryRecipientPhoneChange = (e) => {
+    if (pedidoInmutable) return;
+    const value = e.target.value.replace(/[^\d\s()+-]/g, '');
+    setFormData(prev => ({ ...prev, deliveryRecipientPhone: value }));
+    if (errors.deliveryRecipientPhone) {
+      setErrors(prev => ({ ...prev, deliveryRecipientPhone: null }));
+    }
+  };
 
   const handleShippingAmountChange = (e) => {
     if (pedidoInmutable) return;
@@ -511,6 +523,7 @@ function OrdersForm() {
     }
 
     notifyReadyOrderReturnsToProcess();
+    setProductosModificados(true);
 
     const precio = getProductPriceForClient(producto, selectedClient);
     const subtotalLinea = calculateLineSubtotal(1, precio);
@@ -548,6 +561,7 @@ function OrdersForm() {
     if (cantidad === toNumber(producto?.cantidad)) return;
 
     notifyReadyOrderReturnsToProcess();
+    setProductosModificados(true);
 
     setFormData(prev => ({
       ...prev,
@@ -571,6 +585,7 @@ function OrdersForm() {
   const handleRemoveProduct = (productoId) => {
     if (!productosEditables) return;
     notifyReadyOrderReturnsToProcess();
+    setProductosModificados(true);
     setFormData(prev => ({
       ...prev,
       estadoLogistico: getOrderStatusAfterItemsChange(prev.estadoLogistico),
@@ -632,8 +647,16 @@ function OrdersForm() {
     if (formData.clienteId === '' || formData.clienteId === undefined) {
       newErrors.clienteId = 'Debe seleccionar un cliente.';
     }
-    if (!creaVentaDirecta && !formData.deliveryRecipientName?.trim()) {
-      newErrors.deliveryRecipientName = 'Debe ingresar la persona que recibe o recoge el pedido.';
+    if (formData.tipoEntrega === 'domicilio' && !formData.deliveryRecipientName?.trim()) {
+      newErrors.deliveryRecipientName = 'Debe ingresar el nombre de la persona que recibe el pedido.';
+    }
+    if (formData.tipoEntrega === 'domicilio') {
+      const recipientPhoneDigits = formData.deliveryRecipientPhone.replace(/\D/g, '');
+      if (!recipientPhoneDigits) {
+        newErrors.deliveryRecipientPhone = 'Debe ingresar el telefono de la persona que recibe el pedido.';
+      } else if (recipientPhoneDigits.length < 7 || recipientPhoneDigits.length > 15) {
+        newErrors.deliveryRecipientPhone = 'El telefono debe tener entre 7 y 15 digitos.';
+      }
     }
     if (!formData.direccionEntrega?.trim()) {
       newErrors.direccionEntrega = 'La dirección de entrega es obligatoria.';
@@ -703,7 +726,12 @@ function OrdersForm() {
         usuarioId: getSessionUserId(user),
         tipoEntrega: formData.tipoEntrega,
         direccionEntrega: formData.direccionEntrega.trim(),
-        deliveryRecipientName: formData.deliveryRecipientName.trim(),
+        deliveryRecipientName: formData.tipoEntrega === 'domicilio'
+          ? formData.deliveryRecipientName.trim()
+          : null,
+        deliveryRecipientPhone: formData.tipoEntrega === 'domicilio'
+          ? formData.deliveryRecipientPhone.trim()
+          : null,
         departamentoEntregaCodigo: formData.departamentoEntregaCodigo,
         departamentoEntregaNombre: formData.departamentoEntregaNombre,
         ciudadEntregaCodigo: formData.ciudadEntregaCodigo,
@@ -725,12 +753,13 @@ function OrdersForm() {
           tipoEntrega: payload.tipoEntrega,
           direccionEntrega: payload.direccionEntrega,
           deliveryRecipientName: payload.deliveryRecipientName,
+          deliveryRecipientPhone: payload.deliveryRecipientPhone,
           departamentoEntregaCodigo: payload.departamentoEntregaCodigo,
           departamentoEntregaNombre: payload.departamentoEntregaNombre,
           ciudadEntregaCodigo: payload.ciudadEntregaCodigo,
           ciudadEntregaNombre: payload.ciudadEntregaNombre,
           shippingAmount: payload.shippingAmount,
-          productos: payload.productos,
+          ...(productosModificados && { productos: payload.productos }),
           estadoLogistico: payload.estadoLogistico,
           motivoCancelacion: formData.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO ? formData.motivoCancelacion : null,
         });
@@ -928,6 +957,7 @@ function OrdersForm() {
           onCiudadEntregaChange={handleCiudadEntregaChange}
           onDireccionManualChange={handleDireccionManualChange}
           onDeliveryRecipientNameChange={handleDeliveryRecipientNameChange}
+          onDeliveryRecipientPhoneChange={handleDeliveryRecipientPhoneChange}
           onShippingAmountChange={handleShippingAmountChange}
           onEstadoLogisticoChange={handleEstadoLogisticoChange}
           onMotivoCancelacionChange={handleMotivoCancelacionChange}

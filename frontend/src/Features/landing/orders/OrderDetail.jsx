@@ -7,7 +7,11 @@ import {
   LoaderCircle,
   MapPin,
   Package,
+  Phone,
+  RotateCcw,
+  MessageCircle,
   Upload,
+  UserRound,
   X,
   ZoomIn,
 } from 'lucide-react';
@@ -80,6 +84,11 @@ function OrderDetail() {
   const [proofPreview, setProofPreview] = useState(null);
   const [now, setNow] = useState(Date.now());
   const fileInputRef = useRef(null);
+  const isDeliveryAwaitingShipping = Boolean(
+    order &&
+    order.tipoEntrega !== 'recoge' &&
+    Number(order.shippingAmount || 0) <= 0
+  );
   const paymentDeadlineTime = order?.fechaLimitePago ? new Date(order.fechaLimitePago).getTime() : null;
   const hasPaymentDeadline = Number.isFinite(paymentDeadlineTime);
   const shouldShowPaymentCountdown = Boolean(
@@ -168,6 +177,13 @@ function OrderDetail() {
   };
 
   const handleSendReceipt = async () => {
+    if (isDeliveryAwaitingShipping) {
+      showWarning(
+        'Envio pendiente',
+        'Espera a que el administrador asigne el valor del envio para transferir y enviar un unico comprobante.'
+      );
+      return;
+    }
     if (!receipt) {
       showWarning('Falta el comprobante', 'Selecciona una imagen antes de enviarla.');
       return;
@@ -235,6 +251,13 @@ function OrderDetail() {
   const hasRejectedReceipt = order.comprobantesPago?.some(
     (proof) => normalizeReceiptStatus(proof.status) === 'rechazado'
   );
+  const hasPendingReceipt = order.comprobantesPago?.some(
+    (proof) => normalizeReceiptStatus(proof.status) === 'pendiente'
+  );
+  const orderNumber = order.numeroPedido || order.id;
+  const returnWhatsAppUrl = `https://api.whatsapp.com/send/?phone=%2B573212828628&text=${encodeURIComponent(
+    `Hola, necesito ayuda con una devolución de mi pedido No. ${orderNumber}`
+  )}&type=phone_number&app_absent=0`;
 
   return (
     <div className="min-h-screen bg-[#f6f9fc]" style={{ fontFamily: ORDER_FONT_FAMILY }}>
@@ -279,10 +302,57 @@ function OrderDetail() {
                   value={order.saldoPendiente > 0 ? 'Pendiente' : 'Pago registrado'}
                   icon={<CreditCard size={15} />}
                 />
+                {order.tipoEntrega !== 'recoge' && (
+                  <>
+                    <Info
+                      label="Persona que recibe"
+                      value={order.deliveryRecipientName || 'No especificado'}
+                      icon={<UserRound size={15} />}
+                    />
+                    <Info
+                      label="Telefono de quien recibe"
+                      value={order.deliveryRecipientPhone || 'No especificado'}
+                      icon={<Phone size={15} />}
+                    />
+                  </>
+                )}
               </div>
+              {order.estadoLogistico === 'entregado' && (
+                <div className="mt-5 flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-blue-900">
+                  <RotateCcw size={19} className="mt-0.5 shrink-0 text-[#004D77]" />
+                  <div>
+                    <p className="text-sm font-black">Plazo para solicitar una devolución</p>
+                    <p className="mt-1 text-xs font-semibold leading-relaxed text-blue-800">
+                      A partir de la entrega de este pedido, tienes un mes para solicitar una devolución.
+                    </p>
+                    <a
+                      href={returnWhatsAppUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#25D366] px-4 py-2 text-xs font-black text-white transition hover:bg-[#1ebe5d]"
+                    >
+                      <MessageCircle size={15} />
+                      Solicitar devolución por WhatsApp
+                    </a>
+                  </div>
+                </div>
+              )}
             </section>
 
-            {order.saldoPendiente > 0 && order.estadoLogistico !== 'cancelado' && (
+            {isDeliveryAwaitingShipping && order.estadoLogistico !== 'cancelado' && (
+              <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:rounded-3xl sm:p-6">
+                <h2 className="flex items-center gap-2 text-xl font-black text-amber-900">
+                  <Clock size={21} /> Valor de envio pendiente
+                </h2>
+                <p className="mt-3 text-sm font-semibold leading-relaxed text-amber-800">
+                  El administrador debe asignar el valor del envio antes de que realices la transferencia.
+                  Cuando esté listo, recibirás una notificación y aquí verás el total definitivo para enviar
+                  un único comprobante.
+                </p>
+              </section>
+            )}
+
+            {!isDeliveryAwaitingShipping && order.saldoPendiente > 0 && order.estadoLogistico !== 'cancelado' && (
               <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
                 <h2 className="flex items-center gap-2 text-xl font-black text-slate-800">
                   <CreditCard size={21} className="text-[#004D77]" /> Completar pago
@@ -316,6 +386,18 @@ function OrderDetail() {
                   </p>
                 )}
 
+                {hasPendingReceipt ? (
+                  <div className="mt-5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+                    <Clock size={18} className="mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-black uppercase">Comprobante en revisión</p>
+                      <p className="mt-1 text-xs font-semibold leading-relaxed">
+                        Ya tienes un comprobante pendiente. Debes esperar a que el administrador lo apruebe o rechace antes de enviar otro.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
                 <div className="mt-5 grid gap-4 sm:grid-cols-2 sm:gap-5">
                   <div className="text-center">
                     <img
@@ -384,6 +466,8 @@ function OrderDetail() {
                   {submitting && <LoaderCircle size={16} className="animate-spin" />}
                   {submitting ? 'Registrando...' : 'Enviar comprobante'}
                 </button>
+                  </>
+                )}
               </section>
             )}
 
