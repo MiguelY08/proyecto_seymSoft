@@ -301,8 +301,9 @@ function EditProfileForm({ onClose, isModal = false }) {
   const handleNumericBeforeInput = (e) => {
     if (!e.data || /^\d+$/.test(e.data)) return;
     e.preventDefault();
-    setTouched((prev) => ({ ...prev, [e.currentTarget.name]: true }));
-    setErrors((prev) => ({ ...prev, [e.currentTarget.name]: "El telefono solo debe contener numeros" }));
+    const { name } = e.currentTarget;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    setErrors((prev) => ({ ...prev, [name]: "El telefono solo debe contener numeros" }));
   };
 
   const handlePhonePaste = (e) => {
@@ -330,8 +331,9 @@ function EditProfileForm({ onClose, isModal = false }) {
   const handleEmailBeforeInput = (e) => {
     if (!e.data || !/\s/.test(e.data)) return;
     e.preventDefault();
-    setTouched((prev) => ({ ...prev, [e.currentTarget.name]: true }));
-    setErrors((prev) => ({ ...prev, [e.currentTarget.name]: "El correo no debe contener espacios." }));
+    const { name } = e.currentTarget;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    setErrors((prev) => ({ ...prev, [name]: "El correo no debe contener espacios." }));
   };
 
   const handleEmailPaste = (e) => {
