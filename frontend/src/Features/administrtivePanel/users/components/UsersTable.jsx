@@ -1,5 +1,4 @@
 
-import { useNavigate } from "react-router-dom";
 import {
   Info,
   SquarePen,
@@ -13,7 +12,6 @@ import {
 import { useCallback, useRef, useState } from "react";
 
 import { useAlert } from "../../../shared/alerts/useAlert";
-import Spinner from "../../../shared/spinner";
 
 import {
   highlight,
@@ -76,12 +74,12 @@ function ClientUserBadge() {
     <>
       <div
         ref={ref}
-        className="w-6 h-6 rounded-full bg-[#004D77]/15 flex items-center justify-center"
+        className="w-5 h-5 rounded-full bg-[#004D77]/15 flex items-center justify-center"
         onMouseEnter={show}
         onMouseLeave={hide}
       >
         <ShoppingBag
-          className="w-3.5 h-3.5 text-[#004D77]"
+          className="w-3 h-3 text-[#004D77]"
           strokeWidth={1.8}
         />
       </div>
@@ -202,7 +200,7 @@ function ActiveToggle({
         onClick={handleClick}
         disabled={isLoading || disabled}
         title={disabled ? disabledMessage : undefined}
-        className={`relative w-12 h-6 rounded-full transition-colors duration-300 cursor-pointer shrink-0 ${
+        className={`relative w-10 h-5 rounded-full transition-colors duration-300 cursor-pointer shrink-0 ${
           activo
             ? "bg-green-500"
             : "bg-red-400"
@@ -215,22 +213,22 @@ function ActiveToggle({
         {
           isLoading
             ?
-            <Loader2 className="absolute inset-0 m-auto w-4.5 h-4.5 text-white animate-spin" />
+            <Loader2 className="absolute inset-0 m-auto w-4 h-4 text-white animate-spin" />
             :
             <>
               <span
                 className={`absolute top-1/2 -translate-y-1/2 text-white text-[10px] font-bold transition-all duration-300 ${
                   activo
-                    ? "left-1.5"
-                    : "right-1.5"
+                    ? "left-1"
+                    : "right-1"
                 }`}
               >
                 {activo ? "A" : "I"}
               </span>
               <span
-                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-300 ${
+                className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
                   activo
-                    ? "left-6"
+                    ? "left-[22px]"
                     : "left-0.5"
                 }`}
               />
@@ -243,17 +241,14 @@ function ActiveToggle({
 
 // ─── Empty State ────────────────────────────────────────────
 function EmptyState({
-  isSearching
+  isSearching,
+  onCreateUser
 }) {
-
-  const navigate =
-    useNavigate();
-
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 gap-4">
-      <div className="w-20 h-20 rounded-full bg-[#004D77]/10 flex items-center justify-center">
+    <div className="flex flex-col items-center justify-center py-12 px-4 gap-3">
+      <div className="w-16 h-16 rounded-full bg-[#004D77]/10 flex items-center justify-center">
         <Users
-          className="w-10 h-10 text-[#004D77]/40"
+          className="w-8 h-8 text-[#004D77]/40"
           strokeWidth={1.5}
         />
       </div>
@@ -261,34 +256,32 @@ function EmptyState({
         isSearching
           ?
           <>
-            <p className="text-base font-semibold text-gray-500">
+            <p className="text-sm font-semibold text-gray-500">
               No se encontraron resultados
             </p>
-            <p className="text-sm text-gray-400 text-center max-w-xs">
+            <p className="text-xs text-gray-400 text-center max-w-xs">
               Ningún usuario coincide con la búsqueda.
             </p>
           </>
           :
           <>
-            <p className="text-base font-semibold text-gray-500">
+            <p className="text-sm font-semibold text-gray-500">
               No hay usuarios registrados
             </p>
-            <p className="text-sm text-gray-400 text-center max-w-xs">
+            <p className="text-xs text-gray-400 text-center max-w-xs">
               Aún no se han registrado usuarios.
             </p>
 
             <Permission permission="usuarios.crear">
               <button
-                onClick={() =>
-                  navigate("/admin/users/form-user")
-                }
-                className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"
+                onClick={() => onCreateUser?.()}
+                className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-semibold border text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors cursor-pointer"
               >
                 <span>
                   Nuevo usuario
                 </span>
                 <Plus
-                  className="w-4 h-4"
+                  className="w-3.5 h-3.5"
                   strokeWidth={2}
                 />
               </button>
@@ -304,12 +297,12 @@ function UsersTable({
   data = [],
   onDelete,
   onToggle,
+  onViewInfo,
+  onEdit,
+  onCreateUser,
   search = "",
   totalData = 0,
 }) {
-  const navigate =
-    useNavigate();
-
   const {
     showConfirm,
     showWarning,
@@ -318,23 +311,6 @@ function UsersTable({
 
   const [deletingId,setDeletingId] =
     useState(null);
-
-    const [loadingMessage,setLoadingMessage] =
-    useState("");
-
-  const navigateWithSpinner = (
-    message,
-    to,
-    options
-  ) => {
-    setLoadingMessage(message);
-    window.setTimeout(() => {
-      navigate(
-        to,
-        options
-      );
-    }, 80);
-  };
 
   const handleDelete = async (
     row
@@ -404,6 +380,7 @@ function UsersTable({
           &&
           search.trim().length > 0
         }
+        onCreateUser={onCreateUser}
       />
     );
   }
@@ -419,37 +396,26 @@ function UsersTable({
     });
 
   return (
-    <div className="flex-1 overflow-x-auto rounded-xl shadow-md min-h-0">
-      {
-        loadingMessage && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
-            <Spinner
-              message={loadingMessage}
-              className="min-h-0"
-            />
-          </div>
-        )
-      }
-
+    <div className="flex-1 overflow-x-auto rounded-xl min-h-0">
       <table className="min-w-max w-full">
         <thead className="bg-[#004D77] text-white">
           <tr>
-            <th className="px-4 py-3 text-center text-sm font-semibold">
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Nombre
             </th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Correo electrónico
             </th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Teléfono
             </th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Registrado desde
             </th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Rol
             </th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Acciones
             </th>
           </tr>
@@ -477,8 +443,8 @@ function UsersTable({
                   key={row.id}
                   className={`transition-colors duration-150 ${rowBg}`}
                 >
-                  <td className="px-4 py-2.5 text-center text-sm text-gray-800 whitespace-nowrap">
-                    <div className="flex items-center justify-center gap-2">
+                  <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap">
+                    <div className="flex items-center justify-center gap-1.5">
                       {
                         highlight(
                           row.name,
@@ -492,7 +458,7 @@ function UsersTable({
                       }
                     </div>
                   </td>
-                  <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                  <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                     {
                       highlight(
                         row.email,
@@ -500,7 +466,7 @@ function UsersTable({
                       )
                     }
                   </td>
-                  <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                  <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                     {
                       highlight(
                         row.phone,
@@ -508,7 +474,7 @@ function UsersTable({
                       )
                     }
                   </td>
-                  <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                  <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                     {
                       highlight(
                         formattedDate,
@@ -516,7 +482,7 @@ function UsersTable({
                       )
                     }
                   </td>
-                  <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                  <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                     {
                       highlight(
                         row.role?.nameRole || row.role?.name || "Sin rol",
@@ -524,17 +490,17 @@ function UsersTable({
                       )
                     }
                   </td>
-                  <td className="px-4 py-2.5">
+                  <td className="px-3 py-2">
                     {
                       isSystemUser
                         ?
                         <div className="flex items-center justify-center">
-                          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-[#004D77] border border-blue-200">
+                          <span className="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-blue-100 text-[#004D77] border border-blue-200">
                             Sistema
                           </span>
                         </div>
                         :
-                        <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                        <div className="flex items-center justify-center gap-1 sm:gap-1.5">
 
                           {/* ACTIVO */}
                           <Permission permission="usuarios.activar_desactivar">
@@ -555,21 +521,15 @@ function UsersTable({
                               onClick={(e)=>{
                                 const rect =
                                   e.currentTarget.getBoundingClientRect();
-                                navigateWithSpinner(
-                                  "Cargando detalles del usuario...",
-                                  "/admin/users/info-user",
+                                onViewInfo?.(
+                                  row,
                                   {
-                                    state: {
-                                      user: row,
-                                      origin: {
-                                        x:
-                                          rect.left +
-                                          rect.width / 2,
-                                        y:
-                                          rect.top +
-                                          rect.height / 2,
-                                      },
-                                    },
+                                    x:
+                                      rect.left +
+                                      rect.width / 2,
+                                    y:
+                                      rect.top +
+                                      rect.height / 2,
                                   }
                                 );
                               }}
@@ -577,7 +537,7 @@ function UsersTable({
                               title="Información"
                             >
                               <Info
-                                className="w-4 h-4 sm:w-4.5 sm:h-4.5"
+                                className="w-3.5 h-3.5 sm:w-4 sm:h-4"
                                 strokeWidth={1.5}
                               />
                             </button>
@@ -596,21 +556,15 @@ function UsersTable({
                                 }
                                 const rect =
                                   e.currentTarget.getBoundingClientRect();
-                                navigateWithSpinner(
-                                  "Cargando edicion del usuario...",
-                                  "/admin/users/form-user",
+                                onEdit?.(
+                                  row,
                                   {
-                                    state: {
-                                      user: row,
-                                      origin: {
-                                        x:
-                                          rect.left +
-                                          rect.width / 2,
-                                        y:
-                                          rect.top +
-                                          rect.height / 2,
-                                      },
-                                    },
+                                    x:
+                                      rect.left +
+                                      rect.width / 2,
+                                    y:
+                                      rect.top +
+                                      rect.height / 2,
                                   }
                                 );
                               }}
@@ -627,7 +581,7 @@ function UsersTable({
                               }
                             >
                               <SquarePen
-                                className="w-4 h-4 sm:w-4.5 sm:h-4.5"
+                                className="w-3.5 h-3.5 sm:w-4 sm:h-4"
                                 strokeWidth={1.5}
                               />
                             </button>
@@ -654,10 +608,10 @@ function UsersTable({
                               {
                                 isDeleting
                                   ?
-                                  <Loader2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 animate-spin" />
+                                  <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
                                   :
                                   <Trash2
-                                    className="w-4 h-4 sm:w-4.5 sm:h-4.5"
+                                    className="w-3.5 h-3.5 sm:w-4 sm:h-4"
                                     strokeWidth={1.5}
                                   />
                               }

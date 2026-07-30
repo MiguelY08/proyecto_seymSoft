@@ -1,8 +1,6 @@
-import { useNavigate, useLocation } from 'react-router-dom';
 import { X, User, Mail, Phone, ShieldCheck, Loader2 } from 'lucide-react';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAlert } from '../../../shared/alerts/useAlert';
-import { useModalAnimation } from '../../../shared/useModalAnimation';
 import { useAuth } from '../../../access/context/AuthContext';
 import { checkEmailAvailability } from '../../../access/services/authService';
 import FormSelect from '../../../shared/FormSelect';
@@ -60,55 +58,94 @@ const buildSanitizedInputValue = (target, input, sanitizer) => {
   return sanitizer(`${value.slice(0, start)}${input}${value.slice(end)}`);
 };
 
-function FormUser() {
-  const navigate = useNavigate();
-  const location = useLocation();
+const getInitialForm = (userToEdit = null) => ({
+  nombreCompleto: userToEdit?.name ?? '',
+  correo: userToEdit?.email ?? '',
+  telefono: userToEdit?.phone ?? '',
+  rol: String(userToEdit?.role?.idRole ?? userToEdit?.role?.id ?? ''),
+});
+
+const EMAIL_AVAILABILITY = {
+  IDLE: 'idle',
+  CHECKING: 'checking',
+  AVAILABLE: 'available',
+  DUPLICATED: 'duplicated',
+  ERROR: 'error',
+};
+
+function FormUser({
+  userToEdit = null,
+  isOpen = false,
+  origin = null,
+  onClose,
+  onSaved,
+}) {
   const { showWarning, showSuccess, showConfirm } = useAlert();
   const { user: authUser } = useAuth();
 
-  const userToEdit = location.state?.user ?? null;
   const isEditing = userToEdit !== null;
   const isSelfEdit = isEditing && isSelfUser(userToEdit, authUser);
-  const returnTo = location.state?.returnTo ?? '/admin/users';
-  const origin = location.state?.origin ?? null;
 
-  const { visible, handleClose: animatedClose } = useModalAnimation(returnTo);
+  const [visible, setVisible] = useState(false);
   const transformOrigin = origin ? `${origin.x}px ${origin.y}px` : 'center center';
 
-  const [form, setForm] = useState({
-    nombreCompleto: userToEdit?.name ?? '',
-    correo: userToEdit?.email ?? '',
-    telefono: userToEdit?.phone ?? '',
-    rol: String(userToEdit?.role?.idRole ?? userToEdit?.role?.id ?? ''),
-  });
+  const [form, setForm] = useState(() => getInitialForm(userToEdit));
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkingUnique, setCheckingUnique] = useState({
     correo: false,
   });
+  const [emailAvailability, setEmailAvailability] = useState(EMAIL_AVAILABILITY.IDLE);
+  const [emailCheckRetry, setEmailCheckRetry] = useState(0);
 
   const [roles, setRoles] = useState([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
   const roleOptions = useMemo(() => [
-    { value: '', label: 'Sin rol - Null' },
+    { value: '', label: 'Sin rol' },
     ...roles.map((role) => ({
       value: String(role.idRole ?? role.id),
       label: role.nameRole ?? role.name,
     })),
   ], [roles]);
 
-  const getEmailAvailabilityError = async (value) => {
+  useEffect(() => {
+    if (!isOpen) {
+      setVisible(false);
+      return undefined;
+    }
+
+    setForm(getInitialForm(userToEdit));
+    setErrors({});
+    setTouched({});
+    setCheckingUnique({ correo: false });
+    setEmailAvailability(EMAIL_AVAILABILITY.IDLE);
+    setEmailCheckRetry(0);
+
+    const animationId = requestAnimationFrame(() => setVisible(true));
+    return () => cancelAnimationFrame(animationId);
+  }, [isOpen, userToEdit]);
+
+  const animatedClose = () => {
+    setVisible(false);
+    setTimeout(() => onClose?.(), 250);
+  };
+
+  const isOriginalEmailUnchanged = useCallback((value) => (
+    isEditing &&
+    normalizeEmailInput(userToEdit?.email) === normalizeEmailInput(value)
+  ), [isEditing, userToEdit?.email]);
+
+  const getEmailAvailabilityError = useCallback(async (value) => {
     const localError = validateField('correo', value);
     if (localError) return '';
 
-    const currentEmail = normalizeEmailInput(userToEdit?.email);
     const nextEmail = normalizeEmailInput(value);
-    if (isEditing && currentEmail === nextEmail) return '';
+    if (isOriginalEmailUnchanged(nextEmail)) return '';
 
     const data = await checkEmailAvailability(nextEmail);
     return data?.exists ? 'El correo ya está registrado' : '';
-  };
+  }, [isOriginalEmailUnchanged]);
 
   useEffect(() => {
     const fetchRoles = async () => {
@@ -177,26 +214,48 @@ function FormUser() {
   };
 
   useEffect(() => {
-    if (!touched.correo) return undefined;
+    if (!isOpen || !touched.correo) {
+      setEmailAvailability(EMAIL_AVAILABILITY.IDLE);
+      return undefined;
+    }
 
     const localError = validateField('correo', form.correo);
     if (localError) {
       setCheckingUnique((prev) => ({ ...prev, correo: false }));
+      setEmailAvailability(EMAIL_AVAILABILITY.IDLE);
+      return undefined;
+    }
+
+    if (isOriginalEmailUnchanged(form.correo)) {
+      setCheckingUnique((prev) => ({ ...prev, correo: false }));
+      setEmailAvailability(EMAIL_AVAILABILITY.IDLE);
+      setErrors((prev) => ({ ...prev, correo: '' }));
       return undefined;
     }
 
     let cancelled = false;
     setCheckingUnique((prev) => ({ ...prev, correo: true }));
+    setEmailAvailability(EMAIL_AVAILABILITY.CHECKING);
 
     const timer = window.setTimeout(async () => {
       try {
         const duplicateError = await getEmailAvailabilityError(form.correo);
         if (cancelled) return;
 
+        setEmailAvailability(
+          duplicateError
+            ? EMAIL_AVAILABILITY.DUPLICATED
+            : EMAIL_AVAILABILITY.AVAILABLE
+        );
         setErrors((prev) => ({
           ...prev,
           correo: validateField('correo', form.correo) || duplicateError || '',
         }));
+      } catch (error) {
+        if (cancelled) return;
+
+        console.error('Error verificando correo:', error);
+        setEmailAvailability(EMAIL_AVAILABILITY.ERROR);
       } finally {
         if (!cancelled) {
           setCheckingUnique((prev) => ({ ...prev, correo: false }));
@@ -208,7 +267,7 @@ function FormUser() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [form.correo, isEditing, touched.correo, userToEdit?.id]);
+  }, [emailCheckRetry, form.correo, getEmailAvailabilityError, isEditing, isOpen, isOriginalEmailUnchanged, touched.correo, userToEdit?.email]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -336,8 +395,10 @@ function FormUser() {
 
     setIsSubmitting(true);
     try {
+      let savedUser;
+
       if (isEditing) {
-        await UserService.update(userToEdit.id, {
+        savedUser = await UserService.update(userToEdit.id, {
           name: userData.name,
           email: userData.email,
           phone: userData.phone,
@@ -346,6 +407,7 @@ function FormUser() {
         showSuccess('Usuario actualizado', 'Los datos han sido guardados.');
       } else {
         const createdUser = await UserService.create(userData);
+        savedUser = createdUser;
 
         if (createdUser.errorCode === 'EMAIL_SEND_ERROR') {
           showWarning(
@@ -356,9 +418,7 @@ function FormUser() {
           showSuccess('Usuario creado', 'El usuario ha sido registrado. Se ha enviado una contraseña temporal al correo.');
         }
       }
-      navigate(returnTo, {
-        state: returnTo !== '/admin/users' ? { newUserId: isEditing ? String(userToEdit.id) : undefined } : undefined,
-      });
+      await onSaved?.(savedUser);
     } catch (error) {
       const mensaje = getUserActionErrorMessage(error);
       showWarning('Error', mensaje);
@@ -371,7 +431,7 @@ function FormUser() {
     if (isEditing) {
       return (
         form.nombreCompleto !== (userToEdit?.name ?? '') ||
-        form.correo !== (userToEdit?.email ?? '') ||
+        normalizeEmailInput(form.correo) !== normalizeEmailInput(userToEdit?.email) ||
         form.telefono !== (userToEdit?.phone ?? '') ||
         form.rol !== String(userToEdit?.role?.idRole ?? userToEdit?.role?.id ?? '')
       );
@@ -407,7 +467,48 @@ function FormUser() {
   const ErrorMsg = ({ field }) =>
     touched[field] && errors[field] ? <p className="mt-0.5 text-xs text-red-500">{errors[field]}</p> : null;
 
+  const EmailAvailabilityMsg = () => {
+    if (!touched.correo) return null;
+
+    if (errors.correo) {
+      return <p className="mt-0.5 text-xs text-red-500">{errors.correo}</p>;
+    }
+
+    if (emailAvailability === EMAIL_AVAILABILITY.CHECKING) {
+      return <p className="mt-0.5 text-xs text-[#004D77]">Verificando disponibilidad del correo...</p>;
+    }
+
+    if (emailAvailability === EMAIL_AVAILABILITY.AVAILABLE) {
+      return <p className="mt-0.5 text-xs text-green-600">Correo disponible.</p>;
+    }
+
+    if (emailAvailability === EMAIL_AVAILABILITY.ERROR) {
+      return (
+        <div className="mt-0.5 flex items-center gap-2 text-xs text-amber-600">
+          <span>No se pudo verificar el correo.</span>
+          <button
+            type="button"
+            onClick={() => setEmailCheckRetry((current) => current + 1)}
+            className="font-semibold underline underline-offset-2 hover:text-amber-700 cursor-pointer"
+          >
+            Reintentar
+          </button>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   const hasBlockingErrors = Boolean(errors.correo || errors.telefono);
+  const isEmailAvailabilityBlocking = [
+    EMAIL_AVAILABILITY.CHECKING,
+    EMAIL_AVAILABILITY.DUPLICATED,
+    EMAIL_AVAILABILITY.ERROR,
+  ].includes(emailAvailability);
+  const isSubmitDisabled = isSubmitting || checkingUnique.correo || hasBlockingErrors || isEmailAvailabilityBlocking;
+
+  if (!isOpen) return null;
 
   return (
     <div
@@ -479,10 +580,7 @@ function FormUser() {
                 className={inputClass('correo')}
               />
             </div>
-            {checkingUnique.correo && touched.correo && !errors.correo && (
-              <p className="mt-0.5 text-xs text-[#004D77]">Verificando si el correo ya existe...</p>
-            )}
-            <ErrorMsg field="correo" />
+            <EmailAvailabilityMsg />
           </div>
 
           {/* Teléfono */}
@@ -538,9 +636,9 @@ function FormUser() {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting || checkingUnique.correo || hasBlockingErrors}
+            disabled={isSubmitDisabled}
             className={`flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors cursor-pointer sm:w-auto ${
-              isSubmitting || checkingUnique.correo || hasBlockingErrors ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#003a5c]'
+              isSubmitDisabled ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#003a5c]'
             }`}
           >
             {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}

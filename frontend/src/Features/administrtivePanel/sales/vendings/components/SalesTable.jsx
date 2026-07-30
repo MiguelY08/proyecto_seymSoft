@@ -92,28 +92,28 @@ const getPermisos = (estado) => {
 
 function EmptyState({ isSearching }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 gap-4">
-      <div className="w-20 h-20 rounded-full bg-[#004D77]/10 flex items-center justify-center">
+    <div className="flex flex-col items-center justify-center py-12 px-4 gap-3">
+      <div className="w-16 h-16 rounded-full bg-[#004D77]/10 flex items-center justify-center">
         <ShoppingCart
-          className="w-10 h-10 text-[#004D77]/40"
+          className="w-8 h-8 text-[#004D77]/40"
           strokeWidth={1.5}
         />
       </div>
       {isSearching ? (
         <>
-          <p className="text-base font-semibold text-gray-500">
+          <p className="text-sm font-semibold text-gray-500">
             No se encontraron resultados
           </p>
-          <p className="text-sm text-gray-400 text-center max-w-xs">
+          <p className="text-xs text-gray-400 text-center max-w-xs">
             Ninguna venta coincide con la búsqueda. Intenta con otro término.
           </p>
         </>
       ) : (
         <>
-          <p className="text-base font-semibold text-gray-500">
+          <p className="text-sm font-semibold text-gray-500">
             No hay ventas registradas
           </p>
-          <p className="text-sm text-gray-400 text-center max-w-xs">
+          <p className="text-xs text-gray-400 text-center max-w-xs">
             Aún no se han registrado ventas en el sistema. Crea la primera para
             comenzar.
           </p>
@@ -178,41 +178,41 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
   }
 
   return (
-    <div className="h-full min-h-0 min-w-0 w-full flex-1 overflow-auto overscroll-contain rounded-xl [-webkit-overflow-scrolling:touch]">
+    <div className="min-w-0 w-full rounded-xl">
       {loadingMessage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
           <Spinner message={loadingMessage} className="min-h-0" />
         </div>
       )}
 
-      <table className="w-full min-w-[980px] table-auto lg:min-w-[1060px]">
+      <table className="min-w-max w-full table-auto">
         <thead className="sticky top-0 z-20 bg-[#004D77] text-white">
           <tr>
-            <th className="sticky left-0 z-30 bg-[#004D77] px-4 py-3 text-center text-sm font-semibold">
+            <th className="sticky left-0 z-30 bg-[#004D77] px-3 py-2.5 text-center text-xs font-semibold">
               No. Factura
             </th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Recibe/Cliente
             </th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Vendedor
             </th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Fecha
             </th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
               M. Pago
             </th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Total
             </th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Estado pedido
             </th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Estado
             </th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">
               Acciones
             </th>
           </tr>
@@ -235,12 +235,12 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
                 className={`group transition-colors duration-150 ${baseRowBg} hover:bg-blue-50`}
               >
                 <td
-                  className={`sticky left-0 z-10 ${baseRowBg} group-hover:bg-blue-50 px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap font-mono transition-colors duration-150`}
+                  className={`sticky left-0 z-10 ${baseRowBg} group-hover:bg-blue-50 px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap font-mono transition-colors duration-150`}
                 >
                   {highlight(String(row.factura || row.id || "-"), search)}
                 </td>
 
-                <td className="px-4 py-2.5 text-center text-sm text-gray-800 whitespace-nowrap">
+                <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap">
                   <TableText
                     value={clienteMostrar}
                     fallback="Cliente no disponible"
@@ -248,7 +248,7 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
                   />
                 </td>
 
-                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                   <TableText
                     value={row.vendedor}
                     fallback="Vendedor no disponible"
@@ -256,24 +256,24 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
                   />
                 </td>
 
-                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(row.fecha || "-", search)}
                 </td>
-                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(row.metodoPago || "-", search)}
                 </td>
-                <td className="px-4 py-2.5 text-center text-sm text-gray-800 whitespace-nowrap font-semibold">
+                <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap font-semibold">
                   {highlight(row.total || "0", search)}
                 </td>
-                <td className="px-4 py-2.5 text-center whitespace-nowrap">
+                <td className="px-3 py-2 text-center whitespace-nowrap">
                   <EstadoPedidoIndicator estado={row.estadoPedido} term={search} />
                 </td>
-                <td className="px-4 py-2.5 text-center whitespace-nowrap">
+                <td className="px-3 py-2 text-center whitespace-nowrap">
                   <EstadoBadge estado={row.estado} term={search} />
                 </td>
 
                 <td className="px-3 py-2">
-                  <div className="flex items-center justify-center gap-1.5">
+                  <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                     <Permission permission="ventas.ver_informacion">
                       <button
                         onClick={(e) => {
@@ -291,7 +291,7 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
                         className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                         title="Ver informacion"
                       >
-                        <Info className="w-4 h-4" strokeWidth={1.5} />
+                        <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                       </button>
                     </Permission>
 
@@ -301,7 +301,7 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
                           className="text-gray-200 cursor-not-allowed"
                           title="No disponible para ventas anuladas"
                         >
-                          <SquarePen className="w-4 h-4" strokeWidth={1.5} />
+                          <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                         </span>
                       ) : (
                         <button
@@ -313,7 +313,7 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
                           className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                           title="Editar venta"
                         >
-                          <SquarePen className="w-4 h-4" strokeWidth={1.5} />
+                          <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                         </button>
                       )}
                     </Permission>
@@ -324,7 +324,7 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
                           className="text-gray-200 cursor-not-allowed"
                           title="No disponible para ventas anuladas"
                         >
-                          <RefreshCw className="w-4 h-4" strokeWidth={1.5} />
+                          <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                         </span>
                       ) : (
                         <button
@@ -340,7 +340,7 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
                               : "Devolucion no disponible"
                           }
                         >
-                          <RefreshCw className="w-4 h-4" strokeWidth={1.5} />
+                          <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                         </button>
                       )}
                     </Permission>
@@ -351,7 +351,7 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
                           className="text-gray-200 cursor-not-allowed"
                           title="No disponible para ventas anuladas"
                         >
-                          <XCircle className="w-4 h-4" strokeWidth={1.5} />
+                          <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                         </span>
                       ) : (
                         <button
@@ -367,7 +367,7 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
                               : "Anulacion no disponible"
                           }
                         >
-                          <XCircle className="w-4 h-4" strokeWidth={1.5} />
+                          <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                         </button>
                       )}
                     </Permission>

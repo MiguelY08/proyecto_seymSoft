@@ -21,7 +21,7 @@ function UserMetricsCards({ metrics }) {
   const inactiveUsers = metrics?.inactiveUsers ?? 0;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div className="hidden lg:grid lg:grid-cols-3 gap-3">
       <MetricCard
         title="Total de usuarios"
         value={totalUsers}

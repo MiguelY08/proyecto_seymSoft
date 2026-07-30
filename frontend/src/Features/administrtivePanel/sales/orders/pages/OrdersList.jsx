@@ -11,6 +11,7 @@ import { clientsService } from '../../clients/services/clientsService';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import Spinner from '../../../../shared/spinner';
 import PaginationAdmin from '../../../../shared/PaginationAdmin';
+import { formatDeliveryAddress } from '../helpers/deliveryAddressHelper';
 
 const RECORDS_PER_PAGE = 11;
 
@@ -25,6 +26,23 @@ const requiresShippingAmount = (order = {}) => {
   const shippingAmount = Number(order.shippingAmount ?? 0);
   return origin === ORIGENES.WEB && deliveryType === 'domicilio' && shippingAmount <= 0;
 };
+
+const getDeliverySearchText = (order = {}) => {
+  const deliveryType = String(order.tipoEntrega ?? order.deliveryType ?? '').toLowerCase();
+
+  if (deliveryType.includes('recoge') || deliveryType.includes('recibe')) {
+    return 'Recoger en tienda';
+  }
+
+  return formatDeliveryAddress(order) || 'Sin direccion registrada';
+};
+
+const normalizeSearch = (value) =>
+  String(value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
 
 // ─── Componente principal de lista de pedidos ─────────────────────────────────
 function OrdersList() {
@@ -76,27 +94,32 @@ function OrdersList() {
   loadClients();
 }, []);
 
-  // Cargar pedidos y enviar la busqueda al backend cuando aplique
+  // Cargar pedidos base. La busqueda se aplica localmente sobre los datos enriquecidos.
   useEffect(() => {
+  let active = true;
+
   const loadOrders = async () => {
     setLoading(true);
     try {
-      const searchTerm = search.trim();
-      const rawOrders = await OrdersService.list(
-        searchTerm ? { search: searchTerm } : {}
-      );
-      setOrders(rawOrders);
+      const rawOrders = await OrdersService.list();
+      if (active) {
+        setOrders(rawOrders);
+      }
     } catch (error) {
       console.error('Error al cargar pedidos:', error);
     } finally {
-      setLoading(false);
+      if (active) {
+        setLoading(false);
+      }
     }
   };
 
-  const timeoutId = window.setTimeout(loadOrders, 300);
+  loadOrders();
 
-  return () => window.clearTimeout(timeoutId);
-}, [search]);
+  return () => {
+    active = false;
+  };
+}, []);
 
   // Enriquecer pedidos con datos completos del cliente y estado de pago real
   const enrichedOrders = useMemo(() => {
@@ -120,11 +143,11 @@ function OrdersList() {
 
   // Filtrar pedidos (búsqueda + fechas + origen + estado de pago)
   const filteredOrders = useMemo(() => {
-    const searchLower = search.toLowerCase();
+    const searchTerm = normalizeSearch(search);
 
     return enrichedOrders.filter((order) => {
       // Búsqueda de texto
-      const matchesSearch = !search.trim() || (() => {
+      const matchesSearch = !searchTerm || (() => {
         const searchableFields = [
           order.numeroPedido || String(order.id),
           order.clienteNombre,
@@ -135,6 +158,8 @@ function OrdersList() {
           order.departamentoEntregaNombre,
           order.ciudadEntregaNombre,
           order.direccionEntrega,
+          getDeliverySearchText(order),
+          requiresShippingAmount(order) ? 'Envio pendiente' : '',
           order.fechaPedido ? new Date(order.fechaPedido).toLocaleDateString('es-CO') : '',
           order.estadoLogistico,
           order.pagoEstado,
@@ -142,7 +167,7 @@ function OrdersList() {
           `$${order.total?.toLocaleString()}`,
         ];
         return searchableFields.some(
-          (field) => field && field.toString().toLowerCase().includes(searchLower)
+          (field) => field && normalizeSearch(field).includes(searchTerm)
         );
       })();
 
@@ -339,7 +364,7 @@ function OrdersList() {
         </div>
       )}
 
-      <div className="flex min-h-0 w-full min-w-0 flex-1 overflow-hidden rounded-xl bg-white shadow-md">
+      <div className="w-full min-w-0 shrink-0 overflow-hidden rounded-xl bg-white shadow-md">
         <OrdersTable
           orders={currentOrders}
           onViewDetail={handleViewDetail}
@@ -351,6 +376,8 @@ function OrdersList() {
           hasActiveFilters={hasActiveFilters}
         />
       </div>
+
+      <div className="min-h-0 flex-1" />
 
       {filteredOrders.length > 0 && (
         <div className="shrink-0">
