@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
 
 // Componentes y servicios
 import TopBar          from '../components/TopBar';
 import UserMetricsCards from '../components/UserMetricsCards';
 import UsersTable      from '../components/UsersTable';
+import FormUser from '../components/FormUser';
+import InfoUser from '../components/InfoUser';
 import PaginationAdmin from '../../../shared/PaginationAdmin';
 import Spinner from '../../../shared/spinner';
 import {
@@ -16,10 +17,9 @@ import { downloadUsersExcel } from '../helpers/excelHelper';
 import Permission from "../../configuration/roles/components/Permission";
 
 // Número de registros por página (debe coincidir con el limit que acepta la API)
-const RECORDS_PER_PAGE = 13;
+const RECORDS_PER_PAGE = 11;
 
 function Users() {
-  const location = useLocation();
   const { showError, showSuccess } = useAlert();
 
   // Estados principales
@@ -43,6 +43,10 @@ function Users() {
     activeUsers: 0,
     inactiveUsers: 0,
   });
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [modalOrigin, setModalOrigin] = useState(null);
 
   // ─── Función para cargar usuarios desde la API ─────────────────────────────
   const fetchUsers = useCallback(async (page, searchTerm) => {
@@ -93,15 +97,15 @@ function Users() {
     return () => clearTimeout(timeout);
   }, [search]);
 
-  // ─── Recargar cuando cambia la página, la búsqueda o se vuelve de otra ruta ─
+  // ─── Recargar cuando cambia la página, la búsqueda o el filtro ─
   useEffect(() => {
     fetchUsers(currentPage, debouncedSearch);
-  }, [currentPage, debouncedSearch, statusFilter, location.pathname, fetchUsers]);
+  }, [currentPage, debouncedSearch, statusFilter, fetchUsers]);
 
   // ─── Cargar siempre las métricas ─
   useEffect(() => {
     fetchMetrics();
-  }, [fetchMetrics, location.pathname]);
+  }, [fetchMetrics]);
 
   // ─── Manejadores de acciones ───────────────────────────────────────────────
   const handleExportUsers = async () => {
@@ -114,6 +118,42 @@ function Users() {
 
     return downloadUsersExcel(result.users);
   };
+
+  const openInfoModal = useCallback((user, origin = null) => {
+    setSelectedUser(user);
+    setModalOrigin(origin);
+    setIsFormOpen(false);
+    setIsInfoOpen(true);
+  }, []);
+
+  const openFormModal = useCallback((user = null, origin = null) => {
+    setSelectedUser(user);
+    setModalOrigin(origin);
+    setIsInfoOpen(false);
+    setIsFormOpen(true);
+  }, []);
+
+  const openCreateModal = useCallback((origin = null) => {
+    openFormModal(null, origin);
+  }, [openFormModal]);
+
+  const closeInfoModal = useCallback(() => {
+    setIsInfoOpen(false);
+    setSelectedUser(null);
+    setModalOrigin(null);
+  }, []);
+
+  const closeFormModal = useCallback(() => {
+    setIsFormOpen(false);
+    setSelectedUser(null);
+    setModalOrigin(null);
+  }, []);
+
+  const handleSavedUser = useCallback(async () => {
+    await fetchUsers(currentPage, debouncedSearch);
+    await fetchMetrics();
+    closeFormModal();
+  }, [currentPage, debouncedSearch, fetchUsers, fetchMetrics, closeFormModal]);
 
   const handleToggle = async (userId) => {
     // Encontrar el usuario actual para saber su estado activo
@@ -198,6 +238,7 @@ function Users() {
         statusFilter={statusFilter}
         onStatusChange={setStatusFilter}
         onExport={handleExportUsers}
+        onCreateUser={openCreateModal}
         totalUsers={pagination.total}
       />
 
@@ -211,6 +252,9 @@ function Users() {
             data={users}
             onToggle={handleToggle}
             onDelete={handleDelete}
+            onViewInfo={openInfoModal}
+            onEdit={openFormModal}
+            onCreateUser={openCreateModal}
             search={search}
             totalData={pagination.total} // Total real de usuarios (sin paginar)
           />
@@ -227,7 +271,21 @@ function Users() {
         />
       )}
 
-      <Outlet />
+      <InfoUser
+        user={selectedUser}
+        isOpen={isInfoOpen}
+        origin={modalOrigin}
+        onClose={closeInfoModal}
+        onEdit={openFormModal}
+      />
+
+      <FormUser
+        userToEdit={selectedUser}
+        isOpen={isFormOpen}
+        origin={modalOrigin}
+        onClose={closeFormModal}
+        onSaved={handleSavedUser}
+      />
     </div>
   );
 }

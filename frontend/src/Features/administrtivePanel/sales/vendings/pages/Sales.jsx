@@ -9,7 +9,7 @@ import PaginationAdmin from '../../../../shared/PaginationAdmin';
 import { SalesServices } from '../services/salesServices'; // ✅ importación corregida
 import { filterSales } from '../helpers/salesHelpers';
 import Spinner from '../../../../shared/spinner';
-const RECORDS_PER_PAGE = 13;
+const RECORDS_PER_PAGE = 11;
 const SALES_FETCH_LIMIT = 100;
 
 const getSalesServiceByType = (type) => {
@@ -87,11 +87,9 @@ function Sales() {
     setLoading(true);
     try {
       const service = getSalesServiceByType(activeType);
-      const searchTerm = search.trim();
       const getParams = (page) => ({
         page,
         limit: SALES_FETCH_LIMIT,
-        ...(searchTerm ? { search: searchTerm } : {}),
       });
       const firstPage = await service(getParams(1));
       const allSales = [...(firstPage.sales ?? [])];
@@ -109,14 +107,12 @@ function Sales() {
     } finally {
       setLoading(false);
     }
-  }, [activeType, search]);
+  }, [activeType]);
 
-  // Recargar datos al volver del formulario, cambiar ruta o cambiar seccion
+  // Recargar datos al volver del formulario, cambiar ruta o cambiar seccion.
+  // La busqueda se aplica localmente para evitar doble filtrado backend/frontend.
   useEffect(() => {
-    const debounceMs = search.trim() ? 300 : 0;
-    const timeoutId = window.setTimeout(fetchSales, debounceMs);
-
-    return () => window.clearTimeout(timeoutId);
+    fetchSales();
   }, [fetchSales, location.pathname]);
 
   useEffect(() => {
@@ -175,7 +171,7 @@ function Sales() {
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-hidden p-3 sm:p-4">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto p-3 sm:p-4">
 
       {/* Barra superior con búsqueda */}
       <TopBar
@@ -196,7 +192,7 @@ function Sales() {
       </div>
 
       {/* Tabla de ventas */}
-      <div className="flex min-h-0 w-full min-w-0 flex-1 overflow-hidden rounded-xl bg-white shadow-md">
+      <div className="w-full min-w-0 shrink-0 overflow-hidden rounded-xl bg-white shadow-md">
         <SalesTable
           data={visibleSales}
           search={search}
@@ -204,6 +200,8 @@ function Sales() {
           hasActiveFilters={hasActiveFilters}
         />
       </div>
+
+      <div className="min-h-0 flex-1" />
 
       {/* Paginador, solo si hay datos filtrados */}
       {totalRecords > 0 && (

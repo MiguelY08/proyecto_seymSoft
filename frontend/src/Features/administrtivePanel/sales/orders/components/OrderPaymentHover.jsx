@@ -130,13 +130,23 @@ function OrderPaymentHover({
   const hasPendingReceipts = receiptSummary.pendingReceipts > 0;
   const hasRejectedReceipts = receiptSummary.rejectedReceipts > 0;
 
+  const opensAbove = position?.placement === 'top';
   const positionStyle = position
-    ? { left: `${position.left}px`, top: `${position.top}px` }
+    ? {
+        left: `${position.left}px`,
+        ...(opensAbove
+          ? { bottom: `${position.bottom}px` }
+          : { top: `${position.top}px` }),
+        ...(position.maxHeight ? { maxHeight: `${position.maxHeight}px` } : {}),
+      }
     : {};
+  const verticalMotionClass = opensAbove
+    ? '-translate-y-1 group-hover/payment:translate-y-0'
+    : 'translate-y-1 group-hover/payment:translate-y-0';
 
   return (
     <div
-      className={`pointer-events-none fixed z-[9999] min-w-[260px] max-w-[320px] -translate-x-1/2 translate-y-1 rounded-xl p-3 opacity-0 shadow-2xl transition-all duration-150 group-hover/payment:translate-y-0 group-hover/payment:opacity-100 ${className}`}
+      className={`pointer-events-none fixed z-[9999] min-w-[260px] max-w-[320px] -translate-x-1/2 ${verticalMotionClass} overflow-y-auto overscroll-contain rounded-xl p-3 opacity-0 shadow-2xl transition-all duration-150 group-hover/payment:opacity-100 ${className}`}
       style={{ background: '#1e293b', ...positionStyle }}
     >
       <div className="mb-2 flex items-center justify-between gap-3">

@@ -354,6 +354,17 @@ const normalizeOrder = (order = {}) => {
       order.recipientPhone ??
       order.receiverPhone ??
       '',
+    displayPhone:
+      order.deliveryType === 'Domicilio'
+        ? (
+            order.deliveryRecipientPhone ||
+            order.customer?.phone ||
+            ''
+          )
+        : (
+            order.customer?.phone ||
+            ''
+          ),
     shippingAmount,
     departamentoEntregaCodigo: deliveryDepartmentCode,
     departamentoEntregaNombre: deliveryDepartmentName,
