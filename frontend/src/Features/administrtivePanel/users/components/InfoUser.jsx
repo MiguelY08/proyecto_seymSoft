@@ -1,34 +1,42 @@
-import { useNavigate, useLocation } from 'react-router-dom';
 import { X, SquarePen, User, Mail, Phone, ShieldCheck, CalendarDays } from 'lucide-react';
-import { useModalAnimation } from '../../../shared/useModalAnimation';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../../access/context/AuthContext';
 import { isSelfUser } from '../helpers/selfUser';
 
 /**
- * Componente InfoUser.
  * Modal de solo lectura para mostrar detalles completos de un usuario.
- * Incluye animaciones de apertura y navegación a edición.
- * @param {object} props - No recibe props directas, usa location.state para datos.
- * @returns {JSX.Element|null} Modal con información del usuario o null si no hay usuario.
+ * Recibe los datos desde la pagina y usa callbacks locales para cerrar o editar.
  */
-function InfoUser() {
-  // Obtener datos del usuario desde el estado de navegación
-  const location = useLocation();
-  const user     = location.state?.user   ?? null;
-  const origin   = location.state?.origin ?? null;
-
-  const navigate = useNavigate();
+function InfoUser({
+  user = null,
+  isOpen = false,
+  origin = null,
+  onClose,
+  onEdit,
+}) {
   const { user: authUser } = useAuth();
+  const [visible, setVisible] = useState(false);
   const SYSTEM_ID_USER = 999999999;
   const isSystemUser = user?.id === SYSTEM_ID_USER;
   const isSelf = isSelfUser(user, authUser);
-  const { visible, handleClose } = useModalAnimation('/admin/users');
+
+  useEffect(() => {
+    if (!isOpen || !user) return undefined;
+
+    const animationId = requestAnimationFrame(() => setVisible(true));
+    return () => cancelAnimationFrame(animationId);
+  }, [isOpen, user]);
+
+  const handleClose = () => {
+    setVisible(false);
+    setTimeout(() => onClose?.(), 250);
+  };
 
   /**
    * Navega al formulario de edición con los datos del usuario actual.
    */
   const handleEdit = () => {
-    navigate('/admin/users/form-user', { state: { user } });
+    onEdit?.(user, origin);
   };
 
   // Origen para animación del modal (posición del botón que lo abrió)
@@ -37,7 +45,7 @@ function InfoUser() {
     : 'center center';
 
   // No renderizar si no hay usuario
-  if (!user) return null;
+  if (!isOpen || !user) return null;
 
   // Formatear fecha de creación
   const createdAt = user.createdAt

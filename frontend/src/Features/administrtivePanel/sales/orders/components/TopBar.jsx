@@ -117,13 +117,13 @@ function TopBar({
   }, [isSearchOpen, search]);
 
   return (
-    <div className="flex flex-col gap-3 shrink-0 min-w-0 lg:flex-row lg:items-end lg:justify-between">
-      <div className="flex flex-col gap-3 min-w-0 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 lg:flex-1">
+    <div className="flex flex-col gap-3 shrink-0 min-w-0 lg:flex-row lg:flex-nowrap lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-3 min-w-0 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 lg:flex-1 lg:flex-nowrap lg:gap-2 xl:gap-3">
         <div
           ref={searchWrapperRef}
           className={`relative w-full transition-all duration-300 ease-out sm:shrink-0 ${
             isSearchOpen
-              ? 'sm:w-64 lg:w-72'
+              ? 'sm:w-64 lg:w-52 xl:w-64 2xl:w-72'
               : 'sm:w-10'
           }`}
         >
@@ -167,7 +167,7 @@ function TopBar({
           )}
         </div>
 
-        <div className="relative w-full transition-all duration-300 sm:w-44 lg:w-40" title="Fecha inicial">
+        <div className="relative w-full transition-all duration-300 sm:w-44 lg:w-36 xl:w-40" title="Fecha inicial">
           <Calendar
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
             strokeWidth={1.8}
@@ -185,7 +185,7 @@ function TopBar({
           />
         </div>
 
-        <div className="relative w-full transition-all duration-300 sm:w-44 lg:w-40" title="Fecha final">
+        <div className="relative w-full transition-all duration-300 sm:w-44 lg:w-36 xl:w-40" title="Fecha final">
           <Calendar
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
             strokeWidth={1.8}
@@ -203,10 +203,10 @@ function TopBar({
           />
         </div>
 
-        <div ref={filtersWrapperRef} className="grid w-full grid-cols-2 gap-3 sm:w-auto sm:flex sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
+        <div ref={filtersWrapperRef} className="grid w-full grid-cols-2 gap-3 sm:w-auto sm:flex sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 lg:flex-nowrap lg:gap-2 xl:gap-3">
           <div
             className={`relative w-full min-w-0 transition-all duration-300 sm:w-40 ${
-              compactFilters ? 'lg:w-14' : 'lg:w-40'
+              compactFilters ? 'lg:w-12 xl:w-14' : 'lg:w-32 xl:w-40'
             }`}
           >
           <button
@@ -261,7 +261,7 @@ function TopBar({
 
           <div
             className={`relative w-full min-w-0 transition-all duration-300 sm:w-44 ${
-              compactFilters ? 'lg:w-14' : 'lg:w-44'
+              compactFilters ? 'lg:w-12 xl:w-14' : 'lg:w-[8.5rem] xl:w-44'
             }`}
           >
           <button
@@ -316,7 +316,7 @@ function TopBar({
 
           <div
             className={`relative col-span-2 w-full min-w-0 transition-all duration-300 sm:col-span-1 sm:w-44 ${
-              compactFilters ? 'lg:w-14' : 'lg:w-44'
+              compactFilters ? 'lg:w-12 xl:w-14' : 'lg:w-[8.5rem] xl:w-44'
             }`}
           >
           <button
@@ -382,14 +382,14 @@ function TopBar({
         )}
       </div>
 
-      <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
+      <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0 lg:gap-2">
         <Permission permission="pedidos.exportar">
           <ButtonComponent
             className="flex-1 sm:flex-none bg-white text-green-600 border-green-600 hover:bg-green-400 px-3 flex items-center justify-center gap-2"
             onClick={handleDownloadExcel}
           >
             <FileSpreadsheet className="w-4 h-4" />
-            <span className="hidden sm:inline">Exportar Excel</span>
+            <span className="hidden 2xl:inline">Exportar Excel</span>
           </ButtonComponent>
         </Permission>
 
@@ -399,7 +399,7 @@ function TopBar({
             title="Nuevo"
             className="flex-1 sm:flex-none flex items-center justify-center gap-2"
           >
-            <span className="hidden sm:inline">Nuevo</span>
+            <span className="hidden xl:inline">Nuevo</span>
             <Plus className="w-4 h-4" strokeWidth={2} />
           </ButtonComponent>
         </Permission>

@@ -32,8 +32,6 @@ import DashboardPage from "../../Features/layouts/DashboardPage";
 
 /* USERS */
 import Users from "../../Features/administrtivePanel/users/pages/Users.jsx";
-import FormUser from "../../Features/administrtivePanel/users/components/FormUser.jsx";
-import InfoUser from "../../Features/administrtivePanel/users/components/InfoUser.jsx";
 
 /* PURCHASES */
 import CategoriesPage from "../../Features/administrtivePanel/purchases/categories/pages/CategoriesPage.jsx"; 
@@ -119,8 +117,6 @@ const AppRouter = () => {
 
           {/* USERS */}
           <Route path="users" element={<Users />} />
-          <Route path="users/form-user" element={<FormUser />} />
-          <Route path="users/info-user" element={<InfoUser />} />
 
           {/* PURCHASES */}
           <Route path="purchases/categories" element={<CategoriesPage />} />

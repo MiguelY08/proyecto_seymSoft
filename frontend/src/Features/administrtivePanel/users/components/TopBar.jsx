@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Search, FileSpreadsheet, Plus, Loader2, ListFilter, CircleCheck, CircleX } from "lucide-react";
 import { useAlert } from "../../../shared/alerts/useAlert";
 import { usePermissions } from "../../configuration/roles/hooks/usePermissions";
@@ -12,9 +11,9 @@ function TopBar({
   statusFilter,
   onStatusChange,
   onExport,
+  onCreateUser,
   totalUsers = 0,
 }) {
-  const navigate = useNavigate();
   const { showConfirm, showTimer, showWarning, showError } = useAlert();
   const { hasPermission } = usePermissions();
   const [exporting, setExporting] = useState(false);
@@ -59,22 +58,22 @@ function TopBar({
 
   return (
     <div className="flex flex-col gap-3 shrink-0 lg:flex-row lg:items-end lg:justify-between">
-      <div className="relative w-full lg:max-w-md">
-        <input
-          type="text"
-          placeholder="Buscar"
-          value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
-          className="w-full pl-4 pr-10 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200"
-        />
-        <Search
-          className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-          strokeWidth={2}
-        />
-      </div>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:gap-4 lg:flex-1">
+        <div className="relative w-full lg:max-w-md">
+          <input
+            type="text"
+            placeholder="Buscar"
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            className="w-full pl-4 pr-10 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200"
+          />
+          <Search
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+            strokeWidth={2}
+          />
+        </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4 lg:w-auto">
-        <div className="w-full sm:w-48">
+        <div className="w-full lg:w-48">
           <FormSelect
             value={statusFilter}
             options={statusOptions}
@@ -84,6 +83,9 @@ function TopBar({
             ariaLabel="Estado de usuario"
           />
         </div>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4 lg:w-auto">
         <div className="flex w-full items-center gap-2 sm:w-auto">
           {hasPermission("usuarios.exportar") && (
             <ButtonComponent
@@ -102,7 +104,7 @@ function TopBar({
 
           {hasPermission("usuarios.crear") && (
             <ButtonComponent
-              onClick={() => navigate("/admin/users/form-user")}
+              onClick={() => onCreateUser?.()}
               title="Nuevo"
               className="flex-1 sm:flex-none flex items-center justify-center gap-2"
             >
