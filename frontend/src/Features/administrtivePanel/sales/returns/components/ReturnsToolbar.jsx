@@ -18,14 +18,14 @@ function ReturnsToolbar({
 
   return (
     <div className="flex shrink-0 flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
-        <div className="relative w-full md:w-[360px]">
+      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end lg:flex-1 lg:gap-4">
+        <div className="relative w-full md:w-[360px] lg:w-72">
           <input
             type="text"
             placeholder="Buscar por número, factura, cliente..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="h-11 w-full rounded-xl border border-slate-300 bg-white py-2 pl-4 pr-10 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
+            className="h-11 w-full rounded-xl border border-slate-300 bg-white py-2 pl-4 pr-10 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 lg:h-10 lg:rounded-lg lg:py-2.5"
             aria-label="Buscar devoluciones"
           />
           <Search
@@ -35,7 +35,7 @@ function ReturnsToolbar({
           />
         </div>
 
-        <div className="flex w-full flex-col gap-1 md:w-44">
+        <div className="flex w-full flex-col gap-1 md:w-44 lg:w-40">
           <label className="pl-0.5 text-xs font-medium text-slate-500">
             Fecha Inicial
           </label>
@@ -44,12 +44,12 @@ function ReturnsToolbar({
             value={startDate}
             max={endDate || undefined}
             onChange={(e) => onStartDate(e.target.value)}
-            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
+            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 lg:h-10 lg:rounded-lg"
             aria-label="Fecha inicial"
           />
         </div>
 
-        <div className="flex w-full flex-col gap-1 md:w-44">
+        <div className="flex w-full flex-col gap-1 md:w-44 lg:w-40">
           <label className="pl-0.5 text-xs font-medium text-slate-500">
             Fecha Final
           </label>
@@ -58,7 +58,7 @@ function ReturnsToolbar({
             value={endDate}
             min={startDate || undefined}
             onChange={(e) => onEndDate(e.target.value)}
-            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
+            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 lg:h-10 lg:rounded-lg"
             aria-label="Fecha final"
           />
         </div>
@@ -66,12 +66,12 @@ function ReturnsToolbar({
         {hasActiveFilters && (
           <button
             onClick={onClearFilters}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-800 active:scale-95 md:w-auto"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-800 active:scale-95 md:w-auto lg:h-10 lg:w-10 lg:rounded-lg lg:px-0"
             aria-label="Limpiar filtros"
             title="Limpiar todos los filtros"
           >
             <Eraser className="h-4 w-4" strokeWidth={2} />
-            <span>Limpiar filtros</span>
+            <span className="lg:hidden">Limpiar filtros</span>
           </button>
         )}
       </div>

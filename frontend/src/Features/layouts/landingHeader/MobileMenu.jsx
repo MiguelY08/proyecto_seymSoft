@@ -13,7 +13,7 @@ import {
   Store,
   UserCircle2,
   UserPlus,
-  X
+  X,
 } from "lucide-react";
 
 import logo from "../../../assets/PapeleriaMagicLogo.png";
@@ -28,13 +28,13 @@ function MobileMenu({
   isActive,
   isLoggingOut,
   onClose,
+  onOpenProfileSummary,
   onOpenProfileEdit,
   role,
   showOrders = false,
-  user
+  user,
 }) {
-  const mobileMenuRef =
-    useRef(null);
+  const mobileMenuRef = useRef(null);
 
   const handleAdminClick = () => {
     onClose();
@@ -136,45 +136,25 @@ function MobileMenu({
         <div className="border-t border-[#e2edf5] bg-slate-50 px-4 py-4">
           <div className="mb-3 flex items-center gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#004D77] text-sm font-bold text-white">
-              {
-                user
-                ?
-                getInitials(
-                  user.fullName
-                  ||
-                  user.name
-                )
-                :
+              {user ? (
+                getInitials(user.fullName || user.name)
+              ) : (
                 <UserCircle2 size={28} />
-              }
+              )}
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-[#004D77]">
-                {
-                  user?.fullName
-                  ||
-                  user?.name
-                  ||
-                  "Invitado"
-                }
+                {user?.fullName || user?.name || "Invitado"}
               </p>
               <p className="truncate text-xs text-slate-500">
-                {
-                  user?.email
-                  ||
-                  "No autenticado"
-                }
+                {user?.email || "No autenticado"}
               </p>
             </div>
           </div>
 
-          {
-            user
-            ?
+          {user ? (
             <div className="space-y-1">
-              {
-                role
-                &&
+              {role && (
                 <button
                   type="button"
                   onClick={handleAdminClick}
@@ -183,7 +163,20 @@ function MobileMenu({
                   <LayoutDashboard size={18} />
                   Panel administrativo
                 </button>
-              }
+              )}
+              <button
+                type="button"
+                aria-label="Datos Financieros"
+                title="Datos Financieros"
+                onClick={() => {
+                  onClose();
+                  onOpenProfileSummary();
+                }}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-[#004D77] transition-colors hover:bg-white"
+              >
+                <User size={18} />
+                Datos Financieros
+              </button>
               <button
                 type="button"
                 onClick={handleEditProfileClick}
@@ -198,26 +191,15 @@ function MobileMenu({
                 disabled={isLoggingOut}
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-red-500 transition-colors hover:bg-red-50 disabled:opacity-50"
               >
-                {
-                  isLoggingOut
-                  ?
-                  <Loader2
-                    size={18}
-                    className="animate-spin"
-                  />
-                  :
+                {isLoggingOut ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
                   <LogOut size={18} />
-                }
-                {
-                  isLoggingOut
-                  ?
-                  "Cerrando..."
-                  :
-                  "Cerrar Sesión"
-                }
+                )}
+                {isLoggingOut ? "Cerrando..." : "Cerrar Sesión"}
               </button>
             </div>
-            :
+          ) : (
             <div className="grid grid-cols-2 gap-2">
               <Link
                 to="/login"
@@ -236,7 +218,7 @@ function MobileMenu({
                 Registro
               </Link>
             </div>
-          }
+          )}
         </div>
       </aside>
     </div>

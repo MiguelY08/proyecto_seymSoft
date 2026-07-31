@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useAlert } from '../../../shared/alerts/useAlert';
 import { useModalAnimation } from '../../../shared/useModalAnimation';
 import { useAuth } from '../../../access/context/AuthContext';
+import { checkEmailAvailability } from '../../../access/services/authService';
 import FormSelect from '../../../shared/FormSelect';
 import {
   UserService,
@@ -14,10 +15,14 @@ import { isSelfUser } from '../helpers/selfUser';
 import {
   PHONE_MIN,
   PHONE_MAX,
+  normalizeDigits,
+  normalizeEmailInput,
+  normalizeFullNameInput,
+  toTitleCaseName,
 } from '../validators/usersValidators';
 
 // Funciones de validación (sin cambios)
-const validateField = (name, value, form, context) => {
+const validateField = (name, value) => {
   if (name === 'nombreCompleto') {
     if (!value.trim()) return 'El nombre completo es obligatorio.';
     if (value.trim().length < 3) return 'Mínimo 3 caracteres.';
@@ -45,7 +50,14 @@ const validateUserForm = (form) => {
   errors.nombreCompleto = validateField('nombreCompleto', form.nombreCompleto, form, {});
   errors.correo = validateField('correo', form.correo, form, {});
   errors.telefono = validateField('telefono', form.telefono, form, {});
-  return Object.fromEntries(Object.entries(errors).filter(([_, v]) => v));
+  return Object.fromEntries(Object.entries(errors).filter((entry) => entry[1]));
+};
+
+const buildSanitizedInputValue = (target, input, sanitizer) => {
+  const value = String(target.value ?? '');
+  const start = target.selectionStart ?? value.length;
+  const end = target.selectionEnd ?? value.length;
+  return sanitizer(`${value.slice(0, start)}${input}${value.slice(end)}`);
 };
 
 function FormUser() {
@@ -72,6 +84,9 @@ function FormUser() {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [checkingUnique, setCheckingUnique] = useState({
+    correo: false,
+  });
 
   const [roles, setRoles] = useState([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
@@ -82,6 +97,18 @@ function FormUser() {
       label: role.nameRole ?? role.name,
     })),
   ], [roles]);
+
+  const getEmailAvailabilityError = async (value) => {
+    const localError = validateField('correo', value);
+    if (localError) return '';
+
+    const currentEmail = normalizeEmailInput(userToEdit?.email);
+    const nextEmail = normalizeEmailInput(value);
+    if (isEditing && currentEmail === nextEmail) return '';
+
+    const data = await checkEmailAvailability(nextEmail);
+    return data?.exists ? 'El correo ya está registrado' : '';
+  };
 
   useEffect(() => {
     const fetchRoles = async () => {
@@ -101,19 +128,164 @@ function FormUser() {
     fetchRoles();
   }, [showWarning]);
 
+  const loadUsersForDuplicateCheck = async () => {
+    const firstPage = await UserService.list(1, 100, '');
+    const totalPages = Number(firstPage.pagination?.totalPages || 1);
+    if (totalPages <= 1) return firstPage.users;
+
+    const remainingPages = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, index) => (
+        UserService.list(index + 2, 100, '')
+      )),
+    );
+
+    return [
+      ...firstPage.users,
+      ...remainingPages.flatMap((result) => result.users),
+    ];
+  };
+
+  const findDuplicateUser = async (field, value) => {
+    const normalizedValue = field === 'correo'
+      ? normalizeEmailInput(value)
+      : normalizeDigits(value, PHONE_MAX);
+    if (!normalizedValue) return null;
+
+    const users = await loadUsersForDuplicateCheck();
+    return users.find((user) => {
+      const sameUser = isEditing && Number(user.id) === Number(userToEdit?.id);
+      if (sameUser) return false;
+
+      if (field === 'correo') {
+        return normalizeEmailInput(user.email) === normalizedValue;
+      }
+
+      return normalizeDigits(user.phone, PHONE_MAX) === normalizedValue;
+    }) || null;
+  };
+
+  const GET_DUPLICATE_USER_ERROR = async (field, value) => {
+    const localError = validateField(field, value);
+    if (localError) return '';
+
+    const duplicate = await findDuplicateUser(field, value);
+    if (!duplicate) return '';
+
+    return field === 'correo'
+      ? 'Este correo ya está registrado.'
+      : 'Este teléfono ya está registrado.';
+  };
+
+  useEffect(() => {
+    if (!touched.correo) return undefined;
+
+    const localError = validateField('correo', form.correo);
+    if (localError) {
+      setCheckingUnique((prev) => ({ ...prev, correo: false }));
+      return undefined;
+    }
+
+    let cancelled = false;
+    setCheckingUnique((prev) => ({ ...prev, correo: true }));
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const duplicateError = await getEmailAvailabilityError(form.correo);
+        if (cancelled) return;
+
+        setErrors((prev) => ({
+          ...prev,
+          correo: validateField('correo', form.correo) || duplicateError || '',
+        }));
+      } finally {
+        if (!cancelled) {
+          setCheckingUnique((prev) => ({ ...prev, correo: false }));
+        }
+      }
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [form.correo, isEditing, touched.correo, userToEdit?.id]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     let filtered = value;
+    let forcedError = '';
     if (name === 'telefono') {
-      filtered = value.replace(/\D/g, '');
+      filtered = normalizeDigits(value, PHONE_MAX);
+      if (/\D/.test(String(value))) forcedError = 'Solo se permiten números.';
     } else if (name === 'nombreCompleto') {
-      filtered = value.replace(/[^\p{L}\s]/gu, '');
+      const lettersOnly = value.replace(/[^\p{L}\s]/gu, '');
+      filtered = normalizeFullNameInput(lettersOnly);
+      if (value !== lettersOnly) forcedError = 'Solo letras y espacios.';
+    } else if (name === 'correo') {
+      filtered = normalizeEmailInput(value);
     }
     const updatedForm = { ...form, [name]: filtered };
     setForm(updatedForm);
     setTouched((prev) => ({ ...prev, [name]: true }));
-    const errorMsg = validateField(name, filtered, updatedForm, {});
+    const errorMsg = forcedError || validateField(name, filtered);
     setErrors((prev) => ({ ...prev, [name]: errorMsg || '' }));
+  };
+
+  const handleNumericBeforeInput = (e) => {
+    if (!e.data || /^\d+$/.test(e.data)) return;
+    e.preventDefault();
+    setTouched((prev) => ({ ...prev, [e.currentTarget.name]: true }));
+    setErrors((prev) => ({ ...prev, [e.currentTarget.name]: 'Solo se permiten números.' }));
+  };
+
+  const handlePhonePaste = (e) => {
+    e.preventDefault();
+    const filtered = buildSanitizedInputValue(
+      e.currentTarget,
+      e.clipboardData.getData('text'),
+      (value) => normalizeDigits(value, PHONE_MAX),
+    );
+    const errorMsg = validateField('telefono', filtered);
+
+    setForm((prev) => ({ ...prev, telefono: filtered }));
+    setTouched((prev) => ({ ...prev, telefono: true }));
+    setErrors((prev) => ({ ...prev, telefono: errorMsg || '' }));
+  };
+
+  const handleEmailBeforeInput = (e) => {
+    if (!e.data || !/\s/.test(e.data)) return;
+    e.preventDefault();
+    setTouched((prev) => ({ ...prev, [e.currentTarget.name]: true }));
+    setErrors((prev) => ({ ...prev, [e.currentTarget.name]: 'El correo no debe contener espacios.' }));
+  };
+
+  const handleEmailPaste = (e) => {
+    e.preventDefault();
+    const filtered = buildSanitizedInputValue(
+      e.currentTarget,
+      e.clipboardData.getData('text'),
+      normalizeEmailInput,
+    );
+    const errorMsg = validateField('correo', filtered);
+
+    setForm((prev) => ({ ...prev, correo: filtered }));
+    setTouched((prev) => ({ ...prev, correo: true }));
+    setErrors((prev) => ({ ...prev, correo: errorMsg || '' }));
+  };
+
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    if (name !== 'nombreCompleto') return;
+
+    const formattedName = toTitleCaseName(form.nombreCompleto);
+    const updatedForm = { ...form, nombreCompleto: formattedName };
+
+    setForm(updatedForm);
+    setTouched((prev) => ({ ...prev, nombreCompleto: true }));
+    setErrors((prev) => ({
+      ...prev,
+      nombreCompleto: validateField('nombreCompleto', formattedName) || '',
+    }));
   };
 
   const handleSubmit = async () => {
@@ -128,22 +300,38 @@ function FormUser() {
       return;
     }
 
+    const normalizedForm = {
+      ...form,
+      nombreCompleto: toTitleCaseName(form.nombreCompleto),
+      correo: normalizeEmailInput(form.correo),
+      telefono: normalizeDigits(form.telefono, PHONE_MAX),
+    };
+    setForm(normalizedForm);
+
     // Validar campos
-    const allTouched = Object.keys(form).reduce((acc, k) => ({ ...acc, [k]: true }), {});
+    const allTouched = Object.keys(normalizedForm).reduce((acc, k) => ({ ...acc, [k]: true }), {});
     setTouched(allTouched);
-    const newErrors = validateUserForm(form);
+    const newErrors = validateUserForm(normalizedForm);
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       showWarning('Formulario incompleto', 'Revisa los campos marcados en rojo.');
       return;
     }
 
+    const duplicateEmailError = await getEmailAvailabilityError(normalizedForm.correo);
+    if (duplicateEmailError) {
+      setErrors((prev) => ({ ...prev, correo: duplicateEmailError }));
+      setTouched((prev) => ({ ...prev, correo: true }));
+      showWarning('Datos ya registrados', 'Revisa los campos marcados en rojo.');
+      return;
+    }
+
     // Preparar datos
     const userData = {
-      name: form.nombreCompleto.trim(),
-      email: form.correo.trim(),
-      phone: form.telefono ? Number(form.telefono) : null,
-      roleId: form.rol ? Number(form.rol) : null,
+      name: normalizedForm.nombreCompleto,
+      email: normalizedForm.correo,
+      phone: normalizedForm.telefono ? Number(normalizedForm.telefono) : null,
+      roleId: normalizedForm.rol ? Number(normalizedForm.rol) : null,
     };
 
     setIsSubmitting(true);
@@ -219,6 +407,8 @@ function FormUser() {
   const ErrorMsg = ({ field }) =>
     touched[field] && errors[field] ? <p className="mt-0.5 text-xs text-red-500">{errors[field]}</p> : null;
 
+  const hasBlockingErrors = Boolean(errors.correo || errors.telefono);
+
   return (
     <div
       style={{ transition: 'opacity 250ms ease' }}
@@ -261,6 +451,7 @@ function FormUser() {
                 name="nombreCompleto"
                 value={form.nombreCompleto}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 placeholder="Mín. 3 letras"
                 autoComplete="off"
                 className={inputClass('nombreCompleto')}
@@ -281,11 +472,16 @@ function FormUser() {
                 name="correo"
                 value={form.correo}
                 onChange={handleChange}
+                onBeforeInput={handleEmailBeforeInput}
+                onPaste={handleEmailPaste}
                 placeholder="usuario@dominio.com"
                 autoComplete="off"
                 className={inputClass('correo')}
               />
             </div>
+            {checkingUnique.correo && touched.correo && !errors.correo && (
+              <p className="mt-0.5 text-xs text-[#004D77]">Verificando si el correo ya existe...</p>
+            )}
             <ErrorMsg field="correo" />
           </div>
 
@@ -300,9 +496,13 @@ function FormUser() {
                 type="tel"
                 name="telefono"
                 value={form.telefono}
+                onBeforeInput={handleNumericBeforeInput}
+                onPaste={handlePhonePaste}
                 onChange={handleChange}
                 placeholder={`Entre ${PHONE_MIN} y ${PHONE_MAX} dígitos`}
                 maxLength={PHONE_MAX}
+                inputMode="numeric"
+                pattern="[0-9]*"
                 autoComplete="off"
                 className={inputClass('telefono')}
               />
@@ -338,9 +538,9 @@ function FormUser() {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || checkingUnique.correo || hasBlockingErrors}
             className={`flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors cursor-pointer sm:w-auto ${
-              isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#003a5c]'
+              isSubmitting || checkingUnique.correo || hasBlockingErrors ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#003a5c]'
             }`}
           >
             {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}

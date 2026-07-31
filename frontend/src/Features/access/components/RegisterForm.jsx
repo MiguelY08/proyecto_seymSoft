@@ -1,10 +1,43 @@
-import { useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 
-import { validateRegister, sanitizeInput } from "../validators/authValidators.js";
+import {
+  normalizeEmailInput,
+  normalizeDigits,
+  sanitizeInput,
+  toTitleCaseName,
+  validateRegister,
+} from "../validators/authValidators.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useAlert } from "../../shared/alerts/useAlert.js";
+import { checkEmailAvailability, validatePhone } from "../services/authService.js";
+
+const Label = ({ text, htmlFor }) => (
+  <label htmlFor={htmlFor} className="flex items-center gap-1 mb-1 text-sm font-medium text-gray-700">
+    {text}
+    <span className="text-red-500">*</span>
+  </label>
+);
+
+const buildSanitizedInputValue = (target, input, sanitizer) => {
+  const value = String(target.value ?? "");
+  const start = target.selectionStart ?? value.length;
+  const end = target.selectionEnd ?? value.length;
+  return sanitizer(`${value.slice(0, start)}${input}${value.slice(end)}`);
+};
+
+const getPhoneValidationError = (data) => {
+  if (!data?.valid) {
+    return "El teléfono debe contener entre 7 y 10 dígitos numéricos.";
+  }
+
+  if (data?.exists === true || data?.available === false) {
+    return "El teléfono ya está registrado";
+  }
+
+  return null;
+};
 
 export default function RegisterForm() {
 
@@ -26,10 +59,22 @@ export default function RegisterForm() {
 
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  const [checkingPhone, setCheckingPhone] = useState(false);
+  const emailTimeoutRef = useRef(null);
+  const phoneTimeoutRef = useRef(null);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     let newValue = type === "checkbox" ? checked : value;
+    const hasInvalidPhoneChars = name === "phone" && /\D/.test(String(newValue));
+
+    if (hasInvalidPhoneChars) {
+      setTouched((prev) => ({ ...prev, phone: true }));
+      setErrors((prev) => ({ ...prev, phone: "El teléfono solo debe contener números" }));
+      return;
+    }
+
     newValue = sanitizeInput(name, newValue);
     
     const updatedForm = { ...formData, [name]: newValue };
@@ -38,18 +83,181 @@ export default function RegisterForm() {
 
     // Validar en tiempo real
     const validationErrors = validateRegister(updatedForm);
-    setErrors((prev) => ({ ...prev, [name]: validationErrors[name] }));
+    setErrors((prev) => ({
+      ...prev,
+      [name]: validationErrors[name],
+    }));
+  };
+
+  useEffect(() => {
+    if (!touched.email) return undefined;
+
+    clearTimeout(emailTimeoutRef.current);
+    const email = normalizeEmailInput(formData.email);
+
+    if (!email) {
+      setCheckingEmail(false);
+      setErrors((prev) => ({ ...prev, email: "El correo es obligatorio" }));
+      return undefined;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setCheckingEmail(false);
+      setErrors((prev) => ({ ...prev, email: "Ingresa un correo válido" }));
+      return undefined;
+    }
+
+    setCheckingEmail(true);
+    let cancelled = false;
+
+    emailTimeoutRef.current = setTimeout(async () => {
+      try {
+        const data = await checkEmailAvailability(email);
+        if (cancelled) return;
+
+        setErrors((prev) => ({
+          ...prev,
+          email: data?.exists ? "El correo ya está registrado" : null,
+        }));
+      } catch {
+        if (!cancelled) {
+          setErrors((prev) => ({ ...prev, email: null }));
+        }
+      } finally {
+        if (!cancelled) setCheckingEmail(false);
+      }
+    }, 500);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(emailTimeoutRef.current);
+    };
+  }, [formData.email, touched.email]);
+
+  useEffect(() => {
+    if (!touched.phone) return undefined;
+
+    clearTimeout(phoneTimeoutRef.current);
+    const phone = normalizeDigits(formData.phone, 10);
+    const localError = validateRegister({ phone }).phone;
+
+    if (localError) {
+      setCheckingPhone(false);
+      setErrors((prev) => ({ ...prev, phone: "El teléfono debe contener entre 7 y 10 dígitos numéricos." }));
+      return undefined;
+    }
+
+    setCheckingPhone(true);
+    let cancelled = false;
+
+    phoneTimeoutRef.current = setTimeout(async () => {
+      try {
+        const data = await validatePhone(phone, "client");
+        if (cancelled) return;
+
+        setErrors((prev) => ({
+          ...prev,
+          phone: getPhoneValidationError(data),
+        }));
+      } catch {
+        if (!cancelled) {
+          setErrors((prev) => ({ ...prev, phone: null }));
+        }
+      } finally {
+        if (!cancelled) setCheckingPhone(false);
+      }
+    }, 500);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(phoneTimeoutRef.current);
+    };
+  }, [formData.phone, touched.phone]);
+
+  const handleNumericBeforeInput = (e) => {
+    if (!e.data || /^\d+$/.test(e.data)) return;
+    e.preventDefault();
+    const { name } = e.currentTarget;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    setErrors((prev) => ({ ...prev, [name]: "El teléfono solo debe contener números" }));
+  };
+
+  const handlePhonePaste = (e) => {
+    e.preventDefault();
+    const pastedValue = e.clipboardData.getData("text");
+
+    if (/\D/.test(pastedValue)) {
+      setTouched((prev) => ({ ...prev, phone: true }));
+      setErrors((prev) => ({ ...prev, phone: "El teléfono solo debe contener números" }));
+      return;
+    }
+
+    const nextPhone = buildSanitizedInputValue(
+      e.currentTarget,
+      pastedValue,
+      (value) => normalizeDigits(value, 10),
+    );
+    const updatedForm = { ...formData, phone: nextPhone };
+    const validationErrors = validateRegister(updatedForm);
+
+    setFormData(updatedForm);
+    setTouched((prev) => ({ ...prev, phone: true }));
+    setErrors((prev) => ({ ...prev, phone: validationErrors.phone }));
+  };
+
+  const handleEmailBeforeInput = (e) => {
+    if (!e.data || !/\s/.test(e.data)) return;
+    e.preventDefault();
+    const { name } = e.currentTarget;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    setErrors((prev) => ({ ...prev, [name]: "El correo no debe contener espacios." }));
+  };
+
+  const handleEmailPaste = (e) => {
+    e.preventDefault();
+    const nextEmail = buildSanitizedInputValue(
+      e.currentTarget,
+      e.clipboardData.getData("text"),
+      normalizeEmailInput,
+    );
+    const updatedForm = { ...formData, email: nextEmail };
+    const validationErrors = validateRegister(updatedForm);
+
+    setFormData(updatedForm);
+    setTouched((prev) => ({ ...prev, email: true }));
+    setErrors((prev) => ({ ...prev, email: validationErrors.email }));
+  };
+
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    if (name !== "fullName") return;
+
+    const formattedName = toTitleCaseName(formData.fullName);
+    const updatedForm = { ...formData, fullName: formattedName };
+    const validationErrors = validateRegister(updatedForm);
+
+    setFormData(updatedForm);
+    setTouched((prev) => ({ ...prev, fullName: true }));
+    setErrors((prev) => ({ ...prev, fullName: validationErrors.fullName }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const normalizedForm = {
+      ...formData,
+      fullName: toTitleCaseName(formData.fullName),
+      email: normalizeEmailInput(formData.email),
+      phone: normalizeDigits(formData.phone, 10),
+    };
+
+    setFormData(normalizedForm);
 
     // Marcar todos como tocados
     const allFields = ["fullName", "email", "phone", "password", "confirmPassword", "terms"];
     setTouched(allFields.reduce((acc, f) => ({ ...acc, [f]: true }), {}));
 
     // Validar formulario completo
-    const validationErrors = validateRegister(formData);
+    const validationErrors = validateRegister(normalizedForm);
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -57,13 +265,30 @@ export default function RegisterForm() {
       return;
     }
 
+    const emailCheck = await checkEmailAvailability(normalizedForm.email);
+    if (emailCheck?.exists) {
+      setErrors((prev) => ({ ...prev, email: "El correo ya está registrado" }));
+      setTouched((prev) => ({ ...prev, email: true }));
+      showWarning("Correo registrado", "El correo ya está registrado");
+      return;
+    }
+
+    const phoneValidation = await validatePhone(normalizedForm.phone, "client");
+    const phoneValidationError = getPhoneValidationError(phoneValidation);
+    if (phoneValidationError) {
+      setErrors((prev) => ({ ...prev, phone: phoneValidationError }));
+      setTouched((prev) => ({ ...prev, phone: true }));
+      showWarning("Teléfono inválido", phoneValidationError);
+      return;
+    }
+
     try {
       // Llamar register con objeto correcto
       const result = await register({
-        fullName: formData.fullName.trim(),
-        email: formData.email.trim().toLowerCase(),
+        fullName: normalizedForm.fullName,
+        email: normalizedForm.email,
         password: formData.password,
-        phone: parseInt(formData.phone.replace(/\D/g, ""), 10)
+        phone: parseInt(normalizedForm.phone, 10)
       });
 
       if (result.success) {
@@ -81,19 +306,14 @@ export default function RegisterForm() {
     }
   };
 
-  const Label = ({ text, htmlFor }) => (
-    <label htmlFor={htmlFor} className="flex items-center gap-1 mb-1 text-sm font-medium text-gray-700">
-      {text}
-      <span className="text-red-500">*</span>
-    </label>
-  );
-
   const inputStyle = (field) =>
     `w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors
     ${touched[field] && errors[field]
       ? "border-red-500 focus:ring-2 focus:ring-red-200"
       : "border-gray-300 focus:ring-2 focus:ring-blue-600"
     }`;
+
+  const hasBlockingErrors = Boolean(errors.email || errors.phone);
 
   return (
     <div className="max-w-2xl w-full mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -116,6 +336,7 @@ export default function RegisterForm() {
               name="fullName"
               value={formData.fullName}
               onChange={handleChange}
+              onBlur={handleBlur}
               placeholder="Juan Pérez García"
               className={inputStyle("fullName")}
               disabled={loading}
@@ -135,6 +356,8 @@ export default function RegisterForm() {
               name="email"
               value={formData.email}
               onChange={handleChange}
+              onBeforeInput={handleEmailBeforeInput}
+              onPaste={handleEmailPaste}
               placeholder="ejemplo@mail.com"
               className={inputStyle("email")}
               disabled={loading}
@@ -142,6 +365,9 @@ export default function RegisterForm() {
             />
             {touched.email && errors.email && (
               <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+            )}
+            {checkingEmail && touched.email && !errors.email && (
+              <p className="text-[#004D77] text-xs mt-1">Verificando correo...</p>
             )}
           </div>
 
@@ -154,14 +380,21 @@ export default function RegisterForm() {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
+              onBeforeInput={handleNumericBeforeInput}
+              onPaste={handlePhonePaste}
               placeholder="3001234567"
               maxLength={10}
+              inputMode="numeric"
+              pattern="[0-9]*"
               className={inputStyle("phone")}
               disabled={loading}
               autoComplete="tel"
             />
             {touched.phone && errors.phone && (
               <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+            )}
+            {checkingPhone && touched.phone && !errors.phone && (
+              <p className="text-[#004D77] text-xs mt-1">Verificando teléfono...</p>
             )}
           </div>
 
@@ -174,7 +407,7 @@ export default function RegisterForm() {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              placeholder="••••••••"
+              placeholder="********"
               className={inputStyle("password")}
               disabled={loading}
               autoComplete="new-password"
@@ -202,7 +435,7 @@ export default function RegisterForm() {
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
-              placeholder="••••••••"
+              placeholder="********"
               className={inputStyle("confirmPassword")}
               disabled={loading}
               autoComplete="new-password"
@@ -250,9 +483,9 @@ export default function RegisterForm() {
           <div className="flex flex-col gap-3 mt-4">
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || checkingEmail || checkingPhone || hasBlockingErrors}
               className={`w-full bg-[#004D77] text-white py-2.5 rounded-lg text-sm font-medium transition cursor-pointer
-                ${loading 
+                ${loading || checkingEmail || checkingPhone || hasBlockingErrors
                   ? "opacity-70 cursor-not-allowed" 
                   : "hover:bg-[#003D5e]"
                 }

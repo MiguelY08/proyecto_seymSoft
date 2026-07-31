@@ -6,7 +6,7 @@ import { getDashboardIndicators }
 import { adaptIndicatorsDashboard }
   from "../adapters/indicatorsAdapter.js";
 
-export default function useIndicators() {
+export default function useIndicators(filters = {}) {
   const [indicators, setIndicators] =
     useState(null);
 
@@ -23,7 +23,7 @@ export default function useIndicators() {
         setError(null);
 
         const response =
-          await getDashboardIndicators();
+          await getDashboardIndicators(filters);
 
         const adaptedData =
           adaptIndicatorsDashboard(
@@ -51,7 +51,7 @@ export default function useIndicators() {
 
         setLoading(false);
       }
-    }, []);
+    }, [filters.startDate, filters.endDate]);
 
   useEffect(() => {
     loadIndicators();

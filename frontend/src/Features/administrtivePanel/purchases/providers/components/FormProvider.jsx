@@ -15,8 +15,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, ChevronDown, Loader2 } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
-import { validateProviderForm } from '../utils/providerHelpers';
+import { getEmailValidationError, validateProviderForm } from '../utils/providerHelpers';
 import { categoriesService } from '../data/categoriesService';
+import { providersService } from '../data/providersService';
 import FormSelect from '../../../../shared/FormSelect';
 import LoadingOverlay from '../../../../shared/LoadingOverlay';
 
@@ -85,10 +86,40 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
   const [categoriesList, setCategoriesList] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
   const categoriasRef = useRef(null);
   const { showError, showConfirm } = useAlert();
   const isEditing = !!provider;
   const [isDocumentTypeDisabled, setIsDocumentTypeDisabled] = useState(false);
+
+  const findProviderByEmail = async (email) => {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!normalizedEmail) return null;
+
+    const result = await providersService.getAll({
+      page: 1,
+      limit: 10000,
+      search: '',
+    });
+
+    return result.data.find((item) => {
+      const sameEmail = String(item.correo || '').trim().toLowerCase() === normalizedEmail;
+      const sameProvider = provider?.id && Number(item.id) === Number(provider.id);
+      return sameEmail && !sameProvider;
+    }) || null;
+  };
+
+  const getDuplicateEmailError = async (email) => {
+    const localError = getEmailValidationError(email);
+    if (localError) return '';
+
+    const currentEmail = String(provider?.correo || '').trim().toLowerCase();
+    const nextEmail = String(email || '').trim().toLowerCase();
+    if (currentEmail && currentEmail === nextEmail) return '';
+
+    const duplicate = await findProviderByEmail(email);
+    return duplicate ? 'Este correo ya está registrado' : '';
+  };
 
   // Cargar categorías desde la API
   useEffect(() => {
@@ -154,6 +185,58 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
 
     setErrors({});
   }, [provider, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !touched.correo) return undefined;
+
+    const email = String(formData.correo || '').trim();
+    const localError = getEmailValidationError(formData.correo);
+
+    if (localError) {
+      setCheckingEmail(false);
+      return undefined;
+    }
+
+    const currentEmail = String(provider?.correo || '').trim().toLowerCase();
+    if (currentEmail && currentEmail === email.toLowerCase()) {
+      setCheckingEmail(false);
+      setErrors((prev) => ({
+        ...prev,
+        correo: prev.correo === 'Este correo ya está registrado' ? '' : prev.correo,
+      }));
+      return undefined;
+    }
+
+    let cancelled = false;
+    setCheckingEmail(true);
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const duplicateError = await getDuplicateEmailError(email);
+        if (cancelled) return;
+
+        setErrors((prev) => {
+          const currentLocalError = getEmailValidationError(formData.correo);
+          if (currentLocalError) return { ...prev, correo: currentLocalError };
+          return { ...prev, correo: duplicateError };
+        });
+      } catch {
+        if (!cancelled) {
+          setErrors((prev) => ({
+            ...prev,
+            correo: prev.correo === 'Este correo ya está registrado' ? '' : prev.correo,
+          }));
+        }
+      } finally {
+        if (!cancelled) setCheckingEmail(false);
+      }
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [formData.correo, isOpen, provider?.correo, provider?.id, touched.correo]);
 
   // Cierre del dropdown de categorías
   useEffect(() => {
@@ -397,6 +480,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
 
     if (Object.keys(validationErrors).length > 0) {
       showError('Errores en el formulario', 'Por favor corrija los errores antes de continuar');
+      return;
+    }
+
+    const duplicateEmailError = await getDuplicateEmailError(formData.correo);
+    if (duplicateEmailError) {
+      setErrors((prev) => ({ ...prev, correo: duplicateEmailError }));
+      setTouched((prev) => ({ ...prev, correo: true }));
+      showError('Errores en el formulario', duplicateEmailError);
       return;
     }
 
@@ -687,10 +778,13 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     onBlur={handleBlur}
                     placeholder="Ej: proveedor@email.com"
                     autoComplete="off"
-                    className={inputClass('correo')}
-                  />
-                  {renderError('correo')}
-                </div>
+              className={inputClass('correo')}
+            />
+            {checkingEmail && touched.correo && !errors.correo && (
+              <p className="mt-0.5 text-xs text-[#004D77]">Verificando si el correo ya está registrado...</p>
+            )}
+            {renderError('correo')}
+          </div>
 
               </div>
 

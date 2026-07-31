@@ -1,7 +1,7 @@
-import { useRef, useState } from "react"
-import { Eye, EyeOff } from "lucide-react"
+import { useRef, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { cancelInstallment } from "../services/paymentsServices";
-import { useAlert } from "../../../../shared/alerts/useAlert"
+import { useAlert } from "../../../../shared/alerts/useAlert";
 
 /*
   Modal para anular un abono de una factura específica.
@@ -20,30 +20,28 @@ export default function CancelPaymentModal({
   onClose,
   account,
   payment,
-  onSuccess
+  onSuccess,
 }) {
+  const { showSuccess, showError, showWarning, showConfirm } = useAlert();
 
-  const { showSuccess, showError, showWarning, showConfirm } = useAlert()
+  const [reason, setReason] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [reason,       setReason]       = useState("")
-  const [password,     setPassword]     = useState("")
-  const [errors,       setErrors]       = useState({})
-  const [showPassword, setShowPassword] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const submitLockRef = useRef(false);
 
-  const submitLockRef = useRef(false)
-
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const getUserName = (user) => {
-    if (!user) return null
-    if (typeof user === "string") return user
+    if (!user) return null;
+    if (typeof user === "string") return user;
 
-    const composedName =
-      [user.firstName, user.lastName]
-        .filter(Boolean)
-        .join(" ")
-        .trim()
+    const composedName = [user.firstName, user.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
 
     const directName =
       user.nombre ??
@@ -51,16 +49,16 @@ export default function CancelPaymentModal({
       user.name ??
       user.userName ??
       user.username ??
-      composedName
+      composedName;
 
-    return directName || getUserName(user.user) || user.email || null
-  }
+    return directName || getUserName(user.user) || user.email || null;
+  };
 
   const formatDateTime = (dateString) => {
-    if (!dateString) return "Sin registro"
+    if (!dateString) return "Sin registro";
 
-    const date = new Date(dateString)
-    if (Number.isNaN(date.getTime())) return dateString
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return dateString;
 
     return date.toLocaleString("es-CO", {
       day: "2-digit",
@@ -68,170 +66,176 @@ export default function CancelPaymentModal({
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    })
-  }
+    });
+  };
 
-  const paymentIsCancelled =
-    payment?.isCancelled ??
-    payment?.anulado
+  const formatDate = (dateString) => {
+    if (!dateString) return "-";
 
-  const registeredBy =
-    getUserName(payment?.registeredBy) ??
-    "Sin registro"
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return dateString;
 
-  const cancelledBy =
-    getUserName(payment?.cancelledBy) ??
-    "Sin registro"
+    return date.toLocaleDateString("es-CO", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
+  const paymentIsCancelled = payment?.isCancelled ?? payment?.anulado;
+
+  const registeredBy = getUserName(payment?.registeredBy) ?? "Sin registro";
+
+  const cancelledBy = getUserName(payment?.cancelledBy) ?? "Sin registro";
 
   const cancellationReason =
-    payment?.cancellationReason ??
-    payment?.motivoCancelacion ??
-    "Sin registro"
+    payment?.cancellationReason ?? payment?.motivoCancelacion ?? "Sin registro";
 
   const validateReason = (value) => {
-    const trimmed = value.trim()
-    if (!trimmed)           return "El motivo es obligatorio."
-    if (trimmed.length < 10) return "Debe tener mínimo 10 caracteres."
-    if (/^[0-9]/.test(trimmed)) return "No puede iniciar con números."
-    return ""
-  }
+    const trimmed = value.trim();
+    if (!trimmed) return "El motivo es obligatorio.";
+    if (trimmed.length < 10) return "Debe tener mínimo 10 caracteres.";
+    if (/^[0-9]/.test(trimmed)) return "No puede iniciar con números.";
+    return "";
+  };
 
   const handleReasonChange = (e) => {
-    const value = e.target.value
-    setReason(value)
-    setErrors(prev => ({ ...prev, reason: validateReason(value) }))
-  }
+    const value = e.target.value;
+    setReason(value);
+    setErrors((prev) => ({ ...prev, reason: validateReason(value) }));
+  };
 
   const handlePasswordChange = (e) => {
-    setPassword(e.target.value)
-    setErrors(prev => ({ ...prev, password: "" }))
-  }
+    setPassword(e.target.value);
+    setErrors((prev) => ({ ...prev, password: "" }));
+  };
 
-const handleSubmit = async () => {
-  if (
-    isSubmitting ||
-    submitLockRef.current
-  ) return;
+  const handleSubmit = async () => {
+    if (isSubmitting || submitLockRef.current) return;
 
-  submitLockRef.current = true;
+    submitLockRef.current = true;
 
-  const reasonError =
-    validateReason(reason);
+    const reasonError = validateReason(reason);
 
-  if (reasonError) {
-    setErrors({
-      reason: reasonError,
-    });
+    if (reasonError) {
+      setErrors({
+        reason: reasonError,
+      });
 
-    await showWarning(
-      "Motivo inválido",
-      reasonError
-    );
+      await showWarning("Motivo inválido", reasonError);
 
-    submitLockRef.current = false;
+      submitLockRef.current = false;
 
-    return;
-  }
+      return;
+    }
 
-  const confirm =
-    await showConfirm(
+    const confirm = await showConfirm(
       "warning",
       "Confirmar anulacion",
       "Esta acción no se puede deshacer.",
       {
-        confirmButtonText:
-          "Sí, anular",
-        cancelButtonText:
-          "Volver",
-      }
+        confirmButtonText: "Sí, anular",
+        cancelButtonText: "Volver",
+      },
     );
 
-  if (!confirm.isConfirmed) {
-    submitLockRef.current = false;
+    if (!confirm.isConfirmed) {
+      submitLockRef.current = false;
 
-    return;
-  }
-
-  try {
-    setIsSubmitting(true);
-
-    await cancelInstallment(
-      payment?.id,
-      reason,
-      password
-    );
-
-    showSuccess(
-      "Abono anulado",
-      "El abono fue anulado correctamente."
-    );
-
-    if (onSuccess) {
-      await onSuccess();
+      return;
     }
 
-    setReason("");
-    setPassword("");
-    setErrors({});
-    setShowPassword(false);
+    try {
+      setIsSubmitting(true);
 
-    onClose();
+      await cancelInstallment(payment?.id, reason, password);
 
-  } catch (error) {
+      showSuccess("Abono anulado", "El abono fue anulado correctamente.");
 
-    const message =
-      error?.response?.data?.message ||
-      error?.message ||
-      "No fue posible anular el abono.";
+      if (onSuccess) {
+        await onSuccess();
+      }
 
-    setErrors((prev) => ({
-      ...prev,
-      password: message,
-    }));
+      setReason("");
+      setPassword("");
+      setErrors({});
+      setShowPassword(false);
 
-    showError(
-      "Error",
-      message
-    );
-  } finally {
-    setIsSubmitting(false);
-    submitLockRef.current = false;
-  }
-};
+      onClose();
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "No fue posible anular el abono.";
+
+      setErrors((prev) => ({
+        ...prev,
+        password: message,
+      }));
+
+      showError("Error", message);
+    } finally {
+      setIsSubmitting(false);
+      submitLockRef.current = false;
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-2 sm:p-4 z-50">
       <div className="bg-white w-full max-w-md max-h-[94vh] rounded-2xl shadow-xl font-lexend overflow-hidden flex flex-col">
-
         {/* HEADER */}
         <div className="bg-[#0E3B5F] text-white px-4 sm:px-6 py-3 sm:py-4 rounded-t-2xl flex justify-between items-center gap-3">
           <h2 className="text-base sm:text-lg font-semibold">Anular Abono</h2>
-          <button onClick={onClose} className="cursor-pointer">✕</button>
+          <button onClick={onClose} className="cursor-pointer">
+            ✕
+          </button>
         </div>
 
         <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto">
-
           <p className="text-sm text-gray-600">
-            Esta acción marcará el abono como anulado. El saldo de la factura será recalculado automáticamente.
+            Esta acción marcará el abono como anulado. El saldo de la factura
+            será recalculado automáticamente.
           </p>
 
           {/* DATOS DEL ABONO */}
           <div className="bg-gray-100 p-3 sm:p-4 rounded-xl text-sm space-y-2 break-words">
-            <p><strong>Nro Abono:</strong> #{payment?.nroAbono ?? "-"}</p>
-            <p><strong>Cliente:</strong> {account?.nombre ?? "-"}</p>
-            <p><strong>Fecha:</strong> {payment?.fecha ?? "-"}</p>
             <p>
-              <strong>Valor:</strong>{" "}
-              ${new Intl.NumberFormat("es-CO").format(payment?.monto ?? 0)}
+              <strong>Nro Abono:</strong> #
+              {payment?.displayId ?? payment?.nroAbono ?? "-"}
             </p>
-            <p><strong>Medio de pago:</strong> {payment?.medioPago ?? "-"}</p>
-            <p><strong>Registrado por:</strong> {registeredBy}</p>
-            <p><strong>Estado:</strong> {paymentIsCancelled ? "Anulado" : "Activo"}</p>
+            <p>
+              <strong>Cliente:</strong> {account?.nombre ?? "-"}
+            </p>
+            <p>
+              <strong>Fecha:</strong>{" "}
+              {formatDate(payment?.fecha ?? payment?.createdAt)}
+            </p>
+            <p>
+              <strong>Valor:</strong> $
+              {new Intl.NumberFormat("es-CO").format(payment?.monto ?? 0)}
+            </p>
+            <p>
+              <strong>Medio de pago:</strong> {payment?.medioPago ?? "-"}
+            </p>
+            <p>
+              <strong>Registrado por:</strong> {registeredBy}
+            </p>
+            <p>
+              <strong>Estado:</strong>{" "}
+              {paymentIsCancelled ? "Anulado" : "Activo"}
+            </p>
             {paymentIsCancelled && (
               <>
-                <p><strong>Anulado por:</strong> {cancelledBy}</p>
-                <p><strong>Fecha de anulación:</strong> {formatDateTime(payment?.cancelledAt)}</p>
-                <p><strong>Motivo de anulación:</strong> {cancellationReason}</p>
+                <p>
+                  <strong>Anulado por:</strong> {cancelledBy}
+                </p>
+                <p>
+                  <strong>Fecha de anulación:</strong>{" "}
+                  {formatDateTime(payment?.cancelledAt)}
+                </p>
+                <p>
+                  <strong>Motivo de anulación:</strong> {cancellationReason}
+                </p>
               </>
             )}
           </div>
@@ -256,7 +260,9 @@ const handleSubmit = async () => {
 
           {/* PASSWORD ADMIN */}
           <div>
-            <label className="text-sm font-medium">Contraseña del administrador</label>
+            <label className="text-sm font-medium">
+              Contraseña del administrador
+            </label>
             <div className="relative mt-1">
               <input
                 type={showPassword ? "text" : "password"}
@@ -299,10 +305,8 @@ const handleSubmit = async () => {
               {isSubmitting ? "Anulando..." : "Confirmar anulación"}
             </button>
           </div>
-
         </div>
       </div>
     </div>
-  )
+  );
 }
-

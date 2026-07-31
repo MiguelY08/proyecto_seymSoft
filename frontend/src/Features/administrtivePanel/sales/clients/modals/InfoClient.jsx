@@ -332,7 +332,7 @@ function InfoClient({ isOpen, onClose, client }) {
           </div>
 
           {/* TARJETA DE CRÉDITO */}
-          <div className="mx-4 mt-3 shrink-0">
+          <div className="hidden">
             <div className="bg-gray-50 rounded-xl border border-gray-200 px-3 py-2.5 sm:px-4">
               
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -418,6 +418,87 @@ function InfoClient({ isOpen, onClose, client }) {
 
           {/* CONTENIDO PRINCIPAL */}
           <div className="px-4 py-4 flex-1 min-h-0 overflow-y-auto sm:px-5">
+            <div className="mb-4">
+              <div className="bg-gray-50 rounded-xl border border-gray-200 px-3 py-2.5 sm:px-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-[#004D77]/10 flex items-center justify-center">
+                      <CreditCard className="w-3.5 h-3.5 text-[#004D77]" strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Credito</p>
+                      <p className="text-sm font-bold text-gray-800">
+                        {creditoTotal ? formatCurrency(creditoTotal) : '$ 0'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
+                      <CreditCard className="w-3.5 h-3.5 text-blue-600" strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Credito disponible</p>
+                      <p className="text-sm font-bold text-blue-600">
+                        {formatCurrency(disponible)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
+                      <TrendingUp className="w-3.5 h-3.5 text-amber-600" strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Monto ocupado</p>
+                      <p className="text-sm font-bold text-amber-600">
+                        {montoOcupado > 0 ? formatCurrency(montoOcupado) : '$ 0'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 my-2" />
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-gray-500">RUT</span>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">RUT</p>
+                      <p className="text-sm font-bold text-gray-800">{formatRut(client.rut)}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-gray-500">CIU</span>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Cod. CIU</p>
+                      <p className="text-sm font-bold text-gray-800">{client.ciuCode || '-'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center">
+                      <Wallet className="w-3.5 h-3.5 text-green-600" strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Saldo a favor</p>
+                      <p className="text-sm font-bold text-green-600">
+                        {saldoFavor > 0 ? formatCurrency(saldoFavor) : '$ 0'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+                  Creditos activos: <span className="text-gray-700">{creditosActivos}</span>
+                </div>
+              </div>
+            </div>
             
             <div className="flex items-center gap-2 mb-3">
               <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">{primarySectionTitle}</span>

@@ -12,6 +12,57 @@ import {
 } from './helpers/customerOrderHelpers';
 import { ORDER_FONT_FAMILY, injectOrderTypography } from './orderTypography';
 
+const DETAIL_BATCH_SIZE = 3;
+const DETAIL_RETRY_DELAY_MS = 250;
+
+const wait = (milliseconds) =>
+  new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
+const loadOrderDetail = async (order, clientId) => {
+  if (order.productos?.length) return order;
+
+  let latestOrder = order;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const detailedOrder = await OrdersService.findById(order.id);
+      if (
+        detailedOrder &&
+        Number(detailedOrder.clienteId) === Number(clientId)
+      ) {
+        latestOrder = detailedOrder;
+        if (detailedOrder.productos?.length) return detailedOrder;
+      }
+    } catch {
+      // El listado puede llegar antes que sus relaciones. Se reintenta una vez.
+    }
+
+    if (attempt === 0) await wait(DETAIL_RETRY_DELAY_MS);
+  }
+
+  if (!latestOrder.productos?.length) {
+    throw new Error(`No fue posible cargar los productos del pedido #${order.numeroPedido || order.id}.`);
+  }
+
+  return latestOrder;
+};
+
+const loadDetailedOrders = async (orders, clientId, isActive) => {
+  const detailedOrders = [];
+
+  for (let index = 0; index < orders.length; index += DETAIL_BATCH_SIZE) {
+    if (!isActive()) return [];
+
+    const batch = orders.slice(index, index + DETAIL_BATCH_SIZE);
+    const batchDetails = await Promise.all(
+      batch.map((order) => loadOrderDetail(order, clientId))
+    );
+    detailedOrders.push(...batchDetails);
+  }
+
+  return detailedOrders;
+};
+
 function Orders() {
   injectOrderTypography();
   const navigate = useNavigate();
@@ -46,19 +97,10 @@ function Orders() {
         const clientOrders = response.filter(
           (order) => Number(order.clienteId) === Number(clientId)
         );
-        const detailedOrders = await Promise.all(
-          clientOrders.map(async (order) => {
-            if (order.productos?.length) return order;
-
-            try {
-              const detailedOrder = await OrdersService.findById(order.id);
-              return detailedOrder && Number(detailedOrder.clienteId) === Number(clientId)
-                ? detailedOrder
-                : order;
-            } catch {
-              return order;
-            }
-          })
+        const detailedOrders = await loadDetailedOrders(
+          clientOrders,
+          clientId,
+          () => active
         );
 
         if (!active) return;

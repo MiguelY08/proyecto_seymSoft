@@ -14,6 +14,9 @@ import {
   Plus,
   Search,
   Truck,
+  Pencil,
+  DollarSign,
+  ChevronRight,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAlert } from "../../../../shared/alerts/useAlert";
@@ -27,7 +30,7 @@ import {
 } from "../../../../shared/scanner";
 
 const CreateSidebar = ({
-  productsDB,
+  productsDB = [],
   providersList = [],
   selectedProvider,
   setSelectedProvider,
@@ -51,7 +54,7 @@ const CreateSidebar = ({
   providerTouched,
   setProviderTouched,
   openCreateProduct,
-  openCreateProvider,  // ← NUEVO PROP
+  openCreateProvider,
   extraBarcodes = {},
   onExtraBarcodesChange,
   onCollapse,
@@ -64,6 +67,17 @@ const CreateSidebar = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [purchasePrice, setPurchasePrice] = useState("");
+  
+  // Estados para editar precios de venta (expansible como código de barras)
+  const [showPriceEditor, setShowPriceEditor] = useState(false);
+  const [editingPrices, setEditingPrices] = useState({
+    retailPrice: "",
+    wholesalePrice: "",
+    partnerPrice: "",
+    bulkPrice: "",
+  });
+  const [priceErrors, setPriceErrors] = useState({});
 
   const [showBarcodeForm, setShowBarcodeForm] = useState(false);
   const [barcodeValue, setBarcodeValue] = useState("");
@@ -73,6 +87,7 @@ const CreateSidebar = ({
   const [scannerMessage, setScannerMessage] = useState(null);
   const providerWrapperRef = useRef(null);
   const productWrapperRef = useRef(null);
+  const purchasePriceInputRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -94,6 +109,19 @@ const CreateSidebar = ({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Cuando se selecciona un producto, cargar sus precios
+  useEffect(() => {
+    if (selectedProduct) {
+      setEditingPrices({
+        retailPrice: selectedProduct.valorUnit?.toString() || "",
+        wholesalePrice: selectedProduct.wholesalePrice?.toString() || "",
+        partnerPrice: selectedProduct.partnerPrice?.toString() || "",
+        bulkPrice: selectedProduct.bulkPrice?.toString() || "",
+      });
+      setPurchasePrice(selectedProduct.wholesalePrice?.toString() || "");
+    }
+  }, [selectedProduct]);
 
   const getProductWithLocalBarcodes = (product) => ({
     ...product,
@@ -164,6 +192,13 @@ const CreateSidebar = ({
         : "border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
     }`;
 
+  const priceInputClass = (error) =>
+    `w-full px-3 py-2 bg-white border rounded-lg text-sm text-gray-700 outline-none transition-colors duration-200 ${
+      error
+        ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+        : "border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
+    }`;
+
   const handleBackToPurchases = async (e) => {
     e.preventDefault();
     if (purchaseItems.length > 0) {
@@ -189,10 +224,12 @@ const CreateSidebar = ({
     setSelectedProduct(product);
     setShowSuggestions(false);
     setShowBarcodeForm(false);
+    setShowPriceEditor(false);
     setBarcodeValue("");
     setBarcodeError("");
     setBarcodeSaved(false);
     setActiveBarcodeIndex(nextActiveBarcodeIndex);
+    setPurchasePrice(product.wholesalePrice?.toString() || "");
   };
 
   const handleSearchChange = (e) => {
@@ -202,10 +239,12 @@ const CreateSidebar = ({
     if (selectedProduct && val !== selectedProduct.nombre) {
       setSelectedProduct(null);
       setShowBarcodeForm(false);
+      setShowPriceEditor(false);
       setBarcodeValue("");
       setBarcodeError("");
       setBarcodeSaved(false);
       setActiveBarcodeIndex(0);
+      setPurchasePrice("");
     }
   };
 
@@ -222,6 +261,7 @@ const CreateSidebar = ({
       setSelectedProduct(null);
       setShowSuggestions(true);
       setShowBarcodeForm(false);
+      setShowPriceEditor(false);
       setBarcodeValue("");
       setBarcodeError("");
       setBarcodeSaved(false);
@@ -264,13 +304,23 @@ const CreateSidebar = ({
 
   const handleToggleBarcodeForm = () => {
     if (!selectedProduct) return;
-    if (showBarcodeForm) {
-      setShowBarcodeForm(false);
+    // Si el editor de precios está abierto, lo cerramos
+    if (showPriceEditor) setShowPriceEditor(false);
+    setShowBarcodeForm(!showBarcodeForm);
+    if (!showBarcodeForm) {
       setBarcodeValue("");
       setBarcodeError("");
       setBarcodeSaved(false);
-    } else {
-      setShowBarcodeForm(true);
+    }
+  };
+
+  const handleTogglePriceEditor = () => {
+    if (!selectedProduct) return;
+    // Si el formulario de código de barras está abierto, lo cerramos
+    if (showBarcodeForm) setShowBarcodeForm(false);
+    setShowPriceEditor(!showPriceEditor);
+    if (!showPriceEditor) {
+      setPriceErrors({});
     }
   };
 
@@ -305,11 +355,67 @@ const CreateSidebar = ({
     }, 1800);
   };
 
+  // ================= PRECIO DE COMPRA =================
+  const handlePurchasePriceChange = (e) => {
+    const value = e.target.value;
+    if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+      setPurchasePrice(value);
+    }
+  };
+
+  // Función para enfocar el input de precio de compra (lapicero)
+  const focusPurchasePrice = () => {
+    if (purchasePriceInputRef.current) {
+      purchasePriceInputRef.current.focus();
+      purchasePriceInputRef.current.select();
+    }
+  };
+
+  // ================= PRECIOS DE VENTA (EXPANSIBLE) =================
+  const handlePriceInputChange = (field, value) => {
+    if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+      setEditingPrices(prev => ({ ...prev, [field]: value }));
+      if (priceErrors[field]) {
+        setPriceErrors(prev => ({ ...prev, [field]: undefined }));
+      }
+    }
+  };
+
+  const validatePrices = () => {
+    const errors = {};
+    const retail = parseFloat(editingPrices.retailPrice);
+    const wholesale = parseFloat(editingPrices.wholesalePrice);
+    const partner = parseFloat(editingPrices.partnerPrice);
+    const bulk = parseFloat(editingPrices.bulkPrice);
+
+    if (retail && wholesale && wholesale >= retail) {
+      errors.wholesalePrice = "Debe ser menor al precio detal";
+    }
+    if (wholesale && partner && partner > wholesale) {
+      errors.partnerPrice = "Debe ser menor o igual al precio mayorista";
+    }
+    if (retail && bulk && bulk >= retail) {
+      errors.bulkPrice = "Debe ser menor al precio detal";
+    }
+    return errors;
+  };
+
+  const handleSavePrices = () => {
+    const errors = validatePrices();
+    if (Object.keys(errors).length > 0) {
+      setPriceErrors(errors);
+      showError("Error de validación", "Corrige los errores en los precios");
+      return;
+    }
+    
+    console.log("Precios de venta guardados:", editingPrices);
+    setShowPriceEditor(false);
+    showConfirm("info", "Precios actualizados", "Los precios de venta se han actualizado correctamente.");
+  };
+
   const handleAddProduct = () => {
     handleAddProductProp(resolvedBarcode);
   };
-
-  const barcodeLinkDisabled = !selectedProduct;
 
   return (
     <div className="col-span-3">
@@ -372,9 +478,8 @@ const CreateSidebar = ({
                     className="bg-transparent outline-none text-sm w-full"
                   />
                 </div>
-                {/* ← BOTÓN CREAR PROVEEDOR CORREGIDO */}
                 <button
-                  onClick={openCreateProvider}  // ← Cambiado de openCreateProduct a openCreateProvider
+                  onClick={openCreateProvider}
                   title="Crear proveedor"
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#004D77] bg-white text-[#004D77] transition-colors hover:bg-[#004D77] hover:text-white"
                 >
@@ -485,7 +590,7 @@ const CreateSidebar = ({
           </div>
         </div>
 
-        {/* ================= BUSCAR PRODUCTO ================= */}
+        {/* ================= BUSCAR PRODUCTO + CÓDIGO DE BARRAS ================= */}
         <div
           ref={productWrapperRef}
           className="relative border-t border-gray-100 pt-4"
@@ -493,6 +598,8 @@ const CreateSidebar = ({
           <label className="mb-1.5 block text-sm font-medium text-gray-700">
             Producto
           </label>
+
+          {/* Fila: Buscador + Botón código de barras + Botón crear producto */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
@@ -509,6 +616,25 @@ const CreateSidebar = ({
                 }`}
               />
             </div>
+
+            {/* BOTÓN AGREGAR CÓDIGO DE BARRAS */}
+            <button
+              type="button"
+              onClick={handleToggleBarcodeForm}
+              disabled={!selectedProduct}
+              title={!selectedProduct ? "Primero selecciona un producto" : "Agregar código de barras adicional"}
+              className={`flex h-[42px] w-10 shrink-0 items-center justify-center rounded-lg border transition-colors ${
+                !selectedProduct
+                  ? "border-gray-200 bg-gray-100 text-gray-300 cursor-not-allowed"
+                  : showBarcodeForm
+                  ? "border-blue-600 bg-blue-600 text-white"
+                  : "border-blue-500 bg-white text-blue-600 hover:bg-blue-50 hover:border-blue-600"
+              }`}
+            >
+              <Barcode size={16} />
+            </button>
+
+            {/* Botón crear producto */}
             <button
               type="button"
               onClick={openCreateProduct}
@@ -517,6 +643,73 @@ const CreateSidebar = ({
             >
               <Plus size={16} />
             </button>
+          </div>
+
+          {/* Desplegable del código de barras */}
+          <div
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${
+              showBarcodeForm && selectedProduct
+                ? "max-h-80 opacity-100 mt-3"
+                : "max-h-0 opacity-0"
+            }`}
+          >
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-blue-700">
+                  Agregar código de barras
+                </span>
+                <span className="text-[10px] text-gray-500">
+                  {selectedProduct?.nombre}
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                  Nuevo código de barras
+                </label>
+                <input
+                  type="text"
+                  value={barcodeValue}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 13);
+                    setBarcodeValue(val);
+                    setBarcodeError("");
+                  }}
+                  placeholder="Ej: 7701234000099"
+                  maxLength={13}
+                  className={`w-full px-3 py-2 bg-white border rounded-lg text-sm text-gray-700 outline-none transition-all font-mono tracking-wider ${
+                    barcodeError
+                      ? "border-red-400 focus:ring-2 focus:ring-red-300"
+                      : "border-gray-300 focus:ring-2 focus:ring-[#004D77]"
+                  }`}
+                />
+                <p className="text-right text-xs text-gray-400 mt-1">
+                  {barcodeValue.length}/13 dígitos
+                </p>
+              </div>
+
+              {barcodeError && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle size={12} /> {barcodeError}
+                </p>
+              )}
+
+              <button
+                type="button"
+                onClick={handleSaveBarcode}
+                className={`w-full py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
+                  barcodeSaved
+                    ? "bg-green-500 text-white"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
+              >
+                {barcodeSaved ? (
+                  <><Check size={15} /> ¡Guardado!</>
+                ) : (
+                  "Guardar código"
+                )}
+              </button>
+            </div>
           </div>
 
           <div
@@ -567,6 +760,152 @@ const CreateSidebar = ({
           )}
         </div>
 
+        {/* ================= PRECIO DE COMPRA ================= */}
+        <div className="flex flex-col gap-1.5 border-t border-gray-100 pt-3">
+          <label className="block text-sm font-medium text-gray-700">
+            Precio de compra del producto
+          </label>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <DollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
+              <input
+                ref={purchasePriceInputRef}
+                type="text"
+                value={purchasePrice}
+                onChange={handlePurchasePriceChange}
+                placeholder="Precio de compra"
+                disabled={!selectedProduct}
+                className={`w-full rounded-lg border bg-white py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none transition-colors focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 ${
+                  !selectedProduct ? "bg-gray-100 cursor-not-allowed text-gray-400" : "border-gray-300"
+                }`}
+              />
+            </div>
+
+            {/* BOTÓN LAPICERO → Edita el precio de compra (enfoca el input) */}
+            <button
+              type="button"
+              onClick={focusPurchasePrice}
+              disabled={!selectedProduct}
+              title={!selectedProduct ? "Selecciona un producto primero" : "Editar precio de compra"}
+              className={`flex h-[42px] w-10 shrink-0 items-center justify-center rounded-lg border transition-colors ${
+                !selectedProduct
+                  ? "border-gray-200 bg-gray-100 text-gray-300 cursor-not-allowed"
+                  : "border-[#004D77] bg-white text-[#004D77] hover:bg-[#004D77] hover:text-white"
+              }`}
+            >
+              <Pencil size={16} />
+            </button>
+
+            {/* BOTÓN DÓLAR → Despliega editor de precios de venta */}
+            <button
+              type="button"
+              onClick={handleTogglePriceEditor}
+              disabled={!selectedProduct}
+              title={!selectedProduct ? "Selecciona un producto primero" : "Editar precios de venta (Detal, Mayorista, Colegas, X Pacas)"}
+              className={`flex h-[42px] w-10 shrink-0 items-center justify-center rounded-lg border transition-colors ${
+                !selectedProduct
+                  ? "border-gray-200 bg-gray-100 text-gray-300 cursor-not-allowed"
+                  : showPriceEditor
+                  ? "border-green-600 bg-green-600 text-white"
+                  : "border-green-600 bg-white text-green-600 hover:bg-green-600 hover:text-white"
+              }`}
+            >
+              <DollarSign size={16} />
+            </button>
+          </div>
+
+          {/* Desplegable de precios de venta (expansible como código de barras) */}
+          <div
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${
+              showPriceEditor && selectedProduct
+                ? "max-h-[400px] opacity-100 mt-2"
+                : "max-h-0 opacity-0"
+            }`}
+          >
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-gray-700">
+                  Editar precios de venta
+                </p>
+                <span className="text-[10px] text-gray-400">
+                  {selectedProduct?.nombre}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-medium text-gray-500 mb-1">
+                    Precio Detal
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPrices.retailPrice}
+                    onChange={(e) => handlePriceInputChange('retailPrice', e.target.value)}
+                    placeholder="0"
+                    className={priceInputClass(priceErrors.retailPrice)}
+                  />
+                  {priceErrors.retailPrice && (
+                    <p className="text-[10px] text-red-500 mt-0.5">{priceErrors.retailPrice}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-[10px] font-medium text-gray-500 mb-1">
+                    Precio Mayorista
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPrices.wholesalePrice}
+                    onChange={(e) => handlePriceInputChange('wholesalePrice', e.target.value)}
+                    placeholder="0"
+                    className={priceInputClass(priceErrors.wholesalePrice)}
+                  />
+                  {priceErrors.wholesalePrice && (
+                    <p className="text-[10px] text-red-500 mt-0.5">{priceErrors.wholesalePrice}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-[10px] font-medium text-gray-500 mb-1">
+                    Precio Colegas
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPrices.partnerPrice}
+                    onChange={(e) => handlePriceInputChange('partnerPrice', e.target.value)}
+                    placeholder="0"
+                    className={priceInputClass(priceErrors.partnerPrice)}
+                  />
+                  {priceErrors.partnerPrice && (
+                    <p className="text-[10px] text-red-500 mt-0.5">{priceErrors.partnerPrice}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-[10px] font-medium text-gray-500 mb-1">
+                    Precio X Pacas
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPrices.bulkPrice}
+                    onChange={(e) => handlePriceInputChange('bulkPrice', e.target.value)}
+                    placeholder="0"
+                    className={priceInputClass(priceErrors.bulkPrice)}
+                  />
+                  {priceErrors.bulkPrice && (
+                    <p className="text-[10px] text-red-500 mt-0.5">{priceErrors.bulkPrice}</p>
+                  )}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSavePrices}
+                className="w-full py-2 rounded-lg text-sm font-semibold bg-[#004D77] text-white hover:bg-[#003a5c] transition-colors"
+              >
+                Guardar precios de venta
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* ================= SELECTOR DE CÓDIGO DE BARRAS ACTIVO ================= */}
         {selectedProduct && availableBarcodes.length > 1 && (
           <div className="mb-2 mt-3">
@@ -591,109 +930,6 @@ const CreateSidebar = ({
             </div>
           </div>
         )}
-
-        {/* ================= LINK AGREGAR CÓDIGO DE BARRAS ================= */}
-        <div className="mb-4 mt-3">
-          <button
-            type="button"
-            onClick={handleToggleBarcodeForm}
-            title={barcodeLinkDisabled ? "Primero selecciona un producto del buscador" : ""}
-            className={`flex items-center gap-1.5 text-xs font-medium transition-colors group ${
-              barcodeLinkDisabled
-                ? "text-gray-300 cursor-not-allowed"
-                : "text-[#004D77] hover:text-[#003a5c] cursor-pointer"
-            }`}
-          >
-            <Barcode size={13} className="opacity-70" />
-            <span className={barcodeLinkDisabled ? "" : "underline underline-offset-2 decoration-dotted"}>
-              Agregar código de barras
-            </span>
-            {!barcodeLinkDisabled && (
-              showBarcodeForm
-                ? <ChevronUp size={13} className="opacity-60" />
-                : <ChevronDown size={13} className="opacity-60" />
-            )}
-          </button>
-
-          {barcodeLinkDisabled && (
-            <p className="text-xs text-gray-400 mt-0.5 ml-[18px]">
-              Selecciona un producto primero
-            </p>
-          )}
-
-          <div
-            className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              showBarcodeForm && selectedProduct
-                ? "max-h-80 opacity-100 mt-3"
-                : "max-h-0 opacity-0"
-            }`}
-          >
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Producto seleccionado
-                </label>
-                <div className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-500 font-medium select-none">
-                  {selectedProduct?.nombre}
-                  <span className="ml-2 text-xs text-gray-400 font-normal font-mono">
-                    ({selectedProduct?.codigoBarras})
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Nuevo código de barras
-                </label>
-                <input
-                  type="text"
-                  value={barcodeValue}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, "").slice(0, 13);
-                    setBarcodeValue(val);
-                    setBarcodeError("");
-                  }}
-                  placeholder="Ej: 7701234000099"
-                  maxLength={13}
-                  className={`w-full px-3 py-2 bg-white border rounded-lg text-sm text-gray-700 outline-none transition-all font-mono tracking-wider ${
-                    barcodeError
-                      ? "border-red-400 focus:ring-2 focus:ring-red-300"
-                      : "border-gray-300 focus:ring-2 focus:ring-[#004D77]"
-                  }`}
-                />
-                <p className="text-right text-xs text-gray-400 mt-1">
-                  {barcodeValue.length}/13 dígitos
-                </p>
-              </div>
-
-              <div
-                className={`overflow-hidden transition-all duration-200 ${
-                  barcodeError ? "max-h-8 opacity-100" : "max-h-0 opacity-0"
-                }`}
-              >
-                <p className="text-xs text-red-500 flex items-center gap-1">
-                  <AlertCircle size={12} /> {barcodeError}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleSaveBarcode}
-                className={`w-full py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
-                  barcodeSaved
-                    ? "bg-green-500 text-white"
-                    : "bg-[#004D77] text-white hover:bg-[#003a5c]"
-                }`}
-              >
-                {barcodeSaved ? (
-                  <><Check size={15} /> ¡Guardado!</>
-                ) : (
-                  "Guardar código"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
 
         {/* ================= CANTIDAD ================= */}
         <div className="flex flex-col gap-1.5">

@@ -32,7 +32,11 @@ export const notificationService = {
 
   async markAsRead(id) {
     const response = await apiClient.patch(`/notifications/${id}/read`);
-    return normalizeNotification(getData(response));
+    const data = getData(response);
+
+    return data
+      ? normalizeNotification(data)
+      : { id, isRead: true };
   },
 
   async markAllAsRead() {
@@ -47,4 +51,3 @@ export const notificationService = {
 };
 
 export default notificationService;
-

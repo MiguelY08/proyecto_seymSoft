@@ -185,6 +185,7 @@ function DetailOrder({
   const entregaMostrar = isRecoge ? 'El cliente lo recoge' : 'Domicilio';
   const direccionEntregaCompleta = formatDeliveryAddress(order);
   const personaRecibe = order.deliveryRecipientName || order.clienteNombre || 'No especificado';
+  const telefonoPersonaRecibe = order.deliveryRecipientPhone || 'No especificado';
   const clienteDocumento =
     order.clienteDocumento ??
     order.customerDocument ??
@@ -215,7 +216,8 @@ function DetailOrder({
       { confirmButtonText: 'Sí, marcar listo', cancelButtonText: 'Cancelar' }
     );
     if (!result?.isConfirmed) return;
-    onEstadoChange(order, ESTADOS_LOGISTICOS.LISTO);
+    await onEstadoChange?.(order, ESTADOS_LOGISTICOS.LISTO);
+    return;
     showSuccess('Pedido actualizado', `El pedido #${order.numeroPedido || order.id} ahora está listo.`);
   };
 
@@ -368,6 +370,9 @@ function DetailOrder({
 
               <DetailRow icon={Calendar}   label="Fecha"      value={fechaMostrar} />
               <DetailRow icon={User}       label="Persona que recibe" value={personaRecibe} />
+              {!isRecoge && (
+                <DetailRow icon={Phone} label="Telefono de quien recibe" value={telefonoPersonaRecibe} />
+              )}
               <DetailRow icon={IdCard}     label="Documento cliente" value={documentoCliente || 'No registrado'} />
               <DetailRow icon={Phone}      label="Teléfono"   value={order.clienteTelefono || 'No registrado'} />
               <DetailRow icon={Mail}       label="Correo"     value={order.clienteEmail || 'No registrado'} />

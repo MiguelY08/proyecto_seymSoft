@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -9,8 +7,8 @@ import {
 
 import { useAuth } from "../../access/context/AuthContext";
 import notificationService from "../services/notificationService";
+import { NotificationContext } from "./notificationContextValue";
 
-const NotificationContext = createContext();
 const NOTIFICATION_REFRESH_INTERVAL_MS = 60 * 1000;
 
 export const NotificationProvider = ({ children }) => {
@@ -58,23 +56,38 @@ export const NotificationProvider = ({ children }) => {
 
   const markAsRead = useCallback(async (id) => {
     const notification = await notificationService.markAsRead(id);
+    let updatedNotification = null;
     const wasUnread = notifications.some((currentNotification) => (
       currentNotification.id === id && !currentNotification.isRead
     ));
 
     setNotifications((currentNotifications) => (
-      currentNotifications.map((currentNotification) => (
-        currentNotification.id === id
-          ? notification
-          : currentNotification
-      ))
+      currentNotifications.map((currentNotification) => {
+        if (currentNotification.id !== id) return currentNotification;
+
+        updatedNotification = {
+          ...currentNotification,
+          ...notification,
+          id: notification.id ?? currentNotification.id,
+          title: notification.title || currentNotification.title,
+          message: notification.message || currentNotification.message,
+          type: notification.type || currentNotification.type,
+          createdAt: notification.createdAt || currentNotification.createdAt,
+          updatedAt: notification.updatedAt || currentNotification.updatedAt,
+          actionUrl: notification.actionUrl || currentNotification.actionUrl,
+          metadata: notification.metadata || currentNotification.metadata,
+          isRead: true,
+        };
+
+        return updatedNotification;
+      })
     ));
 
     if (wasUnread) {
       setUnreadCount((currentCount) => Math.max(0, currentCount - 1));
     }
 
-    return notification;
+    return updatedNotification ?? notification;
   }, [notifications]);
 
   const markAllAsRead = useCallback(async () => {
@@ -171,14 +184,3 @@ export const NotificationProvider = ({ children }) => {
     </NotificationContext.Provider>
   );
 };
-
-export const useNotificationContext = () => {
-  const context = useContext(NotificationContext);
-
-  if (!context) {
-    throw new Error("useNotifications debe usarse dentro de NotificationProvider");
-  }
-
-  return context;
-};
-

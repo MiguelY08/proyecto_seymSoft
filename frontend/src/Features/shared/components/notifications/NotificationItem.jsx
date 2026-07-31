@@ -12,7 +12,7 @@ import {
   Users,
   Warehouse,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 const typeIconMap = {
   success: CheckCircle2,
@@ -63,21 +63,28 @@ function NotificationItem({
   notification,
   onMarkAsRead,
   onDelete,
-  onClose,
+  onOpenNotification,
 }) {
-  const navigate = useNavigate();
+  const [expanded, setExpanded] = useState(false);
   const Icon = typeIconMap[notification.type] || Bell;
   const iconColor = typeColorMap[notification.type] || typeColorMap.info;
+  const longMessage = notification.metadata?.longMessage || notification.metadata?.detailMessage || "";
+  const canReadMore = Boolean(longMessage) || String(notification.message || "").length > 95;
+  const visibleMessage = expanded && longMessage ? longMessage : notification.message;
 
   const handleOpen = async () => {
+    let currentNotification = notification;
+
     if (!notification.isRead) {
-      await onMarkAsRead(notification.id);
+      currentNotification =
+        await onMarkAsRead(notification.id) || notification;
     }
 
-    if (notification.actionUrl) {
-      onClose?.();
-      navigate(notification.actionUrl);
-    }
+    onOpenNotification?.({
+      ...notification,
+      ...currentNotification,
+      isRead: true,
+    });
   };
 
   return (
@@ -103,9 +110,29 @@ function NotificationItem({
               <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-500" />
             )}
           </span>
-          <span className="mt-1 line-clamp-2 min-w-0 break-words text-xs leading-5 text-slate-600 [overflow-wrap:anywhere]">
-            {notification.message}
+          <span className={`mt-1 min-w-0 break-words text-xs leading-5 text-slate-600 [overflow-wrap:anywhere] ${expanded ? "" : "line-clamp-2"}`}>
+            {visibleMessage}
           </span>
+          {canReadMore && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(event) => {
+                event.stopPropagation();
+                setExpanded((current) => !current);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setExpanded((current) => !current);
+                }
+              }}
+              className="mt-1 inline-flex text-[11px] font-semibold text-[#004D77] hover:underline"
+            >
+              {expanded ? "Leer menos" : "Leer más"}
+            </span>
+          )}
           <span className="mt-1 block text-[11px] font-medium text-slate-400">
             {formatDate(notification.createdAt)}
           </span>
@@ -137,4 +164,3 @@ function NotificationItem({
 }
 
 export default NotificationItem;
-
