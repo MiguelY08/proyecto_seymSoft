@@ -1,4 +1,4 @@
-﻿// features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx
+﻿﻿// features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -8,7 +8,12 @@ import CreateTable from "../Components/TableCreate";
 import CreateProduct from "../../products/modals/CreateProduct";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import FormProvider from "../../providers/components/FormProvider";
-import { createPurchase, getProducts, getProviders } from "../data/PurchasesService";
+import { 
+  createPurchase, 
+  getProducts, 
+  getProviders,
+  updateProductPrices 
+} from "../data/PurchasesService";
 import { providersService } from "../../providers/data/providersService";
 import { findProductByBarcode, productMatchesBarcodeSearch } from "../../../../shared/scanner";
 import Spinner from "../../../../shared/spinner";
@@ -123,8 +128,6 @@ const CreatePurchase = () => {
   };
 
   const handleSaveProvider = async (dataToSave) => {
-    // Convertir las claves en inglés que envía FormProvider al formato
-    // que espera providersService.create (claves en español)
     const providerPayload = {
       tipoPersona: dataToSave.personType,
       tipo: dataToSave.documentType,
@@ -146,18 +149,16 @@ const CreatePurchase = () => {
       const newProvider = await providersService.create(providerPayload);
       showSuccess("Proveedor creado", "El proveedor se creó correctamente");
 
-      // Seleccionar automáticamente el proveedor recién creado
       setSelectedProvider(newProvider.nombre);
       setSelectedProviderId(newProvider.id);
 
       setIsFormModalOpen(false);
 
-      // Recargar lista de proveedores
       const updatedProviders = await getProviders();
       setProvidersList(updatedProviders);
     } catch (error) {
       showError("Error", error.message || "No se pudo crear el proveedor");
-      throw error; // Para que FormProvider no cierre el modal
+      throw error;
     }
   };
 
@@ -183,7 +184,6 @@ const CreatePurchase = () => {
   const handleCreateProduct = (newProduct) => {
     console.log("Producto creado:", newProduct);
     setShowCreateProduct(false);
-    // Recargar productos
     getProducts().then(setProductsDB);
   };
 
@@ -195,7 +195,8 @@ const CreatePurchase = () => {
     ],
   });
 
-  const handleAddProduct = async (resolvedBarcode, purchasePrice) => {
+  // ========== HANDLE ADD PRODUCT ==========
+  const handleAddProduct = async (resolvedBarcode, purchasePrice, salePrices = {}) => {
     const searchTerm = searchProduct.trim();
 
     if (!searchTerm && !resolvedBarcode) {
@@ -219,7 +220,20 @@ const CreatePurchase = () => {
     }
 
     const codigosExtra = extraBarcodes[foundProduct.codigoBarras] ?? [];
-    const unitPrice = Number(purchasePrice) || foundProduct.supplierPrice || foundProduct.valorUnit;
+    
+    // ========== PRECIO DE COMPRA = usar el que viene del sidebar ==========
+    const unitPrice = Number(purchasePrice) || 
+                      foundProduct.supplierPrice || 
+                      foundProduct.wholesalePrice || 
+                      foundProduct.valorUnit;
+
+    // ========== PREPARAR PRECIOS DE VENTA ==========
+    const salePricesToSave = {
+      retailPrice: salePrices.retailPrice ? Number(salePrices.retailPrice) : foundProduct.retailPrice,
+      wholesalePrice: salePrices.wholesalePrice ? Number(salePrices.wholesalePrice) : foundProduct.wholesalePrice,
+      partnerPrice: salePrices.partnerPrice ? Number(salePrices.partnerPrice) : foundProduct.partnerPrice,
+      bulkPrice: salePrices.bulkPrice ? Number(salePrices.bulkPrice) : foundProduct.bulkPrice,
+    };
 
     const existingItem = purchaseItems.find(
       (item) => item.codigoBarras === foundProduct.codigoBarras
@@ -229,10 +243,24 @@ const CreatePurchase = () => {
       const updatedItems = purchaseItems.map((item) => {
         if (item.codigoBarras === foundProduct.codigoBarras) {
           const nuevaCantidad = item.cantidad + quantity;
-          const subtotal = item.valorUnit * nuevaCantidad;
+          const subtotal = unitPrice * nuevaCantidad;
           const ivaValor = (subtotal * foundProduct.iva) / 100;
           const total = subtotal + ivaValor;
-          return { ...item, cantidad: nuevaCantidad, subtotal, ivaValor, total, codigosExtra };
+          return { 
+            ...item, 
+            cantidad: nuevaCantidad, 
+            subtotal, 
+            ivaValor, 
+            total, 
+            codigosExtra,
+            valorUnit: unitPrice,
+            supplierPrice: unitPrice,
+            // ========== Guardar precios de venta ==========
+            retailPrice: salePricesToSave.retailPrice,
+            wholesalePrice: salePricesToSave.wholesalePrice,
+            partnerPrice: salePricesToSave.partnerPrice,
+            bulkPrice: salePricesToSave.bulkPrice,
+          };
         }
         return item;
       });
@@ -252,6 +280,11 @@ const CreatePurchase = () => {
         cantidad: quantity,
         valorUnit: unitPrice,
         supplierPrice: unitPrice,
+        // ========== Guardar precios de venta ==========
+        retailPrice: salePricesToSave.retailPrice,
+        wholesalePrice: salePricesToSave.wholesalePrice,
+        partnerPrice: salePricesToSave.partnerPrice,
+        bulkPrice: salePricesToSave.bulkPrice,
         subtotal,
         iva: foundProduct.iva,
         ivaValor,
@@ -267,6 +300,7 @@ const CreatePurchase = () => {
     setQuantity(1);
   };
 
+  // ========== GUARDAR COMPRA Y ACTUALIZAR PRODUCTOS ==========
   const handleSavePurchase = async () => {
     setInvoiceTouched(true);
     setDateTouched(true);
@@ -281,7 +315,7 @@ const CreatePurchase = () => {
       return;
     }
 
-    const result = await showConfirm("info", "Confirmar compra", "¿Deseas guardar esta compra?", {
+    const result = await showConfirm("info", "Confirmar compra", "¿Deseas guardar esta compra y actualizar los precios de los productos?", {
       confirmButtonText: "Sí, guardar",
       cancelButtonText: "Cancelar",
     });
@@ -291,6 +325,7 @@ const CreatePurchase = () => {
     setLoading(true);
 
     try {
+      // 1. Guardar la compra
       await createPurchase({
         numeroFacturacion: invoiceNumber.trim(),
         fechaCompra: purchaseDate,
@@ -303,7 +338,48 @@ const CreatePurchase = () => {
         })),
       });
 
-      showSuccess("Compra guardada", "Se registró correctamente");
+      // ========== 2. ACTUALIZAR PRECIOS DE CADA PRODUCTO EN LA BD ==========
+      const updatePromises = purchaseItems.map(async (item) => {
+        const pricesToUpdate = {};
+        
+        // Precio de compra (si fue editado)
+        if (item.supplierPrice !== undefined && item.supplierPrice !== null) {
+          pricesToUpdate.supplierPrice = Number(item.supplierPrice);
+        }
+        
+        // Precios de venta (si fueron editados)
+        if (item.retailPrice !== undefined && item.retailPrice !== null) {
+          pricesToUpdate.retailPrice = Number(item.retailPrice);
+        }
+        if (item.wholesalePrice !== undefined && item.wholesalePrice !== null) {
+          pricesToUpdate.wholesalePrice = Number(item.wholesalePrice);
+        }
+        if (item.partnerPrice !== undefined && item.partnerPrice !== null) {
+          pricesToUpdate.partnerPrice = Number(item.partnerPrice);
+        }
+        if (item.bulkPrice !== undefined && item.bulkPrice !== null) {
+          pricesToUpdate.bulkPrice = Number(item.bulkPrice);
+        }
+
+        // Solo actualizar si hay cambios
+        if (Object.keys(pricesToUpdate).length > 0) {
+          try {
+            console.log(`🔄 Actualizando producto ${item.idProduct}:`, pricesToUpdate);
+            const updated = await updateProductPrices(item.idProduct, pricesToUpdate);
+            console.log(`✅ Producto ${item.idProduct} actualizado:`, updated);
+            return updated;
+          } catch (err) {
+            console.error(`❌ Error actualizando producto ${item.idProduct}:`, err);
+            // No lanzamos error para no interrumpir el flujo, pero lo registramos
+            return null;
+          }
+        }
+        return null;
+      });
+
+      await Promise.all(updatePromises);
+
+      showSuccess("Compra guardada", "Se registró correctamente y los precios fueron actualizados");
       navigate("/admin/purchases");
     } catch (err) {
       showError("Error", err.message || "No se pudo guardar la compra.");
@@ -480,7 +556,3 @@ const CreatePurchase = () => {
 };
 
 export default CreatePurchase;
-
-
-
-

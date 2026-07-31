@@ -68,6 +68,7 @@ const CreateSidebar = ({
 
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [purchasePrice, setPurchasePrice] = useState("");
+  const [isPriceEditable, setIsPriceEditable] = useState(false); // ← controla si el precio es editable
   
   // Estados para editar precios de venta (expansible como código de barras)
   const [showPriceEditor, setShowPriceEditor] = useState(false);
@@ -114,12 +115,17 @@ const CreateSidebar = ({
   useEffect(() => {
     if (selectedProduct) {
       setEditingPrices({
-        retailPrice: selectedProduct.valorUnit?.toString() || "",
+        retailPrice: selectedProduct.retailPrice?.toString() || "",
         wholesalePrice: selectedProduct.wholesalePrice?.toString() || "",
         partnerPrice: selectedProduct.partnerPrice?.toString() || "",
         bulkPrice: selectedProduct.bulkPrice?.toString() || "",
       });
-      setPurchasePrice((selectedProduct.supplierPrice ?? selectedProduct.wholesalePrice ?? "").toString());
+      // ========== PRECIO DE COMPRA = supplierPrice (precio_proveedor) ==========
+      setPurchasePrice(
+        (selectedProduct.supplierPrice ?? selectedProduct.wholesalePrice ?? "").toString()
+      );
+      // ========== POR DEFECTO NO ES EDITABLE ==========
+      setIsPriceEditable(false);
     }
   }, [selectedProduct]);
 
@@ -229,7 +235,21 @@ const CreateSidebar = ({
     setBarcodeError("");
     setBarcodeSaved(false);
     setActiveBarcodeIndex(nextActiveBarcodeIndex);
-    setPurchasePrice((product.supplierPrice ?? product.wholesalePrice ?? "").toString());
+    
+    // ========== PRECIO DE COMPRA = supplierPrice (precio_proveedor) ==========
+    setPurchasePrice(
+      (product.supplierPrice ?? product.wholesalePrice ?? "").toString()
+    );
+    // ========== POR DEFECTO NO ES EDITABLE ==========
+    setIsPriceEditable(false);
+    
+    // Cargar precios de venta
+    setEditingPrices({
+      retailPrice: product.retailPrice?.toString() || "",
+      wholesalePrice: product.wholesalePrice?.toString() || "",
+      partnerPrice: product.partnerPrice?.toString() || "",
+      bulkPrice: product.bulkPrice?.toString() || "",
+    });
   };
 
   const handleSearchChange = (e) => {
@@ -245,6 +265,7 @@ const CreateSidebar = ({
       setBarcodeSaved(false);
       setActiveBarcodeIndex(0);
       setPurchasePrice("");
+      setIsPriceEditable(false);
     }
   };
 
@@ -304,7 +325,6 @@ const CreateSidebar = ({
 
   const handleToggleBarcodeForm = () => {
     if (!selectedProduct) return;
-    // Si el editor de precios está abierto, lo cerramos
     if (showPriceEditor) setShowPriceEditor(false);
     setShowBarcodeForm(!showBarcodeForm);
     if (!showBarcodeForm) {
@@ -316,7 +336,6 @@ const CreateSidebar = ({
 
   const handleTogglePriceEditor = () => {
     if (!selectedProduct) return;
-    // Si el formulario de código de barras está abierto, lo cerramos
     if (showBarcodeForm) setShowBarcodeForm(false);
     setShowPriceEditor(!showPriceEditor);
     if (!showPriceEditor) {
@@ -361,12 +380,17 @@ const CreateSidebar = ({
     if (value === '' || /^\d*\.?\d*$/.test(value)) setPurchasePrice(value);
   };
 
-  // Función para enfocar el input de precio de compra (lapicero)
-  const focusPurchasePrice = () => {
-    if (purchasePriceInputRef.current) {
-      purchasePriceInputRef.current.focus();
-      purchasePriceInputRef.current.select();
-    }
+  // ========== FUNCIÓN DEL LAPICERO: habilita la edición del precio ==========
+  const handleEnablePriceEdit = () => {
+    if (!selectedProduct) return;
+    setIsPriceEditable(true);
+    // Enfocar y seleccionar el input
+    setTimeout(() => {
+      if (purchasePriceInputRef.current) {
+        purchasePriceInputRef.current.focus();
+        purchasePriceInputRef.current.select();
+      }
+    }, 100);
   };
 
   // ================= PRECIOS DE VENTA (EXPANSIBLE) =================
@@ -412,7 +436,17 @@ const CreateSidebar = ({
   };
 
   const handleAddProduct = () => {
-    handleAddProductProp(resolvedBarcode, purchasePrice);
+    // ========== Enviar el precio de compra y los precios de venta al padre ==========
+    handleAddProductProp(
+      resolvedBarcode, 
+      purchasePrice,
+      {
+        retailPrice: editingPrices.retailPrice,
+        wholesalePrice: editingPrices.wholesalePrice,
+        partnerPrice: editingPrices.partnerPrice,
+        bulkPrice: editingPrices.bulkPrice,
+      }
+    );
   };
 
   return (
@@ -597,7 +631,6 @@ const CreateSidebar = ({
             Producto
           </label>
 
-          {/* Fila: Buscador + Botón código de barras + Botón crear producto */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
@@ -615,7 +648,6 @@ const CreateSidebar = ({
               />
             </div>
 
-            {/* BOTÓN AGREGAR CÓDIGO DE BARRAS */}
             <button
               type="button"
               onClick={handleToggleBarcodeForm}
@@ -632,7 +664,6 @@ const CreateSidebar = ({
               <Barcode size={16} />
             </button>
 
-            {/* Botón crear producto */}
             <button
               type="button"
               onClick={openCreateProduct}
@@ -772,22 +803,26 @@ const CreateSidebar = ({
                 value={purchasePrice}
                 onChange={handlePurchasePriceChange}
                 placeholder="Precio de compra"
-                disabled={!selectedProduct}
+                disabled={!selectedProduct || !isPriceEditable}
                 className={`w-full rounded-lg border bg-white py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none transition-colors focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 ${
-                  !selectedProduct ? "bg-gray-100 cursor-not-allowed text-gray-400" : "border-gray-300"
+                  !selectedProduct || !isPriceEditable 
+                    ? "bg-gray-100 cursor-not-allowed text-gray-400" 
+                    : "border-gray-300"
                 }`}
               />
             </div>
 
-            {/* BOTÓN LAPICERO → Edita el precio de compra (enfoca el input) */}
+            {/* ========== LAPICERO → Habilita la edición del precio ========== */}
             <button
               type="button"
-              onClick={focusPurchasePrice}
+              onClick={handleEnablePriceEdit}
               disabled={!selectedProduct}
               title={!selectedProduct ? "Selecciona un producto primero" : "Editar precio de compra"}
               className={`flex h-[42px] w-10 shrink-0 items-center justify-center rounded-lg border transition-colors ${
                 !selectedProduct
                   ? "border-gray-200 bg-gray-100 text-gray-300 cursor-not-allowed"
+                  : isPriceEditable
+                  ? "border-[#004D77] bg-[#004D77] text-white"
                   : "border-[#004D77] bg-white text-[#004D77] hover:bg-[#004D77] hover:text-white"
               }`}
             >
@@ -811,8 +846,17 @@ const CreateSidebar = ({
               <DollarSign size={16} />
             </button>
           </div>
+          
+          {/* ========== Indicador de estado de edición ========== */}
+          {selectedProduct && (
+            <p className={`text-[10px] ${isPriceEditable ? 'text-[#004D77]' : 'text-gray-400'}`}>
+              {isPriceEditable 
+                ? '✏️ Precio editable - modifica el valor y agrega el producto' 
+                : '🔒 Haz clic en el lápiz para editar el precio de compra'}
+            </p>
+          )}
 
-          {/* Desplegable de precios de venta (expansible como código de barras) */}
+          {/* Desplegable de precios de venta */}
           <div
             className={`overflow-hidden transition-all duration-300 ease-in-out ${
               showPriceEditor && selectedProduct
