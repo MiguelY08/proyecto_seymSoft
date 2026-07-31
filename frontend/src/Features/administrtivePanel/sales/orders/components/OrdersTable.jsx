@@ -1,14 +1,16 @@
 // src/features/orders/components/OrdersTable.jsx
 import React from 'react';
-import { AlertTriangle, Info, SquarePen, XCircle, Package } from 'lucide-react';
+import { AlertTriangle, Info, SquarePen, XCircle, Package, Phone } from 'lucide-react';
 import {
   highlight,
   EstadoLogisticoBadgeTable,
   EstadoPagoBadgeTable,
   getPermisos
 } from '../helpers/ordersHelpers';
+import { calculateHoverPosition } from '../helpers/hoverPositionHelper';
 import { ESTADOS_LOGISTICOS, PaymentService } from '../services/ordersService';
 import OrderPaymentHover from './OrderPaymentHover';
+import OrderPhoneHover from './OrderPhoneHover';
 import Permission from '../../../configuration/roles/components/Permission';
 import { formatDeliveryAddress } from '../helpers/deliveryAddressHelper';
 
@@ -69,32 +71,17 @@ function OrdersTable({
   const isSearching = hasActiveFilters || (totalOrders > 0 && search.trim().length > 0);
   const [paymentCache, setPaymentCache] = React.useState({});
   const [paymentHoverPositions, setPaymentHoverPositions] = React.useState({});
+  const [phoneHoverPositions, setPhoneHoverPositions] = React.useState({});
 
-  const updatePaymentHoverPosition = React.useCallback((orderId, target) => {
-    const rect = target.getBoundingClientRect();
-    const tooltipWidth = 320;
-    const tooltipMaxHeight = 360;
-    const margin = 12;
-    const gap = 8;
-    const centeredLeft = rect.left + rect.width / 2;
-    const minLeft = tooltipWidth / 2 + margin;
-    const maxLeft = window.innerWidth - tooltipWidth / 2 - margin;
-    const spaceAbove = rect.top - margin;
-    const spaceBelow = window.innerHeight - rect.bottom - margin;
-    const opensAbove = spaceBelow < tooltipMaxHeight && spaceAbove > spaceBelow;
-    const availableHeight = opensAbove ? spaceAbove : spaceBelow;
-
-    setPaymentHoverPositions((prev) => ({
-      ...prev,
-      [orderId]: {
-        left: Math.min(Math.max(centeredLeft, minLeft), maxLeft),
-        placement: opensAbove ? 'top' : 'bottom',
-        top: opensAbove ? undefined : rect.bottom + gap,
-        bottom: opensAbove ? window.innerHeight - rect.top + gap : undefined,
-        maxHeight: Math.max(180, Math.min(tooltipMaxHeight, availableHeight - gap)),
-      },
-    }));
-  }, []);
+  const updateHoverPosition = React.useCallback(
+    (setter, id, target) => {
+      setter((prev) => ({
+        ...prev,
+        [id]: calculateHoverPosition(target),
+      }));
+    },
+    []
+  );
 
   const loadPaymentsOnHover = React.useCallback(async (order) => {
     if (!order?.id) return;
@@ -189,11 +176,36 @@ function OrdersTable({
 
             return (
               <tr key={order.id} className={`group transition-colors duration-150 ${rowBg}`}>
-                <td className={`sticky left-0 z-10 px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap font-mono transition-colors duration-150 ${stickyCellBg}`}>
+                <td className={`sticky left-0 z-10 px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap font-mono transition-colors duration-150 ${stickyCellBg}`}>
                   {highlight(order.numeroPedido || String(order.id), search)}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap">
-                  {highlight(clienteMostrar, search)}
+                    <div className="flex items-center justify-center gap-2">
+                        <span>
+                            {highlight(clienteMostrar, search)}
+                        </span>
+                        <div
+                            className="group/phone relative inline-flex items-center justify-center"
+                            onMouseEnter={(event) => {
+                                updateHoverPosition(
+                                    setPhoneHoverPositions,
+                                    order.id,
+                                    event.currentTarget
+                                );
+                            }}
+                        >
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#004D77]/15">
+                                <Phone
+                                    className="h-3 w-3 cursor-pointer text-[#004D77] transition-colors duration-200"
+                                    strokeWidth={1.8}
+                                />
+                            </div>
+                            <OrderPhoneHover
+                                phone={order.displayPhone}
+                                position={phoneHoverPositions[order.id]}
+                            />
+                        </div>
+                    </div>
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(order.fechaPedido ? new Date(order.fechaPedido).toLocaleDateString('es-CO') : '', search)}
@@ -219,7 +231,11 @@ function OrdersTable({
                   <div
                     className="group/payment relative inline-flex justify-center"
                     onMouseEnter={(event) => {
-                      updatePaymentHoverPosition(order.id, event.currentTarget);
+                      updateHoverPosition(
+                          setPaymentHoverPositions,
+                          order.id,
+                          event.currentTarget
+                      );
                       loadPaymentsOnHover(order);
                     }}
                   >

@@ -177,8 +177,9 @@ export default function RegisterForm() {
   const handleNumericBeforeInput = (e) => {
     if (!e.data || /^\d+$/.test(e.data)) return;
     e.preventDefault();
-    setTouched((prev) => ({ ...prev, [e.currentTarget.name]: true }));
-    setErrors((prev) => ({ ...prev, [e.currentTarget.name]: "El teléfono solo debe contener números" }));
+    const { name } = e.currentTarget;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    setErrors((prev) => ({ ...prev, [name]: "El teléfono solo debe contener números" }));
   };
 
   const handlePhonePaste = (e) => {
@@ -207,8 +208,9 @@ export default function RegisterForm() {
   const handleEmailBeforeInput = (e) => {
     if (!e.data || !/\s/.test(e.data)) return;
     e.preventDefault();
-    setTouched((prev) => ({ ...prev, [e.currentTarget.name]: true }));
-    setErrors((prev) => ({ ...prev, [e.currentTarget.name]: "El correo no debe contener espacios." }));
+    const { name } = e.currentTarget;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    setErrors((prev) => ({ ...prev, [name]: "El correo no debe contener espacios." }));
   };
 
   const handleEmailPaste = (e) => {

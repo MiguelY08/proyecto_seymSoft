@@ -4,14 +4,80 @@ import {
   useRef,
   useState,
 } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../../access/context/AuthContext";
 import { useNotifications } from "../../hooks/useNotifications";
 import NotificationBadge from "./NotificationBadge";
-import NotificationDetailModal from "./NotificationDetailModal";
 import NotificationDropdown from "./NotificationDropdown";
 
+const ensureInternalPath = (path) => {
+  if (!path || typeof path !== "string") return null;
+
+  const trimmedPath = path.trim();
+  if (!trimmedPath) return null;
+
+  if (/^https?:\/\//i.test(trimmedPath)) {
+    try {
+      const url = new URL(trimmedPath);
+      return `${url.pathname}${url.search}${url.hash}` || "/";
+    } catch {
+      return null;
+    }
+  }
+
+  return trimmedPath.startsWith("/")
+    ? trimmedPath
+    : `/${trimmedPath}`;
+};
+
+const getNotificationTargetPath = (notification) => {
+  const metadata = notification?.metadata || {};
+  const actionPath = ensureInternalPath(
+    notification?.actionUrl || metadata.actionUrl
+  );
+
+  const orderId = metadata.orderId || metadata.idOrder || metadata.order_id;
+  const productId = metadata.productId || metadata.idProduct || metadata.product_id;
+  const module = String(metadata.module || "").toLowerCase();
+
+  if (actionPath) {
+    if (actionPath === "/orders" && orderId) {
+      return `/orders-l/${orderId}`;
+    }
+
+    if (actionPath === "/orders-l" && orderId) {
+      return `/orders-l/${orderId}`;
+    }
+
+    if (actionPath === "/admin/sales/orders" && orderId) {
+      return `/admin/sales/orders/${orderId}`;
+    }
+
+    if (actionPath === "/admin/purchases/products" && productId) {
+      return `/admin/purchases/products/${productId}/edit`;
+    }
+
+    return actionPath;
+  }
+
+  if (orderId) {
+    return module === "orders" || metadata.saleType
+      ? `/admin/sales/orders/${orderId}`
+      : `/orders-l/${orderId}`;
+  }
+
+  if (productId) {
+    return module === "products"
+      ? `/admin/purchases/products/${productId}/edit`
+      : "/cart";
+  }
+
+  return null;
+};
+
 function NotificationBell() {
+  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const {
     notifications,
@@ -25,7 +91,6 @@ function NotificationBell() {
   } = useNotifications();
 
   const [open, setOpen] = useState(false);
-  const [selectedNotification, setSelectedNotification] = useState(null);
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -55,7 +120,17 @@ function NotificationBell() {
   };
 
   const handleOpenNotification = (notification) => {
-    setSelectedNotification(notification);
+    const targetPath = getNotificationTargetPath(notification);
+    setOpen(false);
+
+    if (targetPath) {
+      navigate(targetPath, {
+        state: {
+          fromNotification: true,
+          notification,
+        },
+      });
+    }
   };
 
   return (
@@ -84,11 +159,6 @@ function NotificationBell() {
           onOpenNotification={handleOpenNotification}
         />
       )}
-
-      <NotificationDetailModal
-        notification={selectedNotification}
-        onClose={() => setSelectedNotification(null)}
-      />
     </div>
   );
 }

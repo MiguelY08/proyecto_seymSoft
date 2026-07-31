@@ -1,7 +1,7 @@
-import { Info, DollarSign, Phone } from "lucide-react"
-import StatusBadge from "./StatusBadge"
-import { highlight } from "../utils/paymentHelpers"
-import Permission from "../../../configuration/roles/components/Permission"
+import { Info, DollarSign, Phone } from "lucide-react";
+import StatusBadge from "./StatusBadge";
+import { highlight } from "../utils/paymentHelpers";
+import Permission from "../../../configuration/roles/components/Permission";
 
 export default function PaymentsTable({
   data = [],
@@ -10,13 +10,12 @@ export default function PaymentsTable({
   onContact,
   search = "",
 }) {
-
   // Formato COP
   const formatCOP = (value) =>
     new Intl.NumberFormat("es-CO", {
       style: "currency",
       currency: "COP",
-      minimumFractionDigits: 0
+      minimumFractionDigits: 0,
     }).format(value);
 
   // Highlight que funciona dentro de valores formateados
@@ -27,10 +26,12 @@ export default function PaymentsTable({
     const parts = strValue.split(regex);
     return parts.map((part, i) =>
       regex.test(part) ? (
-        <span key={i} className="bg-blue-200 rounded px-1">{part}</span>
+        <span key={i} className="bg-blue-200 rounded px-1">
+          {part}
+        </span>
       ) : (
         part
-      )
+      ),
     );
   };
 
@@ -44,14 +45,16 @@ export default function PaymentsTable({
         )}
 
         {data.map((item) => {
-          const documentNumber = item.documento ?? item.document ?? item.doc_number ?? "-"
-          const status          = item.estado
-          const cupoOcupado     = item.saldo ?? 0
-          const creditoAsignado = item.creditoAsignado ?? 0
-          const cupoDisponible  = item.cupoDisponible ?? 0
-          const pctOcupado      = creditoAsignado > 0
-            ? Math.min(100, Math.round((cupoOcupado / creditoAsignado) * 100))
-            : 0
+          const documentNumber =
+            item.documento ?? item.document ?? item.doc_number ?? "-";
+          const status = item.estado;
+          const cupoOcupado = item.saldo ?? 0;
+          const creditoAsignado = item.creditoAsignado ?? 0;
+          const cupoDisponible = item.cupoDisponible ?? 0;
+          const pctOcupado =
+            creditoAsignado > 0
+              ? Math.min(100, Math.round((cupoOcupado / creditoAsignado) * 100))
+              : 0;
 
           return (
             <div
@@ -82,16 +85,20 @@ export default function PaymentsTable({
                 <div>
                   <div className="flex justify-between gap-3">
                     <span className="text-gray-500">Cupo ocupado</span>
-                    <span className={`text-right font-semibold ${cupoOcupado > 0 ? "text-red-600" : "text-green-600"}`}>
+                    <span
+                      className={`text-right font-semibold ${cupoOcupado > 0 ? "text-red-600" : "text-green-600"}`}
+                    >
                       {highlightCOP(cupoOcupado, search)}
                     </span>
                   </div>
                   <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
                     <div
                       className={`h-full rounded-full transition-all ${
-                        pctOcupado >= 90 ? "bg-red-500" :
-                        pctOcupado >= 60 ? "bg-yellow-400" :
-                        "bg-green-500"
+                        pctOcupado >= 90
+                          ? "bg-red-500"
+                          : pctOcupado >= 60
+                            ? "bg-yellow-400"
+                            : "bg-green-500"
                       }`}
                       style={{ width: `${pctOcupado}%` }}
                     />
@@ -103,7 +110,9 @@ export default function PaymentsTable({
 
                 <div className="flex justify-between gap-3">
                   <span className="text-gray-500">Cupo disponible</span>
-                  <span className={`text-right font-semibold ${cupoDisponible > 0 ? "text-green-600" : "text-gray-400"}`}>
+                  <span
+                    className={`text-right font-semibold ${cupoDisponible > 0 ? "text-green-600" : "text-gray-400"}`}
+                  >
                     {highlightCOP(cupoDisponible, search)}
                   </span>
                 </div>
@@ -140,128 +149,169 @@ export default function PaymentsTable({
                 </Permission>
               </div>
             </div>
-          )
+          );
         })}
       </div>
 
       <div className="hidden min-h-0 min-w-0 w-full flex-1 overflow-x-auto overscroll-x-contain rounded-xl shadow-md [-webkit-overflow-scrolling:touch] md:block">
-      <table className="w-full min-w-[760px] table-auto lg:min-w-[860px]">
-        <thead className="bg-[#004D77] text-white">
-          <tr>
-            <th className="px-4 py-3 text-left text-sm font-semibold">Documento</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Crédito Asignado</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Cupo Ocupado</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Cupo Disponible</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Estado</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.length === 0 && (
+        <table className="w-full min-w-[760px] table-auto lg:min-w-[860px]">
+          <thead className="bg-[#004D77] text-white">
             <tr>
-              <td colSpan={6} className="text-center py-8 text-gray-400 text-sm">
-                No hay registros para mostrar
-              </td>
+              <th className="px-4 py-3 text-left text-sm font-semibold">
+                Documento
+              </th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">
+                Cliente
+              </th>
+              <th className="px-4 py-3 text-center text-sm font-semibold">
+                Crédito Asignado
+              </th>
+              <th className="px-4 py-3 text-center text-sm font-semibold">
+                Cupo Ocupado
+              </th>
+              <th className="px-4 py-3 text-center text-sm font-semibold">
+                Cupo Disponible
+              </th>
+              <th className="px-4 py-3 text-center text-sm font-semibold">
+                Estado
+              </th>
+              <th className="px-4 py-3 text-center text-sm font-semibold">
+                Acciones
+              </th>
             </tr>
-          )}
-          {data.map((item, index) => {
-            const documentNumber = item.documento ?? item.document ?? item.doc_number ?? "-"
-            const status          = item.estado
-            const cupoOcupado     = item.saldo ?? 0
-            const creditoAsignado = item.creditoAsignado ?? 0
-            const cupoDisponible  = item.cupoDisponible ?? 0
-            const pctOcupado      = creditoAsignado > 0
-              ? Math.min(100, Math.round((cupoOcupado / creditoAsignado) * 100))
-              : 0;
-
-            return (
-              <tr
-                key={item.id}
-                className={`transition-colors duration-150 ${index % 2 === 0 ? "bg-gray-100" : "bg-white"} hover:bg-blue-50 cursor-pointer`}
-              >
-                {/* Documento */}
-                <td className="px-3 py-1 text-[11px] font-medium text-gray-700 max-w-[220px] break-words">
-                  {highlight(documentNumber, search)}
+          </thead>
+          <tbody>
+            {data.length === 0 && (
+              <tr>
+                <td
+                  colSpan={7}
+                  className="text-center py-8 text-gray-400 text-sm"
+                >
+                  No hay registros para mostrar
                 </td>
-
-                {/* Crédito Asignado */}
-                <td className="px-4 py-2.5 text-sm text-center text-gray-700 font-medium">
-                  {highlightCOP(creditoAsignado, search)}
-                </td>
-
-                {/* Cupo Ocupado */}
-                <td className="px-4 py-2.5 text-sm text-center">
-                  <div className="flex flex-col items-center gap-1">
-                    <span className={`font-semibold ${cupoOcupado > 0 ? "text-red-600" : "text-green-600"}`}>
-                      {highlightCOP(cupoOcupado, search)}
-                    </span>
-
-                    <div className="w-16 h-1 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          pctOcupado >= 90 ? "bg-red-500" :
-                          pctOcupado >= 60 ? "bg-yellow-400" :
-                          "bg-green-500"
-                        }`}
-                        style={{ width: `${pctOcupado}%` }}
-                      />
-                    </div>
-
-                    <span className="text-gray-400 text-[11px] leading-none">{pctOcupado}%</span>
-                  </div>
-                </td>
-
-                {/* Cupo Disponible */}
-                <td className="px-4 py-2.5 text-sm text-center">
-                  <span className={`font-semibold ${cupoDisponible > 0 ? "text-green-600" : "text-gray-400"}`}>
-                    {highlightCOP(cupoDisponible, search)}
-                  </span>
-                </td>
-
-                {/* Estado */}
-                <td className="px-4 py-2.5 text-center">
-                  <StatusBadge status={status} search={search} />
-                </td>
-
-                {/* Funciones */}
-                <td className="px-3 py-1">
-                  <div className="flex justify-center gap-2">
-                    <Permission permission="pagos_y_abonos.ver_informacion">
-                      <Info
-                        size={14}
-                        className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-[#004D77]"
-                        title="Ver detalle"
-                        onClick={() => onView(item.id)}
-                      />
-                    </Permission>
-                    <Permission permission="pagos_y_abonos.abonar">
-                      {(status === "pendiente" || status === "vencido") && (
-                        <DollarSign
-                          size={14}
-                          className="cursor-pointer text-gray-400 hover:scale-110 transition hover:text-green-600"
-                          title="Registrar abono"
-                          onClick={() => onAbonar(item.id)}
-                        />
-                      )}
-                    </Permission>
-                    <Permission permission="pagos_y_abonos.contactar">
-                      {status === "vencido" && (
-                        <Phone
-                          size={14}
-                          className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-red-500"
-                          title="Contactar cliente"
-                          onClick={() => onContact(item)}
-                        />
-                      )}
-                    </Permission>
-                  </div>
-                </td>
-
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            )}
+            {data.map((item, index) => {
+              const documentNumber =
+                item.documento ?? item.document ?? item.doc_number ?? "-";
+              const clientName =
+                item.nombre ??
+                item.fullName ??
+                item.name ??
+                item.clientName ??
+                "-";
+              const status = item.estado;
+              const cupoOcupado = item.saldo ?? 0;
+              const creditoAsignado = item.creditoAsignado ?? 0;
+              const cupoDisponible = item.cupoDisponible ?? 0;
+              const pctOcupado =
+                creditoAsignado > 0
+                  ? Math.min(
+                      100,
+                      Math.round((cupoOcupado / creditoAsignado) * 100),
+                    )
+                  : 0;
+
+              return (
+                <tr
+                  key={item.id}
+                  className={`transition-colors duration-150 ${index % 2 === 0 ? "bg-gray-100" : "bg-white"} hover:bg-blue-50 cursor-pointer`}
+                >
+                  {/* Documento */}
+                  <td className="px-3 py-1 text-[11px] font-medium text-gray-700 max-w-[220px] break-words">
+                    {highlight(documentNumber, search)}
+                  </td>
+
+                  {/* Cliente */}
+                  <td className="px-3 py-1 text-sm text-gray-700 max-w-[220px] break-words">
+                    {highlight(clientName, search)}
+                  </td>
+
+                  {/* Crédito Asignado */}
+                  <td className="px-4 py-2.5 text-sm text-center text-gray-700 font-medium">
+                    {highlightCOP(creditoAsignado, search)}
+                  </td>
+
+                  {/* Cupo Ocupado */}
+                  <td className="px-4 py-2.5 text-sm text-center">
+                    <div className="flex flex-col items-center gap-1">
+                      <span
+                        className={`font-semibold ${cupoOcupado > 0 ? "text-red-600" : "text-green-600"}`}
+                      >
+                        {highlightCOP(cupoOcupado, search)}
+                      </span>
+
+                      <div className="w-16 h-1 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            pctOcupado >= 90
+                              ? "bg-red-500"
+                              : pctOcupado >= 60
+                                ? "bg-yellow-400"
+                                : "bg-green-500"
+                          }`}
+                          style={{ width: `${pctOcupado}%` }}
+                        />
+                      </div>
+
+                      <span className="text-gray-400 text-[11px] leading-none">
+                        {pctOcupado}%
+                      </span>
+                    </div>
+                  </td>
+
+                  {/* Cupo Disponible */}
+                  <td className="px-4 py-2.5 text-sm text-center">
+                    <span
+                      className={`font-semibold ${cupoDisponible > 0 ? "text-green-600" : "text-gray-400"}`}
+                    >
+                      {highlightCOP(cupoDisponible, search)}
+                    </span>
+                  </td>
+
+                  {/* Estado */}
+                  <td className="px-4 py-2.5 text-center">
+                    <StatusBadge status={status} search={search} />
+                  </td>
+
+                  {/* Funciones */}
+                  <td className="px-3 py-1">
+                    <div className="flex justify-center gap-2">
+                      <Permission permission="pagos_y_abonos.ver_informacion">
+                        <Info
+                          size={14}
+                          className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-[#004D77]"
+                          title="Ver detalle"
+                          onClick={() => onView(item.id)}
+                        />
+                      </Permission>
+                      <Permission permission="pagos_y_abonos.abonar">
+                        {(status === "pendiente" || status === "vencido") && (
+                          <DollarSign
+                            size={14}
+                            className="cursor-pointer text-gray-400 hover:scale-110 transition hover:text-green-600"
+                            title="Registrar abono"
+                            onClick={() => onAbonar(item.id)}
+                          />
+                        )}
+                      </Permission>
+                      <Permission permission="pagos_y_abonos.contactar">
+                        {status === "vencido" && (
+                          <Phone
+                            size={14}
+                            className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-red-500"
+                            title="Contactar cliente"
+                            onClick={() => onContact(item)}
+                          />
+                        )}
+                      </Permission>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );

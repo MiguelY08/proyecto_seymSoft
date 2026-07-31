@@ -18,6 +18,7 @@ export const patterns = {
 
 export const normalizeNameInput = (value) =>
   String(value ?? "")
+    .replace(/[^\p{L}\s]/gu, "")
     .replace(/^\s+/, "")
     .replace(/\s{2,}/g, " ");
 

@@ -116,19 +116,13 @@ export default function GenerateInterestModal({
   const formatCOP = (value) => new Intl.NumberFormat("es-CO").format(value);
 
   const handleSubmit = async () => {
-    if (
-      isSubmitting ||
-      submitLockRef.current
-    ) return;
+    if (isSubmitting || submitLockRef.current) return;
 
     submitLockRef.current = true;
 
     if (!isValidPercentage) {
       setError(percentageErrorMessage);
-      await showWarning(
-        "Porcentaje inválido",
-        percentageErrorMessage,
-      );
+      await showWarning("Porcentaje inválido", percentageErrorMessage);
       submitLockRef.current = false;
       return;
     }
@@ -172,7 +166,9 @@ export default function GenerateInterestModal({
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-2 sm:p-4 z-50">
       <div className="bg-white w-full max-w-md max-h-[94vh] rounded-2xl shadow-xl font-lexend overflow-hidden flex flex-col">
         <div className="bg-[#004D77] text-white px-4 sm:px-6 py-3 sm:py-4 rounded-t-2xl flex justify-between items-center gap-3">
-          <h2 className="text-base sm:text-lg font-semibold">Aplicar interés</h2>
+          <h2 className="text-base sm:text-lg font-semibold">
+            Aplicar interés
+          </h2>
           <button onClick={onClose} className="cursor-pointer">
             <X size={18} />
           </button>
@@ -232,7 +228,7 @@ export default function GenerateInterestModal({
               </span>
             </div>
             <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-3">
-              <span className="text-gray-600">InterÃ©s generado</span>
+              <span className="text-gray-600">Interés generado</span>
               <span className="font-medium text-green-600">
                 ${formatCOP(interestGenerated)}
               </span>
@@ -264,4 +260,3 @@ export default function GenerateInterestModal({
     </div>
   );
 }
-

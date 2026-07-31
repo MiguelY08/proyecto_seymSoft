@@ -275,11 +275,23 @@ function OrdersList() {
       showWarning('Usa el flujo de cancelacion', 'Para cancelar un pedido debes indicar el motivo desde la accion Cancelar.');
       return;
     }
-    const updated = await OrdersService.updateEstadoLogistico(orderId, nuevoEstado, motivo);
+    try {
+      const updated = await OrdersService.updateEstadoLogistico(orderId, nuevoEstado, motivo);
     if (updated) {
       setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
       if (selectedOrder?.id === updated.id) setSelectedOrder(updated);
       showSuccess('Estado actualizado', `El pedido #${updated.numeroPedido} ahora está ${updated.estadoLogistico}.`);
+      return updated;
+    }
+    } catch (error) {
+      showError(
+        'No se pudo actualizar',
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          'No se pudo cambiar el estado del pedido.'
+      );
+      throw error;
     }
   };
 

@@ -9,7 +9,7 @@ import { Outlet } from 'react-router-dom';
  */
 function OrdersLayout() {
   return (
-    <div className="h-full min-h-0 min-w-0 w-full overflow-hidden">
+    <div className="h-full min-h-0 min-w-0 w-full">
       <Outlet />
     </div>
   );

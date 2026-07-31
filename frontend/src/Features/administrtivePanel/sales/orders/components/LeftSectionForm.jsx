@@ -27,6 +27,7 @@ function LeftSectionForm({
   onCiudadEntregaChange,
   onDireccionManualChange,
   onDeliveryRecipientNameChange,
+  onDeliveryRecipientPhoneChange,
   onShippingAmountChange,
   onEstadoLogisticoChange,
   onMotivoCancelacionChange,
@@ -296,7 +297,7 @@ function LeftSectionForm({
           {showClienteError && errorMsg('clienteId')}
         </div>
 
-        {!showDirectSaleLockedInfo && (
+        {mostrarDireccionManual && !showDirectSaleLockedInfo && (
           <div className="flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
               Persona que recibe/recoge <span className="text-red-500">*</span>
@@ -330,6 +331,26 @@ function LeftSectionForm({
                 Usar nombre del cliente
               </button>
             )}
+
+            <label className="mt-2 block text-sm font-medium text-gray-700">
+              Telefono de quien recibe <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
+              <input
+                type="tel"
+                value={formData.deliveryRecipientPhone || ''}
+                onChange={onDeliveryRecipientPhoneChange}
+                placeholder="Ej: 300 123 4567"
+                disabled={loading || readOnly}
+                maxLength={30}
+                className={`w-full rounded-lg border bg-white py-2.5 pl-10 pr-4 text-sm text-gray-700 outline-none transition-colors duration-200
+                  ${errors.deliveryRecipientPhone ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'}
+                  ${loading || readOnly ? 'cursor-not-allowed bg-gray-100 text-gray-500' : ''}
+                `}
+              />
+            </div>
+            {errorMsg('deliveryRecipientPhone')}
           </div>
         )}
 
@@ -521,6 +542,7 @@ function LeftSectionForm({
               placeholder="Estado del pedido"
               className={!isEstadoDisabled ? estadoColorClass : ''}
               ariaLabel="Estado del pedido"
+              placement="bottom"
             />
             {errorMsg('estadoLogistico')}
             {isEditMode && isEstadoPersistidoInmutable && (
