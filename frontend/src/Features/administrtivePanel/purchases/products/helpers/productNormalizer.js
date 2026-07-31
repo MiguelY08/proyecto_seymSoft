@@ -20,6 +20,9 @@ export const normalizeProduct = (rawProduct) => {
     wholesalePrice: parseFloat(rawProduct.wholesalePrice) || 0,
     partnerPrice: rawProduct.partnerPrice ? parseFloat(rawProduct.partnerPrice) : null,
     bulkPrice: rawProduct.bulkPrice ? parseFloat(rawProduct.bulkPrice) : null,
+    supplierPrice: rawProduct.supplierPrice !== undefined && rawProduct.supplierPrice !== null && rawProduct.supplierPrice !== ''
+      ? parseFloat(rawProduct.supplierPrice)
+      : null,
     
     // Descuentos
     retailDiscountPct: parseFloat(rawProduct.retailDiscountPct) || 0,

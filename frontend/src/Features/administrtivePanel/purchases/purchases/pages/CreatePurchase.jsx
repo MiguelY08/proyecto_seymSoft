@@ -195,7 +195,7 @@ const CreatePurchase = () => {
     ],
   });
 
-  const handleAddProduct = async (resolvedBarcode) => {
+  const handleAddProduct = async (resolvedBarcode, purchasePrice) => {
     const searchTerm = searchProduct.trim();
 
     if (!searchTerm && !resolvedBarcode) {
@@ -219,6 +219,7 @@ const CreatePurchase = () => {
     }
 
     const codigosExtra = extraBarcodes[foundProduct.codigoBarras] ?? [];
+    const unitPrice = Number(purchasePrice) || foundProduct.supplierPrice || foundProduct.valorUnit;
 
     const existingItem = purchaseItems.find(
       (item) => item.codigoBarras === foundProduct.codigoBarras
@@ -228,7 +229,7 @@ const CreatePurchase = () => {
       const updatedItems = purchaseItems.map((item) => {
         if (item.codigoBarras === foundProduct.codigoBarras) {
           const nuevaCantidad = item.cantidad + quantity;
-          const subtotal = foundProduct.valorUnit * nuevaCantidad;
+          const subtotal = item.valorUnit * nuevaCantidad;
           const ivaValor = (subtotal * foundProduct.iva) / 100;
           const total = subtotal + ivaValor;
           return { ...item, cantidad: nuevaCantidad, subtotal, ivaValor, total, codigosExtra };
@@ -238,7 +239,7 @@ const CreatePurchase = () => {
       setPurchaseItems(updatedItems);
       showSuccess("Cantidad actualizada", "Se sumó la cantidad al producto existente");
     } else {
-      const subtotal = foundProduct.valorUnit * quantity;
+      const subtotal = unitPrice * quantity;
       const ivaValor = (subtotal * foundProduct.iva) / 100;
       const total = subtotal + ivaValor;
 
@@ -249,7 +250,8 @@ const CreatePurchase = () => {
         codigoBarras: foundProduct.codigoBarras,
         proveedor: foundProduct.proveedor,
         cantidad: quantity,
-        valorUnit: foundProduct.valorUnit,
+        valorUnit: unitPrice,
+        supplierPrice: unitPrice,
         subtotal,
         iva: foundProduct.iva,
         ivaValor,
@@ -296,6 +298,7 @@ const CreatePurchase = () => {
         productos: purchaseItems.map(item => ({
           idProduct: item.idProduct,
           cantidad: item.cantidad,
+          supplierPrice: item.supplierPrice,
           codigosExtra: item.codigosExtra || [],
         })),
       });

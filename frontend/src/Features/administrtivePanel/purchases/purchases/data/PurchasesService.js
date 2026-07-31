@@ -186,6 +186,7 @@ export const createPurchase = async (purchaseData) => {
       details: purchaseData.productos.map(product => ({
         idProduct: product.idProduct,
         quantity: product.cantidad,
+        supplierPrice: product.supplierPrice,
         extraBarcodes: product.codigosExtra || [],
       })),
     };
@@ -222,6 +223,7 @@ export const getProducts = async (searchTerm = '') => {
       codigoBarras: p.barcodes?.[0]?.barcode || '',
       proveedor: p.providerName || '',
       valorUnit: p.wholesalePrice || 0,
+      supplierPrice: p.supplierPrice ?? null,
       iva: p.ivaPercentage || 19,
     }));
   } catch (error) {

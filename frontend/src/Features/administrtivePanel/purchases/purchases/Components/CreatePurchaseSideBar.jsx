@@ -119,7 +119,7 @@ const CreateSidebar = ({
         partnerPrice: selectedProduct.partnerPrice?.toString() || "",
         bulkPrice: selectedProduct.bulkPrice?.toString() || "",
       });
-      setPurchasePrice(selectedProduct.wholesalePrice?.toString() || "");
+      setPurchasePrice((selectedProduct.supplierPrice ?? selectedProduct.wholesalePrice ?? "").toString());
     }
   }, [selectedProduct]);
 
@@ -229,7 +229,7 @@ const CreateSidebar = ({
     setBarcodeError("");
     setBarcodeSaved(false);
     setActiveBarcodeIndex(nextActiveBarcodeIndex);
-    setPurchasePrice(product.wholesalePrice?.toString() || "");
+    setPurchasePrice((product.supplierPrice ?? product.wholesalePrice ?? "").toString());
   };
 
   const handleSearchChange = (e) => {
@@ -357,10 +357,8 @@ const CreateSidebar = ({
 
   // ================= PRECIO DE COMPRA =================
   const handlePurchasePriceChange = (e) => {
-    const value = e.target.value;
-    if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
-      setPurchasePrice(value);
-    }
+    const value = e.target.value.replace(',', '.');
+    if (value === '' || /^\d*\.?\d*$/.test(value)) setPurchasePrice(value);
   };
 
   // Función para enfocar el input de precio de compra (lapicero)
@@ -414,7 +412,7 @@ const CreateSidebar = ({
   };
 
   const handleAddProduct = () => {
-    handleAddProductProp(resolvedBarcode);
+    handleAddProductProp(resolvedBarcode, purchasePrice);
   };
 
   return (
