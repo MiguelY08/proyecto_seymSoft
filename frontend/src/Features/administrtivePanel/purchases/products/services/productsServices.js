@@ -88,6 +88,7 @@ export const ProductsService = {
     formData.append('precioMayorista', Number(data.precioMayorista));
     formData.append('precioColegas', toOptionalNumber(data.precioColegas));
     formData.append('precioPacas', toOptionalNumber(data.precioPacas));
+    if (hasValue(data.supplierPrice)) formData.append('supplierPrice', Number(data.supplierPrice));
     formData.append('ivaPercentage', data.ivaPercentage || 0);
     formData.append('idUnitMeasure', data.idUnitMeasure);
     formData.append('idCategorie', data.id_category || data.idCategorie || 1);
@@ -133,6 +134,7 @@ export const ProductsService = {
     if (data.precioMayorista !== undefined) formData.append('wholesalePrice', Number(data.precioMayorista));
     if (data.precioColegas !== undefined)   formData.append('partnerPrice', toOptionalNumber(data.precioColegas));
     if (data.precioPacas !== undefined)     formData.append('bulkPrice', toOptionalNumber(data.precioPacas));
+    if (data.supplierPrice !== undefined)   formData.append('supplierPrice', toOptionalNumber(data.supplierPrice));
     if (data.ivaPercentage !== undefined)   formData.append('ivaPercentage', data.ivaPercentage);
 
     if (data.retailDiscountPct !== undefined)    formData.append('retailDiscountPct', data.retailDiscountPct);

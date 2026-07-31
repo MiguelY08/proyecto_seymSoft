@@ -103,6 +103,7 @@ const initialForm = {
   precioMayorista: '',
   precioColegas: '',
   precioPacas: '',
+  supplierPrice: '',
   descripcion: '',
   cantidadXPaca: '',
   id_category: null,
@@ -209,6 +210,7 @@ function ProductForm({
       precioMayorista: producto.wholesalePrice || '',
       precioColegas: producto.partnerPrice || '',
       precioPacas: producto.bulkPrice || '',
+      supplierPrice: producto.supplierPrice ?? '',
       idUnitMeasure: producto.unitMeasure?.id || '',
       ivaPercentage: producto.ivaPercentage || 0,
       retailDiscountPct: producto.retailDiscountPct || 0,
@@ -316,6 +318,9 @@ function ProductForm({
     else if (Number(d.precioMayorista) <= 0) e.precioMayorista = 'El precio mayorista debe ser mayor a 0.';
     if (d.precioColegas !== '' && Number(d.precioColegas) <= 0) e.precioColegas = 'El precio colegas debe ser mayor a 0.';
     if (d.precioPacas !== '' && Number(d.precioPacas) <= 0) e.precioPacas = 'El precio por pacas debe ser mayor a 0.';
+    if (d.supplierPrice !== '' && (!Number.isFinite(Number(d.supplierPrice)) || Number(d.supplierPrice) <= 0)) {
+      e.supplierPrice = 'El precio de compra debe ser mayor a 0.';
+    }
     return e;
   };
 
@@ -460,6 +465,7 @@ function ProductForm({
           precioMayorista: formData.precioMayorista,
           precioColegas: formData.precioColegas,
           precioPacas: formData.precioPacas,
+          supplierPrice: formData.supplierPrice,
           idUnitMeasure: formData.idUnitMeasure,
           ivaPercentage: formData.ivaPercentage,
           retailDiscountPct: formData.retailDiscountPct,
@@ -485,6 +491,7 @@ function ProductForm({
         formDataToSend.append('precioMayorista', Number(formData.precioMayorista));
         formDataToSend.append('precioColegas', Number(formData.precioColegas));
         formDataToSend.append('precioPacas', Number(formData.precioPacas));
+        if (formData.supplierPrice !== '') formDataToSend.append('supplierPrice', Number(formData.supplierPrice));
         formDataToSend.append('ivaPercentage', formData.ivaPercentage || 0);
         formDataToSend.append('retailDiscountPct', formData.retailDiscountPct || 0);
         formDataToSend.append('wholesaleDiscountPct', formData.wholesaleDiscountPct || 0);
@@ -736,6 +743,33 @@ function ProductForm({
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="md:col-span-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        Precio de compra al proveedor <span className="text-xs font-normal text-gray-400">(opcional)</span>
+                      </label>
+                      <div className={`relative max-w-md rounded-lg border bg-white transition-colors duration-200 focus-within:ring-2 ${
+                        errors.supplierPrice
+                          ? 'border-red-500 focus-within:ring-red-200 bg-red-50'
+                          : 'border-gray-300 focus-within:border-[#004D77] focus-within:ring-[#004D77]/20'
+                      }`}>
+                        <BadgeDollarSign className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 pointer-events-none ${errors.supplierPrice ? 'text-red-400' : 'text-gray-400'}`} strokeWidth={1.8} />
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          name="supplierPrice"
+                          value={formData.supplierPrice || ''}
+                          onChange={(e) => handleChange({
+                            target: {
+                              name: 'supplierPrice',
+                              value: e.target.value.replace(',', '.').replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'),
+                            },
+                          })}
+                          placeholder="Ej: 2500.50"
+                          className={`h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm font-medium outline-none ${errors.supplierPrice ? 'text-red-900 placeholder-red-300' : 'text-gray-700 placeholder-gray-400'}`}
+                        />
+                      </div>
+                      <ErrMsg field="supplierPrice" />
+                    </div>
                     <div className="md:col-span-3">
                       <PriceCard label="Precio Detal" fieldMain="precioDetalle" fieldPaca="retailDiscountPct" valueMain={formData.precioDetalle || ''} valuePaca={formData.retailDiscountPct || ''} placeholderMain="5000" placeholderPaca="0" onChange={handleChange} errMain={errors.precioDetalle || priceErrors.precioDetalle} />
                     </div>
