@@ -1,5 +1,5 @@
 // features/administrtivePanel/purchases/nonConformingProducts/pages/FormNonConformingProduct.jsx
-import { X, AlertCircle, Search, Check } from "lucide-react";
+import { X, AlertCircle, Search, Check, PackageX } from "lucide-react";
 import { useState } from "react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import { createNonConforming, getProductByBarcode } from "../data/nonConformingService";
@@ -32,14 +32,21 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
     return null;
   })();
 
-  // Validación de la cantidad (incluye stock disponible en tiempo real)
+  // ✅ Validación de la cantidad (incluye stock disponible en tiempo real)
   const cantidadError = (() => {
     if (!cantidadTouched) return null;
     if (!form.cantidad) return "La cantidad es obligatoria.";
     if (Number(form.cantidad) <= 0) return "La cantidad debe ser mayor a 0.";
     if (Number(form.cantidad) > 10000) return "Cantidad demasiado grande.";
-    if (productInfo && Number(form.cantidad) > productInfo.stock) {
-      return `Stock disponible: ${productInfo.stock}. No puedes reportar más de lo que hay en inventario.`;
+    
+    // ✅ Validación de stock agotado o insuficiente
+    if (productInfo) {
+      if (productInfo.stock <= 0) {
+        return "Producto agotado. No hay stock disponible para reportar.";
+      }
+      if (Number(form.cantidad) > productInfo.stock) {
+        return `Stock disponible: ${productInfo.stock}. No puedes reportar más de lo que hay en inventario.`;
+      }
     }
     return null;
   })();
@@ -53,6 +60,7 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
   })();
 
   const hasErrors = codigoError || cantidadError || motivoError;
+  const isStockEmpty = productInfo && productInfo.stock <= 0;
 
   // Buscar producto por código de barras
   const handleSearchProduct = async (barcode = form.codigo) => {
@@ -70,9 +78,14 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
       const product = await getProductByBarcode(normalizedCode);
       if (product) {
         setProductInfo(product);
-        // Re-validar la cantidad ya ingresada contra el nuevo stock encontrado
         setCantidadTouched(true);
-        showSuccess("Producto encontrado", `"${product.nombre}"`);
+        
+        // ✅ Mostrar advertencia si el stock está agotado
+        if (product.stock <= 0) {
+          showWarning("Producto agotado", `"${product.nombre}" no tiene stock disponible para reportar.`);
+        } else {
+          showSuccess("Producto encontrado", `"${product.nombre}" - Stock: ${product.stock}`);
+        }
       } else {
         setProductInfo(null);
         showError("No encontrado", "No se encontró un producto con ese código de barras.");
@@ -101,7 +114,6 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
   });
 
   const handleSubmit = async () => {
-    // Evita doble envío si ya hay una petición en curso
     if (submitting) return;
 
     setCodigoTouched(true);
@@ -118,7 +130,12 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
       return;
     }
 
-    // Verificar stock disponible (doble chequeo justo antes de enviar)
+    // ✅ Verificar stock disponible (doble chequeo justo antes de enviar)
+    if (productInfo.stock <= 0) {
+      showWarning("Stock agotado", `"${productInfo.nombre}" no tiene stock disponible para reportar.`);
+      return;
+    }
+
     if (productInfo.stock < Number(form.cantidad)) {
       showWarning("Stock insuficiente", `Stock disponible: ${productInfo.stock}, Cantidad solicitada: ${form.cantidad}`);
       return;
@@ -217,18 +234,41 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
 
             {/* Información del producto encontrado */}
             {productInfo && !codigoError && (
-              <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div className={`mt-2 p-3 rounded-lg border ${
+                isStockEmpty 
+                  ? "bg-red-50 border-red-200" 
+                  : "bg-green-50 border-green-200"
+              }`}>
                 <div className="flex items-center gap-2">
-                  <Check size={16} className="text-green-600" />
-                  <span className="text-sm font-semibold text-green-800">Producto verificado</span>
+                  {isStockEmpty ? (
+                    <PackageX size={16} className="text-red-600" />
+                  ) : (
+                    <Check size={16} className="text-green-600" />
+                  )}
+                  <span className={`text-sm font-semibold ${
+                    isStockEmpty ? "text-red-800" : "text-green-800"
+                  }`}>
+                    {isStockEmpty ? "Producto agotado" : "Producto verificado"}
+                  </span>
                 </div>
                 <p className="text-sm text-gray-700 mt-1">
                   <strong>{productInfo.nombre}</strong>
                   <br />
                   <span className="text-xs text-gray-500">Categoría: {productInfo.categoria}</span>
                   <br />
-                  <span className="text-xs text-gray-500">Stock disponible: {productInfo.stock}</span>
+                  <span className={`text-xs font-semibold ${
+                    isStockEmpty ? "text-red-600" : "text-green-600"
+                  }`}>
+                    Stock disponible: {productInfo.stock}
+                    {isStockEmpty && " (Agotado)"}
+                  </span>
                 </p>
+                {isStockEmpty && (
+                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    <AlertCircle size={12} />
+                    No se puede reportar este producto porque no tiene stock disponible.
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -249,7 +289,7 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
                 onBlur={() => setCantidadTouched(true)}
                 placeholder="Cantidad"
                 className={inputClass(cantidadError)}
-                disabled={submitting}
+                disabled={submitting || isStockEmpty}
               />
               {cantidadTouched && cantidadError && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -260,6 +300,12 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
             {cantidadError && (
               <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
                 <AlertCircle size={12} /> {cantidadError}
+              </p>
+            )}
+            {isStockEmpty && (
+              <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                <AlertCircle size={12} />
+                Producto agotado - No se puede reportar
               </p>
             )}
           </div>
@@ -277,7 +323,7 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
               onBlur={() => setMotivoTouched(true)}
               placeholder="Ingrese el motivo del reporte"
               className={inputClass(motivoError)}
-              disabled={submitting}
+              disabled={submitting || isStockEmpty}
             />
             {motivoError && (
               <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
@@ -291,14 +337,14 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
         <div className="px-6 pb-6 flex gap-4">
           <button
             onClick={handleSubmit}
-            disabled={hasErrors || !productInfo || submitting}
+            disabled={hasErrors || !productInfo || submitting || isStockEmpty}
             className={`flex-1 py-2.5 text-sm font-medium text-white rounded-xl transition ${
-              hasErrors || !productInfo || submitting
+              hasErrors || !productInfo || submitting || isStockEmpty
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-[#0E5679] hover:bg-[#0a435c]"
             }`}
           >
-            {submitting ? "Guardando..." : "Guardar"}
+            {submitting ? "Guardando..." : isStockEmpty ? "Stock agotado" : "Guardar"}
           </button>
           <button
             onClick={handleCancel}
