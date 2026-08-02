@@ -11,6 +11,16 @@ export const getCreditCustomers = async () => {
 };
 
 /* ==========================================
+   METODOS VALIDOS PARA ABONOS
+========================================== */
+
+export const getPaymentMethods = async () => {
+  const response = await apiClient.get("/payments/payment-methods");
+
+  return response.data.data;
+};
+
+/* ==========================================
    FACTURAS DE UN CLIENTE
 ========================================== */
 
