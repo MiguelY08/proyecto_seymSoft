@@ -3,7 +3,7 @@ import { normalizeProduct, normalizeProducts } from '../helpers/productNormalize
 
 const hasValue = (value) => value !== undefined && value !== null && value !== '';
 
-const toOptionalNumber = (value) => (hasValue(value) ? Number(value) : '');
+const toOptionalNumber = (value) => (hasValue(value) ? Number(value) : 0);
 
 const buildBarcodesPayload = (data) => {
   const barcodes = [];
@@ -84,8 +84,8 @@ export const ProductsService = {
 
     formData.append('nombre', data.nombre);
     formData.append('referencia', data.referencia);
-    formData.append('precioDetalle', Number(data.precioDetalle));
-    formData.append('precioMayorista', Number(data.precioMayorista));
+    formData.append('precioDetalle', toOptionalNumber(data.precioDetalle));
+    formData.append('precioMayorista', toOptionalNumber(data.precioMayorista));
     formData.append('precioColegas', toOptionalNumber(data.precioColegas));
     formData.append('precioPacas', toOptionalNumber(data.precioPacas));
     formData.append('ivaPercentage', data.ivaPercentage || 0);
@@ -129,8 +129,8 @@ export const ProductsService = {
 
     if (data.nombre !== undefined)          formData.append('name', data.nombre);
     if (data.referencia !== undefined)      formData.append('reference', data.referencia);
-    if (data.precioDetalle !== undefined)   formData.append('retailPrice', Number(data.precioDetalle));
-    if (data.precioMayorista !== undefined) formData.append('wholesalePrice', Number(data.precioMayorista));
+    if (data.precioDetalle !== undefined)   formData.append('retailPrice', toOptionalNumber(data.precioDetalle));
+    if (data.precioMayorista !== undefined) formData.append('wholesalePrice', toOptionalNumber(data.precioMayorista));
     if (data.precioColegas !== undefined)   formData.append('partnerPrice', toOptionalNumber(data.precioColegas));
     if (data.precioPacas !== undefined)     formData.append('bulkPrice', toOptionalNumber(data.precioPacas));
     if (data.ivaPercentage !== undefined)   formData.append('ivaPercentage', data.ivaPercentage);

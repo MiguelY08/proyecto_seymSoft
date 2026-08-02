@@ -310,12 +310,6 @@ function ProductForm({
     }
     if (d.stockPrincipal === '') e.stockPrincipal = 'El stock es obligatorio.';
     else if (!Number.isInteger(Number(d.stockPrincipal)) || Number(d.stockPrincipal) < 0) e.stockPrincipal = 'El stock debe ser un numero entero mayor o igual a 0.';
-    if (d.precioDetalle === '') e.precioDetalle = 'El precio detal es obligatorio.';
-    else if (Number(d.precioDetalle) <= 0) e.precioDetalle = 'El precio detal debe ser mayor a 0.';
-    if (d.precioMayorista === '') e.precioMayorista = 'El precio mayorista es obligatorio.';
-    else if (Number(d.precioMayorista) <= 0) e.precioMayorista = 'El precio mayorista debe ser mayor a 0.';
-    if (d.precioColegas !== '' && Number(d.precioColegas) <= 0) e.precioColegas = 'El precio colegas debe ser mayor a 0.';
-    if (d.precioPacas !== '' && Number(d.precioPacas) <= 0) e.precioPacas = 'El precio por pacas debe ser mayor a 0.';
     return e;
   };
 
@@ -620,7 +614,7 @@ function ProductForm({
                     <input
                       type="text"
                       inputMode="numeric"
-                      value={formData.stockPrincipal || ''}
+                      value={formData.stockPrincipal ?? ''}
                       onChange={(e) => setFormData((prev) => ({ ...prev, stockPrincipal: numeric(e.target.value) }))}
                       onKeyDown={block}
                       placeholder="0"
@@ -711,7 +705,7 @@ function ProductForm({
                           </div>
                           <div className="relative border-l border-gray-200 bg-gray-50">
                             <Boxes className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                            <input type="text" inputMode="numeric" value={item.stock || ''} onChange={(e) => handleCodBarrasExtraChange(i, 'stock', numeric(e.target.value))} onKeyDown={block} placeholder="Stock" className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm font-semibold text-gray-700 outline-none placeholder-gray-400" />
+                            <input type="text" inputMode="numeric" value={item.stock ?? ''} onChange={(e) => handleCodBarrasExtraChange(i, 'stock', numeric(e.target.value))} onKeyDown={block} placeholder="Stock" className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm font-semibold text-gray-700 outline-none placeholder-gray-400" />
                           </div>
                         </div>
                         <button type="button" onClick={() => setFormData((prev) => ({ ...prev, codsBarrasExtra: (prev.codsBarrasExtra || []).filter((_, idx) => idx !== i) }))} className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-md bg-red-100 text-red-500 hover:bg-red-200 transition-colors cursor-pointer">
@@ -732,7 +726,7 @@ function ProductForm({
                     <BadgeDollarSign className="h-4 w-4 text-[#004D77]" strokeWidth={1.8} />
                     <div>
                       <p className="text-sm font-semibold text-gray-800">Precios y descuentos</p>
-                      <p className="text-xs text-gray-400">El precio detal es la configuración comercial principal.</p>
+                      <p className="text-xs text-gray-400">Los precios son opcionales y pueden configurarse posteriormente.</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -976,14 +970,14 @@ function ProductForm({
                       <ErrMsg field="codBarras" />
                     </div>
                     <div className="w-24 flex-shrink-0">
-                      <input type="text" inputMode="numeric" value={formData.stockPrincipal || ''} onChange={(e) => setFormData((prev) => ({ ...prev, stockPrincipal: numeric(e.target.value) }))} onKeyDown={block} placeholder="Stock" className={inputCls('stockPrincipal')} />
+                      <input type="text" inputMode="numeric" value={formData.stockPrincipal ?? ''} onChange={(e) => setFormData((prev) => ({ ...prev, stockPrincipal: numeric(e.target.value) }))} onKeyDown={block} placeholder="Stock" className={inputCls('stockPrincipal')} />
                       <ErrMsg field="stockPrincipal" />
                     </div>
                   </div>
                   {(formData.codsBarrasExtra || []).map((item, i) => (
                     <div key={i} className="flex items-center gap-2 mt-2">
                       <input type="text" value={item.cod || ''} onChange={(e) => handleCodBarrasExtraChange(i, 'cod', e.target.value)} onFocus={() => setActiveBarcodeTarget({ type: 'extra', index: i })} data-scanner-field="product-barcode-extra" placeholder={`Codigo de barras ${i + 2}`} className="flex-1 px-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 text-sm transition-colors duration-200" />
-                      <input type="text" inputMode="numeric" value={item.stock || ''} onChange={(e) => handleCodBarrasExtraChange(i, 'stock', numeric(e.target.value))} onKeyDown={block} placeholder="Stock" className="w-24 flex-shrink-0 px-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 text-sm transition-colors duration-200" />
+                      <input type="text" inputMode="numeric" value={item.stock ?? ''} onChange={(e) => handleCodBarrasExtraChange(i, 'stock', numeric(e.target.value))} onKeyDown={block} placeholder="Stock" className="w-24 flex-shrink-0 px-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 text-sm transition-colors duration-200" />
                       <button type="button" onClick={() => setFormData((prev) => ({ ...prev, codsBarrasExtra: (prev.codsBarrasExtra || []).filter((_, idx) => idx !== i) }))} className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-md bg-red-100 text-red-500 hover:bg-red-200 transition-colors cursor-pointer">
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -1033,7 +1027,7 @@ function ProductForm({
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-800">Configuración de precios</p>
-                <p className="text-xs text-gray-400">Precios de venta y descuentos</p>
+                <p className="text-xs text-gray-400">Precios opcionales y descuentos</p>
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-5">
