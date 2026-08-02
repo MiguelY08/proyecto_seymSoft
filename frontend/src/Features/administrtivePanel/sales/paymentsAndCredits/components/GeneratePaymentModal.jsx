@@ -1,6 +1,8 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { X } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
+import { getPaymentMethods } from "../services/paymentsServices";
+import { mapPaymentMethods } from "../mappers/paymentsMapper";
 
 export default function GeneratePaymentModal({
   cliente,
@@ -27,27 +29,118 @@ export default function GeneratePaymentModal({
     factura?.saldoPendiente ??
     Number(capitalPendiente) + Number(interesPendiente);
 
+  const favorBalance = Number(cliente?.favorBalance ?? 0);
+  const minimumInstallmentAmount =
+    Number(deudaTotal) >= 10000 ? 10000 : Number(deudaTotal);
+
   const [monto, setMonto] = useState("");
-
   const [idPaymentMethod, setIdPaymentMethod] = useState(2);
-
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [loadingMethods, setLoadingMethods] = useState(false);
   const [observacion, setObservacion] = useState("");
-
   const [errors, setErrors] = useState({});
-
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const submitLockRef = useRef(false);
 
-  const minimumInstallmentAmount = 1000;
-
   const formatNumber = (value) => {
-    if (!value) return "";
+    if (value === "" || value === null || value === undefined) return "";
 
     return new Intl.NumberFormat("es-CO").format(value);
   };
 
   const parseNumber = (value) => Number(String(value).replace(/\./g, ""));
+
+  const selectedPaymentMethod = useMemo(
+    () =>
+      paymentMethods.find(
+        (method) => Number(method.id) === Number(idPaymentMethod),
+      ),
+    [paymentMethods, idPaymentMethod],
+  );
+
+  const isFavorBalanceMethod =
+    Number(idPaymentMethod) === 4 ||
+    selectedPaymentMethod?.nombre?.toLowerCase() === "saldo a favor";
+
+  const getAmountError = (
+    rawValue,
+    numericValue,
+    isFavorMethod = isFavorBalanceMethod,
+  ) => {
+    if (!rawValue) {
+      return "Ingrese un monto";
+    }
+
+    if (numericValue <= 0) {
+      return "El monto del abono debe ser mayor a $0.";
+    }
+
+    if (numericValue > Number(deudaTotal)) {
+      return "El monto no puede ser mayor a la deuda";
+    }
+
+    if (
+      Number(deudaTotal) >= 10000 &&
+      numericValue < minimumInstallmentAmount
+    ) {
+      return "El abono mínimo permitido es de $10.000.";
+    }
+
+    if (Number(deudaTotal) < 10000 && numericValue !== Number(deudaTotal)) {
+      return `La deuda pendiente es menor a $10.000. Debe abonar el total exacto: $${formatNumber(deudaTotal)}.`;
+    }
+
+    if (isFavorMethod && numericValue > favorBalance) {
+      return `El cliente no tiene saldo a favor suficiente. Disponible: $${formatNumber(favorBalance)}.`;
+    }
+
+    return undefined;
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadPaymentMethods = async () => {
+      try {
+        setLoadingMethods(true);
+
+        const methodsResponse = await getPaymentMethods();
+        const mappedMethods = mapPaymentMethods(methodsResponse);
+
+        if (!isMounted) return;
+
+        setPaymentMethods(mappedMethods);
+        setIdPaymentMethod((currentId) => {
+          if (
+            mappedMethods.some(
+              (method) => Number(method.id) === Number(currentId),
+            )
+          ) {
+            return currentId;
+          }
+
+          return Number(mappedMethods[0]?.id ?? currentId);
+        });
+      } catch (error) {
+        console.error(error);
+
+        if (isMounted) {
+          showError("Error", "No se pudieron cargar los medios de pago.");
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingMethods(false);
+        }
+      }
+    };
+
+    loadPaymentMethods();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [showError]);
 
   const nuevaDeuda = useMemo(() => {
     const numericMonto = parseNumber(monto);
@@ -65,17 +158,12 @@ export default function GeneratePaymentModal({
 
   const validate = () => {
     const newErrors = {};
-
     const numericMonto = parseNumber(monto);
-
+    const amountError = getAmountError(monto, numericMonto);
     const trimmedObs = observacion.trim();
 
-    if (!monto) {
-      newErrors.monto = "Ingrese un monto";
-    } else if (numericMonto < minimumInstallmentAmount) {
-      newErrors.monto = "El valor mínimo permitido para un abono es de $1.000.";
-    } else if (numericMonto > deudaTotal) {
-      newErrors.monto = "El monto no puede ser mayor a la deuda";
+    if (amountError) {
+      newErrors.monto = amountError;
     }
 
     if (trimmedObs.length > 255) {
@@ -87,20 +175,17 @@ export default function GeneratePaymentModal({
   };
 
   const numericMonto = parseNumber(monto);
-  const isValidAmount =
-    Number(numericMonto) >= minimumInstallmentAmount &&
-    Number(numericMonto) <= Number(deudaTotal);
+  const currentAmountError = getAmountError(monto, numericMonto);
   const canSubmit =
-    isValidAmount &&
+    !currentAmountError &&
     !errors.monto &&
     !errors.observacion &&
-    !isSubmitting;
+    !isSubmitting &&
+    !loadingMethods &&
+    paymentMethods.length > 0;
 
   const handleSubmit = async () => {
-    if (
-      isSubmitting ||
-      submitLockRef.current
-    ) return;
+    if (isSubmitting || submitLockRef.current) return;
 
     submitLockRef.current = true;
 
@@ -138,9 +223,7 @@ export default function GeneratePaymentModal({
 
       await onSave({
         monto: parseNumber(monto),
-
         idPaymentMethod,
-
         observacion: observacion.trim(),
       });
 
@@ -202,6 +285,13 @@ export default function GeneratePaymentModal({
                 ${formatNumber(deudaTotal)}
               </span>
             </p>
+
+            <p className="text-gray-500">
+              Saldo a favor disponible:
+              <span className="font-semibold text-emerald-600 ml-1">
+                ${formatNumber(favorBalance)}
+              </span>
+            </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4">
@@ -210,35 +300,18 @@ export default function GeneratePaymentModal({
 
               <input
                 type="text"
+                inputMode="numeric"
                 value={monto}
                 onChange={(e) => {
                   const rawValue = e.target.value.replace(/\D/g, "");
-
-                  setMonto(formatNumber(rawValue));
-
+                  const formattedValue = formatNumber(rawValue);
                   const numeric = Number(rawValue);
 
-                  if (!rawValue) {
-                    setErrors((prev) => ({
-                      ...prev,
-                      monto: "Ingrese un monto",
-                    }));
-                  } else if (numeric < minimumInstallmentAmount) {
-                    setErrors((prev) => ({
-                      ...prev,
-                      monto: "El valor mínimo permitido para un abono es de $1.000.",
-                    }));
-                  } else if (numeric > deudaTotal) {
-                    setErrors((prev) => ({
-                      ...prev,
-                      monto: "El monto no puede ser mayor a la deuda",
-                    }));
-                  } else {
-                    setErrors((prev) => ({
-                      ...prev,
-                      monto: undefined,
-                    }));
-                  }
+                  setMonto(formattedValue);
+                  setErrors((prev) => ({
+                    ...prev,
+                    monto: getAmountError(formattedValue, numeric),
+                  }));
                 }}
                 placeholder="0"
                 className={`w-full px-3 py-2 rounded-lg border transition focus:outline-none ${
@@ -259,13 +332,45 @@ export default function GeneratePaymentModal({
 
             <select
               value={idPaymentMethod}
-              onChange={(e) => setIdPaymentMethod(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#004D77]"
-            >
-              <option value={2}>Efectivo</option>
+              disabled={loadingMethods}
+              onChange={(e) => {
+                const nextIdPaymentMethod = Number(e.target.value);
+                const nextMethod = paymentMethods.find(
+                  (method) => Number(method.id) === nextIdPaymentMethod,
+                );
+                const nextIsFavorBalanceMethod =
+                  nextIdPaymentMethod === 4 ||
+                  nextMethod?.nombre?.toLowerCase() === "saldo a favor";
 
-              <option value={1}>Transferencia</option>
+                setIdPaymentMethod(nextIdPaymentMethod);
+                setErrors((prev) => ({
+                  ...prev,
+                  monto: getAmountError(
+                    monto,
+                    parseNumber(monto),
+                    nextIsFavorBalanceMethod,
+                  ),
+                }));
+              }}
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#004D77] disabled:bg-gray-100 disabled:text-gray-500"
+            >
+              {loadingMethods && (
+                <option value={idPaymentMethod}>Cargando...</option>
+              )}
+
+              {!loadingMethods &&
+                paymentMethods.map((method) => (
+                  <option key={method.id} value={method.id}>
+                    {method.nombre}
+                  </option>
+                ))}
             </select>
+
+            {isFavorBalanceMethod && (
+              <p className="text-xs text-emerald-600 mt-1">
+                Disponible: ${formatNumber(favorBalance)}
+              </p>
+            )}
           </div>
 
           <div>

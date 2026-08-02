@@ -31,6 +31,23 @@ const getCustomerEmail = (customer) =>
   customer?.user?.email ??
   "";
 
+const getCustomerFavorBalance = (customer, customerDetails) =>
+  Number(
+    customer?.favorBalance ??
+    customerDetails?.credit_balance ??
+    customerDetails?.creditBalance ??
+    customerDetails?.clientCreditBalance ??
+    customerDetails?.favorBalance ??
+    customerDetails?.saldoFavor ??
+    customerDetails?.saldo_a_favor ??
+    customer?.credit_balance ??
+    customer?.creditBalance ??
+    customer?.clientCreditBalance ??
+    customer?.saldoFavor ??
+    customer?.saldo_a_favor ??
+    0,
+  );
+
 function CreditDateTooltip({ factura, formatDate }) {
   const anchorRef = useRef(null);
   const [position, setPosition] = useState(null);
@@ -144,6 +161,7 @@ export default function AccountDetailsPage({ mode }) {
     creditoAsignado: 0,
     saldo: 0,
     cupoDisponible: 0,
+    favorBalance: 0,
     deudaTotal: 0,
     estado: "al_dia",
   });
@@ -186,6 +204,8 @@ export default function AccountDetailsPage({ mode }) {
           console.error(customerDetailsError);
         }
 
+        const favorBalance = getCustomerFavorBalance(customer, customerDetails);
+
         setAccount({
           id: customer.idClient,
           nombre: customer.fullName,
@@ -195,6 +215,7 @@ export default function AccountDetailsPage({ mode }) {
           creditoAsignado: Number(customer.assignedCredit ?? 0),
           saldo: Number(customer.usedCredit ?? 0),
           cupoDisponible: Number(customer.availableCredit ?? 0),
+          favorBalance,
           deudaTotal: Number(customer.totalDebt ?? 0),
           estado: customer.status?.toLowerCase() ?? "al_dia",
         });
@@ -425,6 +446,7 @@ export default function AccountDetailsPage({ mode }) {
           creditoAsignado={account.creditoAsignado}
           saldoTotal={cupoOcupado}
           cupoDisponible={account.cupoDisponible}
+          favorBalance={account.favorBalance}
           interesTotal={interesTotal}
           deudaTotal={totalDebt}
           estadoGeneral={estadoGeneral}
