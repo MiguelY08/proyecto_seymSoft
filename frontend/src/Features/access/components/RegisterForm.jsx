@@ -60,9 +60,7 @@ export default function RegisterForm() {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [checkingEmail, setCheckingEmail] = useState(false);
-  const [checkingPhone, setCheckingPhone] = useState(false);
   const emailTimeoutRef = useRef(null);
-  const phoneTimeoutRef = useRef(null);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -81,11 +79,10 @@ export default function RegisterForm() {
     setFormData(updatedForm);
     setTouched((prev) => ({ ...prev, [name]: true }));
 
-    // Validar en tiempo real
     const validationErrors = validateRegister(updatedForm);
     setErrors((prev) => ({
       ...prev,
-      [name]: validationErrors[name],
+      [name]: name === "phone" ? "" : validationErrors[name],
     }));
   };
 
@@ -134,46 +131,6 @@ export default function RegisterForm() {
     };
   }, [formData.email, touched.email]);
 
-  useEffect(() => {
-    if (!touched.phone) return undefined;
-
-    clearTimeout(phoneTimeoutRef.current);
-    const phone = normalizeDigits(formData.phone, 10);
-    const localError = validateRegister({ phone }).phone;
-
-    if (localError) {
-      setCheckingPhone(false);
-      setErrors((prev) => ({ ...prev, phone: "El teléfono debe contener entre 7 y 10 dígitos numéricos." }));
-      return undefined;
-    }
-
-    setCheckingPhone(true);
-    let cancelled = false;
-
-    phoneTimeoutRef.current = setTimeout(async () => {
-      try {
-        const data = await validatePhone(phone, "client");
-        if (cancelled) return;
-
-        setErrors((prev) => ({
-          ...prev,
-          phone: getPhoneValidationError(data),
-        }));
-      } catch {
-        if (!cancelled) {
-          setErrors((prev) => ({ ...prev, phone: null }));
-        }
-      } finally {
-        if (!cancelled) setCheckingPhone(false);
-      }
-    }, 500);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(phoneTimeoutRef.current);
-    };
-  }, [formData.phone, touched.phone]);
-
   const handleNumericBeforeInput = (e) => {
     if (!e.data || /^\d+$/.test(e.data)) return;
     e.preventDefault();
@@ -198,11 +155,10 @@ export default function RegisterForm() {
       (value) => normalizeDigits(value, 10),
     );
     const updatedForm = { ...formData, phone: nextPhone };
-    const validationErrors = validateRegister(updatedForm);
 
     setFormData(updatedForm);
     setTouched((prev) => ({ ...prev, phone: true }));
-    setErrors((prev) => ({ ...prev, phone: validationErrors.phone }));
+    setErrors((prev) => ({ ...prev, phone: "" }));
   };
 
   const handleEmailBeforeInput = (e) => {
@@ -393,9 +349,6 @@ export default function RegisterForm() {
             {touched.phone && errors.phone && (
               <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
             )}
-            {checkingPhone && touched.phone && !errors.phone && (
-              <p className="text-[#004D77] text-xs mt-1">Verificando teléfono...</p>
-            )}
           </div>
 
           {/* Contraseña */}
@@ -483,9 +436,9 @@ export default function RegisterForm() {
           <div className="flex flex-col gap-3 mt-4">
             <button
               type="submit"
-              disabled={loading || checkingEmail || checkingPhone || hasBlockingErrors}
+              disabled={loading || checkingEmail || hasBlockingErrors}
               className={`w-full bg-[#004D77] text-white py-2.5 rounded-lg text-sm font-medium transition cursor-pointer
-                ${loading || checkingEmail || checkingPhone || hasBlockingErrors
+                ${loading || checkingEmail || hasBlockingErrors
                   ? "opacity-70 cursor-not-allowed" 
                   : "hover:bg-[#003D5e]"
                 }

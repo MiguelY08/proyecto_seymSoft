@@ -9,6 +9,7 @@ export default function AccountHeader({
   creditoAsignado,
   saldoTotal,
   cupoDisponible,
+  favorBalance,
   interesTotal,
   deudaTotal,
   mode,
@@ -27,6 +28,7 @@ export default function AccountHeader({
   const totalAPagar = Number(deudaTotal ?? 0);
   const credAsignado = creditoAsignado ?? 0;
   const cupoDisponibleValue = cupoDisponible ?? 0;
+  const favorBalanceValue = Number(favorBalance ?? 0);
 
   const pctOcupado =
     credAsignado > 0
@@ -92,6 +94,15 @@ export default function AccountHeader({
               {formatCOP(cupoDisponibleValue)}
             </p>
           </div>
+
+          {/* Saldo a Favor */}
+          {favorBalanceValue > 0 && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5 text-center min-w-0 xl:min-w-[110px]">
+              <p className="text-[9px] text-emerald-500 font-medium uppercase">Saldo a Favor</p>
+              <p className="text-sm font-bold text-emerald-600 mt-1">{formatCOP(favorBalanceValue)}</p>
+              <p className="text-[8px] text-emerald-400 mt-0.5">Disponible</p>
+            </div>
+          )}
 
           {/* Intereses Generados */}
           {interes > 0 && (
