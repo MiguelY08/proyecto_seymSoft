@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 // Componentes y servicios
 import TopBar          from '../components/TopBar';
@@ -6,6 +6,8 @@ import UserMetricsCards from '../components/UserMetricsCards';
 import UsersTable      from '../components/UsersTable';
 import FormUser from '../components/FormUser';
 import InfoUser from '../components/InfoUser';
+import FormClient from '../../sales/clients/modals/FormClient';
+import { clientsService } from '../../sales/clients/services/clientsService';
 import PaginationAdmin from '../../../shared/PaginationAdmin';
 import Spinner from '../../../shared/spinner';
 import {
@@ -18,6 +20,44 @@ import Permission from "../../configuration/roles/components/Permission";
 
 // Número de registros por página (debe coincidir con el limit que acepta la API)
 const RECORDS_PER_PAGE = 11;
+
+const splitUserNameForClient = (name = '') => {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length <= 1) {
+    return {
+      firstName: parts[0] || '',
+      lastName: '',
+    };
+  }
+
+  return {
+    firstName: parts.slice(0, -1).join(' '),
+    lastName: parts.at(-1),
+  };
+};
+
+const buildClientInitialDataFromUser = (user = null) => {
+  const { firstName, lastName } = splitUserNameForClient(user?.name);
+
+  return {
+    personType: 'natural',
+    documentType: 'CC',
+    document: '',
+    firstName,
+    lastName,
+    address: '',
+    phone: user?.phone ? String(user.phone) : '',
+    email: user?.email || '',
+    contactName: '',
+    contactPhone: '',
+    clientCredit: '',
+    saldoFavor: '',
+    clientType: '',
+    rut: '',
+    ciuCode: '',
+  };
+};
 
 function Users() {
   const { showError, showSuccess } = useAlert();
@@ -47,6 +87,12 @@ function Users() {
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [modalOrigin, setModalOrigin] = useState(null);
+  const [clientSeedUser, setClientSeedUser] = useState(null);
+  const [isClientFormOpen, setIsClientFormOpen] = useState(false);
+  const clientInitialData = useMemo(
+    () => buildClientInitialDataFromUser(clientSeedUser),
+    [clientSeedUser]
+  );
 
   // ─── Función para cargar usuarios desde la API ─────────────────────────────
   const fetchUsers = useCallback(async (page, searchTerm) => {
@@ -148,6 +194,62 @@ function Users() {
     setSelectedUser(null);
     setModalOrigin(null);
   }, []);
+
+  const openMakeClientFlow = useCallback((user) => {
+    if (!user) return;
+
+    setClientSeedUser(user);
+    setIsClientFormOpen(true);
+    setIsFormOpen(false);
+    setIsInfoOpen(false);
+    setModalOrigin(null);
+  }, []);
+
+  const closeClientFormModal = useCallback(() => {
+    setIsClientFormOpen(false);
+    setClientSeedUser(null);
+  }, []);
+
+  const handleMakeClientSave = useCallback(async (clientData) => {
+    const userId = Number(clientSeedUser?.id);
+
+    if (!userId) {
+      showError(
+        'Usuario no identificado',
+        'No se pudo identificar el usuario para crear el cliente.'
+      );
+      throw new Error('USER_ID_REQUIRED');
+    }
+
+    try {
+      await clientsService.create({
+        ...clientData,
+        userId,
+      });
+
+      await fetchUsers(currentPage, debouncedSearch);
+
+      showSuccess(
+        'Cliente creado',
+        'El usuario ahora tiene un perfil de cliente asociado.'
+      );
+    } catch (error) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        error.message ||
+        'No se pudo crear el cliente.';
+
+      showError('Error', errorMessage);
+      throw error;
+    }
+  }, [
+    clientSeedUser,
+    currentPage,
+    debouncedSearch,
+    fetchUsers,
+    showError,
+    showSuccess,
+  ]);
 
   const handleSavedUser = useCallback(async () => {
     await fetchUsers(currentPage, debouncedSearch);
@@ -285,6 +387,16 @@ function Users() {
         origin={modalOrigin}
         onClose={closeFormModal}
         onSaved={handleSavedUser}
+        onMakeClient={openMakeClientFlow}
+      />
+
+      <FormClient
+        isOpen={isClientFormOpen}
+        onClose={closeClientFormModal}
+        client={null}
+        initialData={clientInitialData}
+        linkedUser={clientSeedUser}
+        onSave={handleMakeClientSave}
       />
     </div>
   );

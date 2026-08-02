@@ -221,7 +221,7 @@ function MiniFormGraph({ clientId, onExpand }) {
   );
 }
 
-function FormClient({ isOpen, onClose, client, onSave }) {
+function FormClient({ isOpen, onClose, client, onSave, initialData = null, linkedUser = null }) {
   const [showGraph, setShowGraph] = useState(false);
   const [saving, setSaving] = useState(false);
   const { showConfirm } = useAlert();
@@ -244,11 +244,23 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     ciuCode:      '',
   };
 
+  const getCreateInitialState = () => ({
+    ...initialState,
+    ...(initialData || {}),
+  });
+
   const [formData, setFormData] = useState(initialState);
   const [errors,   setErrors]   = useState({});
   const [touched,  setTouched]  = useState({});
   const [checkingEmail, setCheckingEmail] = useState(false);
   const isEditing = !!client;
+  const linkedUserEmail = normalizeEmailInput(linkedUser?.email);
+  const isLinkedUserEmail = (email) => (
+    !isEditing &&
+    linkedUser?.id &&
+    linkedUserEmail &&
+    normalizeEmailInput(email) === linkedUserEmail
+  );
 
   const getDuplicateEmailError = async (email) => {
     const localError = getEmailValidationError(email);
@@ -257,6 +269,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     const currentEmail = String(client?.email || '').trim().toLowerCase();
     const nextEmail = String(email || '').trim().toLowerCase();
     if (currentEmail && currentEmail === nextEmail) return '';
+    if (isLinkedUserEmail(nextEmail)) return '';
 
     const data = await checkEmailAvailability(nextEmail);
     return data?.exists ? 'El correo ya está registrado' : '';
@@ -365,13 +378,13 @@ function FormClient({ isOpen, onClose, client, onSave }) {
       });
       setTouched(Object.keys(initialState).reduce((acc, k) => ({ ...acc, [k]: true }), {}));
     } else {
-      setFormData(initialState);
+      setFormData(getCreateInitialState());
       setTouched({});
     }
     setErrors({});
     setCheckingEmail(false);
     setShowGraph(false);
-  }, [client, isOpen]);
+  }, [client, isOpen, initialData]);
 
   useEffect(() => {
     if (!isOpen || !touched.email) return undefined;
@@ -385,7 +398,10 @@ function FormClient({ isOpen, onClose, client, onSave }) {
     }
 
     const currentEmail = String(client?.email || '').trim().toLowerCase();
-    if (currentEmail && currentEmail === email.toLowerCase()) {
+    if (
+      (currentEmail && currentEmail === email.toLowerCase()) ||
+      isLinkedUserEmail(email)
+    ) {
       setCheckingEmail(false);
       setErrors((prev) => ({
         ...prev,
@@ -426,7 +442,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
   }, [client?.email, client?.id, formData.email, isOpen, touched.email]);
 
   const resetForm = () => {
-    setFormData(initialState);
+    setFormData(getCreateInitialState());
     setErrors({});
     setTouched({});
     setCheckingEmail(false);
@@ -452,7 +468,7 @@ function FormClient({ isOpen, onClose, client, onSave }) {
           rut: client.rut || '',
           ciuCode: client.ciuCode || '',
         }
-      : initialState;
+      : getCreateInitialState();
 
     return Object.keys(initialState).some(
       (key) => String(formData[key] ?? '') !== String(baseData[key] ?? '')

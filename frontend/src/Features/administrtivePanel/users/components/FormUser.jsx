@@ -1,4 +1,4 @@
-import { X, User, Mail, Phone, ShieldCheck, Loader2 } from 'lucide-react';
+import { X, User, Mail, Phone, ShieldCheck, Loader2, UserPlus, BadgeCheck } from 'lucide-react';
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAlert } from '../../../shared/alerts/useAlert';
 import { useAuth } from '../../../access/context/AuthContext';
@@ -79,12 +79,14 @@ function FormUser({
   origin = null,
   onClose,
   onSaved,
+  onMakeClient,
 }) {
   const { showWarning, showSuccess, showConfirm } = useAlert();
   const { user: authUser } = useAuth();
 
   const isEditing = userToEdit !== null;
   const isSelfEdit = isEditing && isSelfUser(userToEdit, authUser);
+  const isClientUser = isEditing && userToEdit?.isClient === true;
 
   const [visible, setVisible] = useState(false);
   const transformOrigin = origin ? `${origin.x}px ${origin.y}px` : 'center center';
@@ -102,7 +104,7 @@ function FormUser({
   const [roles, setRoles] = useState([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
   const roleOptions = useMemo(() => [
-    { value: '', label: 'Sin rol' },
+    { value: '', label: 'Cliente' },
     ...roles.map((role) => ({
       value: String(role.idRole ?? role.id),
       label: role.nameRole ?? role.name,
@@ -427,6 +429,11 @@ function FormUser({
     }
   };
 
+  const handleMakeClient = () => {
+    if (!isEditing || isClientUser) return;
+    onMakeClient?.(userToEdit);
+  };
+
   const isDirty = useMemo(() => {
     if (isEditing) {
       return (
@@ -624,6 +631,43 @@ function FormUser({
               ariaLabel="Rol"
             />
           </div>
+
+          {isEditing && (
+            <div className={`rounded-lg border px-4 py-3 text-sm ${
+              isClientUser
+                ? 'border-green-200 bg-green-50 text-green-700'
+                : 'border-[#004D77]/20 bg-[#004D77]/5 text-gray-700'
+            }`}>
+              {isClientUser ? (
+                <div className="flex items-start gap-2">
+                  <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-green-600" strokeWidth={1.8} />
+                  <div>
+                    <p className="font-semibold">Este usuario ya es cliente.</p>
+                    <p className="mt-0.5 text-xs text-green-700/80">
+                      Ya existe un perfil de cliente asociado a este usuario.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-semibold text-[#004D77]">Este usuario aún no es cliente.</p>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Puedes iniciar el registro de cliente con sus datos actuales.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleMakeClient}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#003a5c] sm:w-auto"
+                  >
+                    <UserPlus className="h-4 w-4" strokeWidth={1.8} />
+                    Hacer cliente
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
