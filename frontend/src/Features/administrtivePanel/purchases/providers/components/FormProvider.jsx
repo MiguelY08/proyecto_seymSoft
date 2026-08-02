@@ -15,13 +15,23 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, ChevronDown, Loader2 } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
-import { getEmailValidationError, validateProviderForm } from '../utils/providerHelpers';
+import {
+  getDocumentValidationError,
+  getEmailValidationError,
+  normalizeDocumentKey,
+  validateProviderForm,
+} from '../utils/providerHelpers';
 import { categoriesService } from '../data/categoriesService';
 import { providersService } from '../data/providersService';
 import FormSelect from '../../../../shared/FormSelect';
 import LoadingOverlay from '../../../../shared/LoadingOverlay';
 
 let categoriesCache = null;
+
+const EMAIL_MAX_LENGTH = 100;
+const ADDRESS_MAX_LENGTH = 120;
+const CIU_CODE_LENGTH = 4;
+const PROVIDER_NAME_MAX_LENGTH = 100;
 
 const onlyDigits = (value, maxLength = 10) =>
   String(value ?? '').replace(/\D/g, '').slice(0, maxLength);
@@ -32,7 +42,7 @@ const onlyLetters = (value, maxLength = 80) =>
     .replace(/\s{2,}/g, ' ')
     .slice(0, maxLength);
 
-const cleanCompanyName = (value, maxLength = 120) =>
+const cleanCompanyName = (value, maxLength = PROVIDER_NAME_MAX_LENGTH) =>
   String(value ?? '')
     .replace(/[^A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ\s&.,#'-]/g, '')
     .replace(/\s{2,}/g, ' ')
@@ -50,7 +60,16 @@ const cleanDocument = (value, documentType) => {
 };
 
 const cleanCiuCode = (value) =>
-  String(value ?? '').replace(/[^A-Za-z0-9-]/g, '').slice(0, 25);
+  onlyDigits(value, CIU_CODE_LENGTH);
+
+const cleanEmail = (value) =>
+  String(value ?? '').trim().toLowerCase().slice(0, EMAIL_MAX_LENGTH);
+
+const cleanAddress = (value) =>
+  String(value ?? '')
+    .replace(/^\s+/, '')
+    .replace(/\s{2,}/g, ' ')
+    .slice(0, ADDRESS_MAX_LENGTH);
 
 const getCategoryIds = (categories) => {
   if (!Array.isArray(categories)) return [];
@@ -87,6 +106,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [saving, setSaving] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
+  const [checkingDocument, setCheckingDocument] = useState(false);
   const categoriasRef = useRef(null);
   const { showError, showConfirm } = useAlert();
   const isEditing = !!provider;
@@ -119,6 +139,39 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
 
     const duplicate = await findProviderByEmail(email);
     return duplicate ? 'Este correo ya está registrado' : '';
+  };
+
+  const findProviderByDocument = async (document, documentType) => {
+    const normalizedDocument = normalizeDocumentKey(document);
+    const normalizedType = String(documentType || '').trim().toUpperCase();
+    if (!normalizedDocument || !normalizedType) return null;
+
+    const result = await providersService.getAll({
+      page: 1,
+      limit: 10000,
+      search: '',
+    });
+
+    return (result.data || []).find((item) => {
+      const sameProvider = provider?.id && Number(item.id) === Number(provider.id);
+      const sameType = String(item.tipo || '').trim().toUpperCase() === normalizedType;
+      const sameDocument = normalizeDocumentKey(item.numero) === normalizedDocument;
+      return sameType && sameDocument && !sameProvider;
+    }) || null;
+  };
+
+  const getDuplicateDocumentError = async (document, documentType) => {
+    const localError = getDocumentValidationError(document, documentType);
+    if (localError) return '';
+
+    const currentType = String(provider?.tipo || '').trim().toUpperCase();
+    const currentDocument = normalizeDocumentKey(provider?.numero);
+    const nextType = String(documentType || '').trim().toUpperCase();
+    const nextDocument = normalizeDocumentKey(document);
+    if (currentType === nextType && currentDocument && currentDocument === nextDocument) return '';
+
+    const duplicateDocument = await findProviderByDocument(document, documentType);
+    return duplicateDocument ? 'Este documento ya está registrado' : '';
   };
 
   // Cargar categorías desde la API
@@ -184,6 +237,8 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     }
 
     setErrors({});
+    setCheckingEmail(false);
+    setCheckingDocument(false);
   }, [provider, isOpen]);
 
   useEffect(() => {
@@ -238,6 +293,49 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     };
   }, [formData.correo, isOpen, provider?.correo, provider?.id, touched.correo]);
 
+  useEffect(() => {
+    if (!isOpen || isEditing || !touched.numero) return undefined;
+
+    const documentValue = String(formData.numero || '').trim();
+    const localError = getDocumentValidationError(formData.numero, formData.tipo);
+
+    if (localError) {
+      setCheckingDocument(false);
+      setErrors((prev) => ({ ...prev, numero: localError }));
+      return undefined;
+    }
+
+    let cancelled = false;
+    setCheckingDocument(true);
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const duplicateError = await getDuplicateDocumentError(documentValue, formData.tipo);
+        if (cancelled) return;
+
+        setErrors((prev) => {
+          const currentLocalError = getDocumentValidationError(formData.numero, formData.tipo);
+          if (currentLocalError) return { ...prev, numero: currentLocalError };
+          return { ...prev, numero: duplicateError };
+        });
+      } catch {
+        if (!cancelled) {
+          setErrors((prev) => ({
+            ...prev,
+            numero: prev.numero === 'Este documento ya está registrado' ? '' : prev.numero,
+          }));
+        }
+      } finally {
+        if (!cancelled) setCheckingDocument(false);
+      }
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [formData.numero, formData.tipo, isEditing, isOpen, touched.numero]);
+
   // Cierre del dropdown de categorías
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -261,6 +359,8 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     setTouched({});
     setCategoriasOpen(false);
     setIsDocumentTypeDisabled(false);
+    setCheckingEmail(false);
+    setCheckingDocument(false);
   };
 
   const handleClose = () => {
@@ -302,6 +402,12 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     }
     if (name === 'numero') {
       nextValue = cleanDocument(value, formData.tipo);
+    }
+    if (name === 'correo') {
+      nextValue = cleanEmail(value);
+    }
+    if (name === 'direccion') {
+      nextValue = cleanAddress(value);
     }
     if (name === 'codigoCIU') {
       nextValue = cleanCiuCode(value);
@@ -354,6 +460,12 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       fieldsToRefresh.forEach((field) => {
         next[field] = validationErrors[field] || '';
       });
+      if (name === 'numero') {
+        next.numero = getDocumentValidationError(nextValue, newFormData.tipo);
+      }
+      if (name === 'tipo') {
+        next.numero = getDocumentValidationError(newFormData.numero, newFormData.tipo);
+      }
       return next;
     });
   };
@@ -400,7 +512,9 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     const validationErrors = validateForm(formData);
     setErrors((prev) => ({
       ...prev,
-      [name]: validationErrors[name] || '',
+      [name]: name === 'numero'
+        ? getDocumentValidationError(formData.numero, formData.tipo)
+        : validationErrors[name] || '',
     }));
   };
 
@@ -424,6 +538,12 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       : data;
 
     const validationErrors = validateProviderForm(dataToValidate);
+    const documentError = getDocumentValidationError(data.numero, data.tipo);
+    if (documentError) {
+      validationErrors.numero = documentError;
+    } else {
+      delete validationErrors.numero;
+    }
 
     if (data.tipoPersona === 'juridica') {
       delete validationErrors.apellidos;
@@ -432,6 +552,8 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
         validationErrors.nombres = 'El nombre de la empresa es obligatorio';
       } else if (data.nombres.trim().length < 2) {
         validationErrors.nombres = 'Debe tener al menos 2 caracteres';
+      } else if (data.nombres.trim().length > PROVIDER_NAME_MAX_LENGTH) {
+        validationErrors.nombres = `No puede superar ${PROVIDER_NAME_MAX_LENGTH} caracteres`;
       } else {
         delete validationErrors.nombres;
       }
@@ -457,10 +579,11 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     }
 
     // Validación específica: si RUT es "Sí", código CIU es obligatorio
-    if (formData.rut === 'si' && !formData.codigoCIU?.trim()) {
-      setErrors(prev => ({ ...prev, codigoCIU: 'El código CIU es obligatorio cuando RUT es Sí' }));
+    if (formData.rut === 'si' && !/^\d{4}$/.test(String(formData.codigoCIU || '').trim())) {
+      const ciuError = 'El codigo CIU debe tener exactamente 4 numeros';
+      setErrors(prev => ({ ...prev, codigoCIU: ciuError }));
       setTouched(prev => ({ ...prev, codigoCIU: true }));
-      showError('Errores en el formulario', 'El código CIU es obligatorio cuando RUT es Sí');
+      showError('Errores en el formulario', ciuError);
       return;
     }
 
@@ -491,6 +614,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       return;
     }
 
+    const duplicateDocumentError = await getDuplicateDocumentError(formData.numero, formData.tipo);
+    if (duplicateDocumentError) {
+      setErrors((prev) => ({ ...prev, numero: duplicateDocumentError }));
+      setTouched((prev) => ({ ...prev, numero: true }));
+      showError('Errores en el formulario', duplicateDocumentError);
+      return;
+    }
+
     // Preparar datos para enviar
     const dataToSave = {
       personType: formData.tipoPersona,
@@ -504,7 +635,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       contactPersonName: formData.nombreContacto,
       contactPersonNumber: formData.numeroContacto ? Number(formData.numeroContacto) : null,
       rut: formData.rut === 'si',
-      ciuCode: formData.codigoCIU || null,
+      ciuCode: formData.rut === 'si' ? cleanCiuCode(formData.codigoCIU) : null,
       maxReturnPeriod: formData.plazoDevoluciones ? parseInt(formData.plazoDevoluciones) : null,
       categoryIds: formData.categoryIds,
       idStatus: 1
@@ -528,14 +659,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
   const hasLiveErrors = Object.keys(liveValidationErrors).length > 0;
 
   const inputClass = (field) =>
-    `h-10 w-full rounded-xl border px-3 py-0 text-sm outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors ${
+    `h-10 w-full rounded-lg border px-3 py-0 text-sm outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors ${
       errors[field] && touched[field]
         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
         : 'border-slate-200 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/10'
     }`;
 
   const disabledInputClass = (field) =>
-    `h-10 w-full rounded-xl border px-3 py-0 text-sm outline-none bg-slate-100 text-slate-500 cursor-not-allowed ${
+    `h-10 w-full rounded-lg border px-3 py-0 text-sm outline-none bg-slate-100 text-slate-500 cursor-not-allowed ${
       errors[field] && touched[field]
         ? 'border-red-500'
         : 'border-slate-200'
@@ -620,7 +751,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
         onClick={handleClose}
       />
 
-      <div className="relative flex h-dvh w-full min-h-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[94vh] sm:max-w-2xl sm:rounded-3xl">
+      <div className="relative flex h-dvh w-full min-h-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[94vh] sm:max-w-2xl sm:rounded-lg">
         <LoadingOverlay show={saving} message={isEditing ? 'Actualizando proveedor...' : 'Creando proveedor...'} />
         
           <div className="bg-[#004D77] text-white px-4 py-3.5 sm:px-5 sm:py-4 flex items-center justify-between shrink-0">
@@ -639,7 +770,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
           <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5">
             {isEditing && (
-              <div className="mb-4 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-800">
+              <div className="mb-4 rounded-lg border border-sky-100 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-800">
                 Modo edición: puedes actualizar contacto, plazo de devolución, categorías, RUT y CIU. La identificación queda protegida.
               </div>
             )}
@@ -663,7 +794,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     error={errors.tipoPersona && touched.tipoPersona}
               placeholder="Selecciona una opción"
               ariaLabel="Tipo de persona"
-              className="h-10 rounded-xl py-0 pr-10"
+              className="h-10 rounded-lg py-0 pr-10"
               {...selectResponsiveProps}
             />
                   {renderError('tipoPersona')}
@@ -680,7 +811,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       error={errors.tipo && touched.tipo}
                 placeholder="Tipo"
                 ariaLabel="Tipo de documento"
-                className="h-10 rounded-xl py-0 pr-10"
+                className="h-10 rounded-lg py-0 pr-10"
                 {...selectResponsiveProps}
               />
                   </div>
@@ -697,6 +828,9 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       className={isEditing ? disabledInputClass('numero') : inputClass('numero')}
                       disabled={isEditing}
                     />
+                    {checkingDocument && touched.numero && !errors.numero && (
+                      <p className="mt-0.5 text-xs text-[#004D77]">Verificando si el documento ya está registrado...</p>
+                    )}
                     {renderError('numero')}
                   </div>
                 </div>
@@ -710,8 +844,9 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     value={formData.nombres}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder={isLegalPerson ? 'Ej: PapelerÃ­a Magic SAS' : 'Ej: Juan Carlos'}
+                    placeholder={isLegalPerson ? 'Ej: Papeleria Magic SAS' : 'Ej: Juan Carlos'}
                     autoComplete="off"
+                    maxLength={PROVIDER_NAME_MAX_LENGTH}
                     className={isEditing ? disabledInputClass('nombres') : inputClass('nombres')}
                     disabled={isEditing}
                   />
@@ -729,6 +864,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     onBlur={handleBlur}
                     placeholder="Ej: Pérez Gómez"
                     autoComplete="off"
+                    maxLength={PROVIDER_NAME_MAX_LENGTH}
                     className={isEditing ? disabledInputClass('apellidos') : inputClass('apellidos')}
                     disabled={isEditing}
                   />
@@ -762,6 +898,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       onBlur={handleBlur}
                       placeholder="Ej: Calle 10 # 15-25"
                       autoComplete="off"
+                      maxLength={ADDRESS_MAX_LENGTH}
                       className={inputClass('direccion')}
                     />
                     {renderError('direccion')}
@@ -778,6 +915,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     onBlur={handleBlur}
                     placeholder="Ej: proveedor@email.com"
                     autoComplete="off"
+                    maxLength={EMAIL_MAX_LENGTH}
               className={inputClass('correo')}
             />
             {checkingEmail && touched.correo && !errors.correo && (
@@ -898,7 +1036,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       error={errors.rut && touched.rut}
                 placeholder="Seleccione"
                 ariaLabel="RUT"
-              className="h-10 rounded-xl py-0 pr-10"
+                className="h-10 rounded-lg py-0 pr-10"
                 {...selectResponsiveProps}
               />
                     {renderError('rut')}
@@ -912,6 +1050,9 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       onChange={handleChange}
                       onBlur={handleBlur}
                       autoComplete="off"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={CIU_CODE_LENGTH}
                       className={formData.rut === 'si' ? inputClass('codigoCIU') : disabledInputClass('codigoCIU')}
                       disabled={formData.rut === 'no'}
                       readOnly={formData.rut === 'no'}
@@ -930,14 +1071,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
               type="button"
               onClick={handleClose}
               disabled={saving}
-              className="w-full rounded-full border border-slate-300 px-6 py-2.5 text-sm font-semibold text-slate-600 transition duration-200 hover:border-[#004D77] hover:bg-sky-50 hover:text-[#004D77] disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto sm:hover:-translate-y-0.5"
+              className="w-full rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              disabled={saving || hasLiveErrors}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-semibold text-white transition duration-200 hover:bg-[#003d61] disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60 sm:w-auto sm:hover:-translate-y-0.5 sm:hover:shadow-lg"
+              disabled={saving || checkingEmail || checkingDocument || hasLiveErrors}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               {saving ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}

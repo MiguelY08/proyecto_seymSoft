@@ -65,9 +65,20 @@ const getStatusDotClass = (status) => {
   const normalized = normalizeStatus(status).toLocaleLowerCase('es-CO');
   if (normalized.includes('listo') || normalized.includes('procesad')) return 'bg-emerald-400';
   if (normalized.includes('anulad') || normalized.includes('cancel')) return 'bg-red-400';
+  if (normalized.includes('proceso') || normalized.includes('pend')) return 'bg-yellow-400';
   if (normalized.includes('reembolso') || normalized.includes('reemplazo')) return 'bg-yellow-400';
   if (normalized.includes('envio') || normalized.includes('envío')) return 'bg-orange-400';
   return 'bg-slate-400';
+};
+
+const shouldPulseStatus = (status) => {
+  const normalized = normalizeStatus(status).toLocaleLowerCase('es-CO');
+  return (
+    normalized.includes('proceso') ||
+    normalized.includes('pend') ||
+    normalized.includes('envio') ||
+    normalized.includes('envÃ­o')
+  );
 };
 
 function useFloatingTooltip() {
@@ -138,9 +149,15 @@ const StatusProcessTooltip = ({ row, status }) => {
         ref={ref}
         onMouseEnter={show}
         onMouseLeave={hide}
-        className={`inline-flex max-w-full cursor-default items-center justify-center truncate rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusStyle(status)}`}
+        className={`inline-flex max-w-full cursor-default items-center justify-center gap-1 truncate rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getStatusStyle(status)}`}
         title={getStatusText(status)}
       >
+        <span className="relative inline-flex h-1.5 w-1.5 shrink-0">
+          {shouldPulseStatus(status) && (
+            <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${getStatusDotClass(status)}`} />
+          )}
+          <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${getStatusDotClass(status)}`} />
+        </span>
         {getStatusText(status)}
       </span>
 
@@ -235,26 +252,14 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
   }
 
   return (
-    <div className="w-full overflow-x-auto rounded-xl bg-white shadow-md lg:max-h-[calc(100vh-330px)] lg:min-w-0 lg:overflow-auto lg:overscroll-contain lg:shadow-none lg:[-webkit-overflow-scrolling:touch]">
-      <table className="min-w-[1180px] w-full table-fixed lg:min-w-[1060px] lg:table-auto">
-        <colgroup>
-          <col className="w-[4%]" />
-          <col className="w-[13%]" />
-          <col className="w-[10%]" />
-          <col className="w-[18%]" />
-          <col className="w-[17%]" />
-          <col className="w-[10%]" />
-          <col className="w-[11%]" />
-          <col className="w-[12%]" />
-          <col className="w-[10%]" />
-        </colgroup>
-
-        <thead className="sticky top-0 z-10 bg-[#004D77] text-white">
+    <div className="min-w-0 w-full rounded-xl overflow-x-auto lg:overflow-auto lg:overscroll-contain lg:[-webkit-overflow-scrolling:touch]">
+      <table className="min-w-max w-full table-auto">
+        <thead className="sticky top-0 z-20 bg-[#004D77] text-white">
           <tr>
             {HEADERS.map((header) => (
               <th
                 key={header}
-                className="truncate px-4 py-3 text-center text-sm font-semibold"
+                className="truncate px-3 py-2.5 text-center text-xs font-semibold"
                 title={header}
               >
                 {header}
@@ -299,7 +304,19 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
                     ${formatCurrency(total)}
                   </td>
                   <td className="px-4 py-2.5 text-center">
-                    <StatusProcessTooltip row={row} status={status} />
+                    <div className="flex items-center justify-center gap-2">
+                      <StatusProcessTooltip row={row} status={status} />
+                      {canView && (
+                        <button
+                          type="button"
+                          
+                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-400 "
+                          
+                        >
+                          <Info className="h-4 w-4" strokeWidth={1.7} />
+                        </button>
+                      )}
+                    </div>
                   </td>
                   <td className="px-3 py-2.5">
                     <div className="mx-auto flex min-w-[92px] items-center justify-center gap-2.5">

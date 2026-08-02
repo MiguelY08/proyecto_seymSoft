@@ -11,6 +11,29 @@ import { formatCurrency, formatDate } from '../utils/returnsHelpers';
 const MOTIVO_MAX = 500;
 const MOTIVO_MIN = 10;
 
+const getCancelReturnError = (error) => {
+  const message = error?.response?.data?.message || error?.message || '';
+
+  if (message.toLowerCase().includes('saldo a favor')) {
+    return {
+      title: 'No se puede revertir el saldo',
+      text: message,
+    };
+  }
+
+  if (message.toLowerCase().includes('stock')) {
+    return {
+      title: 'No se puede ajustar el stock',
+      text: message,
+    };
+  }
+
+  return {
+    title: 'No se pudo anular la devolución',
+    text: message || 'Intenta nuevamente.',
+  };
+};
+
 function DetailItem({ label, value }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -41,7 +64,6 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
   };
   const motivoError = touched ? validateMotivo(motivo) : '';
 
-  // ✅ Usar details (modelo único)
   const productos = returnData.details || [];
   const totalGeneral = returnData.totalAmount || 0;
 
@@ -58,7 +80,8 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
         onClose();
       }
     } catch (error) {
-      showError('Error', error.message || 'No se pudo anular la devolución');
+      const alertData = getCancelReturnError(error);
+      showError(alertData.title, alertData.text);
     } finally {
       setSubmitting(false);
     }
@@ -66,7 +89,7 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
 
   return (
     <div onClick={onClose} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-0 backdrop-blur-sm sm:p-4">
-      <div onClick={(e) => e.stopPropagation()} className="flex h-dvh w-full max-w-3xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:rounded-3xl">
+      <div onClick={(e) => e.stopPropagation()} className="flex h-dvh w-full max-w-3xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:rounded-lg">
         
         <div className="flex shrink-0 items-center justify-between bg-[#004D77] px-4 py-4 sm:px-6">
           <div className="flex items-center gap-2.5">
@@ -125,7 +148,7 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
                     onBlur={() => setTouched(true)}
                     placeholder="Describe el motivo por el cual se anula esta devolución..."
                     rows={4}
-                    className={`w-full px-4 py-2.5 text-sm border rounded-xl outline-none resize-none text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
+                    className={`w-full px-4 py-2.5 text-sm border rounded-lg outline-none resize-none text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
                       motivoError
                         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
                         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
@@ -196,13 +219,13 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
         </div>
 
         <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6 sm:py-4">
-          <button onClick={onClose} className="w-full rounded-xl bg-gray-100 px-6 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 sm:w-auto">
+          <button onClick={onClose} className="w-full rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 sm:w-auto">
             Cancelar
           </button>
           <button
             onClick={handleConfirm}
             disabled={Boolean(validateMotivo(motivo)) || submitting}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#004D77] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#003D5e] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             <XCircle className="w-4 h-4" strokeWidth={2} />
             {submitting ? 'Anulando...' : 'Confirmar anulación'}
