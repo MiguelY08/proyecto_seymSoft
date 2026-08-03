@@ -7,6 +7,20 @@
 
 import apiClient from '../../../../../setting/apiClient.js';
 
+const isLegalProvider = (provider) =>
+  String(provider?.personType || '').trim().toLowerCase() === 'juridica';
+
+const getDisplayLastname = (provider) => {
+  const lastname = String(provider?.lastname || '').trim();
+  if (isLegalProvider(provider) && lastname.toLowerCase() === 'empresa') return '';
+  return lastname;
+};
+
+const getDisplayName = (provider) => {
+  if (isLegalProvider(provider)) return String(provider?.nameProvider || '').trim();
+  return provider.fullName || `${provider.nameProvider || ''} ${getDisplayLastname(provider)}`.trim();
+};
+
 export const providersService = {
   getAll: async (params = {}) => {
     const { page = 1, limit = 13, search = '', personType = '', idStatus = '' } = params;
@@ -29,7 +43,7 @@ export const providersService = {
       id: provider.id,
       tipo: provider.documentType,
       numero: provider.documentNumber,
-      nombre: provider.fullName || `${provider.nameProvider} ${provider.lastname}`.trim(),
+      nombre: getDisplayName(provider),
       pContacto: provider.contactPersonName,
       nuContacto: provider.contactPersonNumber,
       plazoDevoluciones: provider.maxReturnPeriod,
@@ -37,7 +51,7 @@ export const providersService = {
       activo: provider.active,
       tipoPersona: provider.personType,
       nombres: provider.nameProvider,
-      apellidos: provider.lastname,
+      apellidos: getDisplayLastname(provider),
       telefono: provider.phone,
       correo: provider.email,
       direccion: provider.address,
@@ -67,7 +81,7 @@ export const providersService = {
       id: provider.id,
       tipo: provider.documentType,
       numero: provider.documentNumber,
-      nombre: provider.fullName || `${provider.nameProvider} ${provider.lastname}`.trim(),
+      nombre: getDisplayName(provider),
       pContacto: provider.contactPersonName,
       nuContacto: provider.contactPersonNumber,
       plazoDevoluciones: provider.maxReturnPeriod,
@@ -75,7 +89,7 @@ export const providersService = {
       activo: provider.active,
       tipoPersona: provider.personType,
       nombres: provider.nameProvider,
-      apellidos: provider.lastname,
+      apellidos: getDisplayLastname(provider),
       telefono: provider.phone,
       correo: provider.email,
       direccion: provider.address,
@@ -87,6 +101,7 @@ export const providersService = {
   },
 
   create: async (providerData) => {
+    const hasRut = providerData.rut === 'si';
     const payload = {
       personType: providerData.tipoPersona,
       documentType: providerData.tipo,
@@ -98,8 +113,8 @@ export const providersService = {
       address: providerData.direccion,
       contactPersonName: providerData.nombreContacto,
       contactPersonNumber: providerData.numeroContacto ? Number(providerData.numeroContacto) : null,
-      rut: providerData.rut === 'si',
-      ciuCode: providerData.codigoCIU || null,
+      rut: hasRut,
+      ciuCode: hasRut ? providerData.codigoCIU || null : null,
       maxReturnPeriod: providerData.plazoDevoluciones ? parseInt(providerData.plazoDevoluciones) : null,
       categoryIds: providerData.categoryIds || [],
       idStatus: 1
@@ -118,7 +133,7 @@ export const providersService = {
       id: provider.id,
       tipo: provider.documentType,
       numero: provider.documentNumber,
-      nombre: provider.fullName || `${provider.nameProvider} ${provider.lastname}`.trim(),
+      nombre: getDisplayName(provider),
       pContacto: provider.contactPersonName,
       nuContacto: provider.contactPersonNumber,
       plazoDevoluciones: provider.maxReturnPeriod,
@@ -126,7 +141,7 @@ export const providersService = {
       activo: provider.active,
       tipoPersona: provider.personType,
       nombres: provider.nameProvider,
-      apellidos: provider.lastname,
+      apellidos: getDisplayLastname(provider),
       telefono: provider.phone,
       correo: provider.email,
       direccion: provider.address,
@@ -144,14 +159,17 @@ export const providersService = {
     const payload = {};
     
     // Usa los nombres que vienen de FormProvider
+    const hasRut = providerData.rut === 'si';
     if (providerData.tipoPersona !== undefined) payload.personType = providerData.tipoPersona;
     if (providerData.correo !== undefined) payload.email = providerData.correo;
     if (providerData.phone !== undefined) payload.phone = providerData.phone;
     if (providerData.direccion !== undefined) payload.address = providerData.direccion;
     if (providerData.nombreContacto !== undefined) payload.contactPersonName = providerData.nombreContacto;
     if (providerData.numeroContacto !== undefined) payload.contactPersonNumber = providerData.numeroContacto ? Number(providerData.numeroContacto) : null;
-    if (providerData.rut !== undefined) payload.rut = providerData.rut === 'si';
-    if (providerData.codigoCIU !== undefined) payload.ciuCode = providerData.codigoCIU || null;
+    if (providerData.rut !== undefined) payload.rut = hasRut;
+    if (providerData.codigoCIU !== undefined || providerData.rut !== undefined) {
+      payload.ciuCode = hasRut ? providerData.codigoCIU || null : null;
+    }
     if (providerData.plazoDevoluciones !== undefined) payload.maxReturnPeriod = providerData.plazoDevoluciones ? parseInt(providerData.plazoDevoluciones) : null;
     if (providerData.categoryIds !== undefined) payload.categoryIds = providerData.categoryIds;
     if (providerData.idStatus !== undefined) payload.idStatus = providerData.idStatus;
@@ -169,7 +187,7 @@ export const providersService = {
       id: provider.id,
       tipo: provider.documentType,
       numero: provider.documentNumber,
-      nombre: provider.fullName || `${provider.nameProvider} ${provider.lastname}`.trim(),
+      nombre: getDisplayName(provider),
       pContacto: provider.contactPersonName,
       nuContacto: provider.contactPersonNumber,
       plazoDevoluciones: provider.maxReturnPeriod,
@@ -177,7 +195,7 @@ export const providersService = {
       activo: provider.active,
       tipoPersona: provider.personType,
       nombres: provider.nameProvider,
-      apellidos: provider.lastname,
+      apellidos: getDisplayLastname(provider),
       telefono: provider.phone,
       correo: provider.email,
       direccion: provider.address,
@@ -213,7 +231,7 @@ export const providersService = {
       id: provider.id,
       tipo: provider.documentType,
       numero: provider.documentNumber,
-      nombre: provider.fullName || `${provider.nameProvider} ${provider.lastname}`.trim(),
+      nombre: getDisplayName(provider),
       pContacto: provider.contactPersonName,
       nuContacto: provider.contactPersonNumber,
       plazoDevoluciones: provider.maxReturnPeriod,
@@ -221,7 +239,7 @@ export const providersService = {
       activo: provider.active,
       tipoPersona: provider.personType,
       nombres: provider.nameProvider,
-      apellidos: provider.lastname,
+      apellidos: getDisplayLastname(provider),
       telefono: provider.phone,
       correo: provider.email,
       direccion: provider.address,

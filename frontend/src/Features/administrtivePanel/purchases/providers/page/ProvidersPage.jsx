@@ -58,6 +58,33 @@ const providerMatchesSearch = (provider, searchTerm) => {
   return searchable.some((value) => normalizeSearch(value).includes(term));
 };
 
+const toNumber = (value) => {
+  if (value === null || value === undefined || value === '') return 0;
+  const number = Number(String(value).replace(/[^\d.-]/g, ''));
+  return Number.isFinite(number) ? number : 0;
+};
+
+const getProviderDeadline = (provider) =>
+  toNumber(provider?.plazoDevoluciones ?? provider?.maxReturnPeriod ?? provider?.returnDeadline);
+
+const getProviderSaveError = (error) => {
+  const response = error?.response?.data || {};
+  const message = response.message || error?.message || '';
+  const lowerMessage = message.toLowerCase();
+
+  if (lowerMessage.includes('duplicate') || lowerMessage.includes('ya existe')) {
+    return {
+      title: 'Proveedor duplicado',
+      text: message || 'Ya existe un proveedor con esos datos.',
+    };
+  }
+
+  return {
+    title: 'No se pudo guardar el proveedor',
+    text: message || 'Revisa los datos e inténtalo nuevamente.',
+  };
+};
+
 function ProvidersPage() {
   const [providers, setProviders] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -170,6 +197,19 @@ function ProvidersPage() {
       const providerPayload = mapProviderFormToService(formData);
 
       if (selectedProvider) {
+        const previousDeadline = getProviderDeadline(selectedProvider);
+        const nextDeadline = toNumber(providerPayload.plazoDevoluciones);
+
+        if (previousDeadline !== nextDeadline) {
+          const result = await showConfirm(
+            'warning',
+            'Confirmar plazo de devoluciones',
+            `Vas a cambiar el plazo de devoluciones de "${selectedProvider.nombre}" de ${previousDeadline} día(s) a ${nextDeadline} día(s). Este plazo se usará para validar futuras devoluciones de compra.`,
+            { confirmButtonText: 'Sí, guardar cambios', cancelButtonText: 'Revisar' }
+          );
+          if (!result?.isConfirmed) return;
+        }
+
         const updatedProvider = await providersService.update(selectedProvider.id, providerPayload);
         
         if (updatedProvider) {
@@ -180,13 +220,13 @@ function ProvidersPage() {
         const newProvider = await providersService.create(providerPayload);
         
         setProviders(prev => [...prev, newProvider]);
-        loadProviders(); // Recargar para tener datos actualizados
+        loadProviders();
         showSuccess('Proveedor creado', 'El nuevo proveedor se creó exitosamente');
       }
-      //  No cerrar el modal aquí, se cierra en FormProvider después del éxito
     } catch (error) {
-      showError('Error', error.message || 'No se pudo guardar el proveedor');
-      throw error; //  Relanzar para que FormProvider no cierre el modal
+      const alertData = getProviderSaveError(error);
+      showError(alertData.title, alertData.text);
+      throw error;
     }
   };
 
