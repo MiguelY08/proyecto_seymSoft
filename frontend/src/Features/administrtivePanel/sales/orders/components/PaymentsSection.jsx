@@ -163,7 +163,7 @@ function PaymentsSection({
             <CreditCard className="w-4 h-4 text-white" strokeWidth={2} />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-gray-800">Pagos y Abonos</p>
+            <p className="text-sm font-semibold text-gray-800">Pagos</p>
             <p className="text-xs text-gray-400">Gestión de pagos del pedido</p>
           </div>
         </div>
@@ -174,7 +174,7 @@ function PaymentsSection({
             className="flex w-full items-center justify-center gap-1 rounded-md px-2 py-2 text-sm text-[#004D77] transition-colors duration-200 hover:bg-[#004D77]/10 sm:w-auto sm:py-1"
           >
             <Plus className="w-4 h-4" strokeWidth={1.8} />
-            Agregar abono
+            Agregar pago
           </button>
         )}
       </div>

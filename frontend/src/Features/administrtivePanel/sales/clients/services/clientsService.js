@@ -127,8 +127,8 @@ export const clientsService = {
       email: clientData.email || '',
       phone: clientData.phone || '',
       address: clientData.address || '',
-      contactName: clientData.contactName || null,
-      contactPhone: clientData.contactPhone || null,
+      contactName: clientData.contactName || '',
+      contactPhone: clientData.contactPhone || '',
       clientType: clientData.clientType || '',
       clientCredit: formattedClientCredit,
       credit_balance: clientData.saldoFavor || '0', // ✅ Mapeado correctamente
