@@ -13,9 +13,19 @@ import {
 } from '../helpers/clientHelpers';
 import { clientsService } from '../services/clientsService';
 
+const DETAIL_VALUE_PREVIEW_LIMIT = 42;
+
 function DetailRow({ icon, label, value, fullWidth = false }) {
+  const [expanded, setExpanded] = useState(false);
+  const stringValue = String(value ?? '').trim();
+  const hasValue = Boolean(stringValue && stringValue !== '-');
+  const shouldCollapse = hasValue && stringValue.length > DETAIL_VALUE_PREVIEW_LIMIT;
+  const visibleValue = shouldCollapse && !expanded
+    ? `${stringValue.slice(0, DETAIL_VALUE_PREVIEW_LIMIT).trim()}...`
+    : stringValue;
+
   return (
-    <div className={`flex items-start gap-3 ${fullWidth ? 'col-span-2' : ''}`}>
+    <div className={`flex min-w-0 items-start gap-3 ${fullWidth ? 'col-span-2' : ''}`}>
       <div className="w-8 h-8 rounded-lg bg-[#004D77]/8 flex items-center justify-center shrink-0 mt-0.5">
         {createElement(icon, {
           className: 'w-4 h-4 text-[#004D77]/60',
@@ -26,9 +36,21 @@ function DetailRow({ icon, label, value, fullWidth = false }) {
         <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide leading-none">
           {label}
         </span>
-        <span className="text-sm font-medium text-gray-800 wrap-break-words leading-snug">
-          {value || <span className="text-gray-300 italic">-</span>}
+        <span
+          className="max-w-full whitespace-pre-wrap break-words text-sm font-medium leading-snug text-gray-800 [overflow-wrap:anywhere] [word-break:break-word]"
+          title={hasValue ? stringValue : undefined}
+        >
+          {hasValue ? visibleValue : <span className="text-gray-300 italic">-</span>}
         </span>
+        {shouldCollapse && (
+          <button
+            type="button"
+            onClick={() => setExpanded((current) => !current)}
+            className="mt-0.5 w-fit text-[10px] font-semibold text-[#004D77] transition hover:underline"
+          >
+            {expanded ? 'Ver menos' : 'Ver más'}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -182,6 +204,7 @@ function MiniGraphClient({ clientId, onExpand }) {
 
 function InfoClient({ isOpen, onClose, client }) {
   const [showGraph, setShowGraph] = useState(false);
+  const [headerNameExpanded, setHeaderNameExpanded] = useState(false);
   
   // ✅ Estados para datos financieros (vienen del módulo de pagos)
   const [financialData, setFinancialData] = useState(null);
@@ -219,12 +242,20 @@ function InfoClient({ isOpen, onClose, client }) {
     };
   }, [client, isOpen]);
 
+  useEffect(() => {
+    setHeaderNameExpanded(false);
+  }, [client?.id, isOpen]);
+
   if (!isOpen || !client) return null;
 
   const isLegalPerson = client.personType === 'juridica';
   const displayName = isLegalPerson
     ? (client.firstName || client.fullName || 'Sin nombre')
     : (client.fullName || 'Sin nombre');
+  const shouldCollapseHeaderName = displayName.length > DETAIL_VALUE_PREVIEW_LIMIT;
+  const visibleHeaderName = shouldCollapseHeaderName && !headerNameExpanded
+    ? `${displayName.slice(0, DETAIL_VALUE_PREVIEW_LIMIT).trim()}...`
+    : displayName;
   const primarySectionTitle = isLegalPerson ? 'Datos empresariales' : 'Datos personales';
   const contactSectionTitle = isLegalPerson ? 'Encargado y registro' : 'Contacto y registro';
   const identificationLabel = isLegalPerson ? 'NIT' : 'Identificacion';
@@ -307,10 +338,22 @@ function InfoClient({ isOpen, onClose, client }) {
                   {initials}
                 </span>
               </div>
-              <div className="min-w-0">
-                <h2 className="text-white font-bold text-base leading-tight truncate">
-                  {displayName}
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <h2
+                  className="max-w-full whitespace-pre-wrap break-words text-base font-bold leading-tight text-white [overflow-wrap:anywhere] [word-break:break-word]"
+                  title={displayName}
+                >
+                  {visibleHeaderName}
                 </h2>
+                {shouldCollapseHeaderName && (
+                  <button
+                    type="button"
+                    onClick={() => setHeaderNameExpanded((current) => !current)}
+                    className="mt-0.5 text-[10px] font-semibold text-white/90 transition hover:text-white hover:underline"
+                  >
+                    {headerNameExpanded ? 'Ver menos' : 'Ver más'}
+                  </button>
+                )}
                 <p className="text-white/70 text-[11px] mt-0.5">
                   {identificationLabel}: {identificacionCompleta}
                 </p>

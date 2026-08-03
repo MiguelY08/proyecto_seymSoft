@@ -238,7 +238,7 @@ function SelectedProduct({ product, configurations, onConfigurationsChange, onRe
   };
 
   return (
-    <div className="border rounded-xl overflow-hidden transition-colors border-gray-300">
+    <div className="overflow-hidden rounded-lg border border-gray-300 transition-colors">
       {/* Header del card - información del producto */}
       <div className="flex items-center gap-2 px-3 py-2.5 bg-[#f1f1f1]">
         {/* Botón para expandir/colapsar */}

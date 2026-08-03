@@ -64,6 +64,92 @@ const sortClientsWithSystemFirst = (clients) =>
     return Number(a.id || 0) - Number(b.id || 0);
   });
 
+const toMoneyNumber = (value) => {
+  if (value === null || value === undefined || value === '') return 0;
+  const cleaned = String(value).replace(/[^\d.-]/g, '');
+  const number = Number(cleaned);
+  return Number.isFinite(number) ? number : 0;
+};
+
+const formatMoney = (value) =>
+  new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    maximumFractionDigits: 0,
+  }).format(toMoneyNumber(value));
+
+const normalizeTextValue = (value) =>
+  String(value ?? '').trim().toLowerCase();
+
+const getClientTypeValue = (client) =>
+  client?.clientType ?? client?.typeClient ?? client?.tipoCliente ?? '';
+
+const buildClientChangeAlert = (previousClient, nextData) => {
+  if (!previousClient) return null;
+
+  const changes = [];
+  const previousType = normalizeTextValue(getClientTypeValue(previousClient));
+  const nextType = normalizeTextValue(nextData.clientType ?? nextData.typeClient ?? nextData.tipoCliente ?? previousType);
+
+  if (previousType && nextType && previousType !== nextType) {
+    changes.push(`Tipo de cliente: ${getClientTypeValue(previousClient)} -> ${nextData.clientType ?? nextData.typeClient ?? nextData.tipoCliente}`);
+  }
+
+  const previousCredit = toMoneyNumber(previousClient.clientCredit ?? previousClient.credit);
+  const nextCredit = toMoneyNumber(nextData.clientCredit ?? previousClient.clientCredit ?? previousClient.credit);
+  if (previousCredit !== nextCredit) {
+    changes.push(`Crédito: ${formatMoney(previousCredit)} -> ${formatMoney(nextCredit)}`);
+  }
+
+  const previousBalance = toMoneyNumber(previousClient.credit_balance ?? previousClient.creditBalance);
+  const nextBalance = toMoneyNumber(nextData.credit_balance ?? nextData.creditBalance ?? previousClient.credit_balance ?? previousClient.creditBalance);
+  if (previousBalance !== nextBalance) {
+    changes.push(`Saldo a favor: ${formatMoney(previousBalance)} -> ${formatMoney(nextBalance)}`);
+  }
+
+  if (changes.length === 0) return null;
+  return `Vas a guardar cambios comerciales sensibles para "${previousClient.fullName}".\n\n${changes.join('\n')}`;
+};
+
+const getClientSaveError = (error) => {
+  const response = error?.response?.data || {};
+  const errorCode = response.errorCode || '';
+  const message = response.message || error?.message || '';
+
+  const messagesByCode = {
+    CLIENT_HAS_OVERDUE_CREDITS: {
+      title: 'No se puede aumentar el crédito',
+      text: 'El cliente tiene créditos vencidos. Regulariza su situación antes de aumentar el cupo.',
+    },
+    CLIENT_HAS_PENDING_CREDITS: {
+      title: 'No se puede aumentar el crédito',
+      text: 'El cliente tiene créditos pendientes. Regulariza su situación antes de aumentar el cupo.',
+    },
+    CLIENT_CREDIT_BELOW_USED: {
+      title: 'Crédito insuficiente',
+      text: message || 'No puedes bajar el crédito por debajo del monto ocupado actualmente.',
+    },
+    CLIENT_CREDIT_NEGATIVE: {
+      title: 'Crédito inválido',
+      text: 'El crédito del cliente no puede ser negativo.',
+    },
+    CREDIT_BALANCE_NEGATIVE: {
+      title: 'Saldo a favor inválido',
+      text: 'El saldo a favor no puede ser negativo.',
+    },
+  };
+
+  if (messagesByCode[errorCode]) return messagesByCode[errorCode];
+  if (message.toUpperCase().includes('NO SE PUEDE AUMENTAR')) {
+    return messagesByCode.CLIENT_HAS_PENDING_CREDITS;
+  }
+
+  return {
+    title: 'No se pudo guardar el cliente',
+    text: message || 'Revisa los datos e inténtalo nuevamente.',
+  };
+};
+
 function ClientsPage() {
   const [clients,         setClients]         = useState([]);
   const [searchTerm,      setSearchTerm]      = useState('');
@@ -185,6 +271,17 @@ function ClientsPage() {
 const handleSave = async (formData) => {
     try {
       if (selectedClient) {
+        const sensitiveChanges = buildClientChangeAlert(selectedClient, formData);
+        if (sensitiveChanges) {
+          const result = await showConfirm(
+            'warning',
+            'Confirmar cambios del cliente',
+            sensitiveChanges,
+            { confirmButtonText: 'Sí, guardar cambios', cancelButtonText: 'Revisar' }
+          );
+          if (!result?.isConfirmed) return;
+        }
+
         await clientsService.update(selectedClient.id, formData);
         await loadClients();
         showSuccess('Cliente actualizado', 'Los datos se actualizaron correctamente');
@@ -194,28 +291,8 @@ const handleSave = async (formData) => {
         showSuccess('Cliente creado', 'El nuevo cliente se creó exitosamente');
       }
     } catch (error) {
-      // 🔥 Obtener el mensaje desde error.response.data
-      const errorMessage = error?.response?.data?.message || error.message || '';
-      const errorCode = error?.response?.data?.errorCode || '';
-
-      // ✅ ALERTA PARA CRÉDITO VENCIDO
-      if (errorCode === 'CLIENT_HAS_OVERDUE_CREDITS' || 
-          errorCode === 'CLIENT_HAS_OVERDUE_INVOICES' ||
-          errorMessage.includes('NO SE PUEDE AUMENTAR EL CRÉDITO')) {
-        showError(
-          'NO SE PUEDE AUMENTAR EL CRÉDITO',
-          'EL CLIENTE TIENE CRÉDITOS O FACTURAS VENCIDAS. REGULARICE SU SITUACIÓN ANTES DE AUMENTAR EL CUPO.'
-        );
-      } 
-      else if (errorMessage.includes('registros relacionados') || errorMessage.includes('ventas asociadas')) {
-        showError(
-          'NO SE PUEDE ELIMINAR', 
-          'ESTE CLIENTE TIENE VENTAS, CRÉDITOS O ACCESOS ASOCIADOS. NO SE PUEDE ELIMINAR POR INTEGRIDAD DE DATOS.'
-        );
-      } 
-      else {
-        showError('Error', errorMessage || 'No se pudo guardar el cliente');
-      }
+      const alertData = getClientSaveError(error);
+      showError(alertData.title, alertData.text);
       throw error;
     }
 };
@@ -223,8 +300,8 @@ const handleSave = async (formData) => {
 const handleDelete = async (client) => {
   const result = await showConfirm(
     'warning',
-    `¿Eliminar a "${client.fullName}"?`,
-    'Esta acción no se podrá revertir. Los créditos y pedidos se transferirán al cliente de sistema.',
+    'Eliminar cliente',
+    `¿Está seguro de eliminar el cliente "${client.fullName}"? Esta acción no se puede deshacer.`,
     { confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar' }
   );
 
@@ -241,21 +318,21 @@ const handleDelete = async (client) => {
       // Verificar por errorCode específico
       if (errorCode === 'CLIENT_HAS_SALES') {
         showError(
-          'NO SE PUEDE ELIMINAR',
-          'ESTE CLIENTE TIENE VENTAS ASOCIADAS. HISTÓRICAMENTE NO SE PUEDEN BORRAR CLIENTES CON TRANSACCIONES.'
+          'No se puede eliminar',
+          'Este cliente tiene ventas asociadas. Históricamente no se pueden borrar clientes con transacciones.'
         );
       } 
       // Verificar por mensaje
       else if (errorMessage.includes('ventas asociadas')) {
         showError(
-          'NO SE PUEDE ELIMINAR',
-          'ESTE CLIENTE TIENE VENTAS ASOCIADAS. HISTÓRICAMENTE NO SE PUEDEN BORRAR CLIENTES CON TRANSACCIONES.'
+          'No se puede eliminar',
+          'Este cliente tiene ventas asociadas. Históricamente no se pueden borrar clientes con transacciones.'
         );
       } 
       else if (errorMessage.includes('registros relacionados')) {
         showError(
-          'NO SE PUEDE ELIMINAR', 
-          'ESTE CLIENTE TIENE VENTAS, CRÉDITOS O ACCESOS ASOCIADOS. NO SE PUEDE ELIMINAR POR INTEGRIDAD DE DATOS.'
+          'No se puede eliminar', 
+          'Este cliente tiene ventas, créditos o accesos asociados. No se puede eliminar por integridad de datos.'
         );
       } 
       else {

@@ -24,6 +24,32 @@ import Spinner from '../../../../shared/spinner';
 
 const RECORDS_PER_PAGE = 13;
 
+const getReturnSaveError = (error) => {
+  const response = error?.response?.data || {};
+  const message = response.message || error?.message || '';
+  const code = response.errorCode || '';
+
+  const byCode = {
+    SALE_NOT_ELIGIBLE_FOR_RETURN: {
+      title: 'La venta no permite devolución',
+      text: message || 'Solo se pueden generar devoluciones para ventas entregadas y dentro del plazo permitido.',
+    },
+    STOCK_NOT_AVAILABLE: {
+      title: 'Stock insuficiente',
+      text: message || 'No hay stock suficiente para completar la devolución.',
+    },
+    CREDIT_BALANCE_NOT_AVAILABLE: {
+      title: 'Saldo a favor insuficiente',
+      text: message || 'El saldo a favor del cliente no alcanza para revertir esta operación.',
+    },
+  };
+
+  return byCode[code] || {
+    title: 'No se pudo guardar la devolución',
+    text: message || 'Revisa los datos e inténtalo nuevamente.',
+  };
+};
+
 const normalizeReturn = (item = {}) => {
   const details = (item.details || item.productosDevueltos || []).map((detail) => ({
     ...detail,
@@ -291,7 +317,8 @@ function ReturnsPage() {
         }
       }
     } catch (error) {
-      showError('Error', error.message || 'No se pudo guardar');
+      const alertData = getReturnSaveError(error);
+      showError(alertData.title, alertData.text);
     }
   };
 
@@ -313,7 +340,7 @@ function ReturnsPage() {
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-4 p-3 sm:p-4 lg:gap-3 lg:overflow-hidden">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto p-3 sm:p-4">
       <ReturnsToolbar
         search={searchTerm}
         onSearchChange={handleSearchChange}
@@ -346,7 +373,7 @@ function ReturnsPage() {
         </div>
       )}
 
-      <div className="lg:w-full lg:min-w-0 lg:rounded-xl lg:bg-white lg:shadow-md">
+      <div className="w-full min-w-0 shrink-0 overflow-hidden rounded-xl bg-white shadow-md">
         <ReturnsTable
           data={currentData}
           startIndex={startIndex}
@@ -357,8 +384,10 @@ function ReturnsPage() {
         />
       </div>
 
+      <div className="min-h-0 flex-1" />
+
       {filteredReturns.length > 0 && (
-        <div className="lg:shrink-0">
+        <div className="shrink-0">
           <PaginationAdmin
             currentPage={currentPage}
             onPageChange={setCurrentPage}

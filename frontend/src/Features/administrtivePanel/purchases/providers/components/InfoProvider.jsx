@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, User, Mail, Phone, MapPin, UserCheck, Package, FileText, Hash, Clock } from 'lucide-react';
 import {
   formatPersonType,
@@ -13,11 +13,66 @@ const formatCategories = (categorias) => {
   return categorias.map(cat => cat.name).join(', ');
 };
 
+const DETAIL_VALUE_PREVIEW_LIMIT = 42;
+
 function DetailRow({ icon, label, value, fullWidth = false }) {
+  const [expanded, setExpanded] = useState(false);
   let displayValue = value;
   if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
     displayValue = JSON.stringify(value);
   }
+  const stringValue = String(displayValue ?? '').trim();
+  const hasValue = Boolean(stringValue && stringValue !== 'â€”' && stringValue !== '-');
+  const shouldCollapse = hasValue && stringValue.length > DETAIL_VALUE_PREVIEW_LIMIT;
+  const visibleValue = shouldCollapse && !expanded
+    ? `${stringValue.slice(0, DETAIL_VALUE_PREVIEW_LIMIT).trim()}...`
+    : stringValue;
+  displayValue = hasValue ? visibleValue : displayValue;
+
+  return (
+    <div className={`flex min-w-0 items-start gap-3 ${fullWidth ? 'md:col-span-2 lg:col-span-1' : ''}`}>
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#004D77]/10 sm:h-10 sm:w-10 lg:h-8 lg:w-8 lg:rounded-lg">
+        {React.createElement(icon, {
+          className: 'h-5 w-5 text-[#004D77]/70 lg:h-4 lg:w-4 lg:text-[#004D77]/60',
+          strokeWidth: 1.8
+        })}
+        {shouldCollapse && (
+          <button
+            type="button"
+            onClick={() => setExpanded((current) => !current)}
+            className="mt-0.5 w-fit text-[10px] font-semibold text-[#004D77] transition hover:underline"
+          >
+            {expanded ? 'Ver menos' : 'Ver más'}
+          </button>
+        )}
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col gap-1 pt-0.5 lg:gap-0.5">
+        <span className="text-[10px] font-bold uppercase leading-none tracking-widest text-slate-400 lg:font-semibold lg:tracking-wide">
+          {label}
+        </span>
+        <span
+          className="max-w-full whitespace-pre-wrap break-words text-sm font-semibold leading-snug text-slate-800 [overflow-wrap:anywhere] [word-break:break-word] sm:text-[15px] lg:font-medium"
+          title={hasValue ? stringValue : undefined}
+        >
+          {displayValue || <span className="text-gray-300 italic">—</span>}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function SafeDetailRow({ icon, label, value, fullWidth = false }) {
+  const [expanded, setExpanded] = useState(false);
+  const normalizedValue = typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? JSON.stringify(value)
+    : value;
+  const stringValue = String(normalizedValue ?? '').trim();
+  const hasValue = Boolean(stringValue && stringValue !== '—' && stringValue !== '-');
+  const shouldCollapse = hasValue && stringValue.length > DETAIL_VALUE_PREVIEW_LIMIT;
+  const visibleValue = shouldCollapse && !expanded
+    ? `${stringValue.slice(0, DETAIL_VALUE_PREVIEW_LIMIT).trim()}...`
+    : stringValue;
 
   return (
     <div className={`flex min-w-0 items-start gap-3 ${fullWidth ? 'md:col-span-2 lg:col-span-1' : ''}`}>
@@ -32,15 +87,28 @@ function DetailRow({ icon, label, value, fullWidth = false }) {
         <span className="text-[10px] font-bold uppercase leading-none tracking-widest text-slate-400 lg:font-semibold lg:tracking-wide">
           {label}
         </span>
-        <span className="break-words text-sm font-semibold leading-snug text-slate-800 sm:text-[15px] lg:font-medium">
-          {displayValue || <span className="text-gray-300 italic">—</span>}
+        <span
+          className="max-w-full whitespace-pre-wrap break-words text-sm font-semibold leading-snug text-slate-800 [overflow-wrap:anywhere] [word-break:break-word] sm:text-[15px] lg:font-medium"
+          title={hasValue ? stringValue : undefined}
+        >
+          {hasValue ? visibleValue : <span className="text-gray-300 italic">—</span>}
         </span>
+        {shouldCollapse && (
+          <button
+            type="button"
+            onClick={() => setExpanded((current) => !current)}
+            className="mt-0.5 w-fit text-[10px] font-semibold text-[#004D77] transition hover:underline"
+          >
+            {expanded ? 'Ver menos' : 'Ver más'}
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
 function InfoProvider({ isOpen, onClose, provider }) {
+  const [headerNameExpanded, setHeaderNameExpanded] = useState(false);
   if (!isOpen || !provider) return null;
 
   const initials = (provider.nombre || provider.nombres || '')
@@ -58,6 +126,10 @@ function InfoProvider({ isOpen, onClose, provider }) {
   const categoriasTexto = formatCategories(provider.categorias);
   const identificacionCompleta = `${provider.tipo || 'N/A'} ${provider.numero || '—'}`;
   const providerName = provider.nombre || `${provider.nombres || ''} ${provider.apellidos || ''}`.trim() || 'Sin nombre';
+  const shouldCollapseHeaderName = providerName.length > DETAIL_VALUE_PREVIEW_LIMIT;
+  const visibleHeaderName = shouldCollapseHeaderName && !headerNameExpanded
+    ? `${providerName.slice(0, DETAIL_VALUE_PREVIEW_LIMIT).trim()}...`
+    : providerName;
 
   return (
     <div className="fixed inset-0 z-50 flex items-stretch justify-center p-0 sm:items-center sm:p-4">
@@ -79,10 +151,22 @@ function InfoProvider({ isOpen, onClose, provider }) {
               </span>
             </div>
 
-            <div className="min-w-0 max-w-full">
-              <h2 className="text-xl font-bold leading-tight text-white sm:text-2xl lg:truncate lg:text-base">
-                {providerName}
+            <div className="min-w-0 max-w-full overflow-hidden">
+              <h2
+                className="max-w-full whitespace-pre-wrap break-words text-xl font-bold leading-tight text-white [overflow-wrap:anywhere] [word-break:break-word] sm:text-2xl lg:text-base"
+                title={providerName}
+              >
+                {visibleHeaderName}
               </h2>
+              {shouldCollapseHeaderName && (
+                <button
+                  type="button"
+                  onClick={() => setHeaderNameExpanded((current) => !current)}
+                  className="mt-0.5 text-[10px] font-semibold text-white/90 transition hover:text-white hover:underline"
+                >
+                  {headerNameExpanded ? 'Ver menos' : 'Ver más'}
+                </button>
+              )}
               <p className="mt-1 text-sm text-white/75 lg:text-[11px]">
                 Identificación: {identificacionCompleta}
               </p>
@@ -105,22 +189,22 @@ function InfoProvider({ isOpen, onClose, provider }) {
             <div className="h-px flex-1 bg-[#004D77]/15" />
           </div>
 
-          <DetailRow icon={User} label="Nombre completo" value={providerName} fullWidth />
-          <DetailRow icon={Mail} label="Correo electrónico" value={provider.correo || '—'} />
-          <DetailRow icon={Phone} label="Teléfono" value={provider.telefono || '—'} />
-          <DetailRow icon={MapPin} label="Dirección" value={provider.direccion || '—'} fullWidth />
+          <SafeDetailRow icon={User} label="Nombre completo" value={providerName} fullWidth />
+          <SafeDetailRow icon={Mail} label="Correo electrónico" value={provider.correo || '—'} />
+          <SafeDetailRow icon={Phone} label="Teléfono" value={provider.telefono || '—'} />
+          <SafeDetailRow icon={MapPin} label="Dirección" value={provider.direccion || '—'} fullWidth />
 
           <div className="md:col-span-2 flex items-center gap-2 pt-2 lg:mt-1 lg:pt-1">
             <span className="text-[10px] font-bold uppercase tracking-widest text-[#004D77]">Contacto y registro</span>
             <div className="h-px flex-1 bg-[#004D77]/15" />
           </div>
 
-          <DetailRow icon={UserCheck} label="Persona contacto" value={provider.pContacto || provider.nombreContacto || '—'} />
-          <DetailRow icon={Phone} label="Tel. contacto" value={provider.nuContacto || provider.numeroContacto || '—'} />
-          <DetailRow icon={Clock} label="Plazo devoluciones" value={provider.plazoDevoluciones ? `${provider.plazoDevoluciones} Día/s` : '—'} />
-          <DetailRow icon={Package} label="Categorías" value={categoriasTexto} fullWidth />
-          <DetailRow icon={FileText} label="RUT" value={formatRut(provider.rut)} />
-          <DetailRow icon={Hash} label="Código CIU" value={provider.codigoCIU || '—'} />
+          <SafeDetailRow icon={UserCheck} label="Persona contacto" value={provider.pContacto || provider.nombreContacto || '—'} />
+          <SafeDetailRow icon={Phone} label="Tel. contacto" value={provider.nuContacto || provider.numeroContacto || '—'} />
+          <SafeDetailRow icon={Clock} label="Plazo devoluciones" value={provider.plazoDevoluciones ? `${provider.plazoDevoluciones} Día/s` : '—'} />
+          <SafeDetailRow icon={Package} label="Categorías" value={categoriasTexto} fullWidth />
+          <SafeDetailRow icon={FileText} label="RUT" value={formatRut(provider.rut)} />
+          <SafeDetailRow icon={Hash} label="Código CIU" value={provider.codigoCIU || '—'} />
         </div>
 
         <div className="flex shrink-0 items-center justify-end border-t border-gray-100 bg-white px-4 py-3 sm:px-6 lg:px-5">

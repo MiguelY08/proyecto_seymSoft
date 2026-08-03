@@ -6,12 +6,21 @@ import {
   FileText, Hash, BarChart2, TrendingUp, Loader2,
 } from 'lucide-react';
 import GraphClient from '../components/GraphClient';
-import { getEmailValidationError, validateClientForm } from '../helpers/clientHelpers';
+import {
+  getDocumentValidationError,
+  getEmailValidationError,
+  normalizeDocumentKey,
+  validateClientForm,
+} from '../helpers/clientHelpers';
 import FormSelect from '../../../../shared/FormSelect';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import LoadingOverlay from '../../../../shared/LoadingOverlay';
 import { clientsService } from '../services/clientsService';
 import { checkEmailAvailability } from '../../../../access/services/authService';
+
+const EMAIL_MAX_LENGTH = 100;
+const ADDRESS_MAX_LENGTH = 120;
+const CIU_CODE_LENGTH = 4;
 
 const onlyDigits = (value, maxLength = 10) =>
   String(value ?? '').replace(/\D/g, '').slice(0, maxLength);
@@ -28,7 +37,7 @@ const toTitleCaseName = (value) =>
     .replace(/\p{L}+/gu, (word) => word.charAt(0).toUpperCase() + word.slice(1));
 
 const normalizeEmailInput = (value) =>
-  String(value ?? '').trim().toLowerCase();
+  String(value ?? '').trim().toLowerCase().slice(0, EMAIL_MAX_LENGTH);
 
 const ONLY_LETTERS = (value, maxLength = 80) =>
   String(value ?? '')
@@ -54,7 +63,13 @@ const CLEAN_DOCUMENT = (value, documentType) => {
 };
 
 const cleanCiuCode = (value) =>
-  String(value ?? '').replace(/[^A-Za-z0-9-]/g, '').slice(0, 25);
+  onlyDigits(value, CIU_CODE_LENGTH);
+
+const cleanAddress = (value) =>
+  String(value ?? '')
+    .replace(/^\s+/, '')
+    .replace(/\s{2,}/g, ' ')
+    .slice(0, ADDRESS_MAX_LENGTH);
 
 const cleanPersonName = (value, maxLength = 80) =>
   normalizeNameInput(String(value ?? '').replace(/[^\p{L}\s'-]/gu, ''))
@@ -253,6 +268,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
   const [errors,   setErrors]   = useState({});
   const [touched,  setTouched]  = useState({});
   const [checkingEmail, setCheckingEmail] = useState(false);
+  const [checkingDocument, setCheckingDocument] = useState(false);
   const isEditing = !!client;
   const linkedUserEmail = normalizeEmailInput(linkedUser?.email);
   const isLinkedUserEmail = (email) => (
@@ -273,6 +289,39 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
 
     const data = await checkEmailAvailability(nextEmail);
     return data?.exists ? 'El correo ya está registrado' : '';
+  };
+
+  const findClientByDocument = async (document, documentType) => {
+    const normalizedDocument = normalizeDocumentKey(document);
+    const normalizedType = String(documentType || '').trim().toUpperCase();
+    if (!normalizedDocument || !normalizedType) return null;
+
+    const result = await clientsService.getAll({
+      page: 1,
+      limit: 10000,
+      search: '',
+    });
+
+    return (result.data || []).find((item) => {
+      const sameClient = client?.id && Number(item.id) === Number(client.id);
+      const sameType = String(item.documentType || '').trim().toUpperCase() === normalizedType;
+      const sameDocument = normalizeDocumentKey(item.document) === normalizedDocument;
+      return sameType && sameDocument && !sameClient;
+    }) || null;
+  };
+
+  const getDuplicateDocumentError = async (document, documentType) => {
+    const localError = getDocumentValidationError(document, documentType);
+    if (localError) return '';
+
+    const currentType = String(client?.documentType || '').trim().toUpperCase();
+    const currentDocument = normalizeDocumentKey(client?.document);
+    const nextType = String(documentType || '').trim().toUpperCase();
+    const nextDocument = normalizeDocumentKey(document);
+    if (currentType === nextType && currentDocument && currentDocument === nextDocument) return '';
+
+    const duplicate = await findClientByDocument(document, documentType);
+    return duplicate ? 'Este documento ya está registrado' : '';
   };
 
   // ============================================
@@ -347,11 +396,8 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
       if (!value || value.trim() === '') {
         return 'El código CIU es obligatorio cuando RUT es Sí';
       }
-      if (value === 'No aplica' || value === 'No disponible') {
-        return 'Por favor, ingrese un código CIU válido';
-      }
-      if (value.length < 3) {
-        return 'El código CIU debe tener al menos 3 caracteres';
+      if (!/^\d{4}$/.test(String(value).trim())) {
+        return 'El código CIU debe tener exactamente 4 números';
       }
     }
     return '';
@@ -383,6 +429,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
     }
     setErrors({});
     setCheckingEmail(false);
+    setCheckingDocument(false);
     setShowGraph(false);
   }, [client, isOpen, initialData]);
 
@@ -441,11 +488,55 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
     };
   }, [client?.email, client?.id, formData.email, isOpen, touched.email]);
 
+  useEffect(() => {
+    if (!isOpen || isEditing || !touched.document) return undefined;
+
+    const documentValue = String(formData.document || '').trim();
+    const localError = getDocumentValidationError(formData.document, formData.documentType);
+
+    if (localError) {
+      setCheckingDocument(false);
+      setErrors((prev) => ({ ...prev, document: localError }));
+      return undefined;
+    }
+
+    let cancelled = false;
+    setCheckingDocument(true);
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const duplicateError = await getDuplicateDocumentError(documentValue, formData.documentType);
+        if (cancelled) return;
+
+        setErrors((prev) => {
+          const currentLocalError = getDocumentValidationError(formData.document, formData.documentType);
+          if (currentLocalError) return { ...prev, document: currentLocalError };
+          return { ...prev, document: duplicateError };
+        });
+      } catch {
+        if (!cancelled) {
+          setErrors((prev) => ({
+            ...prev,
+            document: prev.document === 'Este documento ya está registrado' ? '' : prev.document,
+          }));
+        }
+      } finally {
+        if (!cancelled) setCheckingDocument(false);
+      }
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [formData.document, formData.documentType, isEditing, isOpen, touched.document]);
+
   const resetForm = () => {
     setFormData(getCreateInitialState());
     setErrors({});
     setTouched({});
     setCheckingEmail(false);
+    setCheckingDocument(false);
     setShowGraph(false);
   };
 
@@ -522,11 +613,14 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
       }
     }
     if (name === 'document') {
-      nextValue = cleanNumericDocument(value, formData.documentType);
-      if (/\D/.test(String(value))) forcedError = 'Solo se permiten números.';
+      nextValue = CLEAN_DOCUMENT(value, formData.documentType);
+      forcedError = getDocumentValidationError(nextValue, formData.documentType);
     }
     if (name === 'email') {
       nextValue = normalizeEmailInput(value);
+    }
+    if (name === 'address') {
+      nextValue = cleanAddress(value);
     }
     if (name === 'ciuCode') {
       nextValue = cleanCiuCode(value);
@@ -599,8 +693,16 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
 
   const handleNumericBeforeInput = (e) => {
     if (!e.data || /^\d+$/.test(e.data)) return;
+    if (e.currentTarget.name === 'document' && formData.documentType === 'NIT' && e.data === '-') return;
     e.preventDefault();
-    setRealtimeFieldError(e.currentTarget.name, 'El teléfono solo debe contener números');
+    setRealtimeFieldError(
+      e.currentTarget.name,
+      e.currentTarget.name === 'document'
+        ? 'El documento solo debe contener números'
+        : e.currentTarget.name === 'ciuCode'
+          ? 'El código CIU solo debe contener números'
+        : 'El teléfono solo debe contener números',
+    );
   };
 
   const handleNumericPaste = (e) => {
@@ -608,14 +710,19 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
     const { name } = e.currentTarget;
     const pastedValue = e.clipboardData.getData('text');
 
-    if ((name === 'phone' || name === 'contactPhone') && /\D/.test(pastedValue)) {
-      setRealtimeFieldError(name, 'El teléfono solo debe contener números');
+    if ((name === 'phone' || name === 'contactPhone' || name === 'ciuCode') && /\D/.test(pastedValue)) {
+      setRealtimeFieldError(
+        name,
+        name === 'ciuCode' ? 'El código CIU solo debe contener números' : 'El teléfono solo debe contener números',
+      );
       return;
     }
 
     const sanitizer = name === 'document'
-      ? (value) => cleanNumericDocument(value, formData.documentType)
-      : (value) => onlyDigits(value, 10);
+      ? (value) => CLEAN_DOCUMENT(value, formData.documentType)
+      : name === 'ciuCode'
+        ? cleanCiuCode
+        : (value) => onlyDigits(value, 10);
     const nextValue = buildSanitizedInputValue(
       e.currentTarget,
       pastedValue,
@@ -626,7 +733,12 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
 
     setFormData(newFormData);
     setTouched((prev) => ({ ...prev, [name]: true }));
-    setErrors((prev) => ({ ...prev, [name]: validationErrors[name] || '' }));
+    setErrors((prev) => ({
+      ...prev,
+      [name]: name === 'document'
+        ? getDocumentValidationError(nextValue, formData.documentType)
+        : validationErrors[name] || '',
+    }));
   };
 
   const handleEmailBeforeInput = (e) => {
@@ -666,8 +778,10 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
       blurredFormData = { ...formData, [name]: toTitleCaseName(formData[name]) };
     } else if (name === 'email') {
       blurredFormData = { ...formData, email: normalizeEmailInput(formData.email) };
+    } else if (name === 'address') {
+      blurredFormData = { ...formData, address: cleanAddress(formData.address).trim() };
     } else if (name === 'document') {
-      blurredFormData = { ...formData, document: cleanNumericDocument(formData.document, formData.documentType) };
+      blurredFormData = { ...formData, document: CLEAN_DOCUMENT(formData.document, formData.documentType) };
     } else if (name === 'phone' || name === 'contactPhone') {
       blurredFormData = { ...formData, [name]: onlyDigits(formData[name], 10) };
     }
@@ -689,7 +803,12 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
     }
 
     const validationErrors = validateClientForm(blurredFormData);
-    setErrors(prev => ({ ...prev, [name]: validationErrors[name] || '' }));
+    setErrors(prev => ({
+      ...prev,
+      [name]: name === 'document'
+        ? getDocumentValidationError(blurredFormData.document, blurredFormData.documentType)
+        : validationErrors[name] || '',
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -697,7 +816,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
 
     const normalizedFormData = {
       ...formData,
-      document: cleanNumericDocument(formData.document, formData.documentType),
+      document: CLEAN_DOCUMENT(formData.document, formData.documentType),
       firstName: formData.personType === 'juridica'
         ? normalizeNameInput(cleanBusinessName(formData.firstName)).trim()
         : toTitleCaseName(cleanPersonName(formData.firstName)),
@@ -705,9 +824,11 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
         ? formData.lastName
         : toTitleCaseName(cleanPersonName(formData.lastName)),
       phone: onlyDigits(formData.phone, 10),
+      address: cleanAddress(formData.address).trim(),
       email: normalizeEmailInput(formData.email),
       contactName: formData.contactName ? toTitleCaseName(cleanPersonName(formData.contactName, 100)) : '',
       contactPhone: onlyDigits(formData.contactPhone, 10),
+      ciuCode: formData.rut === 'no' ? '' : cleanCiuCode(formData.ciuCode),
     };
 
     setFormData(normalizedFormData);
@@ -734,6 +855,12 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
     }
 
     const validationErrors = validateClientForm(normalizedFormData);
+    const documentError = getDocumentValidationError(normalizedFormData.document, normalizedFormData.documentType);
+    if (documentError) {
+      validationErrors.document = documentError;
+    } else {
+      delete validationErrors.document;
+    }
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       setTouched(Object.keys(normalizedFormData).reduce((acc, k) => ({ ...acc, [k]: true }), {}));
@@ -744,6 +871,16 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
     if (duplicateEmailError) {
       setErrors((prev) => ({ ...prev, email: duplicateEmailError }));
       setTouched((prev) => ({ ...prev, email: true }));
+      return;
+    }
+
+    const duplicateDocumentError = await getDuplicateDocumentError(
+      normalizedFormData.document,
+      normalizedFormData.documentType,
+    );
+    if (documentError || duplicateDocumentError) {
+      setErrors((prev) => ({ ...prev, document: documentError || duplicateDocumentError }));
+      setTouched((prev) => ({ ...prev, document: true }));
       return;
     }
 
@@ -762,7 +899,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
       clientCredit: normalizedFormData.clientCredit || '0',
       saldoFavor: normalizedFormData.saldoFavor || '',
       rut: normalizedFormData.rut,
-      ciuCode: normalizedFormData.rut === 'no' ? '' : (normalizedFormData.ciuCode || '')
+      ciuCode: normalizedFormData.rut === 'no' ? '' : cleanCiuCode(normalizedFormData.ciuCode || '')
     };
 
     try {
@@ -779,14 +916,14 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
   if (!isOpen) return null;
 
   const inputClass = (field) =>
-    `h-10 w-full rounded-xl border px-3 py-0 text-sm outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
+    `h-10 w-full rounded-lg border px-3 py-0 text-sm outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 ${
       errors[field] && touched[field]
         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
         : 'border-slate-200 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/10'
     }`;
 
   const disabledInputClass = (field) =>
-    `h-10 w-full rounded-xl border px-3 py-0 text-sm outline-none bg-slate-100 text-slate-500 cursor-not-allowed ${
+    `h-10 w-full rounded-lg border px-3 py-0 text-sm outline-none bg-slate-100 text-slate-500 cursor-not-allowed ${
       errors[field] && touched[field]
         ? 'border-red-500'
         : 'border-slate-200'
@@ -843,7 +980,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
         onClick={handleClose}
       />
 
-      <div className={`relative flex h-dvh w-full min-h-0 overflow-hidden bg-white shadow-2xl transition-all duration-500 ease-in-out sm:h-auto sm:max-h-[94vh] sm:rounded-3xl lg:flex-row ${
+      <div className={`relative flex h-dvh w-full min-h-0 overflow-hidden bg-white shadow-2xl transition-all duration-500 ease-in-out sm:h-auto sm:max-h-[94vh] sm:rounded-lg lg:flex-row ${
         showGraph ? 'sm:w-[95vw] sm:max-w-[90rem] max-lg:flex-col' : 'sm:max-w-2xl'
       }`}>
         <LoadingOverlay show={saving} message={isEditing ? 'Actualizando cliente...' : 'Creando cliente...'} />
@@ -870,7 +1007,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
 
           <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {isEditing && (
-              <div className="mx-4 mt-2 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs font-medium leading-relaxed text-sky-800 sm:mx-5 sm:py-1.5">
+              <div className="mx-4 mt-2 rounded-lg border border-sky-100 bg-sky-50 px-3 py-2 text-xs font-medium leading-relaxed text-sky-800 sm:mx-5 sm:py-1.5">
                 Modo edición: puedes actualizar contacto, crédito, tipo de cliente, RUT y CIU. La identificación queda protegida.
               </div>
             )}
@@ -893,7 +1030,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                     error={errors.personType && touched.personType}
                     placeholder="Selecciona una opción"
                     ariaLabel="Tipo de persona"
-                    className="h-10 rounded-xl py-0 pr-10"
+                    className="h-10 rounded-lg py-0 pr-10"
                     {...selectResponsiveProps}
                   />
                   <ErrorMsg field="personType" />
@@ -910,7 +1047,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                       error={errors.documentType && touched.documentType}
                       placeholder="Tipo"
                       ariaLabel="Tipo de documento"
-                      className="h-10 rounded-xl py-0 pr-10"
+                      className="h-10 rounded-lg py-0 pr-10"
                       {...selectResponsiveProps}
                     />
                   </div>
@@ -926,11 +1063,14 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                       onBlur={handleBlur}
                       placeholder="Ej: 123456789"
                       autoComplete="off"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
+                      inputMode={formData.documentType === 'NIT' ? 'text' : 'numeric'}
+                      pattern={formData.documentType === 'NIT' ? undefined : '[0-9]*'}
                       className={isEditing ? disabledInputClass('document') : inputClass('document')}
                       disabled={isEditing}
                     />
+                    {checkingDocument && touched.document && !errors.document && (
+                      <p className="mt-0.5 text-xs text-[#004D77]">Verificando si el documento ya está registrado...</p>
+                    )}
                     <ErrorMsg field="document" />
                   </div>
                 </div>
@@ -1000,6 +1140,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                       onBlur={handleBlur}
                       placeholder="Ej: Calle 10 # 15-25"
                       autoComplete="off"
+                      maxLength={ADDRESS_MAX_LENGTH}
                       className={inputClass('address')}
                     />
                     <ErrorMsg field="address" />
@@ -1018,6 +1159,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                     onBlur={handleBlur}
                     placeholder="Ej: cliente@email.com"
                     autoComplete="off"
+                    maxLength={EMAIL_MAX_LENGTH}
                   className={inputClass('email')}
                 />
                 {checkingEmail && touched.email && !errors.email && (
@@ -1078,7 +1220,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                     error={errors.clientType && touched.clientType}
                     placeholder="Selecciona una opción"
                     ariaLabel="Tipo de cliente"
-                    className="h-10 rounded-xl py-0 pr-10"
+                    className="h-10 rounded-lg py-0 pr-10"
                     {...selectResponsiveProps}
                   />
                   <ErrorMsg field="clientType" />
@@ -1124,7 +1266,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                       error={errors.rut && touched.rut}
                       placeholder="Seleccione"
                       ariaLabel="RUT"
-                      className="h-10 rounded-xl py-0 pr-10"
+                      className="h-10 rounded-lg py-0 pr-10"
                       {...selectResponsiveProps}
                     />
                     <ErrorMsg field="rut" />
@@ -1136,9 +1278,14 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                       name="ciuCode"
                       value={formData.ciuCode}
                       onChange={handleChange}
+                      onBeforeInput={handleNumericBeforeInput}
+                      onPaste={handleNumericPaste}
                       onBlur={handleBlur}
-                      placeholder={formData.rut === 'si' ? "Ej: 1212" : "No aplica"}
+                      placeholder={formData.rut === 'si' ? "Ej: 4711" : "No aplica"}
                       autoComplete="off"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={CIU_CODE_LENGTH}
                       className={formData.rut === 'si' ? inputClass('ciuCode') : disabledInputClass('ciuCode')}
                       disabled={formData.rut === 'no'}
                       readOnly={formData.rut === 'no'}
@@ -1179,14 +1326,14 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                   type="button"
                   onClick={handleClose}
                   disabled={saving}
-                  className="rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600 transition duration-200 hover:border-[#004D77] hover:bg-sky-50 hover:text-[#004D77] disabled:cursor-not-allowed disabled:opacity-50 sm:px-6 sm:hover:-translate-y-0.5"
+                  className="rounded-lg bg-gray-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50 sm:px-6"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={saving || checkingEmail || hasBlockingErrors}
-                  className="flex items-center justify-center gap-2 rounded-full bg-[#004D77] px-4 py-2.5 text-sm font-semibold text-white transition duration-200 hover:bg-[#003d61] disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60 sm:px-6 sm:hover:-translate-y-0.5 sm:hover:shadow-lg"
+                  disabled={saving || checkingEmail || checkingDocument || hasBlockingErrors}
+                  className="flex items-center justify-center gap-2 rounded-lg bg-[#004D77] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-60 sm:px-6"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {saving ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}
@@ -1216,4 +1363,3 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
 }
 
 export default FormClient;
-

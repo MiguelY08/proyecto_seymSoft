@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, ChevronLeft, ChevronRight, Download, Image as ImageIcon } from 'lucide-react';
+import { useAlert } from '../../../../shared/alerts/useAlert';
 
 const ViewEvidence = ({ 
   isOpen, 
@@ -8,6 +9,12 @@ const ViewEvidence = ({
   title = 'Evidencias de la devolución' 
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const { showError } = useAlert();
+
+  useEffect(() => {
+    setDescriptionExpanded(false);
+  }, [currentIndex]);
 
   if (!isOpen || !evidences || evidences.length === 0) return null;
 
@@ -43,10 +50,13 @@ const ViewEvidence = ({
         link.click();
         document.body.removeChild(link);
       } else {
-        alert('No se puede descargar esta imagen');
+        showError('No se puede descargar la imagen', 'La evidencia no tiene una ruta válida para descargar.');
       }
-    } catch {
-      alert('Error al descargar la imagen');
+    } catch (error) {
+      showError(
+        'Error al descargar la imagen',
+        error?.message || 'Intenta nuevamente en unos segundos.'
+      );
     }
   };
 
@@ -59,10 +69,15 @@ const ViewEvidence = ({
 
   const currentImageUrl = currentEvidence?.imageUrl || currentEvidence?.image_path || currentEvidence?.preview || currentEvidence?.url || '';
   const currentDescription = currentEvidence?.image_description || '';
+  const DESCRIPTION_PREVIEW_LIMIT = 180;
+  const shouldCollapseDescription = currentDescription.length > DESCRIPTION_PREVIEW_LIMIT;
+  const visibleDescription = shouldCollapseDescription && !descriptionExpanded
+    ? `${currentDescription.slice(0, DESCRIPTION_PREVIEW_LIMIT).trim()}...`
+    : currentDescription;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-0 backdrop-blur-sm sm:p-4">
-      <div className="flex h-dvh w-full max-w-5xl flex-col overflow-hidden bg-white shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] sm:h-auto sm:max-h-[95vh] sm:rounded-3xl">
+      <div className="flex h-dvh w-full max-w-5xl flex-col overflow-hidden bg-white shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] sm:h-auto sm:max-h-[95vh] sm:rounded-lg">
 
         <div className="flex items-center justify-between px-6 py-3.5 flex-shrink-0 bg-gradient-to-r from-[#004D77] to-[#006699]">
           <div>
@@ -71,7 +86,7 @@ const ViewEvidence = ({
               {evidences.length} {evidences.length === 1 ? 'evidencia' : 'evidencias'}
             </p>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-xl transition text-white cursor-pointer">
+          <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-lg transition text-white cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -144,7 +159,20 @@ const ViewEvidence = ({
         <div className="flex flex-shrink-0 flex-col gap-3 border-t border-gray-200 bg-white px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex-1 min-w-0">
             {currentDescription ? (
-              <p className="text-xs text-gray-600 truncate">{currentDescription}</p>
+              <div className="max-w-full">
+                <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-gray-600 [overflow-wrap:anywhere]">
+                  {visibleDescription}
+                </p>
+                {shouldCollapseDescription && (
+                  <button
+                    type="button"
+                    onClick={() => setDescriptionExpanded((current) => !current)}
+                    className="mt-1 text-xs font-semibold text-[#004D77] transition hover:underline"
+                  >
+                    {descriptionExpanded ? 'Ver menos' : 'Ver más'}
+                  </button>
+                )}
+              </div>
             ) : (
               <p className="text-xs text-gray-400 italic">Sin descripción</p>
             )}

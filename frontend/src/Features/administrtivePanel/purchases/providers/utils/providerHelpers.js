@@ -17,6 +17,10 @@
 
 // Helper para convertir a string de forma segura
 const toStr = (value) => (value !== undefined && value !== null) ? String(value).trim() : '';
+const EMAIL_MAX_LENGTH = 100;
+const ADDRESS_MAX_LENGTH = 120;
+const CIU_CODE_LENGTH = 4;
+const PROVIDER_NAME_MAX_LENGTH = 100;
 
 // Formatea un número de teléfono a formato legible
 export const formatPhoneNumber = (phone) => {
@@ -35,6 +39,7 @@ export const getEmailValidationError = (email) => {
   const trimmed = value.trim();
 
   if (!trimmed) return 'El correo es obligatorio';
+  if (trimmed.length > EMAIL_MAX_LENGTH) return `El correo no puede superar ${EMAIL_MAX_LENGTH} caracteres`;
   if (value !== trimmed) return 'El correo no debe empezar ni terminar con espacios';
   if (/\s/.test(trimmed)) return 'El correo no debe contener espacios';
 
@@ -70,6 +75,37 @@ export const getEmailValidationError = (email) => {
 };
 
 export const isValidEmail = (email) => !getEmailValidationError(email);
+
+export const normalizeDocumentKey = (document) =>
+  String(document || '').replace(/\D/g, '');
+
+export const getDocumentValidationError = (document, documentType = 'CC') => {
+  const value = String(document || '');
+  const trimmed = value.trim();
+  const type = String(documentType || '').toUpperCase();
+  const isNit = type === 'NIT';
+  const label = isNit ? 'NIT' : 'documento';
+  const digitCount = normalizeDocumentKey(trimmed).length;
+
+  if (!trimmed) return `El ${label} es obligatorio`;
+  if (value !== trimmed) return `El ${label} no debe empezar ni terminar con espacios`;
+  if (/\s/.test(trimmed)) return `El ${label} no debe contener espacios`;
+
+  if (isNit) {
+    if (/[^0-9-]/.test(trimmed)) return 'El NIT solo debe contener números y guiones';
+    if (trimmed.startsWith('-') || trimmed.endsWith('-')) return 'El NIT no debe empezar ni terminar con guion';
+    if (trimmed.includes('--')) return 'El NIT no debe tener guiones seguidos';
+  } else if (/\D/.test(trimmed)) {
+    return 'El documento solo debe contener números';
+  }
+
+  if (digitCount < 6) return `El ${label} debe tener al menos 6 dígitos`;
+  if (digitCount > (isNit ? 19 : 15)) {
+    return isNit ? 'El NIT permite máximo 19 dígitos' : 'El documento permite máximo 15 dígitos';
+  }
+
+  return '';
+};
 
 // Verifica que el teléfono tenga entre 7 y 10 dígitos numéricos
 export const isValidPhone = (phone) => {
@@ -188,6 +224,8 @@ export const validateProviderForm = (formData) => {
     errors.nombres = 'El nombre es obligatorio';
   } else if (formData.nombres.trim().length < 2) {
     errors.nombres = 'Debe tener al menos 2 caracteres';
+  } else if (formData.nombres.trim().length > PROVIDER_NAME_MAX_LENGTH) {
+    errors.nombres = `No puede superar ${PROVIDER_NAME_MAX_LENGTH} caracteres`;
   } else if (!isOnlyLetters(formData.nombres)) {
     errors.nombres = 'Solo se permiten letras';
   }
@@ -196,6 +234,8 @@ export const validateProviderForm = (formData) => {
     errors.apellidos = 'El apellido es obligatorio';
   } else if (formData.apellidos.trim().length < 2) {
     errors.apellidos = 'Debe tener al menos 2 caracteres';
+  } else if (formData.apellidos.trim().length > PROVIDER_NAME_MAX_LENGTH) {
+    errors.apellidos = `No puede superar ${PROVIDER_NAME_MAX_LENGTH} caracteres`;
   } else if (!isOnlyLetters(formData.apellidos)) {
     errors.apellidos = 'Solo se permiten letras';
   }
@@ -223,6 +263,8 @@ export const validateProviderForm = (formData) => {
     errors.direccion = 'La dirección es obligatoria';
   } else if (formData.direccion.trim().length < 5) {
     errors.direccion = 'Debe tener al menos 5 caracteres';
+  } else if (formData.direccion.trim().length > ADDRESS_MAX_LENGTH) {
+    errors.direccion = `La direccion no puede superar ${ADDRESS_MAX_LENGTH} caracteres`;
   }
 
   // Convertir plazoDevoluciones a string antes de validar
@@ -247,10 +289,8 @@ export const validateProviderForm = (formData) => {
   if (formData.rut === 'si') {
     if (!formData.codigoCIU?.trim()) {
       errors.codigoCIU = 'El código CIU es obligatorio cuando tiene RUT';
-    } else if (formData.codigoCIU.trim().length < 3) {
-      errors.codigoCIU = 'Debe tener al menos 3 caracteres';
-    } else if (formData.codigoCIU.length > 30) {
-      errors.codigoCIU = 'No puede superar 30 caracteres';
+    } else if (!new RegExp(`^\\d{${CIU_CODE_LENGTH}}$`).test(formData.codigoCIU.trim())) {
+      errors.codigoCIU = `El codigo CIU debe tener exactamente ${CIU_CODE_LENGTH} numeros`;
     }
   }
 

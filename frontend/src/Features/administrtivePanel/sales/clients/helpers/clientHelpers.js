@@ -41,6 +41,7 @@ export const getEmailValidationError = (email) => {
   const trimmed = value.trim();
 
   if (!trimmed) return 'El correo es obligatorio';
+  if (trimmed.length > 100) return 'El correo no puede superar 100 caracteres';
   if (value !== trimmed) return 'El correo no debe empezar ni terminar con espacios';
   if (/\s/.test(trimmed)) return 'El correo no debe contener espacios';
 
@@ -76,6 +77,37 @@ export const getEmailValidationError = (email) => {
 };
 
 export const isValidEmail = (email) => !getEmailValidationError(email);
+
+export const normalizeDocumentKey = (document) =>
+  String(document || '').replace(/\D/g, '');
+
+export const getDocumentValidationError = (document, documentType = 'CC') => {
+  const value = String(document || '');
+  const trimmed = value.trim();
+  const type = String(documentType || '').toUpperCase();
+  const isNit = type === 'NIT';
+  const label = isNit ? 'NIT' : 'documento';
+  const digitCount = normalizeDocumentKey(trimmed).length;
+
+  if (!trimmed) return `El ${label} es obligatorio`;
+  if (value !== trimmed) return `El ${label} no debe empezar ni terminar con espacios`;
+  if (/\s/.test(trimmed)) return `El ${label} no debe contener espacios`;
+
+  if (isNit) {
+    if (/[^0-9-]/.test(trimmed)) return 'El NIT solo debe contener números y guiones';
+    if (trimmed.startsWith('-') || trimmed.endsWith('-')) return 'El NIT no debe empezar ni terminar con guion';
+    if (trimmed.includes('--')) return 'El NIT no debe tener guiones seguidos';
+  } else if (/\D/.test(trimmed)) {
+    return 'El documento solo debe contener números';
+  }
+
+  if (digitCount < 6) return `El ${label} debe tener al menos 6 dígitos`;
+  if (digitCount > (isNit ? 19 : 15)) {
+    return isNit ? 'El NIT permite máximo 19 dígitos' : 'El documento permite máximo 15 dígitos';
+  }
+
+  return '';
+};
 
 // Verifica que el teléfono sea numérico entre 7 y 10 dígitos
 export const isValidPhone = (phone) => {
@@ -230,6 +262,13 @@ export const validateClientForm = (formData) => {
 
   const isLegalPerson = formData.personType === 'juridica';
 
+  const normalizedDocumentError = getDocumentValidationError(formData.document, formData.documentType);
+  if (normalizedDocumentError) {
+    errors.document = normalizedDocumentError;
+  } else {
+    delete errors.document;
+  }
+
   if (!formData.firstName?.trim()) {
     errors.firstName = isLegalPerson ? 'El nombre de la empresa es obligatorio' : 'El nombre es obligatorio';
   } else if (formData.firstName.trim().length < 2) {
@@ -250,6 +289,8 @@ export const validateClientForm = (formData) => {
     errors.address = 'La dirección es obligatoria';
   } else if (formData.address.trim().length < 5) {
     errors.address = 'Debe tener al menos 5 caracteres';
+  } else if (formData.address.trim().length > 120) {
+    errors.address = 'La dirección no puede superar 120 caracteres';
   }
 
   if (!formData.phone?.trim()) {
@@ -290,10 +331,8 @@ export const validateClientForm = (formData) => {
   if (formData.rut === 'si') {
     if (!formData.ciuCode?.trim()) {
       errors.ciuCode = 'El código CIU es obligatorio cuando tiene RUT';
-    } else if (formData.ciuCode.trim().length < 3) {
-      errors.ciuCode = 'Debe tener al menos 3 caracteres';
-    } else if (formData.ciuCode.length > 25) {
-      errors.ciuCode = 'No puede superar 25 caracteres';
+    } else if (!/^\d{4}$/.test(formData.ciuCode.trim())) {
+      errors.ciuCode = 'El código CIU debe tener exactamente 4 números';
     }
   }
 

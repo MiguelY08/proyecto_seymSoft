@@ -3,7 +3,6 @@ import { Eye, EyeOff, Shield } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext.jsx";
 import { useAlert } from "../../shared/alerts/useAlert.js";
-import Spinner from "../../shared/spinner/Spinner.jsx";
 
 import { changePassword } from "../services/authService.js";
 
@@ -19,7 +18,7 @@ export default function GooglePasswordSetupModal() {
     showWarning
   } = useAlert();
 
-  const [loading, setLoading] =
+  const [saving, setSaving] =
     useState(false);
 
   const [showPassword, setShowPassword] =
@@ -112,7 +111,7 @@ export default function GooglePasswordSetupModal() {
 
     try {
 
-      setLoading(true);
+      setSaving(true);
 
       const result =
         await changePassword(
@@ -150,13 +149,13 @@ export default function GooglePasswordSetupModal() {
 
     } finally {
 
-      setLoading(false);
+      setSaving(false);
 
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="google-password-setup-modal fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
 
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6">
 
@@ -227,7 +226,6 @@ export default function GooglePasswordSetupModal() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                disabled={loading}
                 className={`w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 ${
                   errors.password
                     ? "border-red-500"
@@ -280,7 +278,6 @@ export default function GooglePasswordSetupModal() {
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                disabled={loading}
                 className={`w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 ${
                   errors.confirmPassword
                     ? "border-red-500"
@@ -318,30 +315,20 @@ export default function GooglePasswordSetupModal() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={saving}
             className="w-full bg-[#004D77] hover:bg-[#003A5C] text-white py-2 rounded-lg transition disabled:opacity-70"
           >
             {
-              loading
+              saving
                 ? "Guardando..."
                 : "Guardar contraseña"
             }
           </button>
 
         </form>
-
-        {
-          loading && (
-            <div className="mt-4">
-              <Spinner
-                message="Configurando contraseña..."
-              />
-            </div>
-          )
-        }
-
-      </div>
+</div>
 
     </div>
   );
 }
+

@@ -29,6 +29,10 @@ import { clientsService } from '../../clients/services/clientsService';
 const onlyDigits = (value, maxLength = 4) =>
   String(value ?? '').replace(/\D/g, '').slice(0, maxLength);
 
+const ADDRESS_MAX_LENGTH = 120;
+const GENERAL_DESCRIPTION_MAX_LENGTH = 500;
+const REASON_DESCRIPTION_MAX_LENGTH = 255;
+
 const PRODUCTOS_VENTA = [];
 
 const MOTIVOS = [
@@ -69,7 +73,7 @@ const formatReasonLabel = (reason) => {
   return normalized.charAt(0).toLocaleUpperCase('es-CO') + normalized.slice(1);
 };
 
-const RETURN_SELECT_CLASS = 'h-10 py-0 rounded-xl text-sm font-medium';
+const RETURN_SELECT_CLASS = 'h-10 py-0 rounded-lg text-sm font-medium';
 
 const getReasonId = (reasonName) => {
   const reasonMap = {
@@ -117,8 +121,12 @@ function ProductoImg({ src, size = 'md' }) {
   );
 }
 
-function EstadoBadgeSelect({ value, onChange, metodo, sharedStyle = true }) {
+const isFinalProductStatus = (status) =>
+  String(status || '').trim().toLowerCase() === 'listo';
+
+function EstadoBadgeSelect({ value, onChange, metodo, sharedStyle = true, disabled = false }) {
   const [open, setOpen] = useState(false);
+  const isDisabled = disabled || !metodo;
 
   if (sharedStyle) {
     const options = metodo
@@ -133,19 +141,19 @@ function EstadoBadgeSelect({ value, onChange, metodo, sharedStyle = true }) {
         value={value || ''}
         options={options}
         onChange={onChange}
-        disabled={!metodo}
+        disabled={isDisabled}
         placeholder={metodo ? 'Selecciona un estado' : 'Selecciona método primero'}
         ariaLabel="Estado del producto"
-        className={RETURN_SELECT_CLASS}
+        className={`${RETURN_SELECT_CLASS} ${isDisabled ? 'cursor-not-allowed opacity-70' : ''}`}
         placement="bottom"
       />
     );
   }
 
-  if (!metodo) {
+  if (isDisabled) {
     return (
       <div className="px-2.5 py-1.5 rounded-lg border text-xs font-semibold bg-gray-100 text-gray-400 border-gray-200">
-        Selecciona método primero
+        {value || 'Selecciona método primero'}
       </div>
     );
   }
@@ -167,7 +175,7 @@ function EstadoBadgeSelect({ value, onChange, metodo, sharedStyle = true }) {
       <button 
         type="button" 
         onClick={() => setOpen(!open)}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer transition hover:scale-105 ${color}`}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition ${color}`}
       >
         {value}
         <ChevronDown className="w-3 h-3" />
@@ -175,7 +183,7 @@ function EstadoBadgeSelect({ value, onChange, metodo, sharedStyle = true }) {
       
       {open && (
         <div 
-          className="absolute bg-white rounded-xl shadow-lg border border-gray-200 py-1 min-w-[140px]"
+          className="absolute bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[140px]"
           style={{ 
             position: 'absolute',
             zIndex: 99999,
@@ -212,7 +220,7 @@ function DisabledField({ label, value, required = false }) {
         {label}
         {required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
-      <div className="w-full border border-dashed border-gray-300 rounded-xl px-3 py-2 text-sm bg-gray-50 text-gray-500">
+      <div className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500">
         {value || '—'}
       </div>
       <p className="text-[10px] text-gray-400 mt-1">
@@ -230,7 +238,7 @@ function DisabledTextarea({ label, value }) {
         value={value || ''}
         disabled
         rows={4}
-        className="w-full border border-dashed border-gray-300 rounded-xl px-3 py-2 text-xs bg-gray-50 text-gray-500 resize-none cursor-not-allowed"
+        className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-xs bg-gray-50 text-gray-500 resize-none cursor-not-allowed"
       />
       <p className="text-[10px] text-gray-400 mt-1">
         No se puede modificar en edición
@@ -243,7 +251,7 @@ function DisabledEvidence({ count }) {
   return (
     <div>
       <label className="block text-xs font-bold text-gray-600 mb-1">Evidencias</label>
-      <div className="w-full border border-dashed border-gray-300 rounded-xl px-3 py-2 text-sm bg-gray-50 text-gray-500 flex items-center justify-between">
+      <div className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 flex items-center justify-between">
         <span>{count === 0 ? 'Sin evidencias' : `${count} archivo(s) adjunto(s)`}</span>
         <Image className="w-4 h-4 text-gray-400" />
       </div>
@@ -410,6 +418,7 @@ function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange }) {
   const totalQuantityUsed = configs?.reduce((sum, cfg) => sum + (cfg.cantidad || 0), 0) || 0;
 
   const handleStatusChange = (index, newStatus) => {
+    if (isFinalProductStatus(configs[index]?.estado)) return;
     const newConfigs = [...configs];
     newConfigs[index] = { ...newConfigs[index], estado: newStatus };
     onConfigChange(newConfigs);
@@ -418,7 +427,7 @@ function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange }) {
   if (!producto) return null;
 
   return (
-    <div className="border rounded-xl transition-colors border-gray-200 shadow-sm">
+    <div className="border rounded-lg transition-colors border-gray-200 shadow-sm">
       <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-t-xl">
         <button type="button" onClick={() => setExpanded((p) => !p)}
           className="text-[#004D77] hover:text-[#003d61] transition cursor-pointer flex-shrink-0">
@@ -454,7 +463,7 @@ function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange }) {
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Motivo</label>
-                  <div className="w-full px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-xl bg-gray-50 text-gray-500">
+                  <div className="w-full px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-lg bg-gray-50 text-gray-500">
                     {formatReasonLabel(config.motivo)}
                   </div>
                   <p className="text-[10px] text-gray-400 mt-1">No se puede modificar en edición</p>
@@ -466,17 +475,23 @@ function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange }) {
                     value={config.estado} 
                     onChange={(v) => handleStatusChange(index, v)}
                     metodo={config.metodo}
+                    disabled={isFinalProductStatus(config.estado)}
                   />
+                  {isFinalProductStatus(config.estado) && (
+                    <p className="mt-1 text-[10px] font-medium text-green-600">
+                      Estado final bloqueado
+                    </p>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Método devolución</label>
-                  <div className="w-full px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-xl bg-gray-50 text-gray-500">
+                  <div className="w-full px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-lg bg-gray-50 text-gray-500">
                     {config.metodo || '—'}
                   </div>
                   <p className="text-[10px] text-gray-400 mt-1">No se puede modificar en edición</p>
                   {config.metodo === 'Saldo a favor' && (
-                    <div className={`mt-2 rounded-xl border px-3 py-2 text-[11px] font-semibold ${
+                    <div className={`mt-2 rounded-lg border px-3 py-2 text-[11px] font-semibold ${
                       config.creditApplied
                         ? 'border-green-300 bg-green-50 text-green-800'
                         : config.applyCredit
@@ -494,7 +509,7 @@ function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange }) {
 
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Cantidad</label>
-                  <div className="w-full px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-xl bg-gray-50 text-gray-500">
+                  <div className="w-full px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-lg bg-gray-50 text-gray-500">
                     {config.cantidad || 1}
                   </div>
                   <p className="text-[10px] text-gray-400 mt-1">No se puede modificar en edición</p>
@@ -596,7 +611,7 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
 
   const configFieldClass = (configIndex, field, value, config) => {
     const hasError = (touched[`${configIndex}-${field}`] || submitted) && validateField(field, value, config);
-    return `h-10 w-full px-3 py-0 text-sm border rounded-xl outline-none bg-white text-gray-700 transition-colors cursor-pointer ${
+    return `h-10 w-full px-3 py-0 text-sm border rounded-lg outline-none bg-white text-gray-700 transition-colors cursor-pointer ${
       hasError
         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
@@ -605,7 +620,7 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
 
   const configTextareaClass = (configIndex, field, value, config) => {
     const hasError = (touched[`${configIndex}-${field}`] || submitted) && validateField(field, value, config);
-    return `w-full min-h-[86px] px-3 py-2.5 text-sm leading-5 border rounded-xl outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors resize-none ${
+    return `w-full min-h-[86px] px-3 py-2.5 text-sm leading-5 border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors resize-none ${
       hasError
         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
@@ -613,7 +628,7 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
   };
 
   return (
-    <div className="border rounded-xl transition-colors border-gray-300 shadow-sm">
+    <div className="border rounded-lg transition-colors border-gray-300 shadow-sm">
       <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-t-xl">
         <button type="button" onClick={() => setExpanded((p) => !p)}
           className="text-[#004D77] hover:text-[#003d61] transition cursor-pointer flex-shrink-0">
@@ -686,7 +701,7 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
                   />
                   {renderConfigError(index, 'metodo', config.metodo, config)}
                   {config.metodo === 'Saldo a favor' && (
-                    <label className="mt-2 flex cursor-pointer items-start gap-2 rounded-xl border border-green-200 bg-green-50 p-2.5">
+                    <label className="mt-2 flex cursor-pointer items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-2.5">
                       <input
                         type="checkbox"
                         checked={config.applyCredit === true}
@@ -727,7 +742,7 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
                         const newValue = Math.max(1, currentValue - 1);
                         handleConfigChange(index, 'cantidad', newValue);
                       }}
-                      className="w-7 h-7 flex items-center justify-center rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer transition"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer transition"
                     >
                       <Minus className="w-3 h-3" />
                     </button>
@@ -757,7 +772,7 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
                         const newValue = Math.min(remainingQuantity + currentValue, currentValue + 1);
                         handleConfigChange(index, 'cantidad', newValue);
                       }}
-                      className="w-7 h-7 flex items-center justify-center rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer transition"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer transition"
                     >
                       <Plus className="w-3 h-3" />
                     </button>
@@ -770,15 +785,15 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
               </div>
 
               {config.motivo === 'OTRO' && (
-                <div className="mt-3 col-span-2 rounded-2xl border border-gray-100 bg-gray-50/60 p-3">
+                <div className="mt-3 col-span-2 rounded-lg border border-gray-100 bg-gray-50/60 p-3">
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Descripción del motivo<span className="text-red-500">*</span>
                   </label>
                   <textarea
                     value={config.descripcionMotivo || ''}
-                    onChange={(e) => handleConfigChange(index, 'descripcionMotivo', e.target.value)}
+                    onChange={(e) => handleConfigChange(index, 'descripcionMotivo', e.target.value.slice(0, REASON_DESCRIPTION_MAX_LENGTH))}
                     onBlur={() => handleConfigBlur(index, 'descripcionMotivo')}
-                    maxLength={255}
+                    maxLength={REASON_DESCRIPTION_MAX_LENGTH}
                     placeholder="Explica brevemente el motivo de la devolución"
                     rows={3}
                     className={configTextareaClass(index, 'descripcionMotivo', config.descripcionMotivo || '', config)}
@@ -788,7 +803,7 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
                       {renderConfigError(index, 'descripcionMotivo', config.descripcionMotivo || '', config)}
                     </div>
                     <span className="ml-auto text-[10px] text-gray-400">
-                      {(config.descripcionMotivo || '').length}/255
+                      {(config.descripcionMotivo || '').length}/{REASON_DESCRIPTION_MAX_LENGTH}
                     </span>
                   </div>
                 </div>
@@ -800,7 +815,7 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
             <button
               type="button"
               onClick={handleAddConfig}
-              className="mt-4 w-full py-2 border border-dashed border-[#004D77] rounded-xl text-[#004D77] text-xs font-semibold hover:bg-[#004D77]/5 transition cursor-pointer"
+              className="mt-4 w-full py-2 border border-dashed border-[#004D77] rounded-lg text-[#004D77] text-xs font-semibold hover:bg-[#004D77]/5 transition cursor-pointer"
             >
               + Agregar otra configuración ({remainingQuantity} unidades restantes)
             </button>
@@ -1096,6 +1111,14 @@ useEffect(() => {
   // ==================== VALIDACIONES ====================
   const validateField = (name, value) => {
     if (isEdit) return '';
+
+    if (name === 'direccion' && value && value.length > ADDRESS_MAX_LENGTH) {
+      return `La dirección no puede superar ${ADDRESS_MAX_LENGTH} caracteres`;
+    }
+
+    if (name === 'descripcion' && value && value.length > GENERAL_DESCRIPTION_MAX_LENGTH) {
+      return `La descripción no puede superar ${GENERAL_DESCRIPTION_MAX_LENGTH} caracteres`;
+    }
     
     switch (name) {
       case 'noFactura':
@@ -1388,7 +1411,10 @@ useEffect(() => {
     const hasErrors = Object.values(validationErrors).some(error => error && error.length > 0);
     
     if (hasErrors) {
-      showError('Errores en el formulario', 'Por favor corrija los errores antes de continuar');
+      showError(
+        'Faltan datos para guardar',
+        'Revisa los campos marcados en rojo. En cada producto seleccionado debes completar motivo, método, estado y cantidad.'
+      );
       return;
     }
 
@@ -1460,7 +1486,7 @@ useEffect(() => {
     if (isEdit) return '';
     
     const hasError = errors[field] && (touched[field] || submitted);
-    return `w-full border rounded-xl px-3 py-2 text-sm text-gray-500 outline-none placeholder-gray-300 transition-colors ${
+    return `w-full border rounded-lg px-3 py-2 text-sm text-gray-500 outline-none placeholder-gray-300 transition-colors ${
       hasError
         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
         : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
@@ -1516,20 +1542,20 @@ useEffect(() => {
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-0 backdrop-blur-sm sm:p-4">
-      <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-white shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] sm:h-auto sm:max-h-[92vh] sm:max-w-[1240px] sm:rounded-3xl">
+      <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-white shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] sm:h-auto sm:max-h-[92vh] sm:max-w-[1240px] sm:rounded-lg">
         <LoadingOverlay show={saving} message={isEdit ? 'Guardando cambios...' : 'Creando devolución...'} />
 
-        <div className="flex flex-shrink-0 items-center justify-between bg-gradient-to-r from-[#004D77] to-[#006699] px-4 py-3.5 sm:rounded-t-3xl sm:px-6">
+        <div className="flex flex-shrink-0 items-center justify-between bg-gradient-to-r from-[#004D77] to-[#006699] px-4 py-3.5 sm:rounded-t-lg sm:px-6">
           <h2 className="min-w-0 truncate pr-3 text-[15px] font-bold tracking-wide text-white">
             {isEdit ? `Editar devolución — ${returnData?.returnNumber || returnData?.numeroDevolucion || ''}` : 'Nueva devolución'}
           </h2>
           {isEdit && (
-            <div className="hidden items-center gap-2 rounded-xl bg-white/20 px-3 py-1 md:flex">
+            <div className="hidden items-center gap-2 rounded-lg bg-white/20 px-3 py-1 md:flex">
               <span className="text-white text-[10px] font-medium">Modo edición: solo estados</span>
             </div>
           )}
           <button type="button" onClick={handleClose}
-            className="w-7 h-7 flex items-center justify-center rounded-xl bg-white/20 hover:bg-white/30 text-white transition cursor-pointer hover:scale-105">
+            className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 text-white transition cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -1607,7 +1633,7 @@ useEffect(() => {
                             cargarFacturas('');
                           }}
                           placeholder="Buscar venta"
-                          className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-700 outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
                           disabled={isEdit}
                         />
                         <button
@@ -1625,7 +1651,7 @@ useEffect(() => {
                     </div>
                     
                     {showDropdownFactura && facturasFiltradas.length > 0 && (
-                      <div ref={dropdownRef} className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                      <div ref={dropdownRef} className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                         {facturasFiltradas.map((factura, index) => {
                           const isAnnulled = factura.isAnnulled || factura.statusId === 4;
                           const isUnavailable = factura.canReturn === false;
@@ -1698,13 +1724,13 @@ useEffect(() => {
                     )}
 
                     {showDropdownFactura && facturasFiltradas.length === 0 && !cargandoFacturas && (
-                      <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg py-4 text-center text-sm text-gray-400">
+                      <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg py-4 text-center text-sm text-gray-400">
                         No hay facturas disponibles
                       </div>
                     )}
 
                     {cargandoFacturas && (
-                      <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg py-4 text-center text-sm text-gray-400">
+                      <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg py-4 text-center text-sm text-gray-400">
                         <Loader className="w-5 h-5 animate-spin mx-auto text-[#004D77]" />
                         Cargando...
                       </div>
@@ -1747,7 +1773,7 @@ useEffect(() => {
                       value={telefono}
                       onChange={(e) => setTelefono(e.target.value)}
                       placeholder="Teléfono del cliente"
-                      className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-500 outline-none bg-gray-50"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-500 outline-none bg-gray-50"
                       disabled={true}
                     />
                   </div>
@@ -1769,7 +1795,7 @@ useEffect(() => {
                 
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">Estado<span className="text-red-500">*</span></label>
-                  <div className="w-full border border-dashed border-gray-300 rounded-xl px-3 py-2 text-sm bg-yellow-50 text-yellow-700 font-semibold">
+                  <div className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm bg-yellow-50 text-yellow-700 font-semibold">
                     En Proceso
                   </div>
                   <p className="text-[10px] text-gray-400 mt-1">
@@ -1783,7 +1809,7 @@ useEffect(() => {
                     {domicilio && <span className="text-red-500 ml-0.5">*</span>}
                   </label>
                   <button type="button" onClick={() => setEvidenceOpen(true)}
-                    className={`w-full border rounded-xl px-3 py-2 text-sm flex items-center justify-between ${
+                    className={`w-full border rounded-lg px-3 py-2 text-sm flex items-center justify-between ${
                       errors.evidencias && (touched.evidencias || submitted)
                         ? 'border-red-500'
                         : evidencias.length > 0
@@ -1837,12 +1863,16 @@ useEffect(() => {
                     <input
                       type="text"
                       value={direccion}
-                      onChange={(e) => handleFieldChange('direccion', e.target.value)}
+                      onChange={(e) => handleFieldChange('direccion', e.target.value.slice(0, ADDRESS_MAX_LENGTH))}
                       onBlur={() => handleBlur('direccion')}
+                      maxLength={ADDRESS_MAX_LENGTH}
                       placeholder="Calle, número, barrio"
                       className={inputClass('direccion')}
                     />
-                    {renderError('direccion')}
+                    <div className="mt-1 flex justify-between gap-2">
+                      {renderError('direccion')}
+                      <span className="ml-auto text-[10px] text-gray-400">{direccion.length}/{ADDRESS_MAX_LENGTH}</span>
+                    </div>
                   </div>
                 )}
                 
@@ -1852,14 +1882,14 @@ useEffect(() => {
                     value={descripcion}
                     onChange={(e) => handleFieldChange('descripcion', e.target.value)}
                     onBlur={() => handleBlur('descripcion')}
-                    maxLength={500}
+                    maxLength={GENERAL_DESCRIPTION_MAX_LENGTH}
                     placeholder="Agrega una descripción"
                     rows={3}
                     className={`${inputClass('descripcion')} resize-none`}
                   />
                   <div className="mt-1 flex justify-between gap-2">
                     {renderError('descripcion')}
-                    <span className="ml-auto text-[10px] text-gray-400">{descripcion.length}/500</span>
+                    <span className="ml-auto text-[10px] text-gray-400">{descripcion.length}/{GENERAL_DESCRIPTION_MAX_LENGTH}</span>
                   </div>
                 </div>
               </>
@@ -1872,13 +1902,13 @@ useEffect(() => {
             <p className="text-xs text-gray-400 mb-3">Selecciona los productos a devolver</p>
             
             {!isEdit && productosDisponibles.length === 0 && !noFactura && (
-  <div className="flex items-center justify-center bg-gray-50 rounded-xl border border-dashed border-gray-300 py-2 px-3">
+  <div className="flex items-center justify-center bg-gray-50 rounded-lg border border-dashed border-gray-300 py-2 px-3">
     <p className="text-[12px] text-gray-400 text-center">Selecciona una factura</p>
   </div>
 )}
 
             {!isEdit && cargandoProductos && (
-              <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#004D77]/25 bg-[#004D77]/5 px-3 py-6 text-center">
+              <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[#004D77]/25 bg-[#004D77]/5 px-3 py-6 text-center">
                 <Loader className="h-6 w-6 animate-spin text-[#004D77]" />
                 <div>
                   <p className="text-sm font-semibold text-[#004D77]">Cargando productos</p>
@@ -1888,13 +1918,13 @@ useEffect(() => {
             )}
             
             {!isEdit && productosDisponibles.length === 0 && noFactura && !cargandoProductos && (
-  <div className="flex items-center justify-center bg-gray-50 rounded-xl border border-dashed border-gray-300 py-2 px-3">
+  <div className="flex items-center justify-center bg-gray-50 rounded-lg border border-dashed border-gray-300 py-2 px-3">
     <p className="text-[12px] text-gray-400 text-center">Sin productos disponibles</p>
   </div>
 )}
             
             {!isEdit && productosDisponibles.length > 0 && Object.keys(seleccionados).length === 0 && (
-  <div className="flex items-center justify-center bg-gray-50 rounded-xl border border-dashed border-gray-300 py-2 px-3">
+  <div className="flex items-center justify-center bg-gray-50 rounded-lg border border-dashed border-gray-300 py-2 px-3">
     <p className="text-[12px] text-gray-400 text-center">Haz clic en un producto</p>
   </div>
 )}
@@ -1918,7 +1948,7 @@ useEffect(() => {
                   <div key={`${prod.id}-${prod.idBarcode || prod.barcode || index}`}>
                     {!isSelected ? (
                       <div onClick={() => !isEdit && toggleProducto(prod)}
-                        className={`flex items-center gap-2.5 border border-gray-200 rounded-xl px-3 py-2.5 ${!isEdit ? 'cursor-pointer hover:border-gray-300 hover:bg-gray-50' : 'cursor-default bg-gray-50 opacity-70'} transition`}>
+                        className={`flex items-center gap-2.5 border border-gray-200 rounded-lg px-3 py-2.5 ${!isEdit ? 'cursor-pointer hover:border-gray-300 hover:bg-gray-50' : 'cursor-default bg-gray-50 opacity-70'} transition`}>
                         <input type="checkbox" checked={false} readOnly className="accent-[#004D77] w-4 h-4 cursor-pointer flex-shrink-0" />
                         <ProductoImg src={prod.imagen} size="sm" />
                         <div className="flex-1 min-w-0">
@@ -1969,7 +1999,7 @@ useEffect(() => {
               ) : (
                 productosDevueltos.flatMap(({ producto, configs }) => 
                   configs.map((config, idx) => (
-                    <div key={`${producto.id}-${idx}`} className="flex min-w-0 items-center justify-between overflow-hidden border border-gray-200 rounded-xl px-3 py-2">
+                    <div key={`${producto.id}-${idx}`} className="flex min-w-0 items-center justify-between overflow-hidden border border-gray-200 rounded-lg px-3 py-2">
                       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
                         <ProductoImg src={producto.imagen} size="sm" />
                         <div className="min-w-0 flex-1 overflow-hidden">
@@ -2054,15 +2084,15 @@ useEffect(() => {
           </div>
         </div>
 
-        <div className="flex flex-shrink-0 flex-col-reverse gap-3 border-t border-gray-200 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:rounded-b-3xl sm:px-6 sm:py-4">
+        <div className="flex flex-shrink-0 flex-col-reverse gap-3 border-t border-gray-200 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:rounded-b-lg sm:px-6 sm:py-4">
           <button type="button" onClick={handleSubmit}
             disabled={saving}
-            className="w-full rounded-xl bg-[#004D77] px-7 py-2.5 text-sm font-bold text-white transition hover:bg-[#003d61] hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none sm:w-auto">
+            className="w-full rounded-lg bg-[#004D77] px-7 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
             {isEdit ? 'Guardar cambios' : 'Crear devolución'}
           </button>
           <button type="button" onClick={handleClose}
             disabled={saving}
-            className="w-full rounded-xl bg-gray-200 px-7 py-2.5 text-sm font-bold text-gray-700 transition hover:bg-gray-300 hover:shadow-md active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
+            className="w-full rounded-lg bg-gray-500 px-7 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
             Cancelar
           </button>
         </div>
