@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import logo from '../../assets/PapeleriaMagicLogo.png';
+import logo from '../../assets/PapeleriaMagicLogo_512x512.png';
 import horizontalLogo from "../../assets/PMLogo_Horizontal.png";
 import instagramLogo from '../../assets/socialMedia/instagramWhite.png';
 import tiktokLogo from '../../assets/socialMedia/tiktokWhite.png';
@@ -63,7 +63,6 @@ function Footer() {
                     height: '100%',
                     objectFit: 'cover',
                     objectPosition: 'center',
-                    transform: 'scale(1.15)',
                   }}
                 />
               </div>

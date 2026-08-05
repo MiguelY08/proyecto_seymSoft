@@ -4,7 +4,7 @@ import AuthFooter from "../../shared/AuthFooter";
 import HeaderLanding from "../../layouts/HeaderLanding"
 
 // import imagenBanner from "../../../assets/imagenBanner.png";
-import logo from "../../../assets/PapeleriaMagicLogo.png";
+import logo from "../../../assets/PapeleriaMagicLogo_512x512.png";
 
 export default function RegisterPage() {
   return (

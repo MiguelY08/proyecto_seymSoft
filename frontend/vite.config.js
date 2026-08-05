@@ -9,13 +9,13 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico'],
+      includeAssets: ['PapeleriaMagicLogo_192x192.png'],
 
       workbox: {
         clientsClaim: true,
         skipWaiting: true,
         navigateFallback: "/index.html",
-        globPatterns: ["**/*.{js,jsx,css,html,png,jpg,jpeg,webp,svg}"],
+        globPatterns: ["**/*.{jsx,css,html,png,jpg,jpeg,webp,svg}"],
       },
 
       manifest: {
@@ -25,24 +25,24 @@ export default defineConfig({
         theme_color: '#ffffff',
         icons: [
           {
-            src: '/src/assets/PapeleriaMagicLogo.png',
+            src: '/PapeleriaMagicLogo_192x192.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: '/src/assets/PapeleriaMagicLogo.png',
+            src: '/PapeleriaMagicLogo_512x512.png',
             sizes: '512x512',
             type: 'image/png'
           }
         ],
-        screenshots: [
-          {
-            src: '/pwa-1280-581.png', // (1280-581) / (640-480)
-            sizes: '1280x581',
-            type: 'image/png',
-            form_factor: 'wide'
-          }
-        ],
+        // screenshots: [
+        //   {
+        //     src: '/pwa-1280-581.png', // (1280-581) / (640-480)
+        //     sizes: '1280x581',
+        //     type: 'image/png',
+        //     form_factor: 'wide'
+        //   }
+        // ],
       }
     })
   ],

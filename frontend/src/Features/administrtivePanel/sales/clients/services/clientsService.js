@@ -118,14 +118,10 @@ export const clientsService = {
   create: async (clientData) => {
     const formattedClientCredit = validateAndFormatNumber(clientData.clientCredit);
     
-    const payload = {
+    const clientOnlyPayload = {
       personType: clientData.personType || '',
       documentType: clientData.documentType || 'CC',
       document: clientData.document || '',
-      firstName: clientData.firstName || '',
-      lastName: clientData.lastName || '',
-      email: clientData.email || '',
-      phone: clientData.phone || '',
       address: clientData.address || '',
       contactName: clientData.contactName || '',
       contactPhone: clientData.contactPhone || '',
@@ -135,6 +131,15 @@ export const clientsService = {
       rut: clientData.rut || 'no',
       ciuCode: (clientData.ciuCode === 'No aplica' || !clientData.ciuCode) ? null : clientData.ciuCode
     };
+    const payload = clientData.userId
+      ? clientOnlyPayload
+      : {
+          ...clientOnlyPayload,
+          firstName: clientData.firstName || '',
+          lastName: clientData.lastName || '',
+          email: clientData.email || '',
+          phone: clientData.phone || '',
+        };
     
     if (clientData.userId) {
       payload.userId = clientData.userId;

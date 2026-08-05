@@ -4,7 +4,7 @@ import imagenBanner from "../../../assets/imagenBanner.png"
 import AuthFooter from "../../shared/AuthFooter"
 import HeaderLanding from "../../layouts/HeaderLanding"
 
-import logo from "../../../assets/PapeleriaMagicLogo.png"
+import logo from "../../../assets/PapeleriaMagicLogo_512x512.png"
 import ForgotPasswordForm from "../components/ForgotPasswordForm"
 
 export default function ForgotPasswordPage() {

@@ -3,7 +3,7 @@ import LoginBanner from "../components/LoginBanner";
 import AuthFooter from "../../shared/AuthFooter";
 
 import imagenBanner from "../../../assets/imagenBanner.png";
-import logo from "../../../assets/PapeleriaMagicLogo.png";
+import logo from "../../../assets/PapeleriaMagicLogo_192x192.png";
 
 export default function EditProfilePage() {
   return (

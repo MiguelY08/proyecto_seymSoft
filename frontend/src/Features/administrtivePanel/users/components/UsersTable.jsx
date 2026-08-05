@@ -369,7 +369,10 @@ function UsersTable({
                   className={`transition-colors duration-150 ${rowBg}`}
                 >
                   <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap">
-                    <div className="flex items-center justify-center gap-1.5">
+                    <div
+                      className="mx-auto flex max-w-[180px] items-center justify-center gap-1.5 overflow-hidden text-ellipsis whitespace-nowrap"
+                      title={row.name || ""}
+                    >
                       {
                         highlight(
                           row.name,
@@ -379,12 +382,17 @@ function UsersTable({
                     </div>
                   </td>
                   <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                    {
-                      highlight(
-                        row.email,
-                        search
-                      )
-                    }
+                    <div
+                      className="mx-auto max-w-[240px] overflow-hidden text-ellipsis whitespace-nowrap"
+                      title={row.email || ""}
+                    >
+                      {
+                        highlight(
+                          row.email,
+                          search
+                        )
+                      }
+                    </div>
                   </td>
                   <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                     {

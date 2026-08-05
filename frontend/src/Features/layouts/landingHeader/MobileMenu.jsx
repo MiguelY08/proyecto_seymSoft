@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 
-import logo from "../../../assets/PapeleriaMagicLogo.png";
+import logo from "../../../assets/PapeleriaMagicLogo_192x192.png";
 import MobileNavLink from "./MobileNavLink";
 
 function MobileMenu({

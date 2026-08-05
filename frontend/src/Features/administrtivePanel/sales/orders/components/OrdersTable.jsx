@@ -211,7 +211,7 @@ function OrdersTable({
                   {highlight(order.fechaPedido ? new Date(order.fechaPedido).toLocaleDateString('es-CO') : '', search)}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap max-w-xs truncate">
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center justify-center gap-2" title={entregaMostrar || ""}>
                     <span className="truncate">{highlight(entregaMostrar, search)}</span>
                     {needsShippingAmount && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">

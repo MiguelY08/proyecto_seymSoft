@@ -270,15 +270,44 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [checkingDocument, setCheckingDocument] = useState(false);
   const isEditing = !!client;
+  const isLinkedUserFlow = !isEditing && Boolean(linkedUser?.id);
+  const isUserOwnedFieldLocked = isLinkedUserFlow && !isEditing;
+  const associatedUserSummary = isLinkedUserFlow
+    ? {
+        fullName: String(linkedUser?.name || '').trim() || 'No registrado',
+        email: String(linkedUser?.email || '').trim() || 'No registrado',
+        phone: linkedUser?.phone ? String(linkedUser.phone) : 'No registrado',
+      }
+    : null;
   const linkedUserEmail = normalizeEmailInput(linkedUser?.email);
   const isLinkedUserEmail = (email) => (
-    !isEditing &&
-    linkedUser?.id &&
+    isLinkedUserFlow &&
     linkedUserEmail &&
     normalizeEmailInput(email) === linkedUserEmail
   );
 
+  const getFormValidationErrors = (nextFormData) => {
+    const validationErrors = validateClientForm(nextFormData);
+
+    if (isUserOwnedFieldLocked) {
+      delete validationErrors.firstName;
+      delete validationErrors.lastName;
+      delete validationErrors.phone;
+      delete validationErrors.email;
+    } else if (
+      isLinkedUserFlow &&
+      nextFormData.personType === 'natural' &&
+      !String(nextFormData.lastName || '').trim()
+    ) {
+      delete validationErrors.lastName;
+    }
+
+    return validationErrors;
+  };
+
   const getDuplicateEmailError = async (email) => {
+    if (isUserOwnedFieldLocked) return '';
+
     const localError = getEmailValidationError(email);
     if (localError) return '';
 
@@ -434,6 +463,16 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
   }, [client, isOpen, initialData]);
 
   useEffect(() => {
+    if (isUserOwnedFieldLocked) {
+      setCheckingEmail(false);
+      setErrors((prev) => ({
+        ...prev,
+        email: '',
+        phone: prev.phone,
+      }));
+      return undefined;
+    }
+
     if (!isOpen || !touched.email) return undefined;
 
     const email = String(formData.email || '').trim();
@@ -486,7 +525,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [client?.email, client?.id, formData.email, isOpen, touched.email]);
+  }, [client?.email, client?.id, formData.email, isOpen, isUserOwnedFieldLocked, touched.email]);
 
   useEffect(() => {
     if (!isOpen || isEditing || !touched.document) return undefined;
@@ -593,6 +632,9 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
 
     let nextValue = value;
     let forcedError = '';
+    if (isUserOwnedFieldLocked && ['firstName', 'lastName', 'phone', 'email'].includes(name)) {
+      return;
+    }
     if (name === 'phone' || name === 'contactPhone') {
       if (/\D/.test(String(value))) {
         setTouched((prev) => ({ ...prev, [name]: true }));
@@ -660,7 +702,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
       return next;
     });
 
-    const validationErrors = validateClientForm(newFormData);
+    const validationErrors = getFormValidationErrors(newFormData);
     const fieldsToRefresh = [name];
     if (name === 'personType') fieldsToRefresh.push('documentType');
     if (name === 'rut') fieldsToRefresh.push('ciuCode');
@@ -692,6 +734,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
   };
 
   const handleNumericBeforeInput = (e) => {
+    if (isUserOwnedFieldLocked && e.currentTarget.name === 'phone') return;
     if (!e.data || /^\d+$/.test(e.data)) return;
     if (e.currentTarget.name === 'document' && formData.documentType === 'NIT' && e.data === '-') return;
     e.preventDefault();
@@ -706,6 +749,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
   };
 
   const handleNumericPaste = (e) => {
+    if (isUserOwnedFieldLocked && e.currentTarget.name === 'phone') return;
     e.preventDefault();
     const { name } = e.currentTarget;
     const pastedValue = e.clipboardData.getData('text');
@@ -729,7 +773,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
       sanitizer,
     );
     const newFormData = { ...formData, [name]: nextValue };
-    const validationErrors = validateClientForm(newFormData);
+    const validationErrors = getFormValidationErrors(newFormData);
 
     setFormData(newFormData);
     setTouched((prev) => ({ ...prev, [name]: true }));
@@ -742,12 +786,14 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
   };
 
   const handleEmailBeforeInput = (e) => {
+    if (isUserOwnedFieldLocked) return;
     if (!e.data || !/\s/.test(e.data)) return;
     e.preventDefault();
     setRealtimeFieldError(e.currentTarget.name, 'El correo no debe contener espacios.');
   };
 
   const handleEmailPaste = (e) => {
+    if (isUserOwnedFieldLocked) return;
     e.preventDefault();
     const nextValue = buildSanitizedInputValue(
       e.currentTarget,
@@ -755,7 +801,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
       normalizeEmailInput,
     );
     const newFormData = { ...formData, email: nextValue };
-    const validationErrors = validateClientForm(newFormData);
+    const validationErrors = getFormValidationErrors(newFormData);
 
     setFormData(newFormData);
     setTouched((prev) => ({ ...prev, email: true }));
@@ -769,6 +815,9 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
 
   const handleBlur = (e) => {
     const { name } = e.target;
+    if (isUserOwnedFieldLocked && ['firstName', 'lastName', 'phone', 'email'].includes(name)) {
+      return;
+    }
     setTouched(prev => ({ ...prev, [name]: true }));
 
     let blurredFormData = formData;
@@ -802,7 +851,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
       if (ciuError) return;
     }
 
-    const validationErrors = validateClientForm(blurredFormData);
+    const validationErrors = getFormValidationErrors(blurredFormData);
     setErrors(prev => ({
       ...prev,
       [name]: name === 'document'
@@ -817,15 +866,23 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
     const normalizedFormData = {
       ...formData,
       document: CLEAN_DOCUMENT(formData.document, formData.documentType),
-      firstName: formData.personType === 'juridica'
+      firstName: isUserOwnedFieldLocked
+        ? String(formData.firstName || '').trim()
+        : formData.personType === 'juridica'
         ? normalizeNameInput(cleanBusinessName(formData.firstName)).trim()
         : toTitleCaseName(cleanPersonName(formData.firstName)),
-      lastName: formData.personType === 'juridica'
+      lastName: isUserOwnedFieldLocked
+        ? String(formData.lastName || '').trim()
+        : formData.personType === 'juridica'
         ? formData.lastName
         : toTitleCaseName(cleanPersonName(formData.lastName)),
-      phone: onlyDigits(formData.phone, 10),
+      phone: isUserOwnedFieldLocked
+        ? String(formData.phone || '').trim()
+        : onlyDigits(formData.phone, 10),
       address: cleanAddress(formData.address).trim(),
-      email: normalizeEmailInput(formData.email),
+      email: isUserOwnedFieldLocked
+        ? String(formData.email || '').trim()
+        : normalizeEmailInput(formData.email),
       contactName: formData.contactName ? toTitleCaseName(cleanPersonName(formData.contactName, 100)) : '',
       contactPhone: onlyDigits(formData.contactPhone, 10),
       ciuCode: formData.rut === 'no' ? '' : cleanCiuCode(formData.ciuCode),
@@ -854,7 +911,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
       return;
     }
 
-    const validationErrors = validateClientForm(normalizedFormData);
+    const validationErrors = getFormValidationErrors(normalizedFormData);
     const documentError = getDocumentValidationError(normalizedFormData.document, normalizedFormData.documentType);
     if (documentError) {
       validationErrors.document = documentError;
@@ -884,23 +941,28 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
       return;
     }
 
-    const submitData = {
+    const clientOnlyData = {
       personType: normalizedFormData.personType,
       documentType: normalizedFormData.documentType,
       document: normalizedFormData.document,
-      firstName: normalizedFormData.firstName,
-      lastName: normalizedFormData.personType === 'juridica' ? 'Empresa' : normalizedFormData.lastName,
       address: normalizedFormData.address,
-      phone: normalizedFormData.phone,
-      email: normalizedFormData.email,
       contactName: normalizedFormData.contactName,
       contactPhone: normalizedFormData.contactPhone,
       clientType: normalizedFormData.clientType,
       clientCredit: normalizedFormData.clientCredit || '0',
       saldoFavor: normalizedFormData.saldoFavor || '',
       rut: normalizedFormData.rut,
-      ciuCode: normalizedFormData.rut === 'no' ? '' : cleanCiuCode(normalizedFormData.ciuCode || '')
+      ciuCode: normalizedFormData.rut === 'no' ? '' : cleanCiuCode(normalizedFormData.ciuCode || ''),
     };
+    const submitData = isUserOwnedFieldLocked
+      ? clientOnlyData
+      : {
+          ...clientOnlyData,
+          firstName: normalizedFormData.firstName,
+          lastName: normalizedFormData.personType === 'juridica' ? 'Empresa' : normalizedFormData.lastName,
+          phone: normalizedFormData.phone,
+          email: normalizedFormData.email,
+        };
 
     try {
       setSaving(true);
@@ -940,7 +1002,9 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
     </label>
   );
 
-  const hasBlockingErrors = Boolean(errors.email || errors.phone || errors.document);
+  const hasBlockingErrors = isUserOwnedFieldLocked
+    ? Boolean(errors.document)
+    : Boolean(errors.email || errors.phone || errors.document);
 
   const isLegalPerson = formData.personType === 'juridica';
   const personTypeOptions = [
@@ -1019,6 +1083,11 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                   <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-widest">Datos personales</span>
                   <div className="flex-1 h-px bg-[#004D77]/15" />
                 </div>
+                {isUserOwnedFieldLocked && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-800">
+                    Los datos Nombres, Apellidos, Teléfono y Correo pertenecen al usuario asociado y solo pueden editarse desde el módulo de usuarios.
+                  </div>
+                )}
 
                 <div className="flex flex-col gap-1">
                   <Label required>Tipo de persona</Label>
@@ -1086,8 +1155,9 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                     onBlur={handleBlur}
                     placeholder={isLegalPerson ? 'Ej: Papelería Magic SAS' : 'Ej: Juan Carlos'}
                     autoComplete="off"
-                    className={isEditing ? disabledInputClass('firstName') : inputClass('firstName')}
-                    disabled={isEditing}
+                    className={isEditing || isUserOwnedFieldLocked ? disabledInputClass('firstName') : inputClass('firstName')}
+                    disabled={isEditing || isUserOwnedFieldLocked}
+                    readOnly={isUserOwnedFieldLocked}
                   />
                   <ErrorMsg field="firstName" />
                 </div>
@@ -1103,8 +1173,9 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                     onBlur={handleBlur}
                     placeholder="Ej: Pérez Gómez"
                     autoComplete="off"
-                    className={isEditing ? disabledInputClass('lastName') : inputClass('lastName')}
-                    disabled={isEditing}
+                    className={isEditing || isUserOwnedFieldLocked ? disabledInputClass('lastName') : inputClass('lastName')}
+                    disabled={isEditing || isUserOwnedFieldLocked}
+                    readOnly={isUserOwnedFieldLocked}
                   />
                   <ErrorMsg field="lastName" />
                 </div>
@@ -1117,19 +1188,21 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                     <input
                       type="tel"
                       name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      onBeforeInput={handleNumericBeforeInput}
-                      onPaste={handleNumericPaste}
-                      onBlur={handleBlur}
+                    value={formData.phone}
+                    onChange={handleChange}
+                    onBeforeInput={handleNumericBeforeInput}
+                    onPaste={handleNumericPaste}
+                    onBlur={handleBlur}
                       placeholder="Ej: 3001234567"
-                      autoComplete="off"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      className={inputClass('phone')}
-                    />
-                    <ErrorMsg field="phone" />
-                  </div>
+                    autoComplete="off"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    className={isUserOwnedFieldLocked ? disabledInputClass('phone') : inputClass('phone')}
+                    disabled={isUserOwnedFieldLocked}
+                    readOnly={isUserOwnedFieldLocked}
+                  />
+                  <ErrorMsg field="phone" />
+                </div>
                   <div className="flex min-w-0 flex-col gap-1">
                     <Label required>Dirección</Label>
                     <input
@@ -1160,7 +1233,9 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                     placeholder="Ej: cliente@email.com"
                     autoComplete="off"
                     maxLength={EMAIL_MAX_LENGTH}
-                  className={inputClass('email')}
+                  className={isUserOwnedFieldLocked ? disabledInputClass('email') : inputClass('email')}
+                  disabled={isUserOwnedFieldLocked}
+                  readOnly={isUserOwnedFieldLocked}
                 />
                 {checkingEmail && touched.email && !errors.email && (
                   <p className="mt-0.5 text-xs text-[#004D77]">Verificando si el correo ya está registrado...</p>

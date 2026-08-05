@@ -12,6 +12,8 @@ import PaginationAdmin from '../../../shared/PaginationAdmin';
 import Spinner from '../../../shared/spinner';
 import {
   UserService,
+  getApiErrorCode,
+  getApiMessage,
   getUserActionErrorMessage,
 } from '../services/userService';
 import { useAlert }    from '../../../shared/alerts/useAlert';
@@ -60,7 +62,7 @@ const buildClientInitialDataFromUser = (user = null) => {
 };
 
 function Users() {
-  const { showError, showSuccess } = useAlert();
+  const { showError, showSuccess, showWarning, showInfo } = useAlert();
 
   // Estados principales
   const [users, setUsers] = useState([]);           // Lista de usuarios de la página actual
@@ -113,8 +115,12 @@ function Users() {
       setCurrentPage(result.pagination.page || page);
     } catch (err) {
       console.error('Error fetching users:', err);
-      setError(err.response?.data?.message || 'No se pudieron cargar los usuarios.');
-      showError('Error de carga', 'No se pudieron cargar los usuarios. Intenta de nuevo.');
+      const message = getApiMessage(
+        err,
+        'No se pudieron cargar los usuarios.'
+      );
+      setError(message);
+      showError('Error de carga', message);
     } finally {
       setLoading(false);
     }
@@ -197,13 +203,20 @@ function Users() {
 
   const openMakeClientFlow = useCallback((user) => {
     if (!user) return;
+    if (user.isClient === true) {
+      showWarning(
+        'Usuario ya asociado',
+        'Este usuario ya tiene un perfil de cliente asociado.'
+      );
+      return;
+    }
 
     setClientSeedUser(user);
     setIsClientFormOpen(true);
     setIsFormOpen(false);
     setIsInfoOpen(false);
     setModalOrigin(null);
-  }, []);
+  }, [showWarning]);
 
   const closeClientFormModal = useCallback(() => {
     setIsClientFormOpen(false);
@@ -230,14 +243,41 @@ function Users() {
       await fetchUsers(currentPage, debouncedSearch);
 
       showSuccess(
-        'Cliente creado',
-        'El usuario ahora tiene un perfil de cliente asociado.'
+        'Cliente asociado',
+        'Se creo el perfil de cliente para el usuario seleccionado.'
       );
     } catch (error) {
-      const errorMessage =
-        error?.response?.data?.message ||
-        error.message ||
-        'No se pudo crear el cliente.';
+      const backendStatus = error?.response?.status;
+      const backendErrorCode = getApiErrorCode(error);
+
+      if (
+        backendStatus === 409 &&
+        backendErrorCode === 'ALREADY_CLIENT'
+      ) {
+        await fetchUsers(currentPage, debouncedSearch);
+        showInfo(
+          'Usuario ya asociado',
+          'Este usuario ya tiene un perfil de cliente asociado.'
+        );
+        return;
+      }
+
+      if (
+        backendStatus === 404 &&
+        backendErrorCode === 'USER_NOT_FOUND'
+      ) {
+        await fetchUsers(currentPage, debouncedSearch);
+        showWarning(
+          'Usuario no disponible',
+          'El usuario ya no existe o no se pudo encontrar para asociarlo como cliente.'
+        );
+        throw error;
+      }
+
+      const errorMessage = getApiMessage(
+        error,
+        'No se pudo crear el cliente.'
+      );
 
       showError('Error', errorMessage);
       throw error;

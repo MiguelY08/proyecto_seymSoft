@@ -1,4 +1,4 @@
-import logo from '../../../assets/PapeleriaMagicLogo.png';
+import logo from '../../../assets/PapeleriaMagicLogo_192x192.png';
 
 function Spinner({
   message = 'Cargando datos...',
