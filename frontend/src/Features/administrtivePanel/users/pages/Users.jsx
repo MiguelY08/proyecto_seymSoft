@@ -18,10 +18,16 @@ import {
 } from '../services/userService';
 import { useAlert }    from '../../../shared/alerts/useAlert';
 import { downloadUsersExcel } from '../helpers/excelHelper';
+import { userMatchesSearch } from '../helpers/usersHelpers';
 import Permission from "../../configuration/roles/components/Permission";
 
 // Número de registros por página (debe coincidir con el limit que acepta la API)
 const RECORDS_PER_PAGE = 11;
+
+const userMatchesStatus = (user = {}, statusFilter = '') =>
+  !statusFilter ||
+  (statusFilter === '1' && user.active === true) ||
+  (statusFilter === '2' && user.active === false);
 
 const splitUserNameForClient = (name = '') => {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
@@ -65,18 +71,9 @@ function Users() {
   const { showError, showSuccess, showWarning, showInfo } = useAlert();
 
   // Estados principales
-  const [users, setUsers] = useState([]);           // Lista de usuarios de la página actual
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: RECORDS_PER_PAGE,
-    total: 0,
-    totalPages: 0,
-    hasNextPage: false,
-    hasPrevPage: false,
-  });
+  const [allUsers, setAllUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -95,24 +92,31 @@ function Users() {
     () => buildClientInitialDataFromUser(clientSeedUser),
     [clientSeedUser]
   );
+  const filteredUsers = useMemo(() => (
+    allUsers.filter((user) =>
+      userMatchesSearch(user, search) &&
+      userMatchesStatus(user, statusFilter)
+    )
+  ), [allUsers, search, statusFilter]);
+  const totalPages = Math.ceil(filteredUsers.length / RECORDS_PER_PAGE);
+  const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
+  const endIndex = startIndex + RECORDS_PER_PAGE;
+  const currentUsers = useMemo(() => (
+    filteredUsers.slice(startIndex, endIndex)
+  ), [filteredUsers, startIndex, endIndex]);
+  const hasActiveFilters = Boolean(search.trim() || statusFilter);
 
   // ─── Función para cargar usuarios desde la API ─────────────────────────────
-  const fetchUsers = useCallback(async (page, searchTerm) => {
+  const fetchUsers = useCallback(async (page = 1) => {
     setLoading(true);
     setError(null);
     try {
-      // Si la API soporta búsqueda, se pasa como parámetro. Si no, se puede eliminar.
-      // En caso de que no soporte búsqueda, puedes comentar la línea y hacer filtrado local
-      const result = await UserService.list(
-        page,
-        RECORDS_PER_PAGE,
-        searchTerm,
-        statusFilter
-      );
-      setUsers(result.users);
-      setPagination(result.pagination);
-      // Si la API no devuelve la página actual, se puede forzar
-      setCurrentPage(result.pagination.page || page);
+      const loadedUsers = await UserService.listAll();
+      const nextTotalPages = Math.ceil(loadedUsers.length / RECORDS_PER_PAGE);
+      const nextPage = Math.min(page, nextTotalPages || 1);
+
+      setAllUsers(loadedUsers);
+      setCurrentPage(nextPage);
     } catch (err) {
       console.error('Error fetching users:', err);
       const message = getApiMessage(
@@ -124,7 +128,7 @@ function Users() {
     } finally {
       setLoading(false);
     }
-  }, [showError, statusFilter]);
+  }, [showError]);
 
   // ─── Función para cargar métricas ─────────────────────────────
   const fetchMetrics = useCallback(async () => {
@@ -141,18 +145,21 @@ function Users() {
     }
   }, []);
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 350);
-
-    return () => clearTimeout(timeout);
-  }, [search]);
-
   // ─── Recargar cuando cambia la página, la búsqueda o el filtro ─
   useEffect(() => {
-    fetchUsers(currentPage, debouncedSearch);
-  }, [currentPage, debouncedSearch, statusFilter, fetchUsers]);
+    const safePage = Math.min(currentPage, totalPages || 1);
+    if (currentPage !== safePage) {
+      setCurrentPage(safePage);
+    }
+  }, [currentPage, totalPages]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
+
+  useEffect(() => {
+    fetchUsers(1);
+  }, [fetchUsers]);
 
   // ─── Cargar siempre las métricas ─
   useEffect(() => {
@@ -161,14 +168,7 @@ function Users() {
 
   // ─── Manejadores de acciones ───────────────────────────────────────────────
   const handleExportUsers = async () => {
-    const result = await UserService.list(
-      1,
-      pagination.total || RECORDS_PER_PAGE,
-      debouncedSearch,
-      statusFilter
-    );
-
-    return downloadUsersExcel(result.users);
+    return downloadUsersExcel(filteredUsers);
   };
 
   const openInfoModal = useCallback((user, origin = null) => {
@@ -240,7 +240,7 @@ function Users() {
         userId,
       });
 
-      await fetchUsers(currentPage, debouncedSearch);
+      await fetchUsers(currentPage);
 
       showSuccess(
         'Cliente asociado',
@@ -254,7 +254,7 @@ function Users() {
         backendStatus === 409 &&
         backendErrorCode === 'ALREADY_CLIENT'
       ) {
-        await fetchUsers(currentPage, debouncedSearch);
+        await fetchUsers(currentPage);
         showInfo(
           'Usuario ya asociado',
           'Este usuario ya tiene un perfil de cliente asociado.'
@@ -266,7 +266,7 @@ function Users() {
         backendStatus === 404 &&
         backendErrorCode === 'USER_NOT_FOUND'
       ) {
-        await fetchUsers(currentPage, debouncedSearch);
+        await fetchUsers(currentPage);
         showWarning(
           'Usuario no disponible',
           'El usuario ya no existe o no se pudo encontrar para asociarlo como cliente.'
@@ -285,27 +285,26 @@ function Users() {
   }, [
     clientSeedUser,
     currentPage,
-    debouncedSearch,
     fetchUsers,
     showError,
     showSuccess,
   ]);
 
   const handleSavedUser = useCallback(async () => {
-    await fetchUsers(currentPage, debouncedSearch);
+    await fetchUsers(currentPage);
     await fetchMetrics();
     closeFormModal();
-  }, [currentPage, debouncedSearch, fetchUsers, fetchMetrics, closeFormModal]);
+  }, [currentPage, fetchUsers, fetchMetrics, closeFormModal]);
 
   const handleToggle = async (userId) => {
     // Encontrar el usuario actual para saber su estado activo
-    const currentUser = users.find(u => u.id === userId);
+    const currentUser = allUsers.find(u => u.id === userId);
     if (!currentUser) return;
 
     try {
       await UserService.toggle(userId, !currentUser.active);
       // Recargar la misma página después de cambiar el estado
-      await fetchUsers(currentPage, debouncedSearch);
+      await fetchUsers(currentPage);
       // Recargar métricas
       await fetchMetrics();
     } catch (err) {
@@ -322,11 +321,11 @@ function Users() {
       await UserService.delete(user.id);
       let newPage = currentPage;
 
-      if (users.length === 1 && currentPage > 1) {
+      if (currentUsers.length === 1 && currentPage > 1) {
         newPage = currentPage - 1;
         setCurrentPage(newPage);
       }
-      await fetchUsers(newPage, debouncedSearch);
+      await fetchUsers(newPage);
       await fetchMetrics();
       showSuccess(
         "Usuario eliminado",
@@ -348,20 +347,25 @@ function Users() {
   };
 
   // ─── Renderizado condicional mientras carga o hay error ────────────────────
-  if (loading && users.length === 0) {
+  const handleStatusChange = (value) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
+
+  if (loading && allUsers.length === 0) {
     return (
       <Spinner message="Cargando usuarios..." />
     );
   }
 
-  if (error && users.length === 0) {
+  if (error && allUsers.length === 0) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center text-red-500">
           <p className="text-lg font-semibold">Error de carga</p>
           <p>{error}</p>
           <button
-            onClick={() => fetchUsers(currentPage, debouncedSearch)}
+            onClick={() => fetchUsers(currentPage)}
             className="mt-4 px-4 py-2 bg-[#004D77] text-white rounded-lg"
           >
             Reintentar
@@ -378,10 +382,10 @@ function Users() {
         search={search}
         onSearchChange={handleSearchChange}
         statusFilter={statusFilter}
-        onStatusChange={setStatusFilter}
+        onStatusChange={handleStatusChange}
         onExport={handleExportUsers}
         onCreateUser={openCreateModal}
-        totalUsers={pagination.total}
+        totalUsers={filteredUsers.length}
       />
 
       <UserMetricsCards metrics={metrics} />
@@ -391,24 +395,25 @@ function Users() {
       <Permission permission="usuarios.ver">
         <div className="bg-white rounded-xl shadow-md">
           <UsersTable
-            data={users}
+            data={currentUsers}
             onToggle={handleToggle}
             onDelete={handleDelete}
             onViewInfo={openInfoModal}
             onEdit={openFormModal}
             onCreateUser={openCreateModal}
             search={search}
-            totalData={pagination.total} // Total real de usuarios (sin paginar)
+            totalData={filteredUsers.length} // Total real de usuarios (sin paginar)
+            hasActiveFilters={hasActiveFilters}
           />
         </div>
       </Permission>
 
       {/* Paginación - solo si hay más de una página */}
-      {pagination.totalPages > 1 && (
+      {totalPages > 1 && (
         <PaginationAdmin
           currentPage={currentPage}
           onPageChange={(page) => setCurrentPage(page)}
-          totalRecords={pagination.total}
+          totalRecords={filteredUsers.length}
           recordsPerPage={RECORDS_PER_PAGE}
         />
       )}

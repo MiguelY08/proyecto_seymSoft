@@ -111,6 +111,8 @@ const getResponseMeta = (responseData = {}) => ({
     null,
 });
 
+const USERS_LIST_PAGE_LIMIT = 100;
+
 export const UserService = {
   async list(page = 1, limit = 10, search = '', status = '') {
     const params = { page, limit };
@@ -127,6 +129,26 @@ export const UserService = {
       {};
 
     return { users, pagination };
+  },
+
+  async listAll(search = '', status = '') {
+    const firstPage = await this.list(1, USERS_LIST_PAGE_LIMIT, search, status);
+    const totalPages = Number(firstPage.pagination?.totalPages || 1);
+
+    if (totalPages <= 1) {
+      return firstPage.users;
+    }
+
+    const remainingPages = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, index) => (
+        this.list(index + 2, USERS_LIST_PAGE_LIMIT, search, status)
+      )),
+    );
+
+    return [
+      ...firstPage.users,
+      ...remainingPages.flatMap((result) => result.users),
+    ];
   },
 
   async getMetrics() {

@@ -227,6 +227,7 @@ function UsersTable({
   onCreateUser,
   search = "",
   totalData = 0,
+  hasActiveFilters = false,
 }) {
   const {
     showConfirm,
@@ -300,11 +301,7 @@ function UsersTable({
   if (data.length === 0) {
     return (
       <EmptyState
-        isSearching={
-          totalData > 0
-          &&
-          search.trim().length > 0
-        }
+        isSearching={hasActiveFilters}
         onCreateUser={onCreateUser}
       />
     );
