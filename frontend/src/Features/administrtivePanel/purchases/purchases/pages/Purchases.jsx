@@ -6,14 +6,21 @@ import PurchasesTable from "../Components/TablePurchases";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import DetailPurchases from "../pages/DetailPurchases";
 import Anulatepurchase from "../pages/Anulatepurchase";
-import { Plus, FileSpreadsheet } from "lucide-react";
+import { Plus, FileSpreadsheet, ArrowUpDown, Calendar, Clock } from "lucide-react";
 import { getAllPurchases, annulPurchase, getPurchaseById } from "../data/PurchasesService";
-import Spinner from "../../../../shared/spinner"; // ← IMPORTAR SPINNER
-import * as XLSX from "xlsx";
+import Spinner from "../../../../shared/spinner";
 import PaginationAdmin from "../../../../shared/PaginationAdmin";
 import { exportPurchasesExcel } from "../helpers/purchasesExcel";
 import FullScreenSpinner from "../../../../shared/spinner/FullScreenSpinner";
 import Permission from "../../../configuration/roles/components/Permission";
+
+// ========== TIPOS DE ORDENAMIENTO ==========
+const SORT_OPTIONS = {
+  CREATION_DESC: { label: "Creación (nuevo → viejo)", field: "id", order: "desc", icon: Clock },
+  CREATION_ASC: { label: "Creación (viejo → nuevo)", field: "id", order: "asc", icon: Clock },
+  DATE_DESC: { label: "Fecha compra (nueva → vieja)", field: "purchaseDate", order: "desc", icon: Calendar },
+  DATE_ASC: { label: "Fecha compra (vieja → nueva)", field: "purchaseDate", order: "asc", icon: Calendar },
+};
 
 export const Purchases = () => {
   const [products, setProducts] = useState([]);
@@ -28,8 +35,24 @@ export const Purchases = () => {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [annulLoading, setAnnulLoading] = useState(false);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
+  // ========== NUEVO: Estado para ordenamiento ==========
+  const [sortBy, setSortBy] = useState("CREATION_DESC");
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const sortDropdownRef = React.useRef(null);
+  
   const { showSuccess, showError, showInfo } = useAlert();
   const navigate = useNavigate();
+
+  // ========== Cerrar dropdown al hacer clic fuera ==========
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target)) {
+        setShowSortDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const fetchPurchases = useCallback(async () => {
     try {
@@ -40,6 +63,7 @@ export const Purchases = () => {
         search,
         startDate: fechaInicial,
         endDate: fechaFinal,
+        sortBy: sortBy, // ← Enviar orden al backend
       });
       
       setProducts(result.data);
@@ -49,11 +73,18 @@ export const Purchases = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, search, fechaInicial, fechaFinal, showError]);
+  }, [currentPage, search, fechaInicial, fechaFinal, sortBy, showError]);
 
   useEffect(() => {
     fetchPurchases();
   }, [fetchPurchases]);
+
+  // ========== Cambiar ordenamiento ==========
+  const handleSortChange = (sortKey) => {
+    setSortBy(sortKey);
+    setShowSortDropdown(false);
+    setCurrentPage(1);
+  };
 
   const handleReturn = (compra) => {
     navigate("/admin/purchases/returns-p", {
@@ -109,103 +140,6 @@ export const Purchases = () => {
     showSuccess("Filtros limpiados", "Todos los filtros han sido eliminados");
   };
 
-  const handleDownloadExcelLegacy = () => {
-    if (products.length === 0) {
-      showInfo("Sin datos", "No hay compras para exportar.");
-      return;
-    }
-
-    try {
-      const currentDate = new Date();
-      const formattedDate = currentDate.toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" });
-      const formattedDateTime = currentDate.toLocaleString("es-CO", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
-
-      const titleRow = [["COMPRAS"]];
-      const dateRow = [[`Fecha de exportación: ${formattedDate} - ${formattedDateTime}`]];
-      const emptyRow = [[""]];
-
-      const summaryHeaders = ["No. Facturación", "Fecha Compra", "Proveedor", "Cantidad Productos", "Precio Total", "Estado"];
-      const summaryData = products.map((c) => [
-        c.numeroFacturacion || "",
-        c.fechaCompra || "",
-        c.proveedor || "",
-        c.cantidadProductos || 0,
-        c.precioTotal || 0,
-        c.estado || "",
-      ]);
-
-      const summarySheetData = [...titleRow, ...dateRow, ...emptyRow, [["RESUMEN DE COMPRAS"]], ...emptyRow, summaryHeaders, ...summaryData];
-      const summaryWs = XLSX.utils.aoa_to_sheet(summarySheetData);
-      if (!summaryWs["!merges"]) summaryWs["!merges"] = [];
-      summaryWs["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: summaryHeaders.length - 1 } });
-      summaryWs["!merges"].push({ s: { r: 1, c: 0 }, e: { r: 1, c: summaryHeaders.length - 1 } });
-      summaryWs["!merges"].push({ s: { r: 3, c: 0 }, e: { r: 3, c: summaryHeaders.length - 1 } });
-      summaryWs["A1"] = { v: "COMPRAS", t: "s" };
-      summaryWs["A2"] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: "s" };
-      summaryWs["A4"] = { v: "RESUMEN DE COMPRAS", t: "s" };
-      summaryWs["!cols"] = [{ wch: 20 }, { wch: 15 }, { wch: 30 }, { wch: 18 }, { wch: 16 }, { wch: 14 }];
-
-      const productHeaders = ["No. Facturación", "Fecha Compra", "Proveedor", "Producto", "Cantidad", "Precio Unitario", "Total Producto", "Estado"];
-      const productData = [];
-      products.forEach((c) => {
-        productData.push([c.numeroFacturacion || "", c.fechaCompra || "", c.proveedor || "", "Ver detalle para productos", c.cantidadProductos || 0, "", "", c.estado || ""]);
-      });
-
-      const productSheetData = [...titleRow, ...dateRow, ...emptyRow, [["DETALLE DE PRODUCTOS"]], ...emptyRow, productHeaders, ...productData];
-      const productWs = XLSX.utils.aoa_to_sheet(productSheetData);
-      if (!productWs["!merges"]) productWs["!merges"] = [];
-      productWs["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: productHeaders.length - 1 } });
-      productWs["!merges"].push({ s: { r: 1, c: 0 }, e: { r: 1, c: productHeaders.length - 1 } });
-      productWs["!merges"].push({ s: { r: 3, c: 0 }, e: { r: 3, c: productHeaders.length - 1 } });
-      productWs["A1"] = { v: "COMPRAS", t: "s" };
-      productWs["A2"] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: "s" };
-      productWs["A4"] = { v: "DETALLE DE PRODUCTOS", t: "s" };
-      productWs["!cols"] = [{ wch: 20 }, { wch: 15 }, { wch: 30 }, { wch: 35 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 14 }];
-
-      const totalCompras = products.length;
-      const totalValor = products.reduce((s, c) => s + (Number(c.precioTotal) || 0), 0);
-      const totalProductos = products.reduce((s, c) => s + (Number(c.cantidadProductos) || 0), 0);
-      const completadas = products.filter((c) => c.estado === "Completada").length;
-      const anuladas = products.filter((c) => c.estado === "Anulada").length;
-      const enProceso = products.filter((c) => c.estado !== "Completada" && c.estado !== "Anulada").length;
-
-      const statsHeaders = ["Métrica", "Valor"];
-      const statsData = [
-        ["Total Compras", totalCompras],
-        ["Total Valor Compras", totalValor],
-        ["Total Productos Comprados", totalProductos],
-        ["Promedio por Compra", totalCompras > 0 ? (totalValor / totalCompras).toFixed(2) : 0],
-        [""],
-        ["Compras Completadas", completadas],
-        ["Compras Anuladas", anuladas],
-        ["Compras en Proceso", enProceso],
-        [""],
-        ["Fecha de Exportación", formattedDateTime],
-      ];
-
-      const statsSheetData = [...titleRow, ...dateRow, ...emptyRow, [["ESTADÍSTICAS"]], ...emptyRow, statsHeaders, ...statsData];
-      const statsWs = XLSX.utils.aoa_to_sheet(statsSheetData);
-      if (!statsWs["!merges"]) statsWs["!merges"] = [];
-      statsWs["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } });
-      statsWs["!merges"].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 1 } });
-      statsWs["!merges"].push({ s: { r: 3, c: 0 }, e: { r: 3, c: 1 } });
-      statsWs["A1"] = { v: "COMPRAS", t: "s" };
-      statsWs["A2"] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: "s" };
-      statsWs["A4"] = { v: "ESTADÍSTICAS", t: "s" };
-      statsWs["!cols"] = [{ wch: 28 }, { wch: 20 }];
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, summaryWs, "Resumen Compras");
-      XLSX.utils.book_append_sheet(wb, productWs, "Detalle Productos");
-      XLSX.utils.book_append_sheet(wb, statsWs, "Estadísticas");
-      XLSX.writeFile(wb, `compras_${new Date().toISOString().split("T")[0]}.xlsx`);
-
-      showSuccess("Exportación exitosa", "El archivo Excel se generó correctamente");
-    } catch {
-      showError("Error", "No se pudo exportar el archivo");
-    }
-  };
-
   const handleDownloadExcel = async () => {
     if (products.length === 0) {
       showInfo("Sin datos", "No hay compras para exportar.");
@@ -222,6 +156,10 @@ export const Purchases = () => {
       showError("Error", "No se pudo exportar el archivo.");
     }
   };
+
+  // ========== Obtener información del orden actual ==========
+  const currentSortOption = SORT_OPTIONS[sortBy] || SORT_OPTIONS.CREATION_DESC;
+  const SortIcon = currentSortOption.icon;
 
   const currentData = products;
   const totalRecords = pagination.total || 0;
@@ -245,8 +183,57 @@ export const Purchases = () => {
             setCurrentPage={setCurrentPage}
             onClearFilters={handleClearFilters}
           />
+          
           <div className="flex-1" />
+          
           <div className="flex items-center gap-2">
+            {/* ========== BOTÓN DE ORDENAMIENTO ========== */}
+            <div className="relative" ref={sortDropdownRef}>
+              <button
+                onClick={() => setShowSortDropdown(!showSortDropdown)}
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-semibold border rounded-lg transition-all duration-200 whitespace-nowrap ${
+                  showSortDropdown
+                    ? "border-[#004D77] bg-[#004D77] text-white"
+                    : "border-gray-300 bg-white text-gray-700 hover:border-[#004D77] hover:text-[#004D77]"
+                }`}
+                title="Ordenar compras"
+              >
+                <ArrowUpDown className="w-4 h-4" strokeWidth={2} />
+                <SortIcon className="w-3.5 h-3.5" strokeWidth={2} />
+                <span className="hidden sm:inline">{currentSortOption.label.split('(')[0].trim()}</span>
+                <span className="text-[10px] opacity-70 hidden sm:inline">
+                  {currentSortOption.label.includes('nuevo') ? '↓' : '↑'}
+                </span>
+              </button>
+
+              {/* Dropdown de opciones de ordenamiento */}
+              {showSortDropdown && (
+                <div className="absolute right-0 z-50 mt-1 w-56 rounded-lg border border-gray-200 bg-white shadow-xl py-1 overflow-hidden">
+                  {Object.entries(SORT_OPTIONS).map(([key, option]) => {
+                    const Icon = option.icon;
+                    const isActive = sortBy === key;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => handleSortChange(key)}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors duration-150 ${
+                          isActive
+                            ? "bg-[#004D77]/10 text-[#004D77] font-semibold"
+                            : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        <Icon className={`w-4 h-4 ${isActive ? "text-[#004D77]" : "text-gray-400"}`} strokeWidth={1.8} />
+                        <span className="flex-1 text-left">{option.label}</span>
+                        {isActive && (
+                          <span className="text-[#004D77] text-xs font-bold">✓</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             <Permission permission="compras.exportar">
               <button
                 onClick={handleDownloadExcel}
@@ -317,5 +304,3 @@ export const Purchases = () => {
 };
 
 export default Purchases;
-
-

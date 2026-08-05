@@ -1,5 +1,5 @@
 ﻿﻿// features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 import CreateSidebar from "../Components/CreatePurchaseSideBar";
@@ -8,12 +8,7 @@ import CreateTable from "../Components/TableCreate";
 import CreateProduct from "../../products/modals/CreateProduct";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import FormProvider from "../../providers/components/FormProvider";
-import { 
-  createPurchase, 
-  getProducts, 
-  getProviders,
-  updateProductPrices 
-} from "../data/PurchasesService";
+import { createPurchase, getProducts, getProviders, updateProductPrices } from "../data/PurchasesService";
 import { providersService } from "../../providers/data/providersService";
 import { findProductByBarcode, productMatchesBarcodeSearch } from "../../../../shared/scanner";
 import Spinner from "../../../../shared/spinner";
@@ -52,12 +47,62 @@ const CreatePurchase = () => {
   const [extraBarcodes, setExtraBarcodes] = useState({});
   const [fechaLimiteDevolucion, setFechaLimiteDevolucion] = useState("");
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
-  
-  // Datos reales desde API
+
   const [productsDB, setProductsDB] = useState([]);
   const [providersList, setProvidersList] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [loadingProviders, setLoadingProviders] = useState(false);
+
+  // ========== REF PARA EL CONTENEDOR DEL MODAL ==========
+  const modalContainerRef = useRef(null);
+  // ========== REF PARA EL CONTENEDOR PRINCIPAL ==========
+  const mainContainerRef = useRef(null);
+
+  // ========== SCROLL HACIA ABAJO AL ABRIR EL MODAL ==========
+  useEffect(() => {
+    if (showCreateProduct) {
+      // Pequeño delay para asegurar que el modal se renderizó
+      setTimeout(() => {
+        // Opción 1: Scroll al contenedor del modal
+        if (modalContainerRef.current) {
+          modalContainerRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start'  // ← Cambiado a 'start' para que el modal quede arriba
+          });
+        }
+        
+        // Opción 2: Scroll al final de la página (alternativa)
+         window.scrollTo({
+           top: document.documentElement.scrollHeight,
+           behavior: 'smooth'
+         });
+        
+        // Opción 3: Scroll al modal directamente
+        // const modal = document.querySelector('.fixed.inset-0.z-50');
+        // if (modal) {
+        //   const modalRect = modal.getBoundingClientRect();
+        //   const absoluteModalTop = modalRect.top + window.pageYOffset;
+        //   window.scrollTo({
+        //     top: absoluteModalTop - 100, // 100px de margen superior
+        //     behavior: 'smooth'
+        //   });
+        // }
+      }, 50);
+    }
+  }, [showCreateProduct]);
+
+  // ========== FUNCIÓN PARA ABRIR EL MODAL Y HACER SCROLL ==========
+  const handleOpenCreateProduct = () => {
+    setShowCreateProduct(true);
+    // El useEffect se encargará del scroll
+  };
+
+  // ========== FUNCIÓN PARA CERRAR EL MODAL ==========
+  const handleCloseCreateProduct = () => {
+    setShowCreateProduct(false);
+  };
+
+  // ... resto de funciones (handleQuantityChange, handleDeleteItem, etc.)
 
   // Cargar productos reales
   useEffect(() => {
@@ -148,12 +193,9 @@ const CreatePurchase = () => {
     try {
       const newProvider = await providersService.create(providerPayload);
       showSuccess("Proveedor creado", "El proveedor se creó correctamente");
-
       setSelectedProvider(newProvider.nombre);
       setSelectedProviderId(newProvider.id);
-
       setIsFormModalOpen(false);
-
       const updatedProviders = await getProviders();
       setProvidersList(updatedProviders);
     } catch (error) {
@@ -195,8 +237,7 @@ const CreatePurchase = () => {
     ],
   });
 
-  // ========== HANDLE ADD PRODUCT ==========
-  const handleAddProduct = async (resolvedBarcode, purchasePrice, salePrices = {}) => {
+  const handleAddProduct = async (resolvedBarcode, purchasePrice, salePrices = {}, purchaseTypeInfo = null) => {
     const searchTerm = searchProduct.trim();
 
     if (!searchTerm && !resolvedBarcode) {
@@ -220,20 +261,36 @@ const CreatePurchase = () => {
     }
 
     const codigosExtra = extraBarcodes[foundProduct.codigoBarras] ?? [];
-    
-    // ========== PRECIO DE COMPRA = usar el que viene del sidebar ==========
-    const unitPrice = Number(purchasePrice) || 
-                      foundProduct.supplierPrice || 
-                      foundProduct.wholesalePrice || 
-                      foundProduct.valorUnit;
+    const unitPrice = Number(purchasePrice) || foundProduct.supplierPrice || foundProduct.wholesalePrice || foundProduct.valorUnit;
 
-    // ========== PREPARAR PRECIOS DE VENTA ==========
     const salePricesToSave = {
       retailPrice: salePrices.retailPrice ? Number(salePrices.retailPrice) : foundProduct.retailPrice,
       wholesalePrice: salePrices.wholesalePrice ? Number(salePrices.wholesalePrice) : foundProduct.wholesalePrice,
       partnerPrice: salePrices.partnerPrice ? Number(salePrices.partnerPrice) : foundProduct.partnerPrice,
       bulkPrice: salePrices.bulkPrice ? Number(salePrices.bulkPrice) : foundProduct.bulkPrice,
     };
+
+    let finalQuantity = quantity;
+    let purchaseTypeLabel = "Unidad";
+    let purchaseTypeValue = "unit";
+    let quantityPerPack = 0;
+    let stockToAdd = 0;
+
+    if (purchaseTypeInfo) {
+      finalQuantity = purchaseTypeInfo.quantity;
+      purchaseTypeLabel = purchaseTypeInfo.label || "Unidad";
+      purchaseTypeValue = purchaseTypeInfo.type || "unit";
+      
+      if (purchaseTypeValue === "pack") {
+        quantityPerPack = foundProduct.quantityPerPack || 0;
+        stockToAdd = finalQuantity * quantityPerPack;
+      } else {
+        stockToAdd = finalQuantity;
+      }
+    }
+
+    finalQuantity = Number(finalQuantity) || 1;
+    stockToAdd = Number(stockToAdd) || finalQuantity;
 
     const existingItem = purchaseItems.find(
       (item) => item.codigoBarras === foundProduct.codigoBarras
@@ -242,20 +299,24 @@ const CreatePurchase = () => {
     if (existingItem) {
       const updatedItems = purchaseItems.map((item) => {
         if (item.codigoBarras === foundProduct.codigoBarras) {
-          const nuevaCantidad = item.cantidad + quantity;
+          const nuevaCantidad = item.cantidad + finalQuantity;
+          const nuevoStockTotal = item.stockTotal + stockToAdd;
           const subtotal = unitPrice * nuevaCantidad;
           const ivaValor = (subtotal * foundProduct.iva) / 100;
           const total = subtotal + ivaValor;
-          return { 
-            ...item, 
-            cantidad: nuevaCantidad, 
-            subtotal, 
-            ivaValor, 
-            total, 
+          return {
+            ...item,
+            cantidad: nuevaCantidad,
+            stockTotal: nuevoStockTotal,
+            subtotal,
+            ivaValor,
+            total,
             codigosExtra,
             valorUnit: unitPrice,
             supplierPrice: unitPrice,
-            // ========== Guardar precios de venta ==========
+            purchaseType: purchaseTypeLabel,
+            purchaseTypeValue: purchaseTypeValue,
+            quantityPerPack: quantityPerPack,
             retailPrice: salePricesToSave.retailPrice,
             wholesalePrice: salePricesToSave.wholesalePrice,
             partnerPrice: salePricesToSave.partnerPrice,
@@ -265,9 +326,9 @@ const CreatePurchase = () => {
         return item;
       });
       setPurchaseItems(updatedItems);
-      showSuccess("Cantidad actualizada", "Se sumó la cantidad al producto existente");
+      showSuccess("Cantidad actualizada", `Se sumó la cantidad al producto existente (${purchaseTypeLabel})`);
     } else {
-      const subtotal = unitPrice * quantity;
+      const subtotal = unitPrice * finalQuantity;
       const ivaValor = (subtotal * foundProduct.iva) / 100;
       const total = subtotal + ivaValor;
 
@@ -277,10 +338,13 @@ const CreatePurchase = () => {
         producto: foundProduct.nombre,
         codigoBarras: foundProduct.codigoBarras,
         proveedor: foundProduct.proveedor,
-        cantidad: quantity,
+        cantidad: finalQuantity,
+        stockTotal: stockToAdd,
         valorUnit: unitPrice,
         supplierPrice: unitPrice,
-        // ========== Guardar precios de venta ==========
+        purchaseType: purchaseTypeLabel,
+        purchaseTypeValue: purchaseTypeValue,
+        quantityPerPack: quantityPerPack,
         retailPrice: salePricesToSave.retailPrice,
         wholesalePrice: salePricesToSave.wholesalePrice,
         partnerPrice: salePricesToSave.partnerPrice,
@@ -293,14 +357,13 @@ const CreatePurchase = () => {
       };
 
       setPurchaseItems([...purchaseItems, newItem]);
-      showSuccess("Producto agregado", "Añadido correctamente");
+      showSuccess("Producto agregado", `Añadido correctamente (${purchaseTypeLabel})`);
     }
 
     setSearchProduct("");
     setQuantity(1);
   };
 
-  // ========== GUARDAR COMPRA Y ACTUALIZAR PRODUCTOS ==========
   const handleSavePurchase = async () => {
     setInvoiceTouched(true);
     setDateTouched(true);
@@ -325,7 +388,6 @@ const CreatePurchase = () => {
     setLoading(true);
 
     try {
-      // 1. Guardar la compra
       await createPurchase({
         numeroFacturacion: invoiceNumber.trim(),
         fechaCompra: purchaseDate,
@@ -334,20 +396,17 @@ const CreatePurchase = () => {
           idProduct: item.idProduct,
           cantidad: item.cantidad,
           supplierPrice: item.supplierPrice,
+          purchaseType: item.purchaseType || "Unidad",
+          quantityPerPack: item.quantityPerPack || 0,
           codigosExtra: item.codigosExtra || [],
         })),
       });
 
-      // ========== 2. ACTUALIZAR PRECIOS DE CADA PRODUCTO EN LA BD ==========
       const updatePromises = purchaseItems.map(async (item) => {
         const pricesToUpdate = {};
-        
-        // Precio de compra (si fue editado)
         if (item.supplierPrice !== undefined && item.supplierPrice !== null) {
           pricesToUpdate.supplierPrice = Number(item.supplierPrice);
         }
-        
-        // Precios de venta (si fueron editados)
         if (item.retailPrice !== undefined && item.retailPrice !== null) {
           pricesToUpdate.retailPrice = Number(item.retailPrice);
         }
@@ -360,18 +419,15 @@ const CreatePurchase = () => {
         if (item.bulkPrice !== undefined && item.bulkPrice !== null) {
           pricesToUpdate.bulkPrice = Number(item.bulkPrice);
         }
+        if (item.quantityPerPack !== undefined && item.quantityPerPack !== null && item.quantityPerPack > 0) {
+          pricesToUpdate.quantityPerPack = Number(item.quantityPerPack);
+        }
 
-        // Solo actualizar si hay cambios
         if (Object.keys(pricesToUpdate).length > 0) {
           try {
-            console.log(`🔄 Actualizando producto ${item.idProduct}:`, pricesToUpdate);
-            const updated = await updateProductPrices(item.idProduct, pricesToUpdate);
-            console.log(`✅ Producto ${item.idProduct} actualizado:`, updated);
-            return updated;
+            await updateProductPrices(item.idProduct, pricesToUpdate);
           } catch (err) {
             console.error(`❌ Error actualizando producto ${item.idProduct}:`, err);
-            // No lanzamos error para no interrumpir el flujo, pero lo registramos
-            return null;
           }
         }
         return null;
@@ -393,7 +449,7 @@ const CreatePurchase = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white px-4 py-6">
+    <div ref={mainContainerRef} className="min-h-screen bg-white px-4 py-6">
       {loading && <FullScreenSpinner message="Guardando compra..." />}
 
       <div className="max-w-1400px mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -422,7 +478,7 @@ const CreatePurchase = () => {
             setDateTouched={setDateTouched}
             providerTouched={providerTouched}
             setProviderTouched={setProviderTouched}
-            openCreateProduct={() => setShowCreateProduct(true)}
+            openCreateProduct={handleOpenCreateProduct}
             openCreateProvider={() => setIsFormModalOpen(true)}
             extraBarcodes={extraBarcodes}
             onExtraBarcodesChange={setExtraBarcodes}
@@ -438,8 +494,6 @@ const CreatePurchase = () => {
                   type="button"
                   onClick={() => setIsSidebarVisible(true)}
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-colors hover:border-[#004D77] hover:text-[#004D77]"
-                  title="Mostrar panel"
-                  aria-label="Mostrar panel de información"
                 >
                   <PanelLeftOpen className="h-4 w-4" strokeWidth={1.8} />
                 </button>
@@ -544,7 +598,15 @@ const CreatePurchase = () => {
         </div>
       </div>
 
-      <CreateProduct isOpen={showCreateProduct} onClose={() => setShowCreateProduct(false)} onCreate={handleCreateProduct} />
+      {/* ========== CONTENEDOR DEL MODAL CON REF PARA SCROLL ========== */}
+      <div ref={modalContainerRef} className="scroll-mt-4">
+        <CreateProduct 
+          isOpen={showCreateProduct} 
+          onClose={handleCloseCreateProduct} 
+          onCreate={handleCreateProduct} 
+        />
+      </div>
+
       <FormProvider
         isOpen={isFormModalOpen}
         onClose={() => setIsFormModalOpen(false)}
