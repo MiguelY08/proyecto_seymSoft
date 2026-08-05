@@ -131,7 +131,6 @@ export const clientsService = {
       contactPhone: clientData.contactPhone || null,
       clientType: clientData.clientType || '',
       clientCredit: formattedClientCredit,
-      credit_balance: clientData.saldoFavor || '0', // ✅ Mapeado correctamente
       rut: clientData.rut || 'no',
       ciuCode: (clientData.ciuCode === 'No aplica' || !clientData.ciuCode) ? null : clientData.ciuCode
     };
@@ -164,12 +163,7 @@ export const clientsService = {
     if (clientData.clientCredit !== undefined) {
       payload.clientCredit = validateAndFormatNumber(clientData.clientCredit);
     }
-    
-    // ✅ Mapear saldoFavor → credit_balance
-    if (clientData.saldoFavor !== undefined) {
-      payload.credit_balance = validateAndFormatNumber(clientData.saldoFavor);
-    }
-    
+
     if (clientData.ciuCode !== undefined) {
       payload.ciuCode = (clientData.ciuCode === 'No aplica' || !clientData.ciuCode) ? null : clientData.ciuCode;
     }

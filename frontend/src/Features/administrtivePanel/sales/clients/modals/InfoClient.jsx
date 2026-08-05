@@ -2,7 +2,7 @@ import { createElement, useState, useEffect } from 'react';
 import {
   X, IdCard, User, Mail, Phone,
   MapPin, UserCheck, CreditCard,
-  CalendarDays, BarChart2, TrendingUp, Wallet,
+  CalendarDays, BarChart2, TrendingUp, Wallet, Trash2,
 } from 'lucide-react';
 import GraphClient from '../components/GraphClient';
 import {
@@ -164,7 +164,7 @@ function MiniGraphClient({ clientId, onExpand }) {
             <select
               value={selectedYear}
               onChange={(e) => handleYearChange(Number(e.target.value))}
-              className="text-[9px] px-1 py-0.5 border border-gray-300 rounded bg-white"
+              className="cursor-pointer text-[9px] font-semibold px-2 py-0.5 border border-[#004D77]/30 rounded bg-white text-[#004D77] outline-none transition-colors hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
               onClick={(e) => e.stopPropagation()}
             >
               {availableYears.map(year => (
@@ -289,6 +289,21 @@ function InfoClient({ isOpen, onClose, client }) {
 
   const dismissCreditEvent = (eventId) => {
     const next = [...new Set([...dismissedCreditEvents, eventId])];
+    setDismissedCreditEvents(next);
+    localStorage.setItem(
+      `client_dismissed_credit_events_${client.id}`,
+      JSON.stringify(next)
+    );
+  };
+
+  const clearCreditHistory = () => {
+    const next = [
+      ...new Set([
+        ...dismissedCreditEvents,
+        ...visibleCreditEvents.map((event) => event.id),
+      ]),
+    ];
+
     setDismissedCreditEvents(next);
     localStorage.setItem(
       `client_dismissed_credit_events_${client.id}`,
@@ -569,6 +584,15 @@ function InfoClient({ isOpen, onClose, client }) {
                     Historial de saldo a favor
                   </span>
                   <div className="h-px flex-1 bg-green-200" />
+                  <button
+                    type="button"
+                    onClick={clearCreditHistory}
+                    title="Borrar historial visible"
+                    className="inline-flex items-center gap-1 rounded-lg border border-red-100 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-500 transition-colors hover:border-red-200 hover:bg-red-100 hover:text-red-600"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Borrar
+                  </button>
                 </div>
                 <div className="max-h-36 space-y-2 overflow-y-auto pr-1">
                   {visibleCreditEvents.map((event) => (

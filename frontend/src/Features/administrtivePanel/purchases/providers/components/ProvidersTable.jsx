@@ -109,7 +109,7 @@ function ProvidersTable({
   }
 
   return (
-    <div className="max-h-[calc(100vh-170px)] min-w-0 w-full overflow-auto overscroll-contain rounded-xl [-webkit-overflow-scrolling:touch]">
+    <div className="min-w-0 w-full overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-xl [-webkit-overflow-scrolling:touch]">
       <table className="min-w-[1080px] w-full table-fixed">
         <colgroup>
           <col className="w-[6%]" />

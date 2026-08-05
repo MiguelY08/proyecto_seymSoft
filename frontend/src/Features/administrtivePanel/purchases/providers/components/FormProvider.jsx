@@ -24,7 +24,6 @@ import {
 import { categoriesService } from '../data/categoriesService';
 import { providersService } from '../data/providersService';
 import FormSelect from '../../../../shared/FormSelect';
-import LoadingOverlay from '../../../../shared/LoadingOverlay';
 
 let categoriesCache = null;
 
@@ -672,6 +671,15 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
         : 'border-slate-200'
     }`;
 
+  const protectedInputClass = (field) =>
+    `h-10 w-full rounded-lg border px-3 py-0 text-sm outline-none bg-sky-50 text-[#004D77] cursor-not-allowed ${
+      errors[field] && touched[field]
+        ? 'border-red-500'
+        : 'border-sky-200'
+    }`;
+
+  const protectedSelectClass = 'h-10 rounded-lg py-0 pr-10 bg-sky-50 text-[#004D77] border-sky-200 hover:border-sky-200';
+
   const renderError = (field) =>
     errors[field] && touched[field] && (
       <p className="mt-0.5 text-xs text-red-500">
@@ -752,8 +760,6 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       />
 
       <div className="relative flex h-dvh w-full min-h-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[94vh] sm:max-w-2xl sm:rounded-lg">
-        <LoadingOverlay show={saving} message={isEditing ? 'Actualizando proveedor...' : 'Creando proveedor...'} />
-        
           <div className="bg-[#004D77] text-white px-4 py-3.5 sm:px-5 sm:py-4 flex items-center justify-between shrink-0">
           <h2 className="text-white font-semibold text-lg">
             {isEditing ? 'Editar proveedor' : 'Nuevo proveedor'}
@@ -794,7 +800,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     error={errors.tipoPersona && touched.tipoPersona}
               placeholder="Selecciona una opción"
               ariaLabel="Tipo de persona"
-              className="h-10 rounded-lg py-0 pr-10"
+              className={isEditing ? protectedSelectClass : 'h-10 rounded-lg py-0 pr-10'}
               {...selectResponsiveProps}
             />
                   {renderError('tipoPersona')}
@@ -811,7 +817,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       error={errors.tipo && touched.tipo}
                 placeholder="Tipo"
                 ariaLabel="Tipo de documento"
-                className="h-10 rounded-lg py-0 pr-10"
+                className={isEditing ? protectedSelectClass : 'h-10 rounded-lg py-0 pr-10'}
                 {...selectResponsiveProps}
               />
                   </div>
@@ -825,7 +831,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       onBlur={handleBlur}
                       placeholder="Ej: 123456789"
                       autoComplete="off"
-                      className={isEditing ? disabledInputClass('numero') : inputClass('numero')}
+                      className={isEditing ? protectedInputClass('numero') : inputClass('numero')}
                       disabled={isEditing}
                     />
                     {checkingDocument && touched.numero && !errors.numero && (
@@ -847,7 +853,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     placeholder={isLegalPerson ? 'Ej: Papeleria Magic SAS' : 'Ej: Juan Carlos'}
                     autoComplete="off"
                     maxLength={PROVIDER_NAME_MAX_LENGTH}
-                    className={isEditing ? disabledInputClass('nombres') : inputClass('nombres')}
+                    className={isEditing ? protectedInputClass('nombres') : inputClass('nombres')}
                     disabled={isEditing}
                   />
                   {renderError('nombres')}
@@ -865,7 +871,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     placeholder="Ej: Pérez Gómez"
                     autoComplete="off"
                     maxLength={PROVIDER_NAME_MAX_LENGTH}
-                    className={isEditing ? disabledInputClass('apellidos') : inputClass('apellidos')}
+                    className={isEditing ? protectedInputClass('apellidos') : inputClass('apellidos')}
                     disabled={isEditing}
                   />
                   {renderError('apellidos')}
@@ -988,9 +994,9 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       type="button"
                       onClick={() => setCategoriasOpen(!categoriasOpen)}
                       onBlur={handleCategoriasBlur}
-                      className={`${inputClass('categoryIds')} flex items-center justify-between cursor-pointer text-left`}
+                      className={`${inputClass('categoryIds')} flex min-w-0 items-center justify-between gap-2 overflow-hidden cursor-pointer text-left`}
                     >
-                      <span className={formData.categoryIds.length === 0 ? 'text-gray-400' : 'text-gray-700'}>
+                      <span className={`block min-w-0 flex-1 truncate ${formData.categoryIds.length === 0 ? 'text-gray-400' : 'text-gray-700'}`}>
                         {formData.categoryIds.length === 0 
                           ? 'Selecciona categorías' 
                           : loadingCategories 
@@ -1053,7 +1059,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       inputMode="numeric"
                       pattern="[0-9]*"
                       maxLength={CIU_CODE_LENGTH}
-                      className={formData.rut === 'si' ? inputClass('codigoCIU') : disabledInputClass('codigoCIU')}
+                      className={formData.rut === 'si' ? inputClass('codigoCIU') : protectedInputClass('codigoCIU')}
                       disabled={formData.rut === 'no'}
                       readOnly={formData.rut === 'no'}
                     />

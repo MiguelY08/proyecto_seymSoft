@@ -282,28 +282,28 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
 
               return (
                 <tr key={row.id || returnNumber || index} className={`${rowBg} transition-colors duration-150`}>
-                  <td className="px-4 py-2.5 text-center text-sm font-medium text-gray-500">
+                  <td className="px-3 py-2 text-center text-xs font-medium text-gray-500 whitespace-nowrap">
                     {startIndex + index + 1}
                   </td>
-                  <td className="truncate px-4 py-2.5 text-center text-sm text-gray-700" title={returnNumber}>
+                  <td className="truncate px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap" title={returnNumber}>
                     {highlightText(returnNumber, searchTerm)}
                   </td>
-                  <td className="truncate px-4 py-2.5 text-center text-sm text-gray-700" title={invoiceNumber}>
+                  <td className="truncate px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap" title={invoiceNumber}>
                     {highlightText(invoiceNumber, searchTerm)}
                   </td>
-                  <td className="truncate px-4 py-2.5 text-center text-sm font-medium text-gray-800" title={client}>
+                  <td className="truncate px-3 py-2 text-center text-xs font-medium text-gray-800 whitespace-nowrap" title={client}>
                     {highlightText(client, searchTerm)}
                   </td>
-                  <td className="truncate px-4 py-2.5 text-center text-sm text-gray-700" title={reason}>
+                  <td className="truncate px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap" title={reason}>
                     {highlightText(reason, searchTerm)}
                   </td>
-                  <td className="truncate px-4 py-2.5 text-center text-sm text-gray-700">
+                  <td className="truncate px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                     {formatDate(createdAt)}
                   </td>
-                  <td className="truncate px-4 py-2.5 text-center text-sm text-gray-700 font-semibold" title={`$${formatCurrency(total)}`}>
+                  <td className="truncate px-3 py-2 text-center text-xs font-semibold text-gray-800 whitespace-nowrap" title={`$${formatCurrency(total)}`}>
                     ${formatCurrency(total)}
                   </td>
-                  <td className="px-4 py-2.5 text-center">
+                  <td className="px-3 py-2 text-center whitespace-nowrap">
                     <div className="flex items-center justify-center gap-2">
                       <StatusProcessTooltip row={row} status={status} />
                       {canView && (
@@ -318,8 +318,8 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
                       )}
                     </div>
                   </td>
-                  <td className="px-3 py-2.5">
-                    <div className="mx-auto flex min-w-[92px] items-center justify-center gap-2.5">
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <div className="mx-auto flex min-w-[92px] items-center justify-center gap-1.5">
                       {canView && (
                         <button
                           type="button"
