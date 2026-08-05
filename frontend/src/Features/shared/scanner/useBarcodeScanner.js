@@ -17,6 +17,7 @@ const createEmptyBuffer = () => ({
   scannerField: '',
   isUnauthorizedTarget: false,
   isScannerCandidate: false,
+  isScannerDetected: false,
   initialValue: null,
   initialSelectionStart: null,
   initialSelectionEnd: null,
@@ -67,6 +68,13 @@ export function useBarcodeScanner(options = {}) {
         }
       }
 
+      // Determinar si este flush debe realmente consumir el escaneo
+      const fakeEvent = event || { target: buffer.target, key: buffer.chars[buffer.chars.length - 1] || '' };
+      const shouldConsume = shouldCaptureScannerEvent(fakeEvent, config) || Boolean(buffer.isScannerCandidate);
+
+      // Si no corresponde consumir (campo no permitido y no es objetivo de scanner), salir
+      if (!shouldConsume) return;
+
       if (!isLengthValid || !isCustomValid) {
         optionsRef.current.onInvalidScan?.({
           code,
@@ -114,7 +122,6 @@ export function useBarcodeScanner(options = {}) {
     const handleKeyDown = (event) => {
       const config = { ...DEFAULT_SCANNER_OPTIONS, ...optionsRef.current };
       if (config.enabled === false) return;
-      if (!shouldCaptureScannerEvent(event, config)) return;
 
       const now = Date.now();
       const isTerminator = config.terminatorKeys.includes(event.key);
@@ -129,6 +136,13 @@ export function useBarcodeScanner(options = {}) {
         buffer.initialValue = target?.value ?? null;
         buffer.initialSelectionStart = target?.selectionStart ?? null;
         buffer.initialSelectionEnd = target?.selectionEnd ?? null;
+      }
+
+      // Detectar patrón rápido de escaneo: secuencia de teclas con intervalos cortos
+      const delta = buffer.lastAt ? now - buffer.lastAt : Infinity;
+      if (buffer.chars.length > 0 && delta <= config.maxIntervalMs) {
+        // si ya venían caracteres y el intervalo es pequeño, marcamos como escaneo
+        buffer.isScannerDetected = true;
       }
 
       if (isTerminator) {
@@ -154,7 +168,22 @@ export function useBarcodeScanner(options = {}) {
       nextBuffer.chars.push(event.key);
       nextBuffer.lastAt = now;
 
-      if (buffer.isUnauthorizedTarget || config.preventDefault === true) {
+      // Solo prevenir por defecto cuando se detectó un escaneo rápido (pistola),
+      // o cuando la configuración fuerza preventDefault.
+      if (buffer.isScannerDetected || config.preventDefault === true) {
+        // Si es un campo no autorizado y detectamos escaneo, revertimos cualquier
+        // valor parcial antes de prevenir para evitar la inserción visible.
+        if (buffer.isUnauthorizedTarget && buffer.target) {
+          try {
+            buffer.target.value = buffer.initialValue ?? '';
+            buffer.target.setSelectionRange?.(
+              buffer.initialSelectionStart,
+              buffer.initialSelectionEnd
+            );
+          } catch (e) {
+            // no hacer nada si falla la manipulación directa
+          }
+        }
         event.preventDefault();
       }
 

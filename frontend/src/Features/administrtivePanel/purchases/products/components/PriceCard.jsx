@@ -33,7 +33,7 @@ function PriceCard({
       {/* Precio base */}
       <div className="px-3 pt-2.5 pb-1 bg-white">
         <label className="block text-xs font-semibold text-gray-700 mb-1">
-          {label} <span className="text-red-500">*</span>
+          {label} <span className="font-normal text-gray-400">(opcional)</span>
         </label>
         <input
           type="text"

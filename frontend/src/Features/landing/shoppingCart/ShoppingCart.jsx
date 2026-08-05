@@ -1435,30 +1435,6 @@ function ShoppingCart() {
     );
   }
 
-  if (!isAuthenticated) {
-    return (
-      <div className="cart-page">
-        <div className="cart-container">
-          <div className="cart-empty">
-            <div className="cart-empty-icon">
-              <UserRound size={26} color="#004D77" strokeWidth={1.5} />
-            </div>
-            <h3 className="cart-empty-title">Inicia sesión para ver tu carrito</h3>
-            <p className="cart-empty-sub">
-              Tu carrito de compras está asociado a tu cuenta. Ingresa para revisar tus productos y finalizar tu pedido.
-            </p>
-            <button
-              onClick={() => navigate('/login', { state: { from: '/cart' } })}
-              className="btn-outline"
-            >
-              Iniciar sesión <ArrowRight size={12} strokeWidth={3} />
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (cartItems.length === 0) {
     return (
       <div className="cart-page">

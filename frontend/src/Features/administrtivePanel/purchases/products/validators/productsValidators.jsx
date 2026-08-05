@@ -23,28 +23,8 @@ export const validate = (data, { isCreating = true } = {}) => {
 
   if (data.stock === '' || data.stock === undefined) {
     errors.stock = 'El stock es obligatorio.';
-  } else if (!Number.isInteger(Number(data.stock)) || Number(data.stock) < 1) {
-    errors.stock = 'El stock debe ser un número entero mayor o igual a 1.';
-  }
-
-  if (data.precioDetalle === '') {
-    errors.precioDetalle = 'El precio detal es obligatorio.';
-  } else if (Number(data.precioDetalle) <= 0) {
-    errors.precioDetalle = 'El precio detal debe ser mayor a 0.';
-  }
-
-  if (data.precioMayorista === '') {
-    errors.precioMayorista = 'El precio mayorista es obligatorio.';
-  } else if (Number(data.precioMayorista) <= 0) {
-    errors.precioMayorista = 'El precio mayorista debe ser mayor a 0.';
-  }
-
-  if (data.precioColegas !== '' && data.precioColegas !== undefined && Number(data.precioColegas) <= 0) {
-    errors.precioColegas = 'El precio colegas debe ser mayor a 0.';
-  }
-
-  if (data.precioPacas !== '' && data.precioPacas !== undefined && Number(data.precioPacas) <= 0) {
-    errors.precioPacas = 'El precio por pacas debe ser mayor a 0.';
+  } else if (!Number.isInteger(Number(data.stock)) || Number(data.stock) < 0) {
+    errors.stock = 'El stock debe ser un número entero mayor o igual a 0.';
   }
 
   if (!data.categorias?.length) {
