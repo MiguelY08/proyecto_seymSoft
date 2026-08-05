@@ -20,6 +20,15 @@ export const isEditableScannerTarget = (target) => {
   );
 };
 
+const SCANNER_TARGET_SELECTOR =
+  '[data-scanner-field], [data-scanner-capture="true"], .availableForScanning, #availableForScanning';
+
+export const isScannerTarget = (target) => {
+  if (!target || typeof target.closest !== 'function') return false;
+
+  return Boolean(target.closest(SCANNER_TARGET_SELECTOR));
+};
+
 export const getScannerField = (target) => {
   if (!target || typeof target.closest !== 'function') return '';
 
@@ -27,7 +36,7 @@ export const getScannerField = (target) => {
   return scannerField?.dataset?.scannerField ?? '';
 };
 
-export const hasScannerField = (target) => Boolean(getScannerField(target));
+export const hasScannerField = (target) => Boolean(getScannerField(target) || isScannerTarget(target));
 
 export const shouldCaptureScannerEvent = (event, options = {}) => {
   if (!event || event.isComposing) return false;
@@ -38,12 +47,12 @@ export const shouldCaptureScannerEvent = (event, options = {}) => {
   const isAllowedChar = event.key.length === 1 && config.allowedPattern.test(event.key);
   const scannerField = getScannerField(event.target);
   const hasAllowedScannerFields = Array.isArray(config.scannerFields) && config.scannerFields.length > 0;
+  const hasScannerTarget = isScannerTarget(event.target);
 
   if (!isTerminator && !isAllowedChar) return false;
-  if (hasAllowedScannerFields) return config.scannerFields.includes(scannerField);
+  if (hasAllowedScannerFields) return Boolean(scannerField && config.scannerFields.includes(scannerField)) || hasScannerTarget;
   if (config.captureInInputs) return true;
-  if (scannerField) return true;
-  if (event.target?.closest?.('[data-scanner-capture="true"]')) return true;
+  if (hasScannerTarget) return true;
 
   return !isEditableScannerTarget(event.target);
 };

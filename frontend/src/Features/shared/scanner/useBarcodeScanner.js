@@ -3,6 +3,8 @@ import {
   DEFAULT_SCANNER_OPTIONS,
   buildScannerPayload,
   getScannerField,
+  isScannerTarget,
+  isEditableScannerTarget,
   normalizeBarcode,
   shouldCaptureScannerEvent,
 } from './scanner.helpers';
@@ -13,6 +15,11 @@ const createEmptyBuffer = () => ({
   lastAt: 0,
   target: null,
   scannerField: '',
+  isUnauthorizedTarget: false,
+  isScannerCandidate: false,
+  initialValue: null,
+  initialSelectionStart: null,
+  initialSelectionEnd: null,
 });
 
 export function useBarcodeScanner(options = {}) {
@@ -48,6 +55,17 @@ export function useBarcodeScanner(options = {}) {
       const code = normalizeBarcode(raw, config);
       const isLengthValid = code.length >= config.minLength && code.length <= config.maxLength;
       const isCustomValid = typeof config.validate === 'function' ? Boolean(config.validate(code)) : true;
+
+      if (buffer.isUnauthorizedTarget && buffer.target) {
+        // En campos no autorizados, evitamos que el escaneo deje texto.
+        buffer.target?.setSelectionRange?.(
+          buffer.initialSelectionStart,
+          buffer.initialSelectionEnd
+        );
+        if (buffer.target?.value !== buffer.initialValue) {
+          buffer.target.value = buffer.initialValue ?? '';
+        }
+      }
 
       if (!isLengthValid || !isCustomValid) {
         optionsRef.current.onInvalidScan?.({
@@ -101,10 +119,21 @@ export function useBarcodeScanner(options = {}) {
       const now = Date.now();
       const isTerminator = config.terminatorKeys.includes(event.key);
       const buffer = bufferRef.current;
+      const target = event.target;
+      const isScannerCandidate = isScannerTarget(target);
+      const isEditable = isEditableScannerTarget(target);
+
+      if (buffer.chars.length === 0) {
+        buffer.isScannerCandidate = isScannerCandidate;
+        buffer.isUnauthorizedTarget = isEditable && !isScannerCandidate;
+        buffer.initialValue = target?.value ?? null;
+        buffer.initialSelectionStart = target?.selectionStart ?? null;
+        buffer.initialSelectionEnd = target?.selectionEnd ?? null;
+      }
 
       if (isTerminator) {
         if (buffer.chars.length > 0) {
-          if (config.preventDefault === true || config.preventTerminatorDefault === true) {
+          if (buffer.isUnauthorizedTarget || config.preventDefault === true || config.preventTerminatorDefault === true) {
             event.preventDefault();
           }
           flushBuffer(event.key, event);
@@ -119,13 +148,15 @@ export function useBarcodeScanner(options = {}) {
       const nextBuffer = bufferRef.current;
       if (nextBuffer.chars.length === 0) {
         nextBuffer.startedAt = now;
-        nextBuffer.target = event.target;
-        nextBuffer.scannerField = getScannerField(event.target);
+        nextBuffer.target = target;
+        nextBuffer.scannerField = getScannerField(target);
       }
       nextBuffer.chars.push(event.key);
       nextBuffer.lastAt = now;
 
-      if (config.preventDefault === true) event.preventDefault();
+      if (buffer.isUnauthorizedTarget || config.preventDefault === true) {
+        event.preventDefault();
+      }
 
       clearFinishTimer();
       timeoutRef.current = window.setTimeout(() => {

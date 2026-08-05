@@ -2,6 +2,10 @@
 // Servicio de pedidos conectado al API mediante apiClient.
 
 import apiClient from '../../../../../setting/apiClient';
+import {
+  PAYMENT_METHODS as PM_METHODS,
+  PAYMENT_METHOD_IDS as PM_IDS,
+} from '../../../../../constants/paymentMethods';
 
 export const CAJA_CLIENTE_ID = 0;
 
@@ -22,12 +26,8 @@ export const ORIGENES = {
   WEB: 'web',
 };
 
-export const METODOS_PAGO = {
-  EFECTIVO: 'Efectivo',
-  TRANSFERENCIA: 'Transferencia',
-  CREDITO: 'Crédito',
-  DEVOLUCION: 'Saldo a favor',
-};
+export const METODOS_PAGO = PM_METHODS;
+export const PAYMENT_METHOD_IDS = PM_IDS;
 
 const unwrap = (response) => {
   const payload = response?.data ?? response;
@@ -463,12 +463,7 @@ const ORDER_STATUS_IDS = {
   [ESTADOS_LOGISTICOS.CANCELADO]: 4,
 };
 
-export const PAYMENT_METHOD_IDS = {
-  [METODOS_PAGO.TRANSFERENCIA]: 1,
-  [METODOS_PAGO.EFECTIVO]: 2,
-  [METODOS_PAGO.CREDITO]: 3,
-  [METODOS_PAGO.DEVOLUCION]: 4,
-};
+// PAYMENT_METHOD_IDS is provided from centralized constants (re-exported as PAYMENT_METHOD_IDS)
 
 const resolvePaymentMethodId = (metodoPago) => {
   const idPaymentMethod = PAYMENT_METHOD_IDS[metodoPago] ?? metodoPago;
