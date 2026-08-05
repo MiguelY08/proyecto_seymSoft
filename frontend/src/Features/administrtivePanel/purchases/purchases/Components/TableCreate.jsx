@@ -1,5 +1,22 @@
 import React from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Package, Ruler, Scale, Droplet } from "lucide-react";
+
+const TYPE_ICONS = {
+  "Unidad": Package,
+  "X Paca": Ruler,
+  "Litros": Droplet,
+  "Kilos": Scale,
+};
+
+const TypeBadge = ({ type }) => {
+  const Icon = TYPE_ICONS[type] || Package;
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 border border-gray-200 rounded-full text-[10px] font-medium text-gray-600">
+      <Icon className="w-3 h-3" strokeWidth={1.8} />
+      {type || "Unidad"}
+    </span>
+  );
+};
 
 const BarcodeCell = ({ codigoBarras, codigosExtra = [] }) => (
   <div className="flex items-center gap-1.5">
@@ -34,12 +51,14 @@ const BarcodeCell = ({ codigoBarras, codigosExtra = [] }) => (
 
 const CreateTable = ({ currentData, handleDeleteItem }) => (
   <div className="overflow-x-auto rounded-lg border border-gray-200">
-    <table className="min-w-[900px] w-full">
+    <table className="min-w-[1050px] w-full">
       <thead className="bg-[#004D77]/5">
         <tr>
           <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Producto</th>
           <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Código de barras</th>
+          <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Tipo</th>
           <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Cant.</th>
+          <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Stock a sumar</th>
           <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Valor unit.</th>
           <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Subtotal</th>
           <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">IVA</th>
@@ -63,12 +82,40 @@ const CreateTable = ({ currentData, handleDeleteItem }) => (
                 codigosExtra={item.codigosExtra || []}
               />
             </td>
-            <td className="px-3 py-2 text-center text-xs font-semibold text-gray-700">{item.cantidad}</td>
-            <td className="px-3 py-2 text-right text-xs text-gray-600">${item.valorUnit.toLocaleString("es-CO")}</td>
-            <td className="px-3 py-2 text-right text-xs text-gray-600">${item.subtotal.toLocaleString("es-CO")}</td>
-            <td className="px-3 py-2 text-center text-xs text-gray-600">{item.iva}%</td>
-            <td className="px-3 py-2 text-right text-xs text-gray-600">${item.ivaValor.toLocaleString("es-CO")}</td>
-            <td className="px-3 py-2 text-right text-xs font-semibold text-gray-800">${item.total.toLocaleString("es-CO")}</td>
+            <td className="px-3 py-2 text-center">
+              <TypeBadge type={item.purchaseType || "Unidad"} />
+            </td>
+            <td className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+              {item.cantidad}
+            </td>
+            <td className="px-3 py-2 text-center text-xs font-semibold text-[#004D77]">
+              {item.stockTotal?.toLocaleString() || item.cantidad}
+              {item.purchaseTypeValue === "pack" && item.quantityPerPack > 0 && (
+                <span className="block text-[8px] text-gray-400 font-normal">
+                  ({item.cantidad} pacas × {item.quantityPerPack} und/paca)
+                </span>
+              )}
+              {item.purchaseTypeValue === "pack" && item.quantityPerPack === 0 && (
+                <span className="block text-[8px] text-amber-500 font-normal">
+                  ⚠️ Sin cantidad por paca
+                </span>
+              )}
+            </td>
+            <td className="px-3 py-2 text-right text-xs text-gray-600">
+              ${item.valorUnit.toLocaleString("es-CO")}
+            </td>
+            <td className="px-3 py-2 text-right text-xs text-gray-600">
+              ${item.subtotal.toLocaleString("es-CO")}
+            </td>
+            <td className="px-3 py-2 text-center text-xs text-gray-600">
+              {item.iva}%
+            </td>
+            <td className="px-3 py-2 text-right text-xs text-gray-600">
+              ${item.ivaValor.toLocaleString("es-CO")}
+            </td>
+            <td className="px-3 py-2 text-right text-xs font-semibold text-gray-800">
+              ${item.total.toLocaleString("es-CO")}
+            </td>
             <td className="px-3 py-2 text-center">
               <button
                 type="button"

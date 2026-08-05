@@ -1,31 +1,16 @@
 // features/administrtivePanel/purchases/purchases/data/purchasesApi.js
 import apiClient from '../../../../../setting/apiClient.js';
 
-// ==========================================
-// ENDPOINTS
-// ==========================================
-
 const api = {
-  // Supplier Purchases (Compras a proveedores)
   getAllPurchases: (params) => apiClient.get('/supplier-purchases', { params }),
   getPurchaseById: (id) => apiClient.get(`/supplier-purchases/${id}`),
   createPurchase: (data) => apiClient.post('/supplier-purchases', data),
   annulPurchase: (id, data) => apiClient.patch(`/supplier-purchases/${id}/annul`, data),
-
-  // Productos (para el formulario de creación)
   getProducts: (params) => apiClient.get('/products', { params }),
   getProductByBarcode: (barcode) => apiClient.get(`/products/barcode/${barcode}`),
-
-  // Proveedores (para el formulario de creación)
   getProviders: (params) => apiClient.get('/providers', { params }),
-
-  // ========== NUEVO: Actualizar producto ==========
   updateProduct: (id, data) => apiClient.put(`/products/${id}`, data),
 };
-
-// ==========================================
-// CONVERSIÓN DE ESTADOS
-// ==========================================
 
 const mapStatusFromBackend = (statusId, statusName) => {
   if (statusName) {
@@ -40,10 +25,8 @@ const mapStatusFromBackend = (statusId, statusName) => {
   return "Completada";
 };
 
-// Mapear compra para la lista
 export const mapPurchaseToList = (purchase) => {
   if (!purchase) return null;
-
   return {
     id: purchase.id,
     numeroFacturacion: purchase.invoiceNumber,
@@ -56,10 +39,8 @@ export const mapPurchaseToList = (purchase) => {
   };
 };
 
-// Mapear compra para el detalle
 export const mapPurchaseToFrontend = (purchase) => {
   if (!purchase) return null;
-
   const details = purchase.details || [];
   const cantidadProductos = details.reduce((sum, d) => sum + (d.quantity || 0), 0);
 
@@ -84,6 +65,11 @@ export const mapPurchaseToFrontend = (purchase) => {
       codigoBarras: detail.barcode || '',
       cantidad: cantidadComprada,
       cantidadComprada,
+      // ========== NUEVOS CAMPOS ==========
+      purchaseType: detail.purchaseType || "Unidad",
+      quantityPerPack: detail.quantityPerPack || 0,
+      stockAdded: detail.stockAdded || cantidadComprada,
+      // ========== FIN NUEVOS CAMPOS ==========
       valorUnit: detail.netUnitPrice || detail.grossUnitPrice || 0,
       iva: detail.taxPercentage || 0,
       ivaValor: detail.ivaSubtotal || 0,
@@ -108,18 +94,34 @@ export const mapPurchaseToFrontend = (purchase) => {
   };
 };
 
-// ==========================================
-// COMPRAS
-// ==========================================
-
-export const getAllPurchases = async ({ page = 1, limit = 13, search = '', startDate = '', endDate = '' }) => {
+export const getAllPurchases = async ({ 
+  page = 1, 
+  limit = 13, 
+  search = '', 
+  startDate = '', 
+  endDate = '',
+  sortBy = 'CREATION_DESC'
+}) => {
   try {
+    let sortField = 'id_purchase';
+    let sortOrder = 'desc';
+
+    switch (sortBy) {
+      case 'CREATION_DESC': sortField = 'id_purchase'; sortOrder = 'desc'; break;
+      case 'CREATION_ASC': sortField = 'id_purchase'; sortOrder = 'asc'; break;
+      case 'DATE_DESC': sortField = 'purchase_date'; sortOrder = 'desc'; break;
+      case 'DATE_ASC': sortField = 'purchase_date'; sortOrder = 'asc'; break;
+      default: sortField = 'id_purchase'; sortOrder = 'desc';
+    }
+
     const params = {
       page,
       limit,
       ...(search && { search }),
       ...(startDate && { startDate }),
       ...(endDate && { endDate }),
+      sortField,
+      sortOrder,
     };
 
     const response = await api.getAllPurchases(params);
@@ -161,6 +163,8 @@ export const createPurchase = async (purchaseData) => {
         idProduct: product.idProduct,
         quantity: product.cantidad,
         supplierPrice: product.supplierPrice,
+        purchaseType: product.purchaseType || "Unidad",
+        quantityPerPack: product.quantityPerPack || 0,
         extraBarcodes: product.codigosExtra || [],
       })),
     };
@@ -183,35 +187,17 @@ export const annulPurchase = async (id, motivo) => {
   }
 };
 
-// ==========================================
-// ========== NUEVO: ACTUALIZAR PRODUCTO ==========
-// ==========================================
-
 export const updateProductPrices = async (productId, prices) => {
   try {
     const payload = {};
-    
-    if (prices.supplierPrice !== undefined) {
-      payload.precioProveedor = Number(prices.supplierPrice);
-    }
-    if (prices.retailPrice !== undefined) {
-      payload.retailPrice = Number(prices.retailPrice);
-    }
-    if (prices.wholesalePrice !== undefined) {
-      payload.wholesalePrice = Number(prices.wholesalePrice);
-    }
-    if (prices.partnerPrice !== undefined) {
-      payload.partnerPrice = Number(prices.partnerPrice);
-    }
-    if (prices.bulkPrice !== undefined) {
-      payload.bulkPrice = Number(prices.bulkPrice);
-    }
+    if (prices.supplierPrice !== undefined) payload.precioProveedor = Number(prices.supplierPrice);
+    if (prices.retailPrice !== undefined) payload.retailPrice = Number(prices.retailPrice);
+    if (prices.wholesalePrice !== undefined) payload.wholesalePrice = Number(prices.wholesalePrice);
+    if (prices.partnerPrice !== undefined) payload.partnerPrice = Number(prices.partnerPrice);
+    if (prices.bulkPrice !== undefined) payload.bulkPrice = Number(prices.bulkPrice);
+    if (prices.quantityPerPack !== undefined) payload.quantityPerPack = Number(prices.quantityPerPack);
 
-    // Solo enviar si hay datos para actualizar
-    if (Object.keys(payload).length === 0) {
-      return null;
-    }
-
+    if (Object.keys(payload).length === 0) return null;
     const response = await api.updateProduct(productId, payload);
     return response.data.data;
   } catch (error) {
@@ -219,10 +205,6 @@ export const updateProductPrices = async (productId, prices) => {
     throw error;
   }
 };
-
-// ==========================================
-// PRODUCTOS (para el formulario)
-// ==========================================
 
 export const getProducts = async (searchTerm = '') => {
   try {
@@ -233,13 +215,13 @@ export const getProducts = async (searchTerm = '') => {
       nombre: p.name,
       codigoBarras: p.barcodes?.[0]?.barcode || '',
       proveedor: p.providerName || '',
-      // ========== PRECIOS COMPLETOS ==========
-      supplierPrice: p.supplierPrice ?? null,      // ← precio_proveedor
-      wholesalePrice: p.wholesalePrice || 0,       // ← wholesale_price
-      retailPrice: p.retailPrice || 0,             // ← retail_price
-      partnerPrice: p.partnerPrice || 0,           // ← partner_price
-      bulkPrice: p.bulkPrice || 0,                 // ← bulk_price
+      supplierPrice: p.supplierPrice ?? null,
+      wholesalePrice: p.wholesalePrice || 0,
+      retailPrice: p.retailPrice || 0,
+      partnerPrice: p.partnerPrice || 0,
+      bulkPrice: p.bulkPrice || 0,
       iva: p.ivaPercentage || 19,
+      quantityPerPack: p.quantityPerPack || 0, // ← NECESARIO
     }));
   } catch (error) {
     console.error('Error al cargar productos:', error);
@@ -247,13 +229,7 @@ export const getProducts = async (searchTerm = '') => {
   }
 };
 
-export const searchProducts = async (searchTerm) => {
-  return getProducts(searchTerm);
-};
-
-// ==========================================
-// PROVEEDORES (para el formulario)
-// ==========================================
+export const searchProducts = async (searchTerm) => getProducts(searchTerm);
 
 export const getProviders = async () => {
   try {
