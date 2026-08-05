@@ -12,8 +12,18 @@ import {
   PackageCheck,
   Truck,
   X,
+  Ruler,
+  Scale,
+  Droplet,
 } from "lucide-react";
 import Pagination from "../../../../shared/PaginationLanding";
+
+const TYPE_ICONS = {
+  "Unidad": Package,
+  "X Paca": Ruler,
+  "Litros": Droplet,
+  "Kilos": Scale,
+};
 
 const STATUS_STYLES = {
   Completada: "border-green-300 bg-green-100 text-green-700",
@@ -31,6 +41,16 @@ const EstadoBadge = ({ estado }) => (
     {estado ?? "-"}
   </span>
 );
+
+const TypeBadge = ({ type }) => {
+  const Icon = TYPE_ICONS[type] || Package;
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 border border-gray-200 rounded-full text-[10px] font-medium text-gray-600">
+      <Icon className="w-3 h-3" strokeWidth={1.8} />
+      {type || "Unidad"}
+    </span>
+  );
+};
 
 const DetailRow = ({ icon: Icon, label, value, highlight = false }) => {
   const hasValue = value !== undefined && value !== null && String(value).trim();
@@ -306,6 +326,9 @@ const DetailPurchases = ({ purchase, onClose, loading = false }) => {
                           Código de barras
                         </th>
                         <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                          Tipo
+                        </th>
+                        <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
                           Cant.
                         </th>
                         <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
@@ -337,8 +360,16 @@ const DetailPurchases = ({ purchase, onClose, loading = false }) => {
                               codigosExtra={product.codigosExtra ?? []}
                             />
                           </td>
+                          <td className="px-3 py-2 text-center">
+                            <TypeBadge type={product.purchaseType || "Unidad"} />
+                          </td>
                           <td className="px-3 py-2 text-center text-xs font-medium text-gray-600">
                             {product.cantidad ?? 0}
+                            {product.purchaseType === "X Paca" && product.quantityPerPack > 0 && (
+                              <span className="block text-[9px] text-gray-400 font-normal">
+                                {product.cantidad} pacas × {product.quantityPerPack} und = {product.cantidad * product.quantityPerPack} und
+                              </span>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-right text-xs text-gray-600">
                             {formatCurrency(product.valorUnit)}
