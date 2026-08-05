@@ -4,6 +4,10 @@ function Spinner({
   message = 'Cargando datos...',
   className = '',
 }) {
+  if (/configurando contrase/i.test(message)) {
+    return null;
+  }
+
   return (
     <div
       className={`h-full min-h-[320px] flex items-center justify-center px-4 ${className}`}

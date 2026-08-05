@@ -27,7 +27,7 @@ function Evidence({
   const [fileError, setFileError] = useState('');
   const [descriptionTouched, setDescriptionTouched] = useState(false);
   const [saving, setSaving] = useState(false);
-  const { showConfirm } = useAlert();
+  const { showConfirm, showError } = useAlert();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -151,8 +151,11 @@ function Evidence({
       setDeletedIds([]);
       setLocalFiles([]);
       onClose?.();
-    } catch {
-      alert('Error al guardar evidencias');
+    } catch (error) {
+      showError(
+        'No se pudieron guardar las evidencias',
+        error?.message || 'Intenta nuevamente. Si el problema continúa, revisa la conexión.'
+      );
     } finally {
       setSaving(false);
     }
@@ -167,7 +170,7 @@ function Evidence({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-0 backdrop-blur-sm sm:p-4">
-      <div className="flex h-dvh w-full max-w-[520px] flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-2xl">
+      <div className="flex h-dvh w-full max-w-[520px] flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-lg">
         <div className="flex items-center justify-between bg-[#004D77] px-5 py-3.5">
           <h2 className="text-[15px] font-bold tracking-wide text-white">
             {isEdit ? 'Gestionar evidencias' : 'Evidencias'}
@@ -196,7 +199,7 @@ function Evidence({
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={saving}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#004D77] py-3 text-sm font-bold text-white transition hover:bg-[#003d61] disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#004D77] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Link className="h-4 w-4" />
             Subir imágenes
@@ -217,7 +220,7 @@ function Evidence({
           {fileError && <p className="text-center text-xs text-red-600">{fileError}</p>}
 
           {allFiles.length > 0 && (
-            <div className="max-h-60 overflow-y-auto rounded-xl border border-gray-200">
+            <div className="max-h-60 overflow-y-auto rounded-lg border border-gray-200">
               {allFiles.map((file, index) => {
                 const fileName = file.name || (file instanceof File ? file.name : 'Archivo');
                 const isExisting = !(file instanceof File) && file.id;
@@ -280,7 +283,7 @@ function Evidence({
               maxLength={255}
               placeholder="Agrega una breve descripción de las imágenes"
               rows={4}
-              className={`w-full resize-none rounded-xl border px-4 py-3 text-sm text-gray-600 outline-none placeholder-gray-300 focus:border-[#004D77] ${
+              className={`w-full resize-none rounded-lg border px-4 py-3 text-sm text-gray-600 outline-none placeholder-gray-300 focus:border-[#004D77] ${
                 descriptionTouched && descriptionError ? 'border-red-500' : 'border-gray-300'
               }`}
             />
@@ -304,7 +307,7 @@ function Evidence({
               type="button"
               onClick={handleSave}
               disabled={saving || Boolean(fileError || descriptionError)}
-              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#004D77] py-3 text-sm font-bold text-white transition hover:bg-[#003d61] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#004D77] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {saving ? 'Guardando...' : (isEdit ? 'Actualizar' : 'Guardar')}
@@ -313,7 +316,7 @@ function Evidence({
               type="button"
               onClick={handleClose}
               disabled={saving}
-              className="flex-1 cursor-pointer rounded-xl bg-gray-200 py-3 text-sm font-bold text-gray-600 transition hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex-1 cursor-pointer rounded-lg bg-gray-500 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Cancelar
             </button>

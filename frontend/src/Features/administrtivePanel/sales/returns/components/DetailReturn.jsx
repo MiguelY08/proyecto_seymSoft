@@ -74,10 +74,43 @@ const DetailDataRow = ({ icon, label, value, valueClassName = 'text-gray-800' })
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{label}</p>
-        <p className={`text-sm font-medium leading-snug break-words ${hasValue ? valueClassName : 'italic text-gray-300'}`}>
+        <p className={`text-sm font-medium leading-snug break-words [overflow-wrap:anywhere] ${hasValue ? valueClassName : 'italic text-gray-300'}`}>
           {hasValue ? value : 'No registrado'}
         </p>
       </div>
+    </div>
+  );
+};
+
+const CollapsibleText = ({
+  text: rawText,
+  limit = 180,
+  className = '',
+  buttonClassName = 'text-[#004D77]',
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const value = String(rawText ?? '').trim();
+  const shouldCollapse = value.length > limit;
+  const visibleText = shouldCollapse && !expanded
+    ? `${value.slice(0, limit).trim()}...`
+    : value;
+
+  if (!value) return null;
+
+  return (
+    <div className="min-w-0 max-w-full overflow-hidden">
+      <p className={`max-w-full whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word] ${className}`}>
+        {visibleText}
+      </p>
+      {shouldCollapse && (
+        <button
+          type="button"
+          onClick={() => setExpanded((current) => !current)}
+          className={`mt-1 text-xs font-semibold transition hover:underline ${buttonClassName}`}
+        >
+          {expanded ? 'Ver menos' : 'Ver más'}
+        </button>
+      )}
     </div>
   );
 };
@@ -202,9 +235,9 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
     if (exportingPdf) return;
 
     setExportingPdf(true);
-    window.setTimeout(() => {
+    window.setTimeout(async () => {
       try {
-        exportReturnToPDF(devolucion);
+        await exportReturnToPDF(devolucion);
       } finally {
         setExportingPdf(false);
       }
@@ -423,7 +456,15 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
               <div className="mb-4">
                 <h3 className="text-sm font-bold text-gray-800 mb-2">Productos devueltos</h3>
                 <div className="overflow-x-auto rounded-xl border border-gray-200">
-                  <table className="w-full min-w-[720px] text-xs">
+                  <table className="w-full min-w-[720px] table-fixed text-xs">
+                    <colgroup>
+                      <col className="w-[28%]" />
+                      <col className="w-[23%]" />
+                      <col className="w-[15%]" />
+                      <col className="w-[14%]" />
+                      <col className="w-[8%]" />
+                      <col className="w-[12%]" />
+                    </colgroup>
                     <thead>
                       <tr className="bg-[#004D77] text-white">
                         <th className="px-3 py-2.5 text-left font-semibold">Producto</th>
@@ -451,11 +492,16 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
                         return (
                           <tr key={i} className={`border-t border-gray-100 ${isAnulado ? 'bg-red-50/40' : 'hover:bg-gray-50'}`}>
                             <td className="px-3 py-2.5 text-gray-700 font-medium">
-                              {p.productName || 'N/A'}
+                              <span className="block break-words [overflow-wrap:anywhere]">{p.productName || 'N/A'}</span>
                               {mostrarDescripcionOtro && (
-                                <div className="mt-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] font-medium text-amber-800">
+                                <div className="mt-1.5 max-w-full rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] font-medium text-amber-800">
                                   <span className="mr-1">Motivo específico:</span>
-                                  <span>{p.description}</span>
+                                  <CollapsibleText
+                                    text={p.description}
+                                    limit={130}
+                                    className="text-[11px] leading-relaxed text-amber-800"
+                                    buttonClassName="text-amber-700"
+                                  />
                                 </div>
                               )}
                             </td>
@@ -465,7 +511,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
                                 {renderDefectiveAction(p)}
                               </div>
                             </td>
-                            <td className="px-3 py-2.5 text-gray-600">{metodo}</td>
+                            <td className="px-3 py-2.5 text-gray-600 break-words [overflow-wrap:anywhere]">{metodo}</td>
                             <td className="px-3 py-2.5">
                               <span className={`inline-flex min-w-[84px] items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold ${isAnulado ? 'text-red-600 bg-red-100' : getStatusColor(estadoProducto)}`}>
                                 {estadoProducto}
@@ -486,9 +532,13 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
 
             <div>
               <p className="text-sm font-bold text-gray-800 mb-2">Descripción</p>
-              <div className="flex flex-col sm:flex-row gap-3 items-stretch">
-                <div className="flex-1 border-2 border-[#004D77]/30 rounded-xl px-4 py-3 bg-gray-50/50">
-                  <p className="text-xs text-gray-600 leading-relaxed">{mostrarDescripcion}</p>
+              <div className="flex min-w-0 flex-col items-stretch gap-3 sm:flex-row">
+                <div className="min-w-0 flex-1 overflow-hidden rounded-xl border-2 border-[#004D77]/30 bg-gray-50/50 px-4 py-3">
+                  <CollapsibleText
+                    text={mostrarDescripcion}
+                    limit={260}
+                    className="text-xs leading-relaxed text-gray-600"
+                  />
                 </div>
                 <div className="border-2 border-[#004D77]/30 rounded-xl overflow-hidden flex-shrink-0 sm:min-w-[180px] bg-gray-50/50">
                   <div className="flex justify-between items-center px-3 py-2 border-b border-gray-200">

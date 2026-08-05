@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { formatDate } from './returnsHelpers';
+import logoUrl from '../../../../../assets/PMLogo_Horizontal.png';
 
 const BLUE = '004D77';
 const LIGHT_BLUE = 'DCEBF3';
@@ -58,13 +59,46 @@ const styleDataRow = (row, index) => {
 
 const prepareSheet = (worksheet, title, columnCount) => {
   const lastColumn = worksheet.getColumn(columnCount).letter;
-  styleTitle(worksheet, `A1:${lastColumn}1`, title);
-  worksheet.mergeCells(`A2:${lastColumn}2`);
-  worksheet.getCell('A2').value =
+  styleTitle(worksheet, `B1:${lastColumn}1`, title);
+  worksheet.getRow(1).height = 42;
+  worksheet.getRow(2).height = 24;
+  worksheet.getCell('A1').value = 'Papelería\nMagic';
+  worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+  worksheet.getCell('A1').font = { bold: true, size: 12, color: { argb: BLUE } };
+  worksheet.mergeCells(`B2:${lastColumn}2`);
+  worksheet.getCell('B2').value =
     `Fecha de exportación: ${new Date().toLocaleString('es-CO')}`;
-  worksheet.getCell('A2').alignment = { horizontal: 'center' };
-  worksheet.getCell('A2').font = { italic: true, color: { argb: BLUE } };
+  worksheet.getCell('B2').alignment = { horizontal: 'center' };
+  worksheet.getCell('B2').font = { italic: true, color: { argb: BLUE } };
   worksheet.addRow([]);
+};
+
+const loadLogoBase64 = async () => {
+  try {
+    const response = await fetch(logoUrl);
+    const blob = await response.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = typeof reader.result === 'string' ? reader.result : '';
+        resolve(result.includes(',') ? result.split(',')[1] : result);
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+};
+
+const addLogo = (worksheet, logoId) => {
+  if (!logoId) return;
+
+  worksheet.addImage(logoId, {
+    tl: { col: 0.1, row: 0.08 },
+    ext: { width: 120, height: 38 },
+    editAs: 'oneCell',
+  });
 };
 
 export const exportReturnsToExcel = async (returns = []) => {
@@ -73,6 +107,10 @@ export const exportReturnsToExcel = async (returns = []) => {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Papelería Magic';
   workbook.created = new Date();
+  const logoBase64 = await loadLogoBase64();
+  const logoId = logoBase64
+    ? workbook.addImage({ base64: logoBase64, extension: 'png' })
+    : null;
 
   const summary = workbook.addWorksheet('Devoluciones');
   const summaryHeaders = [
@@ -88,6 +126,7 @@ export const exportReturnsToExcel = async (returns = []) => {
     'Descripción',
   ];
   prepareSheet(summary, 'DEVOLUCIONES DE VENTAS', summaryHeaders.length);
+  addLogo(summary, logoId);
   styleHeader(summary.addRow(summaryHeaders));
 
   returns.forEach((item, index) => {
@@ -141,6 +180,7 @@ export const exportReturnsToExcel = async (returns = []) => {
     'Estado producto',
   ];
   prepareSheet(products, 'DETALLE DE PRODUCTOS DEVUELTOS', productHeaders.length);
+  addLogo(products, logoId);
   styleHeader(products.addRow(productHeaders));
 
   let productIndex = 0;

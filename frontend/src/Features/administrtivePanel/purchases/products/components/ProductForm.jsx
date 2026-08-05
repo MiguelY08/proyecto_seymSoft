@@ -103,6 +103,7 @@ const initialForm = {
   precioMayorista: '',
   precioColegas: '',
   precioPacas: '',
+  supplierPrice: '',
   descripcion: '',
   cantidadXPaca: '',
   id_category: null,
@@ -137,6 +138,7 @@ function ProductForm({
   const [selectedSubcategoryIds, setSelectedSubcategoryIds] = useState([]);
   const [expandedCategoryIds, setExpandedCategoryIds] = useState({});
   const [activeBarcodeTarget, setActiveBarcodeTarget] = useState({ type: 'main', index: null });
+  const [productType, setProductType] = useState('existing');
   const [scannerMessage, setScannerMessage] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const imageInputRef = useRef(null);
@@ -209,6 +211,7 @@ function ProductForm({
       precioMayorista: producto.wholesalePrice || '',
       precioColegas: producto.partnerPrice || '',
       precioPacas: producto.bulkPrice || '',
+      supplierPrice: producto.supplierPrice ?? '',
       idUnitMeasure: producto.unitMeasure?.id || '',
       ivaPercentage: producto.ivaPercentage || 0,
       retailDiscountPct: producto.retailDiscountPct || 0,
@@ -248,6 +251,9 @@ function ProductForm({
     return e;
   };
 
+  const isNewProduct = mode === 'create' && productType === 'new';
+  const isExistingProduct = mode === 'edit' || !isNewProduct;
+
   const getCurrentProductId = () =>
     isEditMode ? producto?.id ?? producto?.idProduct ?? null : null;
 
@@ -282,6 +288,49 @@ function ProductForm({
     return `Hay codigos repetidos en el formulario: ${duplicates.join(', ')}.`;
   };
 
+  const getReferenceConflictMessage = (reference) => {
+    const normalized = reference?.trim().toLowerCase();
+    if (!normalized) return '';
+
+    const owner = existingProducts.find((product) => {
+      if (!product?.reference) return false;
+      if (product.id === getCurrentProductId()) return false;
+      return String(product.reference).trim().toLowerCase() === normalized;
+    });
+
+    if (!owner) return '';
+    return owner.name
+      ? `La referencia ya existe en "${owner.name}".`
+      : 'La referencia ya existe en otro producto.';
+  };
+
+  const validateField = (name, value, data = formData) => {
+    if (name === 'codBarras') {
+      const trimmed = value?.trim() ?? '';
+      if (!trimmed) return 'El codigo de barras es obligatorio.';
+      if (trimmed.length < 8) return 'El codigo de barras debe tener minimo 8 caracteres.';
+
+      const conflictMessage = getBarcodeConflictMessage(trimmed);
+      if (conflictMessage) return conflictMessage;
+
+      const duplicateMessage = getInternalDuplicateMessage([
+        trimmed,
+        ...(data.codsBarrasExtra || []).map((item) => item?.cod),
+      ]);
+      if (duplicateMessage) return duplicateMessage;
+    }
+
+    if (name === 'referencia') {
+      const trimmed = value?.trim() ?? '';
+      if (!trimmed) return 'La referencia es obligatoria.';
+
+      const conflictMessage = getReferenceConflictMessage(trimmed);
+      if (conflictMessage) return conflictMessage;
+    }
+
+    return undefined;
+  };
+
   const validate = (d) => {
     const e = {};
     if (!isEditMode && imagenesNuevas.length === 0) {
@@ -308,8 +357,10 @@ function ProductForm({
     if (isEditMode ? d.referencia === '' : !d.referencia.trim()) {
       e.referencia = 'La referencia es obligatoria.';
     }
-    if (d.stockPrincipal === '') e.stockPrincipal = 'El stock es obligatorio.';
-    else if (!Number.isInteger(Number(d.stockPrincipal)) || Number(d.stockPrincipal) < 0) e.stockPrincipal = 'El stock debe ser un numero entero mayor o igual a 0.';
+    if (isExistingProduct) {
+      if (d.stockPrincipal === '') e.stockPrincipal = 'El stock es obligatorio.';
+      else if (!Number.isInteger(Number(d.stockPrincipal)) || Number(d.stockPrincipal) < 0) e.stockPrincipal = 'El stock debe ser un numero entero mayor o igual a 0.';
+    }
     return e;
   };
 
@@ -320,7 +371,22 @@ function ProductForm({
       setPriceErrors(validatePrices(next));
       return next;
     });
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
+
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (name === 'codBarras' || name === 'referencia') {
+        const fieldError = validateField(name, value, {
+          ...formData,
+          [name]: value,
+        });
+
+        if (fieldError) next[name] = fieldError;
+        else delete next[name];
+      } else if (next[name]) {
+        delete next[name];
+      }
+      return next;
+    });
   };
 
   const handleCatChange = (cat) => {
@@ -454,6 +520,7 @@ function ProductForm({
           precioMayorista: formData.precioMayorista,
           precioColegas: formData.precioColegas,
           precioPacas: formData.precioPacas,
+          supplierPrice: formData.supplierPrice,
           idUnitMeasure: formData.idUnitMeasure,
           ivaPercentage: formData.ivaPercentage,
           retailDiscountPct: formData.retailDiscountPct,
@@ -473,35 +540,46 @@ function ProductForm({
         showSuccess('Producto actualizado', `"${saved.name}" fue actualizado correctamente.`);
       } else {
         const formDataToSend = new FormData();
+        const appendIfValue = (key, value) => {
+          if (value !== undefined && value !== null && value !== '') {
+            formDataToSend.append(key, value);
+          }
+        };
+
         formDataToSend.append('nombre', formData.nombre);
         formDataToSend.append('referencia', formData.referencia);
-        formDataToSend.append('precioDetalle', Number(formData.precioDetalle));
-        formDataToSend.append('precioMayorista', Number(formData.precioMayorista));
-        formDataToSend.append('precioColegas', Number(formData.precioColegas));
-        formDataToSend.append('precioPacas', Number(formData.precioPacas));
+        appendIfValue('precioDetalle', formData.precioDetalle);
+        appendIfValue('precioMayorista', formData.precioMayorista);
+        appendIfValue('precioColegas', formData.precioColegas);
+        appendIfValue('precioPacas', formData.precioPacas);
+        if (formData.supplierPrice !== '') appendIfValue('supplierPrice', Number(formData.supplierPrice));
         formDataToSend.append('ivaPercentage', formData.ivaPercentage || 0);
-        formDataToSend.append('retailDiscountPct', formData.retailDiscountPct || 0);
-        formDataToSend.append('wholesaleDiscountPct', formData.wholesaleDiscountPct || 0);
-        formDataToSend.append('partnerDiscountPct', formData.partnerDiscountPct || 0);
-        formDataToSend.append('bulkDiscountPct', formData.bulkDiscountPct || 0);
+        if (isExistingProduct) {
+          formDataToSend.append('retailDiscountPct', formData.retailDiscountPct || 0);
+          formDataToSend.append('wholesaleDiscountPct', formData.wholesaleDiscountPct || 0);
+          formDataToSend.append('partnerDiscountPct', formData.partnerDiscountPct || 0);
+          formDataToSend.append('bulkDiscountPct', formData.bulkDiscountPct || 0);
+        }
         formDataToSend.append('idUnitMeasure', formData.idUnitMeasure);
         formDataToSend.append('idCategorie', formData.id_category || selectedCategoryIds[0]);
         formDataToSend.append('description', formData.descripcion || '');
         formDataToSend.append('quantityPerPack', formData.cantidadXPaca ? Number(formData.cantidadXPaca) : 0);
         formDataToSend.append('codBarras', formData.codBarras);
-        formDataToSend.append('stock', Number(formData.stockPrincipal) || 0);
+        if (isExistingProduct) {
+          formDataToSend.append('stock', Number(formData.stockPrincipal) || 0);
+        }
         formDataToSend.append('barcodes', JSON.stringify([
           {
             barcode: formData.codBarras,
             barcode_type: 'EAN13',
-            stock: Number(formData.stockPrincipal) || 0,
+            stock: isExistingProduct ? Number(formData.stockPrincipal) || 0 : 0,
           },
           ...(formData.codsBarrasExtra || [])
             .filter((barcode) => barcode?.cod)
             .map((barcode) => ({
               barcode: barcode.cod,
               barcode_type: 'SKU',
-              stock: Number(barcode.stock) || 0,
+              stock: isExistingProduct ? Number(barcode.stock) || 0 : 0,
             })),
         ]));
         selectedCategoryIds.forEach((catId) => formDataToSend.append('categories[]', catId));
@@ -544,6 +622,31 @@ function ProductForm({
             <h1 className="text-2xl font-bold text-gray-900">{isEditMode ? 'Editar producto' : 'Nuevo producto'}</h1>
           </div>
         </div>
+
+        {mode === 'create' && (
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <p className="text-sm font-semibold text-gray-800">¿Qué tipo de producto quieres crear?</p>
+            <p className="mt-1 text-xs text-gray-500">Selecciona "Producto nuevo" para crear el catálogo sin stock ni precios. Si eliges "Producto existente", el formulario se mantiene completo.</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setProductType('existing')}
+                className={`rounded-xl border px-4 py-3 text-left transition ${productType === 'existing' ? 'border-[#004D77] bg-[#004D77]/10 text-[#004D77]' : 'border-gray-200 bg-white text-gray-700 hover:border-[#004D77] hover:bg-[#004D77]/5'}`}
+              >
+                <p className="font-semibold">Producto existente</p>
+                <p className="text-xs text-gray-500">El formulario incluye stock y precios.</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setProductType('new')}
+                className={`rounded-xl border px-4 py-3 text-left transition ${productType === 'new' ? 'border-[#004D77] bg-[#004D77]/10 text-[#004D77]' : 'border-gray-200 bg-white text-gray-700 hover:border-[#004D77] hover:bg-[#004D77]/5'}`}
+              >
+                <p className="font-semibold">Producto nuevo</p>
+                <p className="text-xs text-gray-500">Oculta stock y precios; se gestionan desde compras.</p>
+              </button>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -609,18 +712,26 @@ function ProductForm({
                       className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400"
                     />
                   </div>
-                  <div className="relative border-l border-gray-200 bg-gray-50">
-                    <Boxes className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={formData.stockPrincipal ?? ''}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, stockPrincipal: numeric(e.target.value) }))}
-                      onKeyDown={block}
-                      placeholder="0"
-                      className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm font-semibold text-gray-700 outline-none placeholder-gray-400"
-                    />
-                  </div>
+                  {isExistingProduct ? (
+                    <>
+                      <div className="relative border-l border-gray-200 bg-gray-50">
+                        <Boxes className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={formData.stockPrincipal ?? ''}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, stockPrincipal: numeric(e.target.value) }))}
+                          onKeyDown={block}
+                          placeholder="0"
+                          className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm font-semibold text-gray-700 outline-none placeholder-gray-400"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="relative border-l border-gray-200 bg-gray-50 px-3 py-2.5">
+                      <p className="text-sm text-gray-500">Sin stock.</p>
+                    </div>
+                  )}
                 </div>
                 <ErrMsg field="codBarras" />
                 <ErrMsg field="stockPrincipal" />
@@ -703,10 +814,16 @@ function ProductForm({
                             <Barcode className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
                             <input type="text" value={item.cod || ''} onChange={(e) => handleCodBarrasExtraChange(i, 'cod', e.target.value)} onFocus={() => setActiveBarcodeTarget({ type: 'extra', index: i })} data-scanner-field="product-barcode-extra" placeholder={`Código de barras ${i + 2}`} className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400" />
                           </div>
-                          <div className="relative border-l border-gray-200 bg-gray-50">
-                            <Boxes className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                            <input type="text" inputMode="numeric" value={item.stock ?? ''} onChange={(e) => handleCodBarrasExtraChange(i, 'stock', numeric(e.target.value))} onKeyDown={block} placeholder="Stock" className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm font-semibold text-gray-700 outline-none placeholder-gray-400" />
-                          </div>
+                          {isExistingProduct ? (
+                            <div className="relative border-l border-gray-200 bg-gray-50">
+                              <Boxes className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
+                              <input type="text" inputMode="numeric" value={item.stock ?? ''} onChange={(e) => handleCodBarrasExtraChange(i, 'stock', numeric(e.target.value))} onKeyDown={block} placeholder="Stock" className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm font-semibold text-gray-700 outline-none placeholder-gray-400" />
+                            </div>
+                          ) : (
+                            <div className="relative border-l border-gray-200 bg-gray-50 px-3 py-2.5">
+                              <p className="text-sm text-gray-500">Sin stock definido</p>
+                            </div>
+                          )}
                         </div>
                         <button type="button" onClick={() => setFormData((prev) => ({ ...prev, codsBarrasExtra: (prev.codsBarrasExtra || []).filter((_, idx) => idx !== i) }))} className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-md bg-red-100 text-red-500 hover:bg-red-200 transition-colors cursor-pointer">
                           <X className="w-3.5 h-3.5" />
@@ -729,14 +846,49 @@ function ProductForm({
                       <p className="text-xs text-gray-400">Los precios son opcionales y pueden configurarse posteriormente.</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="md:col-span-3">
-                      <PriceCard label="Precio Detal" fieldMain="precioDetalle" fieldPaca="retailDiscountPct" valueMain={formData.precioDetalle || ''} valuePaca={formData.retailDiscountPct || ''} placeholderMain="5000" placeholderPaca="0" onChange={handleChange} errMain={errors.precioDetalle || priceErrors.precioDetalle} />
+                  {isExistingProduct ? (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="md:col-span-3">
+                          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                            Precio de compra al proveedor <span className="text-xs font-normal text-gray-400">(opcional)</span>
+                          </label>
+                          <div className={`relative max-w-md rounded-lg border bg-white transition-colors duration-200 focus-within:ring-2 ${
+                            errors.supplierPrice
+                              ? 'border-red-500 focus-within:ring-red-200 bg-red-50'
+                              : 'border-gray-300 focus-within:border-[#004D77] focus-within:ring-[#004D77]/20'
+                          }`}>
+                            <BadgeDollarSign className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 pointer-events-none ${errors.supplierPrice ? 'text-red-400' : 'text-gray-400'}`} strokeWidth={1.8} />
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              name="supplierPrice"
+                              value={formData.supplierPrice || ''}
+                              onChange={(e) => handleChange({
+                                target: {
+                                  name: 'supplierPrice',
+                                  value: e.target.value.replace(',', '.').replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'),
+                                },
+                              })}
+                              placeholder="Ej: 2500.50"
+                              className={`h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm font-medium outline-none ${errors.supplierPrice ? 'text-red-900 placeholder-red-300' : 'text-gray-700 placeholder-gray-400'}`}
+                            />
+                          </div>
+                          <ErrMsg field="supplierPrice" />
+                        </div>
+                        <div className="md:col-span-3">
+                          <PriceCard label="Precio Detal" fieldMain="precioDetalle" fieldPaca="retailDiscountPct" valueMain={formData.precioDetalle || ''} valuePaca={formData.retailDiscountPct || ''} placeholderMain="5000" placeholderPaca="0" onChange={handleChange} errMain={errors.precioDetalle || priceErrors.precioDetalle} />
+                        </div>
+                        <PriceCard label="Precio Mayorista" fieldMain="precioMayorista" fieldPaca="wholesaleDiscountPct" valueMain={formData.precioMayorista || ''} valuePaca={formData.wholesaleDiscountPct || ''} placeholderMain="4000" placeholderPaca="0" onChange={handleChange} errMain={errors.precioMayorista || priceErrors.precioMayorista} />
+                        <PriceCard label="Precio Colegas" fieldMain="precioColegas" fieldPaca="partnerDiscountPct" valueMain={formData.precioColegas || ''} valuePaca={formData.partnerDiscountPct || ''} placeholderMain="3500" placeholderPaca="0" onChange={handleChange} errMain={errors.precioColegas || priceErrors.precioColegas} />
+                        <PriceCard label="Precio X Pacas" fieldMain="precioPacas" fieldPaca="bulkDiscountPct" valueMain={formData.precioPacas || ''} valuePaca={formData.bulkDiscountPct || ''} placeholderMain="3000" placeholderPaca="0" onChange={handleChange} errMain={errors.precioPacas || priceErrors.precioPacas} />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500">
+                      Los precios y el stock se asignarán después desde el módulo de compras.
                     </div>
-                    <PriceCard label="Precio Mayorista" fieldMain="precioMayorista" fieldPaca="wholesaleDiscountPct" valueMain={formData.precioMayorista || ''} valuePaca={formData.wholesaleDiscountPct || ''} placeholderMain="4000" placeholderPaca="0" onChange={handleChange} errMain={errors.precioMayorista || priceErrors.precioMayorista} />
-                    <PriceCard label="Precio Colegas" fieldMain="precioColegas" fieldPaca="partnerDiscountPct" valueMain={formData.precioColegas || ''} valuePaca={formData.partnerDiscountPct || ''} placeholderMain="3500" placeholderPaca="0" onChange={handleChange} errMain={errors.precioColegas || priceErrors.precioColegas} />
-                    <PriceCard label="Precio X Pacas" fieldMain="precioPacas" fieldPaca="bulkDiscountPct" valueMain={formData.precioPacas || ''} valuePaca={formData.bulkDiscountPct || ''} placeholderMain="3000" placeholderPaca="0" onChange={handleChange} errMain={errors.precioPacas || priceErrors.precioPacas} />
-                  </div>
+                  )}
                 </div>
               </div>
             </div>

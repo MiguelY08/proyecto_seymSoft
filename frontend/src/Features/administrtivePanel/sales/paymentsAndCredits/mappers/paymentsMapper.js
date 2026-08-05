@@ -52,6 +52,17 @@ export const mapCustomer = (customer) => ({
   cupoDisponible:
     Number(customer.availableCredit ?? 0),
 
+  favorBalance:
+    Number(
+      customer.credit_balance ??
+      customer.creditBalance ??
+      customer.clientCreditBalance ??
+      customer.favorBalance ??
+      customer.saldoFavor ??
+      customer.saldo_a_favor ??
+      0,
+    ),
+
   deudaTotal:
     Number(customer.totalDebt ?? 0),
 
@@ -312,10 +323,10 @@ export const mapPaymentMethod = (
   method
 ) => ({
   id:
-    method.idPaymentMethod,
+    method.idPaymentMethod ?? method.id,
 
   nombre:
-    method.name,
+    method.name ?? method.nombre ?? method.namePaymentMethod,
 });
 
 export const mapPaymentMethods =

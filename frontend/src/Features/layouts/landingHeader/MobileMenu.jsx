@@ -11,7 +11,6 @@ import {
   ShoppingCart,
   SquarePen,
   Store,
-  UserCircle2,
   UserPlus,
   X,
 } from "lucide-react";
@@ -135,19 +134,25 @@ function MobileMenu({
 
         <div className="border-t border-[#e2edf5] bg-slate-50 px-4 py-4">
           <div className="mb-3 flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#004D77] text-sm font-bold text-white">
+            <div
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                user
+                  ? "bg-[#004D77] text-white"
+                  : "bg-[#004D77]/8 text-[#004D77] ring-1 ring-[#004D77]/15"
+              }`}
+            >
               {user ? (
                 getInitials(user.fullName || user.name)
               ) : (
-                <UserCircle2 size={28} />
+                <LogIn size={22} />
               )}
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-[#004D77]">
-                {user?.fullName || user?.name || "Invitado"}
+                {user?.fullName || user?.name || "Cuenta"}
               </p>
               <p className="truncate text-xs text-slate-500">
-                {user?.email || "No autenticado"}
+                {user?.email || "Inicia sesión para ver tus pedidos"}
               </p>
             </div>
           </div>

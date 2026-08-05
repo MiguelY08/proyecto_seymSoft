@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
+import logoUrl from "../../../../../assets/PMLogo_Horizontal.png";
 
 const BLUE = "004D77";
 const LIGHT_BLUE = "DCEBF3";
@@ -80,14 +81,14 @@ const styleDataRow = (row, index) => {
 
 const prepareSheet = (worksheet, title, columnCount, range, note) => {
   const lastColumn = worksheet.getColumn(columnCount).letter;
-  styleTitle(worksheet, `A1:${lastColumn}1`, title);
+  styleTitle(worksheet, `B1:${lastColumn}1`, title);
 
-  worksheet.mergeCells(`A2:${lastColumn}2`);
-  worksheet.getCell("A2").value = `Rango consultado: ${formatRange(range)}`;
-  worksheet.getCell("A2").alignment = { horizontal: "center" };
-  worksheet.getCell("A2").font = { italic: true, color: { argb: BLUE } };
+  worksheet.mergeCells(`B2:${lastColumn}2`);
+  worksheet.getCell("B2").value = `Rango consultado: ${formatRange(range)}`;
+  worksheet.getCell("B2").alignment = { horizontal: "center" };
+  worksheet.getCell("B2").font = { italic: true, color: { argb: BLUE } };
 
-  worksheet.mergeCells(`A3:${lastColumn}3`);
+  worksheet.mergeCells(`B3:${lastColumn}3`);
   worksheet.getCell("A3").value = `Fecha de exportación: ${new Date().toLocaleString("es-CO")}`;
   worksheet.getCell("A3").alignment = { horizontal: "center" };
   worksheet.getCell("A3").font = { italic: true, color: { argb: "64748B" } };
@@ -114,8 +115,65 @@ const addTable = (worksheet, headers, rows, startRowIndex = null) => {
   });
 };
 
+const prepareSheetWithLogoSpace = (worksheet, title, columnCount, range, note) => {
+  const lastColumn = worksheet.getColumn(columnCount).letter;
+  worksheet.getRow(1).height = 42;
+  worksheet.getCell("A1").value = "Papelería\nMagic";
+  worksheet.getCell("A1").alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+  worksheet.getCell("A1").font = { bold: true, size: 12, color: { argb: BLUE } };
+  styleTitle(worksheet, `B1:${lastColumn}1`, title);
+
+  worksheet.mergeCells(`B2:${lastColumn}2`);
+  worksheet.getCell("B2").value = `Rango consultado: ${formatRange(range)}`;
+  worksheet.getCell("B2").alignment = { horizontal: "center" };
+  worksheet.getCell("B2").font = { italic: true, color: { argb: BLUE } };
+
+  worksheet.mergeCells(`B3:${lastColumn}3`);
+  worksheet.getCell("B3").value = `Fecha de exportación: ${new Date().toLocaleString("es-CO")}`;
+  worksheet.getCell("B3").alignment = { horizontal: "center" };
+  worksheet.getCell("B3").font = { italic: true, color: { argb: "64748B" } };
+
+  if (note) {
+    worksheet.mergeCells(`B4:${lastColumn}4`);
+    worksheet.getCell("B4").value = note;
+    worksheet.getCell("B4").alignment = { horizontal: "center", wrapText: true };
+    worksheet.getCell("B4").font = { color: { argb: "475569" } };
+  }
+
+  worksheet.addRow([]);
+};
+
 const setAutoFilter = (worksheet, from, to) => {
   worksheet.autoFilter = { from, to };
+};
+
+const loadLogoBase64 = async () => {
+  try {
+    const response = await fetch(logoUrl);
+    const blob = await response.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = typeof reader.result === "string" ? reader.result : "";
+        resolve(result.includes(",") ? result.split(",")[1] : result);
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+};
+
+const addLogo = (worksheet, logoId) => {
+  if (!logoId) return;
+
+  worksheet.getRow(1).height = 42;
+  worksheet.addImage(logoId, {
+    tl: { col: 0.1, row: 0.08 },
+    ext: { width: 120, height: 38 },
+    editAs: "oneCell",
+  });
 };
 
 export const exportIndicatorsExcel = async (indicators, range = {}) => {
@@ -124,15 +182,20 @@ export const exportIndicatorsExcel = async (indicators, range = {}) => {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Papelería Magic";
   workbook.created = new Date();
+  const logoBase64 = await loadLogoBase64();
+  const logoId = logoBase64
+    ? workbook.addImage({ base64: logoBase64, extension: "png" })
+    : null;
 
   const summary = workbook.addWorksheet("Resumen general");
-  prepareSheet(
+  prepareSheetWithLogoSpace(
     summary,
     "RESUMEN GENERAL DEL DASHBOARD",
     4,
     range,
     "Esta hoja resume las tarjetas principales del dashboard y aclara el periodo anterior usado para comparar crecimiento."
   );
+  addLogo(summary, logoId);
   addTable(summary, ["Indicador", "Valor", "Unidad/Formato", "Explicación"], [
     [
       "Ventas del periodo",
@@ -185,13 +248,14 @@ export const exportIndicatorsExcel = async (indicators, range = {}) => {
   ];
 
   const salesPurchases = workbook.addWorksheet("Ventas vs compras");
-  prepareSheet(
+  prepareSheetWithLogoSpace(
     salesPurchases,
     "GRÁFICA: VENTAS VS COMPRAS",
     5,
     range,
     "Corresponde a la gráfica comparativa de ventas y compras del dashboard."
   );
+  addLogo(salesPurchases, logoId);
   addTable(
     salesPurchases,
     ["Periodo", "Ventas", "Compras", "Diferencia ventas - compras", "Lectura"],
@@ -219,13 +283,14 @@ export const exportIndicatorsExcel = async (indicators, range = {}) => {
   ];
 
   const salesReturns = workbook.addWorksheet("Ventas vs devoluciones");
-  prepareSheet(
+  prepareSheetWithLogoSpace(
     salesReturns,
     "GRÁFICA: VENTAS VS DEVOLUCIONES",
     5,
     range,
     "Corresponde a la gráfica comparativa de ventas y devoluciones de ventas."
   );
+  addLogo(salesReturns, logoId);
   addTable(
     salesReturns,
     ["Periodo", "Ventas", "Devoluciones", "% devoluciones sobre ventas", "Lectura"],
@@ -253,13 +318,14 @@ export const exportIndicatorsExcel = async (indicators, range = {}) => {
   ];
 
   const products = workbook.addWorksheet("Productos");
-  prepareSheet(
+  prepareSheetWithLogoSpace(
     products,
     "GRÁFICA: TOP PRODUCTOS",
     5,
     range,
     "Se separan los productos más vendidos por cantidad y por valor para que no se mezclen unidades con dinero."
   );
+  addLogo(products, logoId);
   addTable(products, ["Ranking", "Producto por cantidad", "Unidades vendidas", "Producto por valor", "Valor vendido"], []);
   const quantityProducts = indicators.topProducts?.quantity || [];
   const priceProducts = indicators.topProducts?.price || [];
@@ -287,13 +353,14 @@ export const exportIndicatorsExcel = async (indicators, range = {}) => {
   ];
 
   const categories = workbook.addWorksheet("Categorías");
-  prepareSheet(
+  prepareSheetWithLogoSpace(
     categories,
     "GRÁFICA: CATEGORÍAS DEMANDADAS",
     5,
     range,
     "Corresponde a la gráfica circular de categorías demandadas; la participación se calcula sobre las unidades del top mostrado."
   );
+  addLogo(categories, logoId);
   addTable(
     categories,
     ["Ranking", "Categoría", "Unidades vendidas", "Participación", "Lectura"],
@@ -316,13 +383,14 @@ export const exportIndicatorsExcel = async (indicators, range = {}) => {
   ];
 
   const clients = workbook.addWorksheet("Clientes");
-  prepareSheet(
+  prepareSheetWithLogoSpace(
     clients,
     "GRÁFICA: TOP CLIENTES",
     5,
     range,
     "Corresponde al top de clientes del periodo según valor comprado."
   );
+  addLogo(clients, logoId);
   const topClientsTotal = (indicators.topClients || []).reduce(
     (total, item) => total + Number(item.value || 0),
     0

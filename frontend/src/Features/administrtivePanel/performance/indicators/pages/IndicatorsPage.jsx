@@ -13,6 +13,7 @@ import useIndicators from "../hooks/useIndicators";
 import { exportIndicatorsExcel } from "../helpers/indicatorsExcel";
 
 import Spinner from "../../../../shared/spinner/Spinner.jsx";
+import ButtonComponent from "../../../../shared/ButtonComponent";
 import Permission from "../../../configuration/roles/components/Permission";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 
@@ -75,6 +76,7 @@ function DashboardFilters({
     gap: "8px",
     cursor: "pointer",
     minWidth: isMobile ? "100%" : "150px",
+    transition: "background-color 160ms ease, color 160ms ease, border-color 160ms ease",
   };
 
   return (
@@ -135,20 +137,14 @@ function DashboardFilters({
         )}
       </div>
 
-      <button
-        type="button"
+      <ButtonComponent
         onClick={onExport}
         disabled={exporting}
-        style={{
-          ...buttonStyle,
-          borderColor: "#00a84f",
-          color: "#00a84f",
-          opacity: exporting ? 0.7 : 1,
-        }}
+        className="h-[46px] min-w-full flex-1 rounded-[12px] bg-white px-3 py-0 text-green-600 border-green-600 hover:bg-green-400 flex items-center justify-center gap-2 sm:mt-[21px] sm:min-w-[190px] sm:flex-none"
       >
-        <FileSpreadsheet size={18} />
-        {exporting ? "Exportando..." : "Exportar Excel"}
-      </button>
+        <FileSpreadsheet className="w-4 h-4" />
+        <span className="hidden sm:inline">{exporting ? "Exportando..." : "Exportar Excel"}</span>
+      </ButtonComponent>
     </div>
   );
 }

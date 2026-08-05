@@ -56,9 +56,9 @@ export const getEstadoColor = (estado) => {
  */
 export const getStatusStyle = (status) => {
   const styles = {
-    'En Proceso': 'text-yellow-700 bg-yellow-100',
-    'Procesada': 'text-green-700 bg-green-100',
-    'Anulado': 'text-red-600 bg-red-100'
+    'En Proceso': 'text-yellow-700 bg-yellow-100 border-yellow-200',
+    'Procesada': 'text-green-700 bg-green-100 border-green-200',
+    'Anulado': 'text-red-600 bg-red-100 border-red-200'
   };
   return styles[status] || styles['En Proceso'];
 };

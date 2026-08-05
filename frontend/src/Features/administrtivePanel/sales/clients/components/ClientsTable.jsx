@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Info, SquarePen, Trash2, Users } from 'lucide-react';
 import ActiveToggle from './ActiveToggle';
 import { formatClientType, formatCurrency } from '../helpers/clientHelpers';
@@ -49,6 +49,14 @@ const getClientDisplayName = (client) => {
   return client.fullName;
 };
 
+const NAME_PREVIEW_LIMIT = 32;
+
+const getPreviewText = (value, limit = NAME_PREVIEW_LIMIT) => {
+  const text = String(value || '').trim();
+  if (text.length <= limit) return text;
+  return `${text.slice(0, limit).trim()}...`;
+};
+
 const TableHeader = () => (
   <thead className="sticky top-0 z-20 bg-[#004D77] text-white">
     <tr>
@@ -73,6 +81,8 @@ function ClientsTable({
   onToggleActive,
   onDelete,
 }) {
+  const [expandedNames, setExpandedNames] = useState({});
+
   if (!clients.length) {
     const isSearching = totalData > 0 || searchTerm.trim().length > 0;
     return (
@@ -110,6 +120,12 @@ function ClientsTable({
             const { isCombined, tipoTerm, numTerm } = parseSearchTerm(searchTerm);
             const recordNumber = (startIndex || 0) + index + 1;
             const isSystemClient = client.id === 999999999;
+            const displayName = isSystemClient ? 'Cliente Sistema' : getClientDisplayName(client);
+            const shouldCollapseName = !isSystemClient && String(displayName || '').length > NAME_PREVIEW_LIMIT;
+            const isNameExpanded = Boolean(expandedNames[client.id]);
+            const visibleName = shouldCollapseName && !isNameExpanded
+              ? getPreviewText(displayName)
+              : displayName;
 
             return (
               <tr key={client.id} className={`h-[38px] transition-colors duration-150 ${rowBg}`}>
@@ -128,8 +144,24 @@ function ClientsTable({
                   )}
                 </td>
 
-                <td className="overflow-hidden text-ellipsis whitespace-nowrap px-2.5 py-1.5 text-center text-xs text-gray-800 font-medium">
-                  {isSystemClient ? 'Cliente Sistema' : highlightText(getClientDisplayName(client), searchTerm)}
+                <td className="px-2.5 py-1.5 text-center text-xs font-medium text-gray-800">
+                  <div className="mx-auto min-w-0 max-w-full">
+                    <span
+                      className={`block min-w-0 ${isNameExpanded ? 'whitespace-normal break-words [overflow-wrap:anywhere]' : 'truncate'}`}
+                      title={displayName}
+                    >
+                      {isSystemClient ? 'Cliente Sistema' : highlightText(visibleName, searchTerm)}
+                    </span>
+                    {shouldCollapseName && (
+                      <button
+                        type="button"
+                        onClick={() => setExpandedNames((prev) => ({ ...prev, [client.id]: !prev[client.id] }))}
+                        className="mt-0.5 text-[10px] font-semibold text-[#004D77] transition hover:underline"
+                      >
+                        {isNameExpanded ? 'Ver menos' : 'Ver más'}
+                      </button>
+                    )}
+                  </div>
                 </td>
 
                 <td className="overflow-hidden text-ellipsis whitespace-nowrap px-2.5 py-1.5 text-center text-xs text-gray-700">

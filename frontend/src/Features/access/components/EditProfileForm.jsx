@@ -96,12 +96,10 @@ function EditProfileForm({ onClose, isModal = false }) {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [checkingEmail, setCheckingEmail] = useState(false);
-  const [checkingPhone, setCheckingPhone] = useState(false);
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const emailTimeoutRef = useRef(null);
-  const phoneTimeoutRef = useRef(null);
 
   const validateField = (name, value, currentForm = form) => {
     const v = String(value ?? "").trim();
@@ -192,7 +190,7 @@ function EditProfileForm({ onClose, isModal = false }) {
     } else {
       setErrors((prev) => ({
         ...prev,
-        [name]: validateField(name, filtered, updatedForm),
+        [name]: name === "phone" ? "" : validateField(name, filtered, updatedForm),
       }));
     }
   };
@@ -249,55 +247,6 @@ function EditProfileForm({ onClose, isModal = false }) {
     };
   }, [form.email, touched.email, user?.email]);
 
-  useEffect(() => {
-    if (!touched.phone) return undefined;
-
-    clearTimeout(phoneTimeoutRef.current);
-    const phone = normalizeDigits(form.phone, 10);
-    const currentPhone = normalizeDigits(user?.phone ?? "", 10);
-    const localError = /^\d{7,10}$/.test(phone)
-      ? ""
-      : "El telefono debe contener entre 7 y 10 digitos numericos.";
-
-    if (localError) {
-      setCheckingPhone(false);
-      setErrors((prev) => ({ ...prev, phone: localError }));
-      return undefined;
-    }
-
-    if (phone === currentPhone) {
-      setCheckingPhone(false);
-      setErrors((prev) => ({ ...prev, phone: "" }));
-      return undefined;
-    }
-
-    setCheckingPhone(true);
-    let cancelled = false;
-
-    phoneTimeoutRef.current = setTimeout(async () => {
-      try {
-        const data = await validatePhone(phone, "client");
-        if (cancelled) return;
-
-        setErrors((prev) => ({
-          ...prev,
-          phone: getPhoneValidationError(data) || "",
-        }));
-      } catch {
-        if (!cancelled) {
-          setErrors((prev) => ({ ...prev, phone: "" }));
-        }
-      } finally {
-        if (!cancelled) setCheckingPhone(false);
-      }
-    }, 500);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(phoneTimeoutRef.current);
-    };
-  }, [form.phone, touched.phone, user?.phone]);
-
   const handleNumericBeforeInput = (e) => {
     if (!e.data || /^\d+$/.test(e.data)) return;
     e.preventDefault();
@@ -325,7 +274,7 @@ function EditProfileForm({ onClose, isModal = false }) {
 
     setForm(updatedForm);
     setTouched((prev) => ({ ...prev, phone: true }));
-    setErrors((prev) => ({ ...prev, phone: validateField("phone", nextPhone, updatedForm) }));
+    setErrors((prev) => ({ ...prev, phone: "" }));
   };
 
   const handleEmailBeforeInput = (e) => {
@@ -453,10 +402,10 @@ function EditProfileForm({ onClose, isModal = false }) {
     return;
   }
 
-  if (checkingEmail || checkingPhone) {
+  if (checkingEmail) {
     showWarning(
       "Validando datos",
-      "Espera a que termine la validacion de correo y telefono"
+      "Espera a que termine la validacion de correo"
     );
 
     return;
@@ -897,9 +846,6 @@ function EditProfileForm({ onClose, isModal = false }) {
               disabled={loading}
             />
             <ErrorMsg field="phone" touched={touched} errors={errors} />
-            {checkingPhone && touched.phone && !errors.phone && (
-              <p className="mt-1 text-xs text-[#004D77]">Verificando telefono...</p>
-            )}
           </div>
 
           {canEditAddress && (
@@ -978,9 +924,9 @@ function EditProfileForm({ onClose, isModal = false }) {
       <div className="border-t border-gray-200 px-6 py-4 flex items-center gap-3 shrink-0">
         <button
           onClick={handleSubmit}
-          disabled={loading || checkingEmail || checkingPhone || hasBlockingErrors}
+          disabled={loading || checkingEmail || hasBlockingErrors}
           className={`flex-1 py-2.5 text-sm font-medium text-white bg-[#004D77] rounded-lg transition-colors cursor-pointer
-            ${loading || checkingEmail || checkingPhone || hasBlockingErrors ? "opacity-70 cursor-not-allowed" : "hover:bg-[#003A5C]"}
+            ${loading || checkingEmail || hasBlockingErrors ? "opacity-70 cursor-not-allowed" : "hover:bg-[#003A5C]"}
           `}
         >
           {loading ? "Guardando..." : "Guardar Cambios"}

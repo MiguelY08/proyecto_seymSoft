@@ -6,6 +6,8 @@ import { validateLogin } from "../validators/authValidators.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useAlert } from "../../shared/alerts/useAlert.js";
 
+const LOGIN_EMAIL_STORAGE_KEY = "login_email_draft";
+
 export default function LoginForm() {
 
   const { login, loading } = useAuth();
@@ -14,7 +16,7 @@ export default function LoginForm() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    email: "",
+    email: sessionStorage.getItem(LOGIN_EMAIL_STORAGE_KEY) || "",
     password: ""
   });
   const [errors, setErrors] = useState({});
@@ -23,6 +25,11 @@ export default function LoginForm() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     const updatedForm = { ...formData, [name]: value };
+
+    if (name === "email") {
+      sessionStorage.setItem(LOGIN_EMAIL_STORAGE_KEY, value);
+    }
+
     setFormData(updatedForm);
     setTouched((prev) => ({ ...prev, [name]: true }));
     
@@ -45,12 +52,20 @@ const handleSubmit = async (e) => {
   }
 
   try {
-    const result = await login(formData.email, formData.password);
+    const submittedEmail = formData.email;
+    sessionStorage.setItem(LOGIN_EMAIL_STORAGE_KEY, submittedEmail);
+    const result = await login(submittedEmail, formData.password);
 
     if (result.success) {
+      sessionStorage.removeItem(LOGIN_EMAIL_STORAGE_KEY);
       showSuccess("¡Bienvenido!", "Inicio de sesión exitoso");
       navigate(result.redirectTo);
     } else {
+      setFormData((prev) => ({
+        ...prev,
+        email: submittedEmail,
+        password: "",
+      }));
       setErrors({ general: result.error });
       showError("Error de autenticación", result.error);
     }

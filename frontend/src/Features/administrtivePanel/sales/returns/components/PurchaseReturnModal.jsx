@@ -139,7 +139,7 @@ function PurchaseReturnModal({
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-0 backdrop-blur-sm sm:p-4">
-      <div className="relative flex h-dvh w-full max-w-xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:rounded-2xl">
+      <div className="relative flex h-dvh w-full max-w-xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:rounded-lg">
         <LoadingOverlay show={loading} message="Generando devolución de compra..." />
         <header className="flex items-center justify-between bg-[#004D77] px-5 py-4">
           <div>
@@ -158,7 +158,7 @@ function PurchaseReturnModal({
         </header>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
-          <div className="flex gap-3 rounded-xl border border-green-200 bg-green-50 p-3">
+          <div className="flex gap-3 rounded-lg border border-green-200 bg-green-50 p-3">
             <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
             <div>
               <p className="text-sm font-semibold text-green-800">Compra vigente encontrada</p>
@@ -173,14 +173,14 @@ function PurchaseReturnModal({
           </div>
 
           {maximumQuantity < returnedQuantity && (
-            <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+            <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               Solo {maximumQuantity} de {returnedQuantity} unidad(es) tienen disponibilidad
               para esta compra.
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-4 rounded-xl border border-gray-200 p-4 text-sm sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 rounded-lg border border-gray-200 p-4 text-sm sm:grid-cols-2">
             <div className="sm:col-span-2">
               <p className="text-xs font-semibold uppercase text-gray-400">Producto</p>
               <p className="mt-1 font-semibold text-gray-800">{productData.productName}</p>
@@ -214,7 +214,7 @@ function PurchaseReturnModal({
                 }));
               }}
               onBlur={() => setTouched((current) => ({ ...current, quantity: true }))}
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition focus:border-[#004D77] ${
+              className={`w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition focus:border-[#004D77] ${
                 touched.quantity && errors.quantity ? 'border-red-500' : 'border-gray-300'
               }`}
             />
@@ -237,7 +237,7 @@ function PurchaseReturnModal({
                 }))}
                 ariaLabel="Motivo de devolución de compra"
                 placeholder="Seleccione un motivo"
-                className="rounded-xl"
+                className="rounded-lg"
                 placement="bottom"
               />
             </div>
@@ -255,7 +255,7 @@ function PurchaseReturnModal({
                 }))}
                 ariaLabel="Método de devolución de compra"
                 placeholder="Seleccione un método"
-                className="rounded-xl"
+                className="rounded-lg"
                 placement="bottom"
               />
             </div>
@@ -267,7 +267,7 @@ function PurchaseReturnModal({
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="flex-1 rounded-xl bg-gray-100 py-2.5 text-sm font-bold text-gray-600 transition hover:bg-gray-200 disabled:opacity-60"
+            className="flex-1 rounded-lg bg-gray-500 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 disabled:opacity-60"
           >
             Cancelar
           </button>
@@ -275,7 +275,7 @@ function PurchaseReturnModal({
             type="button"
             onClick={handleSubmit}
             disabled={loading || maximumQuantity < 1 || Object.keys(errors).length > 0}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#004D77] py-2.5 text-sm font-bold text-white transition hover:bg-[#003d61] disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#004D77] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             {loading ? 'Generando...' : 'Generar devolución'}

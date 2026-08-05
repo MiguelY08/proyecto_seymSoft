@@ -24,17 +24,30 @@ function ProfileMenu({
   setProfileModal,
   user,
 }) {
+  const isAuthenticated = Boolean(user);
+
   return (
     <div className="relative hidden sm:block" ref={modalRef}>
       <button
         type="button"
         onClick={() => setProfileModal(!profileModal)}
-        className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-[#004D77] text-xs font-bold text-white transition-all duration-150 hover:bg-[#003d5e]"
-        aria-label="Abrir menú de perfil"
+        className={
+          isAuthenticated
+            ? "relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-[#004D77] text-xs font-bold text-white transition-all duration-150 hover:bg-[#003d5e]"
+            : "relative inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-[#004D77] bg-white px-3 text-xs font-semibold text-[#004D77] transition-all duration-150 hover:bg-[#004D77]/8"
+        }
+        aria-label={isAuthenticated ? "Abrir menú de perfil" : "Abrir opciones de ingreso"}
         aria-expanded={profileModal}
         aria-haspopup="menu"
       >
-        {user ? getInitials(user.fullName || user.name) : <User size={15} />}
+        {isAuthenticated ? (
+          getInitials(user.fullName || user.name)
+        ) : (
+          <>
+            <LogIn size={15} />
+            <span>Ingresar</span>
+          </>
+        )}
       </button>
 
       {profileModal && (
@@ -43,26 +56,34 @@ function ProfileMenu({
           role="menu"
         >
           <div className="flex flex-col items-center gap-1 px-4 py-3 border-b border-[#e2edf5]">
-            <div className="w-11 h-11 rounded-full bg-[#004D77] flex items-center justify-center text-white font-bold text-base mb-1">
-              {user ? (
+            <div
+              className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-base mb-1 ${
+                isAuthenticated
+                  ? "bg-[#004D77] text-white"
+                  : "bg-[#004D77]/8 text-[#004D77] ring-1 ring-[#004D77]/15"
+              }`}
+            >
+              {isAuthenticated ? (
                 getInitials(user.fullName || user.name)
               ) : (
                 <UserCircle2 size={28} />
               )}
             </div>
             <p className="text-xs font-semibold text-[#004D77] text-center">
-              {user?.fullName || user?.name || "Invitado"}
+              {user?.fullName || user?.name || "Cuenta"}
             </p>
-            <p className="text-[0.68rem] text-[#004D77] break-all">
-              {user?.email || "No autenticado"}
+            <p className="text-[0.68rem] text-[#004D77] text-center break-words">
+              {user?.email || "Inicia sesión para ver tus pedidos"}
             </p>
-            <p className="text-[0.68rem] font-semibold text-slate-600 mt-0.5">
-              {roleName}
-            </p>
+            {isAuthenticated && (
+              <p className="text-[0.68rem] font-semibold text-slate-600 mt-0.5">
+                {roleName}
+              </p>
+            )}
           </div>
 
           <div className="py-1">
-            {user ? (
+            {isAuthenticated ? (
               <>
                 {role && (
                   <button
@@ -118,6 +139,7 @@ function ProfileMenu({
                 <Link
                   to="/login"
                   role="menuitem"
+                  onClick={() => setProfileModal(false)}
                   className="flex items-center gap-2.5 px-3.5 py-2 text-xs text-[#004D77] hover:bg-gray-100 transition-colors"
                 >
                   <LogIn size={16} />
@@ -126,6 +148,7 @@ function ProfileMenu({
                 <Link
                   to="/register"
                   role="menuitem"
+                  onClick={() => setProfileModal(false)}
                   className="flex items-center gap-2.5 px-3.5 py-2 text-xs text-[#004D77] hover:bg-gray-100 transition-colors"
                 >
                   <UserPlus size={16} />
