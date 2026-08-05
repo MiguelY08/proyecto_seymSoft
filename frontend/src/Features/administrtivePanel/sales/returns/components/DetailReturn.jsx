@@ -52,7 +52,7 @@ const formatReasonLabel = (reason) => {
 const buildNonConformingReason = (detail = {}, info = {}, returnNumber = '') => {
   const productReason = formatReasonLabel(detail.reason || detail.motivo || 'Producto defectuoso');
   const source = returnNumber
-    ? `devolución de venta ${returnNumber}`
+    ? `devolución de venta N.° ${returnNumber}`
     : 'devolución de venta';
   const detailReason = info.reason || 'No fue posible generar una devolución de compra.';
   return `${productReason} detectado en ${source}. ${detailReason}`;
