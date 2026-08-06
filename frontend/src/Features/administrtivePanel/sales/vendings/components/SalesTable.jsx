@@ -90,6 +90,116 @@ const getPermisos = (estado) => {
   return { puedeDevolver: false, puedeAnular: false, deshabilitado: false };
 };
 
+const MAX_SALE_RETURN_DAYS = 30;
+
+const getSaleId = (sale = {}) =>
+  sale.idSale ?? sale.idVending ?? sale.id_vending ?? sale.id ?? sale.factura ?? null;
+
+const parseDisplayDate = (value) => {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+
+  const text = String(value).trim();
+  if (text.includes('/')) {
+    const [day, month, year] = text.split('/');
+    if (day && month && year) {
+      const localDate = new Date(Number(year), Number(month) - 1, Number(day));
+      if (!Number.isNaN(localDate.getTime())) return localDate;
+    }
+  }
+
+  const directDate = new Date(text);
+  return Number.isNaN(directDate.getTime()) ? null : directDate;
+};
+
+const startOfDay = (date) => {
+  if (!date) return null;
+  const copy = new Date(date);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+};
+
+const daysSince = (value) => {
+  const date = startOfDay(parseDisplayDate(value));
+  if (!date) return null;
+
+  const today = startOfDay(new Date());
+  return Math.floor((today.getTime() - date.getTime()) / 86400000);
+};
+
+const isDeliveredSale = (sale = {}) => {
+  const statusText = normalizeStatusText(
+    sale.estadoPedido ??
+    sale.orderStatusName ??
+    sale.sales_orders?.order_statuses?.name_status ??
+    ''
+  );
+
+  return statusText === 'entregado' || Number(sale.idOrderStatus ?? sale.estadoPedidoId ?? sale.sales_orders?.id_order_status) === 3;
+};
+
+const getReturnStartDate = (sale = {}) =>
+  sale.saleReturnDeliveredAt ||
+  sale.deliveredAt ||
+  sale.deliveryDate ||
+  sale.sales_orders?.hev?.status_date ||
+  sale.saleDate ||
+  sale.fechaPago ||
+  sale.createdAt ||
+  sale.fecha;
+
+const getReturnAvailability = (sale = {}) => {
+  const saleReturnNumber = sale.saleReturnNumber || sale.returnNumber || '';
+
+  if (sale.hasSaleReturn || saleReturnNumber) {
+    return {
+      canCreate: false,
+      reason: 'Devolución ya registrada',
+      title: `Esta venta ya tiene asociada la devolución de venta ${saleReturnNumber || 'registrada'}.`,
+    };
+  }
+
+  const { puedeDevolver } = getPermisos(sale.estado);
+  if (!puedeDevolver) {
+    return {
+      canCreate: false,
+      reason: 'Devolución no permitida',
+      title: `No es posible generar una devolución sobre una venta con estado "${sale.estado}".`,
+    };
+  }
+
+  if (sale.canCreateSaleReturn === false) {
+    return {
+      canCreate: false,
+      reason: 'Devolución no permitida',
+      title: sale.saleReturnBlockReason || 'Esta venta no cumple las condiciones para devolución.',
+    };
+  }
+
+  if (!isDeliveredSale(sale)) {
+    return {
+      canCreate: false,
+      reason: 'Pedido no entregado',
+      title: 'Solo puedes generar devolución cuando el pedido esté en estado Entregado.',
+    };
+  }
+
+  if (sale.canCreateSaleReturn === true) {
+    return { canCreate: true, reason: '', title: 'Generar devolución' };
+  }
+
+  const elapsedDays = sale.saleReturnDaysSinceDelivery ?? daysSince(getReturnStartDate(sale));
+  if (elapsedDays !== null && elapsedDays > MAX_SALE_RETURN_DAYS) {
+    return {
+      canCreate: false,
+      reason: 'Plazo vencido',
+      title: `La venta superó el plazo máximo de ${MAX_SALE_RETURN_DAYS} días para devolución.`,
+    };
+  }
+
+  return { canCreate: true, reason: '', title: 'Generar devolución' };
+};
+
 function EmptyState({ isSearching }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 gap-3">
@@ -158,6 +268,14 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
   };
 
   const handleDevolucion = (row) => {
+    if (row.hasSaleReturn || row.saleReturnNumber) {
+      showError(
+        "Devolución ya registrada",
+        `Esta venta ya tiene asociada la devolución de venta ${row.saleReturnNumber || "registrada"}.`,
+      );
+      return;
+    }
+
     const { puedeDevolver } = getPermisos(row.estado);
 
     if (!puedeDevolver) {
@@ -168,7 +286,25 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
       return;
     }
 
-    navigate("/admin/sales/returns-s", { state: { sale: row } });
+    navigateWithSpinner("Preparando devolución de venta...", "/admin/sales/returns-s", {
+      state: { openReturnForm: true, sale: row },
+    });
+  };
+
+  const handleReturnClick = (row) => {
+    const availability = getReturnAvailability(row);
+
+    if (!availability.canCreate) {
+      showError(
+        availability.reason || "Devolución no permitida",
+        availability.title,
+      );
+      return;
+    }
+
+    navigateWithSpinner("Preparando devolución de venta...", "/admin/sales/returns-s", {
+      state: { openReturnForm: true, sale: { ...row, idSale: getSaleId(row) } },
+    });
   };
 
   if (data.length === 0) {
@@ -228,6 +364,16 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
             const { puedeDevolver, puedeAnular, deshabilitado } = getPermisos(
               row.estado,
             );
+            const hasAssociatedReturn = Boolean(row.hasSaleReturn || row.saleReturnNumber);
+            const returnTitle = hasAssociatedReturn
+              ? `Esta venta ya tiene asociada la devolución de venta ${row.saleReturnNumber || "registrada"}.`
+              : puedeDevolver
+                ? "Generar devolución"
+                : "Devolución no disponible";
+            const canCreateReturn = puedeDevolver && !hasAssociatedReturn;
+            const effectiveReturnAvailability = getReturnAvailability(row);
+            const effectiveReturnTitle = effectiveReturnAvailability.title || returnTitle;
+            const effectiveCanCreateReturn = effectiveReturnAvailability.canCreate;
 
             return (
               <tr
@@ -319,26 +465,23 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
                     </Permission>
 
                     <Permission permission="ventas.crear_devolucion">
-                      {deshabilitado ? (
+                      {deshabilitado || hasAssociatedReturn ? (
                         <span
                           className="text-gray-200 cursor-not-allowed"
-                          title="No disponible para ventas anuladas"
+                          title={deshabilitado ? "No disponible para ventas anuladas" : effectiveReturnTitle}
                         >
                           <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                         </span>
                       ) : (
                         <button
-                          onClick={() => handleDevolucion(row)}
+                          onClick={() => handleReturnClick(row)}
                           className={`transition ${
-                            puedeDevolver
+                            effectiveCanCreateReturn
                               ? "text-gray-400 hover:scale-110 hover:text-amber-500 cursor-pointer"
                               : "text-gray-200 cursor-not-allowed"
                           }`}
-                          title={
-                            puedeDevolver
-                              ? "Generar devolucion"
-                              : "Devolucion no disponible"
-                          }
+                          disabled={!effectiveCanCreateReturn}
+                          title={effectiveReturnTitle}
                         >
                           <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                         </button>

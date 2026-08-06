@@ -10,7 +10,7 @@ import Permission from "../../../configuration/roles/components/Permission";
 import Spinner from '../../../../shared/spinner';
 
 
-const RECORDS_PER_PAGE = 13;
+const RECORDS_PER_PAGE = 11;
 const CREDIT_EVENTS_SEEN_KEY = 'clients_seen_credit_balance_events';
 const SEARCH_FETCH_LIMIT = 10000;
 const SEARCH_DEBOUNCE_MS = 350;
@@ -353,6 +353,7 @@ const handleDelete = async (client) => {
   };
 
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
+  const shouldBalanceTable = clients.length === RECORDS_PER_PAGE;
 
   if (loading && clients.length === 0) {
     return (
@@ -362,7 +363,7 @@ const handleDelete = async (client) => {
 
   return (
     <Permission permission="clientes.ver">
-      <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-2 overflow-y-auto overflow-x-hidden p-2.5 sm:overflow-hidden sm:p-3">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto p-2.5 sm:p-3.5 md:overflow-hidden">
         <ClientsToolbar
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
@@ -371,18 +372,35 @@ const handleDelete = async (client) => {
           onNewClick={handleNewClient}
         />
 
-        <div className="w-full min-w-0 shrink-0 overflow-hidden rounded-xl bg-white shadow-md">
-          <ClientsTable
-            clients={clients}
-            startIndex={startIndex}
-            searchTerm={searchTerm}
-            totalData={totalRecords}
-            onInfo={handleInfo}
-            onEdit={handleEdit}
-            onToggleActive={handleToggleActive}
-            onDelete={handleDelete}
-          />
-        </div>
+        {shouldBalanceTable ? (
+          <div className="hidden min-h-0 flex-1 md:flex md:flex-col md:justify-center">
+            <div className="w-full min-w-0 shrink-0 overflow-hidden rounded-xl bg-white shadow-md">
+              <ClientsTable
+                clients={clients}
+                startIndex={startIndex}
+                searchTerm={searchTerm}
+                totalData={totalRecords}
+                onInfo={handleInfo}
+                onEdit={handleEdit}
+                onToggleActive={handleToggleActive}
+                onDelete={handleDelete}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="w-full min-w-0 shrink-0 overflow-hidden rounded-xl bg-white shadow-md">
+            <ClientsTable
+              clients={clients}
+              startIndex={startIndex}
+              searchTerm={searchTerm}
+              totalData={totalRecords}
+              onInfo={handleInfo}
+              onEdit={handleEdit}
+              onToggleActive={handleToggleActive}
+              onDelete={handleDelete}
+            />
+          </div>
+        )}
 
         {totalRecords > 0 && (
           <div className="shrink-0">

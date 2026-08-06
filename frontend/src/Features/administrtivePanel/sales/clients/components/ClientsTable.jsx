@@ -101,7 +101,7 @@ function ClientsTable({
   }
 
   return (
-    <div className="max-h-none min-w-0 w-full overflow-x-scroll overflow-y-hidden overscroll-x-contain rounded-xl pb-2 sm:max-h-[calc(100vh-170px)] sm:overflow-auto sm:pb-0 [-webkit-overflow-scrolling:touch]">
+    <div className="min-w-0 w-full overflow-x-scroll overflow-y-hidden overscroll-x-contain rounded-xl pb-2 sm:overflow-x-auto sm:overflow-y-hidden sm:pb-0 [-webkit-overflow-scrolling:touch]">
       <table className="w-full min-w-[940px] table-fixed">
         <colgroup>
           <col className="w-[6%]" />

@@ -7,10 +7,12 @@ import SalesMetricsCards from '../components/SalesMetricsCards';
 import SalesTable      from '../components/SalesTable';
 import PaginationAdmin from '../../../../shared/PaginationAdmin';
 import { SalesServices } from '../services/salesServices'; // ✅ importación corregida
+import { getAvailableInvoices, getReturns } from '../../returns/data/returnsService';
 import { filterSales } from '../helpers/salesHelpers';
 import Spinner from '../../../../shared/spinner';
 const RECORDS_PER_PAGE = 11;
 const SALES_FETCH_LIMIT = 100;
+const RETURNS_FETCH_LIMIT = 100;
 
 const getSalesServiceByType = (type) => {
   const servicesByType = {
@@ -45,6 +47,112 @@ const getSaleDateValue = (sale = {}) => {
   }
 
   return null;
+};
+
+const getSaleReturnSaleId = (saleReturn = {}) =>
+  saleReturn.idSale ??
+  saleReturn.id_sale ??
+  saleReturn.saleId ??
+  saleReturn.idVending ??
+  saleReturn.id_vending ??
+  saleReturn.sale?.idSale ??
+  saleReturn.sale?.id ??
+  saleReturn.vending?.idSale ??
+  saleReturn.vending?.id ??
+  null;
+
+const getSaleReturnNumber = (saleReturn = {}) =>
+  saleReturn.returnNumber ||
+  saleReturn.numeroDevolucion ||
+  saleReturn.code ||
+  (saleReturn.id ? `DEV-${saleReturn.id}` : '');
+
+const buildSalesReturnIndex = (saleReturns = []) => {
+  const index = new Map();
+
+  saleReturns.forEach((saleReturn) => {
+    const saleId = getSaleReturnSaleId(saleReturn);
+    if (!saleId) return;
+
+    index.set(String(saleId), {
+      id: saleReturn.id || saleReturn.id_sales_return,
+      returnNumber: getSaleReturnNumber(saleReturn),
+      status: saleReturn.status || saleReturn.estado || '',
+    });
+  });
+
+  return index;
+};
+
+const fetchSalesReturnIndex = async () => {
+  const firstPage = await getReturns({ page: 1, limit: RETURNS_FETCH_LIMIT });
+  const allReturns = [...(firstPage?.data ?? [])];
+  const totalPages = firstPage?.pagination?.totalPages ?? 1;
+
+  for (let page = 2; page <= totalPages; page += 1) {
+    const response = await getReturns({ page, limit: RETURNS_FETCH_LIMIT });
+    allReturns.push(...(response?.data ?? []));
+  }
+
+  return buildSalesReturnIndex(allReturns);
+};
+
+const buildSalesReturnAvailabilityIndex = (invoices = []) => {
+  const index = new Map();
+
+  invoices.forEach((invoice) => {
+    const saleId = invoice?.idSale ?? invoice?.id_sale ?? invoice?.id ?? invoice?.invoiceNumber;
+    if (!saleId) return;
+
+    index.set(String(saleId), {
+      hasReturn: Boolean(invoice.hasReturn),
+      returnNumber: invoice.returnNumber || invoice.numeroDevolucion || '',
+      canReturn: invoice.canReturn === true,
+      returnBlockReason: invoice.returnBlockReason || '',
+      deliveredAt: invoice.deliveredAt || null,
+      daysSinceDelivery: invoice.daysSinceDelivery ?? null,
+      remainingReturnDays: invoice.remainingReturnDays ?? null,
+      isAnnulled: Boolean(invoice.isAnnulled),
+    });
+  });
+
+  return index;
+};
+
+const fetchSalesReturnAvailabilityIndex = async () => {
+  const invoices = await getAvailableInvoices('');
+  return buildSalesReturnAvailabilityIndex(Array.isArray(invoices) ? invoices : []);
+};
+
+const attachReturnInfoToSale = (sale, returnsBySaleId, returnAvailabilityBySaleId) => {
+  const saleId = sale?.idSale ?? sale?.idVending ?? sale?.id_vending ?? sale?.id;
+  const associatedReturn = saleId ? returnsBySaleId.get(String(saleId)) : null;
+  const availability = saleId ? returnAvailabilityBySaleId.get(String(saleId)) : null;
+  const hasSaleReturn = Boolean(
+    associatedReturn ||
+    availability?.hasReturn ||
+    sale?.hasSaleReturn ||
+    sale?.hasReturn
+  );
+
+  return {
+    ...sale,
+    hasSaleReturn,
+    saleReturnId: associatedReturn?.id ?? sale?.saleReturnId,
+    saleReturnNumber:
+      associatedReturn?.returnNumber ||
+      availability?.returnNumber ||
+      sale?.saleReturnNumber ||
+      sale?.returnNumber ||
+      '',
+    saleReturnStatus: associatedReturn?.status ?? sale?.saleReturnStatus,
+    canCreateSaleReturn: availability?.canReturn,
+    saleReturnBlockReason: availability?.returnBlockReason || '',
+    saleReturnDeliveredAt: availability?.deliveredAt || null,
+    saleReturnDaysSinceDelivery: availability?.daysSinceDelivery ?? null,
+    saleReturnRemainingDays: availability?.remainingReturnDays ?? null,
+    saleReturnIsAnnulled: availability?.isAnnulled ?? false,
+  };
 };
 
 /**
@@ -91,7 +199,11 @@ function Sales() {
         page,
         limit: SALES_FETCH_LIMIT,
       });
-      const firstPage = await service(getParams(1));
+      const [firstPage, returnsBySaleId, returnAvailabilityBySaleId] = await Promise.all([
+        service(getParams(1)),
+        fetchSalesReturnIndex().catch(() => new Map()),
+        fetchSalesReturnAvailabilityIndex().catch(() => new Map()),
+      ]);
       const allSales = [...(firstPage.sales ?? [])];
       const totalPages = firstPage.pagination?.totalPages ?? 1;
 
@@ -100,7 +212,7 @@ function Sales() {
         allSales.push(...(response.sales ?? []));
       }
 
-      setSales(allSales);
+      setSales(allSales.map((sale) => attachReturnInfoToSale(sale, returnsBySaleId, returnAvailabilityBySaleId)));
     } catch (error) {
       console.error('Error fetching sales:', error);
       setSales([]);
