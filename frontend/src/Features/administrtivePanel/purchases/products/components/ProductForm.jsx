@@ -1,4 +1,4 @@
-﻿import {
+import {
   ArrowLeft,
   BadgeDollarSign,
   Barcode,
@@ -23,12 +23,8 @@ import ProductsService from '../services/productsServices';
 import CategorySelector from '../components/CategorySelector';
 import FormSelect from '../../../../shared/FormSelect';
 import {
-  ScannerStatus,
   findProductBarcodeOwner,
   getDuplicateBarcodesInValues,
-  normalizeBarcode,
-  useBarcodeScanner,
-  ScannerInput,
 } from '../../../../shared/scanner';
 
 function PriceCard({ label, fieldMain, fieldPaca, valueMain, valuePaca, placeholderMain, placeholderPaca, onChange, errMain, errPaca }) {
@@ -138,9 +134,7 @@ function ProductForm({
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
   const [selectedSubcategoryIds, setSelectedSubcategoryIds] = useState([]);
   const [expandedCategoryIds, setExpandedCategoryIds] = useState({});
-  const [activeBarcodeTarget, setActiveBarcodeTarget] = useState({ type: 'main', index: null });
   const [productType, setProductType] = useState('existing');
-  const [scannerMessage, setScannerMessage] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const imageInputRef = useRef(null);
   const unitMeasureOptions = [
@@ -226,8 +220,6 @@ function ProductForm({
       stockPrincipal: producto.barcodes?.[0]?.stock || 0,
       codsBarrasExtra: producto.barcodes?.slice(1).map((b) => ({ id: b.id, cod: b.barcode, stock: b.stock })) || [],
     });
-    setActiveBarcodeTarget({ type: 'main', index: null });
-    setScannerMessage(null);
     setErrors({});
     setPriceErrors({});
   }, [isEditMode, producto]);
@@ -263,13 +255,7 @@ function ProductForm({
     ...(data.codsBarrasExtra || []).map((item) => item?.cod),
   ];
 
-  const getFormBarcodeValuesWithoutActiveTarget = () => {
-    const values = getFormBarcodeValues();
-    if (activeBarcodeTarget.type === 'main') return values.slice(1);
 
-    const extraPosition = activeBarcodeTarget.index + 1;
-    return values.filter((_, index) => index !== extraPosition);
-  };
 
   const getBarcodeConflictMessage = (code) => {
     const owner = findProductBarcodeOwner(existingProducts, code, {
@@ -430,8 +416,6 @@ function ProductForm({
   };
 
   const handleAddCodBarras = () => {
-    const nextIndex = (formData.codsBarrasExtra || []).length;
-    setActiveBarcodeTarget({ type: 'extra', index: nextIndex });
     setFormData((prev) => ({ ...prev, codsBarrasExtra: [...(prev.codsBarrasExtra || []), { cod: '', stock: '' }] }));
   };
 
@@ -443,58 +427,7 @@ function ProductForm({
     });
   };
 
-  const applyScannedBarcode = (code) => {
-    const normalizedCode = normalizeBarcode(code, { numericOnly: true });
-    const internalDuplicate = getFormBarcodeValuesWithoutActiveTarget()
-      .map((value) => normalizeBarcode(value))
-      .filter(Boolean)
-      .includes(normalizedCode);
-    const conflictMessage = getBarcodeConflictMessage(normalizedCode);
 
-    if (conflictMessage || internalDuplicate) {
-      const message = conflictMessage || 'Este codigo ya esta en el formulario.';
-      setScannerMessage({ type: 'error', message });
-      if (activeBarcodeTarget.type === 'main') {
-        setErrors((prev) => ({ ...prev, codBarras: message }));
-      } else {
-        setErrors((prev) => ({ ...prev, codsBarrasExtra: message }));
-      }
-      return;
-    }
-
-    if (activeBarcodeTarget.type === 'extra' && formData.codsBarrasExtra?.[activeBarcodeTarget.index]) {
-      handleCodBarrasExtraChange(activeBarcodeTarget.index, 'cod', normalizedCode);
-      if (errors.codsBarrasExtra) setErrors((prev) => ({ ...prev, codsBarrasExtra: undefined }));
-      setScannerMessage({ type: 'success', message: `Codigo extra ${activeBarcodeTarget.index + 2}: ${normalizedCode}` });
-      return;
-    }
-
-    setFormData((prev) => ({ ...prev, codBarras: normalizedCode }));
-    if (errors.codBarras) setErrors((prev) => ({ ...prev, codBarras: undefined }));
-    setActiveBarcodeTarget({ type: 'main', index: null });
-    setScannerMessage({ type: 'success', message: `Codigo principal: ${normalizedCode}` });
-  };
-
-  useBarcodeScanner({
-    enabled: isOpen && !isSubmitting,
-    numericOnly: true,
-    minLength: 6,
-    maxLength: 20,
-    scannerFields: ['product-barcode-main', 'product-barcode-extra'],
-    duplicateDelayMs: 800,
-    preventTerminatorDefault: true,
-    onScan: ({ code }) => applyScannedBarcode(code),
-  });
-
-  useEffect(() => {
-    if (!scannerMessage) return undefined;
-
-    const timeout = window.setTimeout(() => {
-      setScannerMessage(null);
-    }, 2200);
-
-    return () => window.clearTimeout(timeout);
-  }, [scannerMessage]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -702,15 +635,13 @@ function ProductForm({
                 }`}>
                   <div className="relative min-w-0">
                     <Barcode className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                    <ScannerInput
+                    <input
                       type="text"
                       name="codBarras"
                       value={formData.codBarras || ''}
                       onChange={handleChange}
-                      onFocus={() => setActiveBarcodeTarget({ type: 'main', index: null })}
-                      scannerField="product-barcode-main"
                       placeholder="Escanea o escribe el código"
-                      inputClassName="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400"
+                      className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400"
                     />
                   </div>
                   {isExistingProduct ? (
@@ -736,7 +667,6 @@ function ProductForm({
                 </div>
                 <ErrMsg field="codBarras" />
                 <ErrMsg field="stockPrincipal" />
-                <ScannerStatus status={scannerMessage} className="mt-1" />
               </div>
               <div className="md:col-span-3">
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">IVA %</label>
@@ -813,14 +743,12 @@ function ProductForm({
                         <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_110px] overflow-hidden rounded-lg border border-gray-300 bg-white transition-colors duration-200 focus-within:border-[#004D77] focus-within:ring-2 focus-within:ring-[#004D77]/20">
                           <div className="relative min-w-0">
                             <Barcode className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                            <ScannerInput
+                            <input
                               type="text"
                               value={item.cod || ''}
                               onChange={(e) => handleCodBarrasExtraChange(i, 'cod', e.target.value)}
-                              onFocus={() => setActiveBarcodeTarget({ type: 'extra', index: i })}
-                              scannerField="product-barcode-extra"
                               placeholder={`Código de barras ${i + 2}`}
-                              inputClassName="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400"
+                              className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400"
                             />
                           </div>
                           {isExistingProduct ? (
@@ -1003,210 +931,7 @@ function ProductForm({
           </div>
           </div>
 
-          {false && (<>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gray-50">
-                <div className="w-7 h-7 rounded-md bg-[#004D77] flex items-center justify-center shrink-0">
-                  <FileText className="w-4 h-4 text-white" strokeWidth={2} />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">Información general</p>
-                  <p className="text-xs text-gray-400">Imágenes, categorías y descripción</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-5">
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-sm font-medium text-gray-700">
-                      {isEditMode ? 'Imagenes' : 'Imagen'} {!isEditMode && <span className="text-red-500">*</span>}
-                    </label>
-                    <span className="text-[10px] font-medium text-gray-500">
-                      {imagenesActuales.length + imagenesNuevas.length} {isEditMode ? 'visible' : 'seleccionada'}
-                      {imagenesActuales.length + imagenesNuevas.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  <input ref={imageInputRef} type="file" accept="image/*" multiple onChange={handleImagenChange} className="hidden" />
-                  <div className={`border rounded-lg p-3 min-h-[200px] flex flex-col gap-3 transition-colors duration-200 ${
-                    errors.imagen ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-white'
-                  }`}>
-                    <button type="button" onClick={() => imageInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-[#004D77] border border-[#004D77] bg-white rounded-lg hover:bg-[#004D77] hover:text-white transition-colors duration-200">
-                      <ImagePlus className="w-4 h-4" />
-                      {isEditMode ? 'Agregar imagenes' : 'Seleccionar imagenes'}
-                    </button>
 
-                    {imagenesActuales.length > 0 && (
-                      <div>
-                        <p className="mb-1 text-[10px] font-semibold uppercase text-gray-500">Actuales</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          {imagenesActuales.map((img) => (
-                            <img key={img.id || img.url} src={img.url} alt="Producto" className="w-full h-20 object-cover rounded-lg border border-gray-200" />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {imagenesNuevas.length > 0 && (
-                      <div>
-                        {isEditMode && (
-                          <p className="mb-1 text-[10px] font-semibold uppercase text-gray-500">Nuevas por guardar</p>
-                        )}
-                        <div className="grid grid-cols-2 gap-2">
-                          {imagenesNuevas.map((file, idx) => (
-                            <div key={`${file.name}-${idx}`} className="relative rounded-lg border border-gray-200 overflow-hidden">
-                              <img src={URL.createObjectURL(file)} alt={`Preview ${idx + 1}`} className={`w-full object-cover ${isEditMode ? 'h-20' : 'h-24'}`} />
-                              <button type="button" onClick={() => setImagenesNuevas((prev) => prev.filter((_, i) => i !== idx))} title={isEditMode ? 'Quitar imagen nueva' : 'Quitar imagen'} className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {imagenesActuales.length === 0 && imagenesNuevas.length === 0 && (
-                      <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
-                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${errors.imagen ? 'bg-red-100' : 'bg-gray-100'}`}>
-                          <Upload className={`w-6 h-6 ${errors.imagen ? 'text-red-400' : 'text-gray-400'}`} />
-                        </div>
-                        <p className="text-xs font-medium text-gray-600">
-                          {isEditMode ? 'No hay imagenes asociadas' : 'Aun no hay imagenes cargadas'}
-                        </p>
-                        <p className="text-[10px] text-gray-400">
-                          {isEditMode ? 'Agrega nuevas imagenes con el boton superior.' : 'Usa el boton superior para agregarlas.'}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  <ErrMsg field="imagen" />
-                </div>
-
-                <CategorySelector
-                  categories={categories}
-                  subcategories={subcategories}
-                  selectedCategoryIds={selectedCategoryIds}
-                  selectedSubcategoryIds={selectedSubcategoryIds}
-                  expandedCategoryIds={expandedCategoryIds}
-                  onCategoryChange={handleCatChange}
-                  onSubcategoryChange={handleSubCatChange}
-                  onToggleExpand={handleToggleCategoryExpand}
-                  error={errors.categorias}
-                  idPrefix={`${mode}-product`}
-                />
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Descripcion <span className="text-gray-400 font-normal">(opcional)</span></label>
-                  <textarea name="descripcion" value={formData.descripcion || ''} onChange={handleChange} placeholder="Descripcion del producto..." className="w-full px-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 resize-none text-sm text-gray-700 placeholder-gray-400 h-[200px] transition-colors duration-200" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gray-50">
-                <div className="w-7 h-7 rounded-md bg-[#004D77] flex items-center justify-center shrink-0">
-                  <Package className="w-4 h-4 text-white" strokeWidth={2} />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">Información del producto</p>
-                  <p className="text-xs text-gray-400">Identificación, inventario y unidad</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 p-5">
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre <span className="text-red-500">*</span></label>
-                  <input type="text" name="nombre" value={formData.nombre || ''} onChange={handleChange} placeholder="Ej: Lapicero Bic Azul" className={inputCls('nombre')} />
-                  <ErrMsg field="nombre" />
-                </div>
-                <div className="col-span-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-sm font-medium text-gray-700">Codigo(s) de barras <span className="text-red-500">*</span></label>
-                    <button type="button" onClick={handleAddCodBarras} className="flex items-center gap-1 text-sm font-medium text-[#004D77] px-2 py-1 rounded-md hover:bg-[#004D77]/10 transition-colors duration-200 cursor-pointer">
-                      <Plus className="w-3 h-3" />
-                      Agregar codigo
-                    </button>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <div className="flex-1">
-                      <input type="text" name="codBarras" value={formData.codBarras || ''} onChange={handleChange} onFocus={() => setActiveBarcodeTarget({ type: 'main', index: null })} data-scanner-field="product-barcode-main" placeholder="Codigo de barras principal" className={inputCls('codBarras')} />
-                      <ErrMsg field="codBarras" />
-                    </div>
-                    <div className="w-24 flex-shrink-0">
-                      <input type="text" inputMode="numeric" value={formData.stockPrincipal ?? ''} onChange={(e) => setFormData((prev) => ({ ...prev, stockPrincipal: numeric(e.target.value) }))} onKeyDown={block} placeholder="Stock" className={inputCls('stockPrincipal')} />
-                      <ErrMsg field="stockPrincipal" />
-                    </div>
-                  </div>
-                  {(formData.codsBarrasExtra || []).map((item, i) => (
-                    <div key={i} className="flex items-center gap-2 mt-2">
-                      <ScannerInput
-                        type="text"
-                        value={item.cod || ''}
-                        onChange={(e) => handleCodBarrasExtraChange(i, 'cod', e.target.value)}
-                        onFocus={() => setActiveBarcodeTarget({ type: 'extra', index: i })}
-                        scannerField="product-barcode-extra"
-                        placeholder={`Codigo de barras ${i + 2}`}
-                        inputClassName="flex-1 px-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 text-sm transition-colors duration-200"
-                      />
-                      <input type="text" inputMode="numeric" value={item.stock ?? ''} onChange={(e) => handleCodBarrasExtraChange(i, 'stock', numeric(e.target.value))} onKeyDown={block} placeholder="Stock" className="w-24 flex-shrink-0 px-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 text-sm transition-colors duration-200" />
-                      <button type="button" onClick={() => setFormData((prev) => ({ ...prev, codsBarrasExtra: (prev.codsBarrasExtra || []).filter((_, idx) => idx !== i) }))} className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-md bg-red-100 text-red-500 hover:bg-red-200 transition-colors cursor-pointer">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                  <ErrMsg field="codsBarrasExtra" />
-                  <ScannerStatus status={scannerMessage} className="mt-1" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Referencia <span className="text-red-500">*</span></label>
-                  <input type="text" name="referencia" value={formData.referencia || ''} onChange={handleChange} placeholder="REF-001" className={inputCls('referencia')} />
-                  <ErrMsg field="referencia" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Stock general <span className="ml-1 text-xs text-gray-400 font-normal">(calculado)</span></label>
-                  <input type="text" readOnly value={calcStock(formData)} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 text-sm cursor-not-allowed font-semibold" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Cantidad x paca</label>
-                  <input type="text" inputMode="numeric" name="cantidadXPaca" value={formData.cantidadXPaca || ''} onChange={(e) => setFormData((prev) => ({ ...prev, cantidadXPaca: numeric(e.target.value) }))} onKeyDown={block} placeholder="12" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 text-sm transition-colors duration-200" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Unidad de medida <span className="text-red-500">*</span></label>
-                  <FormSelect
-                    value={formData.idUnitMeasure}
-                    options={unitMeasureOptions}
-                    onChange={(value) => handleChange({ target: { name: 'idUnitMeasure', value } })}
-                    icon={Ruler}
-                    error={errors.idUnitMeasure}
-                    placeholder="Selecciona una unidad"
-                    ariaLabel="Unidad de medida"
-                  />
-                  <ErrMsg field="idUnitMeasure" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">IVA %</label>
-                  <input type="number" name="ivaPercentage" value={formData.ivaPercentage} onChange={handleChange} min="0" max="100" placeholder="19" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 text-sm transition-colors duration-200" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gray-50">
-              <div className="w-7 h-7 rounded-md bg-[#004D77] flex items-center justify-center shrink-0">
-                <BadgeDollarSign className="w-4 h-4 text-white" strokeWidth={2} />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-800">Configuración de precios</p>
-                <p className="text-xs text-gray-400">Precios opcionales y descuentos</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-5">
-              <PriceCard label="Precio Detal" fieldMain="precioDetalle" fieldPaca="retailDiscountPct" valueMain={formData.precioDetalle || ''} valuePaca={formData.retailDiscountPct || ''} placeholderMain="5000" placeholderPaca="0" onChange={handleChange} errMain={errors.precioDetalle || priceErrors.precioDetalle} />
-              <PriceCard label="Precio Mayorista" fieldMain="precioMayorista" fieldPaca="wholesaleDiscountPct" valueMain={formData.precioMayorista || ''} valuePaca={formData.wholesaleDiscountPct || ''} placeholderMain="4000" placeholderPaca="0" onChange={handleChange} errMain={errors.precioMayorista || priceErrors.precioMayorista} />
-              <PriceCard label="Precio Colegas" fieldMain="precioColegas" fieldPaca="partnerDiscountPct" valueMain={formData.precioColegas || ''} valuePaca={formData.partnerDiscountPct || ''} placeholderMain="3500" placeholderPaca="0" onChange={handleChange} errMain={errors.precioColegas || priceErrors.precioColegas} />
-              <PriceCard label="Precio X Pacas" fieldMain="precioPacas" fieldPaca="bulkDiscountPct" valueMain={formData.precioPacas || ''} valuePaca={formData.bulkDiscountPct || ''} placeholderMain="3000" placeholderPaca="0" onChange={handleChange} errMain={errors.precioPacas || priceErrors.precioPacas} />
-            </div>
-          </div>
-          </>)}
 
           <div className="flex justify-end gap-3 pt-1 mt-auto">
             <button type="button" onClick={onClose} className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer">

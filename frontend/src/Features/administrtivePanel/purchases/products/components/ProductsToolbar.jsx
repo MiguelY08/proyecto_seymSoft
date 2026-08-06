@@ -50,7 +50,6 @@ function ProductsToolbar({
           />
           <input
             type="text"
-            data-scanner-field="product-search"
             placeholder="Buscar producto por nombre, código o referencia..."
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}

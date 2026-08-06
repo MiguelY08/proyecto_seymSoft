@@ -23,10 +23,7 @@ import Spinner from "../../../../shared/spinner";
 import ProductsService from "../services/productsServices";
 import { HighlightText } from "../helpers/productsHelpers";
 import {
-  findProductByBarcode,
-  normalizeBarcode,
   productMatchesBarcodeSearch,
-  useBarcodeScanner,
 } from "../../../../shared/scanner";
 
 const RECORDS_PER_PAGE = 11;
@@ -140,40 +137,7 @@ function Products() {
     setFilterSubcategory("all");
   }, [filterCategory]);
 
-  const handleScannedProductSearch = ({ code, target }) => {
-    const scannedCode = normalizeBarcode(code, { numericOnly: true });
-    const inputCode = normalizeBarcode(target?.value, { numericOnly: true });
-    const product =
-      findProductByBarcode(data, scannedCode) ||
-      findProductByBarcode(data, inputCode);
-    const searchCode = product ? "" : inputCode || scannedCode;
 
-    if (!product) {
-      setSearch(searchCode);
-      showError(
-        "Codigo no registrado",
-        `No se encontro ningun producto con el codigo de barras ${searchCode}.`
-      );
-      return;
-    }
-
-    setSearch("");
-    handleVerDetalles(product);
-  };
-
-  useBarcodeScanner({
-    enabled: canView && canViewInfo && data.length > 0 && !showModal,
-    numericOnly: true,
-    minLength: 6,
-    maxLength: 20,
-    scannerFields: ["product-search"],
-    duplicateDelayMs: 800,
-    preventTerminatorDefault: true,
-    onScan: ({ code, scannerField, target }) => {
-      if (scannerField !== "product-search") return;
-      handleScannedProductSearch({ code, target });
-    },
-  });
 
   // Extraer categorías únicas
   const categories = useMemo(() => {
