@@ -40,13 +40,24 @@ export default function LoginPage() {
 
     }
 
-    if (
+     if (
       error === "google_auth_failed"
     ) {
 
       showError(
         "Error",
         "No se pudo iniciar sesión con Google."
+      );
+
+    }
+
+    if (
+      error === "session_timeout"
+    ) {
+
+      showError(
+        "Sesión finalizada",
+        "La sesión expiró por inactividad"
       );
 
     }

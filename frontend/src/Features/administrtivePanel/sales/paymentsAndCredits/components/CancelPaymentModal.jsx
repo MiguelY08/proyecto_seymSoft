@@ -99,6 +99,12 @@ export default function CancelPaymentModal({
     return "";
   };
 
+  const validatePassword = (value) => {
+    const trimmed = value.trim();
+    if (!trimmed) return "La contraseña es obligatoria.";
+    return "";
+  };
+
   const handleReasonChange = (e) => {
     const value = e.target.value;
     setReason(value);
@@ -110,19 +116,30 @@ export default function CancelPaymentModal({
     setErrors((prev) => ({ ...prev, password: "" }));
   };
 
+  const trimmedReason = reason.trim();
+  const reasonError = validateReason(trimmedReason);
+  const passwordError = validatePassword(password);
+  const canSubmit =
+    !isSubmitting && !reasonError && !passwordError && trimmedReason.length > 0;
+
   const handleSubmit = async () => {
     if (isSubmitting || submitLockRef.current) return;
 
     submitLockRef.current = true;
 
-    const reasonError = validateReason(reason);
+    const currentReasonError = validateReason(reason);
+    const currentPasswordError = validatePassword(password);
 
-    if (reasonError) {
+    if (currentReasonError || currentPasswordError) {
       setErrors({
-        reason: reasonError,
+        reason: currentReasonError,
+        password: currentPasswordError,
       });
 
-      await showWarning("Motivo inválido", reasonError);
+      await showWarning(
+        "Formulario incompleto",
+        currentReasonError || currentPasswordError,
+      );
 
       submitLockRef.current = false;
 
@@ -182,23 +199,23 @@ export default function CancelPaymentModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-2 sm:p-4 z-50">
-      <div className="bg-white w-full max-w-md max-h-[94vh] rounded-2xl shadow-xl font-lexend overflow-hidden flex flex-col">
+      <div className="bg-white w-full max-w-160 max-h-[95vh] rounded-2xl shadow-xl font-lexend overflow-hidden flex flex-col">
         {/* HEADER */}
-        <div className="bg-[#0E3B5F] text-white px-4 sm:px-6 py-3 sm:py-4 rounded-t-2xl flex justify-between items-center gap-3">
+        <div className="bg-[#0E3B5F] text-white px-4 sm:px-5 py-3 sm:py-4 rounded-t-2xl flex justify-between items-center gap-3">
           <h2 className="text-base sm:text-lg font-semibold">Anular Abono</h2>
           <button onClick={onClose} className="cursor-pointer">
             ✕
           </button>
         </div>
 
-        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto">
-          <p className="text-sm text-gray-600">
+        <div className="flex-1 min-h-0 p-3 sm:p-4 md:p-5 flex flex-col gap-3 sm:gap-4 overflow-hidden">
+          <p className="text-sm text-gray-600 leading-relaxed">
             Esta acción marcará el abono como anulado. El saldo de la factura
             será recalculado automáticamente.
           </p>
 
           {/* DATOS DEL ABONO */}
-          <div className="bg-gray-100 p-3 sm:p-4 rounded-xl text-sm space-y-2 break-words">
+          <div className="bg-gray-100 p-3 sm:p-4 rounded-xl text-sm space-y-1.5 wrap-break-word">
             <p>
               <strong>Nro Abono:</strong> #
               {payment?.displayId ?? payment?.nroAbono ?? "-"}
@@ -240,56 +257,62 @@ export default function CancelPaymentModal({
             )}
           </div>
 
-          {/* MOTIVO */}
-          <div>
-            <label className="text-sm font-medium">Motivo de anulación</label>
-            <textarea
-              value={reason}
-              onChange={handleReasonChange}
-              placeholder="Escriba el motivo..."
-              className={`w-full mt-1 p-3 rounded-lg border outline-none transition ${
-                errors.reason
-                  ? "border-red-500 focus:ring-2 focus:ring-red-500"
-                  : "border-gray-300 focus:ring-2 focus:ring-blue-500"
-              }`}
-            />
-            {errors.reason && (
-              <p className="text-red-500 text-xs mt-1">{errors.reason}</p>
-            )}
-          </div>
-
-          {/* PASSWORD ADMIN */}
-          <div>
-            <label className="text-sm font-medium">
-              Contraseña del administrador
-            </label>
-            <div className="relative mt-1">
-              <input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={handlePasswordChange}
-                placeholder="Ingrese contraseña"
-                className={`w-full p-3 pr-10 rounded-lg border outline-none transition ${
-                  errors.password
+          <div className="flex flex-col gap-3">
+            <div>
+              <label className="text-sm font-medium">
+                <span className="mr-1 text-red-500">*</span>
+                Motivo de anulación
+                <span className="ml-1 text-xs text-gray-500">(requerido)</span>
+              </label>
+              <textarea
+                value={reason}
+                onChange={handleReasonChange}
+                placeholder="Escriba el motivo..."
+                className={`w-full mt-1 p-3 min-h-24 rounded-lg border outline-none transition ${
+                  errors.reason
                     ? "border-red-500 focus:ring-2 focus:ring-red-500"
                     : "border-gray-300 focus:ring-2 focus:ring-blue-500"
                 }`}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-gray-500 hover:text-gray-700 cursor-pointer"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+              {errors.reason && (
+                <p className="text-red-500 text-xs mt-1">{errors.reason}</p>
+              )}
             </div>
-            {errors.password && (
-              <p className="text-red-500 text-xs mt-1">{errors.password}</p>
-            )}
+
+            <div>
+              <label className="text-sm font-medium">
+                <span className="mr-1 text-red-500">*</span>
+                Contraseña del administrador
+                <span className="ml-1 text-xs text-gray-500">(requerido)</span>
+              </label>
+              <div className="relative mt-1">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={handlePasswordChange}
+                  placeholder="Ingrese contraseña"
+                  className={`w-full p-3 pr-10 rounded-lg border outline-none transition ${
+                    errors.password
+                      ? "border-red-500 focus:ring-2 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-2 focus:ring-blue-500"
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-gray-500 hover:text-gray-700 cursor-pointer"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+              )}
+            </div>
           </div>
 
           {/* BOTONES */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <div className="flex flex-col sm:flex-row gap-3 pt-1 mt-auto shrink-0">
             <button
               onClick={onClose}
               disabled={isSubmitting}
@@ -299,7 +322,7 @@ export default function CancelPaymentModal({
             </button>
             <button
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={!canSubmit}
               className="flex-1 text-white py-2 rounded-xl cursor-pointer bg-[#004D77] hover:bg-[#003D5e] transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "Anulando..." : "Confirmar anulación"}

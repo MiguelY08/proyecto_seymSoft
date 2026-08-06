@@ -11,6 +11,7 @@ import {
   ShoppingCart,
   SquarePen,
   Store,
+  User,
   UserPlus,
   X,
 } from "lucide-react";
