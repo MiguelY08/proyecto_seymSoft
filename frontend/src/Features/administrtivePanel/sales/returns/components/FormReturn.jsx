@@ -11,11 +11,10 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { X, ChevronDown, ChevronLeft, Minus, Plus, Image, Search, Loader } from 'lucide-react';
+import { X, ChevronDown, ChevronLeft, Minus, Plus, Image, Search, Loader, Lock } from 'lucide-react';
 import Evidence from './Evidence';
 import FormSelect from '../../../../shared/FormSelect';
 import { useAlert } from '../../../../shared/alerts/useAlert';
-import LoadingOverlay from '../../../../shared/LoadingOverlay';
 import {
   getProductStatesForMethod,
   getInitialStateForMethod,
@@ -124,6 +123,17 @@ function ProductoImg({ src, size = 'md' }) {
 const isFinalProductStatus = (status) =>
   String(status || '').trim().toLowerCase() === 'listo';
 
+function BlockedFieldHint({ title = 'Campo bloqueado' }) {
+  return (
+    <span
+      title={title}
+      className="inline-flex h-5 w-5 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-gray-400 transition-colors hover:border-gray-300 hover:text-gray-600"
+    >
+      <Lock className="h-3 w-3" />
+    </span>
+  );
+}
+
 function EstadoBadgeSelect({ value, onChange, metodo, sharedStyle = true, disabled = false }) {
   const [open, setOpen] = useState(false);
   const isDisabled = disabled || !metodo;
@@ -216,11 +226,14 @@ function EstadoBadgeSelect({ value, onChange, metodo, sharedStyle = true, disabl
 function DisabledField({ label, value, required = false }) {
   return (
     <div>
-      <label className="block text-xs font-bold text-gray-600 mb-1">
-        {label}
-        {required && <span className="text-red-500 ml-0.5">*</span>}
-      </label>
-      <div className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <label className="block text-xs font-bold text-gray-600">
+          {label}
+          {required && <span className="text-red-500 ml-0.5">*</span>}
+        </label>
+        <BlockedFieldHint />
+      </div>
+      <div className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 break-words whitespace-pre-wrap">
         {value || '—'}
       </div>
       <p className="text-[10px] text-gray-400 mt-1">
@@ -233,7 +246,10 @@ function DisabledField({ label, value, required = false }) {
 function DisabledTextarea({ label, value }) {
   return (
     <div>
-      <label className="block text-xs font-bold text-gray-600 mb-1">{label}</label>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <label className="block text-xs font-bold text-gray-600">{label}</label>
+        <BlockedFieldHint />
+      </div>
       <textarea
         value={value || ''}
         disabled
@@ -250,7 +266,10 @@ function DisabledTextarea({ label, value }) {
 function DisabledEvidence({ count }) {
   return (
     <div>
-      <label className="block text-xs font-bold text-gray-600 mb-1">Evidencias</label>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <label className="block text-xs font-bold text-gray-600">Evidencias</label>
+        <BlockedFieldHint />
+      </div>
       <div className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 flex items-center justify-between">
         <span>{count === 0 ? 'Sin evidencias' : `${count} archivo(s) adjunto(s)`}</span>
         <Image className="w-4 h-4 text-gray-400" />
@@ -266,7 +285,10 @@ function DisabledDeliveryToggle({ isDelivery }) {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-gray-700">Domicilio</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-gray-700">Domicilio</span>
+          <BlockedFieldHint />
+        </div>
         <div className={`relative w-12 h-6 rounded-full ${isDelivery ? 'bg-green-500' : 'bg-gray-300'} opacity-50`}>
           <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${isDelivery ? 'left-[26px]' : 'left-0.5'}`} />
           {isDelivery && <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-white text-[9px] font-bold">✓</span>}
@@ -390,6 +412,64 @@ const normalizeReturnableProducts = (details = []) => {
   return Array.from(productsByKey.values());
 };
 
+const parseCurrencyNumber = (value) => {
+  if (typeof value === 'number') return value;
+  const digits = String(value ?? '').replace(/[^\d.-]/g, '');
+  const number = Number(digits);
+  return Number.isFinite(number) ? number : 0;
+};
+
+const mapSaleToInvoiceOption = (sale = {}) => {
+  const idSale =
+    sale.idSale ??
+    sale.idVending ??
+    sale.id_vending ??
+    sale.id ??
+    '';
+  const invoiceNumber =
+    sale.invoiceNumber ??
+    sale.invoice_number ??
+    sale.noFactura ??
+    sale.factura ??
+    idSale;
+
+  return {
+    ...sale,
+    idSale,
+    invoiceNumber: String(invoiceNumber ?? ''),
+    clientId: sale.clientId ?? sale.clienteId ?? sale.idClient ?? sale.customerId ?? '',
+    clientName: sale.clientName ?? sale.cliente ?? sale.deliveryRecipientName ?? '',
+    employeeName: sale.employeeName ?? sale.asesor ?? sale.vendedor ?? '',
+    clientPhone: sale.clientPhone ?? sale.telefono ?? sale.phone ?? '',
+    clientDocument: sale.clientDocument ?? sale.clienteDocumento ?? sale.customerDocument ?? '',
+    saleDate: sale.saleDate ?? sale.fechaPago ?? sale.createdAt ?? sale.creationDate ?? sale.fecha ?? '',
+    total: sale.totalNumerico ?? sale.totalAmount ?? parseCurrencyNumber(sale.total),
+  };
+};
+
+const getSaleLookupValue = (sale = {}) =>
+  String(
+    sale.idSale ??
+    sale.idVending ??
+    sale.id_vending ??
+    sale.id ??
+    sale.invoiceNumber ??
+    sale.invoice_number ??
+    sale.factura ??
+    ''
+  ).trim();
+
+const findInvoiceBySale = (invoices = [], sale = {}) => {
+  const lookup = getSaleLookupValue(sale);
+  if (!lookup) return null;
+
+  return invoices.find((invoice) => {
+    const invoiceSaleId = String(invoice?.idSale ?? invoice?.id_sale ?? '').trim();
+    const invoiceNumber = String(invoice?.invoiceNumber ?? invoice?.invoice_number ?? '').trim();
+    return invoiceSaleId === lookup || invoiceNumber === lookup;
+  }) || null;
+};
+
 const isClientHistorySearch = (term, invoice = {}) => {
   const normalizedTerm = normalizeSearchText(term);
   const compactTerm = normalizeCompactSearchText(term);
@@ -491,19 +571,21 @@ function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange }) {
                   </div>
                   <p className="text-[10px] text-gray-400 mt-1">No se puede modificar en edición</p>
                   {config.metodo === 'Saldo a favor' && (
-                    <div className={`mt-2 rounded-lg border px-3 py-2 text-[11px] font-semibold ${
+                    <p className={`mt-2 text-[11px] font-semibold ${
                       config.creditApplied
-                        ? 'border-green-300 bg-green-50 text-green-800'
+                        ? 'text-green-700'
                         : config.applyCredit
-                          ? 'border-amber-300 bg-amber-50 text-amber-800'
-                          : 'border-gray-200 bg-gray-50 text-gray-500'
+                          ? 'text-amber-700'
+                          : 'text-gray-500'
                     }`}>
                       {config.creditApplied
                         ? 'Saldo a favor aplicado al cliente'
                         : config.applyCredit
-                          ? 'Se aplicará cuando el producto llegue a Listo'
+                          ? isFinalProductStatus(config.estado)
+                            ? 'Pendiente de acreditar. Se aplicará al guardar cambios'
+                            : 'Se aplicará cuando el producto llegue a Listo'
                           : 'No se solicitó aplicar saldo a favor'}
-                    </div>
+                    </p>
                   )}
                 </div>
 
@@ -559,7 +641,7 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
       metodo: newMetodo,
       estado: newState,
       applyCredit: newMetodo === 'Saldo a favor'
-        ? newConfigs[index].applyCredit === true
+        ? true
         : false
     };
     onConfigsChange(newConfigs);
@@ -701,22 +783,9 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
                   />
                   {renderConfigError(index, 'metodo', config.metodo, config)}
                   {config.metodo === 'Saldo a favor' && (
-                    <label className="mt-2 flex cursor-pointer items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-2.5">
-                      <input
-                        type="checkbox"
-                        checked={config.applyCredit === true}
-                        onChange={(event) => handleConfigChange(index, 'applyCredit', event.target.checked)}
-                        className="mt-0.5 h-4 w-4 accent-green-600"
-                      />
-                      <span>
-                        <span className="block text-xs font-bold text-green-800">
-                          Aplicar saldo a favor al cliente
-                        </span>
-                        <span className="block text-[10px] leading-snug text-green-700">
-                          Se acreditará automáticamente cuando el producto llegue a Listo.
-                        </span>
-                      </span>
-                    </label>
+                    <p className="mt-2 text-[11px] font-semibold text-green-700">
+                      Saldo a favor automático. Se acreditará automáticamente cuando el producto llegue a Listo.
+                    </p>
                   )}
                 </div>
 
@@ -828,7 +897,7 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
 
 // ======================= COMPONENTE PRINCIPAL =======================
 
-function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
+function FormReturn({ isOpen, onClose, returnData = null, preselectedSale = null, onSave }) {
   const isEdit = Boolean(returnData);
   const { showConfirm, showError, showSuccess } = useAlert();
 
@@ -862,6 +931,7 @@ function FormReturn({ isOpen, onClose, returnData = null, onSave }) {
   const dropdownRef = useRef(null);
   const facturaSearchTimeoutRef = useRef(null);
   const facturaRequestIdRef = useRef(0);
+  const preselectedSaleKeyRef = useRef('');
 
   // ==================== VALIDACIÓN ====================
   const [errors, setErrors] = useState({
@@ -924,7 +994,7 @@ useEffect(() => {
           descripcionMotivo: p.description || p.descripcionMotivo || '',
           estado: p.status || p.estado || 'Pend. envio',
           metodo: p.method || p.metodo || '',
-          applyCredit: p.applyCredit === true,
+          applyCredit: (p.method || p.metodo || '') === 'Saldo a favor' ? true : p.applyCredit === true,
           creditApplied: p.creditApplied === true,
           cantidad: p.quantity || p.cantidad || 1
         });
@@ -1055,6 +1125,72 @@ useEffect(() => {
       setCargandoProductos(false);
     }
   };
+
+  const cargarFacturaPreseleccionada = async (sale) => {
+    const fallbackInvoice = mapSaleToInvoiceOption(sale);
+    const lookup = getSaleLookupValue(fallbackInvoice);
+
+    if (!lookup) return;
+
+    try {
+      setCargandoFacturas(true);
+      const invoices = await getAvailableInvoices(lookup);
+      const invoice = findInvoiceBySale(Array.isArray(invoices) ? invoices : [], fallbackInvoice);
+
+      if (!invoice) {
+        showError(
+          'Factura no encontrada',
+          'No se pudo cargar la venta seleccionada. Intenta buscar la factura manualmente.',
+        );
+        return;
+      }
+
+      if (invoice.hasReturn) {
+        showError(
+          'Devolución ya registrada',
+          `Esta venta ya tiene asociada la devolución ${invoice.returnNumber || 'registrada'}.`,
+        );
+        return;
+      }
+
+      if (invoice.isAnnulled) {
+        showError('Venta anulada', 'No es posible generar devolución sobre una venta anulada.');
+        return;
+      }
+
+      if (invoice.canReturn === false) {
+        showError(
+          'Devolución no permitida',
+          invoice.returnBlockReason || 'Esta venta no cumple las condiciones para devolución.',
+        );
+        return;
+      }
+
+      await seleccionarFactura(invoice);
+    } catch {
+      showError(
+        'No se pudo cargar la venta',
+        'Ocurrió un problema cargando la factura seleccionada. Intenta buscarla manualmente.',
+      );
+    } finally {
+      setCargandoFacturas(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen || isEdit || !preselectedSale) {
+      if (!isOpen) preselectedSaleKeyRef.current = '';
+      return;
+    }
+
+    const saleKey = getSaleLookupValue(preselectedSale);
+
+    if (!saleKey || preselectedSaleKeyRef.current === saleKey) return;
+
+    preselectedSaleKeyRef.current = saleKey;
+    cargarFacturaPreseleccionada(preselectedSale);
+  }, [isOpen, isEdit, preselectedSale]);
+
   // ==================== FILTRAR FACTURAS ====================
   const facturasFiltradas = useMemo(() => {
     const term = normalizeSearchText(searchTermFactura);
@@ -1351,7 +1487,7 @@ useEffect(() => {
         reason: config.motivo,
         description: config.descripcionMotivo || '',
           method: config.metodo,
-          applyCredit: config.applyCredit === true,
+          applyCredit: config.metodo === 'Saldo a favor' ? true : config.applyCredit === true,
           status: config.estado,
           barcode: producto.barcode || '',
           idBarcode: producto.idBarcode || null,
@@ -1433,7 +1569,7 @@ useEffect(() => {
           reason: config.motivo,
           description: config.descripcionMotivo || '',
           method: config.metodo,
-          applyCredit: config.applyCredit === true,
+          applyCredit: config.metodo === 'Saldo a favor' ? true : config.applyCredit === true,
           status: config.estado,
           barcode: producto.barcode || '',
           idBarcode: producto.idBarcode || null,
@@ -1465,7 +1601,7 @@ useEffect(() => {
     idBarcode: p.idBarcode || null,
     reasonName: p.reasonName || '',
     isDefective: p.isDefective || false,
-    applyCredit: p.applyCredit === true,
+    applyCredit: p.method === 'Saldo a favor' ? true : p.applyCredit === true,
     descripcionMotivo: p.description || '',
     status: p.status || 'En Proceso'
   })),
@@ -1542,9 +1678,7 @@ useEffect(() => {
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-0 backdrop-blur-sm sm:p-4">
-      <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-white shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] sm:h-auto sm:max-h-[92vh] sm:max-w-[1240px] sm:rounded-lg">
-        <LoadingOverlay show={saving} message={isEdit ? 'Guardando cambios...' : 'Creando devolución...'} />
-
+      <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-white shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] sm:h-auto sm:max-h-[92vh] sm:max-w-[1320px] sm:rounded-lg">
         <div className="flex flex-shrink-0 items-center justify-between bg-gradient-to-r from-[#004D77] to-[#006699] px-4 py-3.5 sm:rounded-t-lg sm:px-6">
           <h2 className="min-w-0 truncate pr-3 text-[15px] font-bold tracking-wide text-white">
             {isEdit ? `Editar devolución — ${returnData?.returnNumber || returnData?.numeroDevolucion || ''}` : 'Nueva devolución'}
@@ -1739,7 +1873,10 @@ useEffect(() => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">No. Factura<span className="text-red-500">*</span></label>
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <label className="block text-xs font-bold text-gray-600">No. Factura<span className="text-red-500">*</span></label>
+                    <BlockedFieldHint title="Se bloquea al cargar la venta seleccionada" />
+                  </div>
                   <input
                     value={noFactura}
                     onChange={(e) => handleFieldChange('noFactura', e.target.value)}
@@ -1753,7 +1890,10 @@ useEffect(() => {
                 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1">Cliente<span className="text-red-500">*</span></label>
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <label className="block text-xs font-bold text-gray-600">Cliente<span className="text-red-500">*</span></label>
+                      <BlockedFieldHint title="Dato cargado desde la venta" />
+                    </div>
                     <input
                       value={cliente}
                       onChange={(e) => {
@@ -1767,7 +1907,10 @@ useEffect(() => {
                     {renderError('cliente')}
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1">Teléfono</label>
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <label className="block text-xs font-bold text-gray-600">Teléfono</label>
+                      <BlockedFieldHint title="Dato cargado desde la venta" />
+                    </div>
                     <input
                       type="text"
                       value={telefono}
@@ -1780,7 +1923,10 @@ useEffect(() => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">Atendió<span className="text-red-500">*</span></label>
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <label className="block text-xs font-bold text-gray-600">Atendió<span className="text-red-500">*</span></label>
+                    <BlockedFieldHint title="Dato cargado desde la venta" />
+                  </div>
                   <input
                     type="text"
                     value={asesor}
@@ -1794,7 +1940,10 @@ useEffect(() => {
                 </div>
                 
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">Estado<span className="text-red-500">*</span></label>
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <label className="block text-xs font-bold text-gray-600">Estado<span className="text-red-500">*</span></label>
+                    <BlockedFieldHint title="Estado calculado automaticamente" />
+                  </div>
                   <div className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm bg-yellow-50 text-yellow-700 font-semibold">
                     En Proceso
                   </div>
@@ -1987,7 +2136,7 @@ useEffect(() => {
           </div>
 
           {/* COL 3 - Resumen y cálculo */}
-          <div className="flex w-full flex-shrink-0 flex-col p-4 sm:p-5 lg:w-[320px] lg:overflow-hidden">
+          <div className="flex w-full flex-shrink-0 flex-col p-4 sm:p-5 lg:w-[360px] lg:overflow-hidden">
             <p className="text-sm font-bold text-gray-800 mb-0.5">2. Productos devueltos</p>
             <p className="text-xs text-gray-400 mb-3">Cantidad a devolver</p>
             
@@ -2087,7 +2236,8 @@ useEffect(() => {
         <div className="flex flex-shrink-0 flex-col-reverse gap-3 border-t border-gray-200 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:rounded-b-lg sm:px-6 sm:py-4">
           <button type="button" onClick={handleSubmit}
             disabled={saving}
-            className="w-full rounded-lg bg-[#004D77] px-7 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-7 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
+            {saving && <Loader className="h-4 w-4 animate-spin" />}
             {isEdit ? 'Guardar cambios' : 'Crear devolución'}
           </button>
           <button type="button" onClick={handleClose}

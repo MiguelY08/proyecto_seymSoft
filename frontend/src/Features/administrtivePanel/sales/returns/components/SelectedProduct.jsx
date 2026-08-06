@@ -72,10 +72,10 @@ function ConfigurationItem({ config, index, total, onChange, onRemove, product, 
 
   const fieldClass = (field) => {
     const hasError = (touched[field] || submitted) && validateField(field, config[field]);
-    return `w-full px-3 py-1.5 text-sm border rounded-lg outline-none bg-white text-gray-700 transition-colors ${
+    return `w-full px-3 py-1.5 text-sm border rounded-lg outline-none bg-white text-[#004D77] font-semibold transition-colors ${
       hasError
         ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-        : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
+        : 'border-[#004D77]/30 hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
     }`;
   };
 
