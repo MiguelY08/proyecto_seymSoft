@@ -11,10 +11,13 @@ import {
 } from "../validators/authValidators.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useAlert } from "../../shared/alerts/useAlert.js";
-import { checkEmailAvailability, validatePhone } from "../services/authService.js";
+import { checkEmailAvailability } from "../services/authService.js";
 
 const Label = ({ text, htmlFor }) => (
-  <label htmlFor={htmlFor} className="flex items-center gap-1 mb-1 text-sm font-medium text-gray-700">
+  <label
+    htmlFor={htmlFor}
+    className="flex items-center gap-1 mb-1 text-sm font-medium text-gray-700"
+  >
     {text}
     <span className="text-red-500">*</span>
   </label>
@@ -27,20 +30,7 @@ const buildSanitizedInputValue = (target, input, sanitizer) => {
   return sanitizer(`${value.slice(0, start)}${input}${value.slice(end)}`);
 };
 
-const getPhoneValidationError = (data) => {
-  if (!data?.valid) {
-    return "El teléfono debe contener entre 7 y 10 dígitos numéricos.";
-  }
-
-  if (data?.exists === true || data?.available === false) {
-    return "El teléfono ya está registrado";
-  }
-
-  return null;
-};
-
 export default function RegisterForm() {
-
   const { register, loading } = useAuth();
   const navigate = useNavigate();
   const { showSuccess, showError, showWarning } = useAlert();
@@ -65,16 +55,20 @@ export default function RegisterForm() {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     let newValue = type === "checkbox" ? checked : value;
-    const hasInvalidPhoneChars = name === "phone" && /\D/.test(String(newValue));
+    const hasInvalidPhoneChars =
+      name === "phone" && /\D/.test(String(newValue));
 
     if (hasInvalidPhoneChars) {
       setTouched((prev) => ({ ...prev, phone: true }));
-      setErrors((prev) => ({ ...prev, phone: "El teléfono solo debe contener números" }));
+      setErrors((prev) => ({
+        ...prev,
+        phone: "El teléfono solo debe contener números",
+      }));
       return;
     }
 
     newValue = sanitizeInput(name, newValue);
-    
+
     const updatedForm = { ...formData, [name]: newValue };
     setFormData(updatedForm);
     setTouched((prev) => ({ ...prev, [name]: true }));
@@ -136,7 +130,10 @@ export default function RegisterForm() {
     e.preventDefault();
     const { name } = e.currentTarget;
     setTouched((prev) => ({ ...prev, [name]: true }));
-    setErrors((prev) => ({ ...prev, [name]: "El teléfono solo debe contener números" }));
+    setErrors((prev) => ({
+      ...prev,
+      [name]: "El teléfono solo debe contener números",
+    }));
   };
 
   const handlePhonePaste = (e) => {
@@ -145,7 +142,10 @@ export default function RegisterForm() {
 
     if (/\D/.test(pastedValue)) {
       setTouched((prev) => ({ ...prev, phone: true }));
-      setErrors((prev) => ({ ...prev, phone: "El teléfono solo debe contener números" }));
+      setErrors((prev) => ({
+        ...prev,
+        phone: "El teléfono solo debe contener números",
+      }));
       return;
     }
 
@@ -166,7 +166,10 @@ export default function RegisterForm() {
     e.preventDefault();
     const { name } = e.currentTarget;
     setTouched((prev) => ({ ...prev, [name]: true }));
-    setErrors((prev) => ({ ...prev, [name]: "El correo no debe contener espacios." }));
+    setErrors((prev) => ({
+      ...prev,
+      [name]: "El correo no debe contener espacios.",
+    }));
   };
 
   const handleEmailPaste = (e) => {
@@ -209,7 +212,14 @@ export default function RegisterForm() {
     setFormData(normalizedForm);
 
     // Marcar todos como tocados
-    const allFields = ["fullName", "email", "phone", "password", "confirmPassword", "terms"];
+    const allFields = [
+      "fullName",
+      "email",
+      "phone",
+      "password",
+      "confirmPassword",
+      "terms",
+    ];
     setTouched(allFields.reduce((acc, f) => ({ ...acc, [f]: true }), {}));
 
     // Validar formulario completo
@@ -229,22 +239,13 @@ export default function RegisterForm() {
       return;
     }
 
-    const phoneValidation = await validatePhone(normalizedForm.phone, "client");
-    const phoneValidationError = getPhoneValidationError(phoneValidation);
-    if (phoneValidationError) {
-      setErrors((prev) => ({ ...prev, phone: phoneValidationError }));
-      setTouched((prev) => ({ ...prev, phone: true }));
-      showWarning("Teléfono inválido", phoneValidationError);
-      return;
-    }
-
     try {
       // Llamar register con objeto correcto
       const result = await register({
         fullName: normalizedForm.fullName,
         email: normalizedForm.email,
         password: formData.password,
-        phone: parseInt(normalizedForm.phone, 10)
+        phone: parseInt(normalizedForm.phone, 10),
       });
 
       if (result.success) {
@@ -254,26 +255,28 @@ export default function RegisterForm() {
         setErrors({ general: result.error });
         showError("Error en registro", result.error);
       }
-
     } catch (error) {
       console.error("Error en handleSubmit:", error);
-      showError("Error inesperado", "No pudimos procesar tu registro. Intenta de nuevo.");
+      showError(
+        "Error inesperado",
+        "No pudimos procesar tu registro. Intenta de nuevo.",
+      );
       setErrors({ general: "Error inesperado" });
     }
   };
 
   const inputStyle = (field) =>
     `w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors
-    ${touched[field] && errors[field]
-      ? "border-red-500 focus:ring-2 focus:ring-red-200"
-      : "border-gray-300 focus:ring-2 focus:ring-blue-600"
+    ${
+      touched[field] && errors[field]
+        ? "border-red-500 focus:ring-2 focus:ring-red-200"
+        : "border-gray-300 focus:ring-2 focus:ring-blue-600"
     }`;
 
   const hasBlockingErrors = Boolean(errors.email || errors.phone);
 
   return (
     <div className="max-w-2xl w-full mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
-
       <div className="bg-[#004D77] py-4">
         <h2 className="font-lexend text-xl md:text-2xl font-semibold text-white text-center">
           Crear Cuenta
@@ -282,7 +285,6 @@ export default function RegisterForm() {
 
       <div className="p-5 md:p-8">
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-
           {/* Nombre Completo */}
           <div>
             <Label text="Nombre Completo" htmlFor="fullName" />
@@ -323,7 +325,9 @@ export default function RegisterForm() {
               <p className="text-red-500 text-xs mt-1">{errors.email}</p>
             )}
             {checkingEmail && touched.email && !errors.email && (
-              <p className="text-[#004D77] text-xs mt-1">Verificando correo...</p>
+              <p className="text-[#004D77] text-xs mt-1">
+                Verificando correo...
+              </p>
             )}
           </div>
 
@@ -370,7 +374,9 @@ export default function RegisterForm() {
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-[34px] text-gray-500 hover:text-gray-700 disabled:opacity-50"
               disabled={loading}
-              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              aria-label={
+                showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+              }
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -398,12 +404,18 @@ export default function RegisterForm() {
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               className="absolute right-3 top-[34px] text-gray-500 hover:text-gray-700 disabled:opacity-50"
               disabled={loading}
-              aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              aria-label={
+                showConfirmPassword
+                  ? "Ocultar contraseña"
+                  : "Mostrar contraseña"
+              }
             >
               {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
             {touched.confirmPassword && errors.confirmPassword && (
-              <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>
+              <p className="text-red-500 text-xs mt-1">
+                {errors.confirmPassword}
+              </p>
             )}
           </div>
 
@@ -438,9 +450,10 @@ export default function RegisterForm() {
               type="submit"
               disabled={loading || checkingEmail || hasBlockingErrors}
               className={`w-full bg-[#004D77] text-white py-2.5 rounded-lg text-sm font-medium transition cursor-pointer
-                ${loading || checkingEmail || hasBlockingErrors
-                  ? "opacity-70 cursor-not-allowed" 
-                  : "hover:bg-[#003D5e]"
+                ${
+                  loading || checkingEmail || hasBlockingErrors
+                    ? "opacity-70 cursor-not-allowed"
+                    : "hover:bg-[#003D5e]"
                 }
               `}
             >
@@ -452,9 +465,10 @@ export default function RegisterForm() {
               onClick={() => navigate("/login")}
               disabled={loading}
               className={`w-full bg-gray-500 text-white py-2.5 rounded-lg text-sm font-medium transition cursor-pointer
-                ${loading 
-                  ? "opacity-70 cursor-not-allowed" 
-                  : "hover:bg-gray-600"
+                ${
+                  loading
+                    ? "opacity-70 cursor-not-allowed"
+                    : "hover:bg-gray-600"
                 }
               `}
             >
@@ -472,10 +486,8 @@ export default function RegisterForm() {
               Inicia sesión
             </Link>
           </div>
-
         </form>
       </div>
-
     </div>
   );
 }

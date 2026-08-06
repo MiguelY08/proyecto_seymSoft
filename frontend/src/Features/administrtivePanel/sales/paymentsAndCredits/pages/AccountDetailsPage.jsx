@@ -15,6 +15,7 @@ import AccountReceipt from "../components/AccountReceipt";
 import StatusBadge from "../components/StatusBadge";
 import Spinner from "../../../../shared/spinner";
 import Permission from "../../../configuration/roles/components/Permission";
+import ButtonComponent from "../../../../shared/ButtonComponent";
 import { clientsService } from "../../clients/services/clientsService";
 
 import {
@@ -176,12 +177,15 @@ export default function AccountDetailsPage({ mode }) {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [pages, setPages] = useState({});
   const [reloadKey, setReloadKey] = useState(0);
+  const [search, setSearch] = useState("");
+  const [facturaPage, setFacturaPage] = useState(1);
 
   const pdfRef = useRef(null);
   const downloadLockRef = useRef(false);
   const openingPaymentModalRef = useRef(false);
   const openingCancelModalRef = useRef(false);
   const itemsPerPage = 4;
+  const facturasPerPage = 6;
   const showInterestSummaryInExpandedPanel = false;
 
   useEffect(() => {
@@ -298,6 +302,98 @@ export default function AccountDetailsPage({ mode }) {
       currency: "COP",
       minimumFractionDigits: 0,
     }).format(value ?? 0);
+
+  // ── BÚSQUEDA — filtra por todos los campos visibles de la factura ─────────
+  const filteredFacturas = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return facturas;
+
+    return facturas.filter((factura) => {
+      const interes = factura.interesPendiente ?? factura.interes ?? 0;
+      const saldoCapital = Number(
+        factura.capitalPendiente ??
+        factura.saldo ??
+        factura.remainingBalance ??
+        0,
+      );
+      const saldoFac = getFacturaDebtTotal(factura);
+      const totalAbonado =
+        factura.totalAbonado ?? getTotalAbonadoFactura(factura);
+
+      const observacion =
+        factura.observacion ||
+        factura.observation ||
+        factura.descripcion ||
+        factura.description ||
+        "";
+
+      const searchableFields = [
+        factura.nroFactura,
+        factura.valorCredito,
+        interes,
+        saldoCapital,
+        saldoFac,
+        totalAbonado,
+        factura.estado,
+        observacion,
+        formatDate(factura.fechaCredito),
+        formatCOP(factura.valorCredito),
+        formatCOP(interes),
+        formatCOP(saldoCapital),
+        formatCOP(saldoFac),
+        formatCOP(totalAbonado),
+      ];
+
+      return searchableFields.some((field) =>
+        String(field ?? "").toLowerCase().includes(term),
+      );
+    });
+  }, [facturas, search]);
+
+  // ── RESALTADO del término buscado dentro del texto ─────────────────────────
+  const highlight = (text, term) => {
+    if (!term || !term.trim()) {
+      return text;
+    }
+
+    const trimmedTerm = term.trim();
+    const regex = new RegExp(
+      `(${trimmedTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+      "gi",
+    );
+
+    const parts = String(text).split(regex);
+
+    return parts.map((part, index) =>
+      index % 2 === 1 ? (
+        <mark
+          key={index}
+          className="bg-[#004d7726] text-[#004D77] rounded px-0.5"
+        >
+          {part}
+        </mark>
+      ) : (
+        part
+      ),
+    );
+  };
+
+  // ── PAGINACIÓN DE LA TABLA PRINCIPAL DE FACTURAS ───────────────────────────
+  const totalFacturaPages = Math.max(
+    1,
+    Math.ceil(filteredFacturas.length / facturasPerPage),
+  );
+
+  const paginatedFacturas = useMemo(() => {
+    const start = (facturaPage - 1) * facturasPerPage;
+    return filteredFacturas.slice(start, start + facturasPerPage);
+  }, [filteredFacturas, facturaPage]);
+
+  useEffect(() => {
+    if (facturaPage > totalFacturaPages) {
+      setFacturaPage(1);
+    }
+  }, [totalFacturaPages, facturaPage]);
 
   // ✅ SPINNER INTEGRADO
   if (loading && (invoices?.length ?? 0) === 0) {
@@ -422,7 +518,7 @@ export default function AccountDetailsPage({ mode }) {
     }
   };
 
-  // ── Paginación ────────────────────────────────────────────────────────────
+  // ── Paginación de abonos dentro de cada factura expandida ─────────────────
   const getPage = (facturaId) => pages[facturaId] ?? 1;
   const setPage = (facturaId, page) =>
     setPages((prev) => ({ ...prev, [facturaId]: page }));
@@ -451,9 +547,47 @@ export default function AccountDetailsPage({ mode }) {
           deudaTotal={totalDebt}
           estadoGeneral={estadoGeneral}
           mode={mode}
-          isGeneratingPDF={isGeneratingPDF}
-          onDownloadPDF={handleDownloadPDF}
         />
+
+        {/* ── BUSCADOR + DESCARGA PDF ── */}
+        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
+          <div className="relative w-full lg:max-w-md">
+            <input
+              type="text"
+              placeholder="Buscar por número de factura, valor, saldo..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setFacturaPage(1);
+              }}
+              className="w-full pl-4 pr-10 py-2.5 bg-white rounded-xl border border-gray-300 shadow-sm outline-none focus:ring-2 focus:ring-sky-900 text-black text-sm"
+            />
+
+            <svg
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+
+          <Permission permission="pagos_y_abonos.descargar">
+            <ButtonComponent
+              onClick={handleDownloadPDF}
+              disabled={isGeneratingPDF}
+              className="w-full sm:w-auto bg-[#004D77] text-[#004D77] hover:bg-[#003D5e] border border-[#004D77] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 rounded-lg px-4 py-2"
+            >
+              {isGeneratingPDF ? "Generando..." : "Descargar PDF"}
+            </ButtonComponent>
+          </Permission>
+        </div>
 
         {/* ── TABLA DE FACTURAS ── */}
         <div
@@ -475,13 +609,15 @@ export default function AccountDetailsPage({ mode }) {
             <span className="text-center">Acciones</span>
           </div>
 
-          {facturas.length === 0 && (
+          {filteredFacturas.length === 0 && (
             <div className="text-center py-10 text-gray-400 text-sm">
-              Este cliente no tiene facturas registradas.
+              {facturas.length === 0
+                ? "Este cliente no tiene facturas registradas."
+                : "No se encontraron facturas que coincidan con la búsqueda."}
             </div>
           )}
 
-          {facturas.map((factura) => {
+          {paginatedFacturas.map((factura) => {
             const interes = factura.interesPendiente ?? factura.interes ?? 0;
             const saldoCapital = Number(
               factura.capitalPendiente ??
@@ -515,12 +651,12 @@ export default function AccountDetailsPage({ mode }) {
                     ) : (
                       <ChevronDown size={15} className="text-gray-400" />
                     )}
-                    {factura.nroFactura}
+                    {highlight(factura.nroFactura, search)}
                   </div>
 
                   {/* Valor Crédito */}
                   <span className="text-center text-gray-700">
-                    {formatCOP(factura.valorCredito)}
+                    {highlight(formatCOP(factura.valorCredito), search)}
                   </span>
 
                   {/* Interés — destacado en naranja si tiene mora */}
@@ -532,7 +668,7 @@ export default function AccountDetailsPage({ mode }) {
                     {interes > 0 ? (
                       <span className="flex items-center justify-center gap-1">
                         <span>⚠</span>
-                        {formatCOP(interes)}
+                        {highlight(formatCOP(interes), search)}
                         {saldoInt <= 0 && (
                           <span className="text-[10px] text-green-600 font-normal ml-1">
                             ✓ pagado
@@ -546,7 +682,7 @@ export default function AccountDetailsPage({ mode }) {
 
                   {/* Total a Pagar */}
                   <span className="text-center font-semibold text-gray-800">
-                    {formatCOP(totalAPagar)}
+                    {highlight(formatCOP(totalAPagar), search)}
                   </span>
 
                   {/* Fecha Crédito */}
@@ -559,7 +695,7 @@ export default function AccountDetailsPage({ mode }) {
 
                   {/* Total Abonado a Capital */}
                   <span className="text-center text-gray-700">
-                    {formatCOP(totalAbonado)}
+                    {highlight(formatCOP(totalAbonado), search)}
                   </span>
 
                   {/* Saldo total (capital + interés pendiente) */}
@@ -568,7 +704,7 @@ export default function AccountDetailsPage({ mode }) {
                       saldoFac > 0 ? "text-red-600" : "text-green-600"
                     }`}
                   >
-                    {formatCOP(saldoFac)}
+                    {highlight(formatCOP(saldoFac), search)}
                   </span>
 
                   {/* Estado */}
@@ -637,13 +773,15 @@ export default function AccountDetailsPage({ mode }) {
                       }
                     />
 
-                    {/* Paginador */}
-                    <PaymentsPaginator
-                      itemsPerPage={itemsPerPage}
-                      totalItems={abonos.length}
-                      currentPage={getPage(factura.id)}
-                      onPageChange={(page) => setPage(factura.id, page)}
-                    />
+                    {/* Paginador — solo si hay más de 1 página (más de itemsPerPage abonos) */}
+                    {abonos.length > itemsPerPage && (
+                      <PaymentsPaginator
+                        itemsPerPage={itemsPerPage}
+                        totalItems={abonos.length}
+                        currentPage={getPage(factura.id)}
+                        onPageChange={(page) => setPage(factura.id, page)}
+                      />
+                    )}
                   </div>
                 )}
               </div>
@@ -651,6 +789,18 @@ export default function AccountDetailsPage({ mode }) {
           })}
           </div>
           </div>
+
+          {/* ── PAGINADOR DE LA TABLA PRINCIPAL ── */}
+          {filteredFacturas.length > 0 && (
+            <div className="px-4 pb-4">
+              <PaymentsPaginator
+                itemsPerPage={facturasPerPage}
+                totalItems={filteredFacturas.length}
+                currentPage={facturaPage}
+                onPageChange={setFacturaPage}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -704,4 +854,3 @@ export default function AccountDetailsPage({ mode }) {
     </>
   );
 }
-

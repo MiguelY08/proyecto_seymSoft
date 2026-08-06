@@ -4,13 +4,17 @@ import { X, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useAlert } from "../../shared/alerts/useAlert.js";
 import { getSession } from "../helpers/authStorage.js";
-import { checkEmailAvailability, validatePhone } from "../services/authService.js";
-import { normalizeDigits, normalizeEmailInput, normalizeNameInput } from "../validators/authValidators.js";
+import { checkEmailAvailability } from "../services/authService.js";
+import {
+  normalizeDigits,
+  normalizeEmailInput,
+  normalizeNameInput,
+} from "../validators/authValidators.js";
 
 const ErrorMsg = ({ field, touched, errors }) =>
-  touched[field] && errors[field]
-    ? <p className="mt-1 text-xs text-red-500">{errors[field]}</p>
-    : null;
+  touched[field] && errors[field] ? (
+    <p className="mt-1 text-xs text-red-500">{errors[field]}</p>
+  ) : null;
 
 const buildSanitizedInputValue = (target, input, sanitizer) => {
   const value = String(target.value ?? "");
@@ -19,24 +23,27 @@ const buildSanitizedInputValue = (target, input, sanitizer) => {
   return sanitizer(`${value.slice(0, start)}${input}${value.slice(end)}`);
 };
 
-const getPhoneValidationError = (data) => {
-  if (!data?.valid) {
-    return "El telefono debe contener entre 7 y 10 digitos numericos.";
-  }
-
-  if (data?.exists === true || data?.available === false) {
-    return "El telefono ya esta registrado";
-  }
-
-  return null;
-};
-
-const PasswordField = ({ label, name, value, onChange, show, onToggle, touched, errors, disabled, required }) => (
+const PasswordField = ({
+  label,
+  name,
+  value,
+  onChange,
+  show,
+  onToggle,
+  touched,
+  errors,
+  disabled,
+  required,
+}) => (
   <div className="flex flex-col gap-1.5">
     <label className="block text-sm font-medium text-gray-700">
       {label}
       {required && <span className="text-red-500">*</span>}
-      {!required && <span className="text-xs text-gray-400 font-normal ml-1">(opcional)</span>}
+      {!required && (
+        <span className="text-xs text-gray-400 font-normal ml-1">
+          (opcional)
+        </span>
+      )}
     </label>
     <div className="relative">
       <input
@@ -48,9 +55,10 @@ const PasswordField = ({ label, name, value, onChange, show, onToggle, touched, 
         disabled={disabled}
         autoComplete="new-password"
         className={`w-full px-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 pr-10
-          ${touched[name] && errors[name]
-            ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200"
-            : "border-gray-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
+          ${
+            touched[name] && errors[name]
+              ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+              : "border-gray-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
           }
           ${disabled ? "opacity-50 cursor-not-allowed" : ""}
         `}
@@ -74,14 +82,10 @@ function EditProfileForm({ onClose, isModal = false }) {
   const location = useLocation();
   const isAdminContext = location.pathname.startsWith("/admin");
   const { showSuccess, showError, showWarning, showInfo } = useAlert();
-  const sessionClient =
-    getSession()?.client ?? null;
-  const clientData =
-    client ?? sessionClient;
-  const currentAddress =
-    clientData?.address ?? "";
-  const canEditAddress =
-    clientData?.canEditAddress === true;
+  const sessionClient = getSession()?.client ?? null;
+  const clientData = client ?? sessionClient;
+  const currentAddress = clientData?.address ?? "";
+  const canEditAddress = clientData?.canEditAddress === true;
 
   const [form, setForm] = useState({
     fullName: user?.fullName ?? "",
@@ -108,7 +112,8 @@ function EditProfileForm({ onClose, isModal = false }) {
       case "fullName":
         if (!v) return "El nombre es obligatorio.";
         if (v.length < 3) return "El nombre debe tener al menos 3 caracteres.";
-        if (!/^[\p{L}\s]+$/u.test(v)) return "El nombre solo debe contener letras.";
+        if (!/^[\p{L}\s]+$/u.test(v))
+          return "El nombre solo debe contener letras.";
         return "";
 
       case "email":
@@ -124,7 +129,8 @@ function EditProfileForm({ onClose, isModal = false }) {
         return "";
 
       case "address":
-        if (v && v.length < 5) return "La direccion debe tener al menos 5 caracteres.";
+        if (v && v.length < 5)
+          return "La direccion debe tener al menos 5 caracteres.";
         return "";
 
       case "currentPassword":
@@ -159,7 +165,10 @@ function EditProfileForm({ onClose, isModal = false }) {
 
     if (hasInvalidPhoneChars) {
       setTouched((prev) => ({ ...prev, phone: true }));
-      setErrors((prev) => ({ ...prev, phone: "El telefono solo debe contener numeros" }));
+      setErrors((prev) => ({
+        ...prev,
+        phone: "El telefono solo debe contener numeros",
+      }));
       return;
     }
 
@@ -184,13 +193,22 @@ function EditProfileForm({ onClose, isModal = false }) {
       setErrors((prev) => ({
         ...prev,
         [name]: validateField(name, filtered, updatedForm),
-        confirmPassword: validateField("confirmPassword", updatedForm.confirmPassword, updatedForm),
-        currentPassword: validateField("currentPassword", updatedForm.currentPassword, updatedForm),
+        confirmPassword: validateField(
+          "confirmPassword",
+          updatedForm.confirmPassword,
+          updatedForm,
+        ),
+        currentPassword: validateField(
+          "currentPassword",
+          updatedForm.currentPassword,
+          updatedForm,
+        ),
       }));
     } else {
       setErrors((prev) => ({
         ...prev,
-        [name]: name === "phone" ? "" : validateField(name, filtered, updatedForm),
+        [name]:
+          name === "phone" ? "" : validateField(name, filtered, updatedForm),
       }));
     }
   };
@@ -252,7 +270,10 @@ function EditProfileForm({ onClose, isModal = false }) {
     e.preventDefault();
     const { name } = e.currentTarget;
     setTouched((prev) => ({ ...prev, [name]: true }));
-    setErrors((prev) => ({ ...prev, [name]: "El telefono solo debe contener numeros" }));
+    setErrors((prev) => ({
+      ...prev,
+      [name]: "El telefono solo debe contener numeros",
+    }));
   };
 
   const handlePhonePaste = (e) => {
@@ -261,7 +282,10 @@ function EditProfileForm({ onClose, isModal = false }) {
 
     if (/\D/.test(pastedValue)) {
       setTouched((prev) => ({ ...prev, phone: true }));
-      setErrors((prev) => ({ ...prev, phone: "El telefono solo debe contener numeros" }));
+      setErrors((prev) => ({
+        ...prev,
+        phone: "El telefono solo debe contener numeros",
+      }));
       return;
     }
 
@@ -282,7 +306,10 @@ function EditProfileForm({ onClose, isModal = false }) {
     e.preventDefault();
     const { name } = e.currentTarget;
     setTouched((prev) => ({ ...prev, [name]: true }));
-    setErrors((prev) => ({ ...prev, [name]: "El correo no debe contener espacios." }));
+    setErrors((prev) => ({
+      ...prev,
+      [name]: "El correo no debe contener espacios.",
+    }));
   };
 
   const handleEmailPaste = (e) => {
@@ -296,7 +323,10 @@ function EditProfileForm({ onClose, isModal = false }) {
 
     setForm(updatedForm);
     setTouched((prev) => ({ ...prev, email: true }));
-    setErrors((prev) => ({ ...prev, email: validateField("email", nextEmail, updatedForm) }));
+    setErrors((prev) => ({
+      ...prev,
+      email: validateField("email", nextEmail, updatedForm),
+    }));
   };
 
   const isDirty =
@@ -328,7 +358,10 @@ function EditProfileForm({ onClose, isModal = false }) {
     }, 1500);
   };
 
-  const showUnchangedFieldAlerts = (unchangedFields = {}, userTouchedFields = {}) => {
+  const showUnchangedFieldAlerts = (
+    unchangedFields = {},
+    userTouchedFields = {},
+  ) => {
     Object.entries(unchangedFields).forEach(([field, message]) => {
       const aliases = {
         full_name: "fullName",
@@ -346,429 +379,287 @@ function EditProfileForm({ onClose, isModal = false }) {
   };
 
   const handleSubmit = async () => {
-  const userTouchedFields = { ...touched };
+    const userTouchedFields = { ...touched };
 
-  const requiredFields = [
-    "fullName",
-    "email",
-    "phone",
-    ...(canEditAddress ? ["address"] : []),
-  ];
+    const requiredFields = [
+      "fullName",
+      "email",
+      "phone",
+      ...(canEditAddress ? ["address"] : []),
+    ];
 
-  const allFields = [
-    ...requiredFields,
-    "currentPassword",
-    "newPassword",
-    "confirmPassword",
-  ];
+    const allFields = [
+      ...requiredFields,
+      "currentPassword",
+      "newPassword",
+      "confirmPassword",
+    ];
 
-  setTouched(
-    allFields.reduce(
-      (acc, key) => ({
-        ...acc,
-        [key]: true,
-      }),
-      {}
-    )
-  );
-
-  const newErrors = {};
-
-  allFields.forEach((field) => {
-
-    const error = validateField(
-      field,
-      form[field],
-      form
+    setTouched(
+      allFields.reduce(
+        (acc, key) => ({
+          ...acc,
+          [key]: true,
+        }),
+        {},
+      ),
     );
 
-    if (error) {
-      newErrors[field] = error;
-    }
+    const newErrors = {};
 
-  });
+    allFields.forEach((field) => {
+      const error = validateField(field, form[field], form);
 
-  if (
-    Object.keys(newErrors).length > 0
-  ) {
-
-    setErrors(newErrors);
-
-    showWarning(
-      "Campos con error",
-      "Revisa la informacion"
-    );
-
-    return;
-  }
-
-  if (checkingEmail) {
-    showWarning(
-      "Validando datos",
-      "Espera a que termine la validacion de correo"
-    );
-
-    return;
-  }
-
-  if (errors.email || errors.phone) {
-    showWarning(
-      "Campos con error",
-      "Revisa la informacion"
-    );
-
-    return;
-  }
-
-  try {
-    const normalizedEmail =
-      normalizeEmailInput(form.email);
-    const normalizedPhone =
-      normalizeDigits(form.phone, 10);
-    const currentEmail =
-      normalizeEmailInput(user?.email ?? "");
-    const currentPhone =
-      normalizeDigits(user?.phone ?? "", 10);
-
-    setForm((prev) => ({
-      ...prev,
-      email: normalizedEmail,
-      phone: normalizedPhone,
-    }));
-
-    if (normalizedEmail !== currentEmail) {
-      const emailCheck =
-        await checkEmailAvailability(normalizedEmail);
-
-      if (emailCheck?.exists) {
-        setErrors((prev) => ({ ...prev, email: "El correo ya esta registrado" }));
-        setTouched((prev) => ({ ...prev, email: true }));
-        showWarning("Correo registrado", "El correo ya esta registrado");
-        return;
+      if (error) {
+        newErrors[field] = error;
       }
+    });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+
+      showWarning("Campos con error", "Revisa la informacion");
+
+      return;
     }
 
-    if (normalizedPhone !== currentPhone) {
-      const phoneValidation =
-        await validatePhone(normalizedPhone, "client");
-      const phoneValidationError =
-        getPhoneValidationError(phoneValidation);
-
-      if (phoneValidationError) {
-        setErrors((prev) => ({ ...prev, phone: phoneValidationError }));
-        setTouched((prev) => ({ ...prev, phone: true }));
-        showWarning("Telefono invalido", phoneValidationError);
-        return;
-      }
-    }
-
-    const profileChanged =
-
-      form.fullName.trim() !== (user?.fullName ?? "")
-
-      ||
-
-      normalizedEmail !== currentEmail
-
-      ||
-
-      normalizedPhone !== currentPhone
-
-      ||
-
-      (
-        canEditAddress
-        &&
-        form.address.trim() !== currentAddress
-      );
-
-    const passwordChanged =
-      form.newPassword.trim() !== "";
-
-    if (
-      !profileChanged
-      &&
-      !passwordChanged
-    ) {
-
-      showInfo(
-        "Sin cambios",
-        "Los datos enviados son iguales a los datos actuales"
+    if (checkingEmail) {
+      showWarning(
+        "Validando datos",
+        "Espera a que termine la validacion de correo",
       );
 
       return;
     }
 
-    const profileChanges = {
-      fullName: form.fullName.trim(),
-      email: normalizedEmail,
-      phone: normalizedPhone,
-    };
+    if (errors.email || errors.phone) {
+      showWarning("Campos con error", "Revisa la informacion");
 
-    if (canEditAddress) {
-      profileChanges.address = form.address.trim();
+      return;
     }
 
-    if (passwordChanged) {
-      profileChanges.currentPassword = form.currentPassword.trim();
-      profileChanges.newPassword = form.newPassword.trim();
-      profileChanges.confirmPassword = form.confirmPassword.trim();
-    }
+    try {
+      const normalizedEmail = normalizeEmailInput(form.email);
+      const normalizedPhone = normalizeDigits(form.phone, 10);
+      const currentEmail = normalizeEmailInput(user?.email ?? "");
+      const currentPhone = normalizeDigits(user?.phone ?? "", 10);
 
-    // =====================================
-    // ACTUALIZAR PERFIL
-    // =====================================
+      setForm((prev) => ({
+        ...prev,
+        email: normalizedEmail,
+        phone: normalizedPhone,
+      }));
 
-    if (
-      profileChanged
-      ||
-      passwordChanged
-    ) {
+      if (normalizedEmail !== currentEmail) {
+        const emailCheck = await checkEmailAvailability(normalizedEmail);
 
-      const profileResult =
-        await updateProfile(profileChanges);
+        if (emailCheck?.exists) {
+          setErrors((prev) => ({
+            ...prev,
+            email: "El correo ya esta registrado",
+          }));
+          setTouched((prev) => ({ ...prev, email: true }));
+          showWarning("Correo registrado", "El correo ya esta registrado");
+          return;
+        }
+      }
 
-      if (!profileResult.success) {
+      const profileChanged =
+        form.fullName.trim() !== (user?.fullName ?? "") ||
+        normalizedEmail !== currentEmail ||
+        normalizedPhone !== currentPhone ||
+        (canEditAddress && form.address.trim() !== currentAddress);
 
-        if (
-          profileResult.status === 400
-          &&
-          /iguales|igual/i.test(profileResult.error || "")
-        ) {
+      const passwordChanged = form.newPassword.trim() !== "";
 
-          showInfo(
-            "Sin cambios",
-            profileResult.error
-          );
+      if (!profileChanged && !passwordChanged) {
+        showInfo(
+          "Sin cambios",
+          "Los datos enviados son iguales a los datos actuales",
+        );
+
+        return;
+      }
+
+      const profileChanges = {
+        fullName: form.fullName.trim(),
+        email: normalizedEmail,
+        phone: normalizedPhone,
+      };
+
+      if (canEditAddress) {
+        profileChanges.address = form.address.trim();
+      }
+
+      if (passwordChanged) {
+        profileChanges.currentPassword = form.currentPassword.trim();
+        profileChanges.newPassword = form.newPassword.trim();
+        profileChanges.confirmPassword = form.confirmPassword.trim();
+      }
+
+      // =====================================
+      // ACTUALIZAR PERFIL
+      // =====================================
+
+      if (profileChanged || passwordChanged) {
+        const profileResult = await updateProfile(profileChanges);
+
+        if (!profileResult.success) {
+          if (
+            profileResult.status === 400 &&
+            /iguales|igual/i.test(profileResult.error || "")
+          ) {
+            showInfo("Sin cambios", profileResult.error);
+
+            return;
+          }
+
+          showError("Error", profileResult.error);
 
           return;
         }
 
-        showError(
-          "Error",
-          profileResult.error
+        showUnchangedFieldAlerts(
+          profileResult.unchangedFields,
+          userTouchedFields,
         );
 
-        return;
-      }
+        if (profileResult.requiresReLogin) {
+          showSuccess(
+            "Perfil actualizado",
+            "Por seguridad, inicia sesion nuevamente.",
+          );
 
-      showUnchangedFieldAlerts(
-        profileResult.unchangedFields,
-        userTouchedFields
-      );
+          clearLocalSession?.();
 
-      if (profileResult.requiresReLogin) {
+          setTimeout(() => {
+            navigate("/login", { replace: true });
+          }, 1500);
 
-        showSuccess(
-          "Perfil actualizado",
-          "Por seguridad, inicia sesion nuevamente."
-        );
+          return;
+        }
 
-        clearLocalSession?.();
-
-        setTimeout(
-          () => {
-            navigate(
-              "/login",
-              { replace: true }
-            );
-          },
-          1500
-        );
-
-        return;
-      }
-
-      setForm({
-        fullName: profileResult.user?.fullName ?? form.fullName,
-        email: profileResult.user?.email ?? form.email,
-        phone: profileResult.user?.phone ?? form.phone,
-        address:
-          profileResult.client?.address ??
-          "",
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
-
-      showSuccess(
-        passwordChanged ? "Contrasena actualizada" : "Perfil actualizado",
-        "Los cambios se guardaron correctamente"
-      );
-
-      setTimeout(
-        () => {
-
-          if (
-            isModal ||
-            isAdminContext
-          ) {
-
-            onClose?.();
-
-          } else {
-
-            navigate(-1);
-
-          }
-
-        },
-        1500
-      );
-
-      return;
-    }
-
-    // =====================================
-    // CAMBIO DE CONTRASENA
-    // =====================================
-
-    if (passwordChanged) {
-
-      const passwordResult =
-        await updateProfile({
-
-          currentPassword:
-            form.currentPassword.trim(),
-
-          newPassword:
-            form.newPassword.trim(),
-
-          confirmPassword:
-            form.confirmPassword.trim(),
-
+        setForm({
+          fullName: profileResult.user?.fullName ?? form.fullName,
+          email: profileResult.user?.email ?? form.email,
+          phone: profileResult.user?.phone ?? form.phone,
+          address: profileResult.client?.address ?? "",
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
         });
 
-      if (!passwordResult.success) {
+        showSuccess(
+          passwordChanged ? "Contrasena actualizada" : "Perfil actualizado",
+          "Los cambios se guardaron correctamente",
+        );
 
-        if (
-          passwordResult.status === 400
-          &&
-          /iguales|igual/i.test(passwordResult.error || "")
-        ) {
+        setTimeout(() => {
+          if (isModal || isAdminContext) {
+            onClose?.();
+          } else {
+            navigate(-1);
+          }
+        }, 1500);
 
-          showInfo(
-            "Sin cambios",
-            passwordResult.error
-          );
+        return;
+      }
+
+      // =====================================
+      // CAMBIO DE CONTRASENA
+      // =====================================
+
+      if (passwordChanged) {
+        const passwordResult = await updateProfile({
+          currentPassword: form.currentPassword.trim(),
+
+          newPassword: form.newPassword.trim(),
+
+          confirmPassword: form.confirmPassword.trim(),
+        });
+
+        if (!passwordResult.success) {
+          if (
+            passwordResult.status === 400 &&
+            /iguales|igual/i.test(passwordResult.error || "")
+          ) {
+            showInfo("Sin cambios", passwordResult.error);
+
+            return;
+          }
+
+          showError("Error", passwordResult.error);
 
           return;
         }
 
-        showError(
-          "Error",
-          passwordResult.error
+        showUnchangedFieldAlerts(
+          passwordResult.unchangedFields,
+          userTouchedFields,
         );
 
-        return;
-      }
+        if (passwordResult.requiresReLogin) {
+          showSuccess(
+            "Perfil actualizado",
+            "Por seguridad, inicia sesion nuevamente.",
+          );
 
-      showUnchangedFieldAlerts(
-        passwordResult.unchangedFields,
-        userTouchedFields
-      );
+          clearLocalSession?.();
 
-      if (passwordResult.requiresReLogin) {
+          setTimeout(() => {
+            navigate("/login", { replace: true });
+          }, 1500);
+
+          return;
+        }
 
         showSuccess(
-          "Perfil actualizado",
-          "Por seguridad, inicia sesion nuevamente."
+          "Contrasena actualizada",
+          "Los cambios se guardaron correctamente",
         );
 
-        clearLocalSession?.();
-
-        setTimeout(
-          () => {
-            navigate(
-              "/login",
-              { replace: true }
-            );
-          },
-          1500
-        );
+        setTimeout(() => {
+          if (isModal || isAdminContext) {
+            onClose?.();
+          } else {
+            navigate(-1);
+          }
+        }, 1500);
 
         return;
       }
 
-      showSuccess(
-        "Contrasena actualizada",
-        "Los cambios se guardaron correctamente"
-      );
+      // =====================================
+      // SOLO PERFIL
+      // =====================================
 
-      setTimeout(
-        () => {
+      if (profileChanged) {
+        showSuccess(
+          "Perfil actualizado",
+          "Los cambios se guardaron correctamente",
+        );
 
-          if (
-            isModal ||
-            isAdminContext
-          ) {
-
+        setTimeout(() => {
+          if (isModal || isAdminContext) {
             onClose?.();
-
           } else {
-
             navigate(-1);
-
           }
+        }, 1500);
+      }
+    } catch (error) {
+      console.error("Error handleSubmit:", error);
 
-        },
-        1500
-      );
-
-      return;
+      showError("Error", "Ocurrio un error inesperado");
     }
-
-    // =====================================
-    // SOLO PERFIL
-    // =====================================
-
-    if (profileChanged) {
-
-      showSuccess(
-        "Perfil actualizado",
-        "Los cambios se guardaron correctamente"
-      );
-
-      setTimeout(
-        () => {
-
-          if (
-            isModal ||
-            isAdminContext
-          ) {
-
-            onClose?.();
-
-          } else {
-
-            navigate(-1);
-
-          }
-
-        },
-        1500
-      );
-    }
-
-  } catch (error) {
-
-    console.error(
-      "Error handleSubmit:",
-      error
-    );
-
-    showError(
-      "Error",
-      "Ocurrio un error inesperado"
-    );
-  }
-};
+  };
 
   const inputClass = (field) =>
     `w-full px-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200
-    ${touched[field] && errors[field]
-      ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200"
-      : "border-gray-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
+    ${
+      touched[field] && errors[field]
+        ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+        : "border-gray-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
     }`;
 
   const hasBlockingErrors = Boolean(errors.email || errors.phone);
@@ -788,7 +679,6 @@ function EditProfileForm({ onClose, isModal = false }) {
 
       <div className="px-6 py-5 overflow-y-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
           <div className="sm:col-span-2 flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
               Nombre Completo <span className="text-red-500">*</span>
@@ -823,7 +713,9 @@ function EditProfileForm({ onClose, isModal = false }) {
             />
             <ErrorMsg field="email" touched={touched} errors={errors} />
             {checkingEmail && touched.email && !errors.email && (
-              <p className="mt-1 text-xs text-[#004D77]">Verificando correo...</p>
+              <p className="mt-1 text-xs text-[#004D77]">
+                Verificando correo...
+              </p>
             )}
           </div>
 
@@ -917,7 +809,6 @@ function EditProfileForm({ onClose, isModal = false }) {
               required={!!form.newPassword}
             />
           </div>
-
         </div>
       </div>
 
@@ -949,12 +840,8 @@ function EditProfileForm({ onClose, isModal = false }) {
 
   if (shouldRenderAsModal) {
     return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-      >
-        <div
-          className="bg-white rounded-lg shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
-        >
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
           {formContent}
         </div>
       </div>

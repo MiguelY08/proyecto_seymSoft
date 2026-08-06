@@ -14,7 +14,6 @@ import {
 } from '../helpers/clientHelpers';
 import FormSelect from '../../../../shared/FormSelect';
 import { useAlert } from '../../../../shared/alerts/useAlert';
-import LoadingOverlay from '../../../../shared/LoadingOverlay';
 import { clientsService } from '../services/clientsService';
 import { checkEmailAvailability } from '../../../../access/services/authService';
 
@@ -197,7 +196,7 @@ function MiniFormGraph({ clientId, onExpand }) {
             <select
               value={selectedYear}
               onChange={(e) => handleYearChange(Number(e.target.value))}
-              className="text-[9px] px-1 py-0.5 border border-gray-300 rounded bg-white"
+              className="cursor-pointer text-[9px] font-semibold px-2 py-0.5 border border-[#004D77]/30 rounded bg-white text-[#004D77] outline-none transition-colors hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
               onClick={(e) => e.stopPropagation()}
             >
               {availableYears.map(year => (
@@ -446,7 +445,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
         contactName:  client.contactName  || '',
         contactPhone: client.contactPhone || '',
         clientCredit: client.clientCredit || '',
-        saldoFavor:   client.saldoFavor   || '', // Ya no tiene '0' por defecto
+        saldoFavor:   client.saldoFavor ?? client.credit_balance ?? '',
         clientType:   client.clientType   || '',
         rut:          client.rut          || '',
         ciuCode:      client.ciuCode      || '',
@@ -593,7 +592,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
           contactName: client.contactName || '',
           contactPhone: client.contactPhone || '',
           clientCredit: client.clientCredit || '',
-          saldoFavor: client.saldoFavor || '',
+          saldoFavor: client.saldoFavor ?? client.credit_balance ?? '',
           clientType: client.clientType || '',
           rut: client.rut || '',
           ciuCode: client.ciuCode || '',
@@ -892,15 +891,13 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
 
     // Validar campos numéricos
     const creditError = validateNumeric10_2(normalizedFormData.clientCredit, 'Crédito cliente');
-    const saldoError = validateNumeric10_2(normalizedFormData.saldoFavor, 'Saldo a favor');
 
-    if (creditError || saldoError) {
+    if (creditError) {
       setErrors({
         ...errors,
         clientCredit: creditError || '',
-        saldoFavor: saldoError || ''
       });
-      setTouched(prev => ({ ...prev, clientCredit: true, saldoFavor: true }));
+      setTouched(prev => ({ ...prev, clientCredit: true }));
       return;
     }
 
@@ -950,7 +947,6 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
       contactPhone: normalizedFormData.contactPhone,
       clientType: normalizedFormData.clientType,
       clientCredit: normalizedFormData.clientCredit || '0',
-      saldoFavor: normalizedFormData.saldoFavor || '',
       rut: normalizedFormData.rut,
       ciuCode: normalizedFormData.rut === 'no' ? '' : cleanCiuCode(normalizedFormData.ciuCode || ''),
     };
@@ -985,11 +981,14 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
     }`;
 
   const disabledInputClass = (field) =>
-    `h-10 w-full rounded-lg border px-3 py-0 text-sm outline-none bg-slate-100 text-slate-500 cursor-not-allowed ${
+    `h-10 w-full rounded-lg border px-3 py-0 text-sm outline-none bg-sky-50 text-[#004D77] cursor-not-allowed ${
       errors[field] && touched[field]
         ? 'border-red-500'
-        : 'border-slate-200'
+        : 'border-sky-200'
     }`;
+
+  const disabledSelectClass =
+    'bg-sky-50 text-[#004D77] border-sky-200 hover:border-sky-200';
 
   const ErrorMsg = ({ field }) =>
     errors[field] && touched[field]
@@ -1047,8 +1046,6 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
       <div className={`relative flex h-dvh w-full min-h-0 overflow-hidden bg-white shadow-2xl transition-all duration-500 ease-in-out sm:h-auto sm:max-h-[94vh] sm:rounded-lg lg:flex-row ${
         showGraph ? 'sm:w-[95vw] sm:max-w-[90rem] max-lg:flex-col' : 'sm:max-w-2xl'
       }`}>
-        <LoadingOverlay show={saving} message={isEditing ? 'Actualizando cliente...' : 'Creando cliente...'} />
-
         {/* Panel izquierdo - sin borde derecho blanco */}
         <div
           className={`flex min-h-0 min-w-0 flex-col border-r-0 transition-all duration-500 ease-in-out ${
@@ -1099,7 +1096,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                     error={errors.personType && touched.personType}
                     placeholder="Selecciona una opción"
                     ariaLabel="Tipo de persona"
-                    className="h-10 rounded-lg py-0 pr-10"
+                    className={`h-10 rounded-lg py-0 pr-10 ${isEditing ? disabledSelectClass : ''}`}
                     {...selectResponsiveProps}
                   />
                   <ErrorMsg field="personType" />
@@ -1116,7 +1113,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                       error={errors.documentType && touched.documentType}
                       placeholder="Tipo"
                       ariaLabel="Tipo de documento"
-                      className="h-10 rounded-lg py-0 pr-10"
+                      className={`h-10 rounded-lg py-0 pr-10 ${isEditing || formData.personType === 'juridica' ? disabledSelectClass : ''}`}
                       {...selectResponsiveProps}
                     />
                   </div>
@@ -1316,20 +1313,23 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                   <ErrorMsg field="clientCredit" />
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <Label>Saldo a favor</Label>
-                  <input
-                    type="text"
-                    name="saldoFavor"
-                    value={formData.saldoFavor}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="0"
-                    autoComplete="off"
-                    className={inputClass('saldoFavor')}
-                  />
-                  <ErrorMsg field="saldoFavor" />
-                </div>
+                {isEditing && (
+                  <div className="flex flex-col gap-1">
+                    <Label>Saldo a favor</Label>
+                    <input
+                      type="text"
+                      name="saldoFavor"
+                      value={formData.saldoFavor || '0'}
+                      disabled
+                      readOnly
+                      autoComplete="off"
+                      className={disabledInputClass('saldoFavor')}
+                    />
+                    <p className="text-[11px] text-gray-400">
+                      Este valor se actualiza solo con devoluciones de ventas.
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div className="flex min-w-0 flex-col gap-1">

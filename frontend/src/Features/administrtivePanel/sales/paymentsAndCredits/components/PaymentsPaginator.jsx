@@ -97,6 +97,10 @@ export default function PaymentsPaginator({
     Math.ceil(totalItems / itemsPerPage)
   );
 
+  // mostrar cuando el totral de paginas sea mayor a 1
+
+  // if (totalPages <= 1) return null;
+
   const firstItem =
     totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
 

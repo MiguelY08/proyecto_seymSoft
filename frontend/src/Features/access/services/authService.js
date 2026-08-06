@@ -25,30 +25,19 @@ import {
 
 export const register = async (userData) => {
   try {
+    const response = await apiClient.post("/auth/register", {
+      full_name: userData.fullName,
+      email: userData.email,
+      pass_word: userData.password,
+      phone: userData.phone,
+    });
 
-    const response = await apiClient.post(
-      "/auth/register",
-      {
-        full_name: userData.fullName,
-        email: userData.email,
-        pass_word: userData.password,
-        phone: userData.phone,
-      }
-    );
-
-    const {
-      user,
-      role,
-      permissions,
-      client,
-      accessToken,
-      refreshToken
-    } = response.data.data;
+    const { user, role, permissions, client, accessToken, refreshToken } =
+      response.data.data;
 
     // guardar sesión
 
     saveSession({
-
       user,
       role: role || null,
       permissions: permissions || [],
@@ -57,11 +46,9 @@ export const register = async (userData) => {
       accessToken,
 
       refreshToken,
-
     });
 
     return {
-
       success: true,
 
       user,
@@ -72,205 +59,120 @@ export const register = async (userData) => {
       accessToken,
 
       refreshToken,
-
     };
-
   } catch (error) {
-
-    console.error(
-      "Error en register:",
-      error
-    );
+    console.error("Error en register:", error);
 
     const errorMessage =
-
-      error.response?.data?.message
-      ||
-      "Error al registrarse";
+      error.response?.data?.message || "Error al registrarse";
 
     return {
+      success: false,
 
-      success:false,
-
-      error:errorMessage
-
+      error: errorMessage,
     };
-
   }
-
 };
-
 
 // ═══════════════════════════════════════════════════════════
 // LOGIN
 // ═══════════════════════════════════════════════════════════
 
-export const login = async (
-  email,
-  password
-) => {
-
+export const login = async (email, password) => {
   try {
-
     const response = await apiClient.post(
-
       "/auth/login",
 
       {
-
         email,
 
         pass_word: password,
-
-      }
-
+      },
     );
 
-   const {
-  user,
-  role,
-  permissions,
-  accessToken,
-  refreshToken,
-  client,
-} = response.data.data;
+    const { user, role, permissions, accessToken, refreshToken, client } =
+      response.data.data;
 
-console.log("LOGIN RESPONSE:");
-console.log("user:", user);
-console.log("role:", role);
-console.log("permissions:", permissions);
+    console.log("LOGIN RESPONSE:");
+    console.log("user:", user);
+    console.log("role:", role);
+    console.log("permissions:", permissions);
 
-saveSession({
-  user,
-  role,
-  permissions,
-  accessToken,
-  refreshToken,
-  client
-});
+    saveSession({
+      user,
+      role,
+      permissions,
+      accessToken,
+      refreshToken,
+      client,
+    });
 
-console.log("SESSION SAVED:", getSession());
+    console.log("SESSION SAVED:", getSession());
 
-return {
-  success:true,
-  user,
-  role,
-  permissions,
-  accessToken,
-  refreshToken,
-  client,
-  redirectTo: role ? "/admin" : "/"
-};
-
-  } catch(error){
-
-    console.error(
-      "Error en login:",
-      error
-    );
-
-    const errorMessage=
-
-      error.response?.data?.message
-      ||
-      "Email o contraseña incorrectos";
-
-    return{
-
-      success:false,
-
-      error:errorMessage
-
+    return {
+      success: true,
+      user,
+      role,
+      permissions,
+      accessToken,
+      refreshToken,
+      client,
+      redirectTo: role ? "/admin" : "/",
     };
+  } catch (error) {
+    console.error("Error en login:", error);
 
+    const errorMessage =
+      error.response?.data?.message || "Email o contraseña incorrectos";
+
+    return {
+      success: false,
+
+      error: errorMessage,
+    };
   }
-
 };
-
 
 // ═══════════════════════════════════════════════════════════
 // LOGOUT
 // ═══════════════════════════════════════════════════════════
 
-export const logout = async()=>{
+export const logout = async () => {
+  try {
+    const session = getSession();
 
-  try{
-
-    const session=
-      getSession();
-
-    if(
-      session?.refreshToken
-    ){
-
+    if (session?.refreshToken) {
       await apiClient.post(
-
         "/auth/logout",
 
         {
-
-          refreshToken:
-          session.refreshToken
-
-        }
-
+          refreshToken: session.refreshToken,
+        },
       );
-
     }
-
-  }
-  catch(error){
-
-    console.error(
-
-      "Error en logout:",
-      error
-
-    );
-
-  }
-
-  finally{
-
+  } catch (error) {
+    console.error("Error en logout:", error);
+  } finally {
     clearSession();
 
-    return{
-
-      success:true
-
+    return {
+      success: true,
     };
-
   }
-
 };
-
 
 // ═══════════════════════════════════════════════════════════
 // PERFIL
 // ═══════════════════════════════════════════════════════════
 
-export const getProfile = async()=>{
+export const getProfile = async () => {
+  try {
+    const response = await apiClient.get("/auth/me");
 
-  try{
+    const { user, role, permissions, client, requiresPasswordSetup } =
+      response.data.data;
 
-    const response=
-
-      await apiClient.get(
-        "/auth/me"
-      );
-
-    const{
-
-      user,
-      role,
-      permissions,
-      client,
-      requiresPasswordSetup
-
-    }=response.data.data;
-
-    const currentSession =
-      getSession();
+    const currentSession = getSession();
 
     if (currentSession?.accessToken) {
       saveSession({
@@ -279,13 +181,12 @@ export const getProfile = async()=>{
         role: role || null,
         permissions: permissions || [],
         client: client || null,
-        requiresPasswordSetup: requiresPasswordSetup || false
+        requiresPasswordSetup: requiresPasswordSetup || false,
       });
     }
 
-    return{
-
-      success:true,
+    return {
+      success: true,
 
       user,
 
@@ -295,189 +196,94 @@ export const getProfile = async()=>{
 
       client,
 
-      requiresPasswordSetup
-
+      requiresPasswordSetup,
     };
+  } catch (error) {
+    console.error("Error en getProfile:", error);
 
-  }
-  catch(error){
-
-    console.error(
-      "Error en getProfile:",
-      error
-    );
-
-    if(
-
-      error.response?.status
-      ===401
-
-    ){
-
+    if (error.response?.status === 401) {
       clearSession();
-
     }
 
-    return{
+    return {
+      success: false,
 
-      success:false,
-
-      error:
-      "Error al obtener perfil"
-
+      error: "Error al obtener perfil",
     };
-
   }
-
 };
-
 
 // ═══════════════════════════════════════════════════════════
 // ACTUALIZAR PERFIL
 // ═══════════════════════════════════════════════════════════
 
-export const updateProfile = async(
-  changes
-)=>{
+export const updateProfile = async (changes) => {
+  try {
+    const body = {};
 
-  try{
-
-    const body={};
-
-    if(
-
-      changes.fullName!==undefined
-
-    ){
-
-      body.fullName=
-      changes.fullName;
-
+    if (changes.fullName !== undefined) {
+      body.fullName = changes.fullName;
     }
 
-    if(
-
-      changes.email!==undefined
-
-    ){
-
-      body.email=
-      changes.email;
-
+    if (changes.email !== undefined) {
+      body.email = changes.email;
     }
 
-    if(
-
-      changes.phone!==undefined
-
-    ){
-
-      body.phone=
-      changes.phone;
-
+    if (changes.phone !== undefined) {
+      body.phone = changes.phone;
     }
 
-    if(
-
-      changes.address!==undefined
-
-    ){
-
-      body.address=
-      changes.address;
-
+    if (changes.address !== undefined) {
+      body.address = changes.address;
     }
 
-    if(
-
-      changes.currentPassword!==undefined
-
-    ){
-
-      body.current_password=
-      changes.currentPassword;
-
+    if (changes.currentPassword !== undefined) {
+      body.current_password = changes.currentPassword;
     }
 
-    if(
-
-      changes.newPassword!==undefined
-
-    ){
-
-      body.password=
-      changes.newPassword;
-
+    if (changes.newPassword !== undefined) {
+      body.password = changes.newPassword;
     }
 
-    if(
-
-      changes.confirmPassword!==undefined
-
-    ){
-
-      body.confirm_password=
-      changes.confirmPassword;
-
+    if (changes.confirmPassword !== undefined) {
+      body.confirm_password = changes.confirmPassword;
     }
 
-    const response=
+    const response = await apiClient.put(
+      "/auth/profile",
 
-      await apiClient.put(
+      body,
+    );
 
-        "/auth/profile",
+    const responseData = response.data.data || response.data || {};
 
-        body
-
-      );
-
-    const responseData =
-      response.data.data || response.data || {};
-
-    const{
-
-      user,
-      role,
-      permissions,
-      client,
-      unchangedFields,
-
-    }=responseData;
+    const { user, role, permissions, client, unchangedFields } = responseData;
 
     const requiresReLogin =
-      response.data.requiresReLogin === true
-      ||
+      response.data.requiresReLogin === true ||
       responseData.requiresReLogin === true;
 
-    const currentSession=
-      getSession();
-    const updatedUser =
-      user ?? currentSession?.user ?? null;
-    const updatedRole =
-      role ?? currentSession?.role ?? null;
-    const updatedPermissions =
-      permissions ?? currentSession?.permissions ?? [];
-    const updatedClient =
-      client ?? currentSession?.client ?? null;
+    const currentSession = getSession();
+    const updatedUser = user ?? currentSession?.user ?? null;
+    const updatedRole = role ?? currentSession?.role ?? null;
+    const updatedPermissions = permissions ?? currentSession?.permissions ?? [];
+    const updatedClient = client ?? currentSession?.client ?? null;
 
     if (requiresReLogin) {
       clearSession();
 
-      return{
+      return {
+        success: true,
 
-        success:true,
-
-        requiresReLogin:true,
+        requiresReLogin: true,
 
         unchangedFields: unchangedFields || {},
 
-        message: response.data.message || responseData.message
-
+        message: response.data.message || responseData.message,
       };
     }
 
     saveSession({
-
       ...currentSession,
 
       user: updatedUser,
@@ -487,14 +293,10 @@ export const updateProfile = async(
       permissions: updatedPermissions,
 
       client: updatedClient,
-
-
     });
 
-
-    return{
-
-      success:true,
+    return {
+      success: true,
 
       user: updatedUser,
 
@@ -508,254 +310,132 @@ export const updateProfile = async(
 
       message: response.data.message || responseData.message,
 
-      requiresReLogin:false
-
+      requiresReLogin: false,
     };
+  } catch (error) {
+    console.error("Error updateProfile:", error);
 
-  }
+    return {
+      success: false,
 
-  catch(error){
-
-    console.error(
-      "Error updateProfile:",
-      error
-    );
-
-    return{
-
-      success:false,
-
-      error:
-
-      error.response?.data?.message
-
-      ||
-
-      "Error al actualizar perfil",
+      error: error.response?.data?.message || "Error al actualizar perfil",
 
       status: error.response?.status,
 
-      data: error.response?.data?.data
-
+      data: error.response?.data?.data,
     };
-
   }
-
 };
-
 
 // ═══════════════════════════════════════════════════════════
 // FORGOT PASSWORD
 // ═══════════════════════════════════════════════════════════
 
-export const forgotPassword = async(
-  email
-)=>{
+export const forgotPassword = async (email) => {
+  try {
+    const response = await apiClient.post(
+      "/auth/forgot-password",
 
-  try{
+      {
+        email,
+      },
+    );
 
-    const response=
+    return {
+      success: true,
 
-      await apiClient.post(
-
-        "/auth/forgot-password",
-
-        {
-
-          email
-
-        }
-
-      );
-
-    return{
-
-      success:true,
-
-      message:
-      response.data.message
-
+      message: response.data.message,
     };
+  } catch (error) {
+    return {
+      success: false,
 
-  }
-
-  catch(error){
-
-    return{
-
-      success:false,
-
-      error:
-
-      error.response?.data?.message
-
-      ||
-
-      "Error al solicitar reset"
-
+      error: error.response?.data?.message || "Error al solicitar reset",
     };
-
   }
-
 };
-
 
 // ═══════════════════════════════════════════════════════════
 // RESET PASSWORD
 // ═══════════════════════════════════════════════════════════
 
-export const resetPassword = async(
-  token,
-  newPassword
-)=>{
+export const resetPassword = async (token, newPassword) => {
+  try {
+    const response = await apiClient.post(
+      "/auth/reset-password",
 
-  try{
+      {
+        token,
 
-    const response=
+        new_password: newPassword,
 
-      await apiClient.post(
+        confirm_password: newPassword,
+      },
+    );
 
-        "/auth/reset-password",
+    return {
+      success: true,
 
-        {
-
-          token,
-
-          new_password:
-          newPassword,
-
-          confirm_password:
-          newPassword
-
-        }
-
-      );
-
-    return{
-
-      success:true,
-
-      message:
-      response.data.message
-
+      message: response.data.message,
     };
+  } catch (error) {
+    return {
+      success: false,
 
-  }
-
-  catch(error){
-
-    return{
-
-      success:false,
-
-      error:
-
-      error.response?.data?.message
-
-      ||
-
-      "Error al resetear contraseña"
-
+      error: error.response?.data?.message || "Error al resetear contraseña",
     };
-
   }
-
 };
-
 
 // ═══════════════════════════════════════════════════════════
 // GOOGLE LOGIN
 // ═══════════════════════════════════════════════════════════
 
-export const googleLogin=(
-
-  accessToken,
-  refreshToken
-
-)=>{
-
-  try{
-
+export const googleLogin = (accessToken, refreshToken) => {
+  try {
     saveSession({
-
       accessToken,
 
-      refreshToken
-
+      refreshToken,
     });
-
-    return{
-
-      success:true
-
-    };
-
-  }
-
-  catch(error){
-
-    return{
-
-      success:false,
-
-      error:
-      "Error Google Login"
-
-    };
-
-  }
-
-};
-
-export const changePassword = async ({
-  currentPassword,
-  newPassword
-}) => {
-  try {
-
-    const response =
-      await apiClient.post(
-        "/auth/change-password",
-        {
-          currentPassword,
-          newPassword
-        }
-      );
 
     return {
       success: true,
-      message: response.data.message
     };
-
   } catch (error) {
-
     return {
       success: false,
-      error:
-        error.response?.data?.message
-        ||
-        "Error al cambiar contraseña"
-    };
 
+      error: "Error Google Login",
+    };
+  }
+};
+
+export const changePassword = async ({ currentPassword, newPassword }) => {
+  try {
+    const response = await apiClient.post("/auth/change-password", {
+      currentPassword,
+      newPassword,
+    });
+
+    return {
+      success: true,
+      message: response.data.message,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Error al cambiar contraseña",
+    };
   }
 };
 
 export const checkEmailAvailability = async (email) => {
-  const normalizedEmail = String(email || '').trim().toLowerCase();
-  const response = await apiClient.get('/auth/check-email', {
+  const normalizedEmail = String(email || "")
+    .trim()
+    .toLowerCase();
+  const response = await apiClient.get("/auth/check-email", {
     params: { email: normalizedEmail },
-  });
-
-  return response.data.data;
-};
-
-export const validatePhone = async (phone, context = 'client') => {
-  const normalizedPhone = String(phone || '').replace(/\D/g, '');
-  const response = await apiClient.get('/auth/validate-phone', {
-    params: {
-      phone: normalizedPhone,
-      context,
-    },
   });
 
   return response.data.data;

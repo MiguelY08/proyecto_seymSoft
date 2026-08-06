@@ -5,19 +5,17 @@ import LoadingOverlay from '../../../../shared/LoadingOverlay';
 import FormSelect from '../../../../shared/FormSelect';
 import { resolveDefectiveProduct } from '../data/returnsService';
 import { formatCurrency } from '../utils/returnsHelpers';
+import {
+  RETURN_REASON_OPTIONS as PURCHASE_RETURN_REASON_OPTIONS,
+  RETURN_METHOD_OPTIONS as PURCHASE_RETURN_METHOD_OPTIONS,
+  RETURN_METHOD_IDS,
+} from '../../../purchases/returns/helpers/returnsHelpers';
 
-const RETURN_REASONS = [
-  { id: 5, label: 'Insatisfecho' },
-  { id: 8, label: 'Prod. en mal estado' },
-  { id: 11, label: 'Prod. incorrecto' },
-  { id: 10, label: 'Otro motivo' },
-];
+const RETURN_REASONS = PURCHASE_RETURN_REASON_OPTIONS;
 
-const RETURN_METHODS = [
-  { id: 1, label: 'Reemplazo' },
-  { id: 2, label: 'Reembolso' },
-  { id: 3, label: 'Saldo a favor' },
-];
+const RETURN_METHODS = PURCHASE_RETURN_METHOD_OPTIONS.filter(
+  (method) => Number(method.id) !== RETURN_METHOD_IDS.CREDIT_BALANCE
+);
 
 const RETURN_REASON_OPTIONS = RETURN_REASONS.map((reason) => ({
   value: reason.id,

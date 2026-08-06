@@ -1,5 +1,4 @@
-import ButtonComponent from "../../../../shared/ButtonComponent";
-import Permission from "../../../configuration/roles/components/Permission";
+
 
 export default function AccountHeader({
   nombre,
@@ -127,17 +126,6 @@ export default function AccountHeader({
             )}
 
         </div>
-
-        {/* BOTÓN PDF - SIN CAMBIOS */}
-        <Permission permission="pagos_y_abonos.descargar">
-          <ButtonComponent
-            onClick={onDownloadPDF}
-            disabled={isGeneratingPDF}
-            className="w-full sm:w-auto bg-[#004D77] text-[#004D77] hover:bg-[#003D5e] border border-[#004D77] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 rounded-lg px-4 py-2"
-          >
-            {isGeneratingPDF ? "Generando..." : "Descargar PDF"}
-          </ButtonComponent>
-        </Permission>
 
       </div>
 

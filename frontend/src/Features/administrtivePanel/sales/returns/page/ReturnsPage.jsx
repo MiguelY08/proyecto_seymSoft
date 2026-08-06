@@ -2,8 +2,8 @@
  * Archivo: ReturnsPage.jsx
  * Página principal del módulo de gestión de devoluciones de ventas.
  */
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import ReturnsToolbar from '../components/ReturnsToolbar';
 import ReturnsTable from '../components/ReturnsTable';
 import SalesReturnsMetricsCards from '../components/SalesReturnsMetricsCards';
@@ -22,7 +22,8 @@ import { exportReturnsToExcel } from '../utils/excelExporter';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import Spinner from '../../../../shared/spinner';
 
-const RECORDS_PER_PAGE = 13;
+const RECORDS_PER_PAGE = 11;
+const RETURNS_FETCH_LIMIT = 100;
 
 const getReturnSaveError = (error) => {
   const response = error?.response?.data || {};
@@ -41,6 +42,10 @@ const getReturnSaveError = (error) => {
     CREDIT_BALANCE_NOT_AVAILABLE: {
       title: 'Saldo a favor insuficiente',
       text: message || 'El saldo a favor del cliente no alcanza para revertir esta operación.',
+    },
+    RETURN_ALREADY_EXISTS: {
+      title: 'Devolución ya registrada',
+      text: message || 'No es posible crear la devolución. Esta venta ya tiene una devolución asociada.',
     },
   };
 
@@ -114,6 +119,7 @@ const normalizeReturn = (item = {}) => {
 };
 
 function ReturnsPage() {
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [returns, setReturns] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -125,15 +131,24 @@ function ReturnsPage() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [selectedReturn, setSelectedReturn] = useState(null);
   const [returnToCancel, setReturnToCancel] = useState(null);
+  const [preselectedSale, setPreselectedSale] = useState(null);
   const [loading, setLoading] = useState(true);
+  const openedNavigationSaleRef = useRef('');
 
   const { showSuccess, showError } = useAlert();
 
   const loadReturns = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await getReturns({ page: 1, limit: 100 });
-      const rawData = response?.data || [];
+      const response = await getReturns({ page: 1, limit: RETURNS_FETCH_LIMIT });
+      const rawData = [...(response?.data || [])];
+      const totalPages = response?.pagination?.totalPages ?? 1;
+
+      for (let page = 2; page <= totalPages; page += 1) {
+        const nextResponse = await getReturns({ page, limit: RETURNS_FETCH_LIMIT });
+        rawData.push(...(nextResponse?.data || []));
+      }
+
       setReturns(rawData.map(normalizeReturn));
     } catch (error) {
       showError('Error', error.message || 'No se pudieron cargar las devoluciones');
@@ -186,8 +201,31 @@ function ReturnsPage() {
 
   const handleNew = () => {
     setSelectedReturn(null);
+    setPreselectedSale(null);
     setFormOpen(true);
   };
+
+  useEffect(() => {
+    const saleFromNavigation = location.state?.sale;
+    const shouldOpenForm = location.state?.openReturnForm || Boolean(saleFromNavigation);
+    const saleKey = saleFromNavigation
+      ? String(saleFromNavigation.idSale ?? saleFromNavigation.idVending ?? saleFromNavigation.id ?? saleFromNavigation.factura ?? '')
+      : '';
+
+    if (
+      !shouldOpenForm ||
+      !saleFromNavigation ||
+      !saleKey ||
+      openedNavigationSaleRef.current === saleKey ||
+      formOpen ||
+      selectedReturn
+    ) return;
+
+    openedNavigationSaleRef.current = saleKey;
+    setSelectedReturn(null);
+    setPreselectedSale(saleFromNavigation);
+    setFormOpen(true);
+  }, [formOpen, location.state, selectedReturn]);
 
   const loadFullReturn = async (returnData) => {
     try {
@@ -309,6 +347,18 @@ function ReturnsPage() {
           setFormOpen(false);
         }
       } else {
+        const existingReturn = returns.find((item) =>
+          String(item.idSale ?? item.id_sale ?? '') === String(createPayload.idSale ?? '')
+        );
+
+        if (existingReturn) {
+          showError(
+            'Devolución ya registrada',
+            `No es posible crear la devolución. Esta venta ya tiene asociada la devolución ${existingReturn.returnNumber || existingReturn.numeroDevolucion || 'registrada'}.`
+          );
+          return;
+        }
+
         const created = await createReturn(createPayload, createPayload.evidenceFiles);
         if (created) {
           await loadReturns();
@@ -399,8 +449,9 @@ function ReturnsPage() {
 
       <FormReturn
         isOpen={formOpen}
-        onClose={() => { setFormOpen(false); setSelectedReturn(null); }}
+        onClose={() => { setFormOpen(false); setSelectedReturn(null); setPreselectedSale(null); }}
         returnData={selectedReturn}
+        preselectedSale={preselectedSale}
         onSave={handleSave}
       />
 

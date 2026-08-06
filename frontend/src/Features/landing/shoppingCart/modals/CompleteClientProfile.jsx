@@ -7,7 +7,6 @@ import {
   normalizeDocumentKey,
 } from '../../../administrtivePanel/sales/clients/helpers/clientHelpers';
 import FormSelect from '../../../shared/FormSelect';
-import LoadingOverlay from '../../../shared/LoadingOverlay';
 import { useAlert } from '../../../shared/alerts/useAlert';
 
 const EMAIL_MAX_LENGTH = 100;
@@ -506,7 +505,6 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
   return (
     <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/50 p-0 backdrop-blur-sm sm:p-3">
       <div className="relative flex h-dvh w-full max-w-2xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[94vh] sm:rounded-lg">
-        <LoadingOverlay show={submitting} message="Guardando tus datos..." />
         <header className="flex shrink-0 items-center justify-between bg-[#004D77] px-4 py-4 text-white sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
             <span className="rounded-lg bg-white/15 p-2"><UserRound size={19} /></span>
