@@ -18,6 +18,7 @@ const createEmptyBuffer = () => ({
   isUnauthorizedTarget: false,
   isScannerCandidate: false,
   isScannerDetected: false,
+  wasSuccessfulScan: false,
   initialValue: null,
   initialSelectionStart: null,
   initialSelectionEnd: null,
@@ -117,6 +118,7 @@ export function useBarcodeScanner(options = {}) {
           scannerField: buffer.scannerField,
         })
       );
+      buffer.wasSuccessfulScan = true;
     };
 
     const handleKeyDown = (event) => {
@@ -129,6 +131,25 @@ export function useBarcodeScanner(options = {}) {
       const target = event.target;
       const isScannerCandidate = isScannerTarget(target);
       const isEditable = isEditableScannerTarget(target);
+
+    // Validar si el carácter cumple con el patrón permitido
+      const isAllowedChar = event.key.length === 1 && config.allowedPattern.test(event.key);
+
+      // Si no es un terminador ni un carácter permitido, permitir edición normal
+      if (!isTerminator && !isAllowedChar) {
+        // Si hay escaneo en progreso, resetear buffer para permitir edición
+        if (buffer.chars.length > 0) {
+          resetBuffer();
+        }
+        // Dejar que el navegador maneje la tecla normalmente (Backspace, Delete, etc.)
+        return;
+      }
+
+      // Si ya hubo un escaneo exitoso, bloquear letras
+      if (buffer.wasSuccessfulScan && /[A-Za-z]/.test(event.key)) {
+        event.preventDefault();
+        return;
+      }
 
       if (buffer.chars.length === 0) {
         buffer.isScannerCandidate = isScannerCandidate;
