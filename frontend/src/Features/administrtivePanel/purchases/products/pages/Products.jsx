@@ -29,7 +29,7 @@ import {
   useBarcodeScanner,
 } from "../../../../shared/scanner";
 
-const RECORDS_PER_PAGE = 13;
+const RECORDS_PER_PAGE = 11;
 const LOW_STOCK_THRESHOLD = 10;
 const COMPANY_COLOR = "004D77";
 const LIGHT_BLUE = "DCEBF3";
@@ -561,7 +561,7 @@ function Products() {
                 {lowStockCount === 1
                   ? "Hay 1 producto con menos de 10 unidades disponibles."
                   : `Hay ${lowStockCount} productos con menos de 10 unidades disponibles.`}
-                {" Revisa el inventario para programar una compra o reposicion."}
+                {" Revisa el inventario para programar una compra."}
               </p>
             </div>
             <button
