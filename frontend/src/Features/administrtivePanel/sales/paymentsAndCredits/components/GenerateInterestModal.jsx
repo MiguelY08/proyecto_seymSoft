@@ -164,8 +164,8 @@ export default function GenerateInterestModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-2 sm:p-4 z-50">
-      <div className="bg-white w-full max-w-md max-h-[94vh] rounded-2xl shadow-xl font-lexend overflow-hidden flex flex-col">
-        <div className="bg-[#004D77] text-white px-4 sm:px-6 py-3 sm:py-4 rounded-t-2xl flex justify-between items-center gap-3">
+      <div className="bg-white w-full max-w-160 max-h-[95vh] rounded-2xl shadow-xl font-lexend overflow-hidden flex flex-col">
+        <div className="bg-[#004D77] text-white px-4 sm:px-5 py-3 sm:py-4 rounded-t-2xl flex justify-between items-center gap-3">
           <h2 className="text-base sm:text-lg font-semibold">
             Aplicar interés
           </h2>
@@ -174,8 +174,8 @@ export default function GenerateInterestModal({
           </button>
         </div>
 
-        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto">
-          <div className="bg-gray-100 p-4 rounded-xl text-sm space-y-2">
+        <div className="flex-1 min-h-0 p-4 sm:p-5 space-y-3 sm:space-y-4 overflow-y-auto">
+          <div className="bg-gray-100 p-3 sm:p-4 rounded-xl text-sm space-y-2">
             <p>
               <strong>Crédito:</strong> #{factura.idCredit}
             </p>
@@ -219,7 +219,7 @@ export default function GenerateInterestModal({
             {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
           </div>
 
-          <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-sm space-y-2">
+          <div className="bg-gray-50 p-3 sm:p-4 rounded-xl border border-gray-200 text-sm space-y-2">
             <p className="font-medium">Resumen de interés</p>
             <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-3">
               <span className="text-gray-600">Saldo pendiente</span>
@@ -239,7 +239,7 @@ export default function GenerateInterestModal({
             </div>
           </div>
 
-          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-1 mt-auto">
             <button
               onClick={onClose}
               className="flex-1 bg-gray-400 text-white py-2 rounded-xl cursor-pointer hover:bg-gray-500 transition"

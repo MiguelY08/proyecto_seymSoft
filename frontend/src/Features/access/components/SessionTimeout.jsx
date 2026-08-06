@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
-import { useAlert } from "../../shared/alerts/useAlert.js";
-import { clearSession } from "../helpers/authStorage.js";
 
-const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
+// 15 minutos en milisegundos
+const INACTIVITY_LIMIT_MS = 15 * 60 * 1000;
+
 const ACTIVITY_EVENTS = [
   "mousemove",
   "mousedown",
@@ -14,71 +14,57 @@ const ACTIVITY_EVENTS = [
   "touchstart",
 ];
 
-export default function SessionTimeout() {
-  const navigate = useNavigate();
-  const { isAuthenticated, clearLocalSession } = useAuth();
-  const { showWarning } = useAlert();
-
+/**
+ * SessionTimeout
+ *
+ * Cierra la sesión por inactividad del usuario, de forma
+ * INDEPENDIENTE al ciclo de vida del JWT. Debe montarse UNA
+ * SOLA VEZ en App.jsx para funcionar en toda la aplicación.
+ */
+function SessionTimeout() {
   const timeoutRef = useRef(null);
-  const expiredRef = useRef(false);
+  const { isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
 
-  const clearSessionAndRedirect = useCallback(() => {
-    if (expiredRef.current) return;
+  const handleInactivityLogout = useCallback(async () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
 
-    expiredRef.current = true;
-
-    clearSession();
-    sessionStorage.clear();
-    clearLocalSession();
-
-    showWarning("Sesión expirada", "Tu sesión ha cerrado por inactividad.");
-    navigate("/login", { replace: true });
-  }, [clearLocalSession, navigate, showWarning]);
+    await logout();
+    navigate("/login?error=session_timeout", { replace: true });
+  }, [logout, navigate]);
 
   const resetTimer = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
     if (!isAuthenticated) return;
 
-    if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
-    }
-
-    timeoutRef.current = window.setTimeout(() => {
-      clearSessionAndRedirect();
-    }, INACTIVITY_TIMEOUT_MS);
-  }, [clearSessionAndRedirect, isAuthenticated]);
+    timeoutRef.current = setTimeout(handleInactivityLogout, INACTIVITY_LIMIT_MS);
+  }, [isAuthenticated, handleInactivityLogout]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      expiredRef.current = false;
-
-      if (timeoutRef.current) {
-        window.clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-
-      return undefined;
-    }
-
-    expiredRef.current = false;
     resetTimer();
 
-    const handleActivity = () => resetTimer();
-
     ACTIVITY_EVENTS.forEach((eventName) => {
-      window.addEventListener(eventName, handleActivity, { passive: true });
+      window.addEventListener(eventName, resetTimer, { passive: true });
     });
 
     return () => {
       if (timeoutRef.current) {
-        window.clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
+        clearTimeout(timeoutRef.current);
       }
-
       ACTIVITY_EVENTS.forEach((eventName) => {
-        window.removeEventListener(eventName, handleActivity);
+        window.removeEventListener(eventName, resetTimer);
       });
     };
-  }, [isAuthenticated, resetTimer]);
+  }, [resetTimer]);
 
   return null;
 }
+
+export default SessionTimeout;

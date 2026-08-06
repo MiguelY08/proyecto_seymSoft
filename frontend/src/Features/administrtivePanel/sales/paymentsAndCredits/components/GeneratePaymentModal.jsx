@@ -241,190 +241,202 @@ export default function GeneratePaymentModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 font-lexend p-2 sm:p-4">
-      <div className="bg-white w-full max-w-md max-h-[94vh] rounded-2xl shadow-xl overflow-hidden flex flex-col">
+      <div className="bg-white w-full max-w-160 max-h-[92vh] rounded-2xl shadow-xl overflow-hidden flex flex-col">
         <div className="bg-[#004D77] text-white px-4 sm:px-5 py-3 flex justify-between items-center gap-3">
-          <h3 className="font-semibold text-base sm:text-lg">Registrar Abono</h3>
+          <h3 className="font-semibold text-base sm:text-lg">
+            Registrar Abono
+          </h3>
 
           <X
             size={18}
-            className={isSubmitting ? "cursor-not-allowed opacity-50" : "cursor-pointer"}
+            className={
+              isSubmitting ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+            }
             onClick={isSubmitting ? undefined : onClose}
           />
         </div>
 
-        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto">
-          <div className="bg-gray-50 rounded-xl p-3 text-sm space-y-1 border border-gray-200">
-            <p className="font-semibold text-gray-800 break-words">{cliente?.nombre}</p>
+        <div className="flex-1 min-h-0 flex flex-col">
+          <div className="flex-1 min-h-0 p-4 sm:p-5 space-y-3 overflow-y-auto">
+            <div className="bg-gray-50 rounded-xl p-2.5 sm:p-3 text-sm space-y-1 border border-gray-200">
+              <p className="font-semibold text-gray-800 wrap-break-word">
+                {cliente?.nombre}
+              </p>
 
-            <p className="text-gray-500">
-              Factura:
-              <span className="font-medium text-gray-700 ml-1">
-                {factura?.nroFactura}
-              </span>
-            </p>
-
-            <p className="text-gray-500">
-              Capital pendiente:
-              <span className="font-semibold text-gray-700 ml-1">
-                ${formatNumber(capitalPendiente)}
-              </span>
-            </p>
-
-            {Number(interesPendiente) > 0 && (
               <p className="text-gray-500">
-                Interés pendiente:
-                <span className="font-semibold text-amber-600 ml-1">
-                  ${formatNumber(interesPendiente)}
+                Factura:
+                <span className="font-medium text-gray-700 ml-1">
+                  {factura?.nroFactura}
                 </span>
               </p>
-            )}
 
-            <p className="text-gray-500">
-              Saldo pendiente:
-              <span className="font-semibold text-red-600 ml-1">
-                ${formatNumber(deudaTotal)}
-              </span>
-            </p>
+              <p className="text-gray-500">
+                Capital pendiente:
+                <span className="font-semibold text-gray-700 ml-1">
+                  ${formatNumber(capitalPendiente)}
+                </span>
+              </p>
 
-            <p className="text-gray-500">
-              Saldo a favor disponible:
-              <span className="font-semibold text-emerald-600 ml-1">
-                ${formatNumber(favorBalance)}
-              </span>
-            </p>
-          </div>
+              {Number(interesPendiente) > 0 && (
+                <p className="text-gray-500">
+                  Interés pendiente:
+                  <span className="font-semibold text-amber-600 ml-1">
+                    ${formatNumber(interesPendiente)}
+                  </span>
+                </p>
+              )}
 
-          <div className="grid grid-cols-1 gap-4">
+              <p className="text-gray-500">
+                Saldo pendiente:
+                <span className="font-semibold text-red-600 ml-1">
+                  ${formatNumber(deudaTotal)}
+                </span>
+              </p>
+
+              <p className="text-gray-500">
+                Saldo a favor disponible:
+                <span className="font-semibold text-emerald-600 ml-1">
+                  ${formatNumber(favorBalance)}
+                </span>
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              <div>
+                <label className="text-xs text-gray-500">Monto de Abono</label>
+
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={monto}
+                  onChange={(e) => {
+                    const rawValue = e.target.value.replace(/\D/g, "");
+                    const formattedValue = formatNumber(rawValue);
+                    const numeric = Number(rawValue);
+
+                    setMonto(formattedValue);
+                    setErrors((prev) => ({
+                      ...prev,
+                      monto: getAmountError(formattedValue, numeric),
+                    }));
+                  }}
+                  placeholder="0"
+                  className={`w-full px-3 py-2 rounded-lg border transition focus:outline-none ${
+                    errors.monto
+                      ? "border-red-500 ring-2 ring-red-300"
+                      : "border-gray-300 focus:ring-2 focus:ring-[#004D77]"
+                  }`}
+                />
+
+                {errors.monto && (
+                  <p className="text-xs text-red-500 mt-1">{errors.monto}</p>
+                )}
+              </div>
+            </div>
+
             <div>
-              <label className="text-xs text-gray-500">Monto de Abono</label>
+              <label className="text-xs text-gray-500">Medio de Pago</label>
 
-              <input
-                type="text"
-                inputMode="numeric"
-                value={monto}
+              <select
+                value={idPaymentMethod}
+                disabled={loadingMethods}
                 onChange={(e) => {
-                  const rawValue = e.target.value.replace(/\D/g, "");
-                  const formattedValue = formatNumber(rawValue);
-                  const numeric = Number(rawValue);
+                  const nextIdPaymentMethod = Number(e.target.value);
+                  const nextMethod = paymentMethods.find(
+                    (method) => Number(method.id) === nextIdPaymentMethod,
+                  );
+                  const nextIsFavorBalanceMethod =
+                    nextIdPaymentMethod === 4 ||
+                    nextMethod?.nombre?.toLowerCase() === "saldo a favor";
 
-                  setMonto(formattedValue);
+                  setIdPaymentMethod(nextIdPaymentMethod);
                   setErrors((prev) => ({
                     ...prev,
-                    monto: getAmountError(formattedValue, numeric),
+                    monto: getAmountError(
+                      monto,
+                      parseNumber(monto),
+                      nextIsFavorBalanceMethod,
+                    ),
                   }));
                 }}
-                placeholder="0"
-                className={`w-full px-3 py-2 rounded-lg border transition focus:outline-none ${
-                  errors.monto
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#004D77] disabled:bg-gray-100 disabled:text-gray-500"
+              >
+                {loadingMethods && (
+                  <option value={idPaymentMethod}>Cargando...</option>
+                )}
+
+                {!loadingMethods &&
+                  paymentMethods.map((method) => (
+                    <option key={method.id} value={method.id}>
+                      {method.nombre}
+                    </option>
+                  ))}
+              </select>
+
+              {isFavorBalanceMethod && (
+                <p className="text-xs text-emerald-600 mt-1">
+                  Disponible: ${formatNumber(favorBalance)}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-500">
+                Observación (opcional)
+              </label>
+
+              <textarea
+                rows={2}
+                value={observacion}
+                onChange={(e) => {
+                  const value = e.target.value;
+
+                  setObservacion(value);
+
+                  const trimmed = value.trim();
+
+                  if (trimmed.length > 255) {
+                    setErrors((prev) => ({
+                      ...prev,
+                      observacion: "Máximo 255 caracteres",
+                    }));
+                  } else {
+                    setErrors((prev) => ({
+                      ...prev,
+                      observacion: undefined,
+                    }));
+                  }
+                }}
+                placeholder="Descripción del abono..."
+                className={`w-full px-3 py-2 rounded-lg border resize-none transition focus:outline-none ${
+                  errors.observacion
                     ? "border-red-500 ring-2 ring-red-300"
                     : "border-gray-300 focus:ring-2 focus:ring-[#004D77]"
                 }`}
               />
 
-              {errors.monto && (
-                <p className="text-xs text-red-500 mt-1">{errors.monto}</p>
+              {errors.observacion && (
+                <p className="text-xs text-red-500 mt-1">
+                  {errors.observacion}
+                </p>
               )}
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-500">
+                Deuda después del abono
+              </label>
+
+              <input
+                type="text"
+                disabled
+                value={`$ ${formatNumber(nuevaDeuda)}`}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-100 text-gray-600 font-medium"
+              />
             </div>
           </div>
 
-          <div>
-            <label className="text-xs text-gray-500">Medio de Pago</label>
-
-            <select
-              value={idPaymentMethod}
-              disabled={loadingMethods}
-              onChange={(e) => {
-                const nextIdPaymentMethod = Number(e.target.value);
-                const nextMethod = paymentMethods.find(
-                  (method) => Number(method.id) === nextIdPaymentMethod,
-                );
-                const nextIsFavorBalanceMethod =
-                  nextIdPaymentMethod === 4 ||
-                  nextMethod?.nombre?.toLowerCase() === "saldo a favor";
-
-                setIdPaymentMethod(nextIdPaymentMethod);
-                setErrors((prev) => ({
-                  ...prev,
-                  monto: getAmountError(
-                    monto,
-                    parseNumber(monto),
-                    nextIsFavorBalanceMethod,
-                  ),
-                }));
-              }}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#004D77] disabled:bg-gray-100 disabled:text-gray-500"
-            >
-              {loadingMethods && (
-                <option value={idPaymentMethod}>Cargando...</option>
-              )}
-
-              {!loadingMethods &&
-                paymentMethods.map((method) => (
-                  <option key={method.id} value={method.id}>
-                    {method.nombre}
-                  </option>
-                ))}
-            </select>
-
-            {isFavorBalanceMethod && (
-              <p className="text-xs text-emerald-600 mt-1">
-                Disponible: ${formatNumber(favorBalance)}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-500">Observación (opcional)</label>
-
-            <textarea
-              rows={3}
-              value={observacion}
-              onChange={(e) => {
-                const value = e.target.value;
-
-                setObservacion(value);
-
-                const trimmed = value.trim();
-
-                if (trimmed.length > 255) {
-                  setErrors((prev) => ({
-                    ...prev,
-                    observacion: "Máximo 255 caracteres",
-                  }));
-                } else {
-                  setErrors((prev) => ({
-                    ...prev,
-                    observacion: undefined,
-                  }));
-                }
-              }}
-              placeholder="Descripción del abono..."
-              className={`w-full px-3 py-2 rounded-lg border resize-none transition focus:outline-none ${
-                errors.observacion
-                  ? "border-red-500 ring-2 ring-red-300"
-                  : "border-gray-300 focus:ring-2 focus:ring-[#004D77]"
-              }`}
-            />
-
-            {errors.observacion && (
-              <p className="text-xs text-red-500 mt-1">{errors.observacion}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-500">
-              Deuda después del abono
-            </label>
-
-            <input
-              type="text"
-              disabled
-              value={`$ ${formatNumber(nuevaDeuda)}`}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-100 text-gray-600 font-medium"
-            />
-          </div>
-
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2">
+          <div className="border-t border-gray-100 bg-white px-4 sm:px-5 py-3 flex flex-col-reverse sm:flex-row justify-end gap-3">
             <button
               onClick={onClose}
               disabled={isSubmitting}
