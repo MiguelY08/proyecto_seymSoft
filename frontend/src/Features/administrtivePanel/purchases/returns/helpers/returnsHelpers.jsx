@@ -29,7 +29,6 @@ export const getReturnReasonLabelByCode = (code) =>
 export const RETURN_METHOD_OPTIONS = [
   { id: 1, label: "Reemplazo" },
   { id: 2, label: "Reembolso" },
-  { id: 3, label: "Saldo a favor" },
 ];
 
 export const TIPOS_DEVOLUCION = RETURN_METHOD_OPTIONS.map((method) => method.label);

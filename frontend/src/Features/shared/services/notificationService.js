@@ -48,6 +48,11 @@ export const notificationService = {
     const response = await apiClient.delete(`/notifications/${id}`);
     return normalizeNotification(getData(response));
   },
+
+  async deleteAllNotifications() {
+    const response = await apiClient.delete("/notifications/all");
+    return getData(response);
+  },
 };
 
 export default notificationService;
