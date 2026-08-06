@@ -1,4 +1,4 @@
-import { X, User, Mail, Phone, ShieldCheck, Loader2 } from 'lucide-react';
+import { X, User, Mail, Phone, ShieldCheck, Loader2, UserPlus, BadgeCheck } from 'lucide-react';
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAlert } from '../../../shared/alerts/useAlert';
 import { useAuth } from '../../../access/context/AuthContext';
@@ -6,37 +6,42 @@ import { checkEmailAvailability } from '../../../access/services/authService';
 import FormSelect from '../../../shared/FormSelect';
 import {
   UserService,
+  getApiFieldErrors,
   getUserActionErrorMessage,
 } from '../services/userService';
-import { listRoles } from '../services/listRoles.service'
+import { listRoles } from '../services/listRoles.service';
 import { isSelfUser } from '../helpers/selfUser';
 import {
   PHONE_MIN,
   PHONE_MAX,
+  USER_NAME_MAX,
+  USER_EMAIL_MAX,
   normalizeDigits,
   normalizeEmailInput,
   normalizeFullNameInput,
   toTitleCaseName,
 } from '../validators/usersValidators';
 
-// Funciones de validación (sin cambios)
 const validateField = (name, value) => {
   if (name === 'nombreCompleto') {
     if (!value.trim()) return 'El nombre completo es obligatorio.';
-    if (value.trim().length < 3) return 'Mínimo 3 caracteres.';
+    if (value.trim().length < 3) return 'Minimo 3 caracteres.';
+    if (value.trim().length > USER_NAME_MAX) return `Maximo ${USER_NAME_MAX} caracteres.`;
     if (!/^[\p{L}\s]+$/u.test(value)) return 'Solo letras y espacios.';
     return null;
   }
   if (name === 'correo') {
     if (!value.trim()) return 'El correo es obligatorio.';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Correo inválido.';
+    if (value.trim().length > USER_EMAIL_MAX) return `Maximo ${USER_EMAIL_MAX} caracteres.`;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Correo invalido.';
     return null;
   }
   if (name === 'telefono') {
-    const digits = value.replace(/\D/g, '');
-    if (!digits) return 'El teléfono es obligatorio.';
-    if (digits.length < PHONE_MIN || digits.length > PHONE_MAX)
-      return `Mínimo ${PHONE_MIN} dígitos, máximo ${PHONE_MAX}.`;
+    const digits = String(value ?? '').replace(/\D/g, '');
+    if (!digits) return 'El telefono es obligatorio.';
+    if (digits.length < PHONE_MIN || digits.length > PHONE_MAX) {
+      return `Minimo ${PHONE_MIN} digitos, maximo ${PHONE_MAX}.`;
+    }
     return null;
   }
   if (name === 'rol') return null;
@@ -45,10 +50,24 @@ const validateField = (name, value) => {
 
 const validateUserForm = (form) => {
   const errors = {};
-  errors.nombreCompleto = validateField('nombreCompleto', form.nombreCompleto, form, {});
-  errors.correo = validateField('correo', form.correo, form, {});
-  errors.telefono = validateField('telefono', form.telefono, form, {});
+  errors.nombreCompleto = validateField('nombreCompleto', form.nombreCompleto);
+  errors.correo = validateField('correo', form.correo);
+  errors.telefono = validateField('telefono', form.telefono);
   return Object.fromEntries(Object.entries(errors).filter((entry) => entry[1]));
+};
+
+const getMissingUserFieldsLabel = (validationErrors) => {
+  const fields = [];
+
+  if (validationErrors.nombreCompleto) fields.push('nombre');
+  if (validationErrors.correo) fields.push('correo');
+  if (validationErrors.telefono) fields.push('telefono');
+
+  if (fields.length === 0) return '';
+  if (fields.length === 1) return fields[0];
+  if (fields.length === 2) return `${fields[0]} y ${fields[1]}`;
+
+  return `${fields.slice(0, -1).join(', ')} y ${fields.at(-1)}`;
 };
 
 const buildSanitizedInputValue = (target, input, sanitizer) => {
@@ -79,12 +98,14 @@ function FormUser({
   origin = null,
   onClose,
   onSaved,
+  onMakeClient,
 }) {
   const { showWarning, showSuccess, showConfirm } = useAlert();
   const { user: authUser } = useAuth();
 
   const isEditing = userToEdit !== null;
   const isSelfEdit = isEditing && isSelfUser(userToEdit, authUser);
+  const isClientUser = isEditing && userToEdit?.isClient === true;
 
   const [visible, setVisible] = useState(false);
   const transformOrigin = origin ? `${origin.x}px ${origin.y}px` : 'center center';
@@ -102,7 +123,7 @@ function FormUser({
   const [roles, setRoles] = useState([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
   const roleOptions = useMemo(() => [
-    { value: '', label: 'Sin rol' },
+    { value: '', label: 'Cliente' },
     ...roles.map((role) => ({
       value: String(role.idRole ?? role.id),
       label: role.nameRole ?? role.name,
@@ -144,7 +165,7 @@ function FormUser({
     if (isOriginalEmailUnchanged(nextEmail)) return '';
 
     const data = await checkEmailAvailability(nextEmail);
-    return data?.exists ? 'El correo ya está registrado' : '';
+    return data?.exists ? 'El correo ya esta registrado' : '';
   }, [isOriginalEmailUnchanged]);
 
   useEffect(() => {
@@ -209,9 +230,11 @@ function FormUser({
     if (!duplicate) return '';
 
     return field === 'correo'
-      ? 'Este correo ya está registrado.'
-      : 'Este teléfono ya está registrado.';
+      ? 'Este correo ya esta registrado.'
+      : 'Este telefono ya esta registrado.';
   };
+
+  void GET_DUPLICATE_USER_ERROR;
 
   useEffect(() => {
     if (!isOpen || !touched.correo) {
@@ -245,7 +268,7 @@ function FormUser({
         setEmailAvailability(
           duplicateError
             ? EMAIL_AVAILABILITY.DUPLICATED
-            : EMAIL_AVAILABILITY.AVAILABLE
+            : EMAIL_AVAILABILITY.AVAILABLE,
         );
         setErrors((prev) => ({
           ...prev,
@@ -267,22 +290,24 @@ function FormUser({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [emailCheckRetry, form.correo, getEmailAvailabilityError, isEditing, isOpen, isOriginalEmailUnchanged, touched.correo, userToEdit?.email]);
+  }, [emailCheckRetry, form.correo, getEmailAvailabilityError, isOpen, isOriginalEmailUnchanged, touched.correo]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     let filtered = value;
     let forcedError = '';
+
     if (name === 'telefono') {
       filtered = normalizeDigits(value, PHONE_MAX);
-      if (/\D/.test(String(value))) forcedError = 'Solo se permiten números.';
+      if (/\D/.test(String(value))) forcedError = 'Solo se permiten numeros.';
     } else if (name === 'nombreCompleto') {
       const lettersOnly = value.replace(/[^\p{L}\s]/gu, '');
-      filtered = normalizeFullNameInput(lettersOnly);
+      filtered = normalizeFullNameInput(lettersOnly).slice(0, USER_NAME_MAX);
       if (value !== lettersOnly) forcedError = 'Solo letras y espacios.';
     } else if (name === 'correo') {
-      filtered = normalizeEmailInput(value);
+      filtered = normalizeEmailInput(value).slice(0, USER_EMAIL_MAX);
     }
+
     const updatedForm = { ...form, [name]: filtered };
     setForm(updatedForm);
     setTouched((prev) => ({ ...prev, [name]: true }));
@@ -293,8 +318,10 @@ function FormUser({
   const handleNumericBeforeInput = (e) => {
     if (!e.data || /^\d+$/.test(e.data)) return;
     e.preventDefault();
-    setTouched((prev) => ({ ...prev, [e.currentTarget.name]: true }));
-    setErrors((prev) => ({ ...prev, [e.currentTarget.name]: 'Solo se permiten números.' }));
+    const fieldName = e.currentTarget?.name || e.target?.name;
+    if (!fieldName) return;
+    setTouched((prev) => ({ ...prev, [fieldName]: true }));
+    setErrors((prev) => ({ ...prev, [fieldName]: 'Solo se permiten numeros.' }));
   };
 
   const handlePhonePaste = (e) => {
@@ -323,7 +350,7 @@ function FormUser({
     const filtered = buildSanitizedInputValue(
       e.currentTarget,
       e.clipboardData.getData('text'),
-      normalizeEmailInput,
+      (value) => normalizeEmailInput(value).slice(0, USER_EMAIL_MAX),
     );
     const errorMsg = validateField('correo', filtered);
 
@@ -336,7 +363,7 @@ function FormUser({
     const { name } = e.target;
     if (name !== 'nombreCompleto') return;
 
-    const formattedName = toTitleCaseName(form.nombreCompleto);
+    const formattedName = toTitleCaseName(form.nombreCompleto).slice(0, USER_NAME_MAX);
     const updatedForm = { ...form, nombreCompleto: formattedName };
 
     setForm(updatedForm);
@@ -348,26 +375,24 @@ function FormUser({
   };
 
   const handleSubmit = async () => {
-    // Evitar múltiples envíos
     if (isSubmitting) return;
 
     if (isSelfEdit) {
       showWarning(
-        'Acción no permitida',
-        'No puedes editar tu propio usuario desde este módulo. Usa la sección de perfil.'
+        'Accion no permitida',
+        'No puedes editar tu propio usuario desde este modulo. Usa la seccion de perfil.',
       );
       return;
     }
 
     const normalizedForm = {
       ...form,
-      nombreCompleto: toTitleCaseName(form.nombreCompleto),
-      correo: normalizeEmailInput(form.correo),
+      nombreCompleto: toTitleCaseName(form.nombreCompleto).slice(0, USER_NAME_MAX),
+      correo: normalizeEmailInput(form.correo).slice(0, USER_EMAIL_MAX),
       telefono: normalizeDigits(form.telefono, PHONE_MAX),
     };
     setForm(normalizedForm);
 
-    // Validar campos
     const allTouched = Object.keys(normalizedForm).reduce((acc, k) => ({ ...acc, [k]: true }), {});
     setTouched(allTouched);
     const newErrors = validateUserForm(normalizedForm);
@@ -385,7 +410,6 @@ function FormUser({
       return;
     }
 
-    // Preparar datos
     const userData = {
       name: normalizedForm.nombreCompleto,
       email: normalizedForm.correo,
@@ -409,22 +433,80 @@ function FormUser({
         const createdUser = await UserService.create(userData);
         savedUser = createdUser;
 
-        if (createdUser.errorCode === 'EMAIL_SEND_ERROR') {
+        if (createdUser.warningCode === 'EMAIL_SEND_ERROR') {
           showWarning(
             'Usuario creado',
-            'El usuario fue registrado, pero no se pudo enviar la contraseña temporal al correo.'
+            createdUser.warning || 'El usuario fue registrado, pero no se pudo enviar la contrasena temporal al correo.',
           );
         } else {
-          showSuccess('Usuario creado', 'El usuario ha sido registrado. Se ha enviado una contraseña temporal al correo.');
+          showSuccess(
+            'Usuario creado',
+            'El usuario ha sido registrado. Se ha enviado una contrasena temporal al correo.',
+          );
         }
       }
       await onSaved?.(savedUser);
     } catch (error) {
+      const fieldErrors = getApiFieldErrors(error);
+
+      if (fieldErrors.email) {
+        setTouched((prev) => ({ ...prev, correo: true }));
+        setErrors((prev) => ({
+          ...prev,
+          correo: fieldErrors.email,
+        }));
+      }
+
       const mensaje = getUserActionErrorMessage(error);
       showWarning('Error', mensaje);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleMakeClient = () => {
+    if (!isEditing || isClientUser) return;
+
+    const normalizedForm = {
+      ...form,
+      nombreCompleto: toTitleCaseName(form.nombreCompleto).slice(0, USER_NAME_MAX),
+      correo: normalizeEmailInput(form.correo).slice(0, USER_EMAIL_MAX),
+      telefono: normalizeDigits(form.telefono, PHONE_MAX),
+    };
+    const validationErrors = validateUserForm(normalizedForm);
+    const hasRequiredUserData = !validationErrors.nombreCompleto
+      && !validationErrors.correo
+      && !validationErrors.telefono;
+
+    if (!hasRequiredUserData) {
+      setForm(normalizedForm);
+      setTouched((prev) => ({
+        ...prev,
+        nombreCompleto: true,
+        correo: true,
+        telefono: true,
+      }));
+      setErrors((prev) => ({
+        ...prev,
+        ...validationErrors,
+      }));
+      const missingFieldsLabel = getMissingUserFieldsLabel(validationErrors);
+      showWarning(
+        'Completa el usuario primero',
+        `Antes de crear el cliente, debes completar y guardar ${missingFieldsLabel} en el usuario.`,
+      );
+      return;
+    }
+
+    if (isDirty) {
+      showWarning(
+        'Guarda los cambios primero',
+        'Para continuar con la creacion del cliente, primero guarda los cambios realizados en el usuario.',
+      );
+      return;
+    }
+
+    onMakeClient?.(userToEdit);
   };
 
   const isDirty = useMemo(() => {
@@ -452,7 +534,7 @@ function FormUser({
       'warning',
       'Salir sin guardar?',
       'Los cambios no guardados se perderan.',
-      { confirmButtonText: 'Sí, salir', cancelButtonText: 'Continuar editando' }
+      { confirmButtonText: 'Si, salir', cancelButtonText: 'Continuar editando' },
     );
     if (confirmed?.isConfirmed) animatedClose();
   };
@@ -500,7 +582,7 @@ function FormUser({
     return null;
   };
 
-  const hasBlockingErrors = Boolean(errors.correo || errors.telefono);
+  const hasBlockingErrors = Boolean(errors.correo || errors.telefono || errors.nombreCompleto);
   const isEmailAvailabilityBlocking = [
     EMAIL_AVAILABILITY.CHECKING,
     EMAIL_AVAILABILITY.DUPLICATED,
@@ -525,7 +607,6 @@ function FormUser({
         className={`flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-md sm:rounded-lg md:max-w-lg
           ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
       >
-        {/* Header */}
         <div className="flex items-center justify-between bg-[#004D77] px-4 py-4 shrink-0 sm:px-6">
           <h2 className="text-white font-semibold text-lg">
             {isEditing ? 'Editar usuario' : 'Nuevo usuario'}
@@ -538,9 +619,7 @@ function FormUser({
           </button>
         </div>
 
-        {/* Cuerpo */}
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-5 sm:px-6 sm:py-4">
-          {/* Nombre completo */}
           <div className="flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
               Nombre completo<span className="text-red-500">*</span>
@@ -553,18 +632,21 @@ function FormUser({
                 value={form.nombreCompleto}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                placeholder="Mín. 3 letras"
+                placeholder="Min. 3 letras"
                 autoComplete="off"
+                maxLength={USER_NAME_MAX}
                 className={inputClass('nombreCompleto')}
               />
             </div>
+            <p className="text-[11px] text-gray-500">
+              Maximo {form.nombreCompleto.length}/{USER_NAME_MAX} caracteres.
+            </p>
             <ErrorMsg field="nombreCompleto" />
           </div>
 
-          {/* Correo */}
           <div className="flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
-              Correo electrónico<span className="text-red-500">*</span>
+              Correo electronico<span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
@@ -577,16 +659,19 @@ function FormUser({
                 onPaste={handleEmailPaste}
                 placeholder="usuario@dominio.com"
                 autoComplete="off"
+                maxLength={USER_EMAIL_MAX}
                 className={inputClass('correo')}
               />
             </div>
+            <p className="text-[11px] text-gray-500">
+              Maximo {form.correo.length}/{USER_EMAIL_MAX} caracteres.
+            </p>
             <EmailAvailabilityMsg />
           </div>
 
-          {/* Teléfono */}
           <div className="flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
-              Teléfono / Celular<span className="text-red-500">*</span>
+              Telefono / Celular<span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
@@ -597,7 +682,7 @@ function FormUser({
                 onBeforeInput={handleNumericBeforeInput}
                 onPaste={handlePhonePaste}
                 onChange={handleChange}
-                placeholder={`Entre ${PHONE_MIN} y ${PHONE_MAX} dígitos`}
+                placeholder={`Entre ${PHONE_MIN} y ${PHONE_MAX} digitos`}
                 maxLength={PHONE_MAX}
                 inputMode="numeric"
                 pattern="[0-9]*"
@@ -608,7 +693,6 @@ function FormUser({
             <ErrorMsg field="telefono" />
           </div>
 
-          {/* Rol */}
           <div className="flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
               Rol
@@ -624,9 +708,45 @@ function FormUser({
               ariaLabel="Rol"
             />
           </div>
+
+          {isEditing && (
+            <div className={`rounded-lg border px-4 py-3 text-sm ${
+              isClientUser
+                ? 'border-green-200 bg-green-50 text-green-700'
+                : 'border-[#004D77]/20 bg-[#004D77]/5 text-gray-700'
+            }`}>
+              {isClientUser ? (
+                <div className="flex items-start gap-2">
+                  <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-green-600" strokeWidth={1.8} />
+                  <div>
+                    <p className="font-semibold">Este usuario ya es cliente.</p>
+                    <p className="mt-0.5 text-xs text-green-700/80">
+                      Ya existe un perfil de cliente asociado a este usuario.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-semibold text-[#004D77]">Este usuario aun no es cliente.</p>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Puedes iniciar el registro de cliente con sus datos actuales.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleMakeClient}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#003a5c] sm:w-auto"
+                  >
+                    <UserPlus className="h-4 w-4" strokeWidth={1.8} />
+                    Hacer cliente
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Footer */}
         <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-gray-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
           <button
             onClick={handleCancel}

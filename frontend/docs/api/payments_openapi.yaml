@@ -1,0 +1,352 @@
+openapi: 3.0.3
+info:
+  title: SeymSoft - Payments API (especificación mínima)
+  version: 1.0.0
+  description: Especificación mínima orientada a los endpoints de pagos, comprobantes, créditos y ventas que el frontend consume.
+servers:
+  - url: /api
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        errors:
+          type: object
+
+    PaymentItem:
+      type: object
+      properties:
+        idPaymentMethod:
+          type: integer
+          example: 4
+        amount:
+          type: number
+          format: float
+          example: 25000
+        reference:
+          type: string
+          example: "P123-001"
+        observations:
+          type: string
+
+    OrderCreate:
+      type: object
+      required: [idClient, items]
+      properties:
+        idClient:
+          type: integer
+        idEmployee:
+          type: integer
+        idUser:
+          type: integer
+        idOrderStatus:
+          type: integer
+        deliveryType:
+          type: string
+        deliveryAddress:
+          type: string
+        shippingAmount:
+          type: number
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              idProduct:
+                type: integer
+              barcode:
+                type: string
+              quantity:
+                type: integer
+        favorBalanceAmount:
+          type: number
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentItem'
+
+    PaymentReceiptResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        imageUrl:
+          type: string
+        status:
+          type: string
+        uploadedAt:
+          type: string
+
+paths:
+  /orders:
+    post:
+      summary: Crear pedido
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreate'
+      responses:
+        '201':
+          description: Pedido creado (puede incluir pagos procesados)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        '400':
+          description: Error de validación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /orders/{orderId}/payments:
+    post:
+      summary: Agregar pago a un pedido existente
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                idPaymentMethod:
+                  type: integer
+                amount:
+                  type: number
+                reference:
+                  type: string
+                observations:
+                  type: string
+      responses:
+        '201':
+          description: Pago registrado
+        '409':
+          description: Pago duplicado / conflicto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /orders/{orderId}/payment-receipts:
+    post:
+      summary: Subir comprobante de pago (multipart)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                observations:
+                  type: string
+      responses:
+        '201':
+          description: Comprobante recibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentReceiptResponse'
+        '400':
+          description: Archivo inválido
+
+  /orders/{orderId}/payment-receipts/{receiptId}/review:
+    patch:
+      summary: Revisar (aprobar/rechazar) comprobante
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: receiptId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [approved, rejected]
+                reviewObservations:
+                  type: string
+      responses:
+        '200':
+          description: Revisión procesada
+
+  /payments/payment-methods:
+    get:
+      summary: Listar métodos de pago
+      responses:
+        '200':
+          description: Lista de métodos
+
+  /payments/customers:
+    get:
+      summary: Clientes con crédito
+      responses:
+        '200':
+          description: Lista de clientes con info de crédito
+
+  /payments/customers/{customerId}/invoices:
+    get:
+      summary: Facturas / invoices de cliente
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de facturas
+
+  /payments/invoices/{invoiceId}/installments:
+    get:
+      summary: Cuotas de una factura
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de cuotas
+
+  /payments/installments:
+    post:
+      summary: Crear abono en cuenta de crédito
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id_credit:
+                  type: integer
+                percentage:
+                  type: number
+      responses:
+        '201':
+          description: Interés/abono creado
+
+  /payments/installments/{installmentId}/cancel:
+    patch:
+      summary: Anular abono
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: installmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Abono anulado
+
+  /payments/interests:
+    post:
+      summary: Generar interés en crédito
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id_credit:
+                  type: integer
+                percentage:
+                  type: number
+      responses:
+        '201':
+          description: Interés generado
+
+  /sales:
+    post:
+      summary: Crear venta (desde pedido o directa)
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                idEmployee:
+                  type: integer
+                idSaleStatus:
+                  type: integer
+                order:
+                  type: object
+                paymentMethods:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/PaymentItem'
+                credit:
+                  type: object
+                  properties:
+                    dueDate:
+                      type: string
+                    idCreditStatus:
+                      type: integer
+      responses:
+        '201':
+          description: Venta registrada

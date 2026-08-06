@@ -49,10 +49,10 @@ export function AlertProvider({ children }) {
   }, []);
 
   // ─── Alertas simples ──────────────────────────────────────────────────────
-  const showError   = useCallback((title, text, extra = {}) => push({ type: 'error',   title, text, ...extra }), [push]);
+  const showError = useCallback((title, text, extra = {}) => push({ type: 'error', title, text, ...extra }), [push]);
   const showWarning = useCallback((title, text, extra = {}) => push({ type: 'warning', title, text, ...extra }), [push]);
   const showSuccess = useCallback((title, text, extra = {}) => push({ type: 'success', title, text, ...extra }), [push]);
-  const showInfo    = useCallback((title, text, extra = {}) => push({ type: 'info',    title, text, ...extra }), [push]);
+  const showInfo = useCallback((title, text, extra = {}) => push({ type: 'info', title, text, ...extra }), [push]);
 
   // ─── Alerta de confirmación ───────────────────────────────────────────────
   const showConfirm = useCallback((type, title, text, extra = {}) =>
@@ -60,9 +60,9 @@ export function AlertProvider({ children }) {
       type,
       title,
       text,
-      isConfirm:         true,
+      isConfirm: true,
       confirmButtonText: extra.confirmButtonText ?? 'Confirmar',
-      cancelButtonText:  extra.cancelButtonText  ?? 'Cancelar',
+      cancelButtonText: extra.cancelButtonText ?? 'Cancelar',
       ...extra,
     }), [push]);
 

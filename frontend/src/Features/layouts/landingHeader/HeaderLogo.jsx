@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-import logo from "../../../assets/PapeleriaMagicLogo.png";
+import logo from "../../../assets/PapeleriaMagicLogo_192x192.png";
 import horizontalLogo from "../../../assets/PMLogo_Horizontal.png";
 
 function HeaderLogo() {

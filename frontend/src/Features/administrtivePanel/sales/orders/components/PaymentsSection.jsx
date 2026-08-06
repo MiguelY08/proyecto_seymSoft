@@ -29,6 +29,8 @@ function PaymentsSection({
   allowCredit = false,
   creditAvailable = null,
   creditAssigned = null,
+  allowFavorBalance = false,
+  favorBalance = 0,
 }) {
   const [showForm, setShowForm] = useState(false);
   const [newPayment, setNewPayment] = useState({
@@ -48,14 +50,18 @@ function PaymentsSection({
   const creditLimit = creditAvailable === null || creditAvailable === undefined
     ? null
     : roundMoney(creditAvailable);
+  const favorBalanceValue = roundMoney(favorBalance);
   const isCreditPayment = newPayment.metodoPago === METODOS_PAGO.CREDITO;
+  const isFavorBalancePayment = newPayment.metodoPago === METODOS_PAGO.DEVOLUCION;
   const paymentMethodOptions = [
     { value: METODOS_PAGO.EFECTIVO, label: 'Efectivo' },
     { value: METODOS_PAGO.TRANSFERENCIA, label: 'Transferencia' },
   ];
-  const availablePaymentMethodOptions = allowCredit
-    ? [...paymentMethodOptions, { value: METODOS_PAGO.CREDITO, label: 'Crédito' }]
-    : paymentMethodOptions;
+  const availablePaymentMethodOptions = [
+    ...paymentMethodOptions,
+    ...(allowCredit ? [{ value: METODOS_PAGO.CREDITO, label: 'Crédito' }] : []),
+    ...(allowFavorBalance ? [{ value: METODOS_PAGO.DEVOLUCION, label: 'Saldo a favor' }] : []),
+  ];
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('es-CO', {
@@ -92,6 +98,10 @@ function PaymentsSection({
       setFormError(`El monto excede el saldo pendiente (${formatCurrency(saldoPendiente)}).`);
       return;
     }
+    if (isFavorBalancePayment && amount > favorBalanceValue) {
+      setFormError(`El monto excede el saldo a favor disponible (${formatCurrency(favorBalanceValue)}).`);
+      return;
+    }
     if (isCreditPayment && creditLimit !== null && amount > creditLimit) {
       setFormError(`El monto supera el cupo disponible (${formatCurrency(creditLimit)}).`);
       return;
@@ -113,6 +123,10 @@ function PaymentsSection({
     }
     if (!allowCredit && newPayment.metodoPago === METODOS_PAGO.CREDITO) {
       setFormError('El pago por credito no esta disponible para pedidos.');
+      return;
+    }
+    if (newPayment.metodoPago === METODOS_PAGO.DEVOLUCION && monto > favorBalanceValue) {
+      setFormError(`El monto excede el saldo a favor disponible (${formatCurrency(favorBalanceValue)}).`);
       return;
     }
     if (newPayment.metodoPago === METODOS_PAGO.CREDITO && creditLimit !== null && monto > creditLimit) {
@@ -163,7 +177,7 @@ function PaymentsSection({
             <CreditCard className="w-4 h-4 text-white" strokeWidth={2} />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-gray-800">Pagos y Abonos</p>
+            <p className="text-sm font-semibold text-gray-800">Pagos</p>
             <p className="text-xs text-gray-400">Gestión de pagos del pedido</p>
           </div>
         </div>
@@ -174,7 +188,7 @@ function PaymentsSection({
             className="flex w-full items-center justify-center gap-1 rounded-md px-2 py-2 text-sm text-[#004D77] transition-colors duration-200 hover:bg-[#004D77]/10 sm:w-auto sm:py-1"
           >
             <Plus className="w-4 h-4" strokeWidth={1.8} />
-            Agregar abono
+            Agregar pago
           </button>
         )}
       </div>
@@ -218,6 +232,13 @@ function PaymentsSection({
                       montoPreview > creditLimit
                     ) {
                       setFormError(`El monto supera el cupo disponible (${formatCurrency(creditLimit)}).`);
+                      return;
+                    }
+                    if (
+                      value === METODOS_PAGO.DEVOLUCION &&
+                      montoPreview > favorBalanceValue
+                    ) {
+                      setFormError(`El monto excede el saldo a favor disponible (${formatCurrency(favorBalanceValue)}).`);
                       return;
                     }
                     setFormError('');
@@ -267,6 +288,18 @@ function PaymentsSection({
                       {creditAssigned !== null && creditAssigned !== undefined
                         ? ` / asignado: ${formatCurrency(creditAssigned)}`
                         : ''}
+                    </p>
+                  </div>
+                )}
+
+                {isFavorBalancePayment && (
+                  <div className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                    <CreditCard
+                      className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700"
+                      strokeWidth={1.8}
+                    />
+                    <p className="text-sm font-medium text-emerald-800">
+                      Saldo a favor disponible: {formatCurrency(favorBalanceValue)}
                     </p>
                   </div>
                 )}

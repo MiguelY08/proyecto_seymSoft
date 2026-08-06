@@ -5,6 +5,7 @@ import { ChevronLeft, Save } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import { getPrimaryProductBarcode } from '../../../../shared/scanner';
 import { getProductPriceForClient } from '../../shared/clientPricing';
+import { getClientFavorBalanceValue } from '../../shared/utils/clientFavorBalance';
 
 // Servicios
 import { SalesServices } from '../services/salesServices';
@@ -23,12 +24,8 @@ import FormClient from '../../clients/modals/FormClient';
 // Helpers
 import { getInitialPaymentAmounts } from '../helpers/salesHelpers';
 import { ESTADOS_LOGISTICOS, LocationService, ORIGENES } from '../../orders/services/ordersService';
+import { PAYMENT_METHODS, PAYMENT_METHOD_IDS, getPaymentMethodId } from '../../../../../constants/paymentMethods';
 
-const PAYMENT_METHOD_IDS = {
-  transferencia: 1,
-  efectivo: 2,
-  credito: 3,
-};
 
 const ORDER_STATUS_IDS = {
   [ESTADOS_LOGISTICOS.EN_PROCESO]: 1,
@@ -43,15 +40,6 @@ const normalizeText = (value) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 
-const getPaymentMethodId = (methodName) => {
-  const method = normalizeText(methodName);
-
-  if (method.includes('transfer')) return PAYMENT_METHOD_IDS.transferencia;
-  if (method.includes('efect')) return PAYMENT_METHOD_IDS.efectivo;
-  if (method.includes('credit') || /^cr.*dito$/.test(method)) return PAYMENT_METHOD_IDS.credito;
-
-  return null;
-};
 
 const roundMoney = (value) =>
   Math.round((Number(value) || 0) * 100) / 100;
@@ -70,7 +58,7 @@ const hasDuplicatePaymentMethods = (paymentMethods) => {
 
 const getCreditPaymentAmount = (paymentMethods) =>
   paymentMethods
-    .filter((payment) => payment.idPaymentMethod === PAYMENT_METHOD_IDS.credito)
+    .filter((payment) => payment.idPaymentMethod === PAYMENT_METHOD_IDS[PAYMENT_METHODS.CREDITO])
     .reduce((sum, payment) => sum + roundMoney(payment.amount), 0);
 
 const getFirstPositiveNumber = (...values) => {
@@ -254,6 +242,7 @@ function SaleForm() {
   // Cálculo de totales
   const selectedClient = clientes.find((cliente) => Number(cliente.id) === Number(formData.clienteId)) ?? null;
   const selectedCreditAccount = creditAccounts.find((account) => Number(account.id) === Number(formData.clienteId)) ?? null;
+  const favorBalance = getClientFavorBalanceValue(selectedClient);
   const productosCatalogoConPrecio = productosCatalogo.map((product) => ({
     ...product,
     precioDetalle: getProductPriceForClient(product, selectedClient),
@@ -688,7 +677,7 @@ function SaleForm() {
       }
 
       const hasCreditPayment = paymentMethods.some(
-        (payment) => payment.idPaymentMethod === PAYMENT_METHOD_IDS.credito
+        (payment) => payment.idPaymentMethod === PAYMENT_METHOD_IDS[PAYMENT_METHODS.CREDITO]
       );
 
       if (hasCreditPayment) {
@@ -881,6 +870,8 @@ function SaleForm() {
           allowCredit
           creditAvailable={creditValidationInfo.availableCredit}
           creditAssigned={creditValidationInfo.assignedCredit}
+          allowFavorBalance
+          favorBalance={favorBalance}
         />
       </div>
 

@@ -314,7 +314,7 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
   }
 
   return (
-    <div className="min-w-0 w-full rounded-xl">
+    <div className="min-w-0 w-full overflow-x-auto overscroll-x-contain rounded-xl [-webkit-overflow-scrolling:touch]">
       {loadingMessage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
           <Spinner message={loadingMessage} className="min-h-0" />

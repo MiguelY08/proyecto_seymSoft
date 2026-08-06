@@ -121,6 +121,13 @@ export const NotificationProvider = ({ children }) => {
     return deletedNotification;
   }, [notifications]);
 
+  const deleteAllNotifications = useCallback(async () => {
+    const result = await notificationService.deleteAllNotifications();
+    setNotifications([]);
+    setUnreadCount(0);
+    return result;
+  }, []);
+
   useEffect(() => {
     if (authLoading) return;
 
@@ -166,6 +173,7 @@ export const NotificationProvider = ({ children }) => {
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    deleteAllNotifications,
   }), [
     notifications,
     pagination,
@@ -176,6 +184,7 @@ export const NotificationProvider = ({ children }) => {
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    deleteAllNotifications,
   ]);
 
   return (

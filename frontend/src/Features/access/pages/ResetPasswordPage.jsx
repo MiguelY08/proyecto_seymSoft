@@ -4,7 +4,7 @@
 import HeaderLanding from "../../layouts/HeaderLanding"
 import AuthFooter from "../../shared/AuthFooter"
 import ResetPasswordForm from "../components/ResetPasswordForm"
-import logo from "../../../assets/PapeleriaMagicLogo.png"
+import logo from "../../../assets/PapeleriaMagicLogo_512x512.png"
 
 export default function ResetPasswordPage() {
   return (

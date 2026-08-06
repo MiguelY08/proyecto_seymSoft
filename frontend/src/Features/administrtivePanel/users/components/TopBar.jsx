@@ -26,7 +26,7 @@ function TopBar({
 
   const handleDownload = async () => {
     if (totalUsers === 0) {
-      showWarning("Sin registros", "No hay usuarios registrados para descargar.");
+      showWarning("Sin registros", "No hay usuarios que coincidan con los filtros actuales.");
       return;
     }
 

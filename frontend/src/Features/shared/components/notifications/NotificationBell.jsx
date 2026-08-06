@@ -88,6 +88,7 @@ function NotificationBell() {
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    deleteAllNotifications,
   } = useNotifications();
 
   const [open, setOpen] = useState(false);
@@ -155,6 +156,7 @@ function NotificationBell() {
           onMarkAsRead={markAsRead}
           onMarkAllAsRead={markAllAsRead}
           onDelete={deleteNotification}
+          onDeleteAll={deleteAllNotifications}
           onClose={() => setOpen(false)}
           onOpenNotification={handleOpenNotification}
         />

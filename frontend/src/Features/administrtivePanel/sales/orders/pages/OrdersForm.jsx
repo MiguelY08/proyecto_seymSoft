@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 
 // Servicios
-import OrdersService, { PaymentService, LocationService, ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES, METODOS_PAGO } from '../services/ordersService';
+import OrdersService, { PaymentService, LocationService, ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES, METODOS_PAGO, PAYMENT_METHOD_IDS } from '../services/ordersService';
 import { SalesServices } from '../../vendings/services/salesServices';
 import ProductsService from '../../../purchases/products/services/productsServices';
 import { clientsService } from '../../clients/services/clientsService';
@@ -12,6 +12,8 @@ import { useAlert } from '../../../../shared/alerts/useAlert';
 import Spinner from '../../../../shared/spinner';
 import { getPrimaryProductBarcode } from '../../../../shared/scanner';
 import { getProductPriceForClient } from '../../shared/clientPricing';
+import { getClientFavorBalance } from '../../shared/services/clientFavorBalanceService';
+import { getClientFavorBalanceValue } from '../../shared/utils/clientFavorBalance';
 
 // Contexto de autenticación
 import { useAuth } from '../../../../access/context/AuthContext';
@@ -71,11 +73,6 @@ const normalizeClientForForm = (client = {}) => ({
   clientCredit: client.clientCredit ?? client.assignedCredit,
   assignedCredit: client.assignedCredit ?? client.clientCredit,
 });
-
-const PAYMENT_METHOD_IDS = {
-  [METODOS_PAGO.TRANSFERENCIA]: 1,
-  [METODOS_PAGO.EFECTIVO]: 2,
-};
 
 const buildDirectSalePaymentMethods = (payments = []) =>
   payments.map((payment) => ({
@@ -140,6 +137,7 @@ function OrdersForm() {
   const [pagos, setPagos] = useState([]);
   const [paymentReceipts, setPaymentReceipts] = useState([]);
   const [totalPagado, setTotalPagado] = useState(0);
+  const [favorBalance, setFavorBalance] = useState(0);
 
   const productosTotal = roundMoney(formData.productos.reduce((sum, p) => sum + toNumber(p.subtotal), 0));
   const shippingAmount = formData.tipoEntrega === 'domicilio' ? roundMoney(formData.shippingAmount) : 0;
@@ -192,6 +190,39 @@ function OrdersForm() {
       setFormData(prev => ({ ...prev, asesorId: getSessionEmployeeId(user) ?? getSessionUserId(user) }));
     }
   }, [user]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadFavorBalance = async () => {
+      if (formData.clienteId === '' || formData.clienteId === undefined || formData.clienteId === null) {
+        setFavorBalance(0);
+        return;
+      }
+
+      try {
+        setFavorBalance(getClientFavorBalanceValue(selectedClient));
+
+        const balance = await getClientFavorBalance(formData.clienteId);
+
+        if (active) {
+          setFavorBalance(balance);
+        }
+      } catch (error) {
+        console.error('No se pudo cargar el saldo a favor del cliente:', error);
+
+        if (active) {
+          setFavorBalance(0);
+        }
+      }
+    };
+
+    loadFavorBalance();
+
+    return () => {
+      active = false;
+    };
+  }, [formData.clienteId, selectedClient]);
 
   // Carga inicial de datos maestros, pedido y pagos (si edición)
   useEffect(() => {
@@ -810,12 +841,28 @@ function OrdersForm() {
         }
 
         const pendingPayments = pagos.filter((pago) => !pago.locked && !pago.persisted);
+
+        const createdPayments = [];
         for (const pago of pendingPayments) {
-          await PaymentService.add(orderId, {
-            metodoPago: pago.metodoPago,
-            monto: pago.monto,
-            comprobante: pago.comprobante,
-          });
+          try {
+            const created = await PaymentService.add(orderId, {
+              metodoPago: pago.metodoPago,
+              monto: pago.monto,
+              comprobante: pago.comprobante,
+            });
+            if (created) createdPayments.push(created);
+          } catch (err) {
+            console.error('Error registrando abono pendiente:', err);
+          }
+        }
+
+        // Refrescar pagos y total desde el servidor para mantener consistencia
+        try {
+          const canonicalPayments = await PaymentService.getByPedidoId(orderId);
+          setPagos((canonicalPayments || []).map((p) => ({ ...p, locked: true, persisted: true })));
+          setTotalPagado(await PaymentService.getTotalPagado(orderId));
+        } catch (err) {
+          console.warn('No se pudieron sincronizar pagos tras la actualización:', err);
         }
 
         showSuccess('Pedido actualizado', `Pedido #${orderResult.numeroPedido} actualizado correctamente.`);
@@ -851,14 +898,57 @@ function OrdersForm() {
           return;
         }
 
+        // Si hay abonos pendientes, incluirlos en el payload como `payments`
+        // para que el backend los procese atomically al crear el pedido.
+        const pendingPayments = (pagos || []).filter((item) => !item.persisted);
+        if (pendingPayments.length > 0) {
+          const paymentsPayload = pendingPayments.map((p) => ({
+            idPaymentMethod: PAYMENT_METHOD_IDS[p.metodoPago] ?? p.idPaymentMethod ?? p.idPaymentMethod,
+            amount: roundMoney(p.monto),
+            reference: p.comprobante || undefined,
+            observations: p.observaciones || p.observations || undefined,
+          }));
+
+          // Adjuntar payments al payload de creación
+          payload.payments = paymentsPayload;
+        }
+
         orderResult = await OrdersService.create(payload);
 
-        for (const pago of pagos.filter((item) => !item.persisted)) {
-          await PaymentService.add(orderResult.id, {
-            metodoPago: pago.metodoPago,
-            monto: pago.monto,
-            comprobante: pago.comprobante,
-          });
+        // Sincronizar con la verdad del servidor: obtener pagos y total oficiales
+        let canonicalPayments = [];
+        try {
+          canonicalPayments = await PaymentService.getByPedidoId(orderResult.id);
+          setPagos((canonicalPayments || []).map((p) => ({ ...p, locked: true, persisted: true })));
+          setTotalPagado(await PaymentService.getTotalPagado(orderResult.id));
+        } catch (err) {
+          console.warn('No se pudieron obtener los pagos del servidor tras crear el pedido:', err);
+        }
+
+        // Registrar localmente los abonos que siguen pendientes y que NO aparecen en el servidor
+        const remainingPayments = (pagos || []).filter((item) => !item.persisted);
+
+        const notPresent = remainingPayments.filter((local) => {
+          return !(canonicalPayments || []).some((srv) =>
+            Math.round(Number(srv.monto || srv.amount || 0) * 100) === Math.round(Number(local.monto || 0) * 100) &&
+            (String(srv.metodoPago || srv.paymentMethod || srv.paymentMethodName || '').toLowerCase() === String(local.metodoPago || '').toLowerCase())
+          );
+        });
+
+        for (const pago of notPresent) {
+          try {
+            const created = await PaymentService.add(orderResult.id, {
+              metodoPago: pago.metodoPago,
+              monto: pago.monto,
+              comprobante: pago.comprobante,
+            });
+            if (created) {
+              setPagos((prev) => [...prev, { ...created, locked: true, persisted: true }]);
+              setTotalPagado(await PaymentService.getTotalPagado(orderResult.id));
+            }
+          } catch (err) {
+            console.error('Error al registrar abono post-create:', err);
+          }
         }
 
         showSuccess('Pedido creado', `Pedido #${orderResult.numeroPedido} registrado con éxito.`);
@@ -1001,6 +1091,8 @@ function OrdersForm() {
           disabled={pedidoInmutable}
           isEditMode={isEditMode}
           disallowDuplicateMethods={creaVentaDirecta}
+          allowFavorBalance
+          favorBalance={favorBalance}
         />
       </div>
 

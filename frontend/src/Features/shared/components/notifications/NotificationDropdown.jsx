@@ -1,3 +1,4 @@
+import { Trash2 } from "lucide-react";
 import NotificationEmpty from "./NotificationEmpty";
 import NotificationItem from "./NotificationItem";
 import NotificationSkeleton from "./NotificationSkeleton";
@@ -10,6 +11,7 @@ function NotificationDropdown({
   onMarkAsRead,
   onMarkAllAsRead,
   onDelete,
+  onDeleteAll,
   onClose,
   onOpenNotification,
 }) {
@@ -24,15 +26,28 @@ function NotificationDropdown({
             {unreadCount > 0 ? `${unreadCount} sin leer` : "Todo al dia"}
           </p>
         </div>
-        {unreadCount > 0 && (
-          <button
-            type="button"
-            onClick={onMarkAllAsRead}
-            className="shrink-0 rounded-md px-2 py-1 text-xs font-semibold text-[#004D77] transition-colors hover:bg-[#004D77]/10"
-          >
-            Marcar todas
-          </button>
-        )}
+        <div className="flex items-center gap-1.5">
+          {unreadCount > 0 && (
+            <button
+              type="button"
+              onClick={onMarkAllAsRead}
+              className="shrink-0 rounded-md px-2 py-1 text-xs font-semibold text-[#004D77] transition-colors hover:bg-[#004D77]/10"
+            >
+              Marcar leídas
+            </button>
+          )}
+          {notifications.length > 0 && (
+            <button
+              type="button"
+              onClick={onDeleteAll}
+              className="shrink-0 flex items-center justify-center rounded-md p-1.5 text-red-400 transition-colors hover:bg-red-50 hover:text-red-600"
+              title="Limpiar todas"
+              aria-label="Limpiar todas"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="max-h-[calc(100dvh-7rem)] overflow-y-auto sm:max-h-[24rem]">
