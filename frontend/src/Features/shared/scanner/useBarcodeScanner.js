@@ -58,7 +58,7 @@ export function useBarcodeScanner(options = {}) {
       const isLengthValid = code.length >= config.minLength && code.length <= config.maxLength;
       const isCustomValid = typeof config.validate === 'function' ? Boolean(config.validate(code)) : true;
 
-      if (buffer.isUnauthorizedTarget && buffer.target) {
+      if (buffer.isUnauthorizedTarget && buffer.target && buffer.isScannerDetected) {
         // En campos no autorizados, evitamos que el escaneo deje texto.
         buffer.target?.setSelectionRange?.(
           buffer.initialSelectionStart,
