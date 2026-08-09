@@ -154,7 +154,7 @@ const login = async (email, password) => {
 
       return {
         success: true,
-        redirectTo: result.redirectTo || "/",
+        redirectTo: resolvedRole ? "/admin" : "/",
       };
     } else {
       setError(result.error);
