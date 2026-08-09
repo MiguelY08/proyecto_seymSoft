@@ -20,5 +20,4 @@ export {
   productMatchesBarcodeSearch,
 } from './productBarcode.helpers';
 export { default as ScannerStatus } from './ScannerStatus';
-export { default as ScannerInput } from './ScannerInput';
 export { useBarcodeScanner } from './useBarcodeScanner';
