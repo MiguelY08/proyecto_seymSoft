@@ -219,6 +219,7 @@ function SaleForm() {
     ciudadEntregaNombre: '',
     shippingAmount: 0,
     deliveryRecipientName: '',
+    deliveryRecipientPhone: '',
     productos: [],
     estadoLogistico: isDirectSale ? ESTADOS_LOGISTICOS.ENTREGADO : ESTADOS_LOGISTICOS.EN_PROCESO,
     origen: ORIGENES.MANUAL,
@@ -469,6 +470,14 @@ function SaleForm() {
     if (errors.deliveryRecipientName) setErrors(prev => ({ ...prev, deliveryRecipientName: null }));
   };
 
+  const handleDeliveryRecipientPhoneChange = (e) => {
+    const value = e.target.value.replace(/[^\d\s()+-]/g, '');
+    setFormData(prev => ({ ...prev, deliveryRecipientPhone: value }));
+    if (errors.deliveryRecipientPhone) {
+      setErrors(prev => ({ ...prev, deliveryRecipientPhone: null }));
+    }
+  };
+
   const handleShippingAmountChange = (e) => {
     const value = e.target.value;
     setFormData(prev => ({ ...prev, shippingAmount: value }));
@@ -612,8 +621,16 @@ function SaleForm() {
       newErrors.clienteId = 'Debe seleccionar un cliente.';
     }
     if (!getSessionUserId(user)) newErrors.idUser = 'No se pudo identificar al usuario en sesion.';
-    if (!isDirectSale && !formData.deliveryRecipientName?.trim()) {
-      newErrors.deliveryRecipientName = 'Debe ingresar la persona que recibe o recoge la venta.';
+    if (!isDirectSale && formData.tipoEntrega === 'domicilio' && !formData.deliveryRecipientName?.trim()) {
+      newErrors.deliveryRecipientName = 'Debe ingresar el nombre de la persona que recibe la venta.';
+    }
+    if (!isDirectSale && formData.tipoEntrega === 'domicilio') {
+      const recipientPhoneDigits = (formData.deliveryRecipientPhone || '').replace(/\D/g, '');
+      if (!recipientPhoneDigits) {
+        newErrors.deliveryRecipientPhone = 'Debe ingresar el telefono de la persona que recibe.';
+      } else if (recipientPhoneDigits.length < 7 || recipientPhoneDigits.length > 15) {
+        newErrors.deliveryRecipientPhone = 'El telefono debe tener entre 7 y 15 digitos.';
+      }
     }
     if (!formData.direccionEntrega?.trim()) {
       newErrors.direccionEntrega = 'La dirección de entrega es obligatoria.';
@@ -714,6 +731,7 @@ function SaleForm() {
           deliveryType: formData.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Recoge',
           deliveryAddress: formData.direccionEntrega,
           deliveryRecipientName: isDirectSale ? null : formData.deliveryRecipientName.trim(),
+          deliveryRecipientPhone: isDirectSale ? null : (formData.deliveryRecipientPhone || '').trim(),
           shippingAmount,
           deliveryDepartmentCode: formData.tipoEntrega === 'domicilio' ? formData.departamentoEntregaCodigo : null,
           deliveryDepartmentName: formData.tipoEntrega === 'domicilio' ? formData.departamentoEntregaNombre : null,
@@ -831,6 +849,7 @@ function SaleForm() {
           onCiudadEntregaChange={handleCiudadEntregaChange}
           onDireccionManualChange={handleDireccionManualChange}
           onDeliveryRecipientNameChange={handleDeliveryRecipientNameChange}
+          onDeliveryRecipientPhoneChange={handleDeliveryRecipientPhoneChange}
           onShippingAmountChange={handleShippingAmountChange}
           onEstadoLogisticoChange={handleEstadoLogisticoChange}
           onMotivoCancelacionChange={handleMotivoCancelacionChange}
