@@ -1,10 +1,7 @@
-import RegisterForm from "../components/RegisterForm";
+import LoginCard from "../components/LoginCard";
 // import LoginBanner from "../components/LoginBanner";
 import AuthFooter from "../../shared/AuthFooter";
 import HeaderLanding from "../../layouts/HeaderLanding"
-
-// import imagenBanner from "../../../assets/imagenBanner.png";
-import logo from "../../../assets/PapeleriaMagicLogo_512x512.png";
 
 export default function RegisterPage() {
   return (
@@ -22,8 +19,8 @@ export default function RegisterPage() {
         <HeaderLanding />
 
         {/* Contenedor del formulario */}
-        <div className="flex flex-1 justify-center items-center bg-gray-100 px-3 py-3">
-          <RegisterForm />
+        <div className="flex flex-1 justify-center items-start bg-gray-100 px-4 py-6 md:items-center">
+          <LoginCard initialMode="register" />
         </div>
 
       </main>

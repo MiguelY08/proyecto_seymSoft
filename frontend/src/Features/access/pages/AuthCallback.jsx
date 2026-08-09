@@ -21,8 +21,6 @@ const AuthCallback = () => {
       try {
         const accessToken = searchParams.get("accessToken");
         const refreshToken = searchParams.get("refreshToken");
-        const role = searchParams.get("role") || null;
-
         if (!accessToken || !refreshToken) {
           throw new Error("Tokens no encontrados");
         }

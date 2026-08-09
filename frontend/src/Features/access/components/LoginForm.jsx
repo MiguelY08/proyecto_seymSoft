@@ -8,7 +8,7 @@ import { useAlert } from "../../shared/alerts/useAlert.js";
 
 const LOGIN_EMAIL_STORAGE_KEY = "login_email_draft";
 
-export default function LoginForm() {
+export default function LoginForm({ onSwitchToRegister }) {
 
   const { login, loading } = useAuth();
   const navigate = useNavigate();
@@ -85,7 +85,7 @@ const handleSubmit = async (e) => {
     }`;
 
   return (
-    <div className="w-full md:w-1/2 p-6 flex flex-col justify-center">
+    <div className="w-full p-6 flex flex-col justify-center md:h-full">
 
       <h2 className="font-lexend text-xl md:text-2xl font-semibold mb-2 text-gray-800 text-center">
         Papelería Magic
@@ -228,7 +228,17 @@ const handleSubmit = async (e) => {
           <Link
             to="/register"
             className="text-blue-700 font-medium hover:underline"
-            onClick={(e) => loading && e.preventDefault()}
+            onClick={(e) => {
+              if (loading) {
+                e.preventDefault();
+                return;
+              }
+
+              if (onSwitchToRegister) {
+                e.preventDefault();
+                onSwitchToRegister();
+              }
+            }}
           >
             Regístrate
           </Link>

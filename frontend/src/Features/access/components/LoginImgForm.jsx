@@ -2,11 +2,11 @@ import loginPapeleria from "../../../assets/loginBg.png";
 
 export default function LoginImgForm() {
   return (
-    <div className="hidden md:block md:w-1/2">
+    <div className="relative h-full overflow-hidden bg-[#004D77]">
       <img
         src={loginPapeleria}
         alt="Papelería Magic - Login"
-        className="w-full h-[450px] lg:h-[480px] object-cover"
+        className="h-full min-h-[520px] w-full object-cover lg:min-h-[540px]"
       />
     </div>
   );
