@@ -1,5 +1,5 @@
 ﻿﻿// features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 import CreateSidebar from "../Components/CreatePurchaseSideBar";
@@ -8,7 +8,13 @@ import CreateTable from "../Components/TableCreate";
 import CreateProduct from "../../products/modals/CreateProduct";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import FormProvider from "../../providers/components/FormProvider";
-import { createPurchase, getProducts, getProviders, updateProductPrices } from "../data/PurchasesService";
+import { 
+  createPurchase, 
+  getProducts, 
+  getProviders, 
+  updateProductPrices,
+  checkInvoiceExists 
+} from "../data/PurchasesService";
 import { providersService } from "../../providers/data/providersService";
 import { findProductByBarcode, productMatchesBarcodeSearch } from "../../../../shared/scanner";
 import Spinner from "../../../../shared/spinner";
@@ -22,11 +28,19 @@ import {
   Save,
   ShoppingBag,
   X,
+  Pencil,
 } from "lucide-react";
+
+const PURCHASE_TYPES = {
+  UNIT: { value: "unit", label: "Unidad" },
+  PACK: { value: "pack", label: "X Paca" },
+  LITER: { value: "liter", label: "Litros" },
+  KILO: { value: "kilo", label: "Kilos" },
+};
 
 const CreatePurchase = () => {
   const navigate = useNavigate();
-  const { showError, showWarning, showSuccess, showConfirm } = useAlert();
+  const { showError, showWarning, showSuccess, showConfirm, showInfo } = useAlert();
 
   // Estados del formulario
   const [selectedProvider, setSelectedProvider] = useState("");
@@ -53,56 +67,94 @@ const CreatePurchase = () => {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [loadingProviders, setLoadingProviders] = useState(false);
 
-  // ========== REF PARA EL CONTENEDOR DEL MODAL ==========
-  const modalContainerRef = useRef(null);
-  // ========== REF PARA EL CONTENEDOR PRINCIPAL ==========
-  const mainContainerRef = useRef(null);
+  // ========== ESTADOS PARA EDICIÓN ==========
+  const [editingItemId, setEditingItemId] = useState(null);
+  const [isEditingItem, setIsEditingItem] = useState(false);
+  const [editingProductData, setEditingProductData] = useState(null);
 
-  // ========== SCROLL HACIA ABAJO AL ABRIR EL MODAL ==========
+  // ========== ESTADOS PARA VALIDACIÓN DE FACTURA ==========
+  const [invoiceError, setInvoiceError] = useState("");
+  const [isCheckingInvoice, setIsCheckingInvoice] = useState(false);
+  const [invoiceValid, setInvoiceValid] = useState(false);
+
+  // ========== REF PARA EL MODAL DE CREAR PRODUCTO ==========
+  const modalContainerRef = useRef(null);
+
+  // ========== FUNCIÓN PARA VERIFICAR FACTURA EN TIEMPO REAL ==========
+  const validateInvoice = useCallback(async (value) => {
+    if (!value || value.trim().length < 3) {
+      setInvoiceError("El número de factura debe tener al menos 3 caracteres");
+      setInvoiceValid(false);
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9\-]{3,20}$/.test(value.trim())) {
+      setInvoiceError("Solo letras, números y guiones (3-20 caracteres)");
+      setInvoiceValid(false);
+      return;
+    }
+
+    setIsCheckingInvoice(true);
+    try {
+      const exists = await checkInvoiceExists(value.trim());
+      if (exists) {
+        setInvoiceError("Este número de factura ya existe en el sistema");
+        setInvoiceValid(false);
+      } else {
+        setInvoiceError("");
+        setInvoiceValid(true);
+      }
+    } catch (error) {
+      console.error("Error verificando factura:", error);
+      setInvoiceError("Error al verificar la factura");
+      setInvoiceValid(false);
+    } finally {
+      setIsCheckingInvoice(false);
+    }
+  }, []);
+
+  // ========== DEBOUNCE PARA VALIDACIÓN EN TIEMPO REAL ==========
+  useEffect(() => {
+    if (!invoiceTouched) return;
+    
+    const timer = setTimeout(() => {
+      if (invoiceNumber.trim().length >= 3) {
+        validateInvoice(invoiceNumber);
+      } else if (invoiceNumber.trim().length === 0) {
+        setInvoiceError("El número de factura es obligatorio");
+        setInvoiceValid(false);
+      } else {
+        setInvoiceError("El número de factura debe tener al menos 3 caracteres");
+        setInvoiceValid(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [invoiceNumber, invoiceTouched, validateInvoice]);
+
+  // ========== SCROLL AUTOMATICO AL ABRIR EL MODAL ==========
   useEffect(() => {
     if (showCreateProduct) {
-      // Pequeño delay para asegurar que el modal se renderizó
       setTimeout(() => {
-        // Opción 1: Scroll al contenedor del modal
-        if (modalContainerRef.current) {
-          modalContainerRef.current.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start'  // ← Cambiado a 'start' para que el modal quede arriba
-          });
+        const modal = document.querySelector('.fixed.inset-0.z-50');
+        if (modal) {
+          modal.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else if (modalContainerRef.current) {
+          modalContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-        
-        // Opción 2: Scroll al final de la página (alternativa)
-         window.scrollTo({
-           top: document.documentElement.scrollHeight,
-           behavior: 'smooth'
-         });
-        
-        // Opción 3: Scroll al modal directamente
-        // const modal = document.querySelector('.fixed.inset-0.z-50');
-        // if (modal) {
-        //   const modalRect = modal.getBoundingClientRect();
-        //   const absoluteModalTop = modalRect.top + window.pageYOffset;
-        //   window.scrollTo({
-        //     top: absoluteModalTop - 100, // 100px de margen superior
-        //     behavior: 'smooth'
-        //   });
-        // }
-      }, 50);
+      }, 350);
     }
   }, [showCreateProduct]);
 
-  // ========== FUNCIÓN PARA ABRIR EL MODAL Y HACER SCROLL ==========
+  // ========== FUNCIÓN PARA ABRIR EL MODAL ==========
   const handleOpenCreateProduct = () => {
     setShowCreateProduct(true);
-    // El useEffect se encargará del scroll
   };
 
   // ========== FUNCIÓN PARA CERRAR EL MODAL ==========
   const handleCloseCreateProduct = () => {
     setShowCreateProduct(false);
   };
-
-  // ... resto de funciones (handleQuantityChange, handleDeleteItem, etc.)
 
   // Cargar productos reales
   useEffect(() => {
@@ -223,6 +275,104 @@ const CreatePurchase = () => {
     showSuccess("Producto eliminado", "El producto fue eliminado correctamente");
   };
 
+  // ========== FUNCIÓN PARA EDITAR PRODUCTO ==========
+  const handleEditItem = (item) => {
+    const product = productsDB.find(p => p.id === item.idProduct);
+    
+    if (!product) {
+      showError("Error", "No se encontró el producto en la base de datos");
+      return;
+    }
+
+    const productData = {
+      ...product,
+      editingQuantity: item.cantidad,
+      editingPurchasePrice: item.supplierPrice || item.valorUnit || "",
+      editingPurchaseType: item.purchaseType || "Unidad",
+      editingRetailPrice: item.retailPrice || product.retailPrice || 0,
+      editingWholesalePrice: item.wholesalePrice || product.wholesalePrice || 0,
+      editingPartnerPrice: item.partnerPrice || product.partnerPrice || 0,
+      editingBulkPrice: item.bulkPrice || product.bulkPrice || 0,
+      editingBarcode: item.codigoBarras || "",
+      editingStockTotal: item.stockTotal || 0,
+    };
+
+    setEditingProductData(productData);
+    setEditingItemId(item.id);
+    setIsEditingItem(true);
+    
+    showInfo("Editando producto", `Editando: ${item.producto}`);
+    
+    setTimeout(() => {
+      const sidebar = document.querySelector('.col-span-3');
+      if (sidebar) {
+        sidebar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 300);
+  };
+
+  // ========== FUNCIÓN PARA GUARDAR CAMBIOS DEL PRODUCTO EDITADO ==========
+  const handleUpdateEditedProduct = (resolvedBarcode, purchasePrice, salePrices = {}, purchaseTypeInfo = null) => {
+    const itemIndex = purchaseItems.findIndex(item => item.id === editingItemId);
+    if (itemIndex === -1) {
+      showError("Error", "No se encontró el producto a editar");
+      return;
+    }
+
+    const foundProduct = productsDB.find(p => p.id === purchaseItems[itemIndex].idProduct);
+    if (!foundProduct) {
+      showError("Error", "No se encontró el producto en la base de datos");
+      return;
+    }
+
+    const unitPrice = Number(purchasePrice) || foundProduct.supplierPrice || foundProduct.wholesalePrice || foundProduct.valorUnit;
+    const finalQuantity = purchaseTypeInfo?.quantity || quantity;
+    const stockToAdd = purchaseTypeInfo?.type === "pack" 
+      ? finalQuantity * (foundProduct.quantityPerPack || 0) 
+      : finalQuantity;
+
+    const subtotal = unitPrice * finalQuantity;
+    const ivaValor = (subtotal * foundProduct.iva) / 100;
+    const total = subtotal + ivaValor;
+
+    const updatedItems = [...purchaseItems];
+    updatedItems[itemIndex] = {
+      ...updatedItems[itemIndex],
+      cantidad: finalQuantity,
+      stockTotal: stockToAdd,
+      valorUnit: unitPrice,
+      supplierPrice: unitPrice,
+      purchaseType: purchaseTypeInfo?.label || "Unidad",
+      purchaseTypeValue: purchaseTypeInfo?.type || "unit",
+      quantityPerPack: purchaseTypeInfo?.type === "pack" ? (foundProduct.quantityPerPack || 0) : 0,
+      retailPrice: salePrices.retailPrice ? Number(salePrices.retailPrice) : foundProduct.retailPrice,
+      wholesalePrice: salePrices.wholesalePrice ? Number(salePrices.wholesalePrice) : foundProduct.wholesalePrice,
+      partnerPrice: salePrices.partnerPrice ? Number(salePrices.partnerPrice) : foundProduct.partnerPrice,
+      bulkPrice: salePrices.bulkPrice ? Number(salePrices.bulkPrice) : foundProduct.bulkPrice,
+      subtotal,
+      ivaValor,
+      total,
+    };
+
+    setPurchaseItems(updatedItems);
+    setEditingItemId(null);
+    setIsEditingItem(false);
+    setEditingProductData(null);
+    setSearchProduct("");
+    setQuantity(1);
+    
+    showSuccess("Producto actualizado", "Los cambios se guardaron correctamente.");
+  };
+
+  // ========== CANCELAR EDICIÓN ==========
+  const handleCancelEdit = () => {
+    setEditingItemId(null);
+    setIsEditingItem(false);
+    setEditingProductData(null);
+    setSearchProduct("");
+    setQuantity(1);
+  };
+
   const handleCreateProduct = (newProduct) => {
     console.log("Producto creado:", newProduct);
     setShowCreateProduct(false);
@@ -237,6 +387,7 @@ const CreatePurchase = () => {
     ],
   });
 
+  // ========== HANDLE ADD PRODUCT ==========
   const handleAddProduct = async (resolvedBarcode, purchasePrice, salePrices = {}, purchaseTypeInfo = null) => {
     const searchTerm = searchProduct.trim();
 
@@ -364,10 +515,17 @@ const CreatePurchase = () => {
     setQuantity(1);
   };
 
+  // ========== GUARDAR COMPRA ==========
   const handleSavePurchase = async () => {
     setInvoiceTouched(true);
     setDateTouched(true);
     setProviderTouched(true);
+
+    // Validar factura en el momento de guardar
+    if (!invoiceValid || invoiceError) {
+      showWarning("Factura inválida", "El número de factura no es válido o ya existe.");
+      return;
+    }
 
     if (!selectedProvider || !selectedProviderId || !invoiceNumber.trim() || !purchaseDate) {
       showWarning("Campos incompletos", "Llena todos los campos");
@@ -449,7 +607,7 @@ const CreatePurchase = () => {
   }
 
   return (
-    <div ref={mainContainerRef} className="min-h-screen bg-white px-4 py-6">
+    <div className="min-h-screen bg-white px-4 py-6">
       {loading && <FullScreenSpinner message="Guardando compra..." />}
 
       <div className="max-w-1400px mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -463,6 +621,11 @@ const CreatePurchase = () => {
             setSelectedProviderId={setSelectedProviderId}
             invoiceNumber={invoiceNumber}
             setInvoiceNumber={setInvoiceNumber}
+            invoiceTouched={invoiceTouched}
+            setInvoiceTouched={setInvoiceTouched}
+            invoiceError={invoiceError}
+            invoiceValid={invoiceValid}
+            isCheckingInvoice={isCheckingInvoice}
             purchaseDate={purchaseDate}
             setPurchaseDate={setPurchaseDate}
             searchProduct={searchProduct}
@@ -470,10 +633,8 @@ const CreatePurchase = () => {
             quantity={quantity}
             setQuantity={setQuantity}
             handleQuantityChange={handleQuantityChange}
-            handleAddProduct={handleAddProduct}
+            handleAddProduct={isEditingItem ? handleUpdateEditedProduct : handleAddProduct}
             purchaseItems={purchaseItems}
-            invoiceTouched={invoiceTouched}
-            setInvoiceTouched={setInvoiceTouched}
             dateTouched={dateTouched}
             setDateTouched={setDateTouched}
             providerTouched={providerTouched}
@@ -483,6 +644,9 @@ const CreatePurchase = () => {
             extraBarcodes={extraBarcodes}
             onExtraBarcodesChange={setExtraBarcodes}
             onCollapse={() => setIsSidebarVisible(false)}
+            isEditing={isEditingItem}
+            onCancelEdit={handleCancelEdit}
+            editingProductData={editingProductData}
           />
         </div>
 
@@ -550,6 +714,26 @@ const CreatePurchase = () => {
                 </div>
               </div>
 
+              {/* ========== INDICADOR DE EDICIÓN ========== */}
+              {isEditingItem && (
+                <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+                  <div className="flex items-center gap-2 text-sm text-blue-700">
+                    <Pencil size={15} strokeWidth={1.7} />
+                    <span> Editando:</span>
+                    <span className="font-semibold">
+                      {purchaseItems.find(item => item.id === editingItemId)?.producto}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="text-sm text-red-500 hover:text-red-700 font-medium cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
+
               {purchaseItems.length === 0 ? (
                 <div className="flex min-h-[280px] flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-gray-200 px-4 text-center">
                   <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#004D77]/10">
@@ -561,7 +745,11 @@ const CreatePurchase = () => {
                   </div>
                 </div>
               ) : (
-                <CreateTable currentData={currentData} handleDeleteItem={handleDeleteItem} />
+                <CreateTable 
+                  currentData={currentData} 
+                  handleDeleteItem={handleDeleteItem} 
+                  handleEditItem={handleEditItem}
+                />
               )}
 
               {purchaseItems.length > 0 && (
@@ -598,8 +786,8 @@ const CreatePurchase = () => {
         </div>
       </div>
 
-      {/* ========== CONTENEDOR DEL MODAL CON REF PARA SCROLL ========== */}
-      <div ref={modalContainerRef} className="scroll-mt-4">
+      {/* ========== CONTENEDOR DEL MODAL ========== */}
+      <div ref={modalContainerRef}>
         <CreateProduct 
           isOpen={showCreateProduct} 
           onClose={handleCloseCreateProduct} 
