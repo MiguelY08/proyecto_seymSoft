@@ -134,13 +134,13 @@ export const ProductsService = {
     if (data.precioMayorista !== undefined) formData.append('wholesalePrice', toOptionalNumber(data.precioMayorista));
     if (data.precioColegas !== undefined)   formData.append('partnerPrice', toOptionalNumber(data.precioColegas));
     if (data.precioPacas !== undefined)     formData.append('bulkPrice', toOptionalNumber(data.precioPacas));
-    if (data.supplierPrice !== undefined)   formData.append('supplierPrice', toOptionalNumber(data.supplierPrice));
-    if (data.ivaPercentage !== undefined)   formData.append('ivaPercentage', data.ivaPercentage);
+    if (data.supplierPrice !== undefined)   formData.append('supplierPrice', hasValue(data.supplierPrice) ? Number(data.supplierPrice) : '');
+    if (data.ivaPercentage !== undefined)   formData.append('ivaPercentage', toOptionalNumber(data.ivaPercentage));
 
-    if (data.retailDiscountPct !== undefined)    formData.append('retailDiscountPct', data.retailDiscountPct);
-    if (data.wholesaleDiscountPct !== undefined) formData.append('wholesaleDiscountPct', data.wholesaleDiscountPct);
-    if (data.partnerDiscountPct !== undefined)   formData.append('partnerDiscountPct', data.partnerDiscountPct);
-    if (data.bulkDiscountPct !== undefined)      formData.append('bulkDiscountPct', data.bulkDiscountPct);
+    if (data.retailDiscountPct !== undefined)    formData.append('retailDiscountPct', toOptionalNumber(data.retailDiscountPct));
+    if (data.wholesaleDiscountPct !== undefined) formData.append('wholesaleDiscountPct', toOptionalNumber(data.wholesaleDiscountPct));
+    if (data.partnerDiscountPct !== undefined)   formData.append('partnerDiscountPct', toOptionalNumber(data.partnerDiscountPct));
+    if (data.bulkDiscountPct !== undefined)      formData.append('bulkDiscountPct', toOptionalNumber(data.bulkDiscountPct));
 
     if (data.idUnitMeasure !== undefined) formData.append('idUnitMeasure', data.idUnitMeasure);
 
@@ -243,6 +243,7 @@ export const ProductsService = {
    * @param {Array} items - Items a decrementar
    */
   async decrementStock(items) {
+    void items;
     console.warn('decrementStock: Implementar cuando haya módulo de ventas');
   },
 
@@ -251,6 +252,7 @@ export const ProductsService = {
    * @param {Array} items - Items a restaurar
    */
   async restoreStock(items) {
+    void items;
     console.warn('restoreStock: Implementar cuando haya módulo de ventas');
   },
 };

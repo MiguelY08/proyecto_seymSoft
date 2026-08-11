@@ -1,4 +1,4 @@
-import {
+﻿import {
   ArrowLeft,
   BadgeDollarSign,
   Barcode,
@@ -41,7 +41,7 @@ function PriceCard({ label, fieldMain, fieldPaca, valueMain, valuePaca, placehol
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1.5">
-        {label} <span className="text-red-500">*</span>
+        {label} <span className="text-xs font-normal text-gray-400">(opcional)</span>
       </label>
       <div className={`grid grid-cols-[minmax(0,1fr)_105px] overflow-hidden rounded-lg border bg-white transition-colors duration-200 focus-within:ring-2 ${
         hm || hp
@@ -445,6 +445,9 @@ function ProductForm({
     try {
       setIsSubmitting(true);
       let saved;
+      const selectedPrimaryCategoryId = selectedCategoryIds.includes(Number(formData.id_category))
+        ? Number(formData.id_category)
+        : selectedCategoryIds[0];
 
       if (isEditMode) {
         saved = await ProductsService.update(producto.id, {
@@ -463,7 +466,7 @@ function ProductForm({
           bulkDiscountPct: formData.bulkDiscountPct,
           descripcion: formData.descripcion,
           cantidadXPaca: Number(formData.cantidadXPaca),
-          id_category: formData.id_category || selectedCategoryIds[0],
+          id_category: selectedPrimaryCategoryId,
           codBarras: formData.codBarras,
           stock: Number(formData.stockPrincipal) || 0,
           codsBarrasExtra: formData.codsBarrasExtra || [],
@@ -495,7 +498,7 @@ function ProductForm({
           formDataToSend.append('bulkDiscountPct', formData.bulkDiscountPct || 0);
         }
         formDataToSend.append('idUnitMeasure', formData.idUnitMeasure);
-        formDataToSend.append('idCategorie', formData.id_category || selectedCategoryIds[0]);
+        formDataToSend.append('idCategorie', selectedPrimaryCategoryId);
         formDataToSend.append('description', formData.descripcion || '');
         formDataToSend.append('quantityPerPack', formData.cantidadXPaca ? Number(formData.cantidadXPaca) : 0);
         formDataToSend.append('codBarras', formData.codBarras);
