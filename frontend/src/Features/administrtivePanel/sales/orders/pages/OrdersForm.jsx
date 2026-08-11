@@ -34,7 +34,7 @@ const roundMoney = (value) =>
   Math.round((Number(value) || 0) * 100) / 100;
 
 const MIN_PHONE_DIGITS = 7;
-const MAX_PHONE_DIGITS = 15;
+const MAX_PHONE_DIGITS = 10;
 
 const cleanRecipientPhoneInput = (value) => {
   let digitsCount = 0;

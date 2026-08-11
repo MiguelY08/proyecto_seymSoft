@@ -65,6 +65,26 @@ const getReceiptStatusView = (status) => {
   };
 };
 
+function PaymentTransferInfo({ className = '' }) {
+  return (
+    <div className={`text-left ${className}`}>
+      <p className="mb-2 text-[11px] font-black text-slate-700">¿No puedes ver el QR? Usa uno de estos medios:</p>
+      <div className="space-y-2">
+        <div className="rounded-xl border border-[#004D77]/20 bg-[#004D77]/5 px-3 py-2.5 text-[11px] text-slate-700 shadow-sm">
+          <p className="font-black text-[#004D77]">Cuenta de ahorros Bancolombia</p>
+          <p className="mt-1 font-extrabold text-slate-900">010 0000 1340</p>
+          <p className="mt-0.5 font-semibold">Papelería y Variedades Magic</p>
+        </div>
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[11px] text-amber-900 shadow-sm">
+          <p className="font-black">Llave Bancolombia</p>
+          <p className="mt-1 font-extrabold">00 904 854 26</p>
+          <p className="mt-0.5 font-semibold">Magic piso 11</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function OrderDetail() {
   injectOrderTypography();
   const { id } = useParams();
@@ -413,6 +433,7 @@ function OrderDetail() {
                     >
                       <ZoomIn size={13} /> Ampliar QR
                     </button>
+                    <PaymentTransferInfo className="mx-auto mt-4 max-w-xs" />
                   </div>
 
                   <div>
@@ -610,6 +631,7 @@ function OrderDetail() {
               <X size={18} />
             </button>
             <img src={qrMagic} alt="Código QR de pago ampliado" className="mx-auto aspect-square max-h-[70vh] w-full max-w-[360px] rounded-2xl object-contain sm:max-w-[440px]" />
+            <PaymentTransferInfo className="mx-auto mt-4 max-w-[440px]" />
           </div>
         </div>
       )}

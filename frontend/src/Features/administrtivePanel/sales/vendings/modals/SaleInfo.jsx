@@ -117,6 +117,7 @@ const mapSaleToOrderDetail = (sale) => {
     fechaPedido: order.orderDate ?? sale.saleDate,
     clienteNombre: sale.cliente,
     deliveryRecipientName: sale.deliveryRecipientName ?? order.deliveryRecipientName ?? '',
+    deliveryRecipientPhone: sale.deliveryRecipientPhone ?? order.deliveryRecipientPhone ?? '',
     clienteTipoDocumento:
       sale.clienteTipoDocumento ??
       order.clienteTipoDocumento ??

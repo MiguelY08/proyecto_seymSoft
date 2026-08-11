@@ -12,6 +12,26 @@ import { getProductBarcode } from '../../orders/helpers/customerOrderHelpers';
 
 const INITIAL_SECONDS = 48 * 60 * 60;
 
+function PaymentTransferInfo({ className = '' }) {
+  return (
+    <div className={`text-left ${className}`}>
+      <p className="mb-2 text-xs font-black text-slate-700">También puedes pagar con estos datos</p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="rounded-xl border border-[#004D77]/20 bg-[#004D77]/5 px-3 py-2.5 text-[11px] text-slate-700 shadow-sm">
+          <p className="font-black text-[#004D77]">Cuenta de ahorros Bancolombia</p>
+          <p className="mt-1 font-extrabold text-slate-900">010 0000 1340</p>
+          <p className="mt-0.5 font-semibold">Papelería y Variedades Magic</p>
+        </div>
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[11px] text-amber-900 shadow-sm">
+          <p className="font-black">Llave Bancolombia</p>
+          <p className="mt-1 font-extrabold">00 904 854 26</p>
+          <p className="mt-0.5 font-semibold">Magic piso 11</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function useCountdown() {
   const [secondsLeft, setSecondsLeft] = useState(INITIAL_SECONDS);
   const intervalRef = useRef(null);
@@ -234,11 +254,14 @@ function CompletePay({
       onClick={handleClose}
     >
       <div
-        className="w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+        className="w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <header className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-          <h2 className="font-serif text-xl font-bold text-slate-900">Completar pago</h2>
+        <header className="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-[#004D77]">Pedido para recoger</p>
+            <h2 className="font-serif text-xl font-bold text-slate-900">Completar pago</h2>
+          </div>
           <button
             type="button"
             onClick={handleClose}
@@ -250,7 +273,7 @@ function CompletePay({
           </button>
         </header>
 
-        <div className="grid max-h-[92vh] gap-4 overflow-y-auto p-5 md:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] md:overflow-visible">
+        <div className="grid max-h-[calc(100vh-7rem)] gap-5 overflow-y-auto p-5 sm:p-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
           <div className="space-y-4">
           <div className={`flex items-center gap-3 rounded-2xl border p-3 ${
             expired ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-800'
@@ -261,7 +284,7 @@ function CompletePay({
             </span>
           </div>
 
-          <div className="grid grid-cols-[1fr_auto] items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
             <div>
               <p className="text-xs text-slate-500">Total a pagar</p>
               <p className="mt-1 text-xl font-black text-[#004D77]">
@@ -294,6 +317,8 @@ function CompletePay({
               </button>
             </div>
           </div>
+
+          <PaymentTransferInfo />
 
           {availableFavorBalance > 0 && (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
@@ -352,9 +377,9 @@ function CompletePay({
           )}
           </div>
 
-          <div className="space-y-4">
+          <div className="flex flex-col space-y-4">
           {requiresReceipt && (
-            <div>
+            <div className="flex-1">
             <p className="mb-2 text-xs font-bold text-slate-700">Comprobante de transferencia</p>
             <div className="relative">
               <label className={`flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed p-4 text-center transition ${
@@ -397,7 +422,7 @@ function CompletePay({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">
             <button
               type="button"
               onClick={handleClose}
@@ -458,6 +483,7 @@ function CompletePay({
             alt="Código QR de pago ampliado"
             className="mx-auto aspect-square max-h-[70vh] w-full max-w-[360px] rounded-2xl object-contain sm:max-w-[440px]"
           />
+          <PaymentTransferInfo className="mx-auto mt-4 max-w-[440px]" />
         </div>
       </div>
     )}

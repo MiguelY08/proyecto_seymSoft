@@ -45,7 +45,7 @@ const roundMoney = (value) =>
   Math.round((Number(value) || 0) * 100) / 100;
 
 const MIN_PHONE_DIGITS = 7;
-const MAX_PHONE_DIGITS = 15;
+const MAX_PHONE_DIGITS = 10;
 
 const cleanRecipientPhoneInput = (value) => {
   let digitsCount = 0;
@@ -748,12 +748,10 @@ function SaleForm() {
           idOrderStatus: ORDER_STATUS_IDS[formData.estadoLogistico] ?? formData.estadoLogistico,
           deliveryType: formData.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Recoge',
           deliveryAddress: formData.direccionEntrega,
-          deliveryRecipientName: formData.tipoEntrega === 'domicilio'
-            ? formData.deliveryRecipientName.trim()
-            : null,
-          deliveryRecipientPhone: formData.tipoEntrega === 'domicilio'
-            ? (formData.deliveryRecipientPhone || '').trim()
-            : null,
+          ...(formData.tipoEntrega === 'domicilio' && {
+            deliveryRecipientName: formData.deliveryRecipientName.trim(),
+            deliveryRecipientPhone: (formData.deliveryRecipientPhone || '').trim(),
+          }),
           shippingAmount,
           deliveryDepartmentCode: formData.tipoEntrega === 'domicilio' ? formData.departamentoEntregaCodigo : null,
           deliveryDepartmentName: formData.tipoEntrega === 'domicilio' ? formData.departamentoEntregaNombre : null,
