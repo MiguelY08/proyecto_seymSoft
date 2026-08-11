@@ -3,6 +3,8 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Trash2, Search, X, ChevronDown, CheckCircle, ShoppingBag } from 'lucide-react';
 import { ScannerStatus, findProductByBarcode, normalizeBarcode, productMatchesBarcodeSearch, useBarcodeScanner } from '../../../../shared/scanner';
 
+const isProductActive = (product) => product?.isActive === true;
+
 function RightSectionForm({
   productos,
   productosCatalogo,
@@ -44,11 +46,12 @@ function RightSectionForm({
 
   // Productos a mostrar: todos si no hay búsqueda, filtrados si hay término
   const productosMostrados = useMemo(() => {
+    const productosActivos = productosCatalogo.filter(isProductActive);
     if (!searchTerm.trim()) {
-      return productosCatalogo;
+      return productosActivos;
     }
     const term = searchTerm.toLowerCase().trim();
-    return productosCatalogo.filter(prod => {
+    return productosActivos.filter(prod => {
       if (String(prod.nombre || '').toLowerCase().includes(term)) return true;
       if (prod.proveedor && prod.proveedor.toLowerCase().includes(term)) return true;
       if (String(prod.reference || prod.referencia || '').toLowerCase().includes(term)) return true;
@@ -93,7 +96,7 @@ function RightSectionForm({
       if (activeScannerField !== scannerField) return;
 
       const normalizedCode = normalizeBarcode(code, { numericOnly: true });
-      const product = findProductByBarcode(productosCatalogo, normalizedCode);
+      const product = findProductByBarcode(productosCatalogo.filter(isProductActive), normalizedCode);
 
       if (!product) {
         setSearchTerm(normalizedCode);
