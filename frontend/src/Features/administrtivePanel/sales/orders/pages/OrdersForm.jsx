@@ -33,6 +33,24 @@ const toNumber = (value, fallback = 0) => {
 const roundMoney = (value) =>
   Math.round((Number(value) || 0) * 100) / 100;
 
+const MIN_PHONE_DIGITS = 7;
+const MAX_PHONE_DIGITS = 15;
+
+const cleanRecipientPhoneInput = (value) => {
+  let digitsCount = 0;
+
+  return String(value ?? '')
+    .replace(/[^\d\s()+-]/g, '')
+    .split('')
+    .filter((char) => {
+      if (!/\d/.test(char)) return true;
+      if (digitsCount >= MAX_PHONE_DIGITS) return false;
+      digitsCount += 1;
+      return true;
+    })
+    .join('');
+};
+
 const getPrimaryBarcode = (product = {}) => (
   getPrimaryProductBarcode(product)
 );
@@ -506,7 +524,7 @@ function OrdersForm() {
   };
   const handleDeliveryRecipientPhoneChange = (e) => {
     if (pedidoInmutable) return;
-    const value = e.target.value.replace(/[^\d\s()+-]/g, '');
+    const value = cleanRecipientPhoneInput(e.target.value);
     setFormData(prev => ({ ...prev, deliveryRecipientPhone: value }));
     if (errors.deliveryRecipientPhone) {
       setErrors(prev => ({ ...prev, deliveryRecipientPhone: null }));
@@ -685,8 +703,8 @@ function OrdersForm() {
       const recipientPhoneDigits = formData.deliveryRecipientPhone.replace(/\D/g, '');
       if (!recipientPhoneDigits) {
         newErrors.deliveryRecipientPhone = 'Debe ingresar el telefono de la persona que recibe el pedido.';
-      } else if (recipientPhoneDigits.length < 7 || recipientPhoneDigits.length > 15) {
-        newErrors.deliveryRecipientPhone = 'El telefono debe tener entre 7 y 15 digitos.';
+      } else if (recipientPhoneDigits.length < MIN_PHONE_DIGITS || recipientPhoneDigits.length > MAX_PHONE_DIGITS) {
+        newErrors.deliveryRecipientPhone = `El telefono debe tener entre ${MIN_PHONE_DIGITS} y ${MAX_PHONE_DIGITS} digitos.`;
       }
     }
     if (!formData.direccionEntrega?.trim()) {
@@ -879,6 +897,8 @@ function OrdersForm() {
               idOrderStatus: 3,
               deliveryType: payload.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Recoge',
               deliveryAddress: payload.direccionEntrega,
+              deliveryRecipientName: payload.deliveryRecipientName,
+              deliveryRecipientPhone: payload.deliveryRecipientPhone,
               shippingAmount: payload.shippingAmount,
               deliveryDepartmentCode: payload.departamentoEntregaCodigo,
               deliveryDepartmentName: payload.departamentoEntregaNombre,

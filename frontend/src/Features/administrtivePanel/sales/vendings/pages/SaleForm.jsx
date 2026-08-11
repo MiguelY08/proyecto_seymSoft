@@ -44,6 +44,24 @@ const normalizeText = (value) =>
 const roundMoney = (value) =>
   Math.round((Number(value) || 0) * 100) / 100;
 
+const MIN_PHONE_DIGITS = 7;
+const MAX_PHONE_DIGITS = 15;
+
+const cleanRecipientPhoneInput = (value) => {
+  let digitsCount = 0;
+
+  return String(value ?? '')
+    .replace(/[^\d\s()+-]/g, '')
+    .split('')
+    .filter((char) => {
+      if (!/\d/.test(char)) return true;
+      if (digitsCount >= MAX_PHONE_DIGITS) return false;
+      digitsCount += 1;
+      return true;
+    })
+    .join('');
+};
+
 const getIncludedIvaAmount = (totalWithIva, ivaPercentage) => {
   const rate = Number(ivaPercentage || 0) / 100;
   if (rate <= 0) return 0;
@@ -471,7 +489,7 @@ function SaleForm() {
   };
 
   const handleDeliveryRecipientPhoneChange = (e) => {
-    const value = e.target.value.replace(/[^\d\s()+-]/g, '');
+    const value = cleanRecipientPhoneInput(e.target.value);
     setFormData(prev => ({ ...prev, deliveryRecipientPhone: value }));
     if (errors.deliveryRecipientPhone) {
       setErrors(prev => ({ ...prev, deliveryRecipientPhone: null }));
@@ -621,15 +639,15 @@ function SaleForm() {
       newErrors.clienteId = 'Debe seleccionar un cliente.';
     }
     if (!getSessionUserId(user)) newErrors.idUser = 'No se pudo identificar al usuario en sesion.';
-    if (!isDirectSale && formData.tipoEntrega === 'domicilio' && !formData.deliveryRecipientName?.trim()) {
+    if (formData.tipoEntrega === 'domicilio' && !formData.deliveryRecipientName?.trim()) {
       newErrors.deliveryRecipientName = 'Debe ingresar el nombre de la persona que recibe la venta.';
     }
-    if (!isDirectSale && formData.tipoEntrega === 'domicilio') {
+    if (formData.tipoEntrega === 'domicilio') {
       const recipientPhoneDigits = (formData.deliveryRecipientPhone || '').replace(/\D/g, '');
       if (!recipientPhoneDigits) {
         newErrors.deliveryRecipientPhone = 'Debe ingresar el telefono de la persona que recibe.';
-      } else if (recipientPhoneDigits.length < 7 || recipientPhoneDigits.length > 15) {
-        newErrors.deliveryRecipientPhone = 'El telefono debe tener entre 7 y 15 digitos.';
+      } else if (recipientPhoneDigits.length < MIN_PHONE_DIGITS || recipientPhoneDigits.length > MAX_PHONE_DIGITS) {
+        newErrors.deliveryRecipientPhone = `El telefono debe tener entre ${MIN_PHONE_DIGITS} y ${MAX_PHONE_DIGITS} digitos.`;
       }
     }
     if (!formData.direccionEntrega?.trim()) {
@@ -730,8 +748,12 @@ function SaleForm() {
           idOrderStatus: ORDER_STATUS_IDS[formData.estadoLogistico] ?? formData.estadoLogistico,
           deliveryType: formData.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Recoge',
           deliveryAddress: formData.direccionEntrega,
-          deliveryRecipientName: isDirectSale ? null : formData.deliveryRecipientName.trim(),
-          deliveryRecipientPhone: isDirectSale ? null : (formData.deliveryRecipientPhone || '').trim(),
+          deliveryRecipientName: formData.tipoEntrega === 'domicilio'
+            ? formData.deliveryRecipientName.trim()
+            : null,
+          deliveryRecipientPhone: formData.tipoEntrega === 'domicilio'
+            ? (formData.deliveryRecipientPhone || '').trim()
+            : null,
           shippingAmount,
           deliveryDepartmentCode: formData.tipoEntrega === 'domicilio' ? formData.departamentoEntregaCodigo : null,
           deliveryDepartmentName: formData.tipoEntrega === 'domicilio' ? formData.departamentoEntregaNombre : null,

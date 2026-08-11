@@ -297,7 +297,7 @@ function LeftSectionForm({
           {showClienteError && errorMsg('clienteId')}
         </div>
 
-        {mostrarDireccionManual && !showDirectSaleLockedInfo && (
+        {mostrarDireccionManual && (
           <div className="flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
               Persona que recibe/recoge <span className="text-red-500">*</span>
@@ -333,7 +333,7 @@ function LeftSectionForm({
             )}
 
             <label className="mt-2 block text-sm font-medium text-gray-700">
-              Telefono de quien recibe <span className="text-red-500">*</span>
+              Teléfono de quien recibe <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
