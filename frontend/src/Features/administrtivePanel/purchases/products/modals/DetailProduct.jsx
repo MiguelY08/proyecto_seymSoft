@@ -13,7 +13,8 @@ import {
   Maximize2,
 } from 'lucide-react';
 
-function DetailRow({ icon: Icon, label, value, placeholder = 'No especificado', highlight = false }) {
+function DetailRow({ icon, label, value, placeholder = 'No especificado', highlight = false }) {
+  const IconComponent = icon;
   const hasValue = value !== null && value !== undefined && String(value).trim() !== '';
 
   return (
@@ -23,7 +24,7 @@ function DetailRow({ icon: Icon, label, value, placeholder = 'No especificado', 
           hasValue ? 'bg-[#004D77]/10' : 'bg-gray-100'
         }`}
       >
-        <Icon
+        <IconComponent
           className={`w-3.5 h-3.5 ${hasValue ? 'text-[#004D77]' : 'text-gray-300'}`}
           strokeWidth={1.8}
         />
@@ -61,7 +62,7 @@ function SectionTitle({ children }) {
   );
 }
 
-function PriceCard({ label, value }) {
+function PriceCard({ label, value, discount }) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg px-3 py-3 shadow-sm">
       <div className="flex items-center gap-2 mb-1">
@@ -75,6 +76,11 @@ function PriceCard({ label, value }) {
       <p className="text-lg font-bold text-[#004D77] tabular-nums">
         ${value?.toLocaleString() || 0}
       </p>
+      {discount !== undefined && (
+        <p className="mt-1 text-xs text-gray-500">
+          Descuento: {Number(discount || 0)}%
+        </p>
+      )}
     </div>
   );
 }
@@ -85,6 +91,8 @@ function DetailProduct({ producto, isOpen, onClose }) {
   const [isImageExpanded, setIsImageExpanded] = useState(false);
 
   useEffect(() => {
+    // Reinicia el visor cuando el modal recibe otro producto.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setImages(producto?.images || []);
     setSelectedImageIndex(0);
     setIsImageExpanded(false);
@@ -193,10 +201,11 @@ function DetailProduct({ producto, isOpen, onClose }) {
                 <SectionTitle>Información de precios</SectionTitle>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <PriceCard label="Precio detalle" value={producto.retailPrice} />
-                  <PriceCard label="Precio mayorista" value={producto.wholesalePrice} />
-                  <PriceCard label="Precio colegas" value={producto.partnerPrice} />
-                  <PriceCard label="Precio x pacas" value={producto.bulkPrice} />
+                  <PriceCard label="Precio proveedor" value={producto.supplierPrice} />
+                  <PriceCard label="Precio detalle" value={producto.retailPrice} discount={producto.retailDiscountPct} />
+                  <PriceCard label="Precio mayorista" value={producto.wholesalePrice} discount={producto.wholesaleDiscountPct} />
+                  <PriceCard label="Precio colegas" value={producto.partnerPrice} discount={producto.partnerDiscountPct} />
+                  <PriceCard label="Precio x pacas" value={producto.bulkPrice} discount={producto.bulkDiscountPct} />
                 </div>
               </div>
             </div>
@@ -243,6 +252,16 @@ function DetailProduct({ producto, isOpen, onClose }) {
                   icon={ImageIcon}
                   label="Imágenes"
                   value={`${images.length} registrada${images.length === 1 ? '' : 's'}`}
+                />
+                <DetailRow
+                  icon={Package}
+                  label="Cantidad por paca"
+                  value={producto.quantityPerPack}
+                />
+                <DetailRow
+                  icon={Tag}
+                  label="IVA"
+                  value={`${Number(producto.ivaPercentage || 0)}%`}
                 />
               </div>
 
