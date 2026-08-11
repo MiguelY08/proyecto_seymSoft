@@ -51,6 +51,18 @@ export const mapPurchaseToFrontend = (purchase) => {
       detail.quantity ??
       0
     );
+    const cantidadDisponibleDevolucion = Number(
+      detail.returnEligibleQuantity ??
+      detail.returnAvailability?.eligibleQuantity ??
+      Math.min(
+        Number(
+          detail.returnAvailableQuantity ??
+          detail.returnAvailability?.availableQuantity ??
+          cantidadComprada
+        ),
+        Number(detail.stockAvailable ?? cantidadComprada)
+      )
+    );
 
     return {
       id: detail.id,
@@ -65,6 +77,22 @@ export const mapPurchaseToFrontend = (purchase) => {
       codigoBarras: detail.barcode || '',
       cantidad: cantidadComprada,
       cantidadComprada,
+      cantidadDisponibleDevolucion,
+      cantidadDevueltaDefinitiva: Number(
+        detail.finalReturnedQuantity ??
+        detail.returnAvailability?.finalReturnedQuantity ??
+        0
+      ),
+      cantidadReservadaDevolucion: Number(
+        detail.returnReservedQuantity ??
+        detail.returnAvailability?.reservedQuantity ??
+        0
+      ),
+      stockDisponible: Number(detail.stockAvailable ?? cantidadComprada),
+      returnAvailability: {
+        ...(detail.returnAvailability ?? {}),
+        eligibleQuantity: cantidadDisponibleDevolucion,
+      },
       // ========== NUEVOS CAMPOS ==========
       purchaseType: detail.purchaseType || "Unidad",
       quantityPerPack: detail.quantityPerPack || 0,

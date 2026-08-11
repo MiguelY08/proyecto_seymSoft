@@ -10,10 +10,12 @@ import {
   TIPOS_DEVOLUCION,
   getEstadosByTipo,
   getEstadoInicial,
+  getEstadoTerminal,
   formatCurrency,
   getBadgeEstadoProducto,
   getAllowedNextReturnStatuses,
   isEstadoTerminal,
+  isEstadoProveedorRechazado,
 } from '../helpers/returnsHelpers';
 import {
   validateReturnFormConLineas,
@@ -59,6 +61,22 @@ const getExistingReturnQuantity = (producto) =>
 
 const getReturnQuantityLimit = (producto) =>
   getReturnAvailableQuantity(producto) + getExistingReturnQuantity(producto);
+
+const getProductOverallStatus = (producto) => {
+  const lineas = producto?.lineas ?? [];
+  if (lineas.length === 0) return getEstadoInicial();
+
+  const todasListas = lineas.every((linea) =>
+    isEstadoTerminal(linea?.estado)
+  );
+
+  if (todasListas) return getEstadoTerminal();
+
+  return (
+    lineas.find((linea) => !isEstadoTerminal(linea?.estado))?.estado ||
+    getEstadoInicial()
+  );
+};
 
 // ─── useLongPress ─────────────────────────────────────────────────────────────
 function useLongPress(callback, { delay = 380, interval = 75 } = {}) {
@@ -294,12 +312,13 @@ const ReadonlyField = ({ value, placeholder = '-' }) => (
 
 // ─── LineaConfig - una fila de devolucion por producto (con editable condicional) ──
 const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errores, editableCompleto, isEditMode }) => {
-  const esTerminal     = isEstadoTerminal(linea.estado);
+  const esTerminal     = isEstadoTerminal(linea.estado) || isEstadoProveedorRechazado(linea.estado);
+  const esRechazoProveedor = isEstadoProveedorRechazado(linea.estado);
   const badgeStyle     = getBadgeEstadoProducto(linea.estado);
   const esExistente    = isExistingReturnLine(linea);
   const estadoBase     = linea.estadoOriginal || linea.estado;
   const estadosDisp    = !isEditMode
-    ? (linea.tipoDevolucion ? getEstadosByTipo(linea.tipoDevolucion) : [])
+    ? (linea.tipoDevolucion ? getEstadosByTipo(linea.tipoDevolucion, linea.motivo) : [])
     : esExistente
       ? [
           estadoBase,
@@ -308,7 +327,8 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
             linea.originalReturnStatusId ??
               linea.idReturnStatus ??
               linea.returnStatusId ??
-              estadoBase
+              estadoBase,
+            linea.idReturnReason ?? linea.returnReasonId ?? linea.motivo
           ).map((estado) => estado.label),
         ].filter((estado, index, estados) => estado && estados.indexOf(estado) === index)
       : [getEstadoInicial()];
@@ -317,14 +337,14 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
   // Caso terminal: todo solo lectura (no editable)
   if (esTerminal) {
     return (
-      <div className="border border-green-200 rounded-lg p-2.5 bg-green-50">
+      <div className={`rounded-lg border p-2.5 ${esRechazoProveedor ? 'border-orange-200 bg-orange-50' : 'border-green-200 bg-green-50'}`}>
         <div className="flex items-center justify-between mb-2">
           <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={badgeStyle}>
             {linea.estado}
           </span>
-          <span className="text-[9px] text-emerald-600 flex items-center gap-0.5 italic">
+          <span className={`flex items-center gap-0.5 text-[9px] italic ${esRechazoProveedor ? 'text-orange-600' : 'text-emerald-600'}`}>
             <Lock className="w-2.5 h-2.5" strokeWidth={2} />
-            Proceso completado - inmutable
+            {esRechazoProveedor ? 'Proveedor rechazó - inmutable' : 'Proceso completado - inmutable'}
           </span>
         </div>
         <div className="grid grid-cols-1 gap-2 text-[10px] sm:grid-cols-3 sm:gap-x-3">
@@ -456,7 +476,7 @@ const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, err
   const cantidadRestante = cantidadLimite - totalUsado;
   const puedeAgregar     = cantidadRestante > 0;
 
-  const estadoPrincipal = producto.lineas?.[0]?.estado || getEstadoInicial();
+  const estadoPrincipal = getProductOverallStatus(producto);
   const badgeStyle = getBadgeEstadoProducto(estadoPrincipal);
 
   return (
@@ -502,7 +522,10 @@ const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, err
                 const maxParaEstaLinea = Math.max(cantidadLimite - usadoOtras, 0);
                 const erroresLinea     = errores?.lineas?.[idx] ?? {};
                 const esNueva = !isExistingReturnLine(linea);
-                const canRemove = esNueva && !isEstadoTerminal(linea.estado);
+                const canRemove =
+                  esNueva &&
+                  !isEstadoTerminal(linea.estado) &&
+                  !isEstadoProveedorRechazado(linea.estado);
                 const editableCompleto = !isEditMode || esNueva;
 
                 return (
@@ -673,8 +696,8 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
     if (!isEdit) return productos;
 
     return [...productos].sort((a, b) => {
-      const estadoA = a.lineas?.[0]?.estado || '';
-      const estadoB = b.lineas?.[0]?.estado || '';
+      const estadoA = getProductOverallStatus(a);
+      const estadoB = getProductOverallStatus(b);
       const esTerminalA = isEstadoTerminal(estadoA);
       const esTerminalB = isEstadoTerminal(estadoB);
       if (esTerminalA && !esTerminalB) return -1;

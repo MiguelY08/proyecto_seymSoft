@@ -95,7 +95,7 @@ export const validateProducto = (producto) => {
   if (!producto.estado?.trim()) {
     errores.estado = "El estado es obligatorio.";
   } else if (producto.tipoDevolucion) {
-    const estadosValidos = getEstadosByTipo(producto.tipoDevolucion);
+    const estadosValidos = getEstadosByTipo(producto.tipoDevolucion, producto.motivo);
     if (!estadosValidos.includes(producto.estado)) {
       errores.estado = `Estado invalido para el tipo "${producto.tipoDevolucion}".`;
     }
@@ -167,7 +167,7 @@ export const validateLinea = (linea, cantidadMaxima) => {
   if (!linea.estado?.trim()) {
     errores.estado = "El estado es obligatorio.";
   } else if (linea.tipoDevolucion) {
-    const estadosValidos = getEstadosByTipo(linea.tipoDevolucion);
+    const estadosValidos = getEstadosByTipo(linea.tipoDevolucion, linea.motivo);
     if (!estadosValidos.includes(linea.estado)) {
       errores.estado = `Estado invalido para "${linea.tipoDevolucion}".`;
     }
@@ -306,7 +306,8 @@ export const validateReturnUpdateForm = (productosSeleccionados) => {
             !isValidReturnStatusTransition(
               returnMethodId,
               originalStatusId,
-              currentStatusId
+              currentStatusId,
+              linea.idReturnReason ?? linea.returnReasonId ?? linea.motivo
             )
           ) {
             erroresLinea.estado = "La transicion de estado seleccionada no esta permitida.";

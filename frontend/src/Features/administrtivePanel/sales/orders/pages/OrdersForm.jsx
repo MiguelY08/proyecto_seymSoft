@@ -560,6 +560,11 @@ function OrdersForm() {
     const producto = productosCatalogo.find(p => p.id === Number(productoId));
     if (!producto) return;
 
+    if (producto.isActive !== true) {
+      showWarning('Producto inactivo', 'Este producto está desactivado y no se puede agregar a la venta.');
+      return;
+    }
+
     if (toNumber(producto.stock) <= 0) {
       showWarning('Sin stock', 'Este producto no tiene unidades disponibles.');
       return;
@@ -723,6 +728,11 @@ function OrdersForm() {
     }
     if (formData.productos.length === 0) {
       newErrors.productos = 'Debe agregar al menos un producto.';
+    } else if (!isEditMode && formData.productos.some((product) => {
+      const catalogProduct = productosCatalogo.find(item => Number(item.id) === Number(product.id));
+      return !catalogProduct || catalogProduct.isActive !== true;
+    })) {
+      newErrors.productos = 'La venta contiene productos inactivos. Retíralos antes de continuar.';
     } else if (formData.productos.some(product => !product.codBarras && !product.barcode)) {
       newErrors.productos = 'Todos los productos deben tener código de barras.';
     }
