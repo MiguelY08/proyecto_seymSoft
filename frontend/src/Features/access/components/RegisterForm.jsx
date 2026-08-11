@@ -16,7 +16,7 @@ import { checkEmailAvailability } from "../services/authService.js";
 const Label = ({ text, htmlFor }) => (
   <label
     htmlFor={htmlFor}
-    className="flex items-center gap-1 mb-1 text-sm font-medium text-gray-700"
+    className="flex items-center gap-1 mb-0.5 text-xs font-medium text-gray-700"
   >
     {text}
     <span className="text-red-500">*</span>
@@ -30,7 +30,7 @@ const buildSanitizedInputValue = (target, input, sanitizer) => {
   return sanitizer(`${value.slice(0, start)}${input}${value.slice(end)}`);
 };
 
-export default function RegisterForm() {
+export default function RegisterForm({ embedded = false, onSwitchToLogin }) {
   const { register, loading } = useAuth();
   const navigate = useNavigate();
   const { showSuccess, showError, showWarning } = useAlert();
@@ -266,7 +266,7 @@ export default function RegisterForm() {
   };
 
   const inputStyle = (field) =>
-    `w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors
+    `w-full border rounded-lg px-3 py-1.5 text-sm outline-none transition-colors
     ${
       touched[field] && errors[field]
         ? "border-red-500 focus:ring-2 focus:ring-red-200"
@@ -274,19 +274,51 @@ export default function RegisterForm() {
     }`;
 
   const hasBlockingErrors = Boolean(errors.email || errors.phone);
+  const errorTextClass = embedded
+    ? "absolute left-0 top-full mt-0.5 max-w-full truncate text-[10px] leading-none text-red-500"
+    : "text-red-500 text-xs mt-1";
+  const emailStatusClass = embedded
+    ? "absolute left-0 top-full mt-0.5 text-[10px] leading-none text-[#004D77]"
+    : "text-[#004D77] text-xs mt-1";
+
+  const handleBackToLogin = () => {
+    if (onSwitchToLogin) {
+      onSwitchToLogin();
+      return;
+    }
+
+    navigate("/login");
+  };
 
   return (
-    <div className="max-w-2xl w-full mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
-      <div className="bg-[#004D77] py-4">
-        <h2 className="font-lexend text-xl md:text-2xl font-semibold text-white text-center">
+    <div
+      className={
+        embedded
+          ? "w-full bg-white md:flex md:h-full md:flex-col"
+          : "max-w-2xl w-full mx-auto bg-white rounded-2xl shadow-xl overflow-hidden"
+      }
+    >
+      <div className={embedded ? "px-4 pt-3 md:px-5 md:pt-4" : "bg-[#004D77] py-4"}>
+        <h2
+          className={
+            embedded
+              ? "font-lexend text-base font-semibold text-gray-800 text-center"
+              : "font-lexend text-xl md:text-2xl font-semibold text-white text-center"
+          }
+        >
           Crear Cuenta
         </h2>
+        {embedded && (
+          <p className="text-center text-xs text-gray-600">
+            Únete a Papelería Magic y continúa con tus compras.
+          </p>
+        )}
       </div>
 
-      <div className="p-5 md:p-8">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <div className={embedded ? "px-4 pb-4 pt-3 md:flex md:flex-1 md:flex-col md:px-5 md:pb-4 md:pt-3" : "p-5 md:p-8"}>
+        <form onSubmit={handleSubmit} className={embedded ? "flex flex-col gap-3.5 md:flex-1" : "flex flex-col gap-5"}>
           {/* Nombre Completo */}
-          <div>
+          <div className="relative">
             <Label text="Nombre Completo" htmlFor="fullName" />
             <input
               id="fullName"
@@ -301,12 +333,12 @@ export default function RegisterForm() {
               autoComplete="name"
             />
             {touched.fullName && errors.fullName && (
-              <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>
+              <p className={errorTextClass}>{errors.fullName}</p>
             )}
           </div>
 
           {/* Email */}
-          <div>
+          <div className="relative">
             <Label text="Correo Electrónico" htmlFor="email" />
             <input
               id="email"
@@ -322,17 +354,17 @@ export default function RegisterForm() {
               autoComplete="email"
             />
             {touched.email && errors.email && (
-              <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+              <p className={errorTextClass}>{errors.email}</p>
             )}
             {checkingEmail && touched.email && !errors.email && (
-              <p className="text-[#004D77] text-xs mt-1">
+              <p className={emailStatusClass}>
                 Verificando correo...
               </p>
             )}
           </div>
 
           {/* Teléfono */}
-          <div>
+          <div className="relative">
             <Label text="Teléfono" htmlFor="phone" />
             <input
               id="phone"
@@ -351,7 +383,7 @@ export default function RegisterForm() {
               autoComplete="tel"
             />
             {touched.phone && errors.phone && (
-              <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+              <p className={errorTextClass}>{errors.phone}</p>
             )}
           </div>
 
@@ -372,7 +404,10 @@ export default function RegisterForm() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-[34px] text-gray-500 hover:text-gray-700 disabled:opacity-50"
+              className={embedded
+                ? "absolute right-3 top-[31px] text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                : "absolute right-3 top-[34px] text-gray-500 hover:text-gray-700 disabled:opacity-50"
+              }
               disabled={loading}
               aria-label={
                 showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
@@ -381,7 +416,7 @@ export default function RegisterForm() {
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
             {touched.password && errors.password && (
-              <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+              <p className={errorTextClass}>{errors.password}</p>
             )}
           </div>
 
@@ -402,7 +437,10 @@ export default function RegisterForm() {
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-[34px] text-gray-500 hover:text-gray-700 disabled:opacity-50"
+              className={embedded
+                ? "absolute right-3 top-[31px] text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                : "absolute right-3 top-[34px] text-gray-500 hover:text-gray-700 disabled:opacity-50"
+              }
               disabled={loading}
               aria-label={
                 showConfirmPassword
@@ -413,7 +451,7 @@ export default function RegisterForm() {
               {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
             {touched.confirmPassword && errors.confirmPassword && (
-              <p className="text-red-500 text-xs mt-1">
+              <p className={errorTextClass}>
                 {errors.confirmPassword}
               </p>
             )}
@@ -445,11 +483,11 @@ export default function RegisterForm() {
           )}
 
           {/* Botones */}
-          <div className="flex flex-col gap-3 mt-4">
+          <div className={embedded ? "flex flex-col gap-2 mt-1" : "flex flex-col gap-3 mt-4"}>
             <button
               type="submit"
               disabled={loading || checkingEmail || hasBlockingErrors}
-              className={`w-full bg-[#004D77] text-white py-2.5 rounded-lg text-sm font-medium transition cursor-pointer
+              className={`w-full bg-[#004D77] text-white ${embedded ? "py-2" : "py-2.5"} rounded-lg text-sm font-medium transition cursor-pointer
                 ${
                   loading || checkingEmail || hasBlockingErrors
                     ? "opacity-70 cursor-not-allowed"
@@ -462,9 +500,9 @@ export default function RegisterForm() {
 
             <button
               type="button"
-              onClick={() => navigate("/login")}
+              onClick={handleBackToLogin}
               disabled={loading}
-              className={`w-full bg-gray-500 text-white py-2.5 rounded-lg text-sm font-medium transition cursor-pointer
+              className={`w-full bg-gray-500 text-white ${embedded ? "py-2" : "py-2.5"} rounded-lg text-sm font-medium transition cursor-pointer
                 ${
                   loading
                     ? "opacity-70 cursor-not-allowed"
@@ -476,12 +514,22 @@ export default function RegisterForm() {
             </button>
           </div>
 
-          <div className="text-center text-xs mt-3">
+          <div className={embedded ? "text-center text-xs mt-0.5 mb-0" : "text-center text-xs mt-3"}>
             ¿Ya tienes cuenta?{" "}
             <Link
               to="/login"
               className="text-blue-700 font-medium hover:underline"
-              onClick={(e) => loading && e.preventDefault()}
+              onClick={(e) => {
+                if (loading) {
+                  e.preventDefault();
+                  return;
+                }
+
+                if (onSwitchToLogin) {
+                  e.preventDefault();
+                  onSwitchToLogin();
+                }
+              }}
             >
               Inicia sesión
             </Link>

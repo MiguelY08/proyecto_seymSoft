@@ -5,6 +5,7 @@ import { ChevronLeft, Save } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import { getPrimaryProductBarcode } from '../../../../shared/scanner';
 import { getProductPriceForClient } from '../../shared/clientPricing';
+import { getClientFavorBalanceValue } from '../../shared/utils/clientFavorBalance';
 
 // Servicios
 import { SalesServices } from '../services/salesServices';
@@ -23,12 +24,8 @@ import FormClient from '../../clients/modals/FormClient';
 // Helpers
 import { getInitialPaymentAmounts } from '../helpers/salesHelpers';
 import { ESTADOS_LOGISTICOS, LocationService, ORIGENES } from '../../orders/services/ordersService';
+import { PAYMENT_METHODS, PAYMENT_METHOD_IDS, getPaymentMethodId } from '../../../../../constants/paymentMethods';
 
-const PAYMENT_METHOD_IDS = {
-  transferencia: 1,
-  efectivo: 2,
-  credito: 3,
-};
 
 const ORDER_STATUS_IDS = {
   [ESTADOS_LOGISTICOS.EN_PROCESO]: 1,
@@ -43,15 +40,6 @@ const normalizeText = (value) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 
-const getPaymentMethodId = (methodName) => {
-  const method = normalizeText(methodName);
-
-  if (method.includes('transfer')) return PAYMENT_METHOD_IDS.transferencia;
-  if (method.includes('efect')) return PAYMENT_METHOD_IDS.efectivo;
-  if (method.includes('credit') || /^cr.*dito$/.test(method)) return PAYMENT_METHOD_IDS.credito;
-
-  return null;
-};
 
 const roundMoney = (value) =>
   Math.round((Number(value) || 0) * 100) / 100;
@@ -70,7 +58,7 @@ const hasDuplicatePaymentMethods = (paymentMethods) => {
 
 const getCreditPaymentAmount = (paymentMethods) =>
   paymentMethods
-    .filter((payment) => payment.idPaymentMethod === PAYMENT_METHOD_IDS.credito)
+    .filter((payment) => payment.idPaymentMethod === PAYMENT_METHOD_IDS[PAYMENT_METHODS.CREDITO])
     .reduce((sum, payment) => sum + roundMoney(payment.amount), 0);
 
 const getFirstPositiveNumber = (...values) => {
@@ -231,6 +219,7 @@ function SaleForm() {
     ciudadEntregaNombre: '',
     shippingAmount: 0,
     deliveryRecipientName: '',
+    deliveryRecipientPhone: '',
     productos: [],
     estadoLogistico: isDirectSale ? ESTADOS_LOGISTICOS.ENTREGADO : ESTADOS_LOGISTICOS.EN_PROCESO,
     origen: ORIGENES.MANUAL,
@@ -254,6 +243,7 @@ function SaleForm() {
   // Cálculo de totales
   const selectedClient = clientes.find((cliente) => Number(cliente.id) === Number(formData.clienteId)) ?? null;
   const selectedCreditAccount = creditAccounts.find((account) => Number(account.id) === Number(formData.clienteId)) ?? null;
+  const favorBalance = getClientFavorBalanceValue(selectedClient);
   const productosCatalogoConPrecio = productosCatalogo.map((product) => ({
     ...product,
     precioDetalle: getProductPriceForClient(product, selectedClient),
@@ -480,6 +470,14 @@ function SaleForm() {
     if (errors.deliveryRecipientName) setErrors(prev => ({ ...prev, deliveryRecipientName: null }));
   };
 
+  const handleDeliveryRecipientPhoneChange = (e) => {
+    const value = e.target.value.replace(/[^\d\s()+-]/g, '');
+    setFormData(prev => ({ ...prev, deliveryRecipientPhone: value }));
+    if (errors.deliveryRecipientPhone) {
+      setErrors(prev => ({ ...prev, deliveryRecipientPhone: null }));
+    }
+  };
+
   const handleShippingAmountChange = (e) => {
     const value = e.target.value;
     setFormData(prev => ({ ...prev, shippingAmount: value }));
@@ -623,8 +621,16 @@ function SaleForm() {
       newErrors.clienteId = 'Debe seleccionar un cliente.';
     }
     if (!getSessionUserId(user)) newErrors.idUser = 'No se pudo identificar al usuario en sesion.';
-    if (!isDirectSale && !formData.deliveryRecipientName?.trim()) {
-      newErrors.deliveryRecipientName = 'Debe ingresar la persona que recibe o recoge la venta.';
+    if (!isDirectSale && formData.tipoEntrega === 'domicilio' && !formData.deliveryRecipientName?.trim()) {
+      newErrors.deliveryRecipientName = 'Debe ingresar el nombre de la persona que recibe la venta.';
+    }
+    if (!isDirectSale && formData.tipoEntrega === 'domicilio') {
+      const recipientPhoneDigits = (formData.deliveryRecipientPhone || '').replace(/\D/g, '');
+      if (!recipientPhoneDigits) {
+        newErrors.deliveryRecipientPhone = 'Debe ingresar el telefono de la persona que recibe.';
+      } else if (recipientPhoneDigits.length < 7 || recipientPhoneDigits.length > 15) {
+        newErrors.deliveryRecipientPhone = 'El telefono debe tener entre 7 y 15 digitos.';
+      }
     }
     if (!formData.direccionEntrega?.trim()) {
       newErrors.direccionEntrega = 'La dirección de entrega es obligatoria.';
@@ -688,7 +694,7 @@ function SaleForm() {
       }
 
       const hasCreditPayment = paymentMethods.some(
-        (payment) => payment.idPaymentMethod === PAYMENT_METHOD_IDS.credito
+        (payment) => payment.idPaymentMethod === PAYMENT_METHOD_IDS[PAYMENT_METHODS.CREDITO]
       );
 
       if (hasCreditPayment) {
@@ -725,6 +731,7 @@ function SaleForm() {
           deliveryType: formData.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Recoge',
           deliveryAddress: formData.direccionEntrega,
           deliveryRecipientName: isDirectSale ? null : formData.deliveryRecipientName.trim(),
+          deliveryRecipientPhone: isDirectSale ? null : (formData.deliveryRecipientPhone || '').trim(),
           shippingAmount,
           deliveryDepartmentCode: formData.tipoEntrega === 'domicilio' ? formData.departamentoEntregaCodigo : null,
           deliveryDepartmentName: formData.tipoEntrega === 'domicilio' ? formData.departamentoEntregaNombre : null,
@@ -842,6 +849,7 @@ function SaleForm() {
           onCiudadEntregaChange={handleCiudadEntregaChange}
           onDireccionManualChange={handleDireccionManualChange}
           onDeliveryRecipientNameChange={handleDeliveryRecipientNameChange}
+          onDeliveryRecipientPhoneChange={handleDeliveryRecipientPhoneChange}
           onShippingAmountChange={handleShippingAmountChange}
           onEstadoLogisticoChange={handleEstadoLogisticoChange}
           onMotivoCancelacionChange={handleMotivoCancelacionChange}
@@ -881,6 +889,8 @@ function SaleForm() {
           allowCredit
           creditAvailable={creditValidationInfo.availableCredit}
           creditAssigned={creditValidationInfo.assignedCredit}
+          allowFavorBalance
+          favorBalance={favorBalance}
         />
       </div>
 

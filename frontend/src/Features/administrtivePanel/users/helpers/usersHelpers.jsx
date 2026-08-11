@@ -6,13 +6,43 @@
 // - Exportación a Excel (client‑side, basada en datos completos)
 
 // ─── Normalizar texto (quitar tildes, minúsculas) ─────────────────────────────
-export const normalizar = (str = '') =>
-  String(str).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+export const normalizeSearch = (value = '') =>
+  String(value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+
+export const normalizar = normalizeSearch;
 
 const escapeRegExp = (value) =>
   String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // ─── Resaltador de texto ──────────────────────────────────────────────────────
+const getRoleSearchText = (user = {}) =>
+  user.role?.nameRole || user.role?.name || 'Cliente';
+
+const getStatusSearchText = (user = {}) =>
+  user.active ? 'Activo' : 'Inactivo';
+
+export const userMatchesSearch = (user = {}, searchTerm = '') => {
+  const term = normalizeSearch(searchTerm);
+  if (!term) return true;
+
+  const searchableFields = [
+    user.name,
+    user.email,
+    user.phone,
+    getRoleSearchText(user),
+    getStatusSearchText(user),
+    formatDate(user.createdAt),
+  ];
+
+  return searchableFields.some((field) =>
+    normalizeSearch(field).includes(term)
+  );
+};
+
 export const highlight = (text, term) => {
   if (!term || !term.trim()) return text;
   const regex = new RegExp(`(${escapeRegExp(term.trim())})`, 'gi');

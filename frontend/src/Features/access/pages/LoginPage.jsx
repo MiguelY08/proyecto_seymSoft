@@ -5,8 +5,6 @@ import LoginBanner from "../components/LoginBanner";
 import LoginCard from "../components/LoginCard";
 // import BackHeader from "../../shared/BackHeader"
 import AuthFooter from "../../shared/AuthFooter";
-// import imagenBanner from "../../../assets/imagenBanner.png"
-import logo from "../../../assets/PapeleriaMagicLogo.png";
 import HeaderLanding from "../../layouts/HeaderLanding";
 
 import { useAlert } from "../../shared/alerts/useAlert";

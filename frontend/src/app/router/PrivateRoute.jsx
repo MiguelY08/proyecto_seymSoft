@@ -4,7 +4,7 @@ import Spinner from "../../Features/shared/spinner/Spinner.jsx";
 
 export default function PrivateRoute({ requireRole = true }) {
 
-  const { user, role, loading } = useAuth();
+  const { user, role, client, loading } = useAuth();
 
   if (loading) {
     return (
@@ -20,6 +20,10 @@ export default function PrivateRoute({ requireRole = true }) {
   }
 
   //  AQUÍ está el fix real
+  if (!role && !client) {
+    return <Navigate to="/" replace />;
+  }
+
   if (requireRole && !role) {
     return <Navigate to="/" replace />;
   }

@@ -129,7 +129,7 @@ function OrdersTable({
   }
 
   return (
-    <div className="min-w-0 w-full overflow-auto overscroll-contain rounded-xl [-webkit-overflow-scrolling:touch]">
+    <div className="max-h-none min-w-0 w-full overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-xl pb-2 sm:max-h-[calc(100vh-170px)] sm:overflow-auto sm:pb-0 [-webkit-overflow-scrolling:touch]">
       <table className="min-w-max w-full table-auto">
         <thead className="sticky top-0 z-20 bg-[#004D77] text-white">
           <tr>
@@ -211,7 +211,7 @@ function OrdersTable({
                   {highlight(order.fechaPedido ? new Date(order.fechaPedido).toLocaleDateString('es-CO') : '', search)}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap max-w-xs truncate">
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center justify-center gap-2" title={entregaMostrar || ""}>
                     <span className="truncate">{highlight(entregaMostrar, search)}</span>
                     {needsShippingAmount && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">

@@ -9,7 +9,7 @@ function AlertContainer({ alerts, onRemove }) {
   const visibleAlerts = alerts.slice().reverse();
 
   const centerAlerts = visibleAlerts.filter((a) => HIGH_IMPORTANCE(a));
-  const rightAlerts  = visibleAlerts.filter((a) => !HIGH_IMPORTANCE(a));
+  const rightAlerts = visibleAlerts.filter((a) => !HIGH_IMPORTANCE(a));
 
   return createPortal(
     <>
