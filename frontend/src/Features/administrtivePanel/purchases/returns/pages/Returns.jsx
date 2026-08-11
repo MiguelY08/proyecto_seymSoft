@@ -21,10 +21,23 @@ const DEFAULT_METRICS = {
   byStatus: [],
 };
 
+const getAvailableReturnQuantity = (product) =>
+  Number(
+    product?.cantidadDisponibleDevolucion ??
+    product?.returnAvailability?.eligibleQuantity ??
+    product?.returnAvailability?.availableQuantity ??
+    0
+  );
+
+const hasReturnableProducts = (purchase) =>
+  (purchase?.productos ?? []).some(
+    (product) => getAvailableReturnQuantity(product) > 0
+  );
+
 function Returns() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { showError, showSuccess } = useAlert();
+  const { showError, showSuccess, showWarning } = useAlert();
   const { hasPermission } = usePermissions();
   const canCreateReturn = hasPermission("devoluciones_en_compras.crear");
 
@@ -111,12 +124,27 @@ function Returns() {
 
       setReturnFormReturn(null);
       if (hasProducts) {
-        setReturnFormPurchase(purchase);
+        if (hasReturnableProducts(purchase)) {
+          setReturnFormPurchase(purchase);
+        } else {
+          showWarning(
+            "Sin productos disponibles",
+            "Todos los productos de esta compra ya están incluidos en procesos de devolución o no tienen unidades disponibles."
+          );
+        }
       } else {
         setFormLoading(true);
         getPurchaseById(purchase.id)
           .then((detail) => {
-            setReturnFormPurchase(detail);
+            if (hasReturnableProducts(detail)) {
+              setReturnFormPurchase(detail);
+              return;
+            }
+
+            showWarning(
+              "Sin productos disponibles",
+              "Todos los productos de esta compra ya están incluidos en procesos de devolución o no tienen unidades disponibles."
+            );
           })
           .catch((error) => {
             showError("Error", error.message || "No se pudo cargar la compra para devolver.");
@@ -128,7 +156,7 @@ function Returns() {
 
       navigate(location.pathname, { replace: true, state: null });
     }
-  }, [canCreateReturn, location.pathname, location.state, navigate, showError]);
+  }, [canCreateReturn, location.pathname, location.state, navigate, showError, showWarning]);
 
   const handleViewDetail = async (devolucion) => {
     try {
