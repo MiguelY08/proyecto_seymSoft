@@ -1,5 +1,5 @@
 import React from "react";
-import { Trash2, Package, Ruler, Scale, Droplet } from "lucide-react";
+import { Trash2, Package, Ruler, Scale, Droplet, Pencil } from "lucide-react";
 
 const TYPE_ICONS = {
   "Unidad": Package,
@@ -11,7 +11,7 @@ const TYPE_ICONS = {
 const TypeBadge = ({ type }) => {
   const Icon = TYPE_ICONS[type] || Package;
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 border border-gray-200 rounded-full text-[10px] font-medium text-gray-600">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-[10px] font-medium text-blue-700">
       <Icon className="w-3 h-3" strokeWidth={1.8} />
       {type || "Unidad"}
     </span>
@@ -49,7 +49,7 @@ const BarcodeCell = ({ codigoBarras, codigosExtra = [] }) => (
   </div>
 );
 
-const CreateTable = ({ currentData, handleDeleteItem }) => (
+const CreateTable = ({ currentData, handleDeleteItem, handleEditItem }) => (
   <div className="overflow-x-auto rounded-lg border border-gray-200">
     <table className="min-w-[1050px] w-full">
       <thead className="bg-[#004D77]/5">
@@ -64,7 +64,7 @@ const CreateTable = ({ currentData, handleDeleteItem }) => (
           <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">IVA</th>
           <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Valor IVA</th>
           <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Total</th>
-          <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Acción</th>
+          <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -117,14 +117,24 @@ const CreateTable = ({ currentData, handleDeleteItem }) => (
               ${item.total.toLocaleString("es-CO")}
             </td>
             <td className="px-3 py-2 text-center">
-              <button
-                type="button"
-                onClick={() => handleDeleteItem(item.id)}
-                className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-red-500"
-                title="Eliminar producto"
-              >
-                <Trash2 size={15} strokeWidth={1.7} />
-              </button>
+              <div className="flex items-center justify-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleEditItem(item)}
+                  className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]"
+                  title="Editar producto"
+                >
+                  <Pencil size={15} strokeWidth={1.7} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteItem(item.id)}
+                  className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-red-500"
+                  title="Eliminar producto"
+                >
+                  <Trash2 size={15} strokeWidth={1.7} />
+                </button>
+              </div>
             </td>
           </tr>
         ))}
