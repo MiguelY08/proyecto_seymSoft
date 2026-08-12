@@ -3,6 +3,7 @@ import {
   getTotalCreditoCliente,
   getTotalAbonadoCliente,
 } from "../utils/paymentHelpers";
+import logo from "../../../../../assets/PMLogo_Horizontal.png";
 
 /*
   Comprobante PDF del estado de cuenta completo de un cliente.
@@ -34,6 +35,12 @@ export default function AccountReceipt({ account }) {
 
   return (
     <div style={wrapperStyle}>
+      <div style={pdfBrandBarStyle}>
+        <span style={pdfBrandTitleStyle}>ESTADO DE CUENTA</span>
+        <div style={pdfLogoBoxStyle}>
+          <img src={logo} alt="Papelería Magic" style={pdfLogoStyle} />
+        </div>
+      </div>
       <div
         style={{
           textAlign: "center",
@@ -235,7 +242,7 @@ export default function AccountReceipt({ account }) {
 
 const wrapperStyle = {
   backgroundColor: "#FFFFFF",
-  padding: "40px",
+  padding: "14mm",
   fontFamily: "Lexend, sans-serif",
   fontSize: "14px",
   color: "#374151",
@@ -243,6 +250,35 @@ const wrapperStyle = {
   minHeight: "297mm", // A4 height
   boxSizing: "border-box",
 };
+
+const pdfBrandBarStyle = {
+  height: "66px",
+  backgroundColor: "#004D77",
+  borderRadius: "8px 8px 0 0",
+  padding: "0 20px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+};
+
+const pdfBrandTitleStyle = {
+  fontSize: "18px",
+  fontWeight: "700",
+  color: "#FFFFFF",
+  letterSpacing: "0.04em",
+};
+
+const pdfLogoBoxStyle = {
+  width: "140px",
+  height: "40px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#FFFFFF",
+  borderRadius: "6px",
+};
+
+const pdfLogoStyle = { maxWidth: "122px", maxHeight: "30px", objectFit: "contain" };
 
 const sectionTitle = {
   color: "#004D77",
