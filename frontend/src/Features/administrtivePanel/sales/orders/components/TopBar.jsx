@@ -35,7 +35,7 @@ function TopBar({
   orders,
 }) {
   const navigate = useNavigate();
-  const { showWarning, showSuccess } = useAlert();
+  const { showWarning, showSuccess, showConfirm } = useAlert();
   const [isSearchOpen, setIsSearchOpen] = useState(Boolean(search));
   const searchWrapperRef = useRef(null);
   const hasActiveFilters = Boolean(
@@ -74,6 +74,58 @@ function TopBar({
     setIsSearchOpen(false);
   };
 
+<<<<<<< HEAD
+  const handleDownloadExcel = async () => {
+    if (orders.length === 0) {
+      showWarning('Sin registros', 'No hay pedidos que coincidan con los filtros actuales.');
+      return;
+    }
+
+    const confirmed = await showConfirm(
+      'question',
+      '¿Desea descargar los pedidos?',
+      `Se exportarán ${orders.length} pedido${orders.length !== 1 ? 's' : ''} en formato Excel.`,
+      { confirmButtonText: 'Descargar', cancelButtonText: 'Cancelar' }
+    );
+
+    if (!confirmed?.isConfirmed) return;
+
+    const success = await exportOrdersToExcel(orders);
+    if (success) {
+      showSuccess('Exportación exitosa', 'El archivo Excel se ha descargado correctamente.');
+    }
+  };
+
+  const handleSelectFilter = (setter, value) => {
+    setter(value);
+    setCurrentPage(1);
+    setOpenFilter(null);
+  };
+
+  const getOptionLabel = (options, value, fallback) => {
+    return options.find((option) => option.value === value)?.label || fallback;
+  };
+
+  const origenOptions = [
+    { value: '', label: 'Todos' },
+    { value: ORIGENES.MANUAL, label: 'Manual' },
+    { value: ORIGENES.WEB, label: 'Web' },
+  ];
+
+  const pagoOptions = [
+    { value: '', label: 'Todos' },
+    { value: ESTADOS_PAGO.PENDIENTE, label: 'Pendiente' },
+    { value: ESTADOS_PAGO.PAGADO, label: 'Pagado' },
+  ];
+
+  const envioOptions = [
+    { value: '', label: 'Todos' },
+    { value: 'pendiente', label: 'Pendiente' },
+    { value: 'completo', label: 'Completo' },
+  ];
+
+=======
+>>>>>>> 3048ccd1d7b3b34132a236b3e7a723a5e1a08645
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -160,15 +212,34 @@ function TopBar({
 
       <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0 lg:self-start">
         <Permission permission="pedidos.exportar">
+<<<<<<< HEAD
+          <ButtonComponent
+            className="flex-1 sm:flex-none h-10 bg-white text-green-600 border-green-600 hover:bg-green-400 px-3 flex items-center justify-center gap-2"
+            onClick={handleDownloadExcel}
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="hidden 2xl:inline">Exportar Excel</span>
+=======
           <ButtonComponent className="flex-1 bg-white px-3 text-green-600 border-green-600 hover:bg-green-400 sm:flex-none" onClick={handleDownloadExcel} title="Exportar Excel">
             <FileSpreadsheet className="h-4 w-4" />
             <span className="hidden sm:inline">Exportar Excel</span>
+>>>>>>> 3048ccd1d7b3b34132a236b3e7a723a5e1a08645
           </ButtonComponent>
         </Permission>
         <Permission permission="pedidos.crear">
+<<<<<<< HEAD
+          <ButtonComponent
+            onClick={() => navigate('new-order')}
+            title="Nuevo"
+            className="flex-1 sm:flex-none h-10 flex items-center justify-center gap-2"
+          >
+            <span className="hidden xl:inline">Nuevo</span>
+            <Plus className="w-4 h-4" strokeWidth={2} />
+=======
           <ButtonComponent onClick={() => navigate('new-order')} title="Nuevo pedido" className="flex-1 sm:flex-none">
             <span className="hidden sm:inline">Nuevo</span>
             <Plus className="h-4 w-4" strokeWidth={2} />
+>>>>>>> 3048ccd1d7b3b34132a236b3e7a723a5e1a08645
           </ButtonComponent>
         </Permission>
       </div>

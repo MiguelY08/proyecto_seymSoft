@@ -353,7 +353,6 @@ const handleDelete = async (client) => {
   };
 
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
-  const shouldBalanceTable = clients.length === RECORDS_PER_PAGE;
 
   if (loading && clients.length === 0) {
     return (
@@ -372,35 +371,18 @@ const handleDelete = async (client) => {
           onNewClick={handleNewClient}
         />
 
-        {shouldBalanceTable ? (
-          <div className="hidden min-h-0 flex-1 md:flex md:flex-col md:justify-center">
-            <div className="w-full min-w-0 shrink-0 overflow-hidden rounded-xl bg-white shadow-md">
-              <ClientsTable
-                clients={clients}
-                startIndex={startIndex}
-                searchTerm={searchTerm}
-                totalData={totalRecords}
-                onInfo={handleInfo}
-                onEdit={handleEdit}
-                onToggleActive={handleToggleActive}
-                onDelete={handleDelete}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="w-full min-w-0 shrink-0 overflow-hidden rounded-xl bg-white shadow-md">
-            <ClientsTable
-              clients={clients}
-              startIndex={startIndex}
-              searchTerm={searchTerm}
-              totalData={totalRecords}
-              onInfo={handleInfo}
-              onEdit={handleEdit}
-              onToggleActive={handleToggleActive}
-              onDelete={handleDelete}
-            />
-          </div>
-        )}
+        <div className="w-full min-w-0 shrink-0 overflow-hidden rounded-xl bg-white shadow-md">
+          <ClientsTable
+            clients={clients}
+            startIndex={startIndex}
+            searchTerm={searchTerm}
+            totalData={totalRecords}
+            onInfo={handleInfo}
+            onEdit={handleEdit}
+            onToggleActive={handleToggleActive}
+            onDelete={handleDelete}
+          />
+        </div>
 
         {totalRecords > 0 && (
           <div className="shrink-0">

@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { formatPhoneNumber, getStatusText } from './providerHelpers';
+import { createExcelLogoId, prepareExcelLogoHeader } from '../../../../shared/excel/logoHeader';
 
 const COMPANY_COLOR = '004D77';
 const LIGHT_BLUE = 'DCEBF3';
@@ -35,6 +36,29 @@ export const downloadProvidersExcel = async (providers = []) => {
   const currentDate = new Date();
   const fileDate = currentDate.toISOString().split('T')[0];
 
+  worksheet.columns = [
+    { key: 'documentType', width: 18 },
+    { key: 'document', width: 18 },
+    { key: 'name', width: 32 },
+    { key: 'email', width: 35 },
+    { key: 'phone', width: 18 },
+    { key: 'contactName', width: 24 },
+    { key: 'contactPhone', width: 18 },
+    { key: 'categories', width: 36 },
+    { key: 'maxReturnPeriod', width: 20 },
+    { key: 'status', width: 14 },
+  ];
+
+  const logoId = await createExcelLogoId(workbook);
+  prepareExcelLogoHeader(worksheet, {
+    title: 'PROVEEDORES',
+    subtitle: `Fecha de exportación: ${currentDate.toLocaleString('es-CO')}`,
+    columnCount: 10,
+    logoId,
+    blue: COMPANY_COLOR,
+  });
+
+  /*
   worksheet.mergeCells('A1:J1');
   worksheet.getCell('A1').value = 'PROVEEDORES';
   worksheet.getCell('A1').font = { bold: true, size: 18, color: { argb: WHITE } };
@@ -51,6 +75,7 @@ export const downloadProvidersExcel = async (providers = []) => {
   worksheet.getCell('A2').font = { italic: true, color: { argb: COMPANY_COLOR } };
 
   worksheet.addRow([]);
+  */
 
   const headerRow = worksheet.addRow([
     'Tipo documento',
@@ -107,6 +132,7 @@ export const downloadProvidersExcel = async (providers = []) => {
     });
   });
 
+  /*
   worksheet.columns = [
     { key: 'documentType', width: 18 },
     { key: 'document', width: 18 },
@@ -119,9 +145,10 @@ export const downloadProvidersExcel = async (providers = []) => {
     { key: 'maxReturnPeriod', width: 20 },
     { key: 'status', width: 14 },
   ];
+  */
 
-  worksheet.views = [{ state: 'frozen', ySplit: 4 }];
-  worksheet.autoFilter = { from: 'A4', to: 'J4' };
+  worksheet.views = [{ state: 'frozen', ySplit: 5 }];
+  worksheet.autoFilter = { from: 'A5', to: 'J5' };
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], {

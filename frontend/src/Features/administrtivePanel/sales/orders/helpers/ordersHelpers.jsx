@@ -6,6 +6,11 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { DollarSign, Package } from 'lucide-react';
 import { ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES } from '../services/ordersService';
+<<<<<<< HEAD
+import { createExcelLogoId, prepareExcelLogoHeader } from '../../../../shared/excel/logoHeader';
+=======
+import logoUrl from '../../../../../assets/PMLogo_Horizontal.png';
+>>>>>>> 3048ccd1d7b3b34132a236b3e7a723a5e1a08645
 
 // ─── Textos capitalizados para mostrar ───────────────────────────────────────
 export const ESTADO_LOGISTICO_LABELS = {
@@ -412,10 +417,17 @@ const styleDataRow = (row, index) => {
   });
 };
 
-const setupWorksheetHeader = (worksheet, title, subtitle, lastColumn) => {
-  styleTitle(worksheet, `A1:${lastColumn}1`, title);
-  styleSubtitle(worksheet, `A2:${lastColumn}2`, subtitle);
-  worksheet.addRow([]);
+const setupWorksheetHeader = (worksheet, title, subtitle, lastColumn, logoId) => {
+  const columnCount = lastColumn.charCodeAt(0) - 64;
+  prepareExcelLogoHeader(worksheet, {
+    title,
+    subtitle,
+    columnCount,
+    logoId,
+    blue: COMPANY_COLOR,
+    logoAlign: 'left',
+    singleBlueHeader: true,
+  });
 };
 
 const applyWorksheetTableSettings = (worksheet, headerRowNumber, lastColumn) => {
@@ -426,10 +438,8 @@ const applyWorksheetTableSettings = (worksheet, headerRowNumber, lastColumn) => 
   };
 };
 
-const buildOrdersSummarySheet = (workbook, orders, subtitle) => {
+const buildOrdersSummarySheet = (workbook, orders, subtitle, logoId) => {
   const worksheet = workbook.addWorksheet('Resumen Pedidos');
-  setupWorksheetHeader(worksheet, 'PEDIDOS', subtitle, 'M');
-
   worksheet.columns = [
     { key: 'orderNumber', width: 14 },
     { key: 'client', width: 30 },
@@ -445,6 +455,7 @@ const buildOrdersSummarySheet = (workbook, orders, subtitle) => {
     { key: 'cancellationReason', width: 35 },
     { key: 'productCount', width: 18 },
   ];
+  setupWorksheetHeader(worksheet, 'PEDIDOS', subtitle, 'M', logoId);
 
   const headerRow = worksheet.addRow([
     'No. Pedido',
@@ -485,13 +496,11 @@ const buildOrdersSummarySheet = (workbook, orders, subtitle) => {
     styleDataRow(row, index);
   });
 
-  applyWorksheetTableSettings(worksheet, 4, 'M');
+  applyWorksheetTableSettings(worksheet, 5, 'M');
 };
 
-const buildOrdersProductsSheet = (workbook, orders, subtitle) => {
+const buildOrdersProductsSheet = (workbook, orders, subtitle, logoId) => {
   const worksheet = workbook.addWorksheet('Detalle Productos');
-  setupWorksheetHeader(worksheet, 'DETALLE DE PRODUCTOS PEDIDOS', subtitle, 'G');
-
   worksheet.columns = [
     { key: 'orderNumber', width: 14 },
     { key: 'client', width: 30 },
@@ -501,6 +510,7 @@ const buildOrdersProductsSheet = (workbook, orders, subtitle) => {
     { key: 'unitPrice', width: 16 },
     { key: 'lineTotal', width: 16 },
   ];
+  setupWorksheetHeader(worksheet, 'DETALLE DE PRODUCTOS PEDIDOS', subtitle, 'G', logoId);
 
   const headerRow = worksheet.addRow([
     'No. Pedido',
@@ -545,17 +555,16 @@ const buildOrdersProductsSheet = (workbook, orders, subtitle) => {
     });
   });
 
-  applyWorksheetTableSettings(worksheet, 4, 'G');
+  applyWorksheetTableSettings(worksheet, 5, 'G');
 };
 
-const buildOrdersStatsSheet = (workbook, orders, subtitle) => {
+const buildOrdersStatsSheet = (workbook, orders, subtitle, logoId) => {
   const worksheet = workbook.addWorksheet('Estadisticas');
-  setupWorksheetHeader(worksheet, 'ESTADISTICAS DE PEDIDOS', subtitle, 'B');
-
   worksheet.columns = [
     { key: 'metric', width: 36 },
     { key: 'value', width: 24 },
   ];
+  setupWorksheetHeader(worksheet, 'ESTADISTICAS DE PEDIDOS', subtitle, 'B', logoId);
 
   const totalOrders = orders.length;
   const totalValue = orders.reduce((sum, order) => sum + Number(order.total ?? 0), 0);
@@ -596,7 +605,7 @@ const buildOrdersStatsSheet = (workbook, orders, subtitle) => {
     styleDataRow(row, index);
   });
 
-  applyWorksheetTableSettings(worksheet, 4, 'B');
+  applyWorksheetTableSettings(worksheet, 5, 'B');
 };
 
 export const exportOrdersToExcel = async (orders) => {
@@ -609,10 +618,11 @@ export const exportOrdersToExcel = async (orders) => {
 
   workbook.creator = 'SeymSoft';
   workbook.created = currentDate;
+  const logoId = await createExcelLogoId(workbook);
 
-  buildOrdersSummarySheet(workbook, orders, subtitle);
-  buildOrdersProductsSheet(workbook, orders, subtitle);
-  buildOrdersStatsSheet(workbook, orders, subtitle);
+  buildOrdersSummarySheet(workbook, orders, subtitle, logoId);
+  buildOrdersProductsSheet(workbook, orders, subtitle, logoId);
+  buildOrdersStatsSheet(workbook, orders, subtitle, logoId);
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], {
@@ -631,7 +641,7 @@ export const exportOrdersToExcel = async (orders) => {
  * @param {Array} pagos - Lista de pagos asociados al pedido.
  * @param {string} asesorNombre - Nombre del asesor que gestionó el pedido.
  */
-export const exportOrderToPDF = (order, pagos = [], asesorNombre = 'N/A') => {
+export const exportLegacyOrderToPDF = (order, pagos = [], asesorNombre = 'N/A') => {
   if (!order) return;
 
   const formatCurrency = (value) => {
@@ -816,4 +826,137 @@ export const exportOrderToPDF = (order, pagos = [], asesorNombre = 'N/A') => {
   // Descargar
   const fileName = `pedido_${order.numeroPedido || order.id}.pdf`;
   doc.save(fileName);
+};
+
+const loadPdfLogo = async () => {
+  try {
+    const response = await fetch(logoUrl);
+    const blob = await response.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+};
+
+/** Documento de pedido con la plantilla corporativa de Papeleria Magic. */
+export const exportOrderToPDF = async (order, pagos = [], asesorNombre = 'No registrado') => {
+  if (!order) return;
+
+  const BLUE = [0, 77, 119];
+  const LIGHT_BLUE = [232, 242, 248];
+  const TEXT = [51, 65, 85];
+  const margin = 14;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const money = (value) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(value) || 0);
+  const date = (value) => value ? new Date(value).toLocaleDateString('es-CO') : 'No registrada';
+  const value = (item, fallback = 'No registrado') => String(item ?? '').trim() || fallback;
+  const logisticStatus = ESTADO_LOGISTICO_LABELS[order.estadoLogistico] || value(order.estadoLogistico);
+  const paymentStatus = ESTADO_PAGO_LABELS[order.pagoEstado] || value(order.pagoEstado);
+  const isPickup = String(order.tipoEntrega ?? order.deliveryType ?? '').toLowerCase().includes('recoge');
+  const deliveryPlace = [order.ciudadEntregaNombre, order.departamentoEntregaNombre].filter(Boolean).join(', ');
+  const shipping = getOrderShippingAmount(order);
+  const logo = await loadPdfLogo();
+
+  const field = (label, content, x, y, width) => {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text(label.toUpperCase(), x, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...TEXT);
+    doc.text(doc.splitTextToSize(value(content), width), x, y + 4.5);
+  };
+
+  // Header
+  doc.setFillColor(...BLUE);
+  doc.rect(0, 0, pageWidth, 34, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.text('DETALLE DE PEDIDO', margin, 14);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text('Papeleria Magic · Comprobante de venta', margin, 21);
+  if (logo) {
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(pageWidth - 58, 5, 44, 16, 2, 2, 'F');
+    doc.addImage(logo, 'PNG', pageWidth - 55, 8, 38, 10);
+  }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text(`#${order.numeroPedido || order.id}`, pageWidth - margin, 29, { align: 'right' });
+
+  let y = 44;
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(margin, y, pageWidth - margin * 2, 39, 2, 2, 'F');
+  field('Cliente', order.clienteNombre, 19, y + 8, 72);
+  field('Telefono', order.clienteTelefono, 19, y + 23, 72);
+  field('Fecha del pedido', date(order.fechaPedido), 108, y + 8, 38);
+  field('Estado del pedido', logisticStatus, 108, y + 23, 38);
+  field('Estado de pago', paymentStatus, 157, y + 8, 35);
+  field('Asesor', asesorNombre, 157, y + 23, 35);
+  y += 47;
+  field('Correo', order.clienteEmail, margin, y, 74);
+  field('Entrega', isPickup ? 'Recoge en tienda' : deliveryPlace, 91, y, 45);
+  field('Direccion', isPickup ? 'No aplica' : order.direccionEntrega, 143, y, 52);
+  y += 18;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...BLUE);
+  doc.text('Productos del pedido', margin, y);
+  const productRows = (order.productos || []).map((product) => [
+    value(product.nombre, 'Producto'), String(product.cantidad ?? 0), money(product.precioUnitario), money(product.subtotal),
+  ]);
+  const productFoot = isPickup
+    ? [['', '', 'Total:', money(order.total)]]
+    : [['', '', 'Envio:', money(shipping)], ['', '', 'Total:', money(order.total)]];
+  autoTable(doc, {
+    startY: y + 4, margin: { left: margin, right: margin, bottom: 20 },
+    head: [['Producto', 'Cant.', 'Precio unitario', 'Subtotal']],
+    body: productRows.length ? productRows : [['Sin productos registrados', '-', '-', money(0)]], foot: productFoot,
+    theme: 'grid', styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 2.4, lineColor: [220, 230, 236], lineWidth: 0.2 },
+    headStyles: { fillColor: BLUE, textColor: 255, fontStyle: 'bold', halign: 'center' },
+    footStyles: { fillColor: LIGHT_BLUE, textColor: BLUE, fontStyle: 'bold' }, alternateRowStyles: { fillColor: [248, 250, 252] },
+    columnStyles: { 0: { cellWidth: 85 }, 1: { cellWidth: 20, halign: 'center' }, 2: { cellWidth: 34, halign: 'right' }, 3: { cellWidth: 38, halign: 'right' } },
+  });
+  y = doc.lastAutoTable.finalY + 10;
+
+  if (pagos.length) {
+    if (y > 245) { doc.addPage(); y = 20; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...BLUE); doc.text('Pagos realizados', margin, y);
+    const paid = pagos.reduce((sum, payment) => sum + (Number(payment.monto) || 0), 0);
+    autoTable(doc, {
+      startY: y + 4, margin: { left: margin, right: margin, bottom: 20 },
+      head: [['Fecha', 'Metodo', 'Monto', 'Comprobante']],
+      body: pagos.map((payment) => [date(payment.fechaPago), value(payment.metodoPago), money(payment.monto), value(payment.comprobante, '-')]),
+      foot: [['', 'Total pagado:', money(paid), '']], theme: 'grid',
+      styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 2.4, lineColor: [220, 230, 236], lineWidth: 0.2 },
+      headStyles: { fillColor: BLUE, textColor: 255, fontStyle: 'bold', halign: 'center' },
+      footStyles: { fillColor: LIGHT_BLUE, textColor: BLUE, fontStyle: 'bold' }, alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: { 0: { cellWidth: 35 }, 1: { cellWidth: 60 }, 2: { cellWidth: 38, halign: 'right' }, 3: { cellWidth: 44 } },
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  }
+
+  const totalPaid = pagos.reduce((sum, payment) => sum + (Number(payment.monto) || 0), 0);
+  if (y > 265) { doc.addPage(); y = 20; }
+  doc.setFillColor(...LIGHT_BLUE); doc.roundedRect(pageWidth - 83, y, 69, 17, 2, 2, 'F');
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...TEXT); doc.text('SALDO PENDIENTE', pageWidth - 78, y + 6);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...BLUE); doc.text(money(Math.max(0, Number(order.total || 0) - totalPaid)), pageWidth - 19, y + 13, { align: 'right' });
+
+  const pages = doc.getNumberOfPages();
+  for (let page = 1; page <= pages; page += 1) {
+    doc.setPage(page); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(148, 163, 184);
+    doc.text(`Generado el ${new Date().toLocaleString('es-CO')}`, margin, doc.internal.pageSize.getHeight() - 10);
+    doc.text(`Pagina ${page} de ${pages}`, pageWidth - margin, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
+  }
+  doc.save(`pedido_${order.numeroPedido || order.id}.pdf`);
 };

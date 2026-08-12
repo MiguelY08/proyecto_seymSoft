@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { UserService } from '../../../users/services/userService';
 import { SalesServices } from '../services/salesServices';
+import { createExcelLogoId, prepareExcelLogoHeader } from '../../../../shared/excel/logoHeader';
 
 // ─── Claves de almacenamiento (deprecadas, pero mantenidas por compatibilidad) ─
 export const SALES_STORAGE_KEY = 'pm_sales';
@@ -240,10 +241,17 @@ const styleDataRow = (row, index) => {
   });
 };
 
-const setupWorksheetHeader = (worksheet, title, subtitle, lastColumn) => {
-  styleTitle(worksheet, `A1:${lastColumn}1`, title);
-  styleSubtitle(worksheet, `A2:${lastColumn}2`, subtitle);
-  worksheet.addRow([]);
+const setupWorksheetHeader = (worksheet, title, subtitle, lastColumn, logoId) => {
+  const columnCount = lastColumn.charCodeAt(0) - 64;
+  prepareExcelLogoHeader(worksheet, {
+    title,
+    subtitle,
+    columnCount,
+    logoId,
+    blue: COMPANY_COLOR,
+    logoAlign: 'left',
+    singleBlueHeader: true,
+  });
 };
 
 const applyWorksheetTableSettings = (worksheet, headerRowNumber, lastColumn) => {
@@ -259,10 +267,8 @@ const applyWorksheetTableSettings = (worksheet, headerRowNumber, lastColumn) => 
   };
 };
 
-const buildSummarySheet = (workbook, sales, subtitle) => {
+const buildSummarySheet = (workbook, sales, subtitle, logoId) => {
   const worksheet = workbook.addWorksheet('Resumen Ventas');
-  setupWorksheetHeader(worksheet, 'VENTAS', subtitle, 'I');
-
   worksheet.columns = [
     { key: 'invoice', width: 16 },
     { key: 'type', width: 16 },
@@ -274,6 +280,7 @@ const buildSummarySheet = (workbook, sales, subtitle) => {
     { key: 'status', width: 18 },
     { key: 'registeredFrom', width: 18 },
   ];
+  setupWorksheetHeader(worksheet, 'VENTAS', subtitle, 'I', logoId);
 
   const headerRow = worksheet.addRow([
     'No. Factura',
@@ -305,13 +312,11 @@ const buildSummarySheet = (workbook, sales, subtitle) => {
     styleDataRow(row, index);
   });
 
-  applyWorksheetTableSettings(worksheet, 4, 'I');
+  applyWorksheetTableSettings(worksheet, 5, 'I');
 };
 
-const buildProductsSheet = (workbook, sales, subtitle) => {
+const buildProductsSheet = (workbook, sales, subtitle, logoId) => {
   const worksheet = workbook.addWorksheet('Detalle Productos');
-  setupWorksheetHeader(worksheet, 'DETALLE DE PRODUCTOS VENDIDOS', subtitle, 'H');
-
   worksheet.columns = [
     { key: 'invoice', width: 16 },
     { key: 'type', width: 16 },
@@ -322,6 +327,7 @@ const buildProductsSheet = (workbook, sales, subtitle) => {
     { key: 'unitPrice', width: 16 },
     { key: 'lineTotal', width: 16 },
   ];
+  setupWorksheetHeader(worksheet, 'DETALLE DE PRODUCTOS VENDIDOS', subtitle, 'H', logoId);
 
   const headerRow = worksheet.addRow([
     'No. Factura',
@@ -374,17 +380,16 @@ const buildProductsSheet = (workbook, sales, subtitle) => {
     });
   });
 
-  applyWorksheetTableSettings(worksheet, 4, 'H');
+  applyWorksheetTableSettings(worksheet, 5, 'H');
 };
 
-const buildStatsSheet = (workbook, sales, subtitle, typeLabel) => {
+const buildStatsSheet = (workbook, sales, subtitle, typeLabel, logoId) => {
   const worksheet = workbook.addWorksheet('Estadisticas');
-  setupWorksheetHeader(worksheet, 'ESTADISTICAS DE VENTAS', subtitle, 'B');
-
   worksheet.columns = [
     { key: 'metric', width: 34 },
     { key: 'value', width: 24 },
   ];
+  setupWorksheetHeader(worksheet, 'ESTADISTICAS DE VENTAS', subtitle, 'B', logoId);
 
   const totalSales = sales.length;
   const totalValue = sales.reduce((sum, sale) => sum + Number(sale.totalNumerico ?? 0), 0);
@@ -421,7 +426,7 @@ const buildStatsSheet = (workbook, sales, subtitle, typeLabel) => {
     styleDataRow(row, index);
   });
 
-  applyWorksheetTableSettings(worksheet, 4, 'B');
+  applyWorksheetTableSettings(worksheet, 5, 'B');
 };
 
 export const downloadSalesExcel = async (salesToExport, options = {}) => {
@@ -436,10 +441,11 @@ export const downloadSalesExcel = async (salesToExport, options = {}) => {
 
   workbook.creator = 'SeymSoft';
   workbook.created = currentDate;
+  const logoId = await createExcelLogoId(workbook);
 
-  buildSummarySheet(workbook, sales, subtitle);
-  buildProductsSheet(workbook, sales, subtitle);
-  buildStatsSheet(workbook, sales, subtitle, typeLabel);
+  buildSummarySheet(workbook, sales, subtitle, logoId);
+  buildProductsSheet(workbook, sales, subtitle, logoId);
+  buildStatsSheet(workbook, sales, subtitle, typeLabel, logoId);
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], {

@@ -213,15 +213,6 @@ export const exportReturnToPDF = async (saleReturn = {}) => {
       5: { cellWidth: 25, halign: 'right' },
       6: { cellWidth: 25, halign: 'right' },
     },
-    didDrawPage: () => {
-      const pageHeight = doc.internal.pageSize.getHeight();
-      doc.setFontSize(7);
-      doc.setTextColor(148, 163, 184);
-      doc.text(`Generado el ${new Date().toLocaleString('es-CO')}`, 14, pageHeight - 7);
-      doc.text(`Página ${doc.internal.getNumberOfPages()}`, pageWidth - 14, pageHeight - 7, {
-        align: 'right',
-      });
-    },
   });
 
   y = doc.lastAutoTable.finalY + 9;
@@ -263,6 +254,18 @@ export const exportReturnToPDF = async (saleReturn = {}) => {
   doc.setFontSize(12);
   doc.setTextColor(...BLUE);
   doc.text(money(total), pageWidth - 19, y + 20, { align: 'right' });
+
+  const pages = doc.getNumberOfPages();
+  for (let page = 1; page <= pages; page += 1) {
+    doc.setPage(page);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Generado el ${new Date().toLocaleString('es-CO')}`, 14, doc.internal.pageSize.getHeight() - 10);
+    doc.text(`Página ${page} de ${pages}`, pageWidth - 14, doc.internal.pageSize.getHeight() - 10, {
+      align: 'right',
+    });
+  }
 
   doc.save(`devolucion_${returnNumber.replace(/[^a-z0-9_-]/gi, '_')}.pdf`);
 };

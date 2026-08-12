@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
+import { createExcelLogoId, prepareExcelLogoHeader } from "../../../../shared/excel/logoHeader";
 
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 import ActiveToggle from "../components/ActiveToggle";
@@ -322,6 +323,34 @@ function Products() {
       const currentDate = new Date();
       const fileDate = currentDate.toISOString().split("T")[0];
 
+      worksheet.columns = [
+        { key: "id", width: 10 },
+        { key: "name", width: 30 },
+        { key: "barcode", width: 18 },
+        { key: "reference", width: 16 },
+        { key: "categories", width: 30 },
+        { key: "subcategories", width: 30 },
+        { key: "unit", width: 18 },
+        { key: "stock", width: 12 },
+        { key: "retailPrice", width: 18 },
+        { key: "wholesalePrice", width: 18 },
+        { key: "partnerPrice", width: 18 },
+        { key: "bulkPrice", width: 18 },
+        { key: "status", width: 14 },
+      ];
+
+      const logoId = await createExcelLogoId(workbook);
+      prepareExcelLogoHeader(worksheet, {
+        title: "PRODUCTOS",
+        subtitle: `Fecha de exportación: ${currentDate.toLocaleString("es-CO")}`,
+        columnCount: 13,
+        logoId,
+        blue: COMPANY_COLOR,
+        logoAlign: "left",
+        singleBlueHeader: true,
+      });
+
+      /*
       worksheet.mergeCells("A1:M1");
       worksheet.getCell("A1").value = "PRODUCTOS";
       worksheet.getCell("A1").font = {
@@ -349,6 +378,7 @@ function Products() {
       };
 
       worksheet.addRow([]);
+      */
 
       const headerRow = worksheet.addRow([
         "ID",
@@ -421,6 +451,7 @@ function Products() {
         });
       });
 
+      /*
       worksheet.columns = [
         { key: "id", width: 10 },
         { key: "name", width: 30 },
@@ -436,8 +467,9 @@ function Products() {
         { key: "bulkPrice", width: 18 },
         { key: "status", width: 14 },
       ];
-      worksheet.views = [{ state: "frozen", ySplit: 4 }];
-      worksheet.autoFilter = { from: "A4", to: "M4" };
+      */
+      worksheet.views = [{ state: "frozen", ySplit: 5 }];
+      worksheet.autoFilter = { from: "A5", to: "M5" };
 
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], {

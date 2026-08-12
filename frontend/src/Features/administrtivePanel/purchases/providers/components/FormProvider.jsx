@@ -13,7 +13,22 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, ChevronDown, Loader2 } from 'lucide-react';
+import {
+  Building2,
+  CalendarClock,
+  FileText,
+  Hash,
+  IdCard,
+  Loader2,
+  Mail,
+  MapPin,
+  Phone,
+  Tags,
+  UserCheck,
+  UserCircle,
+  X,
+  ChevronDown,
+} from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import {
   getDocumentValidationError,
@@ -689,6 +704,15 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
 
   const labelClass = 'flex min-h-8 items-end text-xs font-semibold leading-tight text-gray-600';
 
+  const IconInput = ({ icon: Icon, className, ...props }) => (
+    <div className="relative">
+      {Icon && (
+        <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
+      )}
+      <input {...props} className={Icon ? `${className} pl-9` : className} />
+    </div>
+  );
+
   const getSelectedCategoryNames = () => {
     const selectedCategories = categoriesList.filter(cat => formData.categoryIds.includes(cat.id));
     return selectedCategories.map(cat => cat.name).join(', ');
@@ -796,6 +820,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     value={formData.tipoPersona}
                     options={personTypeOptions}
                     onChange={(value) => handleSelectChange('tipoPersona', value)}
+                    icon={UserCircle}
                     disabled={isEditing}
                     error={errors.tipoPersona && touched.tipoPersona}
               placeholder="Selecciona una opción"
@@ -813,6 +838,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       value={formData.tipo}
                       options={documentTypeOptions}
                       onChange={(value) => handleSelectChange('tipo', value)}
+                      icon={IdCard}
                       disabled={isEditing || isDocumentTypeDisabled}
                       error={errors.tipo && touched.tipo}
                 placeholder="Tipo"
@@ -823,13 +849,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
                     <label className={labelClass}>Número<span className="text-red-500">*</span></label>
-                    <input
+                    <IconInput
+                      icon={IdCard}
                       type="text"
                       name="numero"
                       value={formData.numero}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder="Ej: 123456789"
+                      placeholder="123456789"
                       autoComplete="off"
                       className={isEditing ? protectedInputClass('numero') : inputClass('numero')}
                       disabled={isEditing}
@@ -844,13 +871,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                 <div className={`grid grid-cols-1 gap-2 ${isLegalPerson ? '' : 'sm:grid-cols-2'}`}>
                 <div className="flex min-w-0 flex-col gap-1">
                   <label className={labelClass}>{isLegalPerson ? 'Nombre empresa' : 'Nombres'}<span className="text-red-500">*</span></label>
-                  <input
+                  <IconInput
+                    icon={isLegalPerson ? Building2 : UserCircle}
                     type="text"
                     name="nombres"
                     value={formData.nombres}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder={isLegalPerson ? 'Ej: Papeleria Magic SAS' : 'Ej: Juan Carlos'}
+                    placeholder={isLegalPerson ? 'Empresa SAS' : 'Juan'}
                     autoComplete="off"
                     maxLength={PROVIDER_NAME_MAX_LENGTH}
                     className={isEditing ? protectedInputClass('nombres') : inputClass('nombres')}
@@ -862,13 +890,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                 {!isLegalPerson && (
                 <div className="flex min-w-0 flex-col gap-1">
                   <label className={labelClass}>Apellidos<span className="text-red-500">*</span></label>
-                  <input
+                  <IconInput
+                    icon={UserCircle}
                     type="text"
                     name="apellidos"
                     value={formData.apellidos}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="Ej: Pérez Gómez"
+                    placeholder="Pérez"
                     autoComplete="off"
                     maxLength={PROVIDER_NAME_MAX_LENGTH}
                     className={isEditing ? protectedInputClass('apellidos') : inputClass('apellidos')}
@@ -882,13 +911,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1 flex-1">
                     <label className={labelClass}>Teléfono<span className="text-red-500">*</span></label>
-                    <input
+                    <IconInput
+                      icon={Phone}
                       type="tel"
                       name="telefono"
                       value={formData.telefono}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder="Ej: 3001234567"
+                      placeholder="3001234567"
                       autoComplete="off"
                       className={inputClass('telefono')}
                     />
@@ -896,13 +926,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
                     <label className={labelClass}>Dirección<span className="text-red-500">*</span></label>
-                    <input
+                    <IconInput
+                      icon={MapPin}
                       type="text"
                       name="direccion"
                       value={formData.direccion}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder="Ej: Calle 10 # 15-25"
+                      placeholder="Calle 10 # 15-25"
                       autoComplete="off"
                       maxLength={ADDRESS_MAX_LENGTH}
                       className={inputClass('direccion')}
@@ -913,13 +944,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
 
                 <div className="flex flex-col gap-1">
                   <label className={labelClass}>Correo<span className="text-red-500">*</span></label>
-                  <input
+                  <IconInput
+                    icon={Mail}
                     type="email"
                     name="correo"
                     value={formData.correo}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="Ej: proveedor@email.com"
+                    placeholder="email@gmail.com"
                     autoComplete="off"
                     maxLength={EMAIL_MAX_LENGTH}
               className={inputClass('correo')}
@@ -943,13 +975,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1 flex-1">
                     <label className={labelClass}>{isLegalPerson ? 'Persona encargada' : 'Persona contacto'}</label>
-                    <input
+                    <IconInput
+                      icon={UserCheck}
                       type="text"
                       name="nombreContacto"
                       value={formData.nombreContacto}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder="Ej: María López"
+                      placeholder="María"
                       autoComplete="off"
                       className={inputClass('nombreContacto')}
                     />
@@ -957,13 +990,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
                     <label className={labelClass}>{isLegalPerson ? 'Número persona encargada' : 'Tel. contacto'}</label>
-                    <input
+                    <IconInput
+                      icon={Phone}
                       type="tel"
                       name="numeroContacto"
                       value={formData.numeroContacto}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder="Ej: 3009876543"
+                      placeholder="3009876543"
                       autoComplete="off"
                       className={inputClass('numeroContacto')}
                     />
@@ -973,13 +1007,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
 
                 <div className="flex flex-col gap-1">
                   <label className={labelClass}>Plazo devoluciones</label>
-                  <input
+                  <IconInput
+                    icon={CalendarClock}
                     type="text"
                     name="plazoDevoluciones"
                     value={formData.plazoDevoluciones}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="Ej: 30 días"
+                    placeholder="30"
                     autoComplete="off"
                     className={inputClass('plazoDevoluciones')}
                   />
@@ -996,6 +1031,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       onBlur={handleCategoriasBlur}
                       className={`${inputClass('categoryIds')} flex min-w-0 items-center justify-between gap-2 overflow-hidden cursor-pointer text-left`}
                     >
+                      <Tags className="h-4 w-4 flex-shrink-0 text-gray-400" strokeWidth={1.8} />
                       <span className={`block min-w-0 flex-1 truncate ${formData.categoryIds.length === 0 ? 'text-gray-400' : 'text-gray-700'}`}>
                         {formData.categoryIds.length === 0 
                           ? 'Selecciona categorías' 
@@ -1039,6 +1075,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       value={formData.rut}
                       options={rutOptions}
                       onChange={(value) => handleSelectChange('rut', value)}
+                      icon={FileText}
                       error={errors.rut && touched.rut}
                 placeholder="Seleccione"
                 ariaLabel="RUT"
@@ -1049,12 +1086,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
                     <label className={labelClass}>Código CIU {formData.rut === 'si' && <span className="text-red-500">*</span>}</label>
-                    <input
+                    <IconInput
+                      icon={Hash}
                       type="text"
                       name="codigoCIU"
                       value={formData.codigoCIU}
                       onChange={handleChange}
                       onBlur={handleBlur}
+                      placeholder={formData.rut === 'si' ? '4711' : 'No aplica'}
                       autoComplete="off"
                       inputMode="numeric"
                       pattern="[0-9]*"
