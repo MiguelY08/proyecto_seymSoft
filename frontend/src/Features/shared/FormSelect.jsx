@@ -21,6 +21,7 @@ function FormSelect({
   noOptionsMessage = 'No se encontraron resultados',
   minDropdownWidth = 0,
   maxDropdownWidth,
+  hideSelectedLabel = false,
 }) {
   const safeOptions = Array.isArray(options) ? options : [];
   const [isOpen, setIsOpen] = useState(false);
@@ -152,7 +153,7 @@ function FormSelect({
             strokeWidth={1.8}
           />
         )}
-        <span className="truncate text-left">
+        <span className={`truncate text-left ${hideSelectedLabel ? 'lg:hidden' : ''}`}>
           {selectedOption?.label || placeholder}
         </span>
         {!disabled && (

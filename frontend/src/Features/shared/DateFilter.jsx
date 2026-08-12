@@ -15,7 +15,7 @@ export const PurchasesFilters = ({
   const hasActiveFilters = search !== "" || fechaInicial !== "" || fechaFinal !== "";
 
   return (
-    <div className="flex items-end gap-3 flex-wrap">
+    <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-end">
 
       {/* ===== BÚSQUEDA ===== */}
       <div className="relative w-full sm:w-72">
@@ -37,48 +37,41 @@ export const PurchasesFilters = ({
       </div>
 
       {/* ===== FECHA INICIAL ===== */}
-      <div className="flex flex-col gap-0.5">
-        <label className="text-xs font-medium text-gray-700 pl-0.5">
-          Fecha Inicial
-        </label>
+      <div className="w-full sm:w-auto">
         <input
           type="date"
           value={fechaInicial}
           max={fechaFinal || undefined}
+          aria-label="Fecha inicial"
           onChange={(e) => {
             setFechaInicial(e.target.value);
             setCurrentPage(1);
           }}
-          className="px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm outline-none focus:ring-2 focus:ring-sky-900 text-sm text-gray-700 cursor-pointer"
+          className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm outline-none focus:ring-2 focus:ring-sky-900 text-sm text-gray-700 cursor-pointer sm:w-auto"
         />
       </div>
 
       {/* ===== FECHA FINAL ===== */}
-      <div className="flex flex-col gap-0.5">
-        <label className="text-xs font-medium text-gray-700 pl-0.5">
-          Fecha Final
-        </label>
+      <div className="w-full sm:w-auto">
         <input
           type="date"
           value={fechaFinal}
           min={fechaInicial || undefined}
+          aria-label="Fecha final"
           onChange={(e) => {
             setFechaFinal(e.target.value);
             setCurrentPage(1);
           }}
-          className="px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm outline-none focus:ring-2 focus:ring-sky-900 text-sm text-gray-700 cursor-pointer"
+          className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm outline-none focus:ring-2 focus:ring-sky-900 text-sm text-gray-700 cursor-pointer sm:w-auto"
         />
       </div>
 
       {/* ===== LIMPIAR FILTROS ===== */}
       {hasActiveFilters && (
-        <div className="flex flex-col gap-0.5">
-          <label className="text-xs font-medium text-gray-700 pl-0.5 invisible">
-            Limpiar
-          </label>
+        <div className="w-full sm:w-auto">
           <button
             onClick={onClearFilters}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-400 rounded-lg text-gray-600 bg-white hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 cursor-pointer whitespace-nowrap"
+            className="flex w-full items-center justify-center gap-2 px-3 py-2 text-sm font-medium border border-gray-400 rounded-lg text-gray-600 bg-white hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 cursor-pointer whitespace-nowrap sm:w-auto"
             aria-label="Limpiar filtros"
             title="Limpiar todos los filtros"
           >

@@ -533,7 +533,7 @@ function OrdersForm() {
 
   const handleShippingAmountChange = (e) => {
     if (pedidoInmutable) return;
-    const value = e.target.value;
+    const value = String(e.target.value ?? '').replace(/\D/g, '');
     setFormData(prev => ({ ...prev, shippingAmount: value }));
     if (errors.shippingAmount) setErrors(prev => ({ ...prev, shippingAmount: null }));
   };
@@ -1045,7 +1045,7 @@ function OrdersForm() {
             {isEditMode ? `Editando Pedido #${id}` : 'Nuevo Pedido'}
           </h1>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
+        <div className="sticky top-0 z-30 -mx-3 grid grid-cols-2 gap-2 bg-white px-3 py-3 shadow-sm sm:-mx-6 sm:px-6 sm:py-3 lg:static lg:mx-0 lg:flex lg:bg-transparent lg:p-0 lg:shadow-none lg:gap-3">
           <button
             onClick={handleCancel}
             className="w-full rounded-lg bg-gray-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 cursor-pointer sm:w-auto sm:px-6"

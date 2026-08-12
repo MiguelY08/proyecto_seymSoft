@@ -46,6 +46,12 @@ function LeftSectionForm({
   const mostrarDireccionManual = formData.tipoEntrega === 'domicilio';
   const showShippingAmountHighlight = mostrarDireccionManual && highlightShippingAmount;
   const isClienteDisabled = loading || readOnly || isEditMode;
+  const formatShippingAmount = (value) => {
+    const digits = String(value ?? '').replace(/\D/g, '');
+    return digits
+      ? new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(Number(digits))
+      : '';
+  };
 
   // Estados para el buscador de clientes
   const [clienteSearchTerm, setClienteSearchTerm] = useState('');
@@ -460,10 +466,9 @@ function LeftSectionForm({
                 showShippingAmountHighlight ? 'text-amber-600' : 'text-gray-400'
               }`} strokeWidth={1.8} />
               <input
-                type="number"
-                min="0"
-                step="100"
-                value={formData.shippingAmount ?? ''}
+                type="text"
+                inputMode="numeric"
+                value={formatShippingAmount(formData.shippingAmount)}
                 onChange={onShippingAmountChange}
                 placeholder="0"
                 disabled={loading || readOnly}

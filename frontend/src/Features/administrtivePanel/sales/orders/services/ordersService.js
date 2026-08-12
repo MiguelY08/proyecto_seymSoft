@@ -560,11 +560,35 @@ export const LocationService = {
   },
 };
 export const OrdersService = {
-  async list(params = {}) {
+  async getPage(params = {}) {
     const response = await apiClient.get('/orders', { params });
+    const responseData = response?.data ?? response;
     const payload = unwrap(response);
     const orders = Array.isArray(payload) ? payload : payload?.orders ?? payload?.pedidos ?? [];
-    return orders.map(normalizeOrder);
+
+    return {
+      orders: orders.map(normalizeOrder),
+      pagination: responseData?.pagination ?? null,
+    };
+  },
+
+  async list(params = {}) {
+    const { orders } = await this.getPage(params);
+    return orders;
+  },
+
+  async listAll(params = {}) {
+    const limit = Math.min(Math.max(Number(params.limit) || 100, 1), 100);
+    const firstPage = await this.getPage({ ...params, page: 1, limit });
+    const orders = [...firstPage.orders];
+    const totalPages = Number(firstPage.pagination?.totalPages) || 1;
+
+    for (let page = 2; page <= totalPages; page += 1) {
+      const response = await this.getPage({ ...params, page, limit });
+      orders.push(...response.orders);
+    }
+
+    return orders;
   },
 
   async findById(id) {
