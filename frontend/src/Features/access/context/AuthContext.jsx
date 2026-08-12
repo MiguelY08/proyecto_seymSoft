@@ -129,8 +129,6 @@ const login = async (email, password) => {
     const result = await loginService(email, password);
 
     if (result.success) {
-      console.log("RESULT LOGIN:", result);
-
       const profileResult = await getProfile();
       const resolvedUser =
         profileResult.success ? profileResult.user : result.user;

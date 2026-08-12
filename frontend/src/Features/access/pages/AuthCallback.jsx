@@ -25,23 +25,12 @@ const AuthCallback = () => {
           throw new Error("Tokens no encontrados");
         }
 
-        console.log("ACCESS TOKEN:", accessToken);
-console.log("REFRESH TOKEN:", refreshToken);
-
         localStorage.setItem(
           "session",
           JSON.stringify({ accessToken, refreshToken })
         );
 
-        console.log(
-  "SESSION TEMPORAL:",
-  JSON.parse(
-    localStorage.getItem("session")
-  )
-);
-
         const profileResult = await getProfile();
-        console.log( "PROFILE RESULT:", profileResult );
 
         if (!profileResult.success) {
           throw new Error("No se pudo obtener perfil");
@@ -80,11 +69,6 @@ console.log("REFRESH TOKEN:", refreshToken);
           hasRole
             ? "/admin"
             : "/";
-
-          console.log(
-            "REQUIRES PASSWORD SETUP:",
-            profileResult.requiresPasswordSetup
-          );
 
         navigate(redirectTo);
 

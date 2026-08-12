@@ -5,6 +5,7 @@ import { useNavigate, Link } from "react-router-dom";
 import {
   normalizeEmailInput,
   normalizeDigits,
+  isRegisterEmailValid,
   sanitizeInput,
   toTitleCaseName,
   validateRegister,
@@ -92,7 +93,7 @@ export default function RegisterForm({ embedded = false, onSwitchToLogin }) {
       return undefined;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!isRegisterEmailValid(email)) {
       setCheckingEmail(false);
       setErrors((prev) => ({ ...prev, email: "Ingresa un correo válido" }));
       return undefined;
@@ -231,11 +232,17 @@ export default function RegisterForm({ embedded = false, onSwitchToLogin }) {
       return;
     }
 
-    const emailCheck = await checkEmailAvailability(normalizedForm.email);
-    if (emailCheck?.exists) {
-      setErrors((prev) => ({ ...prev, email: "El correo ya está registrado" }));
-      setTouched((prev) => ({ ...prev, email: true }));
-      showWarning("Correo registrado", "El correo ya está registrado");
+    try {
+      const emailCheck = await checkEmailAvailability(normalizedForm.email);
+      if (emailCheck?.exists) {
+        setErrors((prev) => ({ ...prev, email: "El correo ya está registrado" }));
+        setTouched((prev) => ({ ...prev, email: true }));
+        showWarning("Correo registrado", "El correo ya está registrado");
+        return;
+      }
+    } catch (error) {
+      console.error("Error al verificar correo:", error);
+      showWarning("Correo no verificado", "No pudimos verificar el correo. Intenta de nuevo.");
       return;
     }
 
@@ -246,6 +253,7 @@ export default function RegisterForm({ embedded = false, onSwitchToLogin }) {
         email: normalizedForm.email,
         password: formData.password,
         phone: parseInt(normalizedForm.phone, 10),
+        termsAccepted: normalizedForm.terms,
       });
 
       if (result.success) {
@@ -390,31 +398,30 @@ export default function RegisterForm({ embedded = false, onSwitchToLogin }) {
           {/* Contraseña */}
           <div className="relative">
             <Label text="Contraseña" htmlFor="password" />
-            <input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="********"
-              className={inputStyle("password")}
-              disabled={loading}
-              autoComplete="new-password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className={embedded
-                ? "absolute right-3 top-[31px] text-gray-500 hover:text-gray-700 disabled:opacity-50"
-                : "absolute right-3 top-[34px] text-gray-500 hover:text-gray-700 disabled:opacity-50"
-              }
-              disabled={loading}
-              aria-label={
-                showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
-              }
-            >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="********"
+                className={`${inputStyle("password")} pr-10`}
+                disabled={loading}
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                disabled={loading}
+                aria-label={
+                  showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                }
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
             {touched.password && errors.password && (
               <p className={errorTextClass}>{errors.password}</p>
             )}
@@ -423,33 +430,32 @@ export default function RegisterForm({ embedded = false, onSwitchToLogin }) {
           {/* Confirmar Contraseña */}
           <div className="relative">
             <Label text="Confirmar Contraseña" htmlFor="confirmPassword" />
-            <input
-              id="confirmPassword"
-              type={showConfirmPassword ? "text" : "password"}
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              placeholder="********"
-              className={inputStyle("confirmPassword")}
-              disabled={loading}
-              autoComplete="new-password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className={embedded
-                ? "absolute right-3 top-[31px] text-gray-500 hover:text-gray-700 disabled:opacity-50"
-                : "absolute right-3 top-[34px] text-gray-500 hover:text-gray-700 disabled:opacity-50"
-              }
-              disabled={loading}
-              aria-label={
-                showConfirmPassword
-                  ? "Ocultar contraseña"
-                  : "Mostrar contraseña"
-              }
-            >
-              {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
+            <div className="relative">
+              <input
+                id="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="********"
+                className={`${inputStyle("confirmPassword")} pr-10`}
+                disabled={loading}
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                disabled={loading}
+                aria-label={
+                  showConfirmPassword
+                    ? "Ocultar contraseña"
+                    : "Mostrar contraseña"
+                }
+              >
+                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
             {touched.confirmPassword && errors.confirmPassword && (
               <p className={errorTextClass}>
                 {errors.confirmPassword}
@@ -457,24 +463,36 @@ export default function RegisterForm({ embedded = false, onSwitchToLogin }) {
             )}
           </div>
 
-          {/* Términos
-          <div className="flex items-center gap-2">
-            <input
-              id="terms"
-              type="checkbox"
-              name="terms"
-              checked={formData.terms}
-              onChange={handleChange}
-              disabled={loading}
-            />
-            <label htmlFor="terms" className="text-sm text-gray-700 cursor-pointer">
-              Aceptar términos y condiciones
-            </label>
-          </div> */}
+          {/* Términos */}
+          <div className="relative">
+            <div className="flex items-start gap-2">
+              <input
+                id="terms"
+                type="checkbox"
+                name="terms"
+                checked={formData.terms}
+                onChange={handleChange}
+                disabled={loading}
+                className="mt-1 h-3 w-3 rounded border-gray-300 text-[#004D77] focus:ring-2 focus:ring-[#004D77] disabled:opacity-60"
+              />
+              <label htmlFor="terms" className="text-sm text-gray-700 cursor-pointer">
+                Acepto los{" "}
+                <a
+                  href="/Terminos_y_Condiciones_Papeleria_Magic.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-blue-700 hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  términos y condiciones
+                </a>
+              </label>
+            </div>
 
-          {/* {touched.terms && errors.terms && (
-            <p className="text-red-500 text-xs">{errors.terms}</p>
-          )} */}
+            {touched.terms && errors.terms && (
+              <p className={errorTextClass}>{errors.terms}</p>
+            )}
+          </div>
 
           {errors.general && (
             <p className="text-red-500 text-xs text-center bg-red-50 p-2 rounded">
