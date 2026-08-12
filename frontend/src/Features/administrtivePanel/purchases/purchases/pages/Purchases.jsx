@@ -45,7 +45,7 @@ export const Purchases = () => {
   const sortDropdownRef = React.useRef(null);
   const sortDropdownMenuRef = React.useRef(null);
   
-  const { showSuccess, showError, showInfo } = useAlert();
+  const { showSuccess, showError, showInfo, showConfirm } = useAlert();
   const navigate = useNavigate();
 
   // ========== Cerrar dropdown al hacer clic fuera ==========
@@ -200,6 +200,15 @@ export const Purchases = () => {
     }
 
     try {
+      const confirmed = await showConfirm(
+        "question",
+        "Desea descargar las compras?",
+        `Se exportaran ${products.length} compra${products.length !== 1 ? "s" : ""} en formato Excel.`,
+        { confirmButtonText: "Descargar", cancelButtonText: "Cancelar" }
+      );
+
+      if (!confirmed?.isConfirmed) return;
+
       await exportPurchasesExcel(products);
       showSuccess(
         "Exportación exitosa",

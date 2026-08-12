@@ -6,11 +6,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { DollarSign, Package } from 'lucide-react';
 import { ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES } from '../services/ordersService';
-<<<<<<< HEAD
 import { createExcelLogoId, prepareExcelLogoHeader } from '../../../../shared/excel/logoHeader';
-=======
 import logoUrl from '../../../../../assets/PMLogo_Horizontal.png';
->>>>>>> 3048ccd1d7b3b34132a236b3e7a723a5e1a08645
 
 // ─── Textos capitalizados para mostrar ───────────────────────────────────────
 export const ESTADO_LOGISTICO_LABELS = {
