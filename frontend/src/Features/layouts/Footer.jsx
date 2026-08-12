@@ -342,6 +342,16 @@ function Footer() {
           <p style={{ fontSize: '0.73rem', color: '#475569' }}>
             © 2025 Papelería Magic · Todos los derechos reservados
           </p>
+          <a
+            href="/Terminos_y_Condiciones_Papeleria_Magic.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontSize: '0.73rem', color: '#60a5fa', textDecoration: 'none' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#93c5fd'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#60a5fa'; }}
+          >
+            Términos y condiciones
+          </a>
           <p style={{ fontSize: '0.73rem', color: '#475569' }}>
             Impulsado por{' '}
             <span style={{ color: '#60a5fa', fontWeight: 600 }}>SeymSoft</span>
