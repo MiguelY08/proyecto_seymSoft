@@ -1,6 +1,6 @@
 // src/features/orders/components/RightSectionForm.jsx
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Trash2, Search, X, ChevronDown, CheckCircle, ShoppingBag } from 'lucide-react';
+import { Trash2, Search, X, ChevronDown, CheckCircle, ShoppingBag, Users, Phone, Mail, IdCard, Plus } from 'lucide-react';
 import { ScannerStatus, findProductByBarcode, normalizeBarcode, productMatchesBarcodeSearch, useBarcodeScanner } from '../../../../shared/scanner';
 
 const isProductActive = (product) => product?.isActive === true;
@@ -21,12 +21,66 @@ function RightSectionForm({
   onRemoveProduct,
   scannerField = 'order-product-search',
   onScannerProductNotFound,
+  formData,
+  clientes = [],
+  isEditMode = false,
+  readOnly = false,
+  onClienteChange,
+  onCreateClient,
 }) {
   const isDisabled = disabled || loading;
   const [searchTerm, setSearchTerm] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [scannerMessage, setScannerMessage] = useState(null);
   const wrapperRef = useRef(null);
+  const [clienteSearchTerm, setClienteSearchTerm] = useState('');
+  const [isClienteDropdownOpen, setIsClienteDropdownOpen] = useState(false);
+  const clienteWrapperRef = useRef(null);
+  const isClienteDisabled = loading || readOnly || isEditMode;
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (clienteWrapperRef.current && !clienteWrapperRef.current.contains(event.target)) {
+        setIsClienteDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const clientesFiltrados = useMemo(() => {
+    if (!clienteSearchTerm.trim()) return clientes;
+    const term = clienteSearchTerm.toLowerCase().trim();
+    return clientes.filter((cliente) => [
+      cliente.name,
+      cliente.fullName,
+      cliente.phone,
+      cliente.email,
+      cliente.document,
+      cliente.address || cliente.direccion,
+    ].some((value) => String(value || '').toLowerCase().includes(term)));
+  }, [clientes, clienteSearchTerm]);
+
+  const clienteSeleccionado = useMemo(() => (
+    clientes.find((item) => Number(item.id) === Number(formData?.clienteId)) ?? null
+  ), [clientes, formData?.clienteId]);
+  const nombreClienteSeleccionado = clienteSeleccionado?.name || clienteSeleccionado?.fullName || '';
+  const clienteInputValue = isClienteDropdownOpen || !clienteSeleccionado
+    ? clienteSearchTerm
+    : nombreClienteSeleccionado;
+
+  const showClienteError = Boolean(errors.clienteId) && (
+    formData?.clienteId === undefined || formData?.clienteId === null || formData?.clienteId === ''
+  );
+
+  const handleClienteSelect = (clienteId) => {
+    const cliente = clientes.find((item) => Number(item.id) === Number(clienteId));
+    if (cliente) {
+      setClienteSearchTerm(cliente.name || cliente.fullName || '');
+      onClienteChange?.({ target: { value: clienteId } });
+    }
+    setIsClienteDropdownOpen(false);
+  };
 
   const formatCurrency = (value) => {
     const parsed = Number(value);
@@ -145,12 +199,60 @@ function RightSectionForm({
           <ShoppingBag className="w-4 h-4 text-white" strokeWidth={2} />
         </div>
         <div>
-          <p className="text-sm font-semibold text-gray-800">Productos</p>
-          <p className="text-xs text-gray-400">Agregue productos al pedido</p>
+          <p className="text-sm font-semibold text-gray-800">Cliente y Productos</p>
+          <p className="text-xs text-gray-400">Seleccione un cliente y agregue productos al pedido</p>
         </div>
       </div>
 
       <div className="flex flex-col gap-4 p-4 sm:p-5">
+        {/* Cliente */}
+        <div className="flex flex-col gap-1.5">
+          <label className="block text-sm font-medium text-gray-700">
+            Cliente <span className="text-red-500">*</span>
+          </label>
+          <div className="flex flex-col items-stretch gap-2 sm:flex-row">
+            <div className="relative min-w-0 flex-1" ref={clienteWrapperRef}>
+              <Users className="pointer-events-none absolute left-3 top-1/2 z-10 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
+              <input
+                type="text"
+                placeholder="Buscar cliente por nombre, teléfono, email..."
+                value={clienteInputValue}
+                onChange={(event) => {
+                  setClienteSearchTerm(event.target.value);
+                  setIsClienteDropdownOpen(true);
+                }}
+                onFocus={() => {
+                  if (isClienteDisabled) return;
+                  setClienteSearchTerm(nombreClienteSeleccionado);
+                  setIsClienteDropdownOpen(true);
+                }}
+                disabled={isClienteDisabled}
+                className={`w-full rounded-lg border py-2.5 pl-10 pr-8 text-sm outline-none transition-colors ${showClienteError ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'} ${isClienteDisabled ? 'cursor-not-allowed bg-gray-100 text-gray-600' : 'bg-white text-gray-700'}`}
+              />
+              <div className="absolute right-2 top-1/2 z-10 flex -translate-y-1/2 items-center gap-1">
+                {clienteSearchTerm && !isClienteDisabled && <button type="button" onClick={() => { setClienteSearchTerm(''); onClienteChange?.({ target: { value: '' } }); }} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" strokeWidth={1.8} /></button>}
+                {!isClienteDisabled && <ChevronDown className="pointer-events-none w-4 text-gray-400" strokeWidth={2} />}
+              </div>
+              {isClienteDropdownOpen && !isClienteDisabled && (
+                <div className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg overscroll-contain">
+                  {clientesFiltrados.length > 0 ? <ul className="py-1">{clientesFiltrados.map((cliente) => (
+                    <li key={cliente.id}><button type="button" onClick={() => handleClienteSelect(cliente.id)} className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-[#004D77]/10">
+                      <div className="font-medium text-gray-800">{cliente.name || cliente.fullName}{cliente.id === 0 && <span className="ml-2 text-xs text-blue-600">(Cliente de Caja)</span>}</div>
+                      <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                        {cliente.phone && <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" strokeWidth={1.5} />{cliente.phone}</span>}
+                        {cliente.email && <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3" strokeWidth={1.5} />{cliente.email}</span>}
+                        {cliente.document && <span className="inline-flex items-center gap-1"><IdCard className="w-3 h-3" strokeWidth={1.5} />{cliente.document}</span>}
+                      </div>
+                    </button></li>
+                  ))}</ul> : <div className="px-4 py-3 text-center text-sm text-gray-500">No se encontraron clientes</div>}
+                </div>
+              )}
+            </div>
+            {onCreateClient && !readOnly && !isEditMode && <button type="button" onClick={onCreateClient} disabled={loading} title="Crear cliente" className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-[#004D77] bg-white text-[#004D77] transition-colors hover:bg-[#004D77] hover:text-white disabled:cursor-not-allowed disabled:opacity-50 sm:w-10 sm:shrink-0"><Plus className="w-4 h-4" strokeWidth={2} /></button>}
+          </div>
+          {showClienteError && <p className="mt-0.5 text-xs text-red-500">{errors.clienteId}</p>}
+        </div>
+
         {/* Buscador con dropdown */}
         <div className="relative" ref={wrapperRef}>
           <div className="relative">

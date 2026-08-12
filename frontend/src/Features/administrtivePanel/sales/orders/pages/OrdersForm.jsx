@@ -8,6 +8,8 @@ import OrdersService, { PaymentService, LocationService, ESTADOS_LOGISTICOS, EST
 import { SalesServices } from '../../vendings/services/salesServices';
 import ProductsService from '../../../purchases/products/services/productsServices';
 import { clientsService } from '../../clients/services/clientsService';
+import { getCreditCustomers } from '../../paymentsAndCredits/services/paymentsServices';
+import { mapCustomers as mapCreditCustomers } from '../../paymentsAndCredits/mappers/paymentsMapper';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import Spinner from '../../../../shared/spinner';
 import { getPrimaryProductBarcode } from '../../../../shared/scanner';
@@ -74,6 +76,18 @@ const calculateLineSubtotal = (cantidad, precioUnitario) =>
 
 const calculateLineIva = (subtotal, ivaPercentage = 19) =>
   roundMoney(subtotal - (subtotal / (1 + (toNumber(ivaPercentage, 19) / 100))));
+
+const getCreditSummary = (creditAccount, client) => {
+  const assignedCredit = toNumber(creditAccount?.creditoAsignado ?? creditAccount?.assignedCredit ?? client?.assignedCredit ?? client?.clientCredit);
+  const usedCredit = toNumber(creditAccount?.saldo ?? creditAccount?.usedCredit ?? creditAccount?.deudaTotal ?? creditAccount?.totalDebt ?? client?.usedCredit ?? client?.totalDebt);
+  const reportedAvailable = toNumber(creditAccount?.cupoDisponible ?? creditAccount?.availableCredit ?? client?.availableCredit);
+
+  return {
+    assignedCredit,
+    usedCredit,
+    availableCredit: reportedAvailable || Math.max(0, roundMoney(assignedCredit - usedCredit)),
+  };
+};
 
 const normalizeClientForForm = (client = {}) => ({
   ...client,
@@ -156,6 +170,7 @@ function OrdersForm() {
   const [paymentReceipts, setPaymentReceipts] = useState([]);
   const [totalPagado, setTotalPagado] = useState(0);
   const [favorBalance, setFavorBalance] = useState(0);
+  const [creditAccounts, setCreditAccounts] = useState([]);
 
   const productosTotal = roundMoney(formData.productos.reduce((sum, p) => sum + toNumber(p.subtotal), 0));
   const shippingAmount = formData.tipoEntrega === 'domicilio' ? roundMoney(formData.shippingAmount) : 0;
@@ -163,6 +178,14 @@ function OrdersForm() {
   const iva = roundMoney(formData.productos.reduce((sum, p) => sum + toNumber(p.iva), 0));
   const subtotal = roundMoney(productosTotal - iva);
   const selectedClient = clientes.find((cliente) => Number(cliente.id) === Number(formData.clienteId)) ?? null;
+  const selectedCreditAccount = creditAccounts.find((account) => Number(account.id) === Number(formData.clienteId)) ?? null;
+  const creditSummary = useMemo(
+    () => getCreditSummary(selectedCreditAccount, selectedClient),
+    [selectedCreditAccount, selectedClient]
+  );
+  const financialSummary = formData.clienteId === '' || formData.clienteId === null || formData.clienteId === undefined
+    ? null
+    : { ...creditSummary, favorBalance };
   const productosCatalogoConPrecio = productosCatalogo.map((product) => ({
     ...product,
     precioDetalle: getProductPriceForClient(product, selectedClient),
@@ -248,6 +271,14 @@ function OrdersForm() {
       try {
         const clientsResponse = await clientsService.getAll();
         setClientes((clientsResponse.data || clientsResponse || []).map(normalizeClientForForm));
+
+        try {
+          const creditCustomers = await getCreditCustomers();
+          setCreditAccounts(mapCreditCustomers(creditCustomers));
+        } catch (error) {
+          console.warn('No se pudo cargar la información de crédito de los clientes:', error);
+          setCreditAccounts([]);
+        }
 
         const departmentsResponse = await LocationService.getDepartments();
         setDepartamentos(departmentsResponse);
@@ -1074,39 +1105,18 @@ function OrdersForm() {
 
       {/* Contenido del formulario en dos columnas principales */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <LeftSectionForm
-          formData={formData}
-          errors={errors}
-          clientes={clientes}
-          departamentos={departamentos}
-          ciudades={ciudades}
-          loadingCiudades={loadingCiudades}
-          user={user}
-          loading={loading}
-          readOnly={pedidoInmutable}
-          isEditMode={isEditMode}
-          estadoLogisticoOriginal={estadoLogisticoOriginal}
-          showDirectSaleLockedInfo={creaVentaDirecta}
-          highlightShippingAmount={requiereRevisionEnvio}
-          onClienteChange={handleClienteChange}
-          onTipoEntregaChange={handleTipoEntregaChange}
-          onDepartamentoEntregaChange={handleDepartamentoEntregaChange}
-          onCiudadEntregaChange={handleCiudadEntregaChange}
-          onDireccionManualChange={handleDireccionManualChange}
-          onDeliveryRecipientNameChange={handleDeliveryRecipientNameChange}
-          onDeliveryRecipientPhoneChange={handleDeliveryRecipientPhoneChange}
-          onShippingAmountChange={handleShippingAmountChange}
-          onEstadoLogisticoChange={handleEstadoLogisticoChange}
-          onMotivoCancelacionChange={handleMotivoCancelacionChange}
-          onCreateClient={() => setIsClientModalOpen(true)}
-        />
-
         <RightSectionForm
           productos={formData.productos}
           productosCatalogo={productosCatalogoConPrecio}
+          formData={formData}
           errors={errors}
+          clientes={clientes}
           loading={loading}
           disabled={!productosEditables || loading || pedidoInmutable}
+          readOnly={pedidoInmutable}
+          isEditMode={isEditMode}
+          onClienteChange={handleClienteChange}
+          onCreateClient={() => setIsClientModalOpen(true)}
           subtotal={subtotal}
           iva={iva}
           shippingAmount={shippingAmount}
@@ -1117,6 +1127,31 @@ function OrdersForm() {
           onRemoveProduct={handleRemoveProduct}
           scannerField="order-product-search"
           onScannerProductNotFound={handleScannerProductNotFound}
+        />
+
+        <LeftSectionForm
+          errors={errors}
+          formData={formData}
+          departamentos={departamentos}
+          ciudades={ciudades}
+          loadingCiudades={loadingCiudades}
+          user={user}
+          loading={loading}
+          readOnly={pedidoInmutable}
+          isEditMode={isEditMode}
+          estadoLogisticoOriginal={estadoLogisticoOriginal}
+          showDirectSaleLockedInfo={creaVentaDirecta}
+          highlightShippingAmount={requiereRevisionEnvio}
+          onTipoEntregaChange={handleTipoEntregaChange}
+          onDepartamentoEntregaChange={handleDepartamentoEntregaChange}
+          onCiudadEntregaChange={handleCiudadEntregaChange}
+          onDireccionManualChange={handleDireccionManualChange}
+          onDeliveryRecipientNameChange={handleDeliveryRecipientNameChange}
+          onDeliveryRecipientPhoneChange={handleDeliveryRecipientPhoneChange}
+          onShippingAmountChange={handleShippingAmountChange}
+          onEstadoLogisticoChange={handleEstadoLogisticoChange}
+          onMotivoCancelacionChange={handleMotivoCancelacionChange}
+          showClientSection={false}
         />
       </div>
 
@@ -1140,6 +1175,7 @@ function OrdersForm() {
           disallowDuplicateMethods={creaVentaDirecta}
           allowFavorBalance
           favorBalance={favorBalance}
+          financialSummary={financialSummary}
         />
       </div>
 
