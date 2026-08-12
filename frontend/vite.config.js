@@ -15,6 +15,7 @@ export default defineConfig({
         clientsClaim: true,
         skipWaiting: true,
         navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/\.pdf$/],
         globPatterns: ["**/*.{jsx,css,html,png,jpg,jpeg,webp,svg}"],
       },
 
