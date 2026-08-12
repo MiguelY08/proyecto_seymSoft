@@ -884,6 +884,10 @@ function OrdersForm() {
           }
         }
 
+        const generatedSale = createdPayments.find(
+          (payment) => payment?.generatedSale
+        )?.generatedSale;
+
         // Refrescar pagos y total desde el servidor para mantener consistencia
         try {
           const canonicalPayments = await PaymentService.getByPedidoId(orderId);
@@ -893,7 +897,12 @@ function OrdersForm() {
           console.warn('No se pudieron sincronizar pagos tras la actualización:', err);
         }
 
-        showSuccess('Pedido actualizado', `Pedido #${orderResult.numeroPedido} actualizado correctamente.`);
+        showSuccess(
+          generatedSale ? 'Pedido pagado y venta creada' : 'Pedido actualizado',
+          generatedSale
+            ? `El pago completó el pedido y se generó la venta #${generatedSale.idSale ?? generatedSale.id ?? ''}.`
+            : `Pedido #${orderResult.numeroPedido} actualizado correctamente.`
+        );
       } else {
         if (creaVentaDirecta) {
           const paymentMethods = buildDirectSalePaymentMethods(pagos);
@@ -965,6 +974,8 @@ function OrdersForm() {
           );
         });
 
+        let generatedSale = orderResult.sale ?? orderResult.venta ?? null;
+
         for (const pago of notPresent) {
           try {
             const created = await PaymentService.add(orderResult.id, {
@@ -973,6 +984,7 @@ function OrdersForm() {
               comprobante: pago.comprobante,
             });
             if (created) {
+              generatedSale = created.generatedSale ?? generatedSale;
               setPagos((prev) => [...prev, { ...created, locked: true, persisted: true }]);
               setTotalPagado(await PaymentService.getTotalPagado(orderResult.id));
             }
@@ -981,7 +993,12 @@ function OrdersForm() {
           }
         }
 
-        showSuccess('Pedido creado', `Pedido #${orderResult.numeroPedido} registrado con éxito.`);
+        showSuccess(
+          generatedSale ? 'Pedido pagado y venta creada' : 'Pedido creado',
+          generatedSale
+            ? `El pedido se registró y se generó la venta #${generatedSale.idSale ?? generatedSale.id ?? ''}.`
+            : `Pedido #${orderResult.numeroPedido} registrado con éxito.`
+        );
       }
 
       navigate('/admin/sales/orders');

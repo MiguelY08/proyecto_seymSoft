@@ -687,7 +687,15 @@ export const PaymentService = {
     const result = unwrap(response);
     const updatedOrder = normalizeOrder(result?.order ?? result);
     const payments = updatedOrder.pagos || [];
-    return payments[payments.length - 1] || null;
+    const lastPayment = payments[payments.length - 1] || null;
+    const generatedSale = result?.generatedSale ?? null;
+
+    return lastPayment
+      ? {
+          ...lastPayment,
+          generatedSale,
+        }
+      : null;
   },
 
   async addDevolucion(pedidoId, monto) {

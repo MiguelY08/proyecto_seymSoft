@@ -650,7 +650,7 @@ function SaleForm() {
         newErrors.deliveryRecipientPhone = `El telefono debe tener entre ${MIN_PHONE_DIGITS} y ${MAX_PHONE_DIGITS} digitos.`;
       }
     }
-    if (!formData.direccionEntrega?.trim()) {
+    if (formData.tipoEntrega === 'domicilio' && !formData.direccionEntrega?.trim()) {
       newErrors.direccionEntrega = 'La dirección de entrega es obligatoria.';
     }
     if (formData.tipoEntrega === 'domicilio') {
