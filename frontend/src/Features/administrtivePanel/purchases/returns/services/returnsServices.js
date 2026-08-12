@@ -5,6 +5,7 @@ import {
   getReturnReasonLabelByCode,
   getReturnReasonLabelById,
   getReturnStatusIdByLabel,
+  getReturnStatusLabelById,
 } from "../helpers/returnsHelpers";
 
 const formatErrorDetail = (detail) => {
@@ -111,6 +112,12 @@ const mapReturnLineToNewDetail = (product, line) => {
       line?.returnMethodId ??
       getReturnMethodIdByLabel(line?.tipoDevolucion)
     ),
+    idReturnStatus: toPositiveIntegerOrNull(
+      getReturnStatusIdByLabel(line?.estado) ??
+      line?.idReturnStatus ??
+      line?.returnStatusId ??
+      line?.statusId
+    ),
   };
 
   const supplierDate = toOptionalDate(line?.supplierDate);
@@ -172,6 +179,16 @@ export const mapReturnFormToUpdatePayload = (selectedProducts = []) => {
 export const mapPurchaseReturnToList = (purchaseReturn) => {
   if (!purchaseReturn) return null;
 
+  const progress = purchaseReturn.progress ?? {
+    completed: purchaseReturn.completedDetails ?? 0,
+    total: purchaseReturn.totalDetails ?? 0,
+    label: `${purchaseReturn.completedDetails ?? 0}/${purchaseReturn.totalDetails ?? 0}`,
+  };
+  const isFullyCompleted =
+    Number(progress.total) > 0 &&
+    Number(progress.completed) === Number(progress.total);
+  const status = isFullyCompleted ? "Listo" : purchaseReturn.status;
+
   return {
     id: purchaseReturn.id,
     purchaseId: purchaseReturn.purchaseId,
@@ -182,13 +199,9 @@ export const mapPurchaseReturnToList = (purchaseReturn) => {
     cancelledAt: purchaseReturn.cancelledAt ?? null,
     fechaAnulacion: formatDateOnly(purchaseReturn.cancelledAt),
     statusId: purchaseReturn.statusId,
-    estado: purchaseReturn.status,
-    status: purchaseReturn.status,
-    progress: purchaseReturn.progress ?? {
-      completed: purchaseReturn.completedDetails ?? 0,
-      total: purchaseReturn.totalDetails ?? 0,
-      label: `${purchaseReturn.completedDetails ?? 0}/${purchaseReturn.totalDetails ?? 0}`,
-    },
+    estado: status,
+    status,
+    progress,
     provider: purchaseReturn.provider ?? null,
     proveedor: purchaseReturn.provider?.name ?? "-",
     totalDetails: purchaseReturn.totalDetails ?? purchaseReturn.progress?.total ?? 0,
@@ -302,7 +315,15 @@ export const mapPurchaseReturnToDetail = (purchaseReturn) => {
       const barcode = getBarcodeFromDetail(detail);
       const reason = getReasonLabel(detail.reason);
       const method = getLabel(detail.method);
-      const detailStatus = getLabel(detail.status);
+      const detailStatusId =
+        detail.returnStatusId ??
+        detail.idReturnStatus ??
+        detail.statusId ??
+        detail.status?.id ??
+        null;
+      const detailStatus =
+        getLabel(detail.status) ||
+        getReturnStatusLabelById(detailStatusId);
       const returnAvailability = getDetailReturnAvailability(detail);
 
       return {
@@ -340,8 +361,8 @@ export const mapPurchaseReturnToDetail = (purchaseReturn) => {
         estado: detailStatus,
         status: detailStatus,
         statusData: detail.status ?? null,
-        idReturnStatus: detail.returnStatusId ?? detail.status?.id ?? null,
-        returnStatusId: detail.returnStatusId ?? detail.status?.id ?? null,
+        idReturnStatus: detailStatusId,
+        returnStatusId: detailStatusId,
         stock: detail.stock ?? barcode?.stock ?? null,
         statusHistory: detail.statusHistory ?? [],
         raw: detail,

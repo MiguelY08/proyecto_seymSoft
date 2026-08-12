@@ -60,6 +60,7 @@ export const RETURN_STATUS_IDS = {
   PENDING_REFUND: 3,
   READY: 4,
   ANNULLED: 5,
+  SUPPLIER_REJECTION: 8,
 };
 
 export const RETURN_STATUS_OPTIONS = [
@@ -68,6 +69,7 @@ export const RETURN_STATUS_OPTIONS = [
   { id: RETURN_STATUS_IDS.PENDING_REFUND, label: "Pend. reembolso", terminal: false },
   { id: RETURN_STATUS_IDS.READY, label: "Listo", terminal: true },
   { id: RETURN_STATUS_IDS.ANNULLED, label: "Anulado", terminal: true },
+  { id: RETURN_STATUS_IDS.SUPPLIER_REJECTION, label: "Prov. rechazó", terminal: true },
 ];
 
 export const getReturnStatusIdByLabel = (label) =>
@@ -104,11 +106,17 @@ const getReturnStatusId = (status) => {
 const RETURN_STATUS_FLOW_BY_METHOD = {
   [RETURN_METHOD_IDS.REPLACEMENT]: {
     [RETURN_STATUS_IDS.PENDING_SHIPMENT]: [RETURN_STATUS_IDS.PENDING_REPLACEMENT],
-    [RETURN_STATUS_IDS.PENDING_REPLACEMENT]: [RETURN_STATUS_IDS.READY],
+    [RETURN_STATUS_IDS.PENDING_REPLACEMENT]: [
+      RETURN_STATUS_IDS.READY,
+      RETURN_STATUS_IDS.SUPPLIER_REJECTION,
+    ],
   },
   [RETURN_METHOD_IDS.REFUND]: {
     [RETURN_STATUS_IDS.PENDING_SHIPMENT]: [RETURN_STATUS_IDS.PENDING_REFUND],
-    [RETURN_STATUS_IDS.PENDING_REFUND]: [RETURN_STATUS_IDS.READY],
+    [RETURN_STATUS_IDS.PENDING_REFUND]: [
+      RETURN_STATUS_IDS.READY,
+      RETURN_STATUS_IDS.SUPPLIER_REJECTION,
+    ],
   },
   [RETURN_METHOD_IDS.CREDIT_BALANCE]: {
     [RETURN_STATUS_IDS.PENDING_SHIPMENT]: [RETURN_STATUS_IDS.PENDING_REFUND],
@@ -116,21 +124,40 @@ const RETURN_STATUS_FLOW_BY_METHOD = {
   },
 };
 
-export const getAllowedNextReturnStatusIds = (method, currentStatus) => {
-  const methodId = getReturnMethodId(method);
-  const currentStatusId = getReturnStatusId(currentStatus);
+const SUPPLIER_REJECTION_REASON_IDS = new Set([5, 8]);
 
-  return RETURN_STATUS_FLOW_BY_METHOD[methodId]?.[currentStatusId] ?? [];
+const getReturnReasonId = (reason) => {
+  if (typeof reason === "object" && reason !== null) {
+    return Number(reason.id ?? reason.returnReasonId ?? reason.idReturnReason) || null;
+  }
+
+  const numericId = Number(reason);
+  return Number.isInteger(numericId) && numericId > 0
+    ? numericId
+    : getReturnReasonIdByLabel(reason);
 };
 
-export const getAllowedNextReturnStatuses = (method, currentStatus) => {
-  const allowedIds = getAllowedNextReturnStatusIds(method, currentStatus);
+export const canUseSupplierRejection = (reason) =>
+  SUPPLIER_REJECTION_REASON_IDS.has(getReturnReasonId(reason));
+
+export const getAllowedNextReturnStatusIds = (method, currentStatus, reason) => {
+  const methodId = getReturnMethodId(method);
+  const currentStatusId = getReturnStatusId(currentStatus);
+  const allowedIds = RETURN_STATUS_FLOW_BY_METHOD[methodId]?.[currentStatusId] ?? [];
+
+  return canUseSupplierRejection(reason)
+    ? allowedIds
+    : allowedIds.filter((id) => id !== RETURN_STATUS_IDS.SUPPLIER_REJECTION);
+};
+
+export const getAllowedNextReturnStatuses = (method, currentStatus, reason) => {
+  const allowedIds = getAllowedNextReturnStatusIds(method, currentStatus, reason);
   return RETURN_STATUS_OPTIONS.filter((status) => allowedIds.includes(status.id));
 };
 
-export const isValidReturnStatusTransition = (method, currentStatus, nextStatus) => {
+export const isValidReturnStatusTransition = (method, currentStatus, nextStatus, reason) => {
   const nextStatusId = getReturnStatusId(nextStatus);
-  return getAllowedNextReturnStatusIds(method, currentStatus).includes(nextStatusId);
+  return getAllowedNextReturnStatusIds(method, currentStatus, reason).includes(nextStatusId);
 };
 
 /**
@@ -164,11 +191,16 @@ export const ESTADOS_SALDO_A_FAVOR = [
  * @param {"Reemplazo"|"Reembolso"|"Saldo a favor"} tipo - Tipo de devolución.
  * @returns {string[]} Lista de estados para el tipo dado.
  */
-export const getEstadosByTipo = (tipo) => {
+export const getEstadosByTipo = (tipo, motivo) => {
   const method = normalizeReturnMethod(tipo);
 
-  if (method === "Reemplazo") return ESTADOS_REEMPLAZO;
-  if (method === "Reembolso") return ESTADOS_REEMBOLSO;
+  const withConditionalRejection = (statuses) =>
+    canUseSupplierRejection(motivo)
+      ? [...statuses, getReturnStatusLabelById(RETURN_STATUS_IDS.SUPPLIER_REJECTION)]
+      : statuses;
+
+  if (method === "Reemplazo") return withConditionalRejection(ESTADOS_REEMPLAZO);
+  if (method === "Reembolso") return withConditionalRejection(ESTADOS_REEMBOLSO);
   if (method === "Saldo a favor") return ESTADOS_SALDO_A_FAVOR;
 
   return [];
@@ -210,6 +242,9 @@ export const isEstadoTerminal = (estado) =>
 export const isEstadoAnulado = (estado) =>
   getReturnStatusId(estado) === RETURN_STATUS_IDS.ANNULLED;
 
+export const isEstadoProveedorRechazado = (estado) =>
+  getReturnStatusId(estado) === RETURN_STATUS_IDS.SUPPLIER_REJECTION;
+
 // ─── Estilos de badge de estado (devolución general) ─────────────────────────
 
 /**
@@ -239,6 +274,9 @@ export const getBadgeEstadoDevolucionClasses = (estado = "") => {
   }
   if (normalizedStatus === "Listo") {
     return "bg-emerald-100 text-emerald-700 border-emerald-300";
+  }
+  if (isEstadoProveedorRechazado(normalizedStatus)) {
+    return "bg-orange-100 text-orange-700 border-orange-300";
   }
   if (normalizedStatus === "Pend. envio" || normalizedStatus === "Pend. envío") {
     return "bg-amber-100 text-amber-700 border-amber-300";
@@ -271,6 +309,9 @@ export const getBadgeEstadoDevolucionClasses = (estado = "") => {
 export const getBadgeEstadoProducto = (estado = "") => {
   if (isEstadoAnulado(estado)) {
     return { background: "#fee2e2", color: "#b91c1c" };
+  }
+  if (isEstadoProveedorRechazado(estado)) {
+    return { background: "#ffedd5", color: "#c2410c" };
   }
 
   switch (estado) {

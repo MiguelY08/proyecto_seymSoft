@@ -1,16 +1,31 @@
 // features/administrtivePanel/purchases/purchases/data/purchasesApi.js
 import apiClient from '../../../../../setting/apiClient.js';
 
+// ==========================================
+// ENDPOINTS
+// ==========================================
+
 const api = {
+  // Supplier Purchases (Compras a proveedores)
   getAllPurchases: (params) => apiClient.get('/supplier-purchases', { params }),
   getPurchaseById: (id) => apiClient.get(`/supplier-purchases/${id}`),
   createPurchase: (data) => apiClient.post('/supplier-purchases', data),
   annulPurchase: (id, data) => apiClient.patch(`/supplier-purchases/${id}/annul`, data),
+
+  // Productos (para el formulario de creación)
   getProducts: (params) => apiClient.get('/products', { params }),
   getProductByBarcode: (barcode) => apiClient.get(`/products/barcode/${barcode}`),
+
+  // Proveedores (para el formulario de creación)
   getProviders: (params) => apiClient.get('/providers', { params }),
+
+  // Actualizar producto
   updateProduct: (id, data) => apiClient.put(`/products/${id}`, data),
 };
+
+// ==========================================
+// CONVERSIÓN DE ESTADOS
+// ==========================================
 
 const mapStatusFromBackend = (statusId, statusName) => {
   if (statusName) {
@@ -25,8 +40,10 @@ const mapStatusFromBackend = (statusId, statusName) => {
   return "Completada";
 };
 
+// Mapear compra para la lista
 export const mapPurchaseToList = (purchase) => {
   if (!purchase) return null;
+
   return {
     id: purchase.id,
     numeroFacturacion: purchase.invoiceNumber,
@@ -39,8 +56,10 @@ export const mapPurchaseToList = (purchase) => {
   };
 };
 
+// Mapear compra para el detalle
 export const mapPurchaseToFrontend = (purchase) => {
   if (!purchase) return null;
+
   const details = purchase.details || [];
   const cantidadProductos = details.reduce((sum, d) => sum + (d.quantity || 0), 0);
 
@@ -50,6 +69,18 @@ export const mapPurchaseToFrontend = (purchase) => {
       detail.returnAvailability?.purchasedQuantity ??
       detail.quantity ??
       0
+    );
+    const cantidadDisponibleDevolucion = Number(
+      detail.returnEligibleQuantity ??
+      detail.returnAvailability?.eligibleQuantity ??
+      Math.min(
+        Number(
+          detail.returnAvailableQuantity ??
+          detail.returnAvailability?.availableQuantity ??
+          cantidadComprada
+        ),
+        Number(detail.stockAvailable ?? cantidadComprada)
+      )
     );
 
     return {
@@ -65,11 +96,26 @@ export const mapPurchaseToFrontend = (purchase) => {
       codigoBarras: detail.barcode || '',
       cantidad: cantidadComprada,
       cantidadComprada,
+      cantidadDisponibleDevolucion,
+      cantidadDevueltaDefinitiva: Number(
+        detail.finalReturnedQuantity ??
+        detail.returnAvailability?.finalReturnedQuantity ??
+        0
+      ),
+      cantidadReservadaDevolucion: Number(
+        detail.returnReservedQuantity ??
+        detail.returnAvailability?.reservedQuantity ??
+        0
+      ),
+      stockDisponible: Number(detail.stockAvailable ?? cantidadComprada),
+      returnAvailability: {
+        ...(detail.returnAvailability ?? {}),
+        eligibleQuantity: cantidadDisponibleDevolucion,
+      },
       // ========== NUEVOS CAMPOS ==========
       purchaseType: detail.purchaseType || "Unidad",
       quantityPerPack: detail.quantityPerPack || 0,
       stockAdded: detail.stockAdded || cantidadComprada,
-      // ========== FIN NUEVOS CAMPOS ==========
       valorUnit: detail.netUnitPrice || detail.grossUnitPrice || 0,
       iva: detail.taxPercentage || 0,
       ivaValor: detail.ivaSubtotal || 0,
@@ -93,6 +139,10 @@ export const mapPurchaseToFrontend = (purchase) => {
     maxReturnDate: purchase.maxReturnDate,
   };
 };
+
+// ==========================================
+// COMPRAS
+// ==========================================
 
 export const getAllPurchases = async ({ 
   page = 1, 
@@ -187,6 +237,10 @@ export const annulPurchase = async (id, motivo) => {
   }
 };
 
+// ==========================================
+// ACTUALIZAR PRODUCTO
+// ==========================================
+
 export const updateProductPrices = async (productId, prices) => {
   try {
     const payload = {};
@@ -206,6 +260,34 @@ export const updateProductPrices = async (productId, prices) => {
   }
 };
 
+// ==========================================
+// VALIDACIÓN DE FACTURA
+// ==========================================
+
+export const checkInvoiceExists = async (invoiceNumber) => {
+  try {
+    const response = await api.getAllPurchases({ 
+      search: invoiceNumber,
+      limit: 100,
+      page: 1
+    });
+    
+    const data = response.data;
+    const exists = data.data?.some(
+      purchase => purchase.invoiceNumber?.toLowerCase() === invoiceNumber.toLowerCase()
+    );
+    
+    return exists;
+  } catch (error) {
+    console.error('Error verificando factura:', error);
+    return false;
+  }
+};
+
+// ==========================================
+// PRODUCTOS (para el formulario)
+// ==========================================
+
 export const getProducts = async (searchTerm = '') => {
   try {
     const response = await api.getProducts({ search: searchTerm, limit: 100 });
@@ -221,7 +303,7 @@ export const getProducts = async (searchTerm = '') => {
       partnerPrice: p.partnerPrice || 0,
       bulkPrice: p.bulkPrice || 0,
       iva: p.ivaPercentage || 19,
-      quantityPerPack: p.quantityPerPack || 0, // ← NECESARIO
+      quantityPerPack: p.quantityPerPack || 0,
     }));
   } catch (error) {
     console.error('Error al cargar productos:', error);
@@ -230,6 +312,10 @@ export const getProducts = async (searchTerm = '') => {
 };
 
 export const searchProducts = async (searchTerm) => getProducts(searchTerm);
+
+// ==========================================
+// PROVEEDORES (para el formulario)
+// ==========================================
 
 export const getProviders = async () => {
   try {

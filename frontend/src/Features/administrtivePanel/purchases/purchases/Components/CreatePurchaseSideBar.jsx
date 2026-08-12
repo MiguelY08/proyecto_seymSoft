@@ -14,13 +14,13 @@ import {
   Plus,
   Search,
   Truck,
-  Pencil,
   DollarSign,
   ChevronRight,
   Package,
   Ruler,
   Scale,
   Droplet,
+  Pencil,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAlert } from "../../../../shared/alerts/useAlert";
@@ -50,6 +50,11 @@ const CreateSidebar = ({
   setSelectedProviderId,
   invoiceNumber,
   setInvoiceNumber,
+  invoiceTouched,
+  setInvoiceTouched,
+  invoiceError = "",
+  invoiceValid = false,
+  isCheckingInvoice = false,
   purchaseDate,
   setPurchaseDate,
   searchProduct,
@@ -59,8 +64,6 @@ const CreateSidebar = ({
   handleQuantityChange,
   handleAddProduct: handleAddProductProp,
   purchaseItems,
-  invoiceTouched,
-  setInvoiceTouched,
   dateTouched,
   setDateTouched,
   providerTouched,
@@ -70,6 +73,9 @@ const CreateSidebar = ({
   extraBarcodes = {},
   onExtraBarcodesChange,
   onCollapse,
+  isEditing = false,
+  onCancelEdit = null,
+  editingProductData = null,
 }) => {
   const navigate = useNavigate();
   const { showConfirm, showError, showWarning } = useAlert();
@@ -105,6 +111,55 @@ const CreateSidebar = ({
   const productWrapperRef = useRef(null);
   const purchasePriceInputRef = useRef(null);
   const sidebarRef = useRef(null);
+
+  // ========== EFECTO PARA CARGAR DATOS DE EDICIÓN ==========
+  useEffect(() => {
+    if (isEditing && editingProductData) {
+      const product = editingProductData;
+      const fullProduct = productsDB.find(p => p.id === product.id);
+      if (fullProduct) {
+        setSelectedProduct(fullProduct);
+        setSearchProduct(fullProduct.nombre);
+        
+        setEditingPrices({
+          retailPrice: product.editingRetailPrice?.toString() || fullProduct.retailPrice?.toString() || "",
+          wholesalePrice: product.editingWholesalePrice?.toString() || fullProduct.wholesalePrice?.toString() || "",
+          partnerPrice: product.editingPartnerPrice?.toString() || fullProduct.partnerPrice?.toString() || "",
+          bulkPrice: product.editingBulkPrice?.toString() || fullProduct.bulkPrice?.toString() || "",
+        });
+        
+        setPurchasePrice(product.editingPurchasePrice?.toString() || fullProduct.supplierPrice?.toString() || "");
+        setQuantity(product.editingQuantity || 1);
+        
+        const typeMap = {
+          "Unidad": "unit",
+          "X Paca": "pack",
+          "Litros": "liter",
+          "Kilos": "kilo"
+        };
+        const typeValue = typeMap[product.editingPurchaseType] || "unit";
+        const foundType = Object.values(PURCHASE_TYPES).find(t => t.value === typeValue);
+        if (foundType) {
+          setPurchaseType(foundType);
+        }
+        
+        if (product.editingBarcode) {
+          const barcodes = getProductBarcodeValues(fullProduct);
+          const barcodeIndex = barcodes.findIndex(code => code === product.editingBarcode);
+          if (barcodeIndex !== -1) {
+            setActiveBarcodeIndex(barcodeIndex);
+          }
+        }
+        
+        const purchaseNum = parseFloat(product.editingPurchasePrice || fullProduct.supplierPrice) || 0;
+        const retailNum = parseFloat(product.editingRetailPrice || fullProduct.retailPrice) || 0;
+        const wholesaleNum = parseFloat(product.editingWholesalePrice || fullProduct.wholesalePrice) || 0;
+        if (purchaseNum > 0 && (retailNum <= purchaseNum || wholesaleNum <= purchaseNum)) {
+          setShowPriceEditor(true);
+        }
+      }
+    }
+  }, [isEditing, editingProductData, productsDB]);
 
   // ========== SCROLL AUTOMATICO AL CREAR PRODUCTO ==========
   useEffect(() => {
@@ -143,7 +198,7 @@ const CreateSidebar = ({
   }, []);
 
   useEffect(() => {
-    if (selectedProduct) {
+    if (selectedProduct && !isEditing) {
       setEditingPrices({
         retailPrice: selectedProduct.retailPrice?.toString() || "",
         wholesalePrice: selectedProduct.wholesalePrice?.toString() || "",
@@ -155,7 +210,7 @@ const CreateSidebar = ({
       setProductQuantityPerPack(selectedProduct.quantityPerPack || 0);
       setPriceErrors({});
     }
-  }, [selectedProduct]);
+  }, [selectedProduct, isEditing]);
 
   const getProductWithLocalBarcodes = (product) => ({
     ...product,
@@ -194,14 +249,6 @@ const CreateSidebar = ({
     if (!providerTouched) return null;
     if (!selectedProvider) return "El proveedor es obligatorio";
     if (selectedProvider.length < 3) return "El nombre del proveedor es demasiado corto";
-    return null;
-  })();
-
-  const invoiceError = (() => {
-    if (!invoiceTouched) return null;
-    if (!invoiceNumber.trim()) return "El numero de factura es obligatorio";
-    if (!/^[a-zA-Z0-9\-]{3,20}$/.test(invoiceNumber.trim()))
-      return "Solo letras, numeros y guiones (3-20 caracteres)";
     return null;
   })();
 
@@ -412,7 +459,7 @@ const CreateSidebar = ({
     return errors;
   };
 
-  // ========== VERIFICAR SI TODOS LOS PRECIOS DE VENTA SON VALIDOS O ESTAN EN 0 ==========
+  // ========== VERIFICAR SI TODOS LOS PRECIOS DE VENTA SON VALIDOS ==========
   const areAllSalePricesValid = () => {
     const purchaseNum = parseFloat(purchasePrice) || 0;
     if (purchaseNum <= 0 || !selectedProduct) return true;
@@ -595,6 +642,7 @@ const CreateSidebar = ({
     }
   };
 
+  // ========== HANDLE ADD PRODUCT ==========
   const handleAddProduct = () => {
     if (!purchasePrice || parseFloat(purchasePrice) <= 0) {
       showWarning("Precio de compra requerido", "Debes definir el precio de compra del producto.");
@@ -667,6 +715,28 @@ const CreateSidebar = ({
         </div>
         <div className="flex flex-col gap-4 p-5">
 
+          {/* ========== INDICADOR DE EDICION ========== */}
+          {isEditing && (
+            <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+              <div className="flex items-center gap-2 text-sm text-blue-700">
+                <Pencil size={15} strokeWidth={1.7} />
+                <span> Editando producto</span>
+                <span className="font-semibold">
+                  {selectedProduct?.nombre || "..."}
+                </span>
+              </div>
+              {onCancelEdit && (
+                <button
+                  type="button"
+                  onClick={onCancelEdit}
+                  className="text-sm text-red-500 hover:text-red-700 font-medium cursor-pointer"
+                >
+                  Cancelar
+                </button>
+              )}
+            </div>
+          )}
+
           {/* PROVEEDOR */}
           <div ref={providerWrapperRef} className="relative flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">Proveedor <span className="text-red-500">*</span></label>
@@ -705,18 +775,57 @@ const CreateSidebar = ({
             </div>
           </div>
 
-          {/* FACTURA */}
+          {/* ========== FACTURA CON VALIDACIÓN EN TIEMPO REAL ========== */}
           <div className="flex flex-col gap-1.5">
-            <label className="block text-sm font-medium text-gray-700">No. factura <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700">
+              No. factura <span className="text-red-500">*</span>
+            </label>
             <div className="relative">
               <FileText className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
-              <input type="text" value={invoiceNumber} onChange={(e) => { setInvoiceNumber(e.target.value); setInvoiceTouched(true); }} onBlur={() => setInvoiceTouched(true)} placeholder="Ingrese el No de la factura" className={inputClass(invoiceError)} />
-              {invoiceTouched && invoiceError && <div className="absolute right-3 top-1/2 -translate-y-1/2"><AlertCircle size={16} className="text-red-400" /></div>}
+              <input
+                type="text"
+                value={invoiceNumber}
+                onChange={(e) => { 
+                  setInvoiceNumber(e.target.value); 
+                  setInvoiceTouched(true); 
+                }}
+                onBlur={() => setInvoiceTouched(true)}
+                placeholder="Ingrese el No de la factura"
+                className={`w-full pl-10 pr-9 py-2.5 bg-white border rounded-lg text-sm text-gray-700 outline-none transition-colors duration-200 ${
+                  invoiceTouched && invoiceError
+                    ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                    : invoiceTouched && invoiceValid
+                    ? "border-green-500 focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                    : "border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
+                }`}
+              />
+              {invoiceTouched && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {isCheckingInvoice ? (
+                    <div className="w-4 h-4 border-2 border-[#004D77] border-t-transparent rounded-full animate-spin" />
+                  ) : invoiceError ? (
+                    <AlertCircle size={16} className="text-red-400" />
+                  ) : invoiceValid ? (
+                    <Check size={16} className="text-green-500" />
+                  ) : null}
+                </div>
+              )}
             </div>
-            <div className={`overflow-hidden transition-all duration-300 ${invoiceError ? "max-h-10 mt-1.5 opacity-100" : "max-h-0 opacity-0"}`}>
-              <p className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={12} /> {invoiceError}</p>
+            <div className={`overflow-hidden transition-all duration-300 ${
+              invoiceTouched && (invoiceError || invoiceValid) ? "max-h-10 mt-1.5 opacity-100" : "max-h-0 opacity-0"
+            }`}>
+              <p className={`text-xs flex items-center gap-1 ${
+                invoiceError ? "text-red-500" : "text-green-500"
+              }`}>
+                {invoiceError ? <AlertCircle size={12} /> : <Check size={12} />}
+                {invoiceError || (invoiceValid && "✓ Número de factura disponible")}
+              </p>
             </div>
-            {invoiceTouched && !invoiceError && <p className="text-xs text-gray-400 mt-1 text-right">{invoiceNumber.trim().length}/20 caracteres</p>}
+            {invoiceTouched && !invoiceError && !invoiceValid && !isCheckingInvoice && invoiceNumber.trim().length > 0 && (
+              <p className="text-xs text-gray-400 mt-1 text-right">
+                {invoiceNumber.trim().length}/20 caracteres
+              </p>
+            )}
           </div>
 
           {/* FECHA */}
@@ -858,7 +967,7 @@ const CreateSidebar = ({
             )}
           </div>
 
-          {/* ========== PRECIO DE COMPRA - SIEMPRE EDITABLE ========== */}
+          {/* PRECIO DE COMPRA */}
           <div className="flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">Precio de compra del producto</label>
             <div className="flex items-center gap-2">
@@ -900,7 +1009,7 @@ const CreateSidebar = ({
               </p>
             )}
 
-            {/* Desplegable precios de venta con validacion */}
+            {/* Desplegable precios de venta */}
             <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showPriceEditor && selectedProduct ? "max-h-[500px] opacity-100 mt-2" : "max-h-0 opacity-0"}`}>
               <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
@@ -908,7 +1017,6 @@ const CreateSidebar = ({
                   <span className="text-[10px] text-gray-400">{selectedProduct?.nombre}</span>
                 </div>
 
-                {/* MOSTRAR PRECIO DE COMPRA DE REFERENCIA */}
                 {purchasePrice && parseFloat(purchasePrice) > 0 && (
                   <div className={`rounded-lg p-2 text-center ${
                     validationStatus === false ? 'bg-red-50 border border-red-200' : 
@@ -930,7 +1038,6 @@ const CreateSidebar = ({
                 )}
 
                 <div className="grid grid-cols-2 gap-3">
-                  {/* PRECIO DETAL - OBLIGATORIO */}
                   <div>
                     <label className="block text-[10px] font-medium text-gray-500 mb-1">
                       Precio Detal <span className="text-red-500">*</span>
@@ -955,7 +1062,6 @@ const CreateSidebar = ({
                     )}
                   </div>
 
-                  {/* PRECIO MAYORISTA - OBLIGATORIO */}
                   <div>
                     <label className="block text-[10px] font-medium text-gray-500 mb-1">
                       Precio Mayorista <span className="text-red-500">*</span>
@@ -980,7 +1086,6 @@ const CreateSidebar = ({
                     )}
                   </div>
 
-                  {/* PRECIO COLEGAS - OPCIONAL */}
                   <div>
                     <label className="block text-[10px] font-medium text-gray-500 mb-1">
                       Precio Colegas
@@ -1005,7 +1110,6 @@ const CreateSidebar = ({
                     )}
                   </div>
 
-                  {/* PRECIO X PACAS - OPCIONAL */}
                   <div>
                     <label className="block text-[10px] font-medium text-gray-500 mb-1">
                       Precio X Pacas
@@ -1087,7 +1191,7 @@ const CreateSidebar = ({
             disabled={(hasInvalidSalePrices || hasEmptySalePrices) && parseFloat(purchasePrice) > 0}
           >
             <Plus className="h-4 w-4" strokeWidth={2} /> 
-            Agregar producto ({purchaseItems.length})
+            {isEditing ? 'Actualizar producto' : `Agregar producto (${purchaseItems.length})`}
             {(hasInvalidSalePrices || hasEmptySalePrices) && parseFloat(purchasePrice) > 0 && (
               <span className="text-[10px] ml-1">Precios invalidos</span>
             )}
