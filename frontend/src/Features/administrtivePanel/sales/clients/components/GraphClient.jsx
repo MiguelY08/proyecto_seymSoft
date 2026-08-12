@@ -154,7 +154,7 @@ function GraphClient({ clientId, clientStartDate = '07/05/2023' }) {
           <select
             value={selectedYear}
             onChange={(e) => handleYearChange(Number(e.target.value))}
-            className="cursor-pointer px-3 py-1.5 text-sm font-semibold border border-[#004D77]/30 rounded-lg focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 hover:border-[#004D77] outline-none bg-white text-[#004D77] transition-colors"
+            className="min-w-[76px] cursor-pointer px-3 py-1.5 text-sm font-semibold border border-[#004D77]/30 rounded-lg focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 hover:border-[#004D77] outline-none bg-white text-[#004D77] transition-colors"
           >
             {availableYears.map(year => (
               <option key={year} value={year}>{year}</option>

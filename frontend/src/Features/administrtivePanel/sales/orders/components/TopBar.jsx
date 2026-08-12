@@ -35,7 +35,7 @@ function TopBar({
   orders,
 }) {
   const navigate = useNavigate();
-  const { showWarning, showSuccess } = useAlert();
+  const { showWarning, showSuccess, showConfirm } = useAlert();
   const [isSearchOpen, setIsSearchOpen] = useState(Boolean(search));
   const [openFilter, setOpenFilter] = useState(null);
   const searchWrapperRef = useRef(null);
@@ -61,6 +61,15 @@ function TopBar({
       showWarning('Sin registros', 'No hay pedidos que coincidan con los filtros actuales.');
       return;
     }
+
+    const confirmed = await showConfirm(
+      'question',
+      '¿Desea descargar los pedidos?',
+      `Se exportarán ${orders.length} pedido${orders.length !== 1 ? 's' : ''} en formato Excel.`,
+      { confirmButtonText: 'Descargar', cancelButtonText: 'Cancelar' }
+    );
+
+    if (!confirmed?.isConfirmed) return;
 
     const success = await exportOrdersToExcel(orders);
     if (success) {
@@ -385,7 +394,7 @@ function TopBar({
       <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0 lg:gap-2">
         <Permission permission="pedidos.exportar">
           <ButtonComponent
-            className="flex-1 sm:flex-none bg-white text-green-600 border-green-600 hover:bg-green-400 px-3 flex items-center justify-center gap-2"
+            className="flex-1 sm:flex-none h-10 bg-white text-green-600 border-green-600 hover:bg-green-400 px-3 flex items-center justify-center gap-2"
             onClick={handleDownloadExcel}
           >
             <FileSpreadsheet className="w-4 h-4" />
@@ -397,7 +406,7 @@ function TopBar({
           <ButtonComponent
             onClick={() => navigate('new-order')}
             title="Nuevo"
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2"
+            className="flex-1 sm:flex-none h-10 flex items-center justify-center gap-2"
           >
             <span className="hidden xl:inline">Nuevo</span>
             <Plus className="w-4 h-4" strokeWidth={2} />

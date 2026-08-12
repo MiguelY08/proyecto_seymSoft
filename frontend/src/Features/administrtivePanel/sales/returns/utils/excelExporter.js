@@ -1,7 +1,7 @@
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { formatDate } from './returnsHelpers';
-import logoUrl from '../../../../../assets/PMLogo_Horizontal.png';
+import horizontalLogoUrl from '../../../../../assets/PMLogo_Horizontal.png';
 
 const BLUE = '004D77';
 const LIGHT_BLUE = 'DCEBF3';
@@ -57,48 +57,112 @@ const styleDataRow = (row, index) => {
   });
 };
 
+const getColumnLetter = (columnNumber) => {
+  let letter = '';
+  let number = columnNumber;
+  while (number > 0) {
+    const remainder = (number - 1) % 26;
+    letter = String.fromCharCode(65 + remainder) + letter;
+    number = Math.floor((number - 1) / 26);
+  }
+  return letter;
+};
+
+const getLogoColumnByWidth = (worksheet, columnCount, targetWidth) => {
+  const columnWidths = Array.from(
+    { length: columnCount },
+    (_, index) => worksheet.getColumn(index + 1).width || 10,
+  );
+
+  let accumulated = 0;
+  for (let index = 0; index < columnWidths.length; index += 1) {
+    const width = columnWidths[index];
+    if (targetWidth <= accumulated + width) {
+      return index + (targetWidth - accumulated) / width;
+    }
+    accumulated += width;
+  }
+
+  return Math.max(0, columnCount - 1);
+};
+
+const getCenteredLogoColumn = (worksheet, columnCount, imageWidthPx) => {
+  const imageWidthUnits = imageWidthPx / 7;
+  const columnWidths = Array.from(
+    { length: columnCount },
+    (_, index) => worksheet.getColumn(index + 1).width || 10,
+  );
+  const totalWidth = columnWidths.reduce((sum, width) => sum + width, 0);
+  return getLogoColumnByWidth(
+    worksheet,
+    columnCount,
+    Math.max(0, (totalWidth - imageWidthUnits) / 2),
+  );
+};
+
 const prepareSheet = (worksheet, title, columnCount) => {
-  const lastColumn = worksheet.getColumn(columnCount).letter;
-  styleTitle(worksheet, `B1:${lastColumn}1`, title);
-  worksheet.getRow(1).height = 42;
+  const lastColumn = getColumnLetter(columnCount);
+  worksheet.getRow(1).height = 52;
+  for (let index = 1; index <= columnCount; index += 1) {
+    const cell = worksheet.getCell(`${getColumnLetter(index)}1`);
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BLUE } };
+    cell.border = {
+      top: { style: 'thin', color: { argb: BLUE } },
+      left: { style: 'thin', color: { argb: BLUE } },
+      bottom: { style: 'thin', color: { argb: BLUE } },
+      right: { style: 'thin', color: { argb: BLUE } },
+    };
+  }
+  styleTitle(worksheet, `A1:${lastColumn}1`, title);
+  worksheet.getRow(1).height = 52;
   worksheet.getRow(2).height = 24;
-  worksheet.getCell('A1').value = 'Papelería\nMagic';
-  worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-  worksheet.getCell('A1').font = { bold: true, size: 12, color: { argb: BLUE } };
-  worksheet.mergeCells(`B2:${lastColumn}2`);
-  worksheet.getCell('B2').value =
+  worksheet.mergeCells(`A2:${lastColumn}2`);
+  worksheet.getCell('A2').value =
     `Fecha de exportación: ${new Date().toLocaleString('es-CO')}`;
-  worksheet.getCell('B2').alignment = { horizontal: 'center' };
-  worksheet.getCell('B2').font = { italic: true, color: { argb: BLUE } };
+  worksheet.getCell('A2').alignment = { horizontal: 'center' };
+  worksheet.getCell('A2').font = { italic: true, color: { argb: BLUE } };
   worksheet.addRow([]);
 };
 
-const loadLogoBase64 = async () => {
+const addLogo = (worksheet, logoId, columnCount) => {
+  if (logoId === null || logoId === undefined) return;
+
+  const logoWidth = 205;
+  const logoHeight = 70;
+  worksheet.addImage(logoId, {
+    tl: { col: 0.03, row: 0.02 },
+    ext: { width: logoWidth, height: logoHeight },
+    editAs: 'absolute',
+  });
+};
+
+const createLogoId = async (workbook) => {
+  if (typeof window === 'undefined' || typeof Image === 'undefined') {
+    return null;
+  }
+
   try {
-    const response = await fetch(logoUrl);
-    const blob = await response.blob();
-    return await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = typeof reader.result === 'string' ? reader.result : '';
-        resolve(result.includes(',') ? result.split(',')[1] : result);
-      };
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
+    const image = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = horizontalLogoUrl;
     });
+
+    const width = 760;
+    const height = 260;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+
+    context.drawImage(image, 0, 0, width, height);
+
+    const pngBase64 = canvas.toDataURL('image/png').split(',')[1];
+    return workbook.addImage({ base64: pngBase64, extension: 'png' });
   } catch {
     return null;
   }
-};
-
-const addLogo = (worksheet, logoId) => {
-  if (!logoId) return;
-
-  worksheet.addImage(logoId, {
-    tl: { col: 0.1, row: 0.08 },
-    ext: { width: 120, height: 38 },
-    editAs: 'oneCell',
-  });
 };
 
 export const exportReturnsToExcel = async (returns = []) => {
@@ -107,10 +171,7 @@ export const exportReturnsToExcel = async (returns = []) => {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Papelería Magic';
   workbook.created = new Date();
-  const logoBase64 = await loadLogoBase64();
-  const logoId = logoBase64
-    ? workbook.addImage({ base64: logoBase64, extension: 'png' })
-    : null;
+  const logoId = await createLogoId(workbook);
 
   const summary = workbook.addWorksheet('Devoluciones');
   const summaryHeaders = [
@@ -126,7 +187,6 @@ export const exportReturnsToExcel = async (returns = []) => {
     'Descripción',
   ];
   prepareSheet(summary, 'DEVOLUCIONES DE VENTAS', summaryHeaders.length);
-  addLogo(summary, logoId);
   styleHeader(summary.addRow(summaryHeaders));
 
   returns.forEach((item, index) => {
@@ -162,8 +222,9 @@ export const exportReturnsToExcel = async (returns = []) => {
     { width: 25 },
     { width: 42 },
   ];
-  summary.views = [{ state: 'frozen', ySplit: 4 }];
-  summary.autoFilter = { from: 'A4', to: 'J4' };
+  addLogo(summary, logoId, summaryHeaders.length);
+  summary.views = [{ state: 'frozen', ySplit: 5 }];
+  summary.autoFilter = { from: 'A5', to: 'J5' };
 
   const products = workbook.addWorksheet('Productos devueltos');
   const productHeaders = [
@@ -180,7 +241,6 @@ export const exportReturnsToExcel = async (returns = []) => {
     'Estado producto',
   ];
   prepareSheet(products, 'DETALLE DE PRODUCTOS DEVUELTOS', productHeaders.length);
-  addLogo(products, logoId);
   styleHeader(products.addRow(productHeaders));
 
   let productIndex = 0;
@@ -222,8 +282,9 @@ export const exportReturnsToExcel = async (returns = []) => {
     { width: 22 },
     { width: 20 },
   ];
-  products.views = [{ state: 'frozen', ySplit: 4 }];
-  products.autoFilter = { from: 'A4', to: 'K4' };
+  addLogo(products, logoId, productHeaders.length);
+  products.views = [{ state: 'frozen', ySplit: 5 }];
+  products.autoFilter = { from: 'A5', to: 'K5' };
 
   const buffer = await workbook.xlsx.writeBuffer();
   saveAs(

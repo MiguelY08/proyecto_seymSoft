@@ -135,7 +135,7 @@ function ReturnsPage() {
   const [loading, setLoading] = useState(true);
   const openedNavigationSaleRef = useRef('');
 
-  const { showSuccess, showError } = useAlert();
+  const { showConfirm, showSuccess, showError } = useAlert();
 
   const loadReturns = useCallback(async () => {
     try {
@@ -192,6 +192,16 @@ function ReturnsPage() {
         showError('Sin datos', 'No hay devoluciones para exportar');
         return;
       }
+
+      const confirmed = await showConfirm(
+        'question',
+        '¿Desea descargar las devoluciones?',
+        `Se exportarán ${filtered.length} devolución${filtered.length !== 1 ? 'es' : ''} de ventas en formato Excel.`,
+        { confirmButtonText: 'Descargar', cancelButtonText: 'Cancelar' }
+      );
+
+      if (!confirmed?.isConfirmed) return;
+
       await exportReturnsToExcel(filtered);
       showSuccess('Exportación exitosa', 'El archivo Excel se generó correctamente');
     } catch {

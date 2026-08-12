@@ -1,4 +1,4 @@
-// features/administrtivePanel/purchases/nonConformingProducts/pages/NonConformingProducts.jsx
+﻿// features/administrtivePanel/purchases/nonConformingProducts/pages/NonConformingProducts.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import NonConformingProductsTable from "../components/NonConformingProductsTable";
@@ -7,10 +7,10 @@ import ViewDetailsPN from "./ViewDetailsPN";
 import { PurchasesFilters } from "../../../../shared/DateFilter";
 import { Plus, FileSpreadsheet } from "lucide-react";
 import { getNonConforming, cancelNonConforming } from "../data/nonConformingService";
-import Spinner from "../../../../shared/spinner"; // ← IMPORTAR SPINNER
-import * as XLSX from "xlsx";
+import Spinner from "../../../../shared/spinner"; // â† IMPORTAR SPINNER
 import { normalizeBarcode, useBarcodeScanner } from "../../../../shared/scanner";
 import Permission from "../../../configuration/roles/components/Permission";
+import { exportStyledWorkbook } from "../../../../shared/excel/exportStyledWorkbook";
 
 const NON_CONFORMING_SEARCH_SCANNER_FIELD = "non-conforming-product-search";
 
@@ -120,8 +120,8 @@ export const NonConformingProducts = () => {
     const result = await showConfirm(
       "warning",
       "Anular reporte",
-      `¿Deseas anular el reporte de "${report.nombre}"?`,
-      { confirmButtonText: "Sí, anular", cancelButtonText: "Cancelar" }
+      `Â¿Deseas anular el reporte de "${report.nombre}"?`,
+      { confirmButtonText: "SÃ­, anular", cancelButtonText: "Cancelar" }
     );
     if (!result?.isConfirmed) return;
 
@@ -142,22 +142,106 @@ export const NonConformingProducts = () => {
     showSuccess("Filtros limpiados", "Todos los filtros han sido eliminados");
   };
 
-  const handleDownloadExcel = () => {
+  const handleDownloadExcel = async () => {
     if (reports.length === 0) {
       showInfo("Sin datos", "No hay reportes para exportar.");
       return;
     }
 
+    const confirmed = await showConfirm(
+      "question",
+      "¿Desea descargar productos no conformes?",
+      `Se exportarán ${reports.length} reporte${reports.length !== 1 ? "s" : ""} de producto no conforme en formato Excel.`,
+      { confirmButtonText: "Descargar", cancelButtonText: "Cancelar" }
+    );
+
+    if (!confirmed?.isConfirmed) return;
+
     try {
       const currentDate = new Date();
+      {
+      const totalReportes = reports.length;
+      const totalAfectados = reports.reduce((s, r) => s + (Number(r.cantidadAfectada) || 0), 0);
+      const activos = reports.filter((r) => r.estado === "Activo").length;
+      const anulados = reports.filter((r) => r.estado === "Anulado").length;
+      const porCategoria = reports.reduce((acc, r) => {
+        const cat = r.categoria || "Sin categorÃ­a";
+        acc[cat] = (acc[cat] || 0) + (Number(r.cantidadAfectada) || 0);
+        return acc;
+      }, {});
+
+      await exportStyledWorkbook({
+        fileName: `productos_no_conformes_${currentDate.toISOString().split("T")[0]}.xlsx`,
+        title: "PRODUCTO NO CONFORME",
+        sheets: [
+          {
+            name: "Resumen Reportes",
+            columns: [
+              { header: "Nombre", key: "nombre", width: 35 },
+              { header: "CÃ³digo de barras", key: "codigoBarras", width: 20 },
+              { header: "CategorÃ­a", key: "categoria", width: 24 },
+              { header: "Cantidad afectada", key: "cantidadAfectada", width: 18 },
+              { header: "Fecha detecciÃ³n", key: "fechaDeteccion", width: 18 },
+              { header: "Motivo", key: "motivo", width: 45 },
+              { header: "Estado", key: "estado", width: 16 },
+            ],
+            rows: reports.map((r) => ({
+              nombre: r.nombre || "",
+              codigoBarras: r.codigoBarras || "",
+              categoria: r.categoria || "",
+              cantidadAfectada: r.cantidadAfectada || 0,
+              fechaDeteccion: r.fechaDeteccion || "",
+              motivo: r.motivo || "",
+              estado: r.estado || "",
+            })),
+          },
+          {
+            name: "EstadÃ­sticas",
+            columns: [
+              { header: "MÃ©trica", key: "metric", width: 42 },
+              { header: "Valor", key: "value", width: 28 },
+            ],
+            rows: [
+              { metric: "Total reportes", value: totalReportes },
+              { metric: "Total unidades afectadas", value: totalAfectados },
+              {
+                metric: "Promedio afectados por reporte",
+                value: totalReportes > 0 ? (totalAfectados / totalReportes).toFixed(2) : 0,
+              },
+              { metric: "Reportes activos", value: activos },
+              { metric: "Reportes anulados", value: anulados },
+              ...Object.entries(porCategoria).map(([cat, total]) => ({
+                metric: `Unidades afectadas - ${cat}`,
+                value: total,
+              })),
+              {
+                metric: "Fecha de exportaciÃ³n",
+                value: currentDate.toLocaleString("es-CO", {
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                }),
+              },
+            ],
+          },
+        ],
+      });
+
+
+      showSuccess("ExportaciÃ³n exitosa", "El archivo Excel se generÃ³ correctamente");
+      return;
+      }
       const formattedDate = currentDate.toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" });
       const formattedDateTime = currentDate.toLocaleString("es-CO", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
       const titleRow = [["PRODUCTOS NO CONFORMES"]];
-      const dateRow = [[`Fecha de exportación: ${formattedDate} - ${formattedDateTime}`]];
+      const dateRow = [[`Fecha de exportaciÃ³n: ${formattedDate} - ${formattedDateTime}`]];
       const emptyRow = [[""]];
 
-      const summaryHeaders = ["Nombre", "Código de Barras", "Categoría", "Cantidad Afectada", "Fecha Detección", "Motivo", "Estado"];
+      const summaryHeaders = ["Nombre", "CÃ³digo de Barras", "CategorÃ­a", "Cantidad Afectada", "Fecha DetecciÃ³n", "Motivo", "Estado"];
       const summaryData = reports.map((r) => [
         r.nombre || "",
         r.codigoBarras || "",
@@ -175,7 +259,7 @@ export const NonConformingProducts = () => {
       summaryWs["!merges"].push({ s: { r: 1, c: 0 }, e: { r: 1, c: summaryHeaders.length - 1 } });
       summaryWs["!merges"].push({ s: { r: 3, c: 0 }, e: { r: 3, c: summaryHeaders.length - 1 } });
       summaryWs["A1"] = { v: "PRODUCTOS NO CONFORMES", t: "s" };
-      summaryWs["A2"] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: "s" };
+      summaryWs["A2"] = { v: `Fecha de exportaciÃ³n: ${formattedDate} - ${formattedDateTime}`, t: "s" };
       summaryWs["A4"] = { v: "RESUMEN DE REPORTES", t: "s" };
       summaryWs["!cols"] = [{ wch: 35 }, { wch: 18 }, { wch: 20 }, { wch: 18 }, { wch: 18 }, { wch: 25 }, { wch: 12 }];
 
@@ -184,12 +268,12 @@ export const NonConformingProducts = () => {
       const activos = reports.filter((r) => r.estado === "Activo").length;
       const anulados = reports.filter((r) => r.estado === "Anulado").length;
       const porCategoria = reports.reduce((acc, r) => {
-        const cat = r.categoria || "Sin categoría";
+        const cat = r.categoria || "Sin categorÃ­a";
         acc[cat] = (acc[cat] || 0) + (Number(r.cantidadAfectada) || 0);
         return acc;
       }, {});
 
-      const statsHeaders = ["Métrica", "Valor"];
+      const statsHeaders = ["MÃ©trica", "Valor"];
       const statsData = [
         ["Total Reportes", totalReportes],
         ["Total Unidades Afectadas", totalAfectados],
@@ -198,29 +282,29 @@ export const NonConformingProducts = () => {
         ["Reportes Activos", activos],
         ["Reportes Anulados", anulados],
         [""],
-        ["— Unidades afectadas por categoría —", ""],
+        ["â€” Unidades afectadas por categorÃ­a â€”", ""],
         ...Object.entries(porCategoria).map(([cat, total]) => [cat, total]),
         [""],
-        ["Fecha de Exportación", formattedDateTime],
+        ["Fecha de ExportaciÃ³n", formattedDateTime],
       ];
 
-      const statsSheetData = [...titleRow, ...dateRow, ...emptyRow, [["ESTADÍSTICAS"]], ...emptyRow, statsHeaders, ...statsData];
+      const statsSheetData = [...titleRow, ...dateRow, ...emptyRow, [["ESTADÃSTICAS"]], ...emptyRow, statsHeaders, ...statsData];
       const statsWs = XLSX.utils.aoa_to_sheet(statsSheetData);
       if (!statsWs["!merges"]) statsWs["!merges"] = [];
       statsWs["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } });
       statsWs["!merges"].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 1 } });
       statsWs["!merges"].push({ s: { r: 3, c: 0 }, e: { r: 3, c: 1 } });
       statsWs["A1"] = { v: "PRODUCTOS NO CONFORMES", t: "s" };
-      statsWs["A2"] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: "s" };
-      statsWs["A4"] = { v: "ESTADÍSTICAS", t: "s" };
+      statsWs["A2"] = { v: `Fecha de exportaciÃ³n: ${formattedDate} - ${formattedDateTime}`, t: "s" };
+      statsWs["A4"] = { v: "ESTADÃSTICAS", t: "s" };
       statsWs["!cols"] = [{ wch: 35 }, { wch: 20 }];
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, summaryWs, "Resumen Reportes");
-      XLSX.utils.book_append_sheet(wb, statsWs, "Estadísticas");
+      XLSX.utils.book_append_sheet(wb, statsWs, "EstadÃ­sticas");
       XLSX.writeFile(wb, `productos_no_conformes_${new Date().toISOString().split("T")[0]}.xlsx`);
 
-      showSuccess("Exportación exitosa", "El archivo Excel se generó correctamente");
+      showSuccess("ExportaciÃ³n exitosa", "El archivo Excel se generÃ³ correctamente");
     } catch {
       showError("Error", "No se pudo exportar el archivo");
     }
@@ -243,7 +327,7 @@ export const NonConformingProducts = () => {
   const endIndex = startIndex + 13;
   const currentData = reports;
 
-  // ✅ USAR SPINNER IGUAL QUE EN LAS DEMÁS PÁGINAS
+  // âœ… USAR SPINNER IGUAL QUE EN LAS DEMÃS PÃGINAS
   if (loading && reports.length === 0) {
     return <Spinner message="Cargando reportes..." />;
   }

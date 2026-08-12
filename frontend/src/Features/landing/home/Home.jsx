@@ -382,6 +382,50 @@ const PAGE_STYLES = `
     background: linear-gradient(90deg, transparent, #d1e5f0, transparent);
     margin-top: 48px;
   }
+
+  @keyframes pm-scrollRevealUp {
+    from {
+      opacity: 0;
+      transform: translateY(34px) scale(0.98);
+      filter: blur(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+  }
+
+  .scroll-reveal {
+    opacity: 0;
+    will-change: opacity, transform, filter;
+  }
+
+  .scroll-reveal.is-visible {
+    animation: pm-scrollRevealUp 0.72s cubic-bezier(0.2, 0.75, 0.25, 1) both;
+  }
+
+  .products-grid .pm-card.scroll-reveal {
+    animation: none;
+  }
+
+  .products-grid .pm-card.scroll-reveal.is-visible {
+    animation: pm-scrollRevealUp 0.72s cubic-bezier(0.2, 0.75, 0.25, 1) both;
+  }
+
+  .scroll-reveal.reveal-soft.is-visible {
+    animation-duration: 0.9s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scroll-reveal,
+    .scroll-reveal.is-visible {
+      opacity: 1;
+      animation: none;
+      transform: none;
+      filter: none;
+    }
+  }
 `;
 
 let homeStylesInjected = false;
@@ -499,6 +543,42 @@ function Home() {
   }, [slides]);
 
   // ═══ CONTROLES DEL CARRUSEL ═══
+  useEffect(() => {
+    const elements = document.querySelectorAll('.home-page .scroll-reveal');
+
+    if (!elements.length) return undefined;
+
+    if (!('IntersectionObserver' in window)) {
+      elements.forEach((element) => element.classList.add('is-visible'));
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        });
+      },
+      {
+        threshold: 0.14,
+        rootMargin: '0px 0px -8% 0px',
+      }
+    );
+
+    elements.forEach((element) => observer.observe(element));
+
+    return () => observer.disconnect();
+  }, [
+    slides.length,
+    categories.length,
+    products.length,
+    loadingCategories,
+    loadingProducts,
+    loadingClientType,
+  ]);
+
   const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % slides.length);
   const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
   const goToSlide = (index) => setCurrentSlide(index);
@@ -517,7 +597,7 @@ function Home() {
 
       {/* ══ Carrusel ══ */}
       {slides.length > 0 && (
-        <section style={{ padding: '12px 0 0' }}>
+        <section className="scroll-reveal reveal-soft" style={{ padding: '12px 0 0' }}>
           <div className="carousel-wrap" style={{ height: 'clamp(200px, 52vw, 78vh)' }}>
 
             {/* Slides */}
@@ -603,7 +683,7 @@ function Home() {
 
       {/* ══ Categorías ══ */}
       <section style={{ maxWidth: 'var(--store-content-max)', margin: '0 auto', padding: 'clamp(32px,5vw,56px) var(--store-content-x) 0' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 28 }}>
+        <div className="scroll-reveal" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 28 }}>
           <div>
             <p className="section-eyebrow">Explora</p>
             <h2 className="section-title">Categorías</h2>
@@ -630,10 +710,15 @@ function Home() {
                 <div key={`skeleton-${i}`} className="cat-card loading-skeleton" />
               ))
             ) : categories.length > 0 ? (
-              categories.slice(0, 5).map((cat) => {
+              categories.slice(0, 5).map((cat, index) => {
                 const Icon = categoryIcons[cat.id] || ShoppingBag;
                 return (
-                  <Link key={cat.id} to={`/shop?category=${cat.id}`} className="cat-card">
+                  <Link
+                    key={cat.id}
+                    to={`/shop?category=${cat.id}`}
+                    className="cat-card scroll-reveal"
+                    style={{ animationDelay: `${Math.min(index, 5) * 0.08}s` }}
+                  >
                     <div className="cat-icon-wrap">
                       <Icon size={24} color="#004D77" strokeWidth={1.75} />
                     </div>
@@ -661,7 +746,7 @@ function Home() {
 
       {/* ══ Productos destacados ══ */}
       <section style={{ maxWidth: 'var(--store-content-max)', margin: '0 auto', padding: 'clamp(32px,5vw,56px) var(--store-content-x) 0' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 28 }}>
+        <div className="scroll-reveal" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 28 }}>
           <div>
             <p className="section-eyebrow">Destacados</p>
             <h2 className="section-title">Nuestros productos</h2>
@@ -684,8 +769,12 @@ function Home() {
             products
               .filter((product) => product.isActive)
               .slice(0, 10)
-              .map((product) => (
-                <div key={product.id} className="pm-card">
+              .map((product, index) => (
+                <div
+                  key={product.id}
+                  className="pm-card scroll-reveal"
+                  style={{ animationDelay: `${Math.min(index, 9) * 0.06}s` }}
+                >
                   <ProductCard
                     product={product}
                     clientType={clientType}
@@ -704,7 +793,7 @@ function Home() {
 
       {/* ══ Mayoristas ══ */}
       <section style={{ padding: 'clamp(32px,5vw,56px) 0 clamp(32px,5vw,56px)' }}>
-        <div className="mayoristas-wrap">
+        <div className="mayoristas-wrap scroll-reveal reveal-soft">
           {/* Fondo imagen */}
           <div style={{
             position: 'absolute', inset: 0,

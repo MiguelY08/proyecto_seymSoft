@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { formatDate } from './usersHelpers';
+import { createExcelLogoId, prepareExcelLogoHeader } from '../../../shared/excel/logoHeader';
 
 const COMPANY_COLOR = '004D77';
 const LIGHT_BLUE = 'DCEBF3';
@@ -31,6 +32,40 @@ export const downloadUsersExcel = async (users = []) => {
   const currentDate = new Date();
   const fileDate = currentDate.toISOString().split('T')[0];
 
+  worksheet.columns = [
+    { key: 'id', width: 10 },
+    { key: 'name', width: 32 },
+    { key: 'email', width: 35 },
+    { key: 'phone', width: 18 },
+    { key: 'status', width: 14 },
+    { key: 'role', width: 22 },
+    { key: 'createdAt', width: 18 },
+  ];
+
+  /*
+  worksheet.columns = [
+    { key: 'id', width: 10 },
+    { key: 'name', width: 32 },
+    { key: 'email', width: 35 },
+    { key: 'phone', width: 18 },
+    { key: 'status', width: 14 },
+    { key: 'role', width: 22 },
+    { key: 'createdAt', width: 18 },
+  ];
+  */
+
+  const logoId = await createExcelLogoId(workbook);
+  prepareExcelLogoHeader(worksheet, {
+    title: 'USUARIOS',
+    subtitle: `Fecha de exportación: ${currentDate.toLocaleString('es-CO')}`,
+    columnCount: 7,
+    logoId,
+    blue: COMPANY_COLOR,
+    logoAlign: 'left',
+    singleBlueHeader: true,
+  });
+
+  /*
   worksheet.mergeCells('A1:G1');
   worksheet.getCell('A1').value = 'USUARIOS';
   worksheet.getCell('A1').font = {
@@ -59,6 +94,7 @@ export const downloadUsersExcel = async (users = []) => {
   };
 
   worksheet.addRow([]);
+  */
 
   const headerRow = worksheet.addRow([
     'ID',
@@ -136,13 +172,13 @@ export const downloadUsersExcel = async (users = []) => {
   worksheet.views = [
     {
       state: 'frozen',
-      ySplit: 4,
+      ySplit: 5,
     },
   ];
 
   worksheet.autoFilter = {
-    from: 'A4',
-    to: 'G4',
+    from: 'A5',
+    to: 'G5',
   };
 
   const buffer = await workbook.xlsx.writeBuffer();

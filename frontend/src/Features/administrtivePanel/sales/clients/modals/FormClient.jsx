@@ -3,7 +3,7 @@ import {
   X, ChevronDown, ChevronRight,
   UserCircle, Users, IdCard, MapPin, Phone,
   Mail, UserCheck, CreditCard, ShoppingCart,
-  FileText, Hash, BarChart2, TrendingUp, Loader2,
+  Building2, FileText, Hash, BarChart2, TrendingUp, Loader2,
 } from 'lucide-react';
 import GraphClient from '../components/GraphClient';
 import {
@@ -196,7 +196,7 @@ function MiniFormGraph({ clientId, onExpand }) {
             <select
               value={selectedYear}
               onChange={(e) => handleYearChange(Number(e.target.value))}
-              className="cursor-pointer text-[9px] font-semibold px-2 py-0.5 border border-[#004D77]/30 rounded bg-white text-[#004D77] outline-none transition-colors hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
+              className="min-w-[58px] cursor-pointer text-[9px] font-semibold px-2 py-0.5 border border-[#004D77]/30 rounded bg-white text-[#004D77] outline-none transition-colors hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
               onClick={(e) => e.stopPropagation()}
             >
               {availableYears.map(year => (
@@ -1001,6 +1001,18 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
     </label>
   );
 
+  const iconInputClass = (field, className) =>
+    `${className} pl-9`;
+
+  const IconInput = ({ icon: Icon, className, ...props }) => (
+    <div className="relative">
+      {Icon && (
+        <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
+      )}
+      <input {...props} className={Icon ? iconInputClass(props.name, className) : className} />
+    </div>
+  );
+
   const hasBlockingErrors = isUserOwnedFieldLocked
     ? Boolean(errors.document)
     : Boolean(errors.email || errors.phone || errors.document);
@@ -1092,6 +1104,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                     value={formData.personType}
                     options={personTypeOptions}
                     onChange={(value) => handleSelectChange('personType', value)}
+                    icon={UserCircle}
                     disabled={isEditing}
                     error={errors.personType && touched.personType}
                     placeholder="Selecciona una opción"
@@ -1109,6 +1122,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                       value={formData.documentType}
                       options={documentTypeOptions}
                       onChange={(value) => handleSelectChange('documentType', value)}
+                      icon={IdCard}
                       disabled={isEditing || formData.personType === 'juridica'}
                       error={errors.documentType && touched.documentType}
                       placeholder="Tipo"
@@ -1119,7 +1133,8 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                   </div>
                   <div className="flex min-w-0 flex-col gap-1">
                     <Label required>Documento</Label>
-                    <input
+                    <IconInput
+                      icon={IdCard}
                       type="text"
                       name="document"
                       value={formData.document}
@@ -1127,7 +1142,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                       onBeforeInput={handleNumericBeforeInput}
                       onPaste={handleNumericPaste}
                       onBlur={handleBlur}
-                      placeholder="Ej: 123456789"
+                      placeholder="123456789"
                       autoComplete="off"
                       inputMode={formData.documentType === 'NIT' ? 'text' : 'numeric'}
                       pattern={formData.documentType === 'NIT' ? undefined : '[0-9]*'}
@@ -1144,13 +1159,14 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                 <div className={`grid grid-cols-1 gap-2 ${isLegalPerson ? '' : 'sm:grid-cols-2'}`}>
                 <div className="flex min-w-0 flex-col gap-1">
                   <Label required>{isLegalPerson ? 'Nombre empresa' : 'Nombres'}</Label>
-                  <input
+                    <IconInput
+                    icon={isLegalPerson ? Building2 : UserCircle}
                     type="text"
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder={isLegalPerson ? 'Ej: Papelería Magic SAS' : 'Ej: Juan Carlos'}
+                    placeholder={isLegalPerson ? 'Empresa SAS' : 'Juan'}
                     autoComplete="off"
                     className={isEditing || isUserOwnedFieldLocked ? disabledInputClass('firstName') : inputClass('firstName')}
                     disabled={isEditing || isUserOwnedFieldLocked}
@@ -1162,13 +1178,14 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                   {!isLegalPerson && (
                 <div className="flex min-w-0 flex-col gap-1">
                   <Label required>Apellidos</Label>
-                  <input
+                  <IconInput
+                    icon={UserCircle}
                     type="text"
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="Ej: Pérez Gómez"
+                    placeholder="Pérez"
                     autoComplete="off"
                     className={isEditing || isUserOwnedFieldLocked ? disabledInputClass('lastName') : inputClass('lastName')}
                     disabled={isEditing || isUserOwnedFieldLocked}
@@ -1182,7 +1199,8 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div className="flex min-w-0 flex-col gap-1">
                     <Label required>Teléfono</Label>
-                    <input
+                    <IconInput
+                      icon={Phone}
                       type="tel"
                       name="phone"
                     value={formData.phone}
@@ -1190,7 +1208,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                     onBeforeInput={handleNumericBeforeInput}
                     onPaste={handleNumericPaste}
                     onBlur={handleBlur}
-                      placeholder="Ej: 3001234567"
+                      placeholder="3001234567"
                     autoComplete="off"
                     inputMode="numeric"
                     pattern="[0-9]*"
@@ -1202,13 +1220,14 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                 </div>
                   <div className="flex min-w-0 flex-col gap-1">
                     <Label required>Dirección</Label>
-                    <input
+                    <IconInput
+                      icon={MapPin}
                       type="text"
                       name="address"
                       value={formData.address}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder="Ej: Calle 10 # 15-25"
+                      placeholder="Calle 10 # 15-25"
                       autoComplete="off"
                       maxLength={ADDRESS_MAX_LENGTH}
                       className={inputClass('address')}
@@ -1219,7 +1238,8 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
 
                 <div className="flex flex-col gap-1 md:col-span-2">
                   <Label required>Correo</Label>
-                  <input
+                  <IconInput
+                    icon={Mail}
                     type="email"
                     name="email"
                     value={formData.email}
@@ -1227,7 +1247,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                     onBeforeInput={handleEmailBeforeInput}
                     onPaste={handleEmailPaste}
                     onBlur={handleBlur}
-                    placeholder="Ej: cliente@email.com"
+                    placeholder="email@gmail.com"
                     autoComplete="off"
                     maxLength={EMAIL_MAX_LENGTH}
                   className={isUserOwnedFieldLocked ? disabledInputClass('email') : inputClass('email')}
@@ -1251,13 +1271,14 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div className="flex min-w-0 flex-col gap-1">
                     <Label>{isLegalPerson ? 'Persona encargada' : 'Persona contacto'}</Label>
-                    <input
+                    <IconInput
+                      icon={UserCheck}
                       type="text"
                       name="contactName"
                       value={formData.contactName}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder="Ej: María López"
+                      placeholder="María"
                       autoComplete="off"
                       className={inputClass('contactName')}
                     />
@@ -1265,7 +1286,8 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                   </div>
                   <div className="flex min-w-0 flex-col gap-1">
                     <Label>{isLegalPerson ? 'Numero persona encargada' : 'Tel. contacto'}</Label>
-                    <input
+                    <IconInput
+                      icon={Phone}
                       type="tel"
                       name="contactPhone"
                       value={formData.contactPhone}
@@ -1273,7 +1295,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                       onBeforeInput={handleNumericBeforeInput}
                       onPaste={handleNumericPaste}
                       onBlur={handleBlur}
-                      placeholder="Ej: 3009876543"
+                      placeholder="3009876543"
                       autoComplete="off"
                       inputMode="numeric"
                       pattern="[0-9]*"
@@ -1289,6 +1311,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                     value={formData.clientType}
                     options={clientTypeOptions}
                     onChange={(value) => handleSelectChange('clientType', value)}
+                    icon={Users}
                     error={errors.clientType && touched.clientType}
                     placeholder="Selecciona una opción"
                     ariaLabel="Tipo de cliente"
@@ -1300,13 +1323,14 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
 
                 <div className="flex flex-col gap-1">
                   <Label>Crédito cliente</Label>
-                  <input
+                  <IconInput
+                    icon={CreditCard}
                     type="text"
                     name="clientCredit"
                     value={formData.clientCredit}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="0"
+                    placeholder="100000"
                     autoComplete="off"
                     className={inputClass('clientCredit')}
                   />
@@ -1316,7 +1340,8 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                 {isEditing && (
                   <div className="flex flex-col gap-1">
                     <Label>Saldo a favor</Label>
-                    <input
+                    <IconInput
+                      icon={CreditCard}
                       type="text"
                       name="saldoFavor"
                       value={formData.saldoFavor || '0'}
@@ -1338,6 +1363,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                       value={formData.rut}
                       options={rutOptions}
                       onChange={(value) => handleSelectChange('rut', value)}
+                      icon={FileText}
                       error={errors.rut && touched.rut}
                       placeholder="Seleccione"
                       ariaLabel="RUT"
@@ -1348,7 +1374,8 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                   </div>
                   <div className="flex min-w-0 flex-col gap-1">
                     <Label>Código CIU {formData.rut === 'si' && <span className="text-red-500">*</span>}</Label>
-                    <input
+                    <IconInput
+                      icon={Hash}
                       type="text"
                       name="ciuCode"
                       value={formData.ciuCode}
@@ -1356,7 +1383,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                       onBeforeInput={handleNumericBeforeInput}
                       onPaste={handleNumericPaste}
                       onBlur={handleBlur}
-                      placeholder={formData.rut === 'si' ? "Ej: 4711" : "No aplica"}
+                      placeholder={formData.rut === 'si' ? "4711" : "No aplica"}
                       autoComplete="off"
                       inputMode="numeric"
                       pattern="[0-9]*"

@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
+import { createExcelLogoId, prepareExcelLogoHeader } from "./logoHeader";
 
 const COMPANY_COLOR = "004D77";
 const LIGHT_BLUE = "DCEBF3";
@@ -43,33 +44,20 @@ const styleDataRow = (row, index) => {
   });
 };
 
-const setupWorksheet = (worksheet, title, subtitle, lastColumn) => {
-  worksheet.mergeCells(`A1:${lastColumn}1`);
-  const titleCell = worksheet.getCell("A1");
-  titleCell.value = title;
-  titleCell.font = { bold: true, size: 18, color: { argb: WHITE } };
-  titleCell.alignment = { horizontal: "center", vertical: "middle" };
-  titleCell.fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: COMPANY_COLOR },
-  };
-  worksheet.getRow(1).height = 28;
-
-  worksheet.mergeCells(`A2:${lastColumn}2`);
-  const subtitleCell = worksheet.getCell("A2");
-  subtitleCell.value = subtitle;
-  subtitleCell.font = { italic: true, color: { argb: COMPANY_COLOR } };
-  subtitleCell.alignment = { horizontal: "center" };
-  worksheet.addRow([]);
-};
-
-const addSheet = (workbook, sheet, subtitle) => {
+const addSheet = (workbook, sheet, subtitle, logoId, workbookTitle) => {
   const worksheet = workbook.addWorksheet(sheet.name);
   const lastColumn = String.fromCharCode(64 + sheet.columns.length);
 
-  setupWorksheet(worksheet, sheet.title, subtitle, lastColumn);
   worksheet.columns = sheet.columns;
+  prepareExcelLogoHeader(worksheet, {
+    title: sheet.title || workbookTitle || sheet.name,
+    subtitle,
+    columnCount: sheet.columns.length,
+    logoId,
+    blue: COMPANY_COLOR,
+    logoAlign: "left",
+    singleBlueHeader: true,
+  });
 
   const headerRow = worksheet.addRow(sheet.columns.map((column) => column.header));
   styleHeaderRow(headerRow);
@@ -84,21 +72,23 @@ const addSheet = (workbook, sheet, subtitle) => {
     styleDataRow(row, index);
   });
 
-  worksheet.views = [{ state: "frozen", ySplit: 4 }];
-  worksheet.autoFilter = { from: "A4", to: `${lastColumn}4` };
+  worksheet.views = [{ state: "frozen", ySplit: 5 }];
+  worksheet.autoFilter = { from: "A5", to: `${lastColumn}5` };
 };
 
 export const exportStyledWorkbook = async ({
   fileName,
   sheets,
   subtitle,
+  title,
 }) => {
   const workbook = new ExcelJS.Workbook();
   const currentDate = new Date();
 
   workbook.creator = "SeymSoft";
   workbook.created = currentDate;
-  sheets.forEach((sheet) => addSheet(workbook, sheet, subtitle));
+  const logoId = await createExcelLogoId(workbook);
+  sheets.forEach((sheet) => addSheet(workbook, sheet, subtitle, logoId, title));
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], {
