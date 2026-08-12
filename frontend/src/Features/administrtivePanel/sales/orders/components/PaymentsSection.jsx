@@ -1,5 +1,5 @@
 // src/features/orders/components/PaymentsSection.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Plus, DollarSign, Tag, FileText, CheckCircle, CreditCard, Lock, Trash2, AlertTriangle } from 'lucide-react';
 import { METODOS_PAGO } from '../services/ordersService';
 import FormSelect from '../../../../shared/FormSelect';
@@ -39,6 +39,15 @@ function PaymentsSection({
     comprobante: '',
   });
   const [formError, setFormError] = useState('');
+  const paymentFormRef = useRef(null);
+  const amountInputRef = useRef(null);
+
+  useEffect(() => {
+    if (!showForm) return;
+
+    paymentFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    amountInputRef.current?.focus({ preventScroll: true });
+  }, [showForm]);
 
   const roundMoney = (value) =>
     Math.round((Number(value) || 0) * 100) / 100;
@@ -164,6 +173,11 @@ function PaymentsSection({
     !pago.isLocked &&
     !pago.persisted;
 
+  const handleTogglePaymentForm = () => {
+    setShowForm((current) => !current);
+    setFormError('');
+  };
+
   // Clases unificadas
   const labelClass = "block text-sm font-medium text-gray-700 mb-1";
   const inputBaseClass = "w-full pl-10 pr-3 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 focus:ring-2 focus:ring-[#004D77]/20 focus:border-[#004D77]";
@@ -183,7 +197,7 @@ function PaymentsSection({
         </div>
         {!estaCompletado && !disabled && (
           <button
-            onClick={() => setShowForm(!showForm)}
+            onClick={handleTogglePaymentForm}
             disabled={loading || disabled}
             className="flex w-full items-center justify-center gap-1 rounded-md px-2 py-2 text-sm text-[#004D77] transition-colors duration-200 hover:bg-[#004D77]/10 sm:w-auto sm:py-1"
           >
@@ -214,7 +228,7 @@ function PaymentsSection({
 
         {/* Formulario para agregar pago */}
         {showForm && !estaCompletado && !disabled && (
-          <form onSubmit={handleSubmit} className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <form ref={paymentFormRef} onSubmit={handleSubmit} className="rounded-lg border border-gray-200 bg-gray-50 p-4">
             <h3 className="text-sm font-medium mb-3">Nuevo abono</h3>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -256,6 +270,7 @@ function PaymentsSection({
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
                   <input
+                    ref={amountInputRef}
                     type="text"
                     inputMode="numeric"
                     value={formatMoneyInput(newPayment.monto)}
@@ -356,7 +371,7 @@ function PaymentsSection({
             <p className="text-sm text-gray-500 italic">No hay pagos registrados.</p>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-gray-200 [-webkit-overflow-scrolling:touch]">
-              <table className="min-w-[680px] divide-y divide-gray-200">
+              <table className="w-full min-w-[680px] divide-y divide-gray-200 lg:min-w-0">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>

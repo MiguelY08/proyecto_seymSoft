@@ -113,10 +113,12 @@ const mapSaleToOrderDetail = (sale) => {
 
   return {
     id: order.idOrder ?? sale.pedidoId ?? sale.id,
+    ventaId: sale.id ?? sale.idSale ?? null,
     numeroPedido: order.idOrder ?? sale.numeroPedido ?? sale.pedidoId,
     fechaPedido: order.orderDate ?? sale.saleDate,
     clienteNombre: sale.cliente,
     deliveryRecipientName: sale.deliveryRecipientName ?? order.deliveryRecipientName ?? '',
+    deliveryRecipientPhone: sale.deliveryRecipientPhone ?? order.deliveryRecipientPhone ?? '',
     clienteTipoDocumento:
       sale.clienteTipoDocumento ??
       order.clienteTipoDocumento ??

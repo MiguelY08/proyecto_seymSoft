@@ -25,12 +25,45 @@ const PaginationAdmin = ({
   };
 
   return (
-    <div className="flex items-center justify-between py-3">
-      <p className="text-xs text-gray-600">
+    <div className="flex flex-col items-center gap-2 py-3 lg:flex-row lg:justify-between">
+      <p className="text-center text-xs text-gray-600 lg:text-left">
         Mostrando {totalRecords === 0 ? 0 : startIndex + 1} – {endIndex} de {totalRecords} registros
       </p>
 
-      <div className="flex items-center gap-1.5 rounded-2xl px-4 py-1.5 shadow">
+      {/* Navegación compacta para evitar desbordes en anchos reducidos. */}
+      <div className="flex items-center gap-2 rounded-2xl px-3 py-1.5 shadow lg:hidden">
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          aria-label="Página anterior"
+          className={`flex h-8 w-8 items-center justify-center rounded-lg border ${
+            currentPage === 1
+              ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-white'
+              : 'border-gray-300 text-gray-600 hover:border-gray-400 cursor-pointer bg-white'
+          }`}
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+
+        <span className="whitespace-nowrap text-xs font-medium text-gray-700">
+          Página {currentPage} de {totalPages}
+        </span>
+
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages || totalPages === 0}
+          aria-label="Página siguiente"
+          className={`flex h-8 w-8 items-center justify-center rounded-lg border ${
+            currentPage === totalPages || totalPages === 0
+              ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-white'
+              : 'border-gray-300 text-gray-600 hover:border-gray-400 cursor-pointer bg-white'
+          }`}
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div className="hidden items-center gap-1.5 rounded-2xl px-4 py-1.5 shadow lg:flex">
 
         {/* Anterior */}
         <button

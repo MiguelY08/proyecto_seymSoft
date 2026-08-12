@@ -33,6 +33,24 @@ const toNumber = (value, fallback = 0) => {
 const roundMoney = (value) =>
   Math.round((Number(value) || 0) * 100) / 100;
 
+const MIN_PHONE_DIGITS = 7;
+const MAX_PHONE_DIGITS = 10;
+
+const cleanRecipientPhoneInput = (value) => {
+  let digitsCount = 0;
+
+  return String(value ?? '')
+    .replace(/[^\d\s()+-]/g, '')
+    .split('')
+    .filter((char) => {
+      if (!/\d/.test(char)) return true;
+      if (digitsCount >= MAX_PHONE_DIGITS) return false;
+      digitsCount += 1;
+      return true;
+    })
+    .join('');
+};
+
 const getPrimaryBarcode = (product = {}) => (
   getPrimaryProductBarcode(product)
 );
@@ -506,7 +524,7 @@ function OrdersForm() {
   };
   const handleDeliveryRecipientPhoneChange = (e) => {
     if (pedidoInmutable) return;
-    const value = e.target.value.replace(/[^\d\s()+-]/g, '');
+    const value = cleanRecipientPhoneInput(e.target.value);
     setFormData(prev => ({ ...prev, deliveryRecipientPhone: value }));
     if (errors.deliveryRecipientPhone) {
       setErrors(prev => ({ ...prev, deliveryRecipientPhone: null }));
@@ -515,7 +533,7 @@ function OrdersForm() {
 
   const handleShippingAmountChange = (e) => {
     if (pedidoInmutable) return;
-    const value = e.target.value;
+    const value = String(e.target.value ?? '').replace(/\D/g, '');
     setFormData(prev => ({ ...prev, shippingAmount: value }));
     if (errors.shippingAmount) setErrors(prev => ({ ...prev, shippingAmount: null }));
   };
@@ -690,8 +708,8 @@ function OrdersForm() {
       const recipientPhoneDigits = formData.deliveryRecipientPhone.replace(/\D/g, '');
       if (!recipientPhoneDigits) {
         newErrors.deliveryRecipientPhone = 'Debe ingresar el telefono de la persona que recibe el pedido.';
-      } else if (recipientPhoneDigits.length < 7 || recipientPhoneDigits.length > 15) {
-        newErrors.deliveryRecipientPhone = 'El telefono debe tener entre 7 y 15 digitos.';
+      } else if (recipientPhoneDigits.length < MIN_PHONE_DIGITS || recipientPhoneDigits.length > MAX_PHONE_DIGITS) {
+        newErrors.deliveryRecipientPhone = `El telefono debe tener entre ${MIN_PHONE_DIGITS} y ${MAX_PHONE_DIGITS} digitos.`;
       }
     }
     if (!formData.direccionEntrega?.trim()) {
@@ -866,6 +884,10 @@ function OrdersForm() {
           }
         }
 
+        const generatedSale = createdPayments.find(
+          (payment) => payment?.generatedSale
+        )?.generatedSale;
+
         // Refrescar pagos y total desde el servidor para mantener consistencia
         try {
           const canonicalPayments = await PaymentService.getByPedidoId(orderId);
@@ -875,7 +897,12 @@ function OrdersForm() {
           console.warn('No se pudieron sincronizar pagos tras la actualización:', err);
         }
 
-        showSuccess('Pedido actualizado', `Pedido #${orderResult.numeroPedido} actualizado correctamente.`);
+        showSuccess(
+          generatedSale ? 'Pedido pagado y venta creada' : 'Pedido actualizado',
+          generatedSale
+            ? `El pago completó el pedido y se generó la venta #${generatedSale.idSale ?? generatedSale.id ?? ''}.`
+            : `Pedido #${orderResult.numeroPedido} actualizado correctamente.`
+        );
       } else {
         if (creaVentaDirecta) {
           const paymentMethods = buildDirectSalePaymentMethods(pagos);
@@ -889,6 +916,8 @@ function OrdersForm() {
               idOrderStatus: 3,
               deliveryType: payload.tipoEntrega === 'domicilio' ? 'Domicilio' : 'Recoge',
               deliveryAddress: payload.direccionEntrega,
+              deliveryRecipientName: payload.deliveryRecipientName,
+              deliveryRecipientPhone: payload.deliveryRecipientPhone,
               shippingAmount: payload.shippingAmount,
               deliveryDepartmentCode: payload.departamentoEntregaCodigo,
               deliveryDepartmentName: payload.departamentoEntregaNombre,
@@ -945,6 +974,8 @@ function OrdersForm() {
           );
         });
 
+        let generatedSale = orderResult.sale ?? orderResult.venta ?? null;
+
         for (const pago of notPresent) {
           try {
             const created = await PaymentService.add(orderResult.id, {
@@ -953,6 +984,7 @@ function OrdersForm() {
               comprobante: pago.comprobante,
             });
             if (created) {
+              generatedSale = created.generatedSale ?? generatedSale;
               setPagos((prev) => [...prev, { ...created, locked: true, persisted: true }]);
               setTotalPagado(await PaymentService.getTotalPagado(orderResult.id));
             }
@@ -961,7 +993,12 @@ function OrdersForm() {
           }
         }
 
-        showSuccess('Pedido creado', `Pedido #${orderResult.numeroPedido} registrado con éxito.`);
+        showSuccess(
+          generatedSale ? 'Pedido pagado y venta creada' : 'Pedido creado',
+          generatedSale
+            ? `El pedido se registró y se generó la venta #${generatedSale.idSale ?? generatedSale.id ?? ''}.`
+            : `Pedido #${orderResult.numeroPedido} registrado con éxito.`
+        );
       }
 
       navigate('/admin/sales/orders');
@@ -1008,7 +1045,7 @@ function OrdersForm() {
             {isEditMode ? `Editando Pedido #${id}` : 'Nuevo Pedido'}
           </h1>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
+        <div className="sticky top-0 z-30 -mx-3 grid grid-cols-2 gap-2 bg-white px-3 py-3 shadow-sm sm:-mx-6 sm:px-6 sm:py-3 lg:static lg:mx-0 lg:flex lg:bg-transparent lg:p-0 lg:shadow-none lg:gap-3">
           <button
             onClick={handleCancel}
             className="w-full rounded-lg bg-gray-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 cursor-pointer sm:w-auto sm:px-6"

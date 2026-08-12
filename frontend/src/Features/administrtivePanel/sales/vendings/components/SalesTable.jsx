@@ -451,11 +451,34 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
                         </span>
                       ) : (
                         <button
-                          onClick={() =>
-                            navigateWithSpinner("Cargando edicion de la venta...", "/admin/sales/edit-sale", {
-                              state: { sale: row },
-                            })
-                          }
+                          onClick={() => {
+                            const orderId = row.pedidoId ?? row.order?.id ?? row.order?.idOrder;
+                            const orderStatus = String(row.estadoPedido ?? '')
+                              .normalize('NFD')
+                              .replace(/[\u0300-\u036f]/g, '')
+                              .toLowerCase();
+                            const usesOrderForm = orderStatus.includes('en proceso') || orderStatus.includes('listo');
+
+                            if (!usesOrderForm) {
+                              navigateWithSpinner('Cargando edicion de la venta...', '/admin/sales/edit-sale', {
+                                state: { sale: row },
+                              });
+                              return;
+                            }
+
+                            if (!orderId) {
+                              showError(
+                                'Pedido no disponible',
+                                'No se encontro el pedido asociado a esta venta para editarlo.'
+                              );
+                              return;
+                            }
+
+                            navigateWithSpinner(
+                              'Cargando pedido para edicion...',
+                              `/admin/sales/orders/${orderId}`
+                            );
+                          }}
                           className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                           title="Editar venta"
                         >

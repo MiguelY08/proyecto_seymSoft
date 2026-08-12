@@ -1414,6 +1414,7 @@ function ShoppingCart() {
           <AlertCircle size={11} /> {errors.deliveryRecipientPhone}
         </div>
       )}
+
     </div>
   );
 
@@ -1577,7 +1578,6 @@ function ShoppingCart() {
 
                 {[
                   { name: 'correo', label: 'Correo electrónico', icon: Mail, type: 'email', placeholder: 'ejemplo@correo.com' },
-                  { name: 'telefono', label: 'Teléfono', icon: Phone, type: 'tel', placeholder: '3001234567' },
                 ].map((field) => (
                   <div className="form-group" key={field.name}>
                     <label className="form-label">

@@ -215,8 +215,7 @@ function TopBar({
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 lg:w-auto lg:justify-end">
-        <div className="flex flex-col gap-0.5 w-full sm:w-44">
-          <label className="text-xs text-gray-500 font-medium pl-0.5">Fecha Inicial</label>
+        <div className="w-full sm:w-44">
           <div className="relative">
             <Calendar
               className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
@@ -226,6 +225,7 @@ function TopBar({
               type="date"
               value={fechaInicial}
               max={fechaFinal || undefined}
+              aria-label="Fecha inicial"
               onChange={(event) => {
                 setFechaInicial(event.target.value);
                 setCurrentPage(1);
@@ -235,8 +235,7 @@ function TopBar({
           </div>
         </div>
 
-        <div className="flex flex-col gap-0.5 w-full sm:w-44">
-          <label className="text-xs text-gray-500 font-medium pl-0.5">Fecha Final</label>
+        <div className="w-full sm:w-44">
           <div className="relative">
             <Calendar
               className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
@@ -246,6 +245,7 @@ function TopBar({
               type="date"
               value={fechaFinal}
               min={fechaInicial || undefined}
+              aria-label="Fecha final"
               onChange={(event) => {
                 setFechaFinal(event.target.value);
                 setCurrentPage(1);
@@ -256,8 +256,7 @@ function TopBar({
         </div>
 
         {hayFiltrosActivos && (
-          <div className="flex flex-col gap-0.5 w-full sm:w-auto">
-            <label className="text-xs text-gray-500 font-medium pl-0.5 invisible">Limpiar</label>
+          <div className="w-full sm:w-auto">
             <button
               onClick={handleClearFilters}
               className="flex w-full items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium border border-gray-400 rounded-lg text-gray-600 bg-white hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 cursor-pointer whitespace-nowrap sm:w-auto"

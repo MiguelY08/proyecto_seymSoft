@@ -303,8 +303,9 @@ function DetailOrder({
 
   const esModoVenta = modo === 'venta';
   const titulo = esModoVenta 
-    ? `Venta #${order.numeroPedido || order.id}`
+    ? `Venta #${order.ventaId || order.id}`
     : `Pedido #${order.numeroPedido || order.id}`;
+  const pedidoRelacionadoId = order.numeroPedido || order.id;
 
   return (
     <>
@@ -328,6 +329,11 @@ function DetailOrder({
               <h2 className="truncate text-base font-semibold text-white sm:text-lg">
                 {titulo}
               </h2>
+              {esModoVenta && pedidoRelacionadoId && (
+                <span className="w-fit rounded-full bg-white/15 px-2 py-1 text-xs font-medium text-white">
+                  Pedido #{pedidoRelacionadoId}
+                </span>
+              )}
               <div className="flex flex-wrap items-center gap-2">
                 <EstadoLogisticoBadgePill estado={order.estadoLogistico} />
                 <EstadoPagoBadgePill estado={order.pagoEstado} />
