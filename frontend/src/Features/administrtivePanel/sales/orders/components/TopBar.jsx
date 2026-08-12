@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -90,16 +90,6 @@ function TopBar({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isSearchOpen, search]);
 
-  const handleDownloadExcel = async () => {
-    if (orders.length === 0) {
-      showWarning('Sin registros', 'No hay pedidos que coincidan con los filtros actuales.');
-      return;
-    }
-
-    if (await exportOrdersToExcel(orders)) {
-      showSuccess('Exportación exitosa', 'El archivo Excel se ha descargado correctamente.');
-    }
-  };
 
   return (
     <div className="flex shrink-0 flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">

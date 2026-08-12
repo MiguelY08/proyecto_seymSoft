@@ -1,7 +1,6 @@
 ﻿import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
-import logoUrl from "../../../../../assets/PMLogo_Horizontal.png";
-import { addExcelLogo } from "../../../../shared/excel/logoHeader";
+import { createExcelLogoId, addExcelLogo } from "../../../../shared/excel/logoHeader";
 
 const BLUE = "004D77";
 const LIGHT_BLUE = "DCEBF3";
@@ -158,24 +157,6 @@ const setAutoFilter = (worksheet, from, to) => {
   worksheet.autoFilter = { from, to };
 };
 
-const loadLogoBase64 = async () => {
-  try {
-    const response = await fetch(logoUrl);
-    const blob = await response.blob();
-    return await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = typeof reader.result === "string" ? reader.result : "";
-        resolve(result.includes(",") ? result.split(",")[1] : result);
-      };
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
-};
-
 const addLogo = (worksheet, logoId, columnCount) => {
   if (logoId === null || logoId === undefined) return;
 
@@ -193,10 +174,7 @@ export const exportIndicatorsExcel = async (indicators, range = {}) => {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "PapelerÃ­a Magic";
   workbook.created = new Date();
-  const logoBase64 = await loadLogoBase64();
-  const logoId = logoBase64
-    ? workbook.addImage({ base64: logoBase64, extension: "png" })
-    : null;
+  const logoId = await createExcelLogoId(workbook);
 
   const summary = workbook.addWorksheet("Resumen general");
   prepareSheetWithLogoSpace(

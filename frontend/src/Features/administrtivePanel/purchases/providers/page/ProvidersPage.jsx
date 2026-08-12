@@ -276,7 +276,7 @@ function ProvidersPage() {
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto p-2.5 sm:p-3.5 md:overflow-hidden">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto p-2.5 sm:p-3.5">
       <ProvidersToolbar
         searchTerm={searchTerm}
         onSearchChange={handleSearchChange}
