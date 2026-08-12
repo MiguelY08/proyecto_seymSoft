@@ -94,7 +94,7 @@ const ProductosTooltip = ({ productos, search, totalDetails = 0, completedDetail
           onMouseEnter={show}
           onMouseLeave={hide}
         >
-          <span className="text-sm text-gray-700 max-w-[170px] truncate">
+          <span className="text-xs text-gray-700 max-w-[170px] truncate">
             {highlight(`${total} producto${total !== 1 ? "s" : ""}`, search)}
           </span>
           <Info className="w-3.5 h-3.5 text-gray-400 shrink-0" strokeWidth={1.5} />
@@ -134,7 +134,7 @@ const ProductosTooltip = ({ productos, search, totalDetails = 0, completedDetail
         onMouseEnter={show}
         onMouseLeave={hide}
       >
-        <span className="text-sm text-gray-700 max-w-[170px] truncate">
+        <span className="text-xs text-gray-700 max-w-[170px] truncate">
           {highlight(preview, search)}
         </span>
         <Info className="w-3.5 h-3.5 text-gray-400 shrink-0" strokeWidth={1.5} />
@@ -303,19 +303,19 @@ function ReturnsTable({
   }
 
   return (
-    <div className="h-full min-h-0 min-w-0 w-full flex-1 overflow-auto overscroll-contain rounded-xl [-webkit-overflow-scrolling:touch]">
-      <table className="w-full min-w-[900px] table-auto lg:min-w-[980px]">
+    <div className="min-w-0 w-full overflow-x-auto overscroll-x-contain rounded-xl [-webkit-overflow-scrolling:touch]">
+      <table className="min-w-max w-full table-auto">
 
         <thead className="sticky top-0 z-20 bg-[#004D77] text-white">
           <tr>
-            <th className="sticky left-0 z-30 bg-[#004D77] px-4 py-3 text-center text-sm font-semibold">No. Devolución</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Compra</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Proveedor</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">F. Devolución</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Productos</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Devolver</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Estado</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold">Acciones</th>
+            <th className="sticky left-0 z-30 bg-[#004D77] px-3 py-2.5 text-center text-xs font-semibold">No. Devolución</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Compra</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Proveedor</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">F. Devolución</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Productos</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Devolver</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Estado</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold">Acciones</th>
           </tr>
         </thead>
 
@@ -334,27 +334,27 @@ function ReturnsTable({
               <tr key={devolucion.id} className={`group transition-colors duration-150 ${rowBg}`}>
 
                 {/* No. Devolución */}
-                <td className={`sticky left-0 z-10 px-4 py-2.5 text-center text-sm text-gray-800 whitespace-nowrap font-medium transition-colors duration-150 ${stickyCellBg}`}>
+                <td className={`sticky left-0 z-10 px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap font-mono transition-colors duration-150 ${stickyCellBg}`}>
                   {highlight(devolucion.id, search)}
                 </td>
 
                 {/* Compra */}
-                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(devolucion.idCompra, search)}
                 </td>
 
                 {/* Proveedor */}
-                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(proveedor, search)}
                 </td>
 
                 {/* Fecha */}
-                <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
+                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(devolucion.fechaDevolucion, search)}
                 </td>
 
                 {/* Productos con tooltip */}
-                <td className="px-4 py-2.5 text-sm">
+                <td className="px-3 py-2 text-xs">
                   <ProductosTooltip
                     productos={devolucion.productos}
                     search={search}
@@ -365,27 +365,27 @@ function ReturnsTable({
                 </td>
 
                 {/* Total unidades a devolver */}
-                <td className="px-4 py-2.5 text-center text-sm text-gray-700 font-semibold whitespace-nowrap">
+                <td className="px-3 py-2 text-center text-xs text-gray-800 font-semibold whitespace-nowrap">
                   {devolucion.productos?.length
                     ? highlight(String(totalUnidades), search)
                     : highlight(progressLabel, search)}
                 </td>
 
                 {/* Estado con tooltip */}
-                <td className="px-4 py-2.5 text-center">
+                <td className="px-3 py-2 text-center whitespace-nowrap">
                   <EstadoTooltip devolucion={devolucion} />
                 </td>
 
                 {/* Acciones */}
-                <td className="px-4 py-2.5">
-                  <div className="flex items-center justify-center gap-2">
+                <td className="px-3 py-2">
+                  <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                     {canViewInfo && (
                       <button
                         onClick={() => onViewDetail(devolucion)}
                         title="Ver detalle"
                         className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                       >
-                        <Info className="w-5 h-5" strokeWidth={1.5} />
+                        <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                       </button>
                     )}
                     {canEdit(devolucion) && (
@@ -394,7 +394,7 @@ function ReturnsTable({
                         title="Editar devolución"
                         className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                       >
-                        <SquarePen className="w-5 h-5" strokeWidth={1.5} />
+                        <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                       </button>
                     )}
                     {canAnnul(devolucion) && (
@@ -403,7 +403,7 @@ function ReturnsTable({
                         title="Anular devolución"
                         className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
                       >
-                        <XCircle className="w-5 h-5" strokeWidth={1.5} />
+                        <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                       </button>
                     )}
                   </div>

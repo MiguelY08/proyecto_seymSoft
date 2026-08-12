@@ -23,7 +23,6 @@ const formatCurrency = (value) =>
 
 const paymentMethodOptions = [
   { value: METODOS_PAGO.TRANSFERENCIA, label: 'Transferencia' },
-  { value: METODOS_PAGO.EFECTIVO, label: 'Efectivo' },
 ];
 
 function ApprovePaymentReceiptModal({

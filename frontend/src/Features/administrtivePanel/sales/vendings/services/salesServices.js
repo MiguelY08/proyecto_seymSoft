@@ -228,6 +228,14 @@ const mapSaleFromApi = (sale) => {
       order?.recipientName ??
       order?.receiverName ??
       '',
+    deliveryRecipientPhone:
+      sale?.deliveryRecipientPhone ??
+      sale?.delivery_recipient_phone ??
+      order?.deliveryRecipientPhone ??
+      order?.delivery_recipient_phone ??
+      order?.recipientPhone ??
+      order?.receiverPhone ??
+      '',
     tipoVenta: getSaleType(sale),
     entrega: order?.deliveryType ?? order?.tipoEntrega ?? order?.direccionEntrega ?? sale?.delivery ?? '-',
     direccion: order?.deliveryAddress ?? order?.direccionEntrega ?? sale?.direccion ?? '',

@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Plus,
   FileSpreadsheet,
-  ChevronDown,
   Calendar,
   ShoppingCart,
   X,
@@ -53,9 +53,12 @@ function TopBar({
   const navigate = useNavigate();
   const { showConfirm, showTimer, showWarning, showError } = useAlert();
   const [showSaleTypeMenu, setShowSaleTypeMenu] = useState(false);
+  const [saleTypeMenuStyle, setSaleTypeMenuStyle] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(Boolean(search));
   const searchWrapperRef = useRef(null);
+  const saleTypeMenuTriggerRef = useRef(null);
+  const saleTypeMenuRef = useRef(null);
   const hasActiveFilters = Boolean(search || fechaInicial || fechaFinal || activeType !== 'all');
 
   const handleClearFilters = () => {
@@ -77,11 +80,62 @@ function TopBar({
       ) {
         setIsSearchOpen(false);
       }
+
+      if (
+        !saleTypeMenuTriggerRef.current?.contains(event.target) &&
+        !saleTypeMenuRef.current?.contains(event.target)
+      ) {
+        setShowSaleTypeMenu(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isSearchOpen, search]);
+
+  const updateSaleTypeMenuPosition = useCallback(() => {
+    const trigger = saleTypeMenuTriggerRef.current;
+    if (!trigger) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const viewport = window.visualViewport;
+    const viewportWidth = viewport?.width ?? window.innerWidth;
+    const viewportHeight = viewport?.height ?? window.innerHeight;
+    const viewportLeft = viewport?.offsetLeft ?? 0;
+    const viewportTop = viewport?.offsetTop ?? 0;
+    const padding = 8;
+    const gap = 8;
+    const width = Math.min(176, Math.max(0, viewportWidth - padding * 2));
+    const spaceBelow = viewportTop + viewportHeight - rect.bottom - gap;
+    const spaceAbove = rect.top - viewportTop - gap;
+    const openUp = spaceBelow < 112 && spaceAbove > spaceBelow;
+    const maxHeight = Math.min(160, Math.max(0, openUp ? spaceAbove : spaceBelow));
+    const minLeft = viewportLeft + padding;
+    const maxLeft = viewportLeft + viewportWidth - padding - width;
+    const left = Math.min(Math.max(rect.right - width, minLeft), Math.max(minLeft, maxLeft));
+    const top = openUp
+      ? Math.max(viewportTop + padding, rect.top - maxHeight - gap)
+      : Math.min(rect.bottom + gap, viewportTop + viewportHeight - padding - maxHeight);
+
+    setSaleTypeMenuStyle({ position: 'fixed', top, left, width, maxHeight, zIndex: 9999 });
+  }, []);
+
+  useEffect(() => {
+    if (!showSaleTypeMenu) return undefined;
+
+    updateSaleTypeMenuPosition();
+    window.addEventListener('resize', updateSaleTypeMenuPosition);
+    window.addEventListener('scroll', updateSaleTypeMenuPosition, true);
+    window.visualViewport?.addEventListener('resize', updateSaleTypeMenuPosition);
+    window.visualViewport?.addEventListener('scroll', updateSaleTypeMenuPosition);
+
+    return () => {
+      window.removeEventListener('resize', updateSaleTypeMenuPosition);
+      window.removeEventListener('scroll', updateSaleTypeMenuPosition, true);
+      window.visualViewport?.removeEventListener('resize', updateSaleTypeMenuPosition);
+      window.visualViewport?.removeEventListener('scroll', updateSaleTypeMenuPosition);
+    };
+  }, [showSaleTypeMenu, updateSaleTypeMenuPosition]);
 
   const handleNewSale = (vendingType) => {
     setShowSaleTypeMenu(false);
@@ -131,12 +185,12 @@ function TopBar({
   };
 
   return (
-    <div className="flex flex-col gap-3 shrink-0 min-w-0 lg:flex-row lg:items-end lg:justify-between">
-      <div className="flex flex-col gap-3 min-w-0 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 lg:flex-1">
+    <div className="flex min-w-0 shrink-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex min-w-0 flex-col gap-3 lg:flex-1 lg:flex-row lg:flex-nowrap lg:items-start lg:gap-3">
         <div
           ref={searchWrapperRef}
           className={`relative w-full transition-all duration-300 ease-out sm:shrink-0 ${
-            isSearchOpen ? 'sm:w-64 lg:w-72' : 'sm:w-10'
+            isSearchOpen ? 'sm:w-64 lg:w-52 xl:w-64 2xl:w-72' : 'sm:w-10'
           }`}
         >
           {isSearchOpen ? (
@@ -175,7 +229,8 @@ function TopBar({
           )}
         </div>
 
-        <div className="relative w-full transition-all duration-300 sm:w-44 lg:w-40" title="Fecha inicial">
+        <div className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:flex-1 lg:grid-cols-none lg:flex lg:flex-wrap lg:items-start lg:gap-3">
+        <div className="relative w-full sm:min-w-0 lg:w-40" title="Fecha inicial">
           <Calendar
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
             strokeWidth={1.8}
@@ -193,7 +248,7 @@ function TopBar({
           />
         </div>
 
-        <div className="relative w-full transition-all duration-300 sm:w-44 lg:w-40" title="Fecha final">
+        <div className="relative w-full sm:min-w-0 lg:w-40" title="Fecha final">
           <Calendar
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
             strokeWidth={1.8}
@@ -211,7 +266,7 @@ function TopBar({
           />
         </div>
 
-        <div className="w-full min-w-0 transition-all duration-300 sm:w-44">
+        <div className="w-full min-w-0 sm:col-span-2 lg:w-40">
           <FormSelect
             value={activeType}
             options={SALES_TYPE_OPTIONS}
@@ -226,16 +281,17 @@ function TopBar({
           <button
             type="button"
             onClick={handleClearFilters}
-            className="w-full h-10 flex items-center justify-center border border-gray-300 rounded-lg text-gray-600 bg-white hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 cursor-pointer sm:w-10 sm:shrink-0"
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white text-gray-600 transition-all duration-200 hover:bg-gray-100 hover:text-gray-800 sm:col-span-2 lg:w-auto"
             title="Limpiar filtros"
             aria-label="Limpiar filtros"
           >
-            <Eraser className="w-4 h-4" strokeWidth={2} />
+            <Eraser className="w-4 h-4" strokeWidth={2} /><span className="lg:hidden">Limpiar filtros</span>
           </button>
         )}
+        </div>
       </div>
 
-      <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
+      <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0 lg:self-start">
         <Permission permission="ventas.exportar">
           <ButtonComponent
             className={`flex-1 sm:flex-none bg-white text-green-600 border-green-600 px-3 flex items-center justify-center gap-2 ${
@@ -251,7 +307,7 @@ function TopBar({
         </Permission>
 
         <Permission permission="ventas.crear">
-          <div className="relative flex-1 sm:flex-none">
+          <div ref={saleTypeMenuTriggerRef} className="flex-1 sm:flex-none">
             <ButtonComponent
               onClick={() => setShowSaleTypeMenu((prev) => !prev)}
               title="Nueva"
@@ -261,8 +317,8 @@ function TopBar({
               <Plus className="w-4 h-4" strokeWidth={2} />
             </ButtonComponent>
 
-            {showSaleTypeMenu && (
-              <div className="absolute right-0 top-full mt-2 w-full min-w-44 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden z-20">
+            {showSaleTypeMenu && saleTypeMenuStyle && createPortal(
+              <div ref={saleTypeMenuRef} style={saleTypeMenuStyle} className="overflow-y-auto rounded-lg border border-gray-100 bg-white shadow-lg">
                 <button
                   type="button"
                   onClick={() => handleNewSale('manual')}
@@ -277,7 +333,8 @@ function TopBar({
                 >
                   Venta directa
                 </button>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
         </Permission>

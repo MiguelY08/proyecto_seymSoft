@@ -129,7 +129,7 @@ function OrdersTable({
   }
 
   return (
-    <div className="max-h-none min-w-0 w-full overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-xl pb-2 sm:max-h-[calc(100vh-170px)] sm:overflow-auto sm:pb-0 [-webkit-overflow-scrolling:touch]">
+    <div className="min-w-0 w-full overflow-x-auto overscroll-x-contain rounded-xl [-webkit-overflow-scrolling:touch]">
       <table className="min-w-max w-full table-auto">
         <thead className="sticky top-0 z-20 bg-[#004D77] text-white">
           <tr>
