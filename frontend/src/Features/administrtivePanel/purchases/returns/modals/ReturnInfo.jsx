@@ -34,7 +34,7 @@ const DetailRow = ({ icon: Icon, label, value, highlight = false }) => {
     value !== undefined && value !== null && String(value).trim().length > 0;
 
   return (
-    <div className="flex items-start gap-3 border-b border-gray-50 py-2 last:border-0">
+    <div className="flex min-w-0 items-start gap-2 rounded-lg border border-gray-100 bg-gray-50/70 p-2.5 md:gap-3 md:rounded-none md:border-x-0 md:border-t-0 md:border-b md:bg-transparent md:px-0 md:py-2 md:last:border-b-0">
       <div
         className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${
           hasValue ? "bg-[#004D77]/10" : "bg-gray-100"
@@ -187,15 +187,10 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 divide-y divide-gray-100 md:grid-cols-2 md:divide-x md:divide-y-0">
-            <div className="px-4 py-4 sm:px-6 sm:py-5">
+          <div className="grid grid-cols-1 gap-3 px-4 py-4 sm:px-6 sm:py-5 md:grid-cols-2 md:gap-0 md:p-0 md:divide-x md:divide-gray-100">
+            <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-none md:border-0 md:px-6 md:py-5 md:shadow-none">
               <SectionTitle>Información general</SectionTitle>
-              <DetailRow
-                icon={FileText}
-                label="No. devolución"
-                value={devolucion?.id}
-                highlight
-              />
+              <div className="grid grid-cols-2 gap-2 md:block">
               <DetailRow
                 icon={FileText}
                 label="No. factura"
@@ -211,10 +206,12 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
                 label="Fecha de devolución"
                 value={devolucion?.fechaDevolucion}
               />
+              </div>
             </div>
 
-            <div className="px-4 py-4 sm:px-6 sm:py-5">
+            <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-none md:border-0 md:px-6 md:py-5 md:shadow-none">
               <SectionTitle>Estado del proceso</SectionTitle>
+              <div className="grid grid-cols-2 gap-2 md:block">
               <DetailRow
                 icon={PackageCheck}
                 label="Estado"
@@ -236,6 +233,7 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
                 label="Compra asociada"
                 value={devolucion?.purchaseId ?? devolucion?.idCompra}
               />
+              </div>
             </div>
           </div>
 

@@ -940,7 +940,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
 
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:w-[min(920px,96vw)] sm:rounded-lg"
+        className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-[92vh] sm:w-[min(920px,96vw)] sm:rounded-lg"
       >
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between gap-3 bg-[#004D77] px-4 py-3 sm:px-6 sm:py-4">
@@ -963,8 +963,8 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
         </div>
 
         {/* Body */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden lg:divide-x lg:divide-gray-200">
-          <div className="flex min-h-0 w-full shrink-0 flex-col border-b border-gray-200 lg:w-[40%] lg:border-b-0">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <div className="flex w-full shrink-0 flex-col border-b border-gray-200">
               <div className="shrink-0 px-4 pb-2 pt-3 sm:px-5 sm:pt-4">
                 <p className="text-sm font-medium text-gray-700 mb-0.5">
                   {isEdit ? 'Productos de la compra' : 'Productos a devolver'}
@@ -982,7 +982,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
                   Seleccionar todos
                 </label>
               </div>
-              <div className="flex max-h-[34dvh] flex-col gap-1.5 overflow-y-auto px-4 pb-3 sm:px-5 lg:max-h-none lg:flex-1 lg:pb-4">
+              <div className="flex max-h-[26dvh] flex-col gap-1.5 overflow-y-auto px-4 pb-3 sm:px-5 lg:max-h-[24dvh] lg:pb-4">
                 {productosCompra.map((p) => {
                   const isSelected = seleccionados.has(p.codigoBarras);
                   const tieneError = productoTieneErrorConLineas(p.codigoBarras, erroresProducto);
@@ -1034,7 +1034,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
               </div>
             </div>
 
-          <div className="flex min-h-0 flex-none flex-col overflow-visible lg:flex-1 lg:overflow-hidden">
+          <div className="flex shrink-0 flex-col overflow-visible">
             <div className="shrink-0 px-4 pb-2 pt-3 sm:px-5 sm:pt-4">
               <p className="text-sm font-medium text-gray-700 mb-0.5">Configurar productos</p>
             </div>
@@ -1049,7 +1049,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
               </div>
             )}
 
-            <div className="flex flex-none flex-col gap-3 overflow-visible px-4 pb-4 sm:px-5 lg:flex-1 lg:overflow-y-auto">
+            <div className="flex flex-none flex-col gap-3 overflow-visible px-4 pb-4 sm:px-5">
               {productosSeleccionadosArray.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 gap-2">
                   <p className="text-sm">Ningun producto seleccionado</p>

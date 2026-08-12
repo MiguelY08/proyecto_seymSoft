@@ -14,7 +14,7 @@ import { PurchaseReturnsService } from "../services/returnsServices";
 import { getPurchaseById } from "../../purchases/data/PurchasesService";
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 
-const RECORDS_PER_PAGE = 13;
+const RECORDS_PER_PAGE = 11;
 
 const DEFAULT_METRICS = {
   total: 0,
@@ -274,7 +274,7 @@ function Returns() {
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-hidden p-3 sm:p-4">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto p-3 sm:p-4">
       <TopBar
         search={search}
         setSearch={(value) => {
@@ -293,7 +293,7 @@ function Returns() {
         <PurchaseReturnsMetricsCards metrics={metricsLoading ? DEFAULT_METRICS : metrics} />
       </div>
 
-      <div className="flex min-h-0 w-full min-w-0 flex-1 overflow-hidden rounded-xl bg-white shadow-md">
+      <div className="w-full min-w-0 shrink-0 overflow-hidden rounded-xl bg-white shadow-md">
         <ReturnsTable
           currentData={returns}
           search={search}
@@ -304,6 +304,8 @@ function Returns() {
           onAnnul={handleAnnul}
         />
       </div>
+
+      <div className="min-h-0 flex-1" />
 
       {pagination.total > 0 && (
         <div className="shrink-0">

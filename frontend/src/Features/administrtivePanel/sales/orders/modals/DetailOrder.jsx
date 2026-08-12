@@ -28,7 +28,9 @@ function DetailRow({ icon, label, value, placeholder, highlight = false, multili
   const hasValue = value && String(value).trim() !== '';
   const IconComponent = icon;
   return (
-    <div className="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0">
+    <div className={`flex min-w-0 items-start gap-2 rounded-lg border border-gray-100 bg-gray-50/70 p-2.5 md:gap-3 md:rounded-none md:border-x-0 md:border-t-0 md:border-b md:bg-transparent md:px-0 md:py-2 md:last:border-b-0 ${
+      multiline ? 'col-span-2 md:col-auto' : ''
+    }`}>
       <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5 ${
         hasValue ? 'bg-[#004D77]/10' : 'bg-gray-100'
       }`}>
@@ -233,8 +235,8 @@ function DetailOrder({
     onClose();
   };
 
-  const handleDownloadPDF = () => {
-    exportOrderToPDF(order, pagos, asesorNombre);
+  const handleDownloadPDF = async () => {
+    await exportOrderToPDF(order, pagos, asesorNombre);
   };
 
   const ensurePendingReceipt = (receipt) => {
@@ -303,8 +305,9 @@ function DetailOrder({
 
   const esModoVenta = modo === 'venta';
   const titulo = esModoVenta 
-    ? `Venta #${order.numeroPedido || order.id}`
+    ? `Venta #${order.ventaId || order.id}`
     : `Pedido #${order.numeroPedido || order.id}`;
+  const pedidoRelacionadoId = order.numeroPedido || order.id;
 
   return (
     <>
@@ -328,6 +331,11 @@ function DetailOrder({
               <h2 className="truncate text-base font-semibold text-white sm:text-lg">
                 {titulo}
               </h2>
+              {esModoVenta && pedidoRelacionadoId && (
+                <span className="w-fit rounded-full bg-white/15 px-2 py-1 text-xs font-medium text-white">
+                  Pedido #{pedidoRelacionadoId}
+                </span>
+              )}
               <div className="flex flex-wrap items-center gap-2">
                 <EstadoLogisticoBadgePill estado={order.estadoLogistico} />
                 <EstadoPagoBadgePill estado={order.pagoEstado} />
@@ -357,9 +365,9 @@ function DetailOrder({
               </div>
             )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
+          <div className="grid grid-cols-1 gap-3 px-4 py-4 sm:px-6 sm:py-5 md:grid-cols-2 md:gap-0 md:p-0 md:divide-x md:divide-gray-100">
             {/* ── Columna izquierda: Detalles ─────────────────── */}
-            <div className="px-4 py-4 sm:px-6 sm:py-5">
+            <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-none md:border-0 md:px-6 md:py-5 md:shadow-none">
               <div className="flex items-center gap-2 mb-3">
                 <div className="h-px flex-1 bg-gray-100" />
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">
@@ -368,6 +376,7 @@ function DetailOrder({
                 <div className="h-px flex-1 bg-gray-100" />
               </div>
 
+              <div className="grid grid-cols-2 gap-2 md:block">
               <DetailRow icon={Calendar}   label="Fecha"      value={fechaMostrar} />
               <DetailRow icon={User}       label="Persona que recibe" value={personaRecibe} />
               {!isRecoge && (
@@ -384,10 +393,11 @@ function DetailOrder({
               )}
               <DetailRow icon={Truck}      label="Entrega"    value={entregaMostrar} />
               <DetailRow icon={MapPin}     label="Dirección de entrega"  value={direccionEntregaCompleta || 'No aplica'} multiline />
+              </div>
             </div>
 
             {/* ── Columna derecha: Productos y pagos ───────────────────────── */}
-            <div className="flex flex-col px-4 py-4 sm:px-6 sm:py-5">
+            <div className="flex flex-col rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-none md:border-0 md:px-6 md:py-5 md:shadow-none">
               <div className="flex items-center gap-2 mb-3">
                 <div className="h-px flex-1 bg-gray-100" />
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">

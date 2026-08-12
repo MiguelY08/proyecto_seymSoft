@@ -101,7 +101,7 @@ function OrdersList() {
   const loadOrders = async () => {
     setLoading(true);
     try {
-      const rawOrders = await OrdersService.list();
+      const rawOrders = await OrdersService.listAll();
       if (active) {
         setOrders(rawOrders);
       }
@@ -330,7 +330,7 @@ function OrdersList() {
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-y-auto overflow-x-hidden p-2.5 sm:overflow-hidden sm:p-3">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto p-2.5 sm:p-3">
       {actionLoadingMessage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
           <Spinner message={actionLoadingMessage} className="min-h-0" />

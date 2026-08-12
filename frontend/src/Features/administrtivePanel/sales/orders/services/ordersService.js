@@ -436,8 +436,8 @@ const buildCreateOrderPayload = (data = {}) => {
     saleType,
     deliveryType: isRecoge ? 'Recoge' : 'Domicilio',
     deliveryAddress: isRecoge ? null : data.direccionEntrega,
-    deliveryRecipientName: isRecoge || saleType === 'direct' ? null : data.deliveryRecipientName,
-    deliveryRecipientPhone: isRecoge || saleType === 'direct' ? null : data.deliveryRecipientPhone,
+    deliveryRecipientName: isRecoge ? null : data.deliveryRecipientName,
+    deliveryRecipientPhone: isRecoge ? null : data.deliveryRecipientPhone,
     shippingAmount,
     deliveryDepartmentCode: isRecoge ? null : data.departamentoEntregaCodigo,
     deliveryDepartmentName: isRecoge ? null : data.departamentoEntregaNombre,
@@ -560,11 +560,35 @@ export const LocationService = {
   },
 };
 export const OrdersService = {
-  async list(params = {}) {
+  async getPage(params = {}) {
     const response = await apiClient.get('/orders', { params });
+    const responseData = response?.data ?? response;
     const payload = unwrap(response);
     const orders = Array.isArray(payload) ? payload : payload?.orders ?? payload?.pedidos ?? [];
-    return orders.map(normalizeOrder);
+
+    return {
+      orders: orders.map(normalizeOrder),
+      pagination: responseData?.pagination ?? null,
+    };
+  },
+
+  async list(params = {}) {
+    const { orders } = await this.getPage(params);
+    return orders;
+  },
+
+  async listAll(params = {}) {
+    const limit = Math.min(Math.max(Number(params.limit) || 100, 1), 100);
+    const firstPage = await this.getPage({ ...params, page: 1, limit });
+    const orders = [...firstPage.orders];
+    const totalPages = Number(firstPage.pagination?.totalPages) || 1;
+
+    for (let page = 2; page <= totalPages; page += 1) {
+      const response = await this.getPage({ ...params, page, limit });
+      orders.push(...response.orders);
+    }
+
+    return orders;
   },
 
   async findById(id) {
@@ -687,7 +711,15 @@ export const PaymentService = {
     const result = unwrap(response);
     const updatedOrder = normalizeOrder(result?.order ?? result);
     const payments = updatedOrder.pagos || [];
-    return payments[payments.length - 1] || null;
+    const lastPayment = payments[payments.length - 1] || null;
+    const generatedSale = result?.generatedSale ?? null;
+
+    return lastPayment
+      ? {
+          ...lastPayment,
+          generatedSale,
+        }
+      : null;
   },
 
   async addDevolucion(pedidoId, monto) {

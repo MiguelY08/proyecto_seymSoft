@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Search,
+  AlertTriangle,
   Calendar,
+  CreditCard,
   Eraser,
   FileSpreadsheet,
   Plus,
+  Search,
   Truck,
-  CreditCard,
-  AlertTriangle,
   X,
-  ChevronDown,
 } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import ButtonComponent from '../../../../shared/ButtonComponent';
+import FormSelect from '../../../../shared/FormSelect';
 import { exportOrdersToExcel } from '../helpers/ordersHelpers';
 import { ORIGENES, ESTADOS_PAGO } from '../services/ordersService';
 import Permission from '../../../configuration/roles/components/Permission';
@@ -37,12 +37,31 @@ function TopBar({
   const navigate = useNavigate();
   const { showWarning, showSuccess, showConfirm } = useAlert();
   const [isSearchOpen, setIsSearchOpen] = useState(Boolean(search));
-  const [openFilter, setOpenFilter] = useState(null);
   const searchWrapperRef = useRef(null);
-  const filtersWrapperRef = useRef(null);
+  const hasActiveFilters = Boolean(
+    search || fechaInicial || fechaFinal || origenFilter || pagoEstadoFilter || envioFilter
+  );
 
-  const hayFiltrosActivos = search || fechaInicial || fechaFinal || origenFilter || pagoEstadoFilter || envioFilter;
-  const compactFilters = isSearchOpen;
+  const origenOptions = [
+    { value: '', label: 'Todos', icon: Truck, iconClassName: 'text-gray-400' },
+    { value: ORIGENES.MANUAL, label: 'Manual', icon: Truck, iconClassName: 'text-[#004D77]' },
+    { value: ORIGENES.WEB, label: 'Web', icon: Truck, iconClassName: 'text-[#004D77]' },
+  ];
+  const pagoOptions = [
+    { value: '', label: 'Todos', icon: CreditCard, iconClassName: 'text-gray-400' },
+    { value: ESTADOS_PAGO.PENDIENTE, label: 'Pendiente', icon: CreditCard, iconClassName: 'text-amber-500' },
+    { value: ESTADOS_PAGO.PAGADO, label: 'Pagado', icon: CreditCard, iconClassName: 'text-green-600' },
+  ];
+  const envioOptions = [
+    { value: '', label: 'Todos', icon: AlertTriangle, iconClassName: 'text-gray-400' },
+    { value: 'pendiente', label: 'Pendiente', icon: AlertTriangle, iconClassName: 'text-amber-500' },
+    { value: 'completo', label: 'Completo', icon: AlertTriangle, iconClassName: 'text-green-600' },
+  ];
+
+  const resetPageAndSet = (setter) => (value) => {
+    setter(value);
+    setCurrentPage(1);
+  };
 
   const handleClearFilters = () => {
     setSearch('');
@@ -53,9 +72,9 @@ function TopBar({
     setEnvioFilter('');
     setCurrentPage(1);
     setIsSearchOpen(false);
-    setOpenFilter(null);
   };
 
+<<<<<<< HEAD
   const handleDownloadExcel = async () => {
     if (orders.length === 0) {
       showWarning('Sin registros', 'No hay pedidos que coincidan con los filtros actuales.');
@@ -105,12 +124,10 @@ function TopBar({
     { value: 'completo', label: 'Completo' },
   ];
 
+=======
+>>>>>>> 3048ccd1d7b3b34132a236b3e7a723a5e1a08645
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (filtersWrapperRef.current && !filtersWrapperRef.current.contains(event.target)) {
-        setOpenFilter(null);
-      }
-
       if (
         isSearchOpen &&
         !search.trim() &&
@@ -125,15 +142,24 @@ function TopBar({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isSearchOpen, search]);
 
+  const handleDownloadExcel = async () => {
+    if (orders.length === 0) {
+      showWarning('Sin registros', 'No hay pedidos que coincidan con los filtros actuales.');
+      return;
+    }
+
+    if (await exportOrdersToExcel(orders)) {
+      showSuccess('Exportación exitosa', 'El archivo Excel se ha descargado correctamente.');
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-3 shrink-0 min-w-0 lg:flex-row lg:flex-nowrap lg:items-end lg:justify-between">
-      <div className="flex flex-col gap-3 min-w-0 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 lg:flex-1 lg:flex-nowrap lg:gap-2 xl:gap-3">
+    <div className="flex shrink-0 flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex min-w-0 flex-col gap-3 lg:flex-1 lg:flex-row lg:flex-nowrap lg:items-start lg:gap-3">
         <div
           ref={searchWrapperRef}
           className={`relative w-full transition-all duration-300 ease-out sm:shrink-0 ${
-            isSearchOpen
-              ? 'sm:w-64 lg:w-52 xl:w-64 2xl:w-72'
-              : 'sm:w-10'
+            isSearchOpen ? 'sm:w-64 lg:w-52 xl:w-64 2xl:w-72' : 'sm:w-10'
           }`}
         >
           {isSearchOpen ? (
@@ -143,266 +169,65 @@ function TopBar({
                 placeholder="Buscar"
                 value={search}
                 autoFocus
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full pl-4 pr-10 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400"
+                onChange={(event) => resetPageAndSet(setSearch)(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-4 pr-10 text-sm text-gray-700 outline-none transition-colors duration-200 placeholder:text-gray-400 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
               />
-              <button
-                type="button"
-                onClick={() => {
-                  setSearch('');
-                  setCurrentPage(1);
-                  setIsSearchOpen(false);
-                }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#004D77] transition"
-                title="Cerrar búsqueda"
-                aria-label="Cerrar búsqueda"
-              >
-                <X className="w-4 h-4" strokeWidth={2} />
+              <button type="button" onClick={() => { setSearch(''); setCurrentPage(1); setIsSearchOpen(false); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-[#004D77]" title="Cerrar búsqueda" aria-label="Cerrar búsqueda">
+                <X className="h-4 w-4" strokeWidth={2} />
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              onClick={() => setIsSearchOpen(true)}
-              className="w-full h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 hover:text-[#004D77] hover:border-[#004D77] transition sm:w-10"
-              title="Buscar"
-              aria-label="Buscar"
-            >
-              <Search className="w-4 h-4" strokeWidth={2} />
+            <button type="button" onClick={() => setIsSearchOpen(true)} className="flex h-10 w-full items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 transition hover:border-[#004D77] hover:text-[#004D77] sm:w-10" title="Buscar" aria-label="Buscar">
+              <Search className="h-4 w-4" strokeWidth={2} />
             </button>
           )}
         </div>
 
-        <div className="relative w-full transition-all duration-300 sm:w-44 lg:w-36 xl:w-40" title="Fecha inicial">
-          <Calendar
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-            strokeWidth={1.8}
-          />
-          <input
-            type="date"
-            value={fechaInicial}
-            max={fechaFinal || undefined}
-            onChange={(event) => {
-              setFechaInicial(event.target.value);
-              setCurrentPage(1);
-            }}
-            className="pl-9 pr-2 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-600 w-full"
-            aria-label="Fecha inicial"
-          />
-        </div>
-
-        <div className="relative w-full transition-all duration-300 sm:w-44 lg:w-36 xl:w-40" title="Fecha final">
-          <Calendar
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-            strokeWidth={1.8}
-          />
-          <input
-            type="date"
-            value={fechaFinal}
-            min={fechaInicial || undefined}
-            onChange={(event) => {
-              setFechaFinal(event.target.value);
-              setCurrentPage(1);
-            }}
-            className="pl-9 pr-2 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-600 w-full"
-            aria-label="Fecha final"
-          />
-        </div>
-
-        <div ref={filtersWrapperRef} className="grid w-full grid-cols-2 gap-3 sm:w-auto sm:flex sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 lg:flex-nowrap lg:gap-2 xl:gap-3">
-          <div
-            className={`relative w-full min-w-0 transition-all duration-300 sm:w-40 ${
-              compactFilters ? 'lg:w-12 xl:w-14' : 'lg:w-32 xl:w-40'
-            }`}
-          >
-          <button
-            type="button"
-            onClick={() => setOpenFilter((current) => (current === 'origen' ? null : 'origen'))}
-            className={`w-full h-10 flex items-center justify-between rounded-lg border border-gray-300 bg-white pl-3 pr-2 text-sm text-gray-600 hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none transition ${
-              compactFilters ? 'lg:px-2' : ''
-            }`}
-            title="Origen"
-            aria-label="Origen"
-          >
-            <span className="flex items-center gap-2 min-w-0">
-              <Truck className="w-4 h-4 text-gray-400 shrink-0" strokeWidth={1.8} />
-              <span className={`truncate ${compactFilters ? 'lg:hidden' : ''}`}>
-                {origenFilter ? getOptionLabel(origenOptions, origenFilter, 'Origen') : 'Origen'}
-              </span>
-            </span>
-            <ChevronDown
-              className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform ${
-                openFilter === 'origen' ? 'rotate-180' : ''
-              }`}
-              strokeWidth={2}
-            />
-          </button>
-
-          {openFilter === 'origen' && (
-            <div className="absolute z-[9999] left-0 top-full mt-1 w-full min-w-44 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-              <ul className="py-1">
-                {origenOptions.map((option) => {
-                  const isSelected = origenFilter === option.value;
-
-                  return (
-                    <li key={option.label}>
-                      <button
-                        type="button"
-                        onClick={() => handleSelectFilter(setOrigenFilter, option.value)}
-                        className={`w-full px-4 py-2 text-left text-sm transition-colors duration-150 ${
-                          isSelected
-                            ? 'bg-[#004D77]/10 text-[#004D77] font-medium'
-                            : 'text-gray-700 hover:bg-[#004D77]/10'
-                        }`}
-                      >
-                        <span className="font-medium">{option.label}</span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
+        <div className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:flex-1 lg:grid-cols-none lg:flex lg:flex-wrap lg:items-start lg:gap-3">
+          <div className="relative w-full sm:min-w-0 sm:flex-1 lg:w-40 lg:flex-none">
+            <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
+            <input type="date" value={fechaInicial} max={fechaFinal || undefined} aria-label="Fecha inicial" onChange={(event) => resetPageAndSet(setFechaInicial)(event.target.value)} className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-9 pr-3 text-sm text-gray-600 outline-none transition-colors duration-200 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20" />
           </div>
-
-          <div
-            className={`relative w-full min-w-0 transition-all duration-300 sm:w-44 ${
-              compactFilters ? 'lg:w-12 xl:w-14' : 'lg:w-[8.5rem] xl:w-44'
-            }`}
-          >
-          <button
-            type="button"
-            onClick={() => setOpenFilter((current) => (current === 'pago' ? null : 'pago'))}
-            className={`w-full h-10 flex items-center justify-between rounded-lg border border-gray-300 bg-white pl-3 pr-2 text-sm text-gray-600 hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none transition ${
-              compactFilters ? 'lg:px-2' : ''
-            }`}
-            title="Estado de pago"
-            aria-label="Estado de pago"
-          >
-            <span className="flex items-center gap-2 min-w-0">
-              <CreditCard className="w-4 h-4 text-gray-400 shrink-0" strokeWidth={1.8} />
-              <span className={`truncate ${compactFilters ? 'lg:hidden' : ''}`}>
-                {pagoEstadoFilter ? getOptionLabel(pagoOptions, pagoEstadoFilter, 'Pago') : 'Pago'}
-              </span>
-            </span>
-            <ChevronDown
-              className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform ${
-                openFilter === 'pago' ? 'rotate-180' : ''
-              }`}
-              strokeWidth={2}
-            />
-          </button>
-
-          {openFilter === 'pago' && (
-            <div className="absolute z-[9999] right-0 top-full mt-1 w-full min-w-48 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-              <ul className="py-1">
-                {pagoOptions.map((option) => {
-                  const isSelected = pagoEstadoFilter === option.value;
-
-                  return (
-                    <li key={option.label}>
-                      <button
-                        type="button"
-                        onClick={() => handleSelectFilter(setPagoEstadoFilter, option.value)}
-                        className={`w-full px-4 py-2 text-left text-sm transition-colors duration-150 ${
-                          isSelected
-                            ? 'bg-[#004D77]/10 text-[#004D77] font-medium'
-                            : 'text-gray-700 hover:bg-[#004D77]/10'
-                        }`}
-                      >
-                        <span className="font-medium">{option.label}</span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
+          <div className="relative w-full sm:min-w-0 sm:flex-1 lg:w-40 lg:flex-none">
+            <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
+            <input type="date" value={fechaFinal} min={fechaInicial || undefined} aria-label="Fecha final" onChange={(event) => resetPageAndSet(setFechaFinal)(event.target.value)} className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-9 pr-3 text-sm text-gray-600 outline-none transition-colors duration-200 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20" />
           </div>
-
-          <div
-            className={`relative col-span-2 w-full min-w-0 transition-all duration-300 sm:col-span-1 sm:w-44 ${
-              compactFilters ? 'lg:w-12 xl:w-14' : 'lg:w-[8.5rem] xl:w-44'
-            }`}
-          >
-          <button
-            type="button"
-            onClick={() => setOpenFilter((current) => (current === 'envio' ? null : 'envio'))}
-            className={`w-full h-10 flex items-center justify-between rounded-lg border border-gray-300 bg-white pl-3 pr-2 text-sm text-gray-600 hover:border-[#004D77] focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none transition ${
-              compactFilters ? 'lg:px-2' : ''
-            }`}
-            title="Envio"
-            aria-label="Envio"
-          >
-            <span className="flex items-center gap-2 min-w-0">
-              <AlertTriangle className="w-4 h-4 text-gray-400 shrink-0" strokeWidth={1.8} />
-              <span className={`truncate ${compactFilters ? 'lg:hidden' : ''}`}>
-                {envioFilter ? getOptionLabel(envioOptions, envioFilter, 'Envio') : 'Envio'}
-              </span>
-            </span>
-            <ChevronDown
-              className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform ${
-                openFilter === 'envio' ? 'rotate-180' : ''
-              }`}
-              strokeWidth={2}
-            />
-          </button>
-
-          {openFilter === 'envio' && (
-            <div className="absolute z-[9999] left-0 top-full mt-1 w-full min-w-48 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-              <ul className="py-1">
-                {envioOptions.map((option) => {
-                  const isSelected = envioFilter === option.value;
-
-                  return (
-                    <li key={option.label}>
-                      <button
-                        type="button"
-                        onClick={() => handleSelectFilter(setEnvioFilter, option.value)}
-                        className={`w-full px-4 py-2 text-left text-sm transition-colors duration-150 ${
-                          isSelected
-                            ? 'bg-[#004D77]/10 text-[#004D77] font-medium'
-                            : 'text-gray-700 hover:bg-[#004D77]/10'
-                        }`}
-                      >
-                        <span className="font-medium">{option.label}</span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
+          <div className={`w-full sm:min-w-0 sm:flex-1 lg:flex-none ${isSearchOpen ? 'lg:w-16' : 'lg:w-40'}`}>
+            <FormSelect value={origenFilter} options={origenOptions} onChange={resetPageAndSet(setOrigenFilter)} placeholder="Origen" ariaLabel="Filtrar por origen" hideSelectedLabel={isSearchOpen} triggerClassName={isSearchOpen ? 'lg:h-10 lg:px-2 lg:pl-2' : ''} minDropdownWidth={192} />
           </div>
+          <div className={`w-full sm:min-w-0 sm:flex-1 lg:flex-none ${isSearchOpen ? 'lg:w-16' : 'lg:w-40'}`}>
+            <FormSelect value={pagoEstadoFilter} options={pagoOptions} onChange={resetPageAndSet(setPagoEstadoFilter)} placeholder="Pago" ariaLabel="Filtrar por estado de pago" hideSelectedLabel={isSearchOpen} triggerClassName={isSearchOpen ? 'lg:h-10 lg:px-2 lg:pl-2' : ''} minDropdownWidth={192} />
+          </div>
+          <div className={`w-full sm:col-span-2 sm:min-w-0 lg:flex-none ${isSearchOpen ? 'lg:w-16' : 'lg:w-40'}`}>
+            <FormSelect value={envioFilter} options={envioOptions} onChange={resetPageAndSet(setEnvioFilter)} placeholder="Envío" ariaLabel="Filtrar por estado de envío" hideSelectedLabel={isSearchOpen} triggerClassName={isSearchOpen ? 'lg:h-10 lg:px-2 lg:pl-2' : ''} minDropdownWidth={192} />
+          </div>
+          {hasActiveFilters && (
+            <button type="button" onClick={handleClearFilters} className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-800 sm:col-span-2 lg:w-auto" title="Limpiar filtros">
+              <Eraser className="h-4 w-4" strokeWidth={2} />
+              <span className="lg:hidden">Limpiar filtros</span>
+            </button>
+          )}
         </div>
-
-        {hayFiltrosActivos && (
-          <button
-            onClick={handleClearFilters}
-            className="w-full h-10 flex items-center justify-center border border-gray-300 rounded-lg text-gray-600 bg-white hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 cursor-pointer sm:w-10 sm:shrink-0"
-            title="Limpiar filtros"
-            aria-label="Limpiar filtros"
-          >
-            <Eraser className="w-4 h-4" strokeWidth={2} />
-          </button>
-        )}
       </div>
 
-      <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0 lg:gap-2">
+      <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0 lg:self-start">
         <Permission permission="pedidos.exportar">
+<<<<<<< HEAD
           <ButtonComponent
             className="flex-1 sm:flex-none h-10 bg-white text-green-600 border-green-600 hover:bg-green-400 px-3 flex items-center justify-center gap-2"
             onClick={handleDownloadExcel}
           >
             <FileSpreadsheet className="w-4 h-4" />
             <span className="hidden 2xl:inline">Exportar Excel</span>
+=======
+          <ButtonComponent className="flex-1 bg-white px-3 text-green-600 border-green-600 hover:bg-green-400 sm:flex-none" onClick={handleDownloadExcel} title="Exportar Excel">
+            <FileSpreadsheet className="h-4 w-4" />
+            <span className="hidden sm:inline">Exportar Excel</span>
+>>>>>>> 3048ccd1d7b3b34132a236b3e7a723a5e1a08645
           </ButtonComponent>
         </Permission>
-
         <Permission permission="pedidos.crear">
+<<<<<<< HEAD
           <ButtonComponent
             onClick={() => navigate('new-order')}
             title="Nuevo"
@@ -410,6 +235,11 @@ function TopBar({
           >
             <span className="hidden xl:inline">Nuevo</span>
             <Plus className="w-4 h-4" strokeWidth={2} />
+=======
+          <ButtonComponent onClick={() => navigate('new-order')} title="Nuevo pedido" className="flex-1 sm:flex-none">
+            <span className="hidden sm:inline">Nuevo</span>
+            <Plus className="h-4 w-4" strokeWidth={2} />
+>>>>>>> 3048ccd1d7b3b34132a236b3e7a723a5e1a08645
           </ButtonComponent>
         </Permission>
       </div>

@@ -30,6 +30,7 @@ export const register = async (userData) => {
       email: userData.email,
       pass_word: userData.password,
       phone: userData.phone,
+      termsAccepted: userData.termsAccepted === true,
     });
 
     const { user, role, permissions, client, accessToken, refreshToken } =
@@ -93,11 +94,6 @@ export const login = async (email, password) => {
     const { user, role, permissions, accessToken, refreshToken, client } =
       response.data.data;
 
-    console.log("LOGIN RESPONSE:");
-    console.log("user:", user);
-    console.log("role:", role);
-    console.log("permissions:", permissions);
-
     saveSession({
       user,
       role,
@@ -106,8 +102,6 @@ export const login = async (email, password) => {
       refreshToken,
       client,
     });
-
-    console.log("SESSION SAVED:", getSession());
 
     return {
       success: true,
@@ -434,9 +428,8 @@ export const checkEmailAvailability = async (email) => {
   const normalizedEmail = String(email || "")
     .trim()
     .toLowerCase();
-  const response = await apiClient.get("/auth/check-email", {
-    params: { email: normalizedEmail },
-  });
+  const params = new URLSearchParams({ email: normalizedEmail });
+  const response = await apiClient.get(`/auth/check-email?${params.toString()}`);
 
   return response.data.data;
 };

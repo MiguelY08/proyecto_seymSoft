@@ -46,6 +46,12 @@ function LeftSectionForm({
   const mostrarDireccionManual = formData.tipoEntrega === 'domicilio';
   const showShippingAmountHighlight = mostrarDireccionManual && highlightShippingAmount;
   const isClienteDisabled = loading || readOnly || isEditMode;
+  const formatShippingAmount = (value) => {
+    const digits = String(value ?? '').replace(/\D/g, '');
+    return digits
+      ? new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(Number(digits))
+      : '';
+  };
 
   // Estados para el buscador de clientes
   const [clienteSearchTerm, setClienteSearchTerm] = useState('');
@@ -297,63 +303,6 @@ function LeftSectionForm({
           {showClienteError && errorMsg('clienteId')}
         </div>
 
-        {mostrarDireccionManual && !showDirectSaleLockedInfo && (
-          <div className="flex flex-col gap-1.5">
-            <label className="block text-sm font-medium text-gray-700">
-              Persona que recibe/recoge <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-              <input
-                type="text"
-                value={formData.deliveryRecipientName || ''}
-                onChange={onDeliveryRecipientNameChange}
-                placeholder="Nombre completo de quien recibe o recoge"
-                disabled={loading || readOnly}
-                maxLength={255}
-                className={`w-full pl-10 pr-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200
-                  ${errors.deliveryRecipientName ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'}
-                  ${loading || readOnly ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}
-                `}
-              />
-            </div>
-            {errorMsg('deliveryRecipientName')}
-            {nombreClienteSeleccionado && !readOnly && (
-              <button
-                type="button"
-                onClick={() => {
-                  onDeliveryRecipientNameChange({ target: { value: nombreClienteSeleccionado } });
-                }}
-                disabled={loading}
-                className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md px-2 py-2 text-sm text-[#004D77] transition-colors duration-200 hover:bg-[#004D77]/10 disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit sm:justify-start sm:py-1"
-              >
-                <Users className="w-3.5 h-3.5" strokeWidth={1.8} />
-                Usar nombre del cliente
-              </button>
-            )}
-
-            <label className="mt-2 block text-sm font-medium text-gray-700">
-              Telefono de quien recibe <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-              <input
-                type="tel"
-                value={formData.deliveryRecipientPhone || ''}
-                onChange={onDeliveryRecipientPhoneChange}
-                placeholder="Ej: 300 123 4567"
-                disabled={loading || readOnly}
-                maxLength={30}
-                className={`w-full rounded-lg border bg-white py-2.5 pl-10 pr-4 text-sm text-gray-700 outline-none transition-colors duration-200
-                  ${errors.deliveryRecipientPhone ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'}
-                  ${loading || readOnly ? 'cursor-not-allowed bg-gray-100 text-gray-500' : ''}
-                `}
-              />
-            </div>
-            {errorMsg('deliveryRecipientPhone')}
-          </div>
-        )}
-
         {/* Tipo de entrega */}
         {showDirectSaleLockedInfo ? (
           <div className="flex items-start gap-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-3 sm:px-4">
@@ -366,7 +315,7 @@ function LeftSectionForm({
             </div>
           </div>
         ) : (
-          <div className={`grid grid-cols-1 ${mostrarDireccionManual ? 'md:grid-cols-2' : ''} gap-4`}>
+          <div className="grid grid-cols-1 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="block text-sm font-medium text-gray-700">
                 Tipo de entrega <span className="text-red-500">*</span>
@@ -383,53 +332,33 @@ function LeftSectionForm({
               />
               {errorMsg('tipoEntrega')}
             </div>
+          </div>
+        )}
 
-            {mostrarDireccionManual && (
-              <div className={`flex flex-col gap-1.5 rounded-xl transition-colors ${
-                showShippingAmountHighlight
-                  ? 'border border-amber-300 bg-amber-50 p-3 shadow-[0_0_0_3px_rgba(251,191,36,0.18)]'
-                  : ''
-              }`}>
-                <label className={`block text-sm font-medium ${
-                  showShippingAmountHighlight ? 'text-amber-900' : 'text-gray-700'
-                }`}>
-                  Total del envío <span className="text-red-500">*</span>
-                  {showShippingAmountHighlight && (
-                    <span className="ml-2 inline-flex rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800">
-                      Envio pendiente
-                    </span>
-                  )}
-                </label>
-                <div className="relative">
-                  <Truck className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${
-                    showShippingAmountHighlight ? 'text-amber-600' : 'text-gray-400'
-                  }`} strokeWidth={1.8} />
-                  <input
-                    type="number"
-                    min="0"
-                    step="100"
-                    value={formData.shippingAmount ?? ''}
-                    onChange={onShippingAmountChange}
-                    placeholder="0"
-                    disabled={loading || readOnly}
-                    className={`w-full pl-10 pr-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200
-                      ${errors.shippingAmount
-                        ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-                        : showShippingAmountHighlight
-                          ? 'border-amber-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200'
-                          : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'}
-                      ${loading || readOnly ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}
-                    `}
-                  />
-                </div>
-                {showShippingAmountHighlight && !errors.shippingAmount && (
-                  <p className="text-xs font-semibold text-amber-800">
-                    Este pedido web a domicilio necesita que el asesor registre el valor del envio.
-                  </p>
-                )}
-                {errorMsg('shippingAmount')}
-              </div>
+        {mostrarDireccionManual && (
+          <div className="flex flex-col gap-1.5">
+            <label className="block text-sm font-medium text-gray-700">
+              Persona que recibe/recoge <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
+              <input type="text" value={formData.deliveryRecipientName || ''} onChange={onDeliveryRecipientNameChange} placeholder="Nombre completo de quien recibe o recoge" disabled={loading || readOnly} maxLength={255}
+                className={`w-full pl-10 pr-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200 ${errors.deliveryRecipientName ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'} ${loading || readOnly ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} />
+            </div>
+            {errorMsg('deliveryRecipientName')}
+            {nombreClienteSeleccionado && !readOnly && (
+              <button type="button" onClick={() => onDeliveryRecipientNameChange({ target: { value: nombreClienteSeleccionado } })} disabled={loading}
+                className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md px-2 py-2 text-sm text-[#004D77] transition-colors duration-200 hover:bg-[#004D77]/10 disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit sm:justify-start sm:py-1">
+                <Users className="w-3.5 h-3.5" strokeWidth={1.8} /> Usar nombre del cliente
+              </button>
             )}
+            <label className="mt-2 block text-sm font-medium text-gray-700">Teléfono de quien recibe <span className="text-red-500">*</span></label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
+              <input type="tel" value={formData.deliveryRecipientPhone || ''} onChange={onDeliveryRecipientPhoneChange} placeholder="Min. 7 - Max. 10 digitos" disabled={loading || readOnly} maxLength={30}
+                className={`w-full rounded-lg border bg-white py-2.5 pl-10 pr-4 text-sm text-gray-700 outline-none transition-colors duration-200 ${errors.deliveryRecipientPhone ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'} ${loading || readOnly ? 'cursor-not-allowed bg-gray-100 text-gray-500' : ''}`} />
+            </div>
+            {errorMsg('deliveryRecipientPhone')}
           </div>
         )}
 
@@ -513,6 +442,52 @@ function LeftSectionForm({
                 </button>
               )}
             </div>
+          </div>
+        )}
+
+        {mostrarDireccionManual && (
+          <div className={`flex flex-col gap-1.5 rounded-xl transition-colors ${
+            showShippingAmountHighlight
+              ? 'border border-amber-300 bg-amber-50 p-3 shadow-[0_0_0_3px_rgba(251,191,36,0.18)]'
+              : ''
+          }`}>
+            <label className={`block text-sm font-medium ${
+              showShippingAmountHighlight ? 'text-amber-900' : 'text-gray-700'
+            }`}>
+              Total del envío <span className="text-red-500">*</span>
+              {showShippingAmountHighlight && (
+                <span className="ml-2 inline-flex rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800">
+                  Envio pendiente
+                </span>
+              )}
+            </label>
+            <div className="relative">
+              <Truck className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${
+                showShippingAmountHighlight ? 'text-amber-600' : 'text-gray-400'
+              }`} strokeWidth={1.8} />
+              <input
+                type="text"
+                inputMode="numeric"
+                value={formatShippingAmount(formData.shippingAmount)}
+                onChange={onShippingAmountChange}
+                placeholder="0"
+                disabled={loading || readOnly}
+                className={`w-full pl-10 pr-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200
+                  ${errors.shippingAmount
+                    ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+                    : showShippingAmountHighlight
+                      ? 'border-amber-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200'
+                      : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'}
+                  ${loading || readOnly ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}
+                `}
+              />
+            </div>
+            {showShippingAmountHighlight && !errors.shippingAmount && (
+              <p className="text-xs font-semibold text-amber-800">
+                Este pedido web a domicilio necesita que el asesor registre el valor del envio.
+              </p>
+            )}
+            {errorMsg('shippingAmount')}
           </div>
         )}
 

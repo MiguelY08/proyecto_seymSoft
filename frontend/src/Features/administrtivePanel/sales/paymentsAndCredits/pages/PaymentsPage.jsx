@@ -155,7 +155,6 @@ export default function PaymentsPage() {
 
     try {
       const contactData = await getCustomerContact(account.id);
-      console.log("CONTACT RESPONSE", contactData);
       setSelectedAccount(contactData);
     } catch (error) {
       console.error("Error cargando contacto cliente:", error);

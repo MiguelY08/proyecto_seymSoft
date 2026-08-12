@@ -1,5 +1,6 @@
 ﻿// features/administrtivePanel/purchases/purchases/pages/Purchases.jsx
 import React, { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import { PurchasesFilters } from "../../../../shared/DateFilter";
 import PurchasesTable from "../Components/TablePurchases";
@@ -22,6 +23,8 @@ const SORT_OPTIONS = {
   DATE_ASC: { label: "Fecha compra (vieja → nueva)", field: "purchaseDate", order: "asc", icon: Calendar },
 };
 
+const RECORDS_PER_PAGE = 11;
+
 export const Purchases = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -38,7 +41,9 @@ export const Purchases = () => {
   // ========== NUEVO: Estado para ordenamiento ==========
   const [sortBy, setSortBy] = useState("CREATION_DESC");
   const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [sortDropdownStyle, setSortDropdownStyle] = useState(null);
   const sortDropdownRef = React.useRef(null);
+  const sortDropdownMenuRef = React.useRef(null);
   
   const { showSuccess, showError, showInfo } = useAlert();
   const navigate = useNavigate();
@@ -46,7 +51,9 @@ export const Purchases = () => {
   // ========== Cerrar dropdown al hacer clic fuera ==========
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target)) {
+      const clickedTrigger = sortDropdownRef.current?.contains(event.target);
+      const clickedMenu = sortDropdownMenuRef.current?.contains(event.target);
+      if (!clickedTrigger && !clickedMenu) {
         setShowSortDropdown(false);
       }
     };
@@ -54,12 +61,58 @@ export const Purchases = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const updateSortDropdownPosition = useCallback(() => {
+    const trigger = sortDropdownRef.current;
+    if (!trigger) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const viewport = window.visualViewport;
+    const viewportWidth = viewport?.width ?? window.innerWidth;
+    const viewportHeight = viewport?.height ?? window.innerHeight;
+    const viewportLeft = viewport?.offsetLeft ?? 0;
+    const viewportTop = viewport?.offsetTop ?? 0;
+    const padding = 8;
+    const gap = 8;
+    const desiredWidth = 224;
+    const maxHeight = 240;
+    const width = Math.min(desiredWidth, Math.max(0, viewportWidth - padding * 2));
+    const spaceBelow = viewportTop + viewportHeight - rect.bottom - gap;
+    const spaceAbove = rect.top - viewportTop - gap;
+    const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
+    const height = Math.min(maxHeight, Math.max(0, openUp ? spaceAbove : spaceBelow));
+    const minLeft = viewportLeft + padding;
+    const maxLeft = viewportLeft + viewportWidth - padding - width;
+    const left = Math.min(Math.max(rect.right - width, minLeft), Math.max(minLeft, maxLeft));
+    const top = openUp
+      ? Math.max(viewportTop + padding, rect.top - height - gap)
+      : Math.min(rect.bottom + gap, viewportTop + viewportHeight - padding - height);
+
+    setSortDropdownStyle({ position: "fixed", top, left, width, maxHeight: height, zIndex: 9999 });
+  }, []);
+
+  useEffect(() => {
+    if (!showSortDropdown) return undefined;
+
+    updateSortDropdownPosition();
+    window.addEventListener("resize", updateSortDropdownPosition);
+    window.addEventListener("scroll", updateSortDropdownPosition, true);
+    window.visualViewport?.addEventListener("resize", updateSortDropdownPosition);
+    window.visualViewport?.addEventListener("scroll", updateSortDropdownPosition);
+
+    return () => {
+      window.removeEventListener("resize", updateSortDropdownPosition);
+      window.removeEventListener("scroll", updateSortDropdownPosition, true);
+      window.visualViewport?.removeEventListener("resize", updateSortDropdownPosition);
+      window.visualViewport?.removeEventListener("scroll", updateSortDropdownPosition);
+    };
+  }, [showSortDropdown, updateSortDropdownPosition]);
+
   const fetchPurchases = useCallback(async () => {
     try {
       setLoading(true);
       const result = await getAllPurchases({
         page: currentPage,
-        limit: 13,
+        limit: RECORDS_PER_PAGE,
         search,
         startDate: fechaInicial,
         endDate: fechaFinal,
@@ -171,7 +224,7 @@ export const Purchases = () => {
 
   return (
     <>
-      <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-hidden p-3 sm:p-4">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto p-3 sm:p-4">
         <div className="flex flex-wrap items-end gap-3">
           <PurchasesFilters
             search={search}
@@ -186,12 +239,12 @@ export const Purchases = () => {
           
           <div className="flex-1" />
           
-          <div className="flex items-center gap-2">
+          <div className="flex w-full items-center gap-2 sm:w-auto">
             {/* ========== BOTÓN DE ORDENAMIENTO ========== */}
-            <div className="relative" ref={sortDropdownRef}>
+            <div className="relative flex-1 sm:flex-none" ref={sortDropdownRef}>
               <button
                 onClick={() => setShowSortDropdown(!showSortDropdown)}
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-semibold border rounded-lg transition-all duration-200 whitespace-nowrap ${
+                className={`flex w-full items-center justify-center gap-2 px-3 py-2 text-sm font-semibold border rounded-lg transition-all duration-200 whitespace-nowrap sm:w-auto ${
                   showSortDropdown
                     ? "border-[#004D77] bg-[#004D77] text-white"
                     : "border-gray-300 bg-white text-gray-700 hover:border-[#004D77] hover:text-[#004D77]"
@@ -207,8 +260,8 @@ export const Purchases = () => {
               </button>
 
               {/* Dropdown de opciones de ordenamiento */}
-              {showSortDropdown && (
-                <div className="absolute right-0 z-50 mt-1 w-56 rounded-lg border border-gray-200 bg-white shadow-xl py-1 overflow-hidden">
+              {showSortDropdown && sortDropdownStyle && createPortal(
+                <div ref={sortDropdownMenuRef} style={sortDropdownStyle} className="overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-xl">
                   {Object.entries(SORT_OPTIONS).map(([key, option]) => {
                     const Icon = option.icon;
                     const isActive = sortBy === key;
@@ -230,14 +283,15 @@ export const Purchases = () => {
                       </button>
                     );
                   })}
-                </div>
+                </div>,
+                document.body
               )}
             </div>
 
             <Permission permission="compras.exportar">
               <button
                 onClick={handleDownloadExcel}
-                className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
+                className="flex flex-1 items-center justify-center gap-2 px-2 py-2 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap sm:flex-none sm:px-4"
               >
                 <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
                 <span className="hidden sm:inline">Exportar Excel</span>
@@ -246,7 +300,7 @@ export const Purchases = () => {
             <Permission permission="compras.crear">
               <Link
                 to="/admin/purchases/create"
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 whitespace-nowrap"
+                className="flex flex-1 items-center justify-center gap-2 px-3 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap sm:flex-none sm:px-4"
               >
                 <span className="hidden sm:inline">Nueva</span>
                 <Plus className="w-4 h-4" strokeWidth={2} />
@@ -255,7 +309,7 @@ export const Purchases = () => {
           </div>
         </div>
 
-        <div className="flex min-h-0 w-full min-w-0 flex-1 overflow-hidden rounded-xl bg-white shadow-md">
+        <div className="w-full min-w-0 shrink-0 overflow-hidden rounded-xl bg-white shadow-md">
           <PurchasesTable
             currentData={currentData}
             handleCancel={handleCancel}
@@ -266,13 +320,15 @@ export const Purchases = () => {
           />
         </div>
 
+        <div className="min-h-0 flex-1" />
+
         {totalRecords > 0 && (
           <div className="shrink-0">
             <PaginationAdmin
               currentPage={currentPage}
               onPageChange={setCurrentPage}
               totalRecords={totalRecords}
-              recordsPerPage={13}
+              recordsPerPage={RECORDS_PER_PAGE}
             />
           </div>
         )}

@@ -95,8 +95,6 @@ export const mapearPermisosParaApi = (roleData, permisosSistema = []) => {
     permissions,
   };
 
-  console.log("📤 PAYLOAD FINAL:", payload);
-
   if (
     typeof roleData.description === "string" &&
     roleData.description.length > 0
@@ -219,8 +217,6 @@ export const toggleRoleStatus = async (id, currentStatus) => {
     const payload = {
       id_status: nextStatus,
     };
-
-    console.log("📤 STATUS PAYLOAD:", payload);
 
     const response = await apiClient.patch(
       `/roles/${id}/status`,
