@@ -62,6 +62,7 @@ const hasMetricsData = (indicators) => {
 
 function DashboardFilters({
   isMobile,
+  isTablet,
   filters,
   onChange,
   onClear,
@@ -98,6 +99,8 @@ function DashboardFilters({
     transition: "background-color 160ms ease, color 160ms ease, border-color 160ms ease",
   };
 
+  const isCompact = isMobile || isTablet;
+
   return (
     <div
       style={{
@@ -106,8 +109,8 @@ function DashboardFilters({
         boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06)",
         padding: "14px",
         display: "flex",
-        flexDirection: isMobile ? "column" : "row",
-        alignItems: isMobile ? "stretch" : "center",
+        flexDirection: isCompact ? "column" : "row",
+        alignItems: isCompact ? "stretch" : "center",
         justifyContent: "space-between",
         gap: "12px",
       }}
@@ -115,9 +118,10 @@ function DashboardFilters({
       <div
         style={{
           display: "flex",
-          flexDirection: isMobile ? "column" : "row",
+          flexDirection: isCompact ? "column" : "row",
+          flexWrap: isTablet ? "wrap" : "nowrap",
           gap: "10px",
-          alignItems: isMobile ? "stretch" : "end",
+          alignItems: isCompact ? "stretch" : "end",
         }}
       >
         <label style={{ display: "grid", gap: "5px", color: "#475569", fontWeight: 600, fontSize: "12px" }}>
@@ -146,7 +150,7 @@ function DashboardFilters({
             onClick={onClear}
             style={{
               ...buttonStyle,
-              minWidth: isMobile ? "100%" : "120px",
+              minWidth: isCompact ? "100%" : "120px",
               borderColor: "#cbd5e1",
               color: "#475569",
             }}
@@ -159,7 +163,7 @@ function DashboardFilters({
           onClick={onLastMonth}
           style={{
             ...buttonStyle,
-            minWidth: isMobile ? "100%" : "150px",
+            minWidth: isCompact ? "100%" : "150px",
             borderColor: "#bfdbfe",
             background: "#eff6ff",
             color: "#1d4ed8",
@@ -172,10 +176,12 @@ function DashboardFilters({
       <ButtonComponent
         onClick={onExport}
         disabled={exporting}
-        className="h-[46px] min-w-full flex-1 rounded-[12px] bg-white px-3 py-0 text-green-600 border-green-600 hover:bg-green-400 flex items-center justify-center gap-2 sm:mt-[21px] sm:min-w-[190px] sm:flex-none"
+        className={`h-[46px] rounded-[12px] bg-white px-3 py-0 text-green-600 border-green-600 hover:bg-green-400 flex items-center justify-center gap-2 ${
+          isCompact ? "min-w-full" : "min-w-[190px] sm:mt-[21px] sm:flex-none"
+        }`}
       >
         <FileSpreadsheet className="w-4 h-4" />
-        <span className="hidden sm:inline">{exporting ? "Exportando..." : "Exportar Excel"}</span>
+        <span>{exporting ? "Exportando..." : "Exportar Excel"}</span>
       </ButtonComponent>
     </div>
   );
@@ -278,8 +284,9 @@ function IndicatorsPage() {
   );
   const emptyRange = Boolean(hasDateFilter && indicators && !hasMetricsData(indicators));
 
-  const row2Cols = isMobile ? "1fr" : "1fr 1fr";
-  const row3Cols = isMobile ? "1fr" : isTablet ? "1fr 1fr" : "2fr 1fr";
+  const isCompactTablet = isTablet;
+  const row2Cols = isCompactTablet || isMobile ? "1fr" : "1fr 1fr";
+  const row3Cols = isMobile ? "1fr" : isTablet ? "1fr" : "2fr 1fr";
 
   const handleFilterChange = (key, value) => {
     setFilters((current) => ({
@@ -356,6 +363,7 @@ function IndicatorsPage() {
       >
         <DashboardFilters
           isMobile={isMobile}
+          isTablet={isTablet}
           filters={filters}
           onChange={handleFilterChange}
           onClear={handleClearFilters}

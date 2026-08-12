@@ -362,7 +362,7 @@ const handleDelete = async (client) => {
 
   return (
     <Permission permission="clientes.ver">
-      <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto p-2.5 sm:p-3.5 md:overflow-hidden">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto p-2.5 sm:p-3.5">
         <ClientsToolbar
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}

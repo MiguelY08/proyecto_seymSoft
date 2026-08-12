@@ -53,26 +53,27 @@ const getCenteredLogoColumn = (worksheet, columnCount, imageWidthPx) => {
 };
 
 export const createExcelLogoId = async (workbook) => {
-  if (typeof window === "undefined" || typeof Image === "undefined") {
+  if (typeof window === "undefined" || typeof FileReader === "undefined") {
     return null;
   }
 
   try {
-    const image = await new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = horizontalLogoUrl;
+    const response = await fetch(horizontalLogoUrl);
+    if (!response.ok) return null;
+
+    const blob = await response.blob();
+    const base64 = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = typeof reader.result === "string" ? reader.result : "";
+        resolve(result.includes(",") ? result.split(",")[1] : "");
+      };
+      reader.onerror = () => resolve("");
+      reader.readAsDataURL(blob);
     });
 
-    const canvas = document.createElement("canvas");
-    canvas.width = 760;
-    canvas.height = 260;
-    const context = canvas.getContext("2d");
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-    const pngBase64 = canvas.toDataURL("image/png").split(",")[1];
-    return workbook.addImage({ base64: pngBase64, extension: "png" });
+    if (!base64) return null;
+    return workbook.addImage({ base64, extension: "png" });
   } catch {
     return null;
   }
