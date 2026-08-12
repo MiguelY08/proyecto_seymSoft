@@ -1,5 +1,17 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
-import { LoaderCircle, UserRound, X } from 'lucide-react';
+import {
+  Building2,
+  FileText,
+  Hash,
+  IdCard,
+  LoaderCircle,
+  Mail,
+  MapPin,
+  Phone,
+  UserCheck,
+  UserRound,
+  X,
+} from 'lucide-react';
 import { clientsService } from '../../../administrtivePanel/sales/clients/services/clientsService';
 import {
   getDocumentValidationError,
@@ -441,8 +453,20 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
     }
   };
 
+  const inputIconMap = {
+    document: IdCard,
+    firstName: isLegalPerson ? Building2 : UserRound,
+    lastName: UserRound,
+    phone: Phone,
+    address: MapPin,
+    email: Mail,
+    ciuCode: Hash,
+    contactName: UserCheck,
+    contactPhone: Phone,
+  };
+
   const inputClass = (name) =>
-    `h-10 w-full rounded-lg border px-3 py-0 text-sm outline-none transition ${
+    `h-10 w-full rounded-lg border py-0 pr-3 text-sm outline-none transition ${inputIconMap[name] ? 'pl-9' : 'px-3'} ${
       touched[name] && errors[name]
         ? 'border-red-400 bg-red-50'
         : 'border-slate-200 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/10'
@@ -458,18 +482,24 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
       <span className="mb-1 block text-xs font-bold text-slate-600">
         {label} {!options.optional && <span className="text-red-500">*</span>}
       </span>
-      <input
-        type={options.type || 'text'}
-        value={options.disabled ? 'No aplica' : form[name]}
-        maxLength={options.maxLength}
-        disabled={options.disabled}
-        onChange={(event) => updateField(name, event.target.value)}
-        onBlur={() => updateField(name, form[name])}
-        inputMode={['phone', 'contactPhone', 'ciuCode'].includes(name) ? 'numeric' : undefined}
-        pattern={['phone', 'contactPhone', 'ciuCode'].includes(name) ? '[0-9]*' : undefined}
-        className={`${inputClass(name)} ${options.disabled ? 'cursor-not-allowed bg-slate-100 text-slate-500' : ''}`}
-        placeholder={options.placeholder}
-      />
+      <div className="relative">
+        {inputIconMap[name] && (() => {
+          const Icon = inputIconMap[name];
+          return <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={1.8} />;
+        })()}
+        <input
+          type={options.type || 'text'}
+          value={options.disabled ? 'No aplica' : form[name]}
+          maxLength={options.maxLength}
+          disabled={options.disabled}
+          onChange={(event) => updateField(name, event.target.value)}
+          onBlur={() => updateField(name, form[name])}
+          inputMode={['phone', 'contactPhone', 'ciuCode'].includes(name) ? 'numeric' : undefined}
+          pattern={['phone', 'contactPhone', 'ciuCode'].includes(name) ? '[0-9]*' : undefined}
+          className={`${inputClass(name)} ${options.disabled ? 'cursor-not-allowed bg-slate-100 text-slate-500' : ''}`}
+          placeholder={options.placeholder}
+        />
+      </div>
       {name === 'email' && checkingEmail && touched.email && !errors.email && (
         <span className="mt-1 block text-[11px] text-[#004D77]">
           Verificando si el correo ya está registrado...
@@ -493,6 +523,7 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
         value={form[name]}
         options={options}
         onChange={(value) => updateField(name, value)}
+        icon={fieldOptions.icon}
         error={Boolean(touched[name] && errors[name])}
         ariaLabel={label}
         className="h-10 rounded-lg py-0 pr-10"
@@ -536,43 +567,44 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
                 <div className="h-px flex-1 bg-[#004D77]/15" />
               </div>
 
-              {renderSelect('personType', 'Tipo de persona', SELECT_OPTIONS.personType, { full: true })}
+              {renderSelect('personType', 'Tipo de persona', SELECT_OPTIONS.personType, { full: true, icon: UserRound })}
 
               <div className="grid grid-cols-1 gap-2 sm:col-span-2 min-[360px]:grid-cols-[8rem_1fr]">
-                {renderSelect('documentType', 'Tipo', documentOptions)}
+                {renderSelect('documentType', 'Tipo', documentOptions, { icon: IdCard })}
                 {renderInput('document', 'Documento', { maxLength: 20 })}
               </div>
 
               {renderInput('firstName', isLegalPerson ? 'Nombre empresa' : 'Nombres', {
                 full: isLegalPerson,
                 maxLength: isLegalPerson ? 120 : 80,
-                placeholder: isLegalPerson ? 'Ej: Papelería Magic SAS' : 'Ej: Juan Carlos',
+                placeholder: isLegalPerson ? 'Empresa SAS' : 'Juan',
               })}
               {!isLegalPerson && renderInput('lastName', 'Apellidos', {
                 maxLength: 80,
-                placeholder: 'Ej: Pérez Gómez',
+                placeholder: 'Pérez',
               })}
-              {renderInput('phone', 'Teléfono', { type: 'tel', maxLength: 10, placeholder: 'Ej: 3001234567' })}
-              {renderInput('address', 'Dirección', { maxLength: ADDRESS_MAX_LENGTH, placeholder: 'Ej: Calle 10 # 15-25' })}
-              {renderInput('email', 'Correo', { full: true, type: 'email', maxLength: EMAIL_MAX_LENGTH, placeholder: 'Ej: cliente@email.com' })}
+              {renderInput('phone', 'Teléfono', { type: 'tel', maxLength: 10, placeholder: '3001234567' })}
+              {renderInput('address', 'Dirección', { maxLength: ADDRESS_MAX_LENGTH, placeholder: 'Calle 10 # 15-25' })}
+              {renderInput('email', 'Correo', { full: true, type: 'email', maxLength: EMAIL_MAX_LENGTH, placeholder: 'email@gmail.com' })}
 
               <div className="mt-1 flex items-center gap-2 sm:col-span-2">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-[#004D77]">Información adicional</span>
                 <div className="h-px flex-1 bg-[#004D77]/15" />
               </div>
 
-              {renderSelect('rut', 'RUT', SELECT_OPTIONS.rut)}
+              {renderSelect('rut', 'RUT', SELECT_OPTIONS.rut, { icon: FileText })}
               {renderInput('ciuCode', 'Código CIU', {
                 optional: form.rut !== 'si',
                 maxLength: CIU_CODE_LENGTH,
-                placeholder: form.rut === 'si' ? 'Ej: 4711' : 'No aplica',
+                placeholder: form.rut === 'si' ? '4711' : 'No aplica',
                 disabled: form.rut !== 'si',
               })}
-              {renderInput('contactName', isLegalPerson ? 'Persona encargada' : 'Persona de contacto', { optional: true, maxLength: 100 })}
+              {renderInput('contactName', isLegalPerson ? 'Persona encargada' : 'Persona de contacto', { optional: true, maxLength: 100, placeholder: 'María' })}
               {renderInput('contactPhone', isLegalPerson ? 'Número persona encargada' : 'Teléfono de contacto', {
                 optional: true,
                 type: 'tel',
                 maxLength: 10,
+                placeholder: '3009876543',
               })}
             </div>
 

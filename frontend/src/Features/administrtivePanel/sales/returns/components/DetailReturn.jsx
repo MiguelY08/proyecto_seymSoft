@@ -319,7 +319,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
           onClick={() => refreshPurchaseInfo(detail).catch((error) => {
             showError('No se pudo verificar', error.message);
           })}
-          className="mt-2 flex w-max items-center rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[11px] font-semibold text-red-700 transition hover:bg-red-100"
+          className="mt-2 inline-flex min-w-0 max-w-full items-center overflow-hidden rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] font-semibold text-red-700 transition hover:bg-red-100"
         >
           Reintentar verificación
         </button>
@@ -352,9 +352,9 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
             saleReturnDetailId: detailId,
             purchaseInfo: info,
           })}
-          className="mt-2 flex w-max items-center gap-1.5 rounded-lg bg-[#004D77] px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-[#003d61] disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-1.5 inline-flex min-w-0 max-w-full items-center gap-1 overflow-hidden rounded-md bg-[#004D77] px-2 py-1 text-[10px] font-semibold leading-none text-white transition hover:bg-[#003d61] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <PackageSearch className="h-3 w-3" />
+          <PackageSearch className="h-2.5 w-2.5" />
           Generar devolución de compra
         </button>
       );
@@ -365,11 +365,11 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
         type="button"
         disabled={resolvingDetailId === detailId}
         onClick={() => handleNonConforming(detail, info)}
-        className="mt-2 flex w-max items-center gap-1.5 rounded-lg bg-amber-100 px-3 py-1.5 text-[11px] font-semibold text-amber-800 transition hover:bg-amber-200 disabled:opacity-60"
+        className="mt-1.5 inline-flex min-w-0 max-w-full items-center gap-1 overflow-hidden rounded-md bg-amber-100 px-2 py-1 text-[10px] font-semibold leading-none text-amber-800 transition hover:bg-amber-200 disabled:opacity-60"
       >
         {resolvingDetailId === detailId
-          ? <Loader2 className="h-3 w-3 animate-spin" />
-          : <AlertTriangle className="h-3 w-3" />}
+          ? <Loader2 className="h-2.5 w-2.5 animate-spin" />
+          : <AlertTriangle className="h-2.5 w-2.5" />}
         {resolvingDetailId === detailId ? 'Registrando...' : 'Enviar a no conforme'}
       </button>
     );
@@ -506,7 +506,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
                               )}
                             </td>
                             <td className="px-3 py-2.5 text-gray-600">
-                              <div className="flex flex-col items-start gap-1.5">
+                              <div className="flex min-w-0 flex-col items-start gap-1.5">
                                 <span>{motivo}</span>
                                 {renderDefectiveAction(p)}
                               </div>

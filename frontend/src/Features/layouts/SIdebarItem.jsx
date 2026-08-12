@@ -107,7 +107,7 @@ export default function SidebarItem({
         >
           <div className="overflow-hidden">
             <div
-              className={`ml-6 flex flex-col gap-1 pb-1 transition-[transform,margin] duration-[300ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
+              className={`relative ml-5 flex flex-col gap-1 pb-1 pl-5 transition-[transform,margin] duration-[300ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] before:absolute before:left-2 before:top-1 before:bottom-2 before:w-px before:rounded-full before:bg-gradient-to-b before:from-[#004D77]/10 before:via-[#004D77]/45 before:to-[#004D77]/10 ${
                 isOpen ? "mt-2 translate-y-0" : "mt-0 -translate-y-1"
               }`}
             >
@@ -122,7 +122,7 @@ export default function SidebarItem({
                     style={{
                       transitionDelay: isOpen ? `${index * 30}ms` : "0ms",
                     }}
-                    className={`group/child grid grid-cols-[8px_minmax(0,1fr)] items-center gap-2 px-3 py-0.5 text-sm
+                    className={`group/child grid grid-cols-[8px_minmax(0,1fr)] items-center gap-2 px-2 py-0.5 text-sm
                       transition-[background-color,color,transform,opacity] duration-150 ease-out
                       ${
                         isActiveChild
@@ -135,7 +135,7 @@ export default function SidebarItem({
                       }`}
                   >
                     <span
-                      className={`h-2 w-2 rounded-full bg-[#004D77] transition-opacity duration-150 ${
+                      className={`relative z-10 h-2 w-2 rounded-full bg-[#004D77] ring-4 ring-[#F0F0F0] transition-opacity duration-150 ${
                         isActiveChild
                           ? "animate-pulse opacity-100"
                           : "opacity-0 group-hover/child:opacity-35"

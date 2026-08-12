@@ -1,6 +1,7 @@
-import ExcelJS from "exceljs";
+﻿import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import logoUrl from "../../../../../assets/PMLogo_Horizontal.png";
+import { addExcelLogo } from "../../../../shared/excel/logoHeader";
 
 const BLUE = "004D77";
 const LIGHT_BLUE = "DCEBF3";
@@ -89,7 +90,7 @@ const prepareSheet = (worksheet, title, columnCount, range, note) => {
   worksheet.getCell("B2").font = { italic: true, color: { argb: BLUE } };
 
   worksheet.mergeCells(`B3:${lastColumn}3`);
-  worksheet.getCell("A3").value = `Fecha de exportación: ${new Date().toLocaleString("es-CO")}`;
+  worksheet.getCell("A3").value = `Fecha de exportaciÃ³n: ${new Date().toLocaleString("es-CO")}`;
   worksheet.getCell("A3").alignment = { horizontal: "center" };
   worksheet.getCell("A3").font = { italic: true, color: { argb: "64748B" } };
 
@@ -117,32 +118,42 @@ const addTable = (worksheet, headers, rows, startRowIndex = null) => {
 
 const prepareSheetWithLogoSpace = (worksheet, title, columnCount, range, note) => {
   const lastColumn = worksheet.getColumn(columnCount).letter;
-  worksheet.getRow(1).height = 42;
-  worksheet.getCell("A1").value = "Papelería\nMagic";
-  worksheet.getCell("A1").alignment = { horizontal: "center", vertical: "middle", wrapText: true };
-  worksheet.getCell("A1").font = { bold: true, size: 12, color: { argb: BLUE } };
-  styleTitle(worksheet, `B1:${lastColumn}1`, title);
 
-  worksheet.mergeCells(`B2:${lastColumn}2`);
-  worksheet.getCell("B2").value = `Rango consultado: ${formatRange(range)}`;
-  worksheet.getCell("B2").alignment = { horizontal: "center" };
-  worksheet.getCell("B2").font = { italic: true, color: { argb: BLUE } };
+  worksheet.getRow(1).height = 52;
+  for (let index = 1; index <= columnCount; index += 1) {
+    const cell = worksheet.getCell(1, index);
+    cell.value = null;
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE } };
+    cell.border = {
+      top: { style: "thin", color: { argb: BLUE } },
+      left: { style: "thin", color: { argb: BLUE } },
+      bottom: { style: "thin", color: { argb: BLUE } },
+      right: { style: "thin", color: { argb: BLUE } },
+    };
+  }
 
-  worksheet.mergeCells(`B3:${lastColumn}3`);
-  worksheet.getCell("B3").value = `Fecha de exportación: ${new Date().toLocaleString("es-CO")}`;
-  worksheet.getCell("B3").alignment = { horizontal: "center" };
-  worksheet.getCell("B3").font = { italic: true, color: { argb: "64748B" } };
+  styleTitle(worksheet, `A1:${lastColumn}1`, title);
+  worksheet.getRow(1).height = 52;
+
+  worksheet.mergeCells(`A2:${lastColumn}2`);
+  worksheet.getCell("A2").value = `Rango consultado: ${formatRange(range)}`;
+  worksheet.getCell("A2").alignment = { horizontal: "center" };
+  worksheet.getCell("A2").font = { italic: true, color: { argb: BLUE } };
+
+  worksheet.mergeCells(`A3:${lastColumn}3`);
+  worksheet.getCell("A3").value = `Fecha de exportación: ${new Date().toLocaleString("es-CO")}`;
+  worksheet.getCell("A3").alignment = { horizontal: "center" };
+  worksheet.getCell("A3").font = { italic: true, color: { argb: "64748B" } };
 
   if (note) {
-    worksheet.mergeCells(`B4:${lastColumn}4`);
-    worksheet.getCell("B4").value = note;
-    worksheet.getCell("B4").alignment = { horizontal: "center", wrapText: true };
-    worksheet.getCell("B4").font = { color: { argb: "475569" } };
+    worksheet.mergeCells(`A4:${lastColumn}4`);
+    worksheet.getCell("A4").value = note;
+    worksheet.getCell("A4").alignment = { horizontal: "center", wrapText: true };
+    worksheet.getCell("A4").font = { color: { argb: "475569" } };
   }
 
   worksheet.addRow([]);
 };
-
 const setAutoFilter = (worksheet, from, to) => {
   worksheet.autoFilter = { from, to };
 };
@@ -165,14 +176,14 @@ const loadLogoBase64 = async () => {
   }
 };
 
-const addLogo = (worksheet, logoId) => {
-  if (!logoId) return;
+const addLogo = (worksheet, logoId, columnCount) => {
+  if (logoId === null || logoId === undefined) return;
 
-  worksheet.getRow(1).height = 42;
-  worksheet.addImage(logoId, {
-    tl: { col: 0.1, row: 0.08 },
-    ext: { width: 120, height: 38 },
-    editAs: "oneCell",
+  addExcelLogo(worksheet, logoId, columnCount, {
+    align: "left",
+    width: 205,
+    height: 70,
+    row: 0.02,
   });
 };
 
@@ -180,7 +191,7 @@ export const exportIndicatorsExcel = async (indicators, range = {}) => {
   if (!indicators) return false;
 
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Papelería Magic";
+  workbook.creator = "PapelerÃ­a Magic";
   workbook.created = new Date();
   const logoBase64 = await loadLogoBase64();
   const logoId = logoBase64
@@ -195,8 +206,8 @@ export const exportIndicatorsExcel = async (indicators, range = {}) => {
     range,
     "Esta hoja resume las tarjetas principales del dashboard y aclara el periodo anterior usado para comparar crecimiento."
   );
-  addLogo(summary, logoId);
-  addTable(summary, ["Indicador", "Valor", "Unidad/Formato", "Explicación"], [
+  addLogo(summary, logoId, 4);
+  addTable(summary, ["Indicador", "Valor", "Unidad/Formato", "ExplicaciÃ³n"], [
     [
       "Ventas del periodo",
       Number(indicators.monthlySales?.currentMonthSales || 0),
@@ -212,10 +223,10 @@ export const exportIndicatorsExcel = async (indicators, range = {}) => {
       `Periodo comparado: ${previousRangeLabel(range)}.`,
     ],
     [
-      "Variación de ventas",
+      "VariaciÃ³n de ventas",
       Number(indicators.monthlySales?.growthPercentage || 0) / 100,
       "Porcentaje",
-      "Crecimiento o disminución frente al periodo anterior equivalente.",
+      "Crecimiento o disminuciÃ³n frente al periodo anterior equivalente.",
     ],
     [
       "Clientes activos",
@@ -230,7 +241,7 @@ export const exportIndicatorsExcel = async (indicators, range = {}) => {
       "Inventario activo actual. Este dato no depende del rango de fechas.",
     ],
     [
-      "Primera fecha con métricas",
+      "Primera fecha con mÃ©tricas",
       indicators.meta?.firstMetricDate ? formatDate(indicators.meta.firstMetricDate) : "No disponible",
       "Fecha",
       "Primera fecha real encontrada entre ventas, compras o devoluciones.",
@@ -250,12 +261,12 @@ export const exportIndicatorsExcel = async (indicators, range = {}) => {
   const salesPurchases = workbook.addWorksheet("Ventas vs compras");
   prepareSheetWithLogoSpace(
     salesPurchases,
-    "GRÁFICA: VENTAS VS COMPRAS",
+    "GRÃFICA: VENTAS VS COMPRAS",
     5,
     range,
-    "Corresponde a la gráfica comparativa de ventas y compras del dashboard."
+    "Corresponde a la grÃ¡fica comparativa de ventas y compras del dashboard."
   );
-  addLogo(salesPurchases, logoId);
+  addLogo(salesPurchases, logoId, 3);
   addTable(
     salesPurchases,
     ["Periodo", "Ventas", "Compras", "Diferencia ventas - compras", "Lectura"],
@@ -285,12 +296,12 @@ export const exportIndicatorsExcel = async (indicators, range = {}) => {
   const salesReturns = workbook.addWorksheet("Ventas vs devoluciones");
   prepareSheetWithLogoSpace(
     salesReturns,
-    "GRÁFICA: VENTAS VS DEVOLUCIONES",
+    "GRÃFICA: VENTAS VS DEVOLUCIONES",
     5,
     range,
-    "Corresponde a la gráfica comparativa de ventas y devoluciones de ventas."
+    "Corresponde a la grÃ¡fica comparativa de ventas y devoluciones de ventas."
   );
-  addLogo(salesReturns, logoId);
+  addLogo(salesReturns, logoId, 3);
   addTable(
     salesReturns,
     ["Periodo", "Ventas", "Devoluciones", "% devoluciones sobre ventas", "Lectura"],
@@ -320,12 +331,12 @@ export const exportIndicatorsExcel = async (indicators, range = {}) => {
   const products = workbook.addWorksheet("Productos");
   prepareSheetWithLogoSpace(
     products,
-    "GRÁFICA: TOP PRODUCTOS",
+    "GRÃFICA: TOP PRODUCTOS",
     5,
     range,
-    "Se separan los productos más vendidos por cantidad y por valor para que no se mezclen unidades con dinero."
+    "Se separan los productos mÃ¡s vendidos por cantidad y por valor para que no se mezclen unidades con dinero."
   );
-  addLogo(products, logoId);
+  addLogo(products, logoId, 5);
   addTable(products, ["Ranking", "Producto por cantidad", "Unidades vendidas", "Producto por valor", "Valor vendido"], []);
   const quantityProducts = indicators.topProducts?.quantity || [];
   const priceProducts = indicators.topProducts?.price || [];
@@ -352,24 +363,24 @@ export const exportIndicatorsExcel = async (indicators, range = {}) => {
     { width: 18 },
   ];
 
-  const categories = workbook.addWorksheet("Categorías");
+  const categories = workbook.addWorksheet("CategorÃ­as");
   prepareSheetWithLogoSpace(
     categories,
-    "GRÁFICA: CATEGORÍAS DEMANDADAS",
+    "GRÃFICA: CATEGORÃAS DEMANDADAS",
     5,
     range,
-    "Corresponde a la gráfica circular de categorías demandadas; la participación se calcula sobre las unidades del top mostrado."
+    "Corresponde a la grÃ¡fica circular de categorÃ­as demandadas; la participaciÃ³n se calcula sobre las unidades del top mostrado."
   );
-  addLogo(categories, logoId);
+  addLogo(categories, logoId, 4);
   addTable(
     categories,
-    ["Ranking", "Categoría", "Unidades vendidas", "Participación", "Lectura"],
+    ["Ranking", "CategorÃ­a", "Unidades vendidas", "ParticipaciÃ³n", "Lectura"],
     (indicators.categoryDemand || []).map((item, index) => [
       index + 1,
       item.name,
       Number(item.units || 0),
       Number(item.percentage || 0) / 100,
-      `${Number(item.percentage || 0).toFixed(1)}% de participación en el top de categorías`,
+      `${Number(item.percentage || 0).toFixed(1)}% de participaciÃ³n en el top de categorÃ­as`,
     ])
   );
   categories.getColumn(3).numFmt = numberFormat;
@@ -385,25 +396,25 @@ export const exportIndicatorsExcel = async (indicators, range = {}) => {
   const clients = workbook.addWorksheet("Clientes");
   prepareSheetWithLogoSpace(
     clients,
-    "GRÁFICA: TOP CLIENTES",
+    "GRÃFICA: TOP CLIENTES",
     5,
     range,
-    "Corresponde al top de clientes del periodo según valor comprado."
+    "Corresponde al top de clientes del periodo segÃºn valor comprado."
   );
-  addLogo(clients, logoId);
+  addLogo(clients, logoId, 4);
   const topClientsTotal = (indicators.topClients || []).reduce(
     (total, item) => total + Number(item.value || 0),
     0
   );
   addTable(
     clients,
-    ["Ranking", "Cliente", "Valor comprado", "Participación dentro del top", "Lectura"],
+    ["Ranking", "Cliente", "Valor comprado", "ParticipaciÃ³n dentro del top", "Lectura"],
     (indicators.topClients || []).map((item, index) => [
       index + 1,
       item.name,
       Number(item.value || 0),
       topClientsTotal > 0 ? Number(item.value || 0) / topClientsTotal : 0,
-      "Participación calculada sobre el total del top de clientes mostrado",
+      "ParticipaciÃ³n calculada sobre el total del top de clientes mostrado",
     ])
   );
   clients.getColumn(3).numFmt = moneyFormat;

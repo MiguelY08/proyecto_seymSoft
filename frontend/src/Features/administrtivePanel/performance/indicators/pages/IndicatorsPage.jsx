@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { BarChart3, FileSpreadsheet, Info, RotateCcw } from "lucide-react";
+import { BarChart3, CalendarDays, FileSpreadsheet, Info, RotateCcw } from "lucide-react";
 
 import DashboardStats from "../components/DashboardStats";
 import MonthlySalesReturnsChart from "../components/MonthlySalesReturnsChart";
@@ -22,6 +22,24 @@ const formatDate = (value) => {
   const date = new Date(`${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString("es-CO");
+};
+
+const formatInputDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getLastMonthRange = () => {
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const lastDay = new Date(today.getFullYear(), today.getMonth(), 0);
+
+  return {
+    startDate: formatInputDate(firstDay),
+    endDate: formatInputDate(lastDay),
+  };
 };
 
 const hasMetricsData = (indicators) => {
@@ -47,6 +65,7 @@ function DashboardFilters({
   filters,
   onChange,
   onClear,
+  onLastMonth,
   onExport,
   exporting,
 }) {
@@ -135,6 +154,19 @@ function DashboardFilters({
             <RotateCcw size={17} /> Limpiar
           </button>
         )}
+        <button
+          type="button"
+          onClick={onLastMonth}
+          style={{
+            ...buttonStyle,
+            minWidth: isMobile ? "100%" : "150px",
+            borderColor: "#bfdbfe",
+            background: "#eff6ff",
+            color: "#1d4ed8",
+          }}
+        >
+          <CalendarDays size={17} /> Mes pasado
+        </button>
       </div>
 
       <ButtonComponent
@@ -221,7 +253,7 @@ function EmptyMetricsState({ firstMetricDate, range, selectedBeforeFirstMetric }
 
 function IndicatorsPage() {
   const { isMobile, isTablet } = useBreakpoint();
-  const { showSuccess, showError } = useAlert();
+  const { showConfirm, showSuccess, showError } = useAlert();
   const [filters, setFilters] = useState({ startDate: "", endDate: "" });
   const [exporting, setExporting] = useState(false);
 
@@ -260,8 +292,23 @@ function IndicatorsPage() {
     setFilters({ startDate: "", endDate: "" });
   };
 
+  const handleLastMonthFilters = () => {
+    setFilters(getLastMonthRange());
+  };
+
   const handleExport = async () => {
     try {
+      const confirmed = await showConfirm(
+        "question",
+        "¿Desea descargar las métricas?",
+        hasDateFilter
+          ? `Se exportará el Excel del dashboard entre el ${formatDate(appliedFilters.startDate)} y el ${formatDate(appliedFilters.endDate)}.`
+          : "Se exportará el Excel del dashboard con las métricas del mes actual.",
+        { confirmButtonText: "Descargar", cancelButtonText: "Cancelar" }
+      );
+
+      if (!confirmed?.isConfirmed) return;
+
       setExporting(true);
       const success = await exportIndicatorsExcel(indicators, appliedFilters);
       if (success) {
@@ -312,6 +359,7 @@ function IndicatorsPage() {
           filters={filters}
           onChange={handleFilterChange}
           onClear={handleClearFilters}
+          onLastMonth={handleLastMonthFilters}
           onExport={handleExport}
           exporting={exporting}
         />
@@ -342,8 +390,8 @@ function IndicatorsPage() {
                 gap: "12px",
               }}
             >
-              <SalesPurchasesChart data={indicators?.commercialTrends} />
-              <MonthlySalesReturnsChart data={indicators?.commercialTrends} />
+              <SalesPurchasesChart data={indicators?.commercialTrends} isFiltered={hasDateFilter} />
+              <MonthlySalesReturnsChart data={indicators?.commercialTrends} isFiltered={hasDateFilter} />
             </div>
 
             <div

@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import React from "react";
+import { createExcelLogoId, prepareExcelLogoHeader } from "../../../../shared/excel/logoHeader";
 
 const COMPANY_COLOR = "004D77";
 const LIGHT_BLUE = "DCEBF3";
@@ -117,6 +118,28 @@ const exportAccountsSummaryToExcel = async (accounts = []) => {
   workbook.creator = "SeymSoft";
   workbook.created = currentDate;
 
+  worksheet.columns = [
+    { key: "nro", width: 8 },
+    { key: "nombre", width: 32 },
+    { key: "creditoAsignado", width: 18 },
+    { key: "cupoOcupado", width: 18 },
+    { key: "cupoDisponible", width: 18 },
+    { key: "creditosActivos", width: 18 },
+    { key: "estado", width: 16 },
+  ];
+
+  const logoId = await createExcelLogoId(workbook);
+  prepareExcelLogoHeader(worksheet, {
+    title: "PAGOS Y ABONOS",
+    subtitle: `Fecha de exportación: ${currentDate.toLocaleString("es-CO")}`,
+    columnCount: 7,
+    logoId,
+    blue: COMPANY_COLOR,
+    logoAlign: "left",
+    singleBlueHeader: true,
+  });
+
+  /*
   worksheet.mergeCells("A1:G1");
   worksheet.getCell("A1").value = "PAGOS Y ABONOS";
   worksheet.getCell("A1").font = {
@@ -143,7 +166,9 @@ const exportAccountsSummaryToExcel = async (accounts = []) => {
   };
 
   worksheet.addRow([]);
+  */
 
+  /*
   worksheet.columns = [
     { key: "nro", width: 8 },
     { key: "nombre", width: 32 },
@@ -153,6 +178,7 @@ const exportAccountsSummaryToExcel = async (accounts = []) => {
     { key: "creditosActivos", width: 18 },
     { key: "estado", width: 16 },
   ];
+  */
 
   const headerRow = worksheet.addRow([
     "#",
@@ -240,8 +266,8 @@ const exportAccountsSummaryToExcel = async (accounts = []) => {
     totalsRow.getCell(key).numFmt = '"$"#,##0';
   });
 
-  worksheet.views = [{ state: "frozen", ySplit: 4 }];
-  worksheet.autoFilter = { from: "A4", to: "G4" };
+  worksheet.views = [{ state: "frozen", ySplit: 5 }];
+  worksheet.autoFilter = { from: "A5", to: "G5" };
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], {
@@ -269,6 +295,36 @@ export const exportAccountsToExcel = async (accounts = []) => {
     workbook.creator = "SeymSoft";
     workbook.created = currentDate;
 
+    worksheet.columns = [
+      { key: "nro", width: 8 },
+      { key: "documento", width: 16 },
+      { key: "nombreCliente", width: 26 },
+      { key: "nroFactura", width: 14 },
+      { key: "valorCredito", width: 16 },
+      { key: "interes", width: 14 },
+      { key: "totalPagar", width: 16 },
+      { key: "fechaCredito", width: 16 },
+      { key: "finCredito", width: 16 },
+      { key: "abonadoCapital", width: 17 },
+      { key: "abonadoInteres", width: 17 },
+      { key: "saldoCapital", width: 16 },
+      { key: "saldoInteres", width: 16 },
+      { key: "saldoTotal", width: 16 },
+      { key: "estado", width: 14 },
+    ];
+
+    const logoId = await createExcelLogoId(workbook);
+    prepareExcelLogoHeader(worksheet, {
+      title: "PAGOS Y ABONOS",
+      subtitle: `Fecha de exportación: ${currentDate.toLocaleString("es-CO")}`,
+     columnCount: 15,
+     logoId,
+     blue: COMPANY_COLOR,
+     logoAlign: "left",
+     singleBlueHeader: true,
+    });
+
+    /*
     worksheet.mergeCells("A1:O1");
     worksheet.getCell("A1").value = "PAGOS Y ABONOS";
     worksheet.getCell("A1").font = {
@@ -295,7 +351,9 @@ export const exportAccountsToExcel = async (accounts = []) => {
     };
 
     worksheet.addRow([]);
+    */
 
+    /*
     worksheet.columns = [
       { key: "nro", width: 8 },
       { key: "documento", width: 16 },
@@ -313,6 +371,7 @@ export const exportAccountsToExcel = async (accounts = []) => {
       { key: "saldoTotal", width: 16 },
       { key: "estado", width: 14 },
     ];
+    */
 
     const headerRow = worksheet.addRow([
       "Nro",
@@ -473,8 +532,8 @@ export const exportAccountsToExcel = async (accounts = []) => {
       totalRow.getCell(key).numFmt = '"$"#,##0';
     });
 
-    worksheet.views = [{ state: "frozen", ySplit: 4 }];
-    worksheet.autoFilter = { from: "A4", to: "O4" };
+    worksheet.views = [{ state: "frozen", ySplit: 5 }];
+    worksheet.autoFilter = { from: "A5", to: "O5" };
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {

@@ -6,7 +6,11 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { DollarSign, Package } from 'lucide-react';
 import { ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES } from '../services/ordersService';
+<<<<<<< HEAD
+import { createExcelLogoId, prepareExcelLogoHeader } from '../../../../shared/excel/logoHeader';
+=======
 import logoUrl from '../../../../../assets/PMLogo_Horizontal.png';
+>>>>>>> 3048ccd1d7b3b34132a236b3e7a723a5e1a08645
 
 // ─── Textos capitalizados para mostrar ───────────────────────────────────────
 export const ESTADO_LOGISTICO_LABELS = {
@@ -413,10 +417,17 @@ const styleDataRow = (row, index) => {
   });
 };
 
-const setupWorksheetHeader = (worksheet, title, subtitle, lastColumn) => {
-  styleTitle(worksheet, `A1:${lastColumn}1`, title);
-  styleSubtitle(worksheet, `A2:${lastColumn}2`, subtitle);
-  worksheet.addRow([]);
+const setupWorksheetHeader = (worksheet, title, subtitle, lastColumn, logoId) => {
+  const columnCount = lastColumn.charCodeAt(0) - 64;
+  prepareExcelLogoHeader(worksheet, {
+    title,
+    subtitle,
+    columnCount,
+    logoId,
+    blue: COMPANY_COLOR,
+    logoAlign: 'left',
+    singleBlueHeader: true,
+  });
 };
 
 const applyWorksheetTableSettings = (worksheet, headerRowNumber, lastColumn) => {
@@ -427,10 +438,8 @@ const applyWorksheetTableSettings = (worksheet, headerRowNumber, lastColumn) => 
   };
 };
 
-const buildOrdersSummarySheet = (workbook, orders, subtitle) => {
+const buildOrdersSummarySheet = (workbook, orders, subtitle, logoId) => {
   const worksheet = workbook.addWorksheet('Resumen Pedidos');
-  setupWorksheetHeader(worksheet, 'PEDIDOS', subtitle, 'M');
-
   worksheet.columns = [
     { key: 'orderNumber', width: 14 },
     { key: 'client', width: 30 },
@@ -446,6 +455,7 @@ const buildOrdersSummarySheet = (workbook, orders, subtitle) => {
     { key: 'cancellationReason', width: 35 },
     { key: 'productCount', width: 18 },
   ];
+  setupWorksheetHeader(worksheet, 'PEDIDOS', subtitle, 'M', logoId);
 
   const headerRow = worksheet.addRow([
     'No. Pedido',
@@ -486,13 +496,11 @@ const buildOrdersSummarySheet = (workbook, orders, subtitle) => {
     styleDataRow(row, index);
   });
 
-  applyWorksheetTableSettings(worksheet, 4, 'M');
+  applyWorksheetTableSettings(worksheet, 5, 'M');
 };
 
-const buildOrdersProductsSheet = (workbook, orders, subtitle) => {
+const buildOrdersProductsSheet = (workbook, orders, subtitle, logoId) => {
   const worksheet = workbook.addWorksheet('Detalle Productos');
-  setupWorksheetHeader(worksheet, 'DETALLE DE PRODUCTOS PEDIDOS', subtitle, 'G');
-
   worksheet.columns = [
     { key: 'orderNumber', width: 14 },
     { key: 'client', width: 30 },
@@ -502,6 +510,7 @@ const buildOrdersProductsSheet = (workbook, orders, subtitle) => {
     { key: 'unitPrice', width: 16 },
     { key: 'lineTotal', width: 16 },
   ];
+  setupWorksheetHeader(worksheet, 'DETALLE DE PRODUCTOS PEDIDOS', subtitle, 'G', logoId);
 
   const headerRow = worksheet.addRow([
     'No. Pedido',
@@ -546,17 +555,16 @@ const buildOrdersProductsSheet = (workbook, orders, subtitle) => {
     });
   });
 
-  applyWorksheetTableSettings(worksheet, 4, 'G');
+  applyWorksheetTableSettings(worksheet, 5, 'G');
 };
 
-const buildOrdersStatsSheet = (workbook, orders, subtitle) => {
+const buildOrdersStatsSheet = (workbook, orders, subtitle, logoId) => {
   const worksheet = workbook.addWorksheet('Estadisticas');
-  setupWorksheetHeader(worksheet, 'ESTADISTICAS DE PEDIDOS', subtitle, 'B');
-
   worksheet.columns = [
     { key: 'metric', width: 36 },
     { key: 'value', width: 24 },
   ];
+  setupWorksheetHeader(worksheet, 'ESTADISTICAS DE PEDIDOS', subtitle, 'B', logoId);
 
   const totalOrders = orders.length;
   const totalValue = orders.reduce((sum, order) => sum + Number(order.total ?? 0), 0);
@@ -597,7 +605,7 @@ const buildOrdersStatsSheet = (workbook, orders, subtitle) => {
     styleDataRow(row, index);
   });
 
-  applyWorksheetTableSettings(worksheet, 4, 'B');
+  applyWorksheetTableSettings(worksheet, 5, 'B');
 };
 
 export const exportOrdersToExcel = async (orders) => {
@@ -610,10 +618,11 @@ export const exportOrdersToExcel = async (orders) => {
 
   workbook.creator = 'SeymSoft';
   workbook.created = currentDate;
+  const logoId = await createExcelLogoId(workbook);
 
-  buildOrdersSummarySheet(workbook, orders, subtitle);
-  buildOrdersProductsSheet(workbook, orders, subtitle);
-  buildOrdersStatsSheet(workbook, orders, subtitle);
+  buildOrdersSummarySheet(workbook, orders, subtitle, logoId);
+  buildOrdersProductsSheet(workbook, orders, subtitle, logoId);
+  buildOrdersStatsSheet(workbook, orders, subtitle, logoId);
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], {
