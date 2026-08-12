@@ -38,6 +38,12 @@ export const normalizeDigits = (value, maxLength) => {
   return maxLength ? digits.slice(0, maxLength) : digits;
 };
 
+const registerEmailPattern =
+  /^[A-Za-z0-9.!#$%&'*+/=^_`{|}~-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/;
+
+export const isRegisterEmailValid = (email) =>
+  registerEmailPattern.test(String(email ?? ""));
+
 // ─── VALIDACIÓN REGISTER ───────────────────────────────────────────
 export const validateRegister = (formData) => {
   let errors = {};
@@ -48,7 +54,7 @@ export const validateRegister = (formData) => {
   }
 
   // Email
-  if (!formData.email || !patterns.email.test(formData.email)) {
+  if (!formData.email || !isRegisterEmailValid(formData.email)) {
     errors.email = "Correo inválido";
   }
 
@@ -70,9 +76,9 @@ export const validateRegister = (formData) => {
   }
 
   // Términos
-  // if (!formData.terms) {
-  //   errors.terms = "Debe aceptar términos y condiciones";
-  // }
+  if (!formData.terms) {
+    errors.terms = "Debes aceptar los términos y condiciones para registrarte.";
+  }
 
   return errors;
 };

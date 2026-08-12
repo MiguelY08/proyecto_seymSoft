@@ -19,8 +19,7 @@ export default function LoginCard({ initialMode = "login" }) {
         shadow-xl
         overflow-hidden
         max-w-[1200px]
-        md:h-[520px]
-        lg:h-[540px]
+        ${isRegister ? "md:h-[540px] lg:h-[560px]" : "md:h-[520px] lg:h-[540px]"}
       `}
     >
       <div
