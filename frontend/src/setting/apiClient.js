@@ -124,12 +124,6 @@ apiClient.interceptors.request.use(
   (config) => {
     const session = getSession();
 
-    console.log("SESSION INTERCEPTOR:", session);
-    console.log(
-      "AUTH HEADER:",
-      session?.accessToken ? "TOKEN PRESENTE" : "SIN TOKEN",
-    );
-
     if (session && session.accessToken) {
       config.headers.Authorization = `Bearer ${session.accessToken}`;
     }
