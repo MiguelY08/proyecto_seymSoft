@@ -6,7 +6,6 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { DollarSign, Package } from 'lucide-react';
 import { ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES } from '../services/ordersService';
-import { createExcelLogoId, prepareExcelLogoHeader } from '../../../../shared/excel/logoHeader';
 import logoUrl from '../../../../../assets/PMLogo_Horizontal.png';
 
 // ─── Textos capitalizados para mostrar ───────────────────────────────────────

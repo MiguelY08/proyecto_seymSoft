@@ -74,27 +74,6 @@ function TopBar({
     setIsSearchOpen(false);
   };
 
-  const handleDownloadExcel = async () => {
-    if (orders.length === 0) {
-      showWarning('Sin registros', 'No hay pedidos que coincidan con los filtros actuales.');
-      return;
-    }
-
-    const confirmed = await showConfirm(
-      'question',
-      '¿Desea descargar los pedidos?',
-      `Se exportarán ${orders.length} pedido${orders.length !== 1 ? 's' : ''} en formato Excel.`,
-      { confirmButtonText: 'Descargar', cancelButtonText: 'Cancelar' }
-    );
-
-    if (!confirmed?.isConfirmed) return;
-
-    const success = await exportOrdersToExcel(orders);
-    if (success) {
-      showSuccess('Exportación exitosa', 'El archivo Excel se ha descargado correctamente.');
-    }
-  };
-
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -171,23 +150,15 @@ function TopBar({
 
       <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0 lg:self-start">
         <Permission permission="pedidos.exportar">
-          <ButtonComponent
-            className="flex-1 sm:flex-none h-10 bg-white text-green-600 border-green-600 hover:bg-green-400 px-3 flex items-center justify-center gap-2"
-            onClick={handleDownloadExcel}
-            title="Exportar Excel"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span className="hidden 2xl:inline">Exportar Excel</span>
+          <ButtonComponent className="flex-1 bg-white px-3 text-green-600 border-green-600 hover:bg-green-400 sm:flex-none" onClick={handleDownloadExcel} title="Exportar Excel">
+            <FileSpreadsheet className="h-4 w-4" />
+            <span className="hidden sm:inline">Exportar Excel</span>
           </ButtonComponent>
         </Permission>
         <Permission permission="pedidos.crear">
-          <ButtonComponent
-            onClick={() => navigate('new-order')}
-            title="Nuevo pedido"
-            className="flex-1 sm:flex-none h-10 flex items-center justify-center gap-2"
-          >
-            <span className="hidden xl:inline">Nuevo</span>
-            <Plus className="w-4 h-4" strokeWidth={2} />
+          <ButtonComponent onClick={() => navigate('new-order')} title="Nuevo pedido" className="flex-1 sm:flex-none">
+            <span className="hidden sm:inline">Nuevo</span>
+            <Plus className="h-4 w-4" strokeWidth={2} />
           </ButtonComponent>
         </Permission>
       </div>
