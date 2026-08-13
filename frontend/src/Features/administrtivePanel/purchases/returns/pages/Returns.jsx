@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import PaginationAdmin from "../../../../shared/PaginationAdmin";
@@ -15,6 +15,7 @@ import { getPurchaseById } from "../../purchases/data/PurchasesService";
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 
 const RECORDS_PER_PAGE = 11;
+const RETURNS_FETCH_LIMIT = 100;
 
 const DEFAULT_METRICS = {
   total: 0,
@@ -55,13 +56,8 @@ function Returns() {
   const [search, setSearch] = useState("");
   const [fechaInicial, setFechaInicial] = useState("");
   const [fechaFinal, setFechaFinal] = useState("");
+  const [estadoFilter, setEstadoFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: RECORDS_PER_PAGE,
-    total: 0,
-    totalPages: 1,
-  });
 
   const fetchMetrics = useCallback(async () => {
     try {
@@ -78,27 +74,28 @@ function Returns() {
   const fetchReturns = useCallback(async () => {
     try {
       setLoading(true);
-      const result = await PurchaseReturnsService.getAll({
-        page: currentPage,
-        limit: RECORDS_PER_PAGE,
-        ...(search.trim() && { search: search.trim() }),
-        ...(fechaInicial && { startDate: fechaInicial }),
-        ...(fechaFinal && { endDate: fechaFinal }),
+      const firstPage = await PurchaseReturnsService.getAll({
+        page: 1,
+        limit: RETURNS_FETCH_LIMIT,
       });
+      const allReturns = [...(firstPage.data ?? [])];
+      const totalPages = firstPage.pagination?.totalPages ?? 1;
 
-      setReturns(result.data ?? []);
-      setPagination(result.pagination ?? {
-        page: currentPage,
-        limit: RECORDS_PER_PAGE,
-        total: 0,
-        totalPages: 1,
-      });
+      for (let page = 2; page <= totalPages; page += 1) {
+        const response = await PurchaseReturnsService.getAll({
+          page,
+          limit: RETURNS_FETCH_LIMIT,
+        });
+        allReturns.push(...(response.data ?? []));
+      }
+
+      setReturns(allReturns);
     } catch (error) {
       showError("Error", error.message || "No se pudieron cargar las devoluciones.");
     } finally {
       setLoading(false);
     }
-  }, [currentPage, fechaFinal, fechaInicial, search, showError]);
+  }, [showError]);
 
   useEffect(() => {
     fetchMetrics();
@@ -262,12 +259,60 @@ function Returns() {
     await Promise.all([fetchReturns(), fetchMetrics()]);
   };
 
+  const filteredReturns = useMemo(() => {
+    const normalize = (value) =>
+      String(value ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+
+    const term = normalize(search);
+
+    return returns.filter((devolucion) => {
+      const matchesSearch = !term || [
+        devolucion.id,
+        devolucion.idCompra,
+        devolucion.invoiceNumber,
+        devolucion.proveedor,
+        devolucion.provider?.name,
+        devolucion.fechaDevolucion,
+        devolucion.estado,
+        devolucion.status,
+        devolucion.progress?.label,
+        devolucion.totalDetails,
+        devolucion.completedDetails,
+      ].some((field) => normalize(field).includes(term));
+
+      if (!matchesSearch) return false;
+      if (estadoFilter && normalize(devolucion.estado) !== normalize(estadoFilter)) return false;
+
+      const returnDate = String(devolucion.fechaDevolucion ?? "").split("T")[0];
+      if (fechaInicial && (!returnDate || returnDate < fechaInicial)) return false;
+      if (fechaFinal && (!returnDate || returnDate > fechaFinal)) return false;
+
+      return true;
+    });
+  }, [returns, search, fechaInicial, fechaFinal, estadoFilter]);
+
+  const totalRecords = filteredReturns.length;
+  const visibleReturns = useMemo(() => {
+    const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
+    return filteredReturns.slice(startIndex, startIndex + RECORDS_PER_PAGE);
+  }, [filteredReturns, currentPage]);
+
+  useEffect(() => {
+    const totalPages = Math.ceil(totalRecords / RECORDS_PER_PAGE) || 1;
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalRecords]);
+
   const handlePageChange = (page) => {
-    if (page < 1 || page > (pagination.totalPages || 1)) return;
+    const totalPages = Math.ceil(totalRecords / RECORDS_PER_PAGE) || 1;
+    if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
   };
 
-  const isSearching = pagination.total > 0 && !!(search || fechaInicial || fechaFinal);
+  const isSearching = Boolean(search || fechaInicial || fechaFinal || estadoFilter);
 
   if (loading && returns.length === 0) {
     return <Spinner message="Cargando devoluciones..." />;
@@ -285,8 +330,10 @@ function Returns() {
         setFechaInicial={setFechaInicial}
         fechaFinal={fechaFinal}
         setFechaFinal={setFechaFinal}
+        estadoFilter={estadoFilter}
+        setEstadoFilter={setEstadoFilter}
         setCurrentPage={setCurrentPage}
-        returns={returns}
+        returns={filteredReturns}
       />
 
       <div className="hidden md:block">
@@ -295,7 +342,7 @@ function Returns() {
 
       <div className="w-full min-w-0 shrink-0 overflow-hidden rounded-xl bg-white shadow-md">
         <ReturnsTable
-          currentData={returns}
+          currentData={visibleReturns}
           search={search}
           isSearching={isSearching}
           offset={(currentPage - 1) * RECORDS_PER_PAGE}
@@ -307,12 +354,12 @@ function Returns() {
 
       <div className="min-h-0 flex-1" />
 
-      {pagination.total > 0 && (
+      {totalRecords > 0 && (
         <div className="shrink-0">
           <PaginationAdmin
             currentPage={currentPage}
             onPageChange={handlePageChange}
-            totalRecords={pagination.total}
+            totalRecords={totalRecords}
             recordsPerPage={RECORDS_PER_PAGE}
           />
         </div>

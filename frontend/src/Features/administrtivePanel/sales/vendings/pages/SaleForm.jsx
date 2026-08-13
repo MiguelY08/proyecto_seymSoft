@@ -851,6 +851,7 @@ function SaleForm() {
 
       {/* Contenido en dos columnas */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="lg:order-2">
         <LeftSectionForm
           formData={formData}
           errors={errors}
@@ -874,14 +875,20 @@ function SaleForm() {
           onEstadoLogisticoChange={handleEstadoLogisticoChange}
           onMotivoCancelacionChange={handleMotivoCancelacionChange}
           onCreateClient={() => setIsClientModalOpen(true)}
+          showClientSection={false}
         />
+        </div>
 
+        <div className="lg:order-1">
         <RightSectionForm
           productos={formData.productos}
           productosCatalogo={productosCatalogoConPrecio}
+          formData={formData}
           errors={errors}
+          clientes={clientes}
           loading={loading}
           disabled={loading}
+          isEditMode={false}
           subtotal={subtotal}
           iva={iva}
           shippingAmount={shippingAmount}
@@ -892,7 +899,10 @@ function SaleForm() {
           onRemoveProduct={handleRemoveProduct}
           scannerField="sale-product-search"
           onScannerProductNotFound={handleScannerProductNotFound}
+          onClienteChange={handleClienteChange}
+          onCreateClient={() => setIsClientModalOpen(true)}
         />
+        </div>
       </div>
 
       {/* Sección de pagos */}
@@ -911,6 +921,12 @@ function SaleForm() {
           creditAssigned={creditValidationInfo.assignedCredit}
           allowFavorBalance
           favorBalance={favorBalance}
+          financialSummary={formData.clienteId !== '' && formData.clienteId !== null && formData.clienteId !== undefined ? {
+            assignedCredit: creditValidationInfo.assignedCredit,
+            usedCredit: creditValidationInfo.usedCredit,
+            availableCredit: creditValidationInfo.availableCredit,
+            favorBalance,
+          } : null}
         />
       </div>
 

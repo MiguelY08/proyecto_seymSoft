@@ -31,6 +31,7 @@ function PaymentsSection({
   creditAssigned = null,
   allowFavorBalance = false,
   favorBalance = 0,
+  financialSummary = null,
 }) {
   const [showForm, setShowForm] = useState(false);
   const [newPayment, setNewPayment] = useState({
@@ -225,6 +226,22 @@ function PaymentsSection({
             </p>
           </div>
         </div>
+
+        {financialSummary && (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              ['Saldo a favor', financialSummary.favorBalance, 'text-emerald-700', 'bg-emerald-50 border-emerald-100'],
+              ['Crédito', financialSummary.assignedCredit, 'text-sky-700', 'bg-sky-50 border-sky-100'],
+              ['Crédito disponible', financialSummary.availableCredit, 'text-indigo-700', 'bg-indigo-50 border-indigo-100'],
+              ['Monto ocupado', financialSummary.usedCredit, 'text-amber-700', 'bg-amber-50 border-amber-100'],
+            ].map(([label, amount, textClass, backgroundClass]) => (
+              <div key={label} className={`rounded-lg border p-3 ${backgroundClass}`}>
+                <p className="text-xs font-medium text-gray-500">{label}</p>
+                <p className={`mt-1 text-base font-semibold ${textClass}`}>{formatCurrency(amount)}</p>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Formulario para agregar pago */}
         {showForm && !estaCompletado && !disabled && (

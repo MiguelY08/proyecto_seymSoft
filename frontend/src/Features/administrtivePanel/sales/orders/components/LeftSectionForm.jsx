@@ -10,7 +10,7 @@ import FormSelect from '../../../../shared/FormSelect';
 function LeftSectionForm({
   formData,
   errors,
-  clientes,
+  clientes = [],
   departamentos = [],
   ciudades = [],
   loadingCiudades = false,
@@ -32,6 +32,7 @@ function LeftSectionForm({
   onEstadoLogisticoChange,
   onMotivoCancelacionChange,
   onCreateClient,
+  showClientSection = true,
 }) {
   const isEstadoPersistidoInmutable = [
     ESTADOS_LOGISTICOS.ENTREGADO,
@@ -197,13 +198,13 @@ function LeftSectionForm({
         </div>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-gray-800">Información del pedido</p>
-          <p className="text-xs text-gray-400">Datos del cliente y entrega</p>
+          <p className="text-xs text-gray-400">Datos de entrega y estado</p>
         </div>
       </div>
 
       <div className="flex flex-col gap-4 p-4 sm:p-5">
         {/* Cliente con buscador desplegable */}
-        <div className="flex flex-col gap-1.5">
+        {showClientSection && <div className="flex flex-col gap-1.5">
           <label className="block text-sm font-medium text-gray-700">
             Cliente <span className="text-red-500">*</span>
           </label>
@@ -301,7 +302,7 @@ function LeftSectionForm({
           )}
           </div>
           {showClienteError && errorMsg('clienteId')}
-        </div>
+        </div>}
 
         {/* Tipo de entrega */}
         {showDirectSaleLockedInfo ? (
