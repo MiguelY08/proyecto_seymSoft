@@ -5,6 +5,17 @@ import { useAlert } from "../../../../shared/alerts/useAlert";
 import ButtonComponent from "../../../../shared/ButtonComponent";
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 import { exportPurchaseReturnsExcel } from "../helpers/returnsExcel";
+import FormSelect from "../../../../shared/FormSelect";
+
+const RETURN_STATUS_OPTIONS = [
+  { value: "", label: "Todos los estados" },
+  { value: "Pend. envÃ­o", label: "Pend. envÃ­o" },
+  { value: "Pend. reemplazo", label: "Pend. reemplazo" },
+  { value: "Pend. reembolso", label: "Pend. reembolso" },
+  { value: "Listo", label: "Listo" },
+  { value: "Anulado", label: "Anulado" },
+  { value: "Prov. rechazÃ³", label: "Prov. rechazÃ³" },
+];
 
 const formatDate = (dateStr) => {
   if (!dateStr) return "";
@@ -26,6 +37,8 @@ function TopBar({
   setFechaInicial,
   fechaFinal,
   setFechaFinal,
+  estadoFilter,
+  setEstadoFilter,
   setCurrentPage,
   returns = [],
 }) {
@@ -37,6 +50,7 @@ function TopBar({
     setSearch("");
     setFechaInicial("");
     setFechaFinal("");
+    setEstadoFilter("");
     setCurrentPage(1);
   };
 
@@ -45,7 +59,7 @@ function TopBar({
     setCurrentPage(1);
   };
 
-  const hayFiltrosActivos = Boolean(search || fechaInicial || fechaFinal);
+  const hayFiltrosActivos = Boolean(search || fechaInicial || fechaFinal || estadoFilter);
 
   const handleDownloadLegacy = () => {
     if (returns.length === 0) {
@@ -199,8 +213,8 @@ function TopBar({
   };
 
   return (
-    <div className="flex flex-col gap-3 shrink-0 lg:flex-row lg:items-end lg:justify-between">
-      <div className="relative w-full lg:max-w-md">
+    <div className="flex flex-col gap-3 shrink-0 xl:flex-row xl:items-end xl:justify-between">
+      <div className="relative w-full min-w-0 xl:flex-1">
         <input
           type="text"
           placeholder="Buscar por devolucion, factura, proveedor o estado..."
@@ -214,7 +228,7 @@ function TopBar({
         />
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 lg:w-auto lg:justify-end">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 xl:ml-4 xl:w-auto xl:justify-end">
         <div className="w-full sm:w-44">
           <div className="relative">
             <Calendar
@@ -233,6 +247,19 @@ function TopBar({
               className="w-full pl-9 pr-3 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-600"
             />
           </div>
+        </div>
+
+        <div className="w-full sm:w-48">
+          <FormSelect
+            value={estadoFilter}
+            options={RETURN_STATUS_OPTIONS}
+            onChange={(value) => {
+              setEstadoFilter(value);
+              setCurrentPage(1);
+            }}
+            placeholder="Estado"
+            ariaLabel="Filtrar por estado"
+          />
         </div>
 
         <div className="w-full sm:w-44">
