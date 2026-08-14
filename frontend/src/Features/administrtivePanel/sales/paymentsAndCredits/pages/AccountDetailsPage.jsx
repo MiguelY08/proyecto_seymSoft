@@ -1,7 +1,5 @@
 ﻿import { useParams } from "react-router-dom";
 import { useState, useEffect, useRef, useMemo } from "react";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
 import { ChevronDown, ChevronUp, PlusCircle } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 
@@ -11,7 +9,6 @@ import PaymentHistoryTable from "../components/PaymentsHistoryTable";
 import PaymentsPaginator from "../components/PaymentsPaginator";
 import GeneratePaymentModal from "../components/GeneratePaymentModal";
 import CancelPaymentModal from "../components/CancelPaymentModal";
-import AccountReceipt from "../components/AccountReceipt";
 import StatusBadge from "../components/StatusBadge";
 import Spinner from "../../../../shared/spinner";
 import Permission from "../../../configuration/roles/components/Permission";
@@ -24,6 +21,7 @@ import {
 } from "../services/paymentsServices";
 import usePaymentsDetails from "../hooks/usePaymentsDetails";
 import { getTotalAbonadoFactura } from "../utils/paymentHelpers";
+import { exportAccountReceiptToPDF } from "../utils/accountReceiptPdf";
 
 const getCustomerEmail = (customer) =>
   customer?.email ??
@@ -180,7 +178,6 @@ export default function AccountDetailsPage({ mode }) {
   const [search, setSearch] = useState("");
   const [facturaPage, setFacturaPage] = useState(1);
 
-  const pdfRef = useRef(null);
   const downloadLockRef = useRef(false);
   const openingPaymentModalRef = useRef(false);
   const openingCancelModalRef = useRef(false);
@@ -456,7 +453,6 @@ export default function AccountDetailsPage({ mode }) {
   const handleDownloadPDF = async () => {
     if (
       !account ||
-      !pdfRef.current ||
       isGeneratingPDF ||
       downloadLockRef.current
     ) return;
@@ -477,38 +473,7 @@ export default function AccountDetailsPage({ mode }) {
 
     try {
       setIsGeneratingPDF(true);
-      const canvas = await html2canvas(pdfRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        allowTaint: false,
-        windowWidth: pdfRef.current.scrollWidth,
-        windowHeight: pdfRef.current.scrollHeight,
-      });
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pageWidth = 210;
-      const pageHeight = 297;
-      const margin = 10;
-      const imgWidth = pageWidth - 2 * margin;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      const pageContentHeight = pageHeight - 2 * margin;
-
-      if (imgHeight <= pageContentHeight) {
-        pdf.addImage(imgData, "PNG", margin, margin, imgWidth, imgHeight);
-      } else {
-        let heightLeft = imgHeight;
-        let position = margin;
-        pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
-        heightLeft -= pageContentHeight;
-        while (heightLeft > 0) {
-          position -= pageContentHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
-          heightLeft -= pageContentHeight;
-        }
-      }
-      pdf.save(`Comprobante_${account.nombre}.pdf`);
+      await exportAccountReceiptToPDF(receiptAccount);
       showSuccess("Descarga completada", "El PDF fue generado correctamente.");
     } catch {
       showError("Error", "Ocurrió un problema al generar el PDF.");
@@ -834,23 +799,6 @@ export default function AccountDetailsPage({ mode }) {
           }}
         />
       )}
-
-      {/* ── RECEIPT OCULTO PARA PDF ── */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "210mm",
-          backgroundColor: "#ffffff",
-          pointerEvents: "none",
-          transform: "translateX(-120%)",
-        }}
-      >
-        <div ref={pdfRef}>
-          <AccountReceipt account={receiptAccount} />
-        </div>
-      </div>
     </>
   );
 }
