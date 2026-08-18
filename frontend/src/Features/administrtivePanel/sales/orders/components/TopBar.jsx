@@ -146,6 +146,7 @@ function TopBar({
             </button>
           )}
         </div>
+        
       </div>
 
       <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0 lg:self-start">

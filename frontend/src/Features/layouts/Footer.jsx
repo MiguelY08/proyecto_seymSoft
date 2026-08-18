@@ -16,7 +16,7 @@ function Footer() {
     const loadCategories = async () => {
       try {
         setLoadingCategories(true);
-        const allCategories = await categoriesService.getAll();
+        const allCategories = await categoriesService.getAllActive();
         setCategories(allCategories);
       } catch (error) {
         console.error('Error cargando categorias del footer:', error);

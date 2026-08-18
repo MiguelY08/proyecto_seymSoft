@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { X, AlertCircle, Plus, Trash2, ChevronRight, ChevronLeft, Tag, Layers } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import ActiveToggle from "../components/ActiveToggle";
+import { useOutsideCloseWarning } from "../../../../shared/hooks/useOutsideCloseWarning";
 
 const normalizeName = (str = "") =>
   str
@@ -62,6 +63,7 @@ function StepIndicator({ currentStep }) {
 }
 
 function FormCategory({ allCategories = [], onClose, onSave }) {
+  const { handleOutsideClick } = useOutsideCloseWarning(onClose);
   const { showWarning } = useAlert();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
@@ -156,7 +158,7 @@ function FormCategory({ allCategories = [], onClose, onSave }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-      onClick={onClose}
+      onClick={handleOutsideClick}
     >
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col"

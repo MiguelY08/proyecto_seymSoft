@@ -19,6 +19,7 @@ import { providersService } from "../../providers/data/providersService";
 import { findProductByBarcode, productMatchesBarcodeSearch } from "../../../../shared/scanner";
 import Spinner from "../../../../shared/spinner";
 import FullScreenSpinner from "../../../../shared/spinner/FullScreenSpinner";
+import { getApiErrorMessage } from "../../../../shared/utils/apiErrorMessage";
 import {
   CalendarDays,
   CircleDollarSign,
@@ -596,7 +597,14 @@ const CreatePurchase = () => {
       showSuccess("Compra guardada", "Se registró correctamente y los precios fueron actualizados");
       navigate("/admin/purchases");
     } catch (err) {
-      showError("Error", err.message || "No se pudo guardar la compra.");
+      showError(
+        "No se puede registrar",
+        getApiErrorMessage(err, {
+          conflictMessage:
+            "Ya existe una compra con ese número de factura o los datos ingresados entran en conflicto con un registro existente.",
+          fallback: "No se pudo guardar la compra.",
+        })
+      );
     } finally {
       setLoading(false);
     }

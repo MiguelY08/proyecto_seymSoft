@@ -2,9 +2,11 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { X } from "lucide-react";
 import Pagination from "../../../../shared/PaginationLanding";
-import { getCategoryById } from "../data/categoriesService";
+import { getCategoryById, normalizeCategoryStatus } from "../data/categoriesService";
+import { useOutsideCloseWarning } from "../../../../shared/hooks/useOutsideCloseWarning";
 
 function CategoryDetail({ category, onClose }) {
+  const { handleOutsideClick } = useOutsideCloseWarning(onClose, { hasUnsavedChanges: false });
   const [subcategories, setSubcategories] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -20,7 +22,7 @@ function CategoryDetail({ category, onClose }) {
             id: sub.id,
             nombre: sub.name,
             descripcion: sub.description,
-            estado: sub.status === "Active" ? "Activo" : "Inactivo"
+            estado: normalizeCategoryStatus(sub)
           }))
         );
       } catch (error) {
@@ -40,7 +42,7 @@ function CategoryDetail({ category, onClose }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-      onClick={onClose}
+      onClick={handleOutsideClick}
     >
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col"
