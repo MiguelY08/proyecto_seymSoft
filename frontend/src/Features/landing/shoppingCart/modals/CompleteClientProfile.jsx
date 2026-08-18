@@ -24,6 +24,8 @@ import { useAlert } from '../../../shared/alerts/useAlert';
 const EMAIL_MAX_LENGTH = 100;
 const ADDRESS_MAX_LENGTH = 120;
 const CIU_CODE_LENGTH = 4;
+const DOCUMENT_MAX_LENGTH = 15;
+const NIT_MAX_LENGTH = 20;
 
 const splitName = (fullName = '') => {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
@@ -67,6 +69,15 @@ const cleanAddress = (value) =>
     .replace(/^\s+/, '')
     .replace(/\s{2,}/g, ' ')
     .slice(0, ADDRESS_MAX_LENGTH);
+
+const FieldCounter = ({ value, maxLength, hidden = false }) => {
+  if (hidden || !maxLength) return null;
+  return (
+    <span className="mt-0.5 block text-right text-[10px] font-medium leading-none text-slate-400">
+      {String(value ?? '').length}/{maxLength}
+    </span>
+  );
+};
 
 const validateField = (name, value, form) => {
   const clean = String(value ?? '').trim();
@@ -500,6 +511,7 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
           placeholder={options.placeholder}
         />
       </div>
+      <FieldCounter value={form[name]} maxLength={options.maxLength} hidden={options.disabled} />
       {name === 'email' && checkingEmail && touched.email && !errors.email && (
         <span className="mt-1 block text-[11px] text-[#004D77]">
           Verificando si el correo ya está registrado...
@@ -571,7 +583,7 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
 
               <div className="grid grid-cols-1 gap-2 sm:col-span-2 min-[360px]:grid-cols-[8rem_1fr]">
                 {renderSelect('documentType', 'Tipo', documentOptions, { icon: IdCard })}
-                {renderInput('document', 'Documento', { maxLength: 20 })}
+                {renderInput('document', 'Documento', { maxLength: form.documentType === 'NIT' ? NIT_MAX_LENGTH : DOCUMENT_MAX_LENGTH })}
               </div>
 
               {renderInput('firstName', isLegalPerson ? 'Nombre empresa' : 'Nombres', {

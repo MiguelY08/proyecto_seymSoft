@@ -77,7 +77,7 @@ const shouldPulseStatus = (status) => {
     normalized.includes('proceso') ||
     normalized.includes('pend') ||
     normalized.includes('envio') ||
-    normalized.includes('envÃ­o')
+    normalized.includes('envío')
   );
 };
 

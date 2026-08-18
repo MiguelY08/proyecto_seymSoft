@@ -8,7 +8,7 @@ import { useAlert } from '../../../../shared/alerts/useAlert';
 import { cancelReturn } from '../data/returnsService';
 import { formatCurrency, formatDate } from '../utils/returnsHelpers';
 
-const MOTIVO_MAX = 500;
+const MOTIVO_MAX = 255;
 const MOTIVO_MIN = 10;
 
 const getCancelReturnError = (error) => {
