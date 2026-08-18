@@ -81,7 +81,38 @@ const getProviderSaveError = (error) => {
 
   return {
     title: 'No se pudo guardar el proveedor',
-    text: message || 'Revisa los datos e inténtalo nuevamente.',
+    text: message || 'Revisa los datos e int?ntalo nuevamente.',
+  };
+};
+
+const getProviderDeleteError = (error) => {
+  const response = error?.response?.data || {};
+  const message = response.message || error?.message || '';
+  const errorCode = response.errorCode || error?.errorCode || '';
+  const status = error?.response?.status;
+  const lowerMessage = message.toLowerCase();
+
+  if (
+    errorCode === 'PROVIDER_HAS_PURCHASES' ||
+    status === 500 ||
+    lowerMessage.includes('compras_id_proveedor_fkey') ||
+    lowerMessage.includes('foreign key constraint violated') ||
+    lowerMessage.includes('compras asociadas') ||
+    lowerMessage.includes('ocurrio un error interno') ||
+    lowerMessage.includes('ocurri? un error interno') ||
+    lowerMessage.includes('purchase') ||
+    lowerMessage.includes('foreign key') ||
+    lowerMessage.includes('constraint')
+  ) {
+    return {
+      title: 'No se puede eliminar',
+      text: 'No se puede eliminar este proveedor porque tiene compras o movimientos asociados.',
+    };
+  }
+
+  return {
+    title: 'No se pudo eliminar el proveedor',
+    text: message || 'Revisa si el proveedor tiene informaci?n asociada e int?ntalo nuevamente.',
   };
 };
 
@@ -252,7 +283,8 @@ function ProvidersPage() {
         
         showSuccess('Proveedor eliminado', 'El proveedor ha sido eliminado exitosamente');
       } catch (error) {
-        showError('Error', error.message || 'No se pudo eliminar el proveedor');
+        const alertData = getProviderDeleteError(error);
+        await showError(alertData.title, alertData.text);
       }
     }
   };

@@ -207,14 +207,31 @@ export const providersService = {
   },
 
   delete: async (id) => {
-    const response = await apiClient.delete(`/providers/${id}`);
-    const result = response.data;
-    
-    if (!response.data.success && result.message) {
-      throw new Error(result.message || 'Error al eliminar el proveedor');
+    try {
+      const response = await apiClient.delete(`/providers/${id}`);
+      const result = response.data;
+
+      if (!response.data.success && result.message) {
+        const serviceError = new Error(result.message || 'Error al eliminar el proveedor');
+        serviceError.response = { data: result };
+        serviceError.errorCode = result.errorCode || null;
+        throw serviceError;
+      }
+
+      return true;
+    } catch (error) {
+      const responseData = error?.response?.data || {};
+      const message =
+        responseData.message ||
+        responseData.error ||
+        error?.message ||
+        'Error al eliminar el proveedor';
+
+      const serviceError = new Error(message);
+      serviceError.response = error?.response;
+      serviceError.errorCode = responseData.errorCode || error?.errorCode || null;
+      throw serviceError;
     }
-    
-    return true;
   },
 
   toggleActive: async (id) => {

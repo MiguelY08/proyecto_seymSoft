@@ -45,6 +45,11 @@ let categoriesCache = null;
 const EMAIL_MAX_LENGTH = 100;
 const ADDRESS_MAX_LENGTH = 120;
 const CIU_CODE_LENGTH = 4;
+const DOCUMENT_MAX_LENGTH = 15;
+const NIT_MAX_LENGTH = 20;
+const CONTACT_NAME_MAX_LENGTH = 100;
+const PHONE_MAX_LENGTH = 10;
+const RETURN_PERIOD_MAX_LENGTH = 3;
 const PROVIDER_NAME_MAX_LENGTH = 100;
 
 const onlyDigits = (value, maxLength = 10) =>
@@ -85,6 +90,24 @@ const cleanAddress = (value) =>
     .replace(/\s{2,}/g, ' ')
     .slice(0, ADDRESS_MAX_LENGTH);
 
+const IconInput = ({ icon: Icon, className, ...props }) => (
+  <div className="relative">
+    {Icon && (
+      <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
+    )}
+    <input {...props} className={Icon ? `${className} pl-9` : className} />
+  </div>
+);
+
+const FieldCounter = ({ value, maxLength, hidden = false }) => {
+  if (hidden || !maxLength) return null;
+  return (
+    <span className="mt-0.5 block text-right text-[10px] font-medium leading-none text-slate-400">
+      {String(value ?? '').length}/{maxLength}
+    </span>
+  );
+};
+
 const getCategoryIds = (categories) => {
   if (!Array.isArray(categories)) return [];
 
@@ -116,6 +139,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [categoriasOpen, setCategoriasOpen] = useState(false);
+  const [categorySearch, setCategorySearch] = useState('');
   const [categoriesList, setCategoriesList] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -367,11 +391,18 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     };
   }, [categoriasOpen]);
 
+  useEffect(() => {
+    if (!categoriasOpen) {
+      setCategorySearch('');
+    }
+  }, [categoriasOpen]);
+
   const resetForm = () => {
     setFormData(initialState);
     setErrors({});
     setTouched({});
     setCategoriasOpen(false);
+    setCategorySearch('');
     setIsDocumentTypeDisabled(false);
     setCheckingEmail(false);
     setCheckingDocument(false);
@@ -515,6 +546,29 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     }));
   };
 
+  const handleSelectAllCategories = () => {
+    const allCategoryIds = categoriesList.map((category) => category.id);
+
+    setFormData((prev) => ({
+      ...prev,
+      categoryIds: allCategoryIds,
+    }));
+    setTouched((prev) => ({ ...prev, categoryIds: true }));
+    setErrors((prev) => ({ ...prev, categoryIds: '' }));
+  };
+
+  const handleClearCategories = () => {
+    setFormData((prev) => ({
+      ...prev,
+      categoryIds: [],
+    }));
+    setTouched((prev) => ({ ...prev, categoryIds: true }));
+    setErrors((prev) => ({
+      ...prev,
+      categoryIds: 'Seleccione al menos una categoría',
+    }));
+  };
+
   const handleBlur = (e) => {
     const { name } = e.target;
     
@@ -580,40 +634,42 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     e.preventDefault();
     if (saving) return;
 
-    // Validación: Persona jurídica debe usar NIT
-    if (formData.tipoPersona === 'juridica' && formData.tipo !== 'NIT') {
-      showError('Error de validación', 'La persona jurídica debe usar tipo de documento NIT');
-      return;
+    const allTouched = Object.keys(initialState).reduce((acc, key) => ({ ...acc, [key]: true }), {});
+    setTouched(allTouched);
+
+    const normalizedFormData = {
+      ...formData,
+      tipoPersona: String(formData.tipoPersona || '').trim(),
+      tipo: String(formData.tipo || '').trim(),
+      numero: String(formData.numero || '').trim(),
+      nombres: String(formData.nombres || '').trim(),
+      apellidos: String(formData.apellidos || '').trim(),
+      telefono: String(formData.telefono || '').trim(),
+      correo: String(formData.correo || '').trim(),
+      direccion: String(formData.direccion || '').trim(),
+      rut: String(formData.rut || '').trim(),
+      categoryIds: Array.isArray(formData.categoryIds) ? formData.categoryIds : [],
+    };
+
+    const validationErrors = validateForm(normalizedFormData);
+
+    if (normalizedFormData.tipoPersona === 'juridica' && normalizedFormData.tipo !== 'NIT') {
+      validationErrors.tipo = 'La persona jur?dica debe usar tipo de documento NIT';
     }
 
-    // Validación: Persona natural no puede usar NIT
-    if (formData.tipoPersona === 'natural' && formData.tipo === 'NIT') {
-      showError('Error de validación', 'La persona natural no puede usar tipo de documento NIT');
-      return;
+    if (normalizedFormData.tipoPersona === 'natural' && normalizedFormData.tipo === 'NIT') {
+      validationErrors.tipo = 'La persona natural no puede usar tipo de documento NIT';
     }
 
-    // Validación específica: si RUT es "Sí", código CIU es obligatorio
-    if (formData.rut === 'si' && !/^\d{4}$/.test(String(formData.codigoCIU || '').trim())) {
-      const ciuError = 'El codigo CIU debe tener exactamente 4 numeros';
-      setErrors(prev => ({ ...prev, codigoCIU: ciuError }));
-      setTouched(prev => ({ ...prev, codigoCIU: true }));
-      showError('Errores en el formulario', ciuError);
-      return;
+    if (normalizedFormData.rut === 'si' && !/^\d{4}$/.test(String(formData.codigoCIU || '').trim())) {
+      validationErrors.codigoCIU = 'El c?digo CIU debe tener exactamente 4 n?meros';
     }
 
-    // Validación: al menos una categoría seleccionada
-    if (formData.categoryIds.length === 0) {
-      setErrors(prev => ({ ...prev, categoryIds: 'Seleccione al menos una categoría' }));
-      setTouched(prev => ({ ...prev, categoryIds: true }));
-      showError('Errores en el formulario', 'Debe seleccionar al menos una categoría');
-      return;
+    if (normalizedFormData.categoryIds.length === 0) {
+      validationErrors.categoryIds = 'Seleccione al menos una categor?a';
     }
 
-    const validationErrors = validateForm(formData);
     setErrors(validationErrors);
-    setTouched(
-      Object.keys(formData).reduce((acc, key) => ({ ...acc, [key]: true }), {})
-    );
 
     if (Object.keys(validationErrors).length > 0) {
       showError('Errores en el formulario', 'Por favor corrija los errores antes de continuar');
@@ -704,19 +760,19 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
 
   const labelClass = 'flex min-h-8 items-end text-xs font-semibold leading-tight text-gray-600';
 
-  const IconInput = ({ icon: Icon, className, ...props }) => (
-    <div className="relative">
-      {Icon && (
-        <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
-      )}
-      <input {...props} className={Icon ? `${className} pl-9` : className} />
-    </div>
-  );
-
   const getSelectedCategoryNames = () => {
     const selectedCategories = categoriesList.filter(cat => formData.categoryIds.includes(cat.id));
     return selectedCategories.map(cat => cat.name).join(', ');
   };
+
+  const filteredCategories = useMemo(() => {
+    const search = categorySearch.trim().toLowerCase();
+    if (!search) return categoriesList;
+
+    return categoriesList.filter((category) =>
+      String(category.name || '').toLowerCase().includes(search)
+    );
+  }, [categoriesList, categorySearch]);
 
   const isDirty = useMemo(() => {
     const baseData = provider
@@ -858,9 +914,11 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       onBlur={handleBlur}
                       placeholder="123456789"
                       autoComplete="off"
+                      maxLength={formData.tipo === 'NIT' ? NIT_MAX_LENGTH : DOCUMENT_MAX_LENGTH}
                       className={isEditing ? protectedInputClass('numero') : inputClass('numero')}
                       disabled={isEditing}
                     />
+                    <FieldCounter value={formData.numero} maxLength={formData.tipo === 'NIT' ? NIT_MAX_LENGTH : DOCUMENT_MAX_LENGTH} />
                     {checkingDocument && touched.numero && !errors.numero && (
                       <p className="mt-0.5 text-xs text-[#004D77]">Verificando si el documento ya está registrado...</p>
                     )}
@@ -884,6 +942,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     className={isEditing ? protectedInputClass('nombres') : inputClass('nombres')}
                     disabled={isEditing}
                   />
+                  <FieldCounter value={formData.nombres} maxLength={PROVIDER_NAME_MAX_LENGTH} />
                   {renderError('nombres')}
                 </div>
 
@@ -903,6 +962,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     className={isEditing ? protectedInputClass('apellidos') : inputClass('apellidos')}
                     disabled={isEditing}
                   />
+                  <FieldCounter value={formData.apellidos} maxLength={PROVIDER_NAME_MAX_LENGTH} />
                   {renderError('apellidos')}
                 </div>
                 )}
@@ -920,8 +980,10 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       onBlur={handleBlur}
                       placeholder="3001234567"
                       autoComplete="off"
+                      maxLength={PHONE_MAX_LENGTH}
                       className={inputClass('telefono')}
                     />
+                    <FieldCounter value={formData.telefono} maxLength={PHONE_MAX_LENGTH} />
                     {renderError('telefono')}
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
@@ -938,6 +1000,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       maxLength={ADDRESS_MAX_LENGTH}
                       className={inputClass('direccion')}
                     />
+                    <FieldCounter value={formData.direccion} maxLength={ADDRESS_MAX_LENGTH} />
                     {renderError('direccion')}
                   </div>
                 </div>
@@ -956,6 +1019,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     maxLength={EMAIL_MAX_LENGTH}
               className={inputClass('correo')}
             />
+            <FieldCounter value={formData.correo} maxLength={EMAIL_MAX_LENGTH} />
             {checkingEmail && touched.correo && !errors.correo && (
               <p className="mt-0.5 text-xs text-[#004D77]">Verificando si el correo ya está registrado...</p>
             )}
@@ -984,8 +1048,10 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       onBlur={handleBlur}
                       placeholder="María"
                       autoComplete="off"
+                      maxLength={CONTACT_NAME_MAX_LENGTH}
                       className={inputClass('nombreContacto')}
                     />
+                    <FieldCounter value={formData.nombreContacto} maxLength={CONTACT_NAME_MAX_LENGTH} />
                     {renderError('nombreContacto')}
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
@@ -999,8 +1065,10 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       onBlur={handleBlur}
                       placeholder="3009876543"
                       autoComplete="off"
+                      maxLength={PHONE_MAX_LENGTH}
                       className={inputClass('numeroContacto')}
                     />
+                    <FieldCounter value={formData.numeroContacto} maxLength={PHONE_MAX_LENGTH} />
                     {renderError('numeroContacto')}
                   </div>
                 </div>
@@ -1016,8 +1084,10 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     onBlur={handleBlur}
                     placeholder="30"
                     autoComplete="off"
+                    maxLength={RETURN_PERIOD_MAX_LENGTH}
                     className={inputClass('plazoDevoluciones')}
                   />
+                  <FieldCounter value={formData.plazoDevoluciones} maxLength={RETURN_PERIOD_MAX_LENGTH} />
                   {renderError('plazoDevoluciones')}
                   <p className="text-[10px] text-gray-400 mt-0.5"></p>
                 </div>
@@ -1043,11 +1113,44 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                     </button>
 
                     {categoriasOpen && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg">
+                        <div className="border-b border-slate-100 p-2">
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={categorySearch}
+                              onChange={(event) => setCategorySearch(event.target.value)}
+                              placeholder="Buscar categoría"
+                              className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 pr-8 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/10"
+                            />
+                            <Tags className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={1.8} />
+                          </div>
+                          <div className="mt-2 flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={handleSelectAllCategories}
+                              disabled={loadingCategories || categoriesList.length === 0}
+                              className="rounded-md border border-[#004D77]/20 bg-sky-50 px-2 py-1 text-[11px] font-semibold text-[#004D77] transition-colors hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              Todas
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleClearCategories}
+                              disabled={formData.categoryIds.length === 0}
+                              className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              Limpiar
+                            </button>
+                          </div>
+                        </div>
+                        <div className="max-h-44 overflow-y-auto">
                         {loadingCategories ? (
                           <div className="px-3 py-2 text-sm text-gray-500">Cargando categorías...</div>
+                        ) : filteredCategories.length === 0 ? (
+                          <div className="px-3 py-3 text-center text-sm text-gray-500">No se encontraron categorías</div>
                         ) : (
-                          categoriesList.map((categoria) => (
+                          filteredCategories.map((categoria) => (
                             <label
                               key={categoria.id}
                               className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
@@ -1058,10 +1161,11 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                                 onChange={() => handleCategoriaChange(categoria.id)}
                                 className="w-4 h-4 text-[#004D77] focus:ring-[#004D77] rounded"
                               />
-                              <span>{categoria.name}</span>
+                              <span className="min-w-0 flex-1 truncate" title={categoria.name}>{categoria.name}</span>
                             </label>
                           ))
                         )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1102,6 +1206,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
                       disabled={formData.rut === 'no'}
                       readOnly={formData.rut === 'no'}
                     />
+                    <FieldCounter value={formData.codigoCIU} maxLength={CIU_CODE_LENGTH} hidden={formData.rut === 'no'} />
                     {renderError('codigoCIU')}
                   </div>
                 </div>
@@ -1122,7 +1227,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
             </button>
             <button
               type="submit"
-              disabled={saving || checkingEmail || checkingDocument || hasLiveErrors}
+              disabled={saving}
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
