@@ -285,10 +285,10 @@ const formatErrorDetail = (detail) => {
 
 const CREDIT_ERROR_MESSAGES = {
   CLIENT_NOT_FOUND: 'Cliente no encontrado.',
-  CLIENT_INACTIVE: 'El cliente esta inactivo.',
-  CLIENT_HAS_OVERDUE_CREDITS: 'El cliente tiene creditos vencidos.',
-  CLIENT_WITHOUT_CREDIT_LIMIT: 'El cliente no tiene cupo de credito asignado.',
-  CREDIT_LIMIT_EXCEEDED: 'El monto a credito supera el cupo disponible del cliente.',
+  CLIENT_INACTIVE: 'El cliente está inactivo.',
+  CLIENT_HAS_OVERDUE_CREDITS: 'El cliente tiene créditos vencidos.',
+  CLIENT_WITHOUT_CREDIT_LIMIT: 'El cliente no tiene cupo de crédito asignado.',
+  CREDIT_LIMIT_EXCEEDED: 'El monto a crédito supera el cupo disponible del cliente.',
 };
 
 const formatPaymentTotalMismatch = (details = {}) => {
@@ -331,7 +331,7 @@ export const SalesServices = {
       const response = await apiClient.get('/vendings/metrics');
       return response.data.data;
     } catch (error) {
-      throw new Error(getErrorMessage(error, 'No se pudieron obtener las metricas de ventas.'));
+      throw new Error(getErrorMessage(error, 'No se pudieron obtener las métricas de ventas.'));
     }
   },
 

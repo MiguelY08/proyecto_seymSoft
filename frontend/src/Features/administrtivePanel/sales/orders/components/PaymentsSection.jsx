@@ -1,6 +1,6 @@
 // src/features/orders/components/PaymentsSection.jsx
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, DollarSign, Tag, FileText, CheckCircle, CreditCard, Lock, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, DollarSign, Tag, FileText, CheckCircle, CreditCard, Lock, Trash2, AlertTriangle, Pencil, X } from 'lucide-react';
 import { METODOS_PAGO } from '../services/ordersService';
 import FormSelect from '../../../../shared/FormSelect';
 
@@ -22,10 +22,10 @@ function PaymentsSection({
   pagos = [],
   onAddPayment,
   onRemovePayment,
+  onUpdatePayment,
   loading = false,
   disabled = false,
   isEditMode = false,
-  disallowDuplicateMethods = false,
   allowCredit = false,
   creditAvailable = null,
   creditAssigned = null,
@@ -40,6 +40,9 @@ function PaymentsSection({
     comprobante: '',
   });
   const [formError, setFormError] = useState('');
+  const [editingPaymentId, setEditingPaymentId] = useState(null);
+  const [editingAmount, setEditingAmount] = useState('');
+  const [editError, setEditError] = useState('');
   const paymentFormRef = useRef(null);
   const amountInputRef = useRef(null);
 
@@ -132,7 +135,7 @@ function PaymentsSection({
       return;
     }
     if (!allowCredit && newPayment.metodoPago === METODOS_PAGO.CREDITO) {
-      setFormError('El pago por credito no esta disponible para pedidos.');
+      setFormError('El pago a crédito no está disponible para pedidos.');
       return;
     }
     if (newPayment.metodoPago === METODOS_PAGO.DEVOLUCION && monto > favorBalanceValue) {
@@ -143,14 +146,6 @@ function PaymentsSection({
       setFormError(`El monto supera el cupo disponible (${formatCurrency(creditLimit)}).`);
       return;
     }
-    if (
-      disallowDuplicateMethods &&
-      pagos.some((pago) => pago.metodoPago === newPayment.metodoPago)
-    ) {
-      setFormError('No se puede repetir un metodo de pago en la misma venta.');
-      return;
-    }
-
     onAddPayment({
       metodoPago: newPayment.metodoPago,
       monto,
@@ -173,6 +168,58 @@ function PaymentsSection({
     !pago.locked &&
     !pago.isLocked &&
     !pago.persisted;
+
+  const canEditPayment = (pago) =>
+    Boolean(onUpdatePayment) &&
+    !loading &&
+    !disabled &&
+    !pago.locked &&
+    !pago.isLocked &&
+    !pago.persisted;
+
+  const startPaymentEdit = (pago) => {
+    setEditingPaymentId(pago.id);
+    setEditingAmount(String(roundMoney(pago.monto)));
+    setEditError('');
+  };
+
+  const cancelPaymentEdit = () => {
+    setEditingPaymentId(null);
+    setEditingAmount('');
+    setEditError('');
+  };
+
+  const savePaymentEdit = (pago) => {
+    const monto = parseMoneyInput(editingAmount);
+    const maxAllowed = roundMoney(saldoPendiente + Number(pago.monto || 0));
+
+    if (monto <= 0) {
+      setEditError('El monto debe ser un número mayor a cero.');
+      return;
+    }
+    if (Math.round(monto * 100) > Math.round(maxAllowed * 100)) {
+      setEditError(`El monto excede el saldo disponible (${formatCurrency(maxAllowed)}).`);
+      return;
+    }
+
+    onUpdatePayment(pago.id, monto);
+    cancelPaymentEdit();
+  };
+
+  const handleEditingAmountChange = (pago, value) => {
+    const cleanValue = cleanMoneyInput(value);
+    const monto = parseMoneyInput(cleanValue);
+    const maxAllowed = roundMoney(saldoPendiente + Number(pago.monto || 0));
+
+    setEditingAmount(cleanValue);
+
+    if (monto > maxAllowed) {
+      setEditError(`El monto excede el saldo disponible (${formatCurrency(maxAllowed)}).`);
+      return;
+    }
+
+    setEditError('');
+  };
 
   const handleTogglePaymentForm = () => {
     setShowForm((current) => !current);
@@ -395,7 +442,7 @@ function PaymentsSection({
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Método</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Monto</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Comprobante</th>
-                    {onRemovePayment && (
+                    {(onRemovePayment || onUpdatePayment) && (
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
                     )}
                   </tr>
@@ -416,7 +463,25 @@ function PaymentsSection({
                           </span>
                         </td>
                         <td className="px-3 py-2 text-sm font-medium text-gray-900">
-                          {formatCurrency(pago.monto)}
+                          {editingPaymentId === pago.id ? (
+                            <div>
+                              <input
+                                autoFocus
+                                type="text"
+                                inputMode="numeric"
+                                value={formatMoneyInput(editingAmount)}
+                                onChange={(event) => handleEditingAmountChange(pago, event.target.value)}
+                                className={`w-28 rounded-md border bg-amber-50 px-2 py-1 text-sm outline-none ring-2 ${editError ? 'border-red-500 ring-red-100 focus:border-red-500 focus:ring-red-200' : 'border-amber-400 ring-amber-100 focus:border-amber-500 focus:ring-amber-200'}`}
+                                aria-label="Nuevo monto del pago"
+                                aria-invalid={Boolean(editError)}
+                              />
+                              <p className={`mt-1 text-xs font-normal ${editError ? 'text-red-600' : 'text-amber-700'}`}>
+                                {editError || `Máximo permitido: ${formatCurrency(roundMoney(saldoPendiente + Number(pago.monto || 0)))}`}
+                              </p>
+                            </div>
+                          ) : (
+                            formatCurrency(pago.monto)
+                          )}
                         </td>
                         <td className="px-3 py-2 text-sm text-gray-500">
                           {pago.comprobante ? (
@@ -428,17 +493,35 @@ function PaymentsSection({
                             '-'
                           )}
                         </td>
-                        {onRemovePayment && (
+                        {(onRemovePayment || onUpdatePayment) && (
                           <td className="px-3 py-2 text-center">
-                            {removable ? (
-                              <button
-                                type="button"
-                                onClick={() => onRemovePayment(pago.id)}
-                                className="inline-flex items-center justify-center w-7 h-7 rounded-md text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
-                                title="Eliminar abono"
-                              >
-                                <Trash2 className="w-4 h-4" strokeWidth={1.8} />
-                              </button>
+                            {editingPaymentId === pago.id ? (
+                              <div className="inline-flex items-center gap-1">
+                                <button type="button" onClick={() => savePaymentEdit(pago)} disabled={Boolean(editError) || !editingAmount} className="inline-flex h-7 w-7 items-center justify-center rounded-md text-emerald-600 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40" title="Guardar monto">
+                                  <CheckCircle className="w-4 h-4" strokeWidth={1.8} />
+                                </button>
+                                <button type="button" onClick={cancelPaymentEdit} className="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100" title="Cancelar edición">
+                                  <X className="w-4 h-4" strokeWidth={1.8} />
+                                </button>
+                              </div>
+                            ) : canEditPayment(pago) || removable ? (
+                              <div className="inline-flex items-center gap-1">
+                                {canEditPayment(pago) && (
+                                  <button type="button" onClick={() => startPaymentEdit(pago)} className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#004D77] transition-colors hover:bg-[#004D77]/10" title="Editar pago">
+                                    <Pencil className="w-4 h-4" strokeWidth={1.8} />
+                                  </button>
+                                )}
+                                {removable && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onRemovePayment(pago.id)}
+                                    className="inline-flex items-center justify-center w-7 h-7 rounded-md text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+                                    title="Eliminar abono"
+                                  >
+                                    <Trash2 className="w-4 h-4" strokeWidth={1.8} />
+                                  </button>
+                                )}
+                              </div>
                             ) : (
                               <span
                                 className="inline-flex items-center justify-center w-7 h-7 text-gray-300"

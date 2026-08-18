@@ -295,8 +295,12 @@ function ReturnsTable({
   const canAnnulGlobal = hasPermission("devoluciones_en_compras.anular");
 
   const isClosed = (d) => isEstadoAnulado(d.estado) || d.estado === "Listo" || d.estado?.startsWith("Procesada");
-  const canEdit  = (d) => canEditGlobal && !isClosed(d);
-  const canAnnul = (d) => canAnnulGlobal && !isClosed(d);
+  const getDisabledActionTitle = (d) => {
+    if (isEstadoAnulado(d.estado)) return "No disponible para devoluciones anuladas";
+    if (d.estado === "Listo") return "No disponible para devoluciones listas";
+    if (d.estado?.startsWith("Procesada")) return "No disponible para devoluciones procesadas";
+    return "No disponible";
+  };
 
   if (currentData.length === 0) {
     return <EmptyState isSearching={isSearching} />;
@@ -310,7 +314,7 @@ function ReturnsTable({
           <tr>
             <th className="sticky left-0 z-30 bg-[#004D77] px-3 py-2.5 text-center text-xs font-semibold">No. Devolución</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Compra</th>
-            <th className="px-3 py-2.5 text-center text-xs font-semibold">Proveedor</th>
+            <th className="w-52 max-w-[13rem] px-3 py-2.5 text-center text-xs font-semibold">Proveedor</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">F. Devolución</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Productos</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold">Devolver</th>
@@ -329,6 +333,8 @@ function ReturnsTable({
               (sum, p) => sum + (p.cantidadDevolver ?? 0), 0
             ) || devolucion.totalDetails || progress.total || 0;
             const progressLabel = progress.label ?? `${devolucion.completedDetails ?? progress.completed ?? 0}/${devolucion.totalDetails ?? progress.total ?? 0}`;
+            const actionsDisabled = isClosed(devolucion);
+            const disabledActionTitle = getDisabledActionTitle(devolucion);
 
             return (
               <tr key={devolucion.id} className={`group transition-colors duration-150 ${rowBg}`}>
@@ -344,8 +350,10 @@ function ReturnsTable({
                 </td>
 
                 {/* Proveedor */}
-                <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                  {highlight(proveedor, search)}
+                <td className="w-52 max-w-[13rem] px-3 py-2 text-center text-xs text-gray-700">
+                  <span className="block truncate" title={String(proveedor)}>
+                    {highlight(proveedor, search)}
+                  </span>
                 </td>
 
                 {/* Fecha */}
@@ -388,23 +396,35 @@ function ReturnsTable({
                         <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                       </button>
                     )}
-                    {canEdit(devolucion) && (
-                      <button
-                        onClick={() => onEdit?.(devolucion)}
-                        title="Editar devolución"
-                        className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
-                      >
-                        <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
-                      </button>
+                    {canEditGlobal && (
+                      actionsDisabled ? (
+                        <span className="text-gray-200 cursor-not-allowed" title={disabledActionTitle}>
+                          <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => onEdit?.(devolucion)}
+                          title="Editar devolución"
+                          className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                        >
+                          <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                        </button>
+                      )
                     )}
-                    {canAnnul(devolucion) && (
-                      <button
-                        onClick={() => onAnnul(devolucion)}
-                        title="Anular devolución"
-                        className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
-                      >
-                        <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
-                      </button>
+                    {canAnnulGlobal && (
+                      actionsDisabled ? (
+                        <span className="text-gray-200 cursor-not-allowed" title={disabledActionTitle}>
+                          <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => onAnnul(devolucion)}
+                          title="Anular devolución"
+                          className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
+                        >
+                          <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                        </button>
+                      )
                     )}
                   </div>
                 </td>

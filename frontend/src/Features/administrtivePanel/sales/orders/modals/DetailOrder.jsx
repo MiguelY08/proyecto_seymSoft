@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   X, User, Phone, Mail, MapPin, Calendar, CreditCard,
-  CheckCircle, XCircle, Edit, AlertTriangle, Tag, DollarSign, FileDown,
+  CheckCircle, Edit, AlertTriangle, Tag, DollarSign, FileDown,
   IdCard, UserCheck, Truck
 } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
@@ -24,13 +24,11 @@ import RejectPaymentReceiptModal from './RejectPaymentReceiptModal';
 import { formatDeliveryAddress } from '../helpers/deliveryAddressHelper';
 
 // ─── DetailRow ────────────────────────────────────────────────────────────────
-function DetailRow({ icon, label, value, placeholder, highlight = false, multiline = false }) {
+function DetailRow({ icon, label, value, placeholder, highlight = false, multiline = false, className = '' }) {
   const hasValue = value && String(value).trim() !== '';
   const IconComponent = icon;
   return (
-    <div className={`flex min-w-0 items-start gap-2 rounded-lg border border-gray-100 bg-gray-50/70 p-2.5 md:gap-3 md:rounded-none md:border-x-0 md:border-t-0 md:border-b md:bg-transparent md:px-0 md:py-2 md:last:border-b-0 ${
-      multiline ? 'col-span-2 md:col-auto' : ''
-    }`}>
+    <div className={`flex min-w-0 items-start gap-2 rounded-lg border border-gray-100 bg-gray-50/70 p-3 md:gap-3 ${className}`}>
       <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5 ${
         hasValue ? 'bg-[#004D77]/10' : 'bg-gray-100'
       }`}>
@@ -62,20 +60,28 @@ function StatusBanner({ order }) {
     return isNaN(date.getTime()) ? dateValue : date.toLocaleDateString('es-CO');
   };
 
-  if (order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) {
-    const cancellationReason = order.cancellationReason ?? order.motivoCancelacion;
-    const cancelledAt = order.cancelledAt ?? order.fechaCancelacion;
+  if (order.estadoLogistico === ESTADOS_LOGISTICOS.ANULADO) {
+    const cancellationReason =
+      order.cancellationReason ??
+      order.motivoCancelacion ??
+      order.motivoAnulacion ??
+      order.cancelReason;
+    const cancelledAt =
+      order.cancelledAt ??
+      order.fechaCancelacion ??
+      order.fechaAnulacion ??
+      order.annulledAt;
 
     return (
       <div className="sticky top-0 z-10 mx-4 mt-4 flex items-start gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-lg shadow-sm">
         <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" strokeWidth={2} />
         <div>
-          <p className="text-xs font-semibold text-red-600">Pedido cancelado</p>
+          <p className="text-xs font-semibold text-red-600">Pedido anulado</p>
           <p className="text-xs text-red-500 leading-relaxed mt-0.5">
             {cancellationReason || 'Sin motivo registrado.'}
           </p>
           {cancelledAt && (
-            <p className="text-xs text-red-400 mt-0.5">Cancelado el {formatDate(cancelledAt)}</p>
+            <p className="text-xs text-red-400 mt-0.5">Anulado el {formatDate(cancelledAt)}</p>
           )}
         </div>
       </div>
@@ -104,12 +110,11 @@ function DetailOrder({
   isOpen, 
   onClose, 
   onEdit, 
-  onCancel, 
-  onEstadoChange,
   onOrderRefresh,
-  modo = 'pedido' // 'pedido' o 'venta'
+  modo = 'pedido', // 'pedido' o 'venta'
+  isPage = false,
 }) {
-  const { showConfirm, showSuccess, showError } = useAlert();
+  const { showSuccess, showError } = useAlert();
   const [pagos, setPagos] = useState([]);
   const [totalPagado, setTotalPagado] = useState(0);
   const [paymentReceipts, setPaymentReceipts] = useState([]);
@@ -204,30 +209,10 @@ function DetailOrder({
     ? [clienteTipoDocumento, clienteDocumento].filter(Boolean).join(' ')
     : '';
   const shippingAmount = Number(order.shippingAmount ?? 0);
-  const isCancelado = order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO;
+  const isCancelado = order.estadoLogistico === ESTADOS_LOGISTICOS.ANULADO;
   const isEntregado = order.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO;
   const canChangeOrder = !isCancelado && !isEntregado;
   const showEditButton = canChangeOrder && modo === 'pedido';
-
-  const handleMarcarListo = async () => {
-    if (!canChangeOrder) return;
-    const result = await showConfirm(
-      'info',
-      'Marcar como listo',
-      `¿Confirmas que el pedido #${order.numeroPedido || order.id} está listo para entrega?`,
-      { confirmButtonText: 'Sí, marcar listo', cancelButtonText: 'Cancelar' }
-    );
-    if (!result?.isConfirmed) return;
-    await onEstadoChange?.(order, ESTADOS_LOGISTICOS.LISTO);
-    return;
-    showSuccess('Pedido actualizado', `El pedido #${order.numeroPedido || order.id} ahora está listo.`);
-  };
-
-  const handleCancelar = () => {
-    if (!canChangeOrder) return;
-    onCancel(order);
-    onClose();
-  };
 
   const handleEditClick = () => {
     if (!showEditButton) return;
@@ -313,8 +298,10 @@ function DetailOrder({
     <>
       <div
         style={{ transition: 'opacity 250ms ease' }}
-        className={`fixed inset-0 z-50 flex items-stretch justify-stretch bg-white sm:items-center sm:justify-center sm:bg-black/40 sm:p-4 sm:backdrop-blur-sm
-          ${visible ? 'opacity-100' : 'opacity-0'}`}
+        className={isPage
+          ? 'flex h-full min-h-0 w-full bg-white'
+          : `fixed inset-0 z-50 flex items-stretch justify-stretch bg-white sm:items-center sm:justify-center sm:bg-black/40 sm:p-4 sm:backdrop-blur-sm ${visible ? 'opacity-100' : 'opacity-0'}`
+        }
       >
         <div
           onClick={(e) => e.stopPropagation()}
@@ -322,32 +309,65 @@ function DetailOrder({
             transformOrigin: 'center center',
             transition: 'transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 200ms ease',
           }}
-          className={`flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:max-w-3xl sm:rounded-lg
-            ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
+          className={isPage
+            ? 'flex h-full min-h-0 w-full flex-col overflow-hidden bg-white'
+            : `flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:max-w-6xl sm:rounded-lg ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`
+          }
         >
-          {/* Header */}
-          <div className="flex shrink-0 items-start justify-between gap-3 bg-[#004D77] px-4 py-3 sm:items-center sm:px-6 sm:py-4">
-            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-              <h2 className="truncate text-base font-semibold text-white sm:text-lg">
-                {titulo}
-              </h2>
-              {esModoVenta && pedidoRelacionadoId && (
-                <span className="w-fit rounded-full bg-white/15 px-2 py-1 text-xs font-medium text-white">
-                  Pedido #{pedidoRelacionadoId}
-                </span>
-              )}
-              <div className="flex flex-wrap items-center gap-2">
+          {isPage ? (
+            <div className="flex shrink-0 flex-col gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:gap-3">
+                <h1 className="truncate text-lg font-semibold text-[#004D77]">{titulo}</h1>
+                {esModoVenta && pedidoRelacionadoId && (
+                  <span className="rounded-full bg-[#004D77]/10 px-2 py-1 text-xs font-medium text-[#004D77]">
+                    Pedido #{pedidoRelacionadoId}
+                  </span>
+                )}
                 <EstadoLogisticoBadgePill estado={order.estadoLogistico} />
                 <EstadoPagoBadgePill estado={order.pagoEstado} />
               </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={handleDownloadPDF}
+                  className="flex items-center justify-center gap-2 rounded-lg border border-gray-400 px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100"
+                >
+                  <FileDown className="h-4 w-4" strokeWidth={1.8} />
+                  Exportar PDF
+                </button>
+                {showEditButton && (
+                  <button
+                    onClick={handleEditClick}
+                    className="flex items-center justify-center gap-2 rounded-lg bg-[#004D77] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#003a5c]"
+                  >
+                    <Edit className="h-4 w-4" strokeWidth={1.8} />
+                    Editar pedido
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  className="rounded-lg bg-gray-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-600"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
-            <button
-              onClick={onClose}
-              className="shrink-0 rounded-full p-1 text-white transition-colors hover:bg-white/20 cursor-pointer"
-            >
-              <X className="w-5 h-5" strokeWidth={2} />
-            </button>
-          </div>
+          ) : (
+            <div className="flex shrink-0 items-start justify-between gap-3 bg-[#004D77] px-4 py-3 sm:items-center sm:px-6 sm:py-4">
+              <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                <h2 className="truncate text-base font-semibold text-white sm:text-lg">{titulo}</h2>
+                {esModoVenta && pedidoRelacionadoId && (
+                  <span className="w-fit rounded-full bg-white/15 px-2 py-1 text-xs font-medium text-white">Pedido #{pedidoRelacionadoId}</span>
+                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <EstadoLogisticoBadgePill estado={order.estadoLogistico} />
+                  <EstadoPagoBadgePill estado={order.pagoEstado} />
+                </div>
+              </div>
+              <button onClick={onClose} className="shrink-0 rounded-full p-1 text-white transition-colors hover:bg-white/20 cursor-pointer">
+                <X className="w-5 h-5" strokeWidth={2} />
+              </button>
+            </div>
+          )}
 
           {/* Cuerpo */}
           <div className="min-h-0 flex-1 overflow-y-auto">
@@ -365,9 +385,9 @@ function DetailOrder({
               </div>
             )}
 
-          <div className="grid grid-cols-1 gap-3 px-4 py-4 sm:px-6 sm:py-5 md:grid-cols-2 md:gap-0 md:p-0 md:divide-x md:divide-gray-100">
+          <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5">
             {/* ── Columna izquierda: Detalles ─────────────────── */}
-            <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-none md:border-0 md:px-6 md:py-5 md:shadow-none">
+            <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="h-px flex-1 bg-gray-100" />
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">
@@ -376,28 +396,36 @@ function DetailOrder({
                 <div className="h-px flex-1 bg-gray-100" />
               </div>
 
-              <div className="grid grid-cols-2 gap-2 md:block">
-              <DetailRow icon={Calendar}   label="Fecha"      value={fechaMostrar} />
-              <DetailRow icon={User}       label="Persona que recibe" value={personaRecibe} />
-              {!isRecoge && (
-                <DetailRow icon={Phone} label="Telefono de quien recibe" value={telefonoPersonaRecibe} />
-              )}
-              <DetailRow icon={IdCard}     label="Documento cliente" value={documentoCliente || 'No registrado'} />
-              <DetailRow icon={Phone}      label="Teléfono"   value={order.clienteTelefono || 'No registrado'} />
-              <DetailRow icon={Mail}       label="Correo"     value={order.clienteEmail || 'No registrado'} />
-              {esModoVenta && (
-                <DetailRow icon={UserCheck} label="Asesor" value={asesorNombre} />
-              )}
-              {!esModoVenta && (
-                <DetailRow icon={Tag}      label="Origen"     value={order.origen || ORIGENES.MANUAL} />
-              )}
-              <DetailRow icon={Truck}      label="Entrega"    value={entregaMostrar} />
-              <DetailRow icon={MapPin}     label="Dirección de entrega"  value={direccionEntregaCompleta || 'No aplica'} multiline />
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="rounded-lg bg-gray-50/40 p-3">
+                  <p className="mb-2 text-xs font-semibold text-gray-500">Información del cliente/persona</p>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <DetailRow icon={IdCard} label="Documento" value={documentoCliente || 'No registrado'} />
+                    <DetailRow icon={User} label="Nombre de la persona/cliente" value={personaRecibe} />
+                    <DetailRow icon={Mail} label="Correo" value={order.clienteEmail || 'No registrado'} />
+                    <DetailRow icon={Phone} label="Teléfono" value={order.clienteTelefono || telefonoPersonaRecibe || 'No registrado'} />
+                  </div>
+                </div>
+
+                <div className="rounded-lg bg-gray-50/40 p-3">
+                  <p className="mb-2 text-xs font-semibold text-gray-500">Información del pedido</p>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <DetailRow icon={Calendar} label="Fecha" value={fechaMostrar} />
+                    {!esModoVenta && (
+                      <DetailRow icon={Tag} label="Origen" value={order.origen || ORIGENES.MANUAL} />
+                    )}
+                    {esModoVenta && (
+                      <DetailRow icon={UserCheck} label="Asesor" value={asesorNombre} />
+                    )}
+                    <DetailRow icon={Truck} label="Entrega" value={entregaMostrar} />
+                    <DetailRow icon={MapPin} label="Dirección de entrega" value={direccionEntregaCompleta || 'No aplica'} multiline />
+                  </div>
+                </div>
               </div>
-            </div>
+            </section>
 
             {/* ── Columna derecha: Productos y pagos ───────────────────────── */}
-            <div className="flex flex-col rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-none md:border-0 md:px-6 md:py-5 md:shadow-none">
+            <section className="flex flex-col rounded-xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="h-px flex-1 bg-gray-100" />
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">
@@ -409,9 +437,9 @@ function DetailOrder({
               {/* Productos */}
               {order.productos?.length > 0 ? (
                 <>
-                  <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
-                    <div className="min-w-[420px]">
-                      <div className="grid grid-cols-[minmax(140px,1fr)_auto_auto_auto] gap-x-3 px-2 py-1.5 rounded-md bg-[#004D77]/5 mb-1">
+                  <div className="w-full">
+                    <div>
+                      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-x-2 px-2 py-1.5 rounded-md bg-[#004D77]/5 mb-1 sm:gap-x-3">
                         <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide">Producto</span>
                         <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide text-right">Cant</span>
                         <span className="text-[10px] font-bold text-[#004D77] uppercase tracking-wide text-right">P. Unit</span>
@@ -421,7 +449,7 @@ function DetailOrder({
                         {order.productos.map((producto, idx) => (
                           <div
                             key={idx}
-                            className={`grid grid-cols-[minmax(140px,1fr)_auto_auto_auto] gap-x-3 px-2 py-2 items-start rounded-md ${
+                            className={`grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-x-2 px-2 py-2 items-start rounded-md sm:gap-x-3 ${
                               idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                             }`}
                           >
@@ -461,7 +489,7 @@ function DetailOrder({
                 </div>
                 {!isRecoge && (
                   <div className="flex justify-between items-center px-1 py-1">
-                    <span className="text-xs text-gray-500">Envio</span>
+                    <span className="text-xs text-gray-500">Envío</span>
                     <span className="text-sm font-bold text-gray-700">{formatCurrency(shippingAmount)}</span>
                   </div>
                 )}
@@ -477,20 +505,20 @@ function DetailOrder({
                 </div>
 
                 {pagos.length > 0 ? (
-                  <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
-                    <table className="min-w-full divide-y divide-gray-200">
+                  <div className="w-full">
+                    <table className="w-full table-fixed divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Fecha</th>
-                          <th className="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Método</th>
-                          <th className="px-2 py-1 text-right text-[10px] font-medium text-gray-500 uppercase">Monto</th>
+                          <th className="w-[28%] px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Fecha</th>
+                          <th className="w-[42%] px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Método</th>
+                          <th className="w-[30%] px-2 py-1 text-right text-[10px] font-medium text-gray-500 uppercase">Monto</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-100">
                         {pagos.map((pago) => (
                           <tr key={pago.id}>
-                            <td className="px-2 py-1 text-xs text-gray-700 whitespace-nowrap">{formatDate(pago.fechaPago)}</td>
-                            <td className="px-2 py-1 text-xs text-gray-700">{pago.metodoPago}</td>
+                            <td className="px-2 py-1 text-xs text-gray-700">{formatDate(pago.fechaPago)}</td>
+                            <td className="break-words px-2 py-1 text-xs text-gray-700">{pago.metodoPago}</td>
                             <td className="px-2 py-1 text-xs font-medium text-gray-900 text-right">{formatCurrency(pago.monto)}</td>
                           </tr>
                         ))}
@@ -501,11 +529,11 @@ function DetailOrder({
                   <p className="text-xs text-gray-400 italic">No hay pagos registrados.</p>
                 )}
               </div>
-            </div>
+            </section>
           </div>
         </div>
 
-        {/* Footer */}
+        {!isPage && (
         <div className="flex shrink-0 flex-col-reverse items-stretch gap-2 border-t border-gray-200 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
           <button
             onClick={handleDownloadPDF}
@@ -523,26 +551,6 @@ function DetailOrder({
             {/* Acciones solo visibles en modo pedido */}
             {modo === 'pedido' && (
               <>
-                {order.estadoLogistico === ESTADOS_LOGISTICOS.EN_PROCESO && (
-                  <>
-                    <button
-                      onClick={handleMarcarListo}
-                      className="flex w-full items-center justify-center gap-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 sm:w-auto"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      Marcar listo
-                    </button>
-                  </>
-                )}
-                {canChangeOrder && (
-                  <button
-                    onClick={handleCancelar}
-                    className="flex w-full items-center justify-center gap-1 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-600 sm:w-auto"
-                  >
-                    <XCircle className="w-4 h-4" />
-                    Cancelar
-                  </button>
-                )}
                 {showEditButton && (
                   <button onClick={handleEditClick} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] sm:w-auto">
                     <Edit className="w-4 h-4" strokeWidth={1.8} />
@@ -552,6 +560,7 @@ function DetailOrder({
               </>
             )}
           </div>
+        )}
         </div>
       </div>
 

@@ -80,7 +80,7 @@ const PaymentRow = ({ payment }) => (
   <div className="rounded-lg px-2 py-1.5" style={{ background: 'rgba(15, 23, 42, 0.72)' }}>
     <div className="flex items-center justify-between gap-3">
       <span className="truncate text-xs font-medium" style={{ color: '#f8fafc' }}>
-        {payment.metodoPago || 'Metodo sin registrar'}
+        {payment.metodoPago || 'Método sin registrar'}
       </span>
       <span className="text-xs font-semibold tabular-nums shrink-0" style={{ color: '#93c5fd' }}>
         {formatCurrency(payment.monto)}

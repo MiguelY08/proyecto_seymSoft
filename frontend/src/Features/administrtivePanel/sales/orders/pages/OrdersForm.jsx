@@ -192,7 +192,7 @@ function OrdersForm() {
   }));
   const pedidoInmutable = isEditMode && [
     ESTADOS_LOGISTICOS.ENTREGADO,
-    ESTADOS_LOGISTICOS.CANCELADO,
+    ESTADOS_LOGISTICOS.ANULADO,
   ].includes(estadoLogisticoOriginal);
   const creaVentaDirecta = !isEditMode && formData.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO;
   const requiereRevisionEnvio = Boolean(
@@ -204,7 +204,7 @@ function OrdersForm() {
   // Determinar si los productos son editables
   const productosEditables = useMemo(() => {
     if (!isEditMode) return true; // en creación siempre editables
-    if (estadoLogisticoOriginal === ESTADOS_LOGISTICOS.CANCELADO) return false;
+    if (estadoLogisticoOriginal === ESTADOS_LOGISTICOS.ANULADO) return false;
     if (estadoLogisticoOriginal === ESTADOS_LOGISTICOS.ENTREGADO) return false;
     if (formData.pagoEstado === ESTADOS_PAGO.PAGADO) return false;
     if (formData.tieneVenta) return false;
@@ -221,7 +221,7 @@ function OrdersForm() {
     setItemsChangedFromReady(true);
     showWarning(
       'Pedido vuelve a En proceso',
-      'Al modificar productos o cantidades, el pedido deja de estar listo y vuelve a preparacion.'
+      'Al modificar productos o cantidades, el pedido deja de estar listo y vuelve a preparación.'
     );
   };
 
@@ -572,8 +572,8 @@ function OrdersForm() {
   const handleEstadoLogisticoChange = async (e) => {
     if (pedidoInmutable) return;
     const newEstado = e.target.value;
-    if (newEstado === ESTADOS_LOGISTICOS.CANCELADO) {
-      showWarning('Usa el flujo de cancelacion', 'Para cancelar un pedido debes usar la accion Cancelar e indicar el motivo.');
+    if (newEstado === ESTADOS_LOGISTICOS.ANULADO) {
+      showWarning('Usa el flujo de anulación', 'Para anular un pedido debes usar la acción Anular e indicar el motivo.');
       return;
     }
     setFormData(prev => ({ ...prev, estadoLogistico: newEstado }));
@@ -680,8 +680,8 @@ function OrdersForm() {
 
   const handleScannerProductNotFound = (code) => {
     showError(
-      'Codigo no registrado',
-      `No se encontro ningun producto con el codigo de barras ${code}.`
+      'Código no registrado',
+      `No se encontró ningún producto con el código de barras ${code}.`
     );
   };
 
@@ -722,11 +722,29 @@ function OrdersForm() {
     showSuccess('Abono eliminado', 'El abono pendiente fue eliminado.');
   };
 
+  const handleUpdatePayment = (paymentId, monto) => {
+    const payment = pagos.find((pago) => pago.id === paymentId);
+    if (!payment || payment.locked || payment.persisted) return;
+
+    const updatedAmount = roundMoney(monto);
+    const totalWithoutPayment = roundMoney(totalPagado - toNumber(payment.monto));
+    if (updatedAmount <= 0 || totalWithoutPayment + updatedAmount > total) {
+      showWarning('Monto no válido', 'El monto del abono no puede superar el saldo pendiente del pedido.');
+      return;
+    }
+
+    setPagos(prev => prev.map((pago) => (
+      pago.id === paymentId ? { ...pago, monto: updatedAmount } : pago
+    )));
+    setTotalPagado(roundMoney(totalWithoutPayment + updatedAmount));
+    showSuccess('Abono actualizado', 'El monto del abono fue actualizado.');
+  };
+
   // --- Validación ---
   const validate = () => {
     const newErrors = {};
     if (pedidoInmutable) {
-      newErrors.general = 'Este pedido ya esta entregado o cancelado y no puede modificarse.';
+      newErrors.general = 'Este pedido ya está entregado o anulado y no puede modificarse.';
       return newErrors;
     }
     if (formData.clienteId === '' || formData.clienteId === undefined) {
@@ -738,9 +756,9 @@ function OrdersForm() {
     if (formData.tipoEntrega === 'domicilio') {
       const recipientPhoneDigits = formData.deliveryRecipientPhone.replace(/\D/g, '');
       if (!recipientPhoneDigits) {
-        newErrors.deliveryRecipientPhone = 'Debe ingresar el telefono de la persona que recibe el pedido.';
+        newErrors.deliveryRecipientPhone = 'Debe ingresar el teléfono de la persona que recibe el pedido.';
       } else if (recipientPhoneDigits.length < MIN_PHONE_DIGITS || recipientPhoneDigits.length > MAX_PHONE_DIGITS) {
-        newErrors.deliveryRecipientPhone = `El telefono debe tener entre ${MIN_PHONE_DIGITS} y ${MAX_PHONE_DIGITS} digitos.`;
+        newErrors.deliveryRecipientPhone = `El teléfono debe tener entre ${MIN_PHONE_DIGITS} y ${MAX_PHONE_DIGITS} dígitos.`;
       }
     }
     if (!formData.direccionEntrega?.trim()) {
@@ -776,22 +794,20 @@ function OrdersForm() {
     if (creaVentaDirecta) {
       const paymentMethods = buildDirectSalePaymentMethods(pagos);
       if (!getSessionUserId(user)) {
-        newErrors.general = 'No se pudo identificar al usuario en sesion.';
+        newErrors.general = 'No se pudo identificar al usuario en sesión.';
       } else if (paymentMethods.length === 0) {
         newErrors.general = 'Para registrar una venta directa, debes agregar al menos un pago.';
       } else if (paymentMethods.some((payment) => !payment.idPaymentMethod)) {
-        newErrors.general = 'Hay pagos con un metodo no valido para registrar la venta directa.';
+        newErrors.general = 'Hay pagos con un método no válido para registrar la venta directa.';
       } else if (paymentMethods.some((payment) => payment.amount <= 0)) {
         newErrors.general = 'Todos los pagos de la venta directa deben ser mayores a cero.';
-      } else if (new Set(paymentMethods.map((payment) => payment.idPaymentMethod)).size !== paymentMethods.length) {
-        newErrors.general = 'No se puede repetir un metodo de pago en una venta directa.';
       } else if (Math.round(totalPagado * 100) !== Math.round(total * 100)) {
         newErrors.general = 'Para registrar una venta directa, la suma de pagos debe ser igual al total.';
       }
     }
-    if (formData.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) {
+    if (formData.estadoLogistico === ESTADOS_LOGISTICOS.ANULADO) {
       if (!formData.motivoCancelacion?.trim()) {
-        newErrors.motivoCancelacion = 'Debe indicar el motivo de cancelación.';
+        newErrors.motivoCancelacion = 'Debe indicar el motivo de anulación.';
       } else if (formData.motivoCancelacion.trim().length < 10) {
         newErrors.motivoCancelacion = 'El motivo debe tener al menos 10 caracteres.';
       }
@@ -851,7 +867,7 @@ function OrdersForm() {
           shippingAmount: payload.shippingAmount,
           ...(productosModificados && { productos: payload.productos }),
           estadoLogistico: payload.estadoLogistico,
-          motivoCancelacion: formData.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO ? formData.motivoCancelacion : null,
+          motivoCancelacion: formData.estadoLogistico === ESTADOS_LOGISTICOS.ANULADO ? formData.motivoCancelacion : null,
         });
 
         const oldTotal = currentOrder?.total || 0;
@@ -1104,7 +1120,7 @@ function OrdersForm() {
       </div>
 
       {/* Contenido del formulario en dos columnas principales */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <RightSectionForm
           productos={formData.productos}
           productosCatalogo={productosCatalogoConPrecio}
@@ -1135,7 +1151,6 @@ function OrdersForm() {
           departamentos={departamentos}
           ciudades={ciudades}
           loadingCiudades={loadingCiudades}
-          user={user}
           loading={loading}
           readOnly={pedidoInmutable}
           isEditMode={isEditMode}
@@ -1169,10 +1184,10 @@ function OrdersForm() {
           pagos={pagos}
           onAddPayment={handleAddPayment}
           onRemovePayment={handleRemovePayment}
+          onUpdatePayment={handleUpdatePayment}
           loading={loading}
           disabled={pedidoInmutable}
           isEditMode={isEditMode}
-          disallowDuplicateMethods={creaVentaDirecta}
           allowFavorBalance
           favorBalance={favorBalance}
           financialSummary={financialSummary}
@@ -1183,7 +1198,7 @@ function OrdersForm() {
       {isEditMode && !productosEditables && (
         <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-sm text-yellow-800">
-            <strong>Productos no editables:</strong> Este pedido ya ha sido pagado, tiene una venta asociada, fue entregado o fue cancelado; no se pueden modificar los productos.
+            <strong>Productos no editables:</strong> Este pedido ya ha sido pagado, tiene una venta asociada, fue entregado o fue anulado; no se pueden modificar los productos.
           </p>
         </div>
       )}
@@ -1199,7 +1214,7 @@ function OrdersForm() {
       {pedidoInmutable && (
         <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-sm text-red-700">
-            <strong>Pedido inmutable:</strong> Los pedidos entregados o cancelados no pueden modificarse.
+            <strong>Pedido inmutable:</strong> Los pedidos entregados o anulados no pueden modificarse.
           </p>
         </div>
       )}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import DetailOrder from '../../orders/modals/DetailOrder';
 import { SalesServices } from '../services/salesServices';
 import { useAlert } from '../../../../shared/alerts/useAlert';
@@ -157,25 +157,17 @@ const mapSaleToOrderDetail = (sale) => {
 };
 
 function SaleInfo() {
-  const location = useLocation();
+  const { id } = useParams();
   const navigate = useNavigate();
   const { showError } = useAlert();
 
-  const saleFromState = location.state?.sale ?? null;
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isOpen, setIsOpen] = useState(true);
 
   useEffect(() => {
-    if (!saleFromState) {
-      showError('Error', 'No se encontro informacion de la venta.');
-      navigate('/admin/sales');
-      return;
-    }
-
     const loadSale = async () => {
       try {
-        const sale = await SalesServices.getById(saleFromState.id);
+        const sale = await SalesServices.getById(id);
         if (!sale) {
           showError('Error', 'La venta no existe.');
           navigate('/admin/sales');
@@ -185,7 +177,7 @@ function SaleInfo() {
         setOrder(mapSaleToOrderDetail(sale));
       } catch (error) {
         console.error('Error cargando venta:', error);
-        showError('Error', 'Ocurrio un error al cargar la venta.');
+        showError('Error', 'Ocurrió un error al cargar la venta.');
         navigate('/admin/sales');
       } finally {
         setLoading(false);
@@ -193,21 +185,20 @@ function SaleInfo() {
     };
 
     loadSale();
-  }, [saleFromState, navigate, showError]);
+  }, [id, navigate, showError]);
 
   const handleClose = () => {
-    setIsOpen(false);
-    setTimeout(() => navigate('/admin/sales'), 200);
+    navigate('/admin/sales');
   };
 
   const noop = () => {};
 
   if (loading || !order) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="flex min-h-[calc(100dvh-5rem)] items-center justify-center">
         <Spinner
-          message="Cargando informacion..."
-          className="min-h-0 text-white"
+          message="Cargando información..."
+          className="min-h-0"
         />
       </div>
     );
@@ -216,7 +207,8 @@ function SaleInfo() {
   return (
     <DetailOrder
       order={order}
-      isOpen={isOpen}
+      isOpen
+      isPage
       onClose={handleClose}
       onEdit={noop}
       onCancel={noop}

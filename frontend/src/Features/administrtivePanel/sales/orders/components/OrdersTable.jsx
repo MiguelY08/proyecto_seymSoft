@@ -1,6 +1,6 @@
 // src/features/orders/components/OrdersTable.jsx
 import React from 'react';
-import { AlertTriangle, Info, SquarePen, XCircle, Package, Phone } from 'lucide-react';
+import { AlertTriangle, Info, SquarePen, XCircle, Package } from 'lucide-react';
 import {
   highlight,
   EstadoLogisticoBadgeTable,
@@ -8,9 +8,8 @@ import {
   getPermisos
 } from '../helpers/ordersHelpers';
 import { calculateHoverPosition } from '../helpers/hoverPositionHelper';
-import { ESTADOS_LOGISTICOS, PaymentService } from '../services/ordersService';
+import { ESTADOS_LOGISTICOS, ESTADOS_PAGO, PaymentService } from '../services/ordersService';
 import OrderPaymentHover from './OrderPaymentHover';
-import OrderPhoneHover from './OrderPhoneHover';
 import Permission from '../../../configuration/roles/components/Permission';
 import { formatDeliveryAddress } from '../helpers/deliveryAddressHelper';
 
@@ -48,7 +47,7 @@ function getDeliveryText(order = {}) {
     return 'Recoger en tienda';
   }
 
-  return formatDeliveryAddress(order) || 'Sin direccion registrada';
+  return formatDeliveryAddress(order) || 'Sin dirección registrada';
 }
 
 
@@ -71,7 +70,6 @@ function OrdersTable({
   const isSearching = hasActiveFilters || (totalOrders > 0 && search.trim().length > 0);
   const [paymentCache, setPaymentCache] = React.useState({});
   const [paymentHoverPositions, setPaymentHoverPositions] = React.useState({});
-  const [phoneHoverPositions, setPhoneHoverPositions] = React.useState({});
 
   const updateHoverPosition = React.useCallback(
     (setter, id, target) => {
@@ -154,8 +152,10 @@ function OrdersTable({
               : index % 2 === 0
                 ? 'bg-gray-100 group-hover:bg-blue-50'
                 : 'bg-white group-hover:bg-blue-50';
-            // Llamada corregida con dos parámetros
-            const { deshabilitado } = getPermisos(order.estadoLogistico, order.pagoEstado);
+            const { editarDeshabilitado, cancelarDeshabilitado } = getPermisos(
+              order.estadoLogistico,
+              order.pagoEstado
+            );
             const entregaMostrar = getDeliveryText(order);
             const clienteMostrar =
               order.deliveryRecipientName ||
@@ -164,15 +164,21 @@ function OrdersTable({
             const cachedPayments = paymentCache[order.id];
             const hoverPosition = paymentHoverPositions[order.id];
 
-            // Mensaje de tooltip según la razón del deshabilitado
-            let disabledTitle = '';
-            if (order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) {
-              disabledTitle = 'No disponible para pedidos cancelados';
-            } else if (order.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO) {
-              disabledTitle = 'No disponible para pedidos entregados';
+            let editDisabledTitle = '';
+            if (order.estadoLogistico === ESTADOS_LOGISTICOS.ANULADO) {
+              editDisabledTitle = 'No disponible para pedidos anulados';
+            } else if (
+              order.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO &&
+              order.pagoEstado === ESTADOS_PAGO.PAGADO
+            ) {
+              editDisabledTitle = 'No disponible para pedidos entregados y pagados';
             } else {
-              disabledTitle = 'No disponible';
+              editDisabledTitle = 'No disponible';
             }
+
+            const cancelDisabledTitle = order.estadoLogistico === ESTADOS_LOGISTICOS.ANULADO
+              ? 'No disponible para pedidos anulados'
+              : 'No disponible para pedidos entregados';
 
             return (
               <tr key={order.id} className={`group transition-colors duration-150 ${rowBg}`}>
@@ -180,32 +186,7 @@ function OrdersTable({
                   {highlight(order.numeroPedido || String(order.id), search)}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap">
-                    <div className="flex items-center justify-center gap-2">
-                        <span>
-                            {highlight(clienteMostrar, search)}
-                        </span>
-                        <div
-                            className="group/phone relative inline-flex items-center justify-center"
-                            onMouseEnter={(event) => {
-                                updateHoverPosition(
-                                    setPhoneHoverPositions,
-                                    order.id,
-                                    event.currentTarget
-                                );
-                            }}
-                        >
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#004D77]/15">
-                                <Phone
-                                    className="h-3 w-3 cursor-pointer text-[#004D77] transition-colors duration-200"
-                                    strokeWidth={1.8}
-                                />
-                            </div>
-                            <OrderPhoneHover
-                                phone={order.displayPhone}
-                                position={phoneHoverPositions[order.id]}
-                            />
-                        </div>
-                    </div>
+                  {highlight(clienteMostrar, search)}
                 </td>
                 <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                   {highlight(order.fechaPedido ? new Date(order.fechaPedido).toLocaleDateString('es-CO') : '', search)}
@@ -216,7 +197,7 @@ function OrdersTable({
                     {needsShippingAmount && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
                         <AlertTriangle className="h-3 w-3" strokeWidth={2} />
-                        Envio pendiente
+                  Envío pendiente
                       </span>
                     )}
                   </div>
@@ -257,14 +238,14 @@ function OrdersTable({
                       className="text-gray-400 hover:text-[#004D77] transition-colors duration-200 cursor-pointer"
                       title="Información"
                     >
-                      <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                      <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4 hover:scale-110" strokeWidth={1.5} />
                     </button>
                     </Permission>
 
                     <Permission permission="pedidos.editar">
-                    {deshabilitado ? (
-                      <span className="text-gray-200 cursor-not-allowed" title={disabledTitle}>
-                        <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                    {editarDeshabilitado ? (
+                      <span className="text-gray-200 cursor-not-allowed" title={editDisabledTitle}>
+                        <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4 hover:scale-110" strokeWidth={1.5} />
                       </span>
                     ) : (
                       <button
@@ -272,14 +253,14 @@ function OrdersTable({
                         className="text-gray-400 hover:text-[#004D77] transition-colors duration-200 cursor-pointer"
                         title="Editar pedido"
                       >
-                        <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                        <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4 hover:scale-110" strokeWidth={1.5} />
                       </button>
                     )}
                     </Permission>
 
                     <Permission permission="pedidos.anular">
-                    {deshabilitado ? (
-                      <span className="text-gray-200 cursor-not-allowed" title={disabledTitle}>
+                    {cancelarDeshabilitado ? (
+                      <span className="text-gray-200 cursor-not-allowed" title={cancelDisabledTitle}>
                         <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                       </span>
                     ) : (
