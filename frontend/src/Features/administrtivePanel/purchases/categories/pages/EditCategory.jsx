@@ -4,6 +4,7 @@ import { X, Plus, AlertCircle, Layers } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import ActiveToggle from "../components/ActiveToggle";
 import SubcategoriesTable from "../components/SubcategoriesTable";
+import { useOutsideCloseWarning } from "../../../../shared/hooks/useOutsideCloseWarning";
 import {
   getSubcategories,
   createSubcategory,
@@ -18,6 +19,7 @@ const normalizeName = (str = "") =>
     .replace(/[\u0300-\u036f]/g, "");
 
 function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated }) {
+  const { handleOutsideClick } = useOutsideCloseWarning(onClose);
   const { showWarning, showSuccess } = useAlert();
   const [subForm, setSubForm] = useState({ nombre: "", descripcion: "", activo: true });
   const [nombreTouched, setNombreTouched] = useState(false);
@@ -91,6 +93,7 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      onClick={handleOutsideClick}
       onClick={handleCancel}
     >
       <div
@@ -181,6 +184,7 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
 }
 
 const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategories }) => {
+  const { handleOutsideClick } = useOutsideCloseWarning(onClose);
   const { showWarning, showSuccess, showConfirm } = useAlert();
   const [form, setForm] = useState({
     nombre: category?.nombre || "",
@@ -249,7 +253,7 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
     <>
       <div
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-        onClick={onClose}
+        onClick={handleOutsideClick}
       >
         <div
           className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col"

@@ -1,5 +1,5 @@
 ﻿// features/administrtivePanel/purchases/purchases/pages/Purchases.jsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import { PurchasesFilters } from "../../../../shared/DateFilter";
@@ -14,6 +14,7 @@ import PaginationAdmin from "../../../../shared/PaginationAdmin";
 import { exportPurchasesExcel } from "../helpers/purchasesExcel";
 import FullScreenSpinner from "../../../../shared/spinner/FullScreenSpinner";
 import Permission from "../../../configuration/roles/components/Permission";
+import { getApiErrorMessage } from "../../../../shared/utils/apiErrorMessage";
 
 // ========== TIPOS DE ORDENAMIENTO ==========
 const SORT_OPTIONS = {
@@ -24,6 +25,14 @@ const SORT_OPTIONS = {
 };
 
 const RECORDS_PER_PAGE = 11;
+const SEARCH_FETCH_LIMIT = 100;
+
+const normalizeSearchValue = (value) =>
+  String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 
 export const Purchases = () => {
   const [products, setProducts] = useState([]);
@@ -37,7 +46,6 @@ export const Purchases = () => {
   const [selectedPurchaseDetail, setSelectedPurchaseDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [annulLoading, setAnnulLoading] = useState(false);
-  const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   // ========== NUEVO: Estado para ordenamiento ==========
   const [sortBy, setSortBy] = useState("CREATION_DESC");
   const [showSortDropdown, setShowSortDropdown] = useState(false);
@@ -110,23 +118,33 @@ export const Purchases = () => {
   const fetchPurchases = useCallback(async () => {
     try {
       setLoading(true);
-      const result = await getAllPurchases({
-        page: currentPage,
-        limit: RECORDS_PER_PAGE,
-        search,
+      const firstPage = await getAllPurchases({
+        page: 1,
+        limit: SEARCH_FETCH_LIMIT,
         startDate: fechaInicial,
         endDate: fechaFinal,
-        sortBy: sortBy, // ← Enviar orden al backend
+        sortBy,
       });
-      
-      setProducts(result.data);
-      setPagination(result.pagination);
+
+      const allPurchases = [...firstPage.data];
+      for (let page = 2; page <= firstPage.pagination.totalPages; page += 1) {
+        const nextPage = await getAllPurchases({
+          page,
+          limit: SEARCH_FETCH_LIMIT,
+          startDate: fechaInicial,
+          endDate: fechaFinal,
+          sortBy,
+        });
+        allPurchases.push(...nextPage.data);
+      }
+
+      setProducts(allPurchases);
     } catch (err) {
       showError("Error", err.message || "No se pudieron cargar las compras.");
     } finally {
       setLoading(false);
     }
-  }, [currentPage, search, fechaInicial, fechaFinal, sortBy, showError]);
+  }, [fechaInicial, fechaFinal, sortBy, showError]);
 
   useEffect(() => {
     fetchPurchases();
@@ -160,7 +178,14 @@ export const Purchases = () => {
       await fetchPurchases();
       showSuccess("Compra Anulada", "La compra fue anulada correctamente.");
     } catch (err) {
-      showError("Error", err.message || "No se pudo anular la compra.");
+      showError(
+        "No se puede anular",
+        getApiErrorMessage(err, {
+          conflictMessage:
+            "Esta compra tiene devoluciones, productos no conformes u otros movimientos asociados y no puede anularse.",
+          fallback: "No se pudo anular la compra.",
+        })
+      );
     } finally {
       setAnnulLoading(false);
       setCancelPurchase(null);
@@ -223,8 +248,25 @@ export const Purchases = () => {
   const currentSortOption = SORT_OPTIONS[sortBy] || SORT_OPTIONS.CREATION_DESC;
   const SortIcon = currentSortOption.icon;
 
-  const currentData = products;
-  const totalRecords = pagination.total || 0;
+  const filteredPurchases = useMemo(() => {
+    const query = normalizeSearchValue(search);
+    if (!query) return products;
+
+    return products.filter((purchase) => [
+      purchase.id,
+      purchase.numeroFacturacion,
+      purchase.fechaCompra,
+      purchase.proveedor,
+      purchase.cantidadProductos,
+      purchase.precioTotal,
+      purchase.maxReturnDate,
+      purchase.estado,
+    ].some((value) => normalizeSearchValue(value).includes(query)));
+  }, [products, search]);
+
+  const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
+  const currentData = filteredPurchases.slice(startIndex, startIndex + RECORDS_PER_PAGE);
+  const totalRecords = filteredPurchases.length;
   const isSearching = Boolean(search || fechaInicial || fechaFinal);
 
   if (loading && products.length === 0) {
@@ -233,7 +275,7 @@ export const Purchases = () => {
 
   return (
     <>
-      <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto p-3 sm:p-4">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-hidden p-3 sm:p-4">
         <div className="flex flex-wrap items-end gap-3">
           <PurchasesFilters
             search={search}

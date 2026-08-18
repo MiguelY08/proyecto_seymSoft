@@ -4,6 +4,7 @@ import { Trash2, SquarePen } from "lucide-react";
 import Pagination from "../../../../shared/PaginationLanding";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import ActiveToggle from "./ActiveToggle";
+import { getApiErrorMessage } from "../../../../shared/utils/apiErrorMessage";
 import {
   getSubcategories,
   updateSubcategory,
@@ -157,7 +158,14 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
       showSuccess("Eliminado", "La subcategoría fue eliminada correctamente.");
       if (refreshCategories) refreshCategories();
     } catch (error) {
-      showError("Error", error.message || "No se pudo eliminar la subcategoría.");
+      showError(
+        "No se puede eliminar",
+        getApiErrorMessage(error, {
+          conflictMessage:
+            "Esta subcategoría tiene productos asociados. Reasigna o elimina esos productos antes de eliminarla.",
+          fallback: "No se pudo eliminar la subcategoría.",
+        })
+      );
     }
   };
 

@@ -10,6 +10,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
+import { useOutsideCloseWarning } from "../../../../shared/hooks/useOutsideCloseWarning";
 
 const MAX_REASON_LENGTH = 250;
 
@@ -62,6 +63,7 @@ const SectionTitle = ({ children }) => (
 );
 
 const AnulatePurchase = ({ purchase, onClose, onConfirm }) => {
+  const { handleOutsideClick } = useOutsideCloseWarning(onClose);
   const [reason, setReason] = useState("");
   const { showWarning } = useAlert();
   const isAlreadyAnnulled = purchase?.estado === "Anulada";
@@ -80,7 +82,7 @@ const AnulatePurchase = ({ purchase, onClose, onConfirm }) => {
 
   return (
     <div
-      onClick={onClose}
+      onClick={handleOutsideClick}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
     >
       <div
