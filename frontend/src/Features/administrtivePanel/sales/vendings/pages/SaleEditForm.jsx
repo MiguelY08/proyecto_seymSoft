@@ -141,7 +141,7 @@ function SaleEditForm() {
 
   useEffect(() => {
     if (!saleFromState?.id) {
-      showError('Error', 'No se encontro informacion de la venta.');
+      showError('Error', 'No se encontró información de la venta.');
       navigate('/admin/sales', { replace: true });
       return;
     }
@@ -239,8 +239,8 @@ function SaleEditForm() {
 
     if (!clientAddress) {
       showWarning(
-        'Direccion no disponible',
-        'El cliente no tiene una direccion registrada.'
+        'Dirección no disponible',
+        'El cliente no tiene una dirección registrada.'
       );
       return;
     }
@@ -265,7 +265,7 @@ function SaleEditForm() {
     if (idOrderStatus === ORDER_STATUS.CANCELADO) {
       setErrors((prev) => ({
         ...prev,
-        idOrderStatus: 'Para cancelar el pedido relacionado debes usar el flujo de anulacion de la venta.',
+        idOrderStatus: 'Para anular el pedido relacionado debes usar el flujo de anulación de la venta.',
       }));
       return;
     }
@@ -295,7 +295,7 @@ function SaleEditForm() {
       normalizeDeliveryType(formData.deliveryType) !== getInitialDeliveryType(sale) ||
       String(formData.deliveryAddress ?? '').trim() !== String(sale?.order?.deliveryAddress ?? sale?.direccion ?? '').trim()
     )) {
-      newErrors.general = 'El pedido relacionado ya esta entregado o cancelado y no puede modificarse.';
+      newErrors.general = 'El pedido relacionado ya está entregado o anulado y no puede modificarse.';
       return newErrors;
     }
 
@@ -308,7 +308,7 @@ function SaleEditForm() {
       formData.deliveryType === 'delivery' &&
       !formData.deliveryAddress.trim()
     ) {
-      newErrors.deliveryAddress = 'La direccion es obligatoria para domicilio.';
+      newErrors.deliveryAddress = 'La dirección es obligatoria para domicilio.';
     }
 
     if (!formData.idSaleStatus) {
@@ -317,14 +317,14 @@ function SaleEditForm() {
 
     if (Number(formData.idOrderStatus) === ORDER_STATUS.CANCELADO && Number(formData.idOrderStatus) !== originalOrderStatus) {
       newErrors.idOrderStatus =
-        'No se puede cancelar el pedido desde la edicion. Usa el flujo de anulacion de la venta.';
+        'No se puede anular el pedido desde la edición. Usa el flujo de anulación de la venta.';
     }
 
     if (!canChangeOrderStatus && Number(formData.idOrderStatus) !== originalOrderStatus) {
       newErrors.idOrderStatus =
         finalOrder
-          ? 'El pedido relacionado ya esta entregado o cancelado y no puede cambiar de estado.'
-          : 'El estado del pedido solo puede modificarse cuando la venta esta aprobada.';
+          ? 'El pedido relacionado ya está entregado o anulado y no puede cambiar de estado.'
+          : 'El estado del pedido solo puede modificarse cuando la venta está aprobada.';
     }
 
     if (canChangeOrderStatus && !formData.idOrderStatus) {
@@ -498,13 +498,13 @@ function SaleEditForm() {
 
         {deliveredOrder && (
           <Notice tone="blue">
-            El pedido relacionado ya esta entregado. Su informacion y estado no pueden modificarse.
+            El pedido relacionado ya está entregado. Su información y estado no pueden modificarse.
           </Notice>
         )}
 
         {cancelledOrder && (
           <Notice tone="red">
-            El pedido relacionado esta cancelado. Su informacion y estado no pueden modificarse.
+            El pedido relacionado está anulado. Su información y estado no pueden modificarse.
           </Notice>
         )}
       </div>
@@ -648,8 +648,8 @@ function SaleEditForm() {
               {!canChangeOrderStatus && !annulledSale && (
                 <p className="mt-0.5 text-xs text-gray-500">
                   {finalOrder
-                    ? 'El pedido relacionado ya esta entregado o cancelado.'
-                    : 'Disponible solo cuando la venta esta aprobada.'}
+                    ? 'El pedido relacionado ya está entregado o anulado.'
+                    : 'Disponible solo cuando la venta está aprobada.'}
                 </p>
               )}
 

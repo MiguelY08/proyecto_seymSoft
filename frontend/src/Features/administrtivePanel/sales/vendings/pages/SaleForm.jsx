@@ -69,11 +69,6 @@ const getIncludedIvaAmount = (totalWithIva, ivaPercentage) => {
   return roundMoney(Number(totalWithIva || 0) - (Number(totalWithIva || 0) / (1 + rate)));
 };
 
-const hasDuplicatePaymentMethods = (paymentMethods) => {
-  const ids = paymentMethods.map((payment) => payment.idPaymentMethod);
-  return new Set(ids).size !== ids.length;
-};
-
 const getCreditPaymentAmount = (paymentMethods) =>
   paymentMethods
     .filter((payment) => payment.idPaymentMethod === PAYMENT_METHOD_IDS[PAYMENT_METHODS.CREDITO])
@@ -585,19 +580,14 @@ function SaleForm() {
 
   const handleScannerProductNotFound = (code) => {
     showError(
-      'Codigo no registrado',
-      `No se encontro ningun producto con el codigo de barras ${code}.`
+      'Código no registrado',
+      `No se encontró ningún producto con el código de barras ${code}.`
     );
   };
 
   // ─── Manejador para pagos (PaymentsSection) ───────────────────────────────
   const handleAddPayment = (paymentData) => {
     const { metodoPago, monto, comprobante } = paymentData;
-
-    if (pagos.some((pago) => normalizeText(pago.metodoPago) === normalizeText(metodoPago))) {
-      showWarning('Metodo repetido', 'No se puede repetir un metodo de pago en la misma venta.');
-      return;
-    }
 
     const tempPago = {
       id: `tmp-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -632,22 +622,44 @@ function SaleForm() {
     showSuccess('Abono eliminado', 'El abono pendiente fue eliminado.');
   };
 
+  const handleUpdatePayment = (paymentId, monto) => {
+    const payment = pagos.find((pago) => pago.id === paymentId);
+    if (!payment) return;
+
+    const updatedAmount = roundMoney(monto);
+    const totalWithoutPayment = roundMoney(totalPagado - roundMoney(payment.monto));
+    if (updatedAmount <= 0 || totalWithoutPayment + updatedAmount > total) {
+      showWarning('Monto no válido', 'El monto del abono no puede superar el saldo pendiente de la venta.');
+      return;
+    }
+
+    setPagos(prev => prev.map((pago) => (
+      pago.id === paymentId ? { ...pago, monto: updatedAmount } : pago
+    )));
+    setTotalPagado(roundMoney(totalWithoutPayment + updatedAmount));
+    setPaymentAmounts(prev => ({
+      ...prev,
+      [payment.metodoPago]: roundMoney((prev[payment.metodoPago] || 0) - roundMoney(payment.monto) + updatedAmount),
+    }));
+    showSuccess('Abono actualizado', 'El monto del abono fue actualizado.');
+  };
+
   // ─── Validación (corregida para aceptar clienteId = 0) ───────────────────
   const validate = () => {
     const newErrors = {};
     if (formData.clienteId === undefined || formData.clienteId === null || formData.clienteId === '') {
       newErrors.clienteId = 'Debe seleccionar un cliente.';
     }
-    if (!getSessionUserId(user)) newErrors.idUser = 'No se pudo identificar al usuario en sesion.';
+    if (!getSessionUserId(user)) newErrors.idUser = 'No se pudo identificar al usuario en sesión.';
     if (formData.tipoEntrega === 'domicilio' && !formData.deliveryRecipientName?.trim()) {
       newErrors.deliveryRecipientName = 'Debe ingresar el nombre de la persona que recibe la venta.';
     }
     if (formData.tipoEntrega === 'domicilio') {
       const recipientPhoneDigits = (formData.deliveryRecipientPhone || '').replace(/\D/g, '');
       if (!recipientPhoneDigits) {
-        newErrors.deliveryRecipientPhone = 'Debe ingresar el telefono de la persona que recibe.';
+        newErrors.deliveryRecipientPhone = 'Debe ingresar el teléfono de la persona que recibe.';
       } else if (recipientPhoneDigits.length < MIN_PHONE_DIGITS || recipientPhoneDigits.length > MAX_PHONE_DIGITS) {
-        newErrors.deliveryRecipientPhone = `El telefono debe tener entre ${MIN_PHONE_DIGITS} y ${MAX_PHONE_DIGITS} digitos.`;
+        newErrors.deliveryRecipientPhone = `El teléfono debe tener entre ${MIN_PHONE_DIGITS} y ${MAX_PHONE_DIGITS} dígitos.`;
       }
     }
     if (formData.tipoEntrega === 'domicilio' && !formData.direccionEntrega?.trim()) {
@@ -661,7 +673,7 @@ function SaleForm() {
         newErrors.ciudadEntregaCodigo = 'Debe seleccionar un municipio/ciudad.';
       }
       if (roundMoney(formData.shippingAmount) <= 0) {
-        newErrors.shippingAmount = 'Debe ingresar un valor de envio mayor a cero.';
+        newErrors.shippingAmount = 'Debe ingresar un valor de envío mayor a cero.';
       }
     }
     if (formData.productos.length === 0) {
@@ -676,7 +688,7 @@ function SaleForm() {
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       if (validationErrors.idUser) {
-        showError('Sesion no valida', validationErrors.idUser);
+        showError('Sesión no válida', validationErrors.idUser);
       } else {
         showWarning('Formulario incompleto', 'Revisa los campos marcados en rojo.');
       }
@@ -687,8 +699,8 @@ function SaleForm() {
 
     if (Math.round(paymentTotal * 100) !== Math.round(total * 100)) {
       showWarning(
-        'Pago invalido',
-        `La suma de los metodos de pago debe ser igual al total de la venta. Total: $${total.toLocaleString()}, pagado: $${paymentTotal.toLocaleString()}.`
+        'Pago inválido',
+        `La suma de los métodos de pago debe ser igual al total de la venta. Total: $${total.toLocaleString()}, pagado: $${paymentTotal.toLocaleString()}.`
       );
       return;
     }
@@ -702,12 +714,7 @@ function SaleForm() {
       })).filter((payment) => payment.idPaymentMethod !== null);
 
       if (paymentMethods.length !== pagos.length) {
-        showWarning('Metodo de pago no valido', 'Hay pagos con un metodo no reconocido.');
-        return;
-      }
-
-      if (hasDuplicatePaymentMethods(paymentMethods)) {
-        showWarning('Metodo repetido', 'No se puede repetir un metodo de pago en la misma venta.');
+        showWarning('Método de pago no válido', 'Hay pagos con un método no reconocido.');
         return;
       }
 
@@ -720,19 +727,19 @@ function SaleForm() {
         const { assignedCredit, availableCredit } = creditValidationInfo;
 
         if (assignedCredit <= 0) {
-          showWarning('Credito no disponible', 'El cliente no tiene cupo de credito asignado.');
+          showWarning('Crédito no disponible', 'El cliente no tiene cupo de crédito asignado.');
           return;
         }
 
         if (isCreditOverdue(selectedCreditAccount ?? selectedClient)) {
-          showWarning('Credito vencido', 'El cliente tiene creditos vencidos. No se puede registrar una venta a credito.');
+          showWarning('Crédito vencido', 'El cliente tiene créditos vencidos. No se puede registrar una venta a crédito.');
           return;
         }
 
         if (roundMoney(creditAmount) > roundMoney(availableCredit)) {
           showWarning(
             'Cupo insuficiente',
-            `El monto a credito ($${creditAmount.toLocaleString()}) supera el cupo disponible ($${availableCredit.toLocaleString()}).`
+            `El monto a crédito ($${creditAmount.toLocaleString()}) supera el cupo disponible ($${availableCredit.toLocaleString()}).`
           );
           return;
         }
@@ -850,7 +857,7 @@ function SaleForm() {
       </div>
 
       {/* Contenido en dos columnas */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="lg:order-2">
         <LeftSectionForm
           formData={formData}
@@ -859,7 +866,6 @@ function SaleForm() {
           departamentos={departamentos}
           ciudades={ciudades}
           loadingCiudades={loadingCiudades}
-          user={user}
           loading={loading}
           isEditMode={false}
           estadoLogisticoOriginal={isDirectSale ? ESTADOS_LOGISTICOS.ENTREGADO : null}
@@ -913,9 +919,9 @@ function SaleForm() {
           pagos={pagos}
           onAddPayment={handleAddPayment}
           onRemovePayment={handleRemovePayment}
+          onUpdatePayment={handleUpdatePayment}
           loading={loading}
           isEditMode={false}
-          disallowDuplicateMethods
           allowCredit
           creditAvailable={creditValidationInfo.availableCredit}
           creditAssigned={creditValidationInfo.assignedCredit}

@@ -53,6 +53,8 @@ import ClientsPage from "../../Features/administrtivePanel/sales/clients/page/Cl
 import OrdersLayout from "../../Features/administrtivePanel/sales/orders/pages/OrdersLayout.jsx";
 import OrdersList from "../../Features/administrtivePanel/sales/orders/pages/OrdersList.jsx";
 import OrderForm from "../../Features/administrtivePanel/sales/orders/pages/OrdersForm.jsx"
+import OrderDetailPage from "../../Features/administrtivePanel/sales/orders/pages/OrderDetailPage.jsx";
+import CancelOrderPage from "../../Features/administrtivePanel/sales/orders/pages/CancelOrderPage.jsx";
 
 import Sales from "../../Features/administrtivePanel/sales/vendings/pages/Sales.jsx";
 import SaleForm from "../../Features/administrtivePanel/sales/vendings/pages/SaleForm.jsx";
@@ -182,14 +184,16 @@ const AppRouter = () => {
           <Route path="sales" element={<Sales />} />
           <Route path="sales/form-sale" element={<SaleForm />} />
           <Route path="sales/edit-sale" element={<SaleEditForm />} />
-          <Route path="sales/info-sale" element={<SaleInfo />} />
-          <Route path="sales/annular-sale" element={<AnnularSale />} />
+          <Route path="sales/:id/detail" element={<SaleInfo />} />
+          <Route path="sales/:id/annul" element={<AnnularSale />} />
 
           <Route path="sales/clients" element={<ClientsPage />} />
 
           <Route path="sales/orders" element={<OrdersLayout />}>
             <Route index element={<OrdersList />} />
             <Route path="new-order" element={<OrderForm />} />
+            <Route path=":id/detail" element={<OrderDetailPage />} />
+            <Route path=":id/cancel" element={<CancelOrderPage />} />
             <Route path=":id" element={<OrderForm />} />
           </Route>
 

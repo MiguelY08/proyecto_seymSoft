@@ -13,7 +13,7 @@ export const ESTADOS_LOGISTICOS = {
   EN_PROCESO: 'en proceso',
   LISTO: 'listo',
   ENTREGADO: 'entregado',
-  CANCELADO: 'cancelado',
+  ANULADO: 'anulado',
 };
 
 export const ESTADOS_PAGO = {
@@ -53,10 +53,10 @@ const normalizeEstadoLogistico = (value) => {
   const id = Number(value?.id ?? value?.idOrderStatus ?? value);
   if (id === 2) return ESTADOS_LOGISTICOS.LISTO;
   if (id === 3) return ESTADOS_LOGISTICOS.ENTREGADO;
-  if (id === 4) return ESTADOS_LOGISTICOS.CANCELADO;
+  if (id === 4) return ESTADOS_LOGISTICOS.ANULADO;
 
   const raw = String((value?.name ?? value) || ESTADOS_LOGISTICOS.EN_PROCESO).toLowerCase();
-  if (raw.includes('cancel')) return ESTADOS_LOGISTICOS.CANCELADO;
+  if (raw.includes('anulled')) return ESTADOS_LOGISTICOS.ANULADO;
   if (raw.includes('entreg') || raw.includes('delivered')) return ESTADOS_LOGISTICOS.ENTREGADO;
   if (raw.includes('list')) return ESTADOS_LOGISTICOS.LISTO;
   return ESTADOS_LOGISTICOS.EN_PROCESO;
@@ -411,10 +411,12 @@ const normalizeOrder = (order = {}) => {
     pagoEstado: normalizePagoEstado(order.pagoEstado ?? order.paymentStatus, totalPagado, total),
     saleType: order.saleType ?? order.sale_type ?? ORIGENES.MANUAL,
     origen: order.origen ?? order.origin ?? order.saleType ?? order.sale_type ?? ORIGENES.MANUAL,
-    motivoCancelacion: order.motivoCancelacion ?? order.cancelReason ?? order.cancellationReason ?? null,
-    cancellationReason: order.cancellationReason ?? order.motivoCancelacion ?? order.cancelReason ?? null,
-    fechaCancelacion: order.fechaCancelacion ?? order.cancelledAt ?? order.canceledAt ?? null,
-    cancelledAt: order.cancelledAt ?? order.fechaCancelacion ?? order.canceledAt ?? null,
+    motivoCancelacion: order.motivoCancelacion ?? order.motivoAnulacion ?? order.cancelReason ?? order.cancellationReason ?? null,
+    motivoAnulacion: order.motivoAnulacion ?? order.motivoCancelacion ?? order.cancelReason ?? order.cancellationReason ?? null,
+    cancellationReason: order.cancellationReason ?? order.motivoCancelacion ?? order.motivoAnulacion ?? order.cancelReason ?? null,
+    fechaCancelacion: order.fechaCancelacion ?? order.fechaAnulacion ?? order.cancelledAt ?? order.canceledAt ?? order.annulledAt ?? null,
+    fechaAnulacion: order.fechaAnulacion ?? order.fechaCancelacion ?? order.cancelledAt ?? order.canceledAt ?? order.annulledAt ?? null,
+    cancelledAt: order.cancelledAt ?? order.annulledAt ?? order.fechaCancelacion ?? order.fechaAnulacion ?? order.canceledAt ?? null,
   };
 };
 
@@ -460,7 +462,7 @@ const ORDER_STATUS_IDS = {
   [ESTADOS_LOGISTICOS.EN_PROCESO]: 1,
   [ESTADOS_LOGISTICOS.LISTO]: 2,
   [ESTADOS_LOGISTICOS.ENTREGADO]: 3,
-  [ESTADOS_LOGISTICOS.CANCELADO]: 4,
+  [ESTADOS_LOGISTICOS.ANULADO]: 4,
 };
 
 // PAYMENT_METHOD_IDS is provided from centralized constants (re-exported as PAYMENT_METHOD_IDS)
@@ -470,7 +472,7 @@ const resolvePaymentMethodId = (metodoPago) => {
   const parsedId = Number(idPaymentMethod);
 
   if (!Number.isInteger(parsedId) || parsedId <= 0) {
-    throw new Error(`Metodo de pago no valido: ${metodoPago}`);
+    throw new Error(`Método de pago no válido: ${metodoPago}`);
   }
 
   return parsedId;
@@ -508,7 +510,7 @@ const buildUpdateOrderPayload = (data = {}) => {
 
   if (data.estadoLogistico !== undefined) {
     const idOrderStatus = ORDER_STATUS_IDS[data.estadoLogistico] ?? data.estadoLogistico;
-    if (Number(idOrderStatus) !== ORDER_STATUS_IDS[ESTADOS_LOGISTICOS.CANCELADO]) {
+    if (Number(idOrderStatus) !== ORDER_STATUS_IDS[ESTADOS_LOGISTICOS.ANULADO]) {
       payload.idOrderStatus = idOrderStatus;
     }
   }
@@ -610,7 +612,7 @@ export const OrdersService = {
 
   canEditProductos(order) {
     if (!order) return false;
-    if (order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) return false;
+    if (order.estadoLogistico === ESTADOS_LOGISTICOS.ANULADO) return false;
     if (order.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO) return false;
     if (order.pagoEstado === ESTADOS_PAGO.PAGADO) return false;
     if (order.tieneVenta) return false;
@@ -648,7 +650,7 @@ export const OrdersService = {
   },
 
   async updateEstadoLogistico(orderId, newEstadoLogistico, motivoCancelacion = null) {
-    if (newEstadoLogistico === ESTADOS_LOGISTICOS.CANCELADO) {
+    if (newEstadoLogistico === ESTADOS_LOGISTICOS.ANULADO) {
       return this.cancel(orderId, motivoCancelacion);
     }
 

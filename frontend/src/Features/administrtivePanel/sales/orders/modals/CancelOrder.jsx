@@ -1,13 +1,14 @@
 // src/features/orders/modals/CancelOrder.jsx
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  X, XCircle, AlertTriangle, Package,
-  Hash, Calendar, User, UserCheck, CreditCard, Tag, Truck, MapPin,
+  XCircle, AlertTriangle, Package,
+  Hash, Calendar, User, UserCheck, CreditCard, Truck, MapPin,
   Loader2,
 } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import { SalesServices } from '../../vendings/services/salesServices';
 import OrdersService from '../services/ordersService';
+import { EstadoLogisticoBadgePill, EstadoPagoBadgePill } from '../helpers/ordersHelpers';
 
 const MOTIVO_MAX = 500;
 const MOTIVO_MIN = 10;
@@ -90,11 +91,44 @@ const normalizeItem = (item = {}, index = 0) => {
   };
 };
 
+const getPaymentMethodName = (value) => {
+  if (!value) return '';
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+
+  return (
+    value.metodoPago ??
+    value.namePaymentMethod ??
+    value.name ??
+    value.method ??
+    value.metodo ??
+    value.paymentMethod?.namePaymentMethod ??
+    value.paymentMethod?.name ??
+    ''
+  );
+};
+
+const getPaymentMethodsLabel = (entity = {}) => {
+  const sources = [
+    entity.metodoPago,
+    entity.paymentMethod,
+    entity.paymentMethods,
+    entity.pagos,
+    entity.payments,
+    entity.orderPayments,
+  ];
+  const methods = sources
+    .flatMap((source) => (Array.isArray(source) ? source : [source]))
+    .map(getPaymentMethodName)
+    .filter(Boolean);
+
+  return [...new Set(methods)].join(' · ') || '—';
+};
+
 // ─── DetailRow ──────────────────────────────────────────────────────────────
 function DetailRow({ icon: Icon, label, value }) {
   const hasValue = value && String(value).trim() !== '';
   return (
-    <div className="flex items-start gap-2.5 py-1.5 border-b border-gray-50 last:border-0">
+    <div className="flex min-w-0 items-start gap-2 rounded-lg border border-gray-100 bg-gray-50/70 p-3 md:gap-3">
       <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 mt-0.5 ${
         hasValue ? 'bg-[#004D77]/10' : 'bg-gray-100'
       }`}>
@@ -121,7 +155,8 @@ function CancelOrder({
   sale,         // para ventas
   onClose,
   onConfirm,
-  contexto = 'pedido' // 'pedido' o 'venta'
+  contexto = 'pedido', // 'pedido' o 'venta'
+  isPage = false,
 }) {
   const { showSuccess, showError } = useAlert();
   const [visible, setVisible] = useState(false);
@@ -167,7 +202,7 @@ function CancelOrder({
           setDetailEntity(detail ?? baseEntity);
         }
       } catch (error) {
-        console.error('Error cargando detalle para anulacion/cancelacion:', error);
+        console.error('Error cargando detalle para anulación/cancelación:', error);
         if (!ignore) {
           setDetailEntity(baseEntity);
         }
@@ -187,6 +222,11 @@ function CancelOrder({
 
   const handleClose = () => {
     if (isSubmitting) return;
+
+    if (isPage) {
+      onClose?.();
+      return;
+    }
 
     setVisible(false);
     setTimeout(() => {
@@ -216,11 +256,7 @@ function CancelOrder({
   const asesorNombre = contexto === 'pedido'
     ? (activeOrder?.asesorNombre || activeOrder?.asesorId)
     : (activeSale?.vendedor || activeSale?.vendedorId);
-  const metodoPagoLabel = contexto === 'pedido'
-    ? (activeOrder?.metodoPago
-        ? (Array.isArray(activeOrder.metodoPago) ? activeOrder.metodoPago.filter(Boolean).join(' · ') : activeOrder.metodoPago)
-        : '—')
-    : (activeSale?.metodoPago || '—');
+  const metodoPagoLabel = getPaymentMethodsLabel(entidad);
   const estadoActual = contexto === 'pedido'
     ? activeOrder?.estadoLogistico
     : activeSale?.estado;
@@ -302,8 +338,8 @@ function CancelOrder({
         await SalesServices.anular(activeSale.id, motivo.trim());
       }
       showSuccess(
-        contexto === 'pedido' ? 'Pedido cancelado' : 'Venta anulada',
-        `El ${contexto === 'pedido' ? 'pedido' : 'venta'} #${numero} fue ${contexto === 'pedido' ? 'cancelado' : 'anulada'} correctamente.`
+        contexto === 'pedido' ? 'Pedido anulado' : 'Venta anulada',
+        `El ${contexto === 'pedido' ? 'pedido' : 'venta'} #${numero} fue ${contexto === 'pedido' ? 'anulado' : 'anulada'} correctamente.`
       );
       handleClose();
     } catch (error) {
@@ -316,17 +352,20 @@ function CancelOrder({
     return null;
   }
 
-  const titulo = contexto === 'pedido' ? 'Cancelar pedido' : 'Anular venta';
   const entidadLabel = contexto === 'pedido' ? 'Pedido No.' : 'Venta No.';
+  const title = contexto === 'pedido' ? `Pedido #${numero}` : `Venta #${numero}`;
+  const saleOrderNumber = activeSale?.numeroPedido ?? activeSale?.order?.numeroPedido;
   const mensajeIrreversible = contexto === 'pedido'
-    ? 'El pedido quedará cancelado, el stock de los productos será restaurado y no podrá modificarse posteriormente.'
+    ? 'El pedido quedará anulado, el stock de los productos será restaurado y no podrá modificarse posteriormente.'
     : 'La venta será anulada, el pedido asociado se cancelará y el stock será restaurado. Esta acción no se puede deshacer.';
 
   return (
     <div
       style={{ transition: 'opacity 250ms ease' }}
-      className={`fixed inset-0 z-50 flex items-stretch justify-stretch bg-white sm:items-center sm:justify-center sm:bg-black/40 sm:p-4 sm:backdrop-blur-sm
-        ${visible ? 'opacity-100' : 'opacity-0'}`}
+      className={isPage
+        ? 'flex h-full min-h-0 w-full bg-white'
+        : `fixed inset-0 z-50 flex items-stretch justify-stretch bg-white sm:items-center sm:justify-center sm:bg-black/40 sm:p-4 sm:backdrop-blur-sm ${visible ? 'opacity-100' : 'opacity-0'}`
+      }
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -334,46 +373,70 @@ function CancelOrder({
           transformOrigin: 'center center',
           transition: 'transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 200ms ease',
         }}
-        className={`flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:max-w-3xl sm:rounded-lg
-          ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
+        className={isPage
+          ? 'flex h-full min-h-0 w-full flex-col overflow-hidden bg-white'
+          : `flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:max-w-3xl sm:rounded-lg ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`
+        }
       >
-        {/* Header */}
-        <div className="flex shrink-0 items-center justify-between gap-3 bg-[#004D77] px-4 py-3 sm:px-6 sm:py-4">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <XCircle className="w-5 h-5 text-white" strokeWidth={2} />
-            <div className="min-w-0">
-              <h2 className="text-white font-semibold text-base leading-tight">{titulo}</h2>
-              <p className="truncate text-white/75 text-xs">{entidadLabel} {numero}</p>
-            </div>
+        <header className="flex shrink-0 flex-col gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:gap-3">
+            <h1 className="truncate text-lg font-semibold text-[#004D77]">{title}</h1>
+            {contexto === 'venta' && saleOrderNumber && (
+              <span className="rounded-full bg-[#004D77]/10 px-2 py-1 text-xs font-medium text-[#004D77]">
+                Pedido #{saleOrderNumber}
+              </span>
+            )}
+            {contexto === 'pedido' ? (
+              <>
+                <EstadoLogisticoBadgePill estado={activeOrder?.estadoLogistico} />
+                <EstadoPagoBadgePill estado={activeOrder?.pagoEstado} />
+              </>
+            ) : (
+              <span className="rounded-full bg-[#004D77]/10 px-2 py-1 text-xs font-medium text-[#004D77]">
+                {estadoActual || 'Sin estado'}
+              </span>
+            )}
           </div>
-          <button
-            onClick={handleClose}
-            disabled={isSubmitting}
-            className={`text-white rounded-full p-1 transition-colors ${
-              isSubmitting
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-white/20 cursor-pointer'
-            }`}
-          >
-            <X className="w-5 h-5" strokeWidth={2} />
-          </button>
-        </div>
-
-        {/* Aviso de irreversibilidad */}
-        <div className="flex shrink-0 items-start gap-3 border-b border-yellow-100 bg-yellow-50 px-4 py-3 sm:px-6">
-          <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 shrink-0" strokeWidth={2} />
-          <p className="text-xs text-yellow-800 leading-relaxed">
-            Esta acción es <strong>permanente e irreversible</strong>. {mensajeIrreversible}
-          </p>
-        </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleClose}
+              disabled={isSubmitting}
+              className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors ${
+                isSubmitting
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'bg-gray-500 hover:bg-gray-600 cursor-pointer'
+              }`}
+            >
+              Cerrar
+            </button>
+            <button
+              onClick={handleConfirm}
+              disabled={isSubmitting}
+              className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors ${
+                isSubmitting
+                  ? 'bg-[#004D77]/50 cursor-not-allowed'
+                  : 'bg-[#004D77] hover:bg-[#003D5e] cursor-pointer'
+              }`}
+            >
+              {isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />
+              ) : (
+                <XCircle className="h-4 w-4" strokeWidth={2} />
+              )}
+              {isSubmitting
+                ? (contexto === 'pedido' ? 'Cancelando...' : 'Anulando...')
+                : 'Confirmar anulación'}
+            </button>
+          </div>
+        </header>
 
         {/* Cuerpo */}
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
+          <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5">
 
             {/* ── Columna izquierda: Detalles + motivo ─────────────────── */}
-            <div className="flex flex-col gap-5 px-4 py-4 sm:px-6 sm:py-5">
-              <div>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.65fr)_minmax(320px,1fr)]">
+              <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="h-px flex-1 bg-gray-100" />
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">
@@ -382,27 +445,25 @@ function CancelOrder({
                   <div className="h-px flex-1 bg-gray-100" />
                 </div>
 
-                <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
-                  <DetailRow icon={Hash}       label={entidadLabel} value={numero} />
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <DetailRow icon={Calendar}   label="Fecha"        value={formatDate(fecha)} />
                   <DetailRow icon={User}       label="Cliente"      value={clienteNombre} />
                   <DetailRow icon={UserCheck}  label="Asesor"       value={asesorNombre} />
                   <DetailRow icon={CreditCard} label="Método de pago" value={metodoPagoLabel} />
-                  <DetailRow icon={Tag}        label="Estado actual" value={estadoActual} />
                   <DetailRow icon={Truck}      label="Entrega"       value={direccionEntrega ? 'Domicilio' : 'Recoge en tienda'} />
                   <DetailRow icon={Hash}       label="Total"         value={formatCurrency(total)} />
                 </div>
                 {direccionEntrega && (
-                  <div className="mt-1">
+                  <div className="mt-2">
                     <DetailRow icon={MapPin} label="Dirección" value={direccionEntrega} />
                   </div>
                 )}
-              </div>
+              </section>
 
               {/* Motivo de cancelación/anulación */}
-              <div>
+              <section className="flex flex-col rounded-xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Motivo de {contexto === 'pedido' ? 'cancelación' : 'anulación'} <span className="text-red-500">*</span>
+                  Motivo de anulación <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <textarea
@@ -412,9 +473,9 @@ function CancelOrder({
                       if (e.target.value.length <= MOTIVO_MAX) setMotivo(e.target.value);
                     }}
                     onBlur={() => setTouched(true)}
-                    placeholder={`Describe el motivo por el cual se ${contexto === 'pedido' ? 'cancela este pedido' : 'anula esta venta'}...`}
+                    placeholder={`Describe el motivo por el cual se anula ${contexto === 'pedido' ? 'este pedido' : 'esta venta'}...`}
                     rows={4}
-                    className={`min-h-32 w-full resize-none rounded-lg border px-4 py-2.5 text-sm text-gray-700 outline-none transition-colors duration-200 placeholder-gray-400 ${
+                    className={`min-h-32 flex-1 w-full resize-none rounded-lg border px-4 py-2.5 text-sm text-gray-700 outline-none transition-colors duration-200 placeholder-gray-400 ${
                       isSubmitting
                         ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
                         : motivoError
@@ -429,11 +490,20 @@ function CancelOrder({
                   </span>
                 </div>
                 {motivoError && <p className="mt-1 text-xs text-red-500">{motivoError}</p>}
-              </div>
+                <div className="mt-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" strokeWidth={2} />
+                  <div>
+                    <p className="text-xs font-semibold text-amber-700">Anulación irreversible</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-amber-600">
+                      Esta acción es permanente e irreversible. {mensajeIrreversible}
+                    </p>
+                  </div>
+                </div>
+              </section>
             </div>
 
             {/* ── Columna derecha: Productos ───────────────────────────── */}
-            <div className="flex flex-col px-4 py-4 sm:px-6 sm:py-5">
+            <section className="flex flex-col rounded-xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="h-px flex-1 bg-gray-100" />
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">
@@ -501,7 +571,7 @@ function CancelOrder({
                       <span className="text-sm font-bold text-white tabular-nums">{formatCurrency(total)}</span>
                     </div>
                     <p className="text-[10px] text-gray-400 mt-1.5 text-center">
-                      ↑ Al {contexto === 'pedido' ? 'cancelar' : 'anular'}, el stock de {items.length} producto{items.length !== 1 ? 's' : ''} será restaurado automáticamente.
+                      ↑ Al anular, el stock de {items.length} producto{items.length !== 1 ? 's' : ''} será restaurado automáticamente.
                     </p>
                   </div>
                 </>
@@ -513,44 +583,11 @@ function CancelOrder({
                   <p className="text-xs text-gray-300 text-center">Sin productos registrados</p>
                 </div>
               )}
-            </div>
+            </section>
 
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex shrink-0 flex-col-reverse items-stretch gap-2 border-t border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
-          <button
-            onClick={handleClose}
-            disabled={isSubmitting}
-            className={`w-full rounded-lg px-6 py-2.5 text-sm font-medium text-white transition-colors sm:w-auto ${
-              isSubmitting
-                ? 'bg-gray-300 cursor-not-allowed'
-                : 'bg-gray-500 hover:bg-gray-600 cursor-pointer'
-            }`}
-          >
-            Cerrar
-          </button>
-          <button
-            onClick={handleConfirm}
-            disabled={isSubmitting}
-            className={`flex w-full items-center justify-center gap-2 rounded-lg px-6 py-2.5 text-sm font-semibold text-white transition-colors sm:w-auto ${
-              isSubmitting
-                ? 'bg-[#004D77]/50 cursor-not-allowed'
-                : 'bg-[#004D77] hover:bg-[#003D5e] cursor-pointer'
-            }`}
-          >
-            {isSubmitting ? (
-              <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />
-            ) : (
-              <XCircle className="w-4 h-4" strokeWidth={2} />
-            )}
-            {isSubmitting
-              ? (contexto === 'pedido' ? 'Cancelando...' : 'Anulando...')
-              : `Confirmar ${contexto === 'pedido' ? 'cancelación' : 'anulación'}`}
-          </button>
-        </div>
       </div>
+    </div>
     </div>
   );
 }

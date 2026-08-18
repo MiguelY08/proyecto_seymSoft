@@ -67,7 +67,7 @@ function PaymentReceiptsSection({
           <div>
             <h3 className="text-sm font-bold text-slate-800">Comprobantes de pago</h3>
             <p className="text-xs text-slate-600">
-              Los comprobantes pendientes requieren revision antes de registrar el pago pendiente.
+              Los comprobantes pendientes requieren revisión antes de registrar el pago pendiente.
             </p>
           </div>
         </div>

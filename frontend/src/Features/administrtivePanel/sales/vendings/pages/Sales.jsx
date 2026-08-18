@@ -14,6 +14,16 @@ const RECORDS_PER_PAGE = 11;
 const SALES_FETCH_LIMIT = 100;
 const RETURNS_FETCH_LIMIT = 100;
 
+const normalizeOrderStatus = (value) => {
+  const normalized = String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+  return normalized === 'cancelado' ? 'anulado' : normalized;
+};
+
 const getSalesServiceByType = (type) => {
   const servicesByType = {
     all: (params) => SalesServices.getAll(params),
@@ -169,6 +179,7 @@ function Sales() {
   const [search,      setSearch]      = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [activeType,  setActiveType]  = useState('all');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('all');
   const [fechaInicial, setFechaInicial] = useState('');
   const [fechaFinal, setFechaFinal] = useState('');
   const [loading,     setLoading]     = useState(false);
@@ -250,10 +261,19 @@ function Sales() {
     setCurrentPage(1);
   };
 
+  const handleOrderStatusFilterChange = (status) => {
+    setOrderStatusFilter(status);
+    setCurrentPage(1);
+  };
+
   const filteredSales = useMemo(() => {
     const salesBySearch = filterSales(sales, search);
 
     return salesBySearch.filter((sale) => {
+      if (orderStatusFilter !== 'all' && normalizeOrderStatus(sale.estadoPedido) !== orderStatusFilter) {
+        return false;
+      }
+
       if (!fechaInicial && !fechaFinal) return true;
 
       const saleDate = getSaleDateValue(sale);
@@ -263,7 +283,7 @@ function Sales() {
 
       return true;
     });
-  }, [sales, search, fechaInicial, fechaFinal]);
+  }, [sales, search, fechaInicial, fechaFinal, orderStatusFilter]);
 
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
   const endIndex = startIndex + RECORDS_PER_PAGE;
@@ -273,7 +293,8 @@ function Sales() {
     search.trim() ||
     fechaInicial ||
     fechaFinal ||
-    activeType !== 'all'
+    activeType !== 'all' ||
+    orderStatusFilter !== 'all'
   );
 
   if (loading && sales.length === 0) {
@@ -291,6 +312,8 @@ function Sales() {
         onSearchChange={handleSearchChange}
         activeType={activeType}
         onTypeChange={handleTypeChange}
+        orderStatusFilter={orderStatusFilter}
+        onOrderStatusFilterChange={handleOrderStatusFilterChange}
         fechaInicial={fechaInicial}
         setFechaInicial={setFechaInicial}
         fechaFinal={fechaFinal}

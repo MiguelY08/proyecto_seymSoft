@@ -4,8 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
 import TopBar from '../components/TopBar';
 import OrdersTable from '../components/OrdersTable';
-import DetailOrder from '../modals/DetailOrder';
-import CancelOrder from '../modals/CancelOrder';
 import OrdersService, { ESTADOS_LOGISTICOS, ORIGENES } from '../services/ordersService';
 import { clientsService } from '../../clients/services/clientsService';
 import { useAlert } from '../../../../shared/alerts/useAlert';
@@ -34,7 +32,7 @@ const getDeliverySearchText = (order = {}) => {
     return 'Recoger en tienda';
   }
 
-  return formatDeliveryAddress(order) || 'Sin direccion registrada';
+  return formatDeliveryAddress(order) || 'Sin dirección registrada';
 };
 
 const normalizeSearch = (value) =>
@@ -47,7 +45,7 @@ const normalizeSearch = (value) =>
 // ─── Componente principal de lista de pedidos ─────────────────────────────────
 function OrdersList() {
   const navigate = useNavigate();
-  const { showSuccess, showError, showWarning } = useAlert();
+  const { showError, showWarning } = useAlert();
 
   // Estados
   const [orders, setOrders] = useState([]);
@@ -59,9 +57,6 @@ function OrdersList() {
   const [pagoEstadoFilter, setPagoEstadoFilter] = useState('');
   const [envioFilter, setEnvioFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [cancelando, setCancelando] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoadingMessage, setActionLoadingMessage] = useState('');
 
@@ -159,7 +154,7 @@ function OrdersList() {
           order.ciudadEntregaNombre,
           order.direccionEntrega,
           getDeliverySearchText(order),
-          requiresShippingAmount(order) ? 'Envio pendiente' : '',
+          requiresShippingAmount(order) ? 'Envío pendiente' : '',
           order.fechaPedido ? new Date(order.fechaPedido).toLocaleDateString('es-CO') : '',
           order.estadoLogistico,
           order.pagoEstado,
@@ -224,101 +219,33 @@ function OrdersList() {
   }, [search, fechaInicial, fechaFinal, origenFilter, pagoEstadoFilter, envioFilter]);
 
   // Handlers
-  const handleViewDetail = async (order) => {
-    setActionLoadingMessage('Cargando detalles del pedido...');
-    try {
-      const freshOrder = await OrdersService.findById(order.id);
-      if (freshOrder) {
-        setOrders(prev => prev.map(item => item.id === freshOrder.id ? freshOrder : item));
-      }
-      setSelectedOrder(freshOrder || order);
-      setIsDetailOpen(true);
-    } catch (error) {
-      showError('Error', error.response?.data?.message || error.message || 'No se pudo cargar el pedido.');
-      setSelectedOrder(order);
-      setIsDetailOpen(true);
-    } finally {
-      setActionLoadingMessage('');
-    }
+  const handleViewDetail = (order) => {
+    navigate(`/admin/sales/orders/${order.id}/detail`);
   };
-
-  const handleCloseDetail = () => {
-    setIsDetailOpen(false);
-    setSelectedOrder(null);
-  };
-
-  const handleOrderRefresh = useCallback((updatedOrder) => {
-    if (!updatedOrder?.id) return;
-
-    setOrders(prev => prev.map(order => order.id === updatedOrder.id ? updatedOrder : order));
-    setSelectedOrder(updatedOrder);
-  }, []);
 
   const handleEdit = (order) => {
-    if ([ESTADOS_LOGISTICOS.ENTREGADO, ESTADOS_LOGISTICOS.CANCELADO].includes(order.estadoLogistico)) {
-      showWarning('Pedido inmutable', 'Los pedidos entregados o cancelados no pueden editarse.');
+    if ([ESTADOS_LOGISTICOS.ENTREGADO, ESTADOS_LOGISTICOS.ANULADO].includes(order.estadoLogistico)) {
+      showWarning('Pedido inmutable', 'Los pedidos entregados o anulados no pueden editarse.');
       return;
     }
-    setActionLoadingMessage('Cargando edicion del pedido...');
+    setActionLoadingMessage('Cargando edición del pedido...');
     window.setTimeout(() => {
       navigate(`/admin/sales/orders/${order.id}`);
     }, 80);
   };
 
-  const handleEstadoLogisticoChange = async (orderId, nuevoEstado, motivo = null) => {
-    const current = orders.find((order) => Number(order.id) === Number(orderId));
-    if ([ESTADOS_LOGISTICOS.ENTREGADO, ESTADOS_LOGISTICOS.CANCELADO].includes(current?.estadoLogistico)) {
-      showWarning('Pedido inmutable', 'Los pedidos entregados o cancelados no pueden cambiar de estado.');
-      return;
-    }
-    if (nuevoEstado === ESTADOS_LOGISTICOS.CANCELADO) {
-      showWarning('Usa el flujo de cancelacion', 'Para cancelar un pedido debes indicar el motivo desde la accion Cancelar.');
-      return;
-    }
-    try {
-      const updated = await OrdersService.updateEstadoLogistico(orderId, nuevoEstado, motivo);
-    if (updated) {
-      setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
-      if (selectedOrder?.id === updated.id) setSelectedOrder(updated);
-      showSuccess('Estado actualizado', `El pedido #${updated.numeroPedido} ahora está ${updated.estadoLogistico}.`);
-      return updated;
-    }
-    } catch (error) {
-      showError(
-        'No se pudo actualizar',
-        error.response?.data?.message ||
-          error.response?.data?.error ||
-          error.message ||
-          'No se pudo cambiar el estado del pedido.'
-      );
-      throw error;
-    }
-  };
-
   const handleCancelOrder = useCallback((order) => {
-    if ([ESTADOS_LOGISTICOS.ENTREGADO, ESTADOS_LOGISTICOS.CANCELADO].includes(order.estadoLogistico)) {
-      showWarning('Pedido inmutable', 'Los pedidos entregados o cancelados no pueden cancelarse.');
+    if ([ESTADOS_LOGISTICOS.ENTREGADO, ESTADOS_LOGISTICOS.ANULADO].includes(order.estadoLogistico)) {
+      showWarning('Pedido inmutable', 'Los pedidos entregados o anulados no pueden anularse.');
       return;
     }
-    setCancelando(order);
-  }, [showWarning]);
+    navigate(`/admin/sales/orders/${order.id}/cancel`);
+  }, [navigate, showWarning]);
 
   const handleShowPendingShipping = useCallback(() => {
     setEnvioFilter(ENVIO_FILTERS.PENDIENTE);
     setCurrentPage(1);
   }, []);
-
-  const confirmCancel = useCallback(async (motivo) => {
-    if (!cancelando) return;
-    const updated = await OrdersService.cancel(cancelando.id, motivo);
-    if (updated) {
-      setOrders(prev => prev.map(o => (o.id === updated.id ? updated : o)));
-      if (selectedOrder?.id === updated.id) setSelectedOrder(updated);
-      if (isDetailOpen) setIsDetailOpen(false);
-      showSuccess('Pedido cancelado', `El pedido #${updated.numeroPedido} ha sido cancelado.`);
-    }
-    setCancelando(null);
-  }, [cancelando, selectedOrder, isDetailOpen, showSuccess]);
 
   if (loading && orders.length === 0) {
     return (
@@ -358,12 +285,12 @@ function OrdersList() {
         <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800 shadow-sm">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">Pedidos web con envio pendiente</p>
+            <p className="text-sm font-semibold">Pedidos web con envío pendiente</p>
             <p className="text-xs leading-relaxed text-amber-700">
               {pendingShippingCount === 1
-                ? 'Hay 1 pedido web a domicilio sin valor de envio registrado.'
-                : `Hay ${pendingShippingCount} pedidos web a domicilio sin valor de envio registrado.`}
-              {` Revisa el pedido y registra el envio para actualizar el total a pagar.`}
+                ? 'Hay 1 pedido web a domicilio sin valor de envío registrado.'
+                : `Hay ${pendingShippingCount} pedidos web a domicilio sin valor de envío registrado.`}
+              {` Revisa el pedido y registra el envío para actualizar el total a pagar.`}
             </p>
           </div>
           <button
@@ -402,24 +329,6 @@ function OrdersList() {
         </div>
       )}
 
-      {/* Modales (detalle y cancelación) */}
-      <DetailOrder
-        order={selectedOrder}
-        isOpen={isDetailOpen}
-        onClose={handleCloseDetail}
-        onEdit={handleEdit}
-        onCancel={handleCancelOrder}
-        onEstadoChange={(order, nuevoEstado) => handleEstadoLogisticoChange(order.id, nuevoEstado)}
-        onOrderRefresh={handleOrderRefresh}
-      />
-
-      {cancelando && (
-        <CancelOrder
-          order={cancelando}
-          onClose={() => setCancelando(null)}
-          onConfirm={confirmCancel}
-        />
-      )}
     </div>
   );
 }

@@ -341,41 +341,43 @@ function RightSectionForm({
 
         {/* Tabla de productos agregados */}
         {productos.length > 0 ? (
-          <div className="overflow-x-auto rounded-lg border border-gray-200 [-webkit-overflow-scrolling:touch]">
-            <table className="min-w-[720px] divide-y divide-gray-200">
+          <div className="overflow-x-auto rounded-lg border border-gray-200 [-webkit-overflow-scrolling:touch] lg:overflow-x-visible">
+            <table className="min-w-[720px] w-full table-fixed divide-y divide-gray-200 lg:min-w-0">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                  <th className="px-3 py-2"></th>
+                  <th className="w-[27%] px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase sm:px-3">Producto</th>
+                  <th className="w-[9%] px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase sm:px-3">Stock</th>
+                  <th className="w-[17%] px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase sm:px-3">Cantidad</th>
+                  <th className="w-[18%] px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase sm:px-3">Precio Unit.</th>
+                  <th className="w-[18%] px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase sm:px-3">Total</th>
+                  <th className="w-[11%] whitespace-nowrap px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase sm:px-3">Acciones</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {productos.map((prod) => (
                   <tr key={prod.id} className="hover:bg-gray-50 transition-colors duration-150">
-                    <td className="min-w-[220px] px-3 py-2 text-sm text-gray-800">{prod.nombre}</td>
-                    <td className="px-3 py-2 text-sm text-gray-700">{prod.stock ?? 0}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-2 py-2 text-sm text-gray-800 sm:px-3" title={prod.nombre}>
+                      <span className="block truncate">{prod.nombre}</span>
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-2 text-sm text-gray-700 sm:px-3">{prod.stock ?? 0}</td>
+                    <td className="px-2 py-2 sm:px-3">
                       <input
                         type="number"
                         min="1"
                         max={prod.stock ?? undefined}
                         value={prod.cantidad}
                         onChange={(e) => onUpdateCantidad(prod.id, parseInt(e.target.value) || 1)}
-                        className="w-20 px-2 py-1.5 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 transition-colors duration-200 focus:ring-2 focus:ring-[#004D77]/20 focus:border-[#004D77] disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        className="w-full max-w-16 px-1.5 py-1.5 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 transition-colors duration-200 focus:ring-2 focus:ring-[#004D77]/20 focus:border-[#004D77] disabled:bg-gray-100 disabled:cursor-not-allowed sm:max-w-20 sm:px-2"
                         disabled={isDisabled}
                       />
                     </td>
-                    <td className="px-3 py-2 text-sm text-gray-700">
+                    <td className="whitespace-nowrap px-2 py-2 text-sm text-gray-700 sm:px-3">
                       {formatCurrency(prod.precioUnitario)}
                     </td>
-                    <td className="px-3 py-2 text-sm font-medium text-gray-900">
+                    <td className="whitespace-nowrap px-2 py-2 text-sm font-medium text-gray-900 sm:px-3">
                       {formatCurrency(prod.subtotal)}
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-2 py-2 text-right sm:px-3">
                       <button
                         type="button"
                         onClick={() => onRemoveProduct(prod.id)}

@@ -13,7 +13,7 @@ export const ESTADO_LOGISTICO_LABELS = {
   [ESTADOS_LOGISTICOS.EN_PROCESO]: 'En proceso',
   [ESTADOS_LOGISTICOS.LISTO]:      'Listo',
   [ESTADOS_LOGISTICOS.ENTREGADO]:  'Entregado',
-  [ESTADOS_LOGISTICOS.CANCELADO]:  'Cancelado',
+  [ESTADOS_LOGISTICOS.ANULADO]:  'Anulado',
 };
 
 const ESTADO_PAGO_LABELS = {
@@ -26,14 +26,14 @@ export const ESTADO_LOGISTICO_STYLES = {
   [ESTADOS_LOGISTICOS.EN_PROCESO]: { bg: '#fef9c3', color: '#a16207', dot: '#ca8a04' },
   [ESTADOS_LOGISTICOS.LISTO]:      { bg: '#dcfce7', color: '#15803d', dot: '#16a34a' },
   [ESTADOS_LOGISTICOS.ENTREGADO]:  { bg: '#dbeafe', color: '#1d4ed8', dot: '#2563eb' },
-  [ESTADOS_LOGISTICOS.CANCELADO]:  { bg: '#fee2e2', color: '#b91c1c', dot: '#dc2626' },
+  [ESTADOS_LOGISTICOS.ANULADO]:  { bg: '#fee2e2', color: '#b91c1c', dot: '#dc2626' },
 };
 
 export const ESTADO_LOGISTICO_TABLE_CLASSES = {
   [ESTADOS_LOGISTICOS.EN_PROCESO]: 'bg-yellow-100 text-yellow-700 border-yellow-300',
   [ESTADOS_LOGISTICOS.LISTO]:      'bg-green-100  text-green-700  border-green-300',
   [ESTADOS_LOGISTICOS.ENTREGADO]:  'bg-blue-100   text-blue-700   border-blue-300',
-  [ESTADOS_LOGISTICOS.CANCELADO]:  'bg-red-100    text-red-400    border-red-200',
+  [ESTADOS_LOGISTICOS.ANULADO]:  'bg-red-100    text-red-400    border-red-200',
 };
 
 // ─── Colores para Estado de Pago ──────────────────────────────────────────────
@@ -56,7 +56,7 @@ export const getEstadoLogisticoColor = (estado) => {
     [ESTADOS_LOGISTICOS.EN_PROCESO]: 'bg-yellow-500',
     [ESTADOS_LOGISTICOS.LISTO]:      'bg-green-500',
     [ESTADOS_LOGISTICOS.ENTREGADO]:  'bg-blue-500',
-    [ESTADOS_LOGISTICOS.CANCELADO]:  'bg-red-500',
+    [ESTADOS_LOGISTICOS.ANULADO]:  'bg-red-500',
   };
   return map[estado] ?? 'bg-gray-500';
 };
@@ -75,9 +75,15 @@ export const getEstadoPagoColor = (estado) => {
 
 // ─── Permisos (basados en estado logístico y pago) ───────────────────────────
 export const getPermisos = (estadoLogistico, pagoEstado) => {
-  const esCancelado = estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO;
-  const esEntregado = estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO;
-  return { deshabilitado: esCancelado || esEntregado };
+  const esAnulado = estadoLogistico === ESTADOS_LOGISTICOS.ANULADO;
+  const esEntregadoYPagado =
+    estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO &&
+    pagoEstado === ESTADOS_PAGO.PAGADO;
+
+  return {
+    editarDeshabilitado: esAnulado || esEntregadoYPagado,
+    cancelarDeshabilitado: esAnulado || estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO,
+  };
 };
 
 // ─── highlight (sin cambios) ──────────────────────────────────────────────────
@@ -176,7 +182,7 @@ const exportOrdersToExcelLegacy = (orders) => {
   // ========== HOJA 1: RESUMEN DE PEDIDOS ==========
   const summaryHeaders = [
     'N° Pedido', 'Cliente', 'Dirección de Entrega', 'Fecha Pedido',
-    'Total', 'Estado Logístico', 'Estado de Pago', 'Origen', 'Motivo cancelación', 'Cantidad Productos'
+    'Total', 'Estado Logístico', 'Estado de Pago', 'Origen', 'Motivo anulación', 'Cantidad Productos'
   ];
 
   const summaryData = orders.map(order => [
@@ -188,7 +194,7 @@ const exportOrdersToExcelLegacy = (orders) => {
     ESTADO_LOGISTICO_LABELS[order.estadoLogistico] || order.estadoLogistico || '',
     ESTADO_PAGO_LABELS[order.pagoEstado] || order.pagoEstado || '',
     order.origen || '',
-    order.motivoCancelacion ?? '',
+    order.motivoAnulacion ?? '',
     order.productos?.length || 0,
   ]);
 
@@ -234,7 +240,7 @@ const exportOrdersToExcelLegacy = (orders) => {
 
   const enProceso = orders.filter(o => o.estadoLogistico === ESTADOS_LOGISTICOS.EN_PROCESO).length;
   const listo = orders.filter(o => o.estadoLogistico === ESTADOS_LOGISTICOS.LISTO).length;
-  const cancelado = orders.filter(o => o.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO).length;
+  const anulado = orders.filter(o => o.estadoLogistico === ESTADOS_LOGISTICOS.ANULADO).length;
   const pagado = orders.filter(o => o.pagoEstado === ESTADOS_PAGO.PAGADO).length;
   const pendientePago = orders.filter(o => o.pagoEstado === ESTADOS_PAGO.PENDIENTE).length;
   const avgPerOrder = totalOrders > 0 ? totalValue / totalOrders : 0;
@@ -248,7 +254,7 @@ const exportOrdersToExcelLegacy = (orders) => {
     [''],
     ['Estado Logístico: En proceso', enProceso],
     ['Estado Logístico: Listo', listo],
-    ['Estado Logístico: Cancelado', cancelado],
+    ['Estado Logístico: Anulado', anulado],
     [''],
     ['Estado de Pago: Pendiente', pendientePago],
     ['Estado de Pago: Pagado', pagado],
@@ -448,7 +454,7 @@ const buildOrdersSummarySheet = (workbook, orders, subtitle, logoId) => {
     { key: 'logisticStatus', width: 18 },
     { key: 'paymentStatus', width: 18 },
     { key: 'origin', width: 14 },
-    { key: 'cancellationReason', width: 35 },
+    { key: 'anullationReason', width: 35 },
     { key: 'productCount', width: 18 },
   ];
   setupWorksheetHeader(worksheet, 'PEDIDOS', subtitle, 'M', logoId);
@@ -458,14 +464,14 @@ const buildOrdersSummarySheet = (workbook, orders, subtitle, logoId) => {
     'Cliente',
     'Departamento',
     'Municipio/Ciudad',
-    'Direccion de entrega',
+    'Dirección de entrega',
     'Fecha pedido',
-    'Envio',
+    'Envío',
     'Total',
-    'Estado logistico',
+    'Estado logístico',
     'Estado de pago',
     'Origen',
-    'Motivo cancelacion',
+    'Motivo de anulación',
     'Cantidad productos',
   ]);
   styleHeaderRow(headerRow);
@@ -483,7 +489,7 @@ const buildOrdersSummarySheet = (workbook, orders, subtitle, logoId) => {
       logisticStatus: ESTADO_LOGISTICO_LABELS[order.estadoLogistico] || normalizeValue(order.estadoLogistico),
       paymentStatus: ESTADO_PAGO_LABELS[order.pagoEstado] || normalizeValue(order.pagoEstado),
       origin: getOriginLabel(order.origen),
-      cancellationReason: normalizeValue(order.motivoCancelacion),
+      anullationReason: normalizeValue(order.motivoAnulacion),
       productCount: getOrderProducts(order).length,
     });
 
@@ -555,12 +561,12 @@ const buildOrdersProductsSheet = (workbook, orders, subtitle, logoId) => {
 };
 
 const buildOrdersStatsSheet = (workbook, orders, subtitle, logoId) => {
-  const worksheet = workbook.addWorksheet('Estadisticas');
+  const worksheet = workbook.addWorksheet('Estadísticas');
   worksheet.columns = [
     { key: 'metric', width: 36 },
     { key: 'value', width: 24 },
   ];
-  setupWorksheetHeader(worksheet, 'ESTADISTICAS DE PEDIDOS', subtitle, 'B', logoId);
+  setupWorksheetHeader(worksheet, 'ESTADÍSTICAS DE PEDIDOS', subtitle, 'B', logoId);
 
   const totalOrders = orders.length;
   const totalValue = orders.reduce((sum, order) => sum + Number(order.total ?? 0), 0);
@@ -571,7 +577,7 @@ const buildOrdersStatsSheet = (workbook, orders, subtitle, logoId) => {
   );
   const enProceso = orders.filter((order) => order.estadoLogistico === ESTADOS_LOGISTICOS.EN_PROCESO).length;
   const listo = orders.filter((order) => order.estadoLogistico === ESTADOS_LOGISTICOS.LISTO).length;
-  const cancelado = orders.filter((order) => order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO).length;
+  const anulado = orders.filter((order) => order.estadoLogistico === ESTADOS_LOGISTICOS.ANULADO).length;
   const pendientePago = orders.filter((order) => order.pagoEstado === ESTADOS_PAGO.PENDIENTE).length;
   const pagado = orders.filter((order) => order.pagoEstado === ESTADOS_PAGO.PAGADO).length;
   const avgPerOrder = totalOrders > 0 ? totalValue / totalOrders : 0;
@@ -585,9 +591,9 @@ const buildOrdersStatsSheet = (workbook, orders, subtitle, logoId) => {
     ['Promedio por pedido', avgPerOrder],
     ['Total productos (lineas)', totalProductLines],
     ['Total unidades', totalUnits],
-    ['Estado logistico: En proceso', enProceso],
-    ['Estado logistico: Listo', listo],
-    ['Estado logistico: Cancelado', cancelado],
+    ['Estado logístico: En proceso', enProceso],
+    ['Estado logístico: Listo', listo],
+    ['Estado logístico: Anulado', anulado],
     ['Estado de pago: Pendiente', pendientePago],
     ['Estado de pago: Pagado', pagado],
     ['Fecha de exportacion', new Date().toLocaleString('es-CO')],
@@ -735,7 +741,7 @@ export const exportLegacyOrderToPDF = (order, pagos = [], asesorNombre = 'N/A') 
 
   const productosFoot = !isRecoge
     ? [
-        ['', '', 'Envio:', formatCurrency(shippingAmount)],
+        ['', '', 'Envío:', formatCurrency(shippingAmount)],
         ['', '', 'Total:', formatCurrency(order.total)],
       ]
     : [['', '', 'Total:', formatCurrency(order.total)]];
@@ -797,12 +803,12 @@ export const exportLegacyOrderToPDF = (order, pagos = [], asesorNombre = 'N/A') 
   doc.setTextColor(60);
   doc.text(`Saldo pendiente: ${formatCurrency(saldoPendiente)}`, marginLeft, yPos);
 
-  // ========== MOTIVO DE CANCELACIÓN (si aplica) ==========
-  if (order.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO && order.motivoCancelacion) {
+  // ========== MOTIVO DE ANULACIO (si aplica) ==========
+  if (order.estadoLogistico === ESTADOS_LOGISTICOS.ANULADO && order.motivoAnulacion) {
     yPos += 10;
     doc.setFontSize(10);
     doc.setTextColor(180, 0, 0);
-    doc.text(`Motivo de cancelación: ${order.motivoCancelacion}`, marginLeft, yPos);
+    doc.text(`Motivo de anulación: ${order.motivoAnulacion}`, marginLeft, yPos);
   }
 
   // ========== PIE DE PÁGINA ==========
@@ -893,7 +899,7 @@ export const exportOrderToPDF = async (order, pagos = [], asesorNombre = 'No reg
   doc.setFillColor(248, 250, 252);
   doc.roundedRect(margin, y, pageWidth - margin * 2, 39, 2, 2, 'F');
   field('Cliente', order.clienteNombre, 19, y + 8, 72);
-  field('Telefono', order.clienteTelefono, 19, y + 23, 72);
+  field('Teléfono', order.clienteTelefono, 19, y + 23, 72);
   field('Fecha del pedido', date(order.fechaPedido), 108, y + 8, 38);
   field('Estado del pedido', logisticStatus, 108, y + 23, 38);
   field('Estado de pago', paymentStatus, 157, y + 8, 35);
@@ -901,7 +907,7 @@ export const exportOrderToPDF = async (order, pagos = [], asesorNombre = 'No reg
   y += 47;
   field('Correo', order.clienteEmail, margin, y, 74);
   field('Entrega', isPickup ? 'Recoge en tienda' : deliveryPlace, 91, y, 45);
-  field('Direccion', isPickup ? 'No aplica' : order.direccionEntrega, 143, y, 52);
+  field('Dirección', isPickup ? 'No aplica' : order.direccionEntrega, 143, y, 52);
   y += 18;
 
   doc.setFont('helvetica', 'bold');
@@ -913,7 +919,7 @@ export const exportOrderToPDF = async (order, pagos = [], asesorNombre = 'No reg
   ]);
   const productFoot = isPickup
     ? [['', '', 'Total:', money(order.total)]]
-    : [['', '', 'Envio:', money(shipping)], ['', '', 'Total:', money(order.total)]];
+    : [['', '', 'Envío:', money(shipping)], ['', '', 'Total:', money(order.total)]];
   autoTable(doc, {
     startY: y + 4, margin: { left: margin, right: margin, bottom: 20 },
     head: [['Producto', 'Cant.', 'Precio unitario', 'Subtotal']],
@@ -931,7 +937,7 @@ export const exportOrderToPDF = async (order, pagos = [], asesorNombre = 'No reg
     const paid = pagos.reduce((sum, payment) => sum + (Number(payment.monto) || 0), 0);
     autoTable(doc, {
       startY: y + 4, margin: { left: margin, right: margin, bottom: 20 },
-      head: [['Fecha', 'Metodo', 'Monto', 'Comprobante']],
+      head: [['Fecha', 'Método', 'Monto', 'Comprobante']],
       body: pagos.map((payment) => [date(payment.fechaPago), value(payment.metodoPago), money(payment.monto), value(payment.comprobante, '-')]),
       foot: [['', 'Total pagado:', money(paid), '']], theme: 'grid',
       styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 2.4, lineColor: [220, 230, 236], lineWidth: 0.2 },

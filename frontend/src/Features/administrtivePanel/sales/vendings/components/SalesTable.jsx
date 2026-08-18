@@ -51,7 +51,8 @@ const PULSING_ORDER_STATUSES = new Set(["en proceso", "listo"]);
 
 function EstadoPedidoIndicator({ estado, term }) {
   const label = estado || "-";
-  const normalized = normalizeStatusText(label);
+  const normalizedStatus = normalizeStatusText(label);
+  const normalized = normalizedStatus === "cancelado" ? "anulado" : normalizedStatus;
   const shouldPulse = PULSING_ORDER_STATUSES.has(normalized);
   const displayLabel = ESTADO_LOGISTICO_LABELS[normalized] || label;
   const content = term?.trim() ? highlight(displayLabel, term) : displayLabel;
@@ -264,7 +265,7 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
       return;
     }
 
-    navigate("/admin/sales/annular-sale", { state: { sale: row } });
+    navigate(`/admin/sales/${row.id}/annul`);
   };
 
   const handleDevolucion = (row) => {
@@ -422,20 +423,14 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
                   <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                     <Permission permission="ventas.ver_informacion">
                       <button
-                        onClick={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          navigateWithSpinner("Cargando detalles de la venta...", "/admin/sales/info-sale", {
-                            state: {
-                              sale: row,
-                              origin: {
-                                x: rect.left + rect.width / 2,
-                                y: rect.top + rect.height / 2,
-                              },
-                            },
-                          });
+                        onClick={() => {
+                          navigateWithSpinner(
+                            "Cargando detalles de la venta...",
+                            `/admin/sales/${row.id}/detail`
+                          );
                         }}
                         className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
-                        title="Ver informacion"
+                        title="Ver información"
                       >
                         <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                       </button>
@@ -469,7 +464,7 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
                             if (!orderId) {
                               showError(
                                 'Pedido no disponible',
-                                'No se encontro el pedido asociado a esta venta para editarlo.'
+                                'No se encontró el pedido asociado a esta venta para editarlo.'
                               );
                               return;
                             }
@@ -530,7 +525,7 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
                           title={
                             puedeAnular
                               ? "Anular venta"
-                              : "Anulacion no disponible"
+                              : "Anulación no disponible"
                           }
                         >
                           <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
