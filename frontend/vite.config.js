@@ -16,7 +16,8 @@ export default defineConfig({
         skipWaiting: true,
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/\.pdf$/],
-        globPatterns: ["**/*.{jsx,css,html,png,jpg,jpeg,webp,svg}"],
+        globPatterns: ["**/*.{js,mjs,wasm,css,html,png,jpg,jpeg,webp,svg,ico,json,webmanifest}"],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
 
       manifest: {
