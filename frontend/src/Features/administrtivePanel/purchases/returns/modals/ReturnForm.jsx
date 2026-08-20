@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   X, Plus, Minus, AlertCircle, CheckCircle2,
-  ChevronDown, Trash2, Lock, ChevronUp,
+  ChevronDown, Trash2, Lock, ChevronUp, Loader2,
 } from 'lucide-react';
 import {
   MOTIVOS_DEVOLUCION,
@@ -28,7 +28,6 @@ import {
   mapReturnFormToCreatePayload,
   mapReturnFormToUpdatePayload,
 } from '../services/returnsServices';
-import FullScreenSpinner from '../../../../shared/spinner/FullScreenSpinner';
 
 // ─── ID unico para lineas ─────────────────────────────────────────────────────
 const newLineaId = () =>
@@ -142,6 +141,10 @@ function EstadoDropdown({ value, disabled, estados, onChange, hasError, allowEmp
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
+
   const selectedStyle = value ? getBadgeEstadoProducto(value) : null;
   const borderClass   = disabled
     ? 'border-gray-200 opacity-50 cursor-not-allowed'
@@ -215,11 +218,12 @@ function EstadoDropdown({ value, disabled, estados, onChange, hasError, allowEmp
 const inputBase = 'w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200';
 
 // ─── Selector de motivo (editable) ───────────────────────────────────────────
-const MotivoSelect = ({ value, onChange, hasError }) => (
+const MotivoSelect = ({ value, onChange, hasError, disabled = false }) => (
   <div className="relative">
     <select
       value={value || ''}
       onChange={(e) => onChange(e.target.value)}
+      disabled={disabled}
       className={`appearance-none w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white cursor-pointer ${inputBase} ${
         hasError
           ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
@@ -236,11 +240,12 @@ const MotivoSelect = ({ value, onChange, hasError }) => (
 );
 
 // ─── Selector de tipo (editable) ─────────────────────────────────────────────
-const TipoSelect = ({ value, onChange, hasError }) => (
+const TipoSelect = ({ value, onChange, hasError, disabled = false }) => (
   <div className="relative">
     <select
       value={value || ''}
       onChange={(e) => onChange(e.target.value)}
+      disabled={disabled}
       className={`appearance-none w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white cursor-pointer ${inputBase} ${
         hasError
           ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
@@ -257,7 +262,7 @@ const TipoSelect = ({ value, onChange, hasError }) => (
 );
 
 // ─── Campo cantidad editable con botones (+/-) (mejorado) ─────────────────────
-const CantidadInput = ({ value, max, onChange, hasError }) => {
+const CantidadInput = ({ value, max, onChange, hasError, disabled = false }) => {
   const cantidad = value ?? 1;
   const decCb = useCallback(() => onChange(Math.max(1, cantidad - 1)), [cantidad, onChange]);
   const incCb = useCallback(() => onChange(Math.min(max, cantidad + 1)), [cantidad, max, onChange]);
@@ -269,7 +274,7 @@ const CantidadInput = ({ value, max, onChange, hasError }) => {
       <div className="flex items-center border border-gray-300 rounded-md overflow-hidden w-fit">
         <button
           type="button" {...lpDec}
-          disabled={cantidad <= 1}
+          disabled={disabled || cantidad <= 1}
           className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100
                      transition-colors cursor-pointer select-none disabled:opacity-40 disabled:cursor-not-allowed"
         >
@@ -280,6 +285,7 @@ const CantidadInput = ({ value, max, onChange, hasError }) => {
           value={cantidad}
           min={1}
           max={max}
+          disabled={disabled}
           onChange={(e) => {
             const val = parseInt(e.target.value, 10);
             if (!isNaN(val)) onChange(Math.min(Math.max(1, val), max));
@@ -291,7 +297,7 @@ const CantidadInput = ({ value, max, onChange, hasError }) => {
         />
         <button
           type="button" {...lpInc}
-          disabled={cantidad >= max}
+          disabled={disabled || cantidad >= max}
           className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100
                      transition-colors cursor-pointer select-none disabled:opacity-40 disabled:cursor-not-allowed"
         >
@@ -311,7 +317,7 @@ const ReadonlyField = ({ value, placeholder = '-' }) => (
 );
 
 // ─── LineaConfig - una fila de devolucion por producto (con editable condicional) ──
-const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errores, editableCompleto, isEditMode }) => {
+const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errores, editableCompleto, isEditMode, disabled = false }) => {
   const esTerminal     = isEstadoTerminal(linea.estado) || isEstadoProveedorRechazado(linea.estado);
   const esRechazoProveedor = isEstadoProveedorRechazado(linea.estado);
   const badgeStyle     = getBadgeEstadoProducto(linea.estado);
@@ -378,7 +384,8 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
           <button
             type="button"
             onClick={onRemove}
-            title="Eliminar esta linea"
+            disabled={disabled}
+            title="Eliminar esta línea"
             className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
           >
             <Trash2 className="w-3 h-3" strokeWidth={2} />
@@ -395,6 +402,7 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
               value={linea.motivo}
               onChange={(val) => onChange({ motivo: val })}
               hasError={!!fieldError('motivo')}
+              disabled={disabled}
             />
           ) : (
             <ReadonlyField value={linea.motivo} placeholder="Seleccionar..." />
@@ -416,6 +424,7 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
                 onChange({ tipoDevolucion: val, estado: getEstadoInicial() });
               }}
               hasError={!!fieldError('tipoDevolucion')}
+              disabled={disabled}
             />
           ) : (
             <ReadonlyField value={linea.tipoDevolucion} placeholder="Seleccionar..." />
@@ -432,7 +441,7 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
           <label className="text-xs font-medium text-gray-600">Estado <span className="text-red-500">*</span></label>
           <EstadoDropdown
             value={linea.estado ?? ''}
-            disabled={!linea.tipoDevolucion}
+            disabled={disabled || !linea.tipoDevolucion}
             estados={estadosDisp}
             onChange={(val) => onChange({ estado: val })}
             hasError={!!fieldError('estado')}
@@ -454,6 +463,7 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
               max={maxCantidad}
               onChange={(val) => onChange({ cantidadDevolver: val })}
               hasError={!!fieldError('cantidadDevolver')}
+              disabled={disabled}
             />
           ) : (
             <ReadonlyField value={linea.cantidadDevolver} placeholder="1" />
@@ -470,7 +480,7 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
 };
 
 // ─── ProductConfig - panel de un producto con sus lineas (colapsable con animacion) ──
-const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, errores, isExpanded, onToggleExpand, isEditMode }) => {
+const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, errores, isExpanded, onToggleExpand, isEditMode, disabled = false }) => {
   const totalUsado       = (producto.lineas ?? []).reduce((sum, l) => sum + (Number(l.cantidadDevolver) || 0), 0);
   const cantidadLimite   = getReturnQuantityLimit(producto);
   const cantidadRestante = cantidadLimite - totalUsado;
@@ -482,8 +492,8 @@ const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, err
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
       <div
-        className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 transition-colors"
-        onClick={onToggleExpand}
+        className={`flex items-center justify-between p-3 transition-colors ${disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-gray-50'}`}
+        onClick={disabled ? undefined : onToggleExpand}
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -493,7 +503,7 @@ const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, err
             </span>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-            <span>Devolucion: {totalUsado}/{cantidadLimite} u.</span>
+            <span>Devolución: {totalUsado}/{cantidadLimite} u.</span>
             <span>Disponible: {getReturnAvailableQuantity(producto)} u.</span>
             <span>Tipo: {producto.lineas?.[0]?.tipoDevolucion || '-'}</span>
           </div>
@@ -539,6 +549,7 @@ const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, err
                     errores={erroresLinea}
                     editableCompleto={editableCompleto}
                     isEditMode={isEditMode}
+                    disabled={disabled}
                   />
                 );
               })}
@@ -548,12 +559,13 @@ const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, err
               <button
                 type="button"
                 onClick={onAddLinea}
+                disabled={disabled}
                 className="flex w-full min-w-0 items-center justify-center gap-1.5 px-2 py-1.5 text-center text-xs font-medium leading-tight whitespace-normal
                            text-[#004D77] border border-dashed border-[#004D77]/40 rounded-lg
-                           hover:bg-[#004D77]/5 hover:border-[#004D77] transition-colors cursor-pointer"
+                           hover:bg-[#004D77]/5 hover:border-[#004D77] transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Plus className="h-3 w-3 shrink-0" strokeWidth={2.5} />
-                <span className="min-w-0">Agregar linea ({cantidadRestante} u. disponibles)</span>
+                <span className="min-w-0">Agregar línea ({cantidadRestante} u. disponibles)</span>
               </button>
             )}
           </div>
@@ -885,11 +897,11 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
       if (isEdit) {
         const payload = mapReturnFormToUpdatePayload(productosSeleccionadosArray);
         devolucionGuardada = await PurchaseReturnsService.update(devolucion.id, payload);
-        showSuccess('Devolucion actualizada', `Los cambios en ${devolucion.id} se guardaron correctamente.`);
+        showSuccess('Devolución actualizada', `Los cambios en ${devolucion.id} se guardaron correctamente.`);
       } else {
         const payload = mapReturnFormToCreatePayload(purchase, productosSeleccionadosArray);
         devolucionGuardada = await PurchaseReturnsService.create(payload);
-        showSuccess('Devolucion registrada', `Se creo la devolucion ${devolucionGuardada.id} correctamente.`);
+        showSuccess('Devolución registrada', `Se creó la devolución ${devolucionGuardada.id} correctamente.`);
       }
       await onSaved?.(devolucionGuardada);
       cerrarYNavegar();
@@ -932,12 +944,6 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
       onClick={handleCerrar}
       className="fixed inset-0 z-50 flex items-stretch justify-stretch bg-white sm:items-center sm:justify-center sm:bg-black/40 sm:p-4 sm:backdrop-blur-sm"
     >
-      {isSaving && (
-        <FullScreenSpinner
-          message={isEdit ? 'Guardando cambios...' : 'Registrando devolución...'}
-        />
-      )}
-
       <div
         onClick={(e) => e.stopPropagation()}
         className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-[92vh] sm:w-[min(920px,96vw)] sm:rounded-lg"
@@ -956,7 +962,8 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
           </div>
           <button
             onClick={handleCerrar}
-            className="shrink-0 rounded-full p-1 text-white transition-colors hover:bg-white/20 cursor-pointer"
+            disabled={isSaving}
+            className="shrink-0 rounded-full p-1 text-white transition-colors hover:bg-white/20 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
           >
             <X className="w-5 h-5" strokeWidth={2} />
           </button>
@@ -969,7 +976,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
                 <p className="text-sm font-medium text-gray-700 mb-0.5">
                   {isEdit ? 'Productos de la compra' : 'Productos a devolver'}
                 </p>
-                <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer mb-2 select-none">
+                <label className={`flex items-center gap-2 text-xs text-gray-600 mb-2 select-none ${isSaving ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
                   <input
                     type="checkbox"
                     checked={
@@ -977,7 +984,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
                     }
                     onChange={toggleTodos}
                     className="accent-[#004D77] w-3.5 h-3.5"
-                    disabled={productosSeleccionables.length === 0}
+                    disabled={isSaving || productosSeleccionables.length === 0}
                   />
                   Seleccionar todos
                 </label>
@@ -992,9 +999,9 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
                   return (
                     <div
                       key={p.codigoBarras}
-                      onClick={() => { if (!sinDisponible) toggleSeleccion(p.codigoBarras); }}
+                      onClick={() => { if (!isSaving && !sinDisponible) toggleSeleccion(p.codigoBarras); }}
                       className={`border rounded-lg p-2.5 transition-colors duration-150 ${
-                        isPersisted || sinDisponible ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'
+                        isSaving || isPersisted || sinDisponible ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'
                       } ${
                         isSelected
                           ? tieneError
@@ -1008,7 +1015,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => {}}
-                          disabled={isPersisted || sinDisponible}
+                          disabled={isSaving || isPersisted || sinDisponible}
                           className="accent-[#004D77] w-3.5 h-3.5 mt-0.5 shrink-0 disabled:opacity-60"
                         />
                         <div className="flex-1 min-w-0">
@@ -1053,7 +1060,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
               {productosSeleccionadosArray.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 gap-2">
                   <p className="text-sm">Ningun producto seleccionado</p>
-                  <p className="text-xs">Selecciona productos del panel izquierdo para configurar su devolucion</p>
+                  <p className="text-xs">Selecciona productos del panel izquierdo para configurar su devolución</p>
                 </div>
               ) : (
                 productosSeleccionadosArray.map((prod) => (
@@ -1067,6 +1074,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
                     isExpanded={expandedProductId === prod.codigoBarras}
                     onToggleExpand={() => setExpandedProductId(prev => prev === prod.codigoBarras ? null : prod.codigoBarras)}
                     isEditMode={isEdit}
+                    disabled={isSaving}
                   />
                 ))
               )}
@@ -1086,8 +1094,9 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
           <button
             onClick={handleGuardar}
             disabled={isSaving}
-            className="w-full rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed sm:w-auto"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed sm:w-auto"
           >
+            {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
             {isSaving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Guardar'}
           </button>
         </div>

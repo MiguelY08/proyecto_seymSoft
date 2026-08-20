@@ -6,6 +6,7 @@ import {
   getBadgeEstadoProducto,
   isEstadoAnulado,
 } from "../helpers/returnsHelpers";
+import { PurchaseReturnsService } from "../services/returnsServices";
 
 // ─── Highlight ────────────────────────────────────────────────────────────────
 const highlight = (text, search) => {
@@ -76,8 +77,12 @@ const FloatingTooltip = ({ pos, children }) => {
 };
 
 // ─── Tooltip Productos ────────────────────────────────────────────────────────
-const ProductosTooltip = ({ productos, search, totalDetails = 0, completedDetails = 0, progress }) => {
+const ProductosTooltip = ({ productos, search, totalDetails = 0, completedDetails = 0, progress, loading = false, onLoadProducts }) => {
   const { ref, pos, show, hide } = useTooltipPos();
+  const handleMouseEnter = () => {
+    show();
+    onLoadProducts?.();
+  };
 
   if (!productos?.length) {
     const total = totalDetails ?? progress?.total ?? 0;
@@ -91,7 +96,7 @@ const ProductosTooltip = ({ productos, search, totalDetails = 0, completedDetail
         <div
           ref={ref}
           className="flex items-center gap-1.5 cursor-default justify-center"
-          onMouseEnter={show}
+          onMouseEnter={handleMouseEnter}
           onMouseLeave={hide}
         >
           <span className="text-xs text-gray-700 max-w-[170px] truncate">
@@ -101,23 +106,29 @@ const ProductosTooltip = ({ productos, search, totalDetails = 0, completedDetail
         </div>
 
         <FloatingTooltip pos={pos}>
-          <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#94a3b8" }}>
-            Resumen de productos
-          </p>
-          <div className="flex flex-col gap-1.5 text-xs" style={{ color: "#f1f5f9" }}>
-            <div className="flex items-center justify-between gap-3">
-              <span>Total de detalles</span>
-              <span className="font-semibold tabular-nums" style={{ color: "#93c5fd" }}>{total}</span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span>Listos</span>
-              <span className="font-semibold tabular-nums" style={{ color: "#93c5fd" }}>{completed}</span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span>Progreso</span>
-              <span className="font-semibold tabular-nums" style={{ color: "#93c5fd" }}>{label}</span>
-            </div>
-          </div>
+          {loading ? (
+            <p className="text-xs" style={{ color: "#f1f5f9" }}>Cargando productos...</p>
+          ) : (
+            <>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#94a3b8" }}>
+                Resumen de productos
+              </p>
+              <div className="flex flex-col gap-1.5 text-xs" style={{ color: "#f1f5f9" }}>
+                <div className="flex items-center justify-between gap-3">
+                  <span>Total de detalles</span>
+                  <span className="font-semibold tabular-nums" style={{ color: "#93c5fd" }}>{total}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span>Listos</span>
+                  <span className="font-semibold tabular-nums" style={{ color: "#93c5fd" }}>{completed}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span>Progreso</span>
+                  <span className="font-semibold tabular-nums" style={{ color: "#93c5fd" }}>{label}</span>
+                </div>
+              </div>
+            </>
+          )}
         </FloatingTooltip>
       </>
     );
@@ -131,7 +142,7 @@ const ProductosTooltip = ({ productos, search, totalDetails = 0, completedDetail
       <div
         ref={ref}
         className="flex items-center gap-1.5 cursor-default justify-center"
-        onMouseEnter={show}
+        onMouseEnter={handleMouseEnter}
         onMouseLeave={hide}
       >
         <span className="text-xs text-gray-700 max-w-[170px] truncate">
@@ -290,6 +301,23 @@ function ReturnsTable({
   onAnnul,
 }) {
   const { hasPermission } = usePermissions();
+  const [productsByReturnId, setProductsByReturnId] = useState({});
+  const [loadingProductIds, setLoadingProductIds] = useState({});
+
+  const loadReturnProducts = useCallback(async (returnId) => {
+    if (!returnId || productsByReturnId[returnId] || loadingProductIds[returnId]) return;
+
+    setLoadingProductIds((current) => ({ ...current, [returnId]: true }));
+
+    try {
+      const detail = await PurchaseReturnsService.getById(returnId);
+      setProductsByReturnId((current) => ({ ...current, [returnId]: detail?.productos ?? [] }));
+    } catch (error) {
+      console.error("No se pudieron cargar los productos de la devolución.", error);
+    } finally {
+      setLoadingProductIds((current) => ({ ...current, [returnId]: false }));
+    }
+  }, [loadingProductIds, productsByReturnId]);
   const canViewInfo   = hasPermission("devoluciones_en_compras.ver_informacion");
   const canEditGlobal = hasPermission("devoluciones_en_compras.editar");
   const canAnnulGlobal = hasPermission("devoluciones_en_compras.anular");
@@ -329,6 +357,7 @@ function ReturnsTable({
             const stickyCellBg  = index % 2 === 0 ? "bg-gray-100 group-hover:bg-blue-50" : "bg-white group-hover:bg-blue-50";
             const proveedor     = devolucion.proveedor ?? devolucion.provider?.name ?? proveedorMap[devolucion.idCompra] ?? "—";
             const progress      = devolucion.progress ?? {};
+            const productos = productsByReturnId[devolucion.id] ?? devolucion.productos;
             const totalUnidades = (devolucion.productos ?? []).reduce(
               (sum, p) => sum + (p.cantidadDevolver ?? 0), 0
             ) || devolucion.totalDetails || progress.total || 0;
@@ -364,11 +393,13 @@ function ReturnsTable({
                 {/* Productos con tooltip */}
                 <td className="px-3 py-2 text-xs">
                   <ProductosTooltip
-                    productos={devolucion.productos}
+                    productos={productos}
                     search={search}
                     totalDetails={devolucion.totalDetails}
                     completedDetails={devolucion.completedDetails}
                     progress={progress}
+                    loading={Boolean(loadingProductIds[devolucion.id])}
+                    onLoadProducts={() => loadReturnProducts(devolucion.id)}
                   />
                 </td>
 

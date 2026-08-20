@@ -63,14 +63,14 @@ function TopBar({
 
   const handleDownloadLegacy = () => {
     if (returns.length === 0) {
-      showWarning("Sin registros", "No hay devoluciones en la pagina actual para exportar.");
+      showWarning("Sin registros", "No hay devoluciones en la página actual para exportar.");
       return;
     }
 
     showConfirm(
       "question",
       "Descargar resumen",
-      `Se exportaran ${returns.length} devolucion${returns.length !== 1 ? "es" : ""} de la pagina actual.`,
+      `Se exportarán ${returns.length} devolución${returns.length !== 1 ? "es" : ""} de la página actual.`,
       { confirmButtonText: "Descargar", cancelButtonText: "Cancelar" }
     ).then((result) => {
       if (!result?.isConfirmed) return;
@@ -91,10 +91,10 @@ function TopBar({
       });
 
       const headers = [
-        "No. devolucion",
+        "N.º de devolución",
         "Factura",
         "Proveedor",
-        "Fecha devolucion",
+        "Fecha de devolución",
         "Estado",
         "Progreso",
         "Total detalles",
@@ -175,7 +175,7 @@ function TopBar({
       XLSX.utils.book_append_sheet(wb, statsSheet, "Estadisticas");
       XLSX.writeFile(wb, `devoluciones_compras_${currentDate.toISOString().split("T")[0]}.xlsx`);
 
-      showTimer("success", "Descarga completada", "El resumen de devoluciones se genero correctamente.", 4000);
+      showTimer("success", "Descarga completada", "El resumen de devoluciones se generó correctamente.", 4000);
     });
   };
 
@@ -217,7 +217,7 @@ function TopBar({
       <div className="relative w-full min-w-0 xl:flex-1">
         <input
           type="text"
-          placeholder="Buscar por devolucion, factura, proveedor o estado..."
+          placeholder="Buscar por devolución, factura, proveedor o estado..."
           value={search}
           onChange={(event) => handleSearchChange(event.target.value)}
           className="w-full pl-4 pr-10 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400"

@@ -65,7 +65,7 @@ function Returns() {
       const result = await PurchaseReturnsService.getMetrics();
       setMetrics(result ?? DEFAULT_METRICS);
     } catch (error) {
-      showError("Error", error.message || "No se pudieron cargar las metricas.");
+      showError("Error", error.message || "No se pudieron cargar las métricas.");
     } finally {
       setMetricsLoading(false);
     }
@@ -161,7 +161,7 @@ function Returns() {
       const detail = await PurchaseReturnsService.getById(devolucion.id);
       setSelectedReturn(detail);
     } catch (error) {
-      showError("Error", error.message || "No se pudo cargar el detalle de la devolucion.");
+      showError("Error", error.message || "No se pudo cargar el detalle de la devolución.");
     } finally {
       setDetailLoading(false);
     }
@@ -191,7 +191,7 @@ function Returns() {
         const detailPurchaseId = detail?.purchaseId ?? detail?.purchase?.id;
 
         if (!detailPurchaseId) {
-          throw new Error("No se pudo identificar la compra asociada a la devolucion.");
+          throw new Error("No se pudo identificar la compra asociada a la devolución.");
         }
 
         purchase = await getPurchaseById(detailPurchaseId);
@@ -203,7 +203,7 @@ function Returns() {
     } catch (error) {
       showError(
         "Error",
-        error.message || "No se pudo cargar la devolucion para editar."
+        error.message || "No se pudo cargar la devolución para editar."
       );
     } finally {
       setFormLoading(false);
@@ -224,14 +224,14 @@ function Returns() {
       setAnnulLoading(true);
       await PurchaseReturnsService.annul(returnToAnnul.id, motivo);
       showSuccess(
-        "Devolucion anulada",
-        "La devolucion de compra fue anulada correctamente."
+        "Devolución anulada",
+        "La devolución de compra fue anulada correctamente."
       );
       setReturnToAnnul(null);
       setSelectedReturn(null);
       await Promise.all([fetchReturns(), fetchMetrics()]);
     } catch (error) {
-      showError("Error", error.message || "No se pudo anular la devolucion.");
+      showError("Error", error.message || "No se pudo anular la devolución.");
     } finally {
       setAnnulLoading(false);
     }

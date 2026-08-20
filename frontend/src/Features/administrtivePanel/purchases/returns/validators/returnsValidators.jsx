@@ -83,13 +83,13 @@ export const validateProducto = (producto) => {
   if (!producto.motivo?.trim()) {
     errores.motivo = "El motivo es obligatorio.";
   } else if (!getReturnReasonIdByLabel(producto.motivo)) {
-    errores.motivo = "Selecciona un motivo valido.";
+    errores.motivo = "Selecciona un motivo válido.";
   }
 
   if (!producto.tipoDevolucion?.trim()) {
-    errores.tipoDevolucion = "El tipo de devolucion es obligatorio.";
+    errores.tipoDevolucion = "El tipo de devolución es obligatorio.";
   } else if (!getReturnMethodIdByLabel(producto.tipoDevolucion)) {
-    errores.tipoDevolucion = "Selecciona un tipo de devolucion valido.";
+    errores.tipoDevolucion = "Selecciona un tipo de devolución válido.";
   }
 
   if (!producto.estado?.trim()) {
@@ -97,7 +97,7 @@ export const validateProducto = (producto) => {
   } else if (producto.tipoDevolucion) {
     const estadosValidos = getEstadosByTipo(producto.tipoDevolucion, producto.motivo);
     if (!estadosValidos.includes(producto.estado)) {
-      errores.estado = `Estado invalido para el tipo "${producto.tipoDevolucion}".`;
+      errores.estado = `Estado inválido para el tipo "${producto.tipoDevolucion}".`;
     }
   }
 
@@ -128,7 +128,7 @@ export const validateReturnForm = (productosSeleccionados) => {
 
 export const validateMotivoCancelacion = (motivo) => {
   if (!motivo?.trim()) {
-    return "El motivo de anulacion es obligatorio.";
+    return "El motivo de anulación es obligatorio.";
   }
   if (motivo.trim().length > 250) {
     return "El motivo no puede superar los 250 caracteres.";
@@ -155,13 +155,13 @@ export const validateLinea = (linea, cantidadMaxima) => {
   if (!linea.motivo?.trim()) {
     errores.motivo = "El motivo es obligatorio.";
   } else if (!getReturnReasonIdByLabel(linea.motivo)) {
-    errores.motivo = "Selecciona un motivo valido.";
+    errores.motivo = "Selecciona un motivo válido.";
   }
 
   if (!linea.tipoDevolucion?.trim()) {
     errores.tipoDevolucion = "El tipo es obligatorio.";
   } else if (!getReturnMethodIdByLabel(linea.tipoDevolucion)) {
-    errores.tipoDevolucion = "Tipo invalido.";
+    errores.tipoDevolucion = "Tipo inválido.";
   }
 
   if (!linea.estado?.trim()) {
@@ -169,7 +169,7 @@ export const validateLinea = (linea, cantidadMaxima) => {
   } else if (linea.tipoDevolucion) {
     const estadosValidos = getEstadosByTipo(linea.tipoDevolucion, linea.motivo);
     if (!estadosValidos.includes(linea.estado)) {
-      errores.estado = `Estado invalido para "${linea.tipoDevolucion}".`;
+      errores.estado = `Estado inválido para "${linea.tipoDevolucion}".`;
     }
   }
 
@@ -181,7 +181,7 @@ export const validateReturnFormConLineas = (productosSeleccionados, purchase = n
   const erroresProducto = {};
 
   if (purchase && !isPositiveInteger(getPurchaseId(purchase))) {
-    erroresGenerales.push("No se pudo identificar la compra para registrar la devolucion.");
+    erroresGenerales.push("No se pudo identificar la compra para registrar la devolución.");
   }
 
   if (!productosSeleccionados || productosSeleccionados.length === 0) {
@@ -193,13 +193,13 @@ export const validateReturnFormConLineas = (productosSeleccionados, purchase = n
     const lineas = producto.lineas ?? [];
 
     if (lineas.length === 0) {
-      erroresGenerales.push(`"${producto.nombre}" debe tener al menos una linea de devolucion.`);
+      erroresGenerales.push(`"${producto.nombre}" debe tener al menos una línea de devolución.`);
       erroresProducto[producto.codigoBarras] = { lineas: [] };
       continue;
     }
 
     if (!isPositiveInteger(getPurchaseDetailId(producto))) {
-      erroresGenerales.push(`"${producto.nombre}" no tiene un detalle de compra valido.`);
+      erroresGenerales.push(`"${producto.nombre}" no tiene un detalle de compra válido.`);
     }
 
     const totalCantidad = lineas.reduce((sum, line) => sum + (Number(line.cantidadDevolver) || 0), 0);
@@ -249,7 +249,7 @@ export const validateReturnUpdateForm = (productosSeleccionados) => {
       hasChanges: false,
       detailsToUpdateCount,
       detailsToAddCount,
-      erroresGenerales: ["La devolucion no contiene productos para actualizar."],
+      erroresGenerales: ["La devolución no contiene productos para actualizar."],
       erroresProducto,
     };
   }
@@ -259,7 +259,7 @@ export const validateReturnUpdateForm = (productosSeleccionados) => {
     const productKey = producto?.codigoBarras ?? `producto-${productIndex}`;
 
     if (lineas.length === 0) {
-      erroresGenerales.push(`"${producto?.nombre ?? "Producto"}" debe tener al menos una linea.`);
+      erroresGenerales.push(`"${producto?.nombre ?? "Producto"}" debe tener al menos una línea.`);
       erroresProducto[productKey] = { lineas: [] };
       return;
     }
@@ -286,13 +286,13 @@ export const validateReturnUpdateForm = (productosSeleccionados) => {
         const returnMethodId = Number(getReturnMethodId(linea));
 
         if (!isPositiveInteger(getPurchaseReturnDetailId(linea))) {
-          erroresLinea.idPurchaseReturnDetail = "No se pudo identificar el detalle de devolucion.";
+          erroresLinea.idPurchaseReturnDetail = "No se pudo identificar el detalle de devolución.";
         }
         if (!isPositiveInteger(originalStatusId)) {
           erroresLinea.originalReturnStatusId = "No se pudo identificar el estado original.";
         }
         if (!isPositiveInteger(currentStatusId)) {
-          erroresLinea.estado = "Selecciona un estado valido.";
+          erroresLinea.estado = "Selecciona un estado válido.";
         }
 
         if (
@@ -301,7 +301,7 @@ export const validateReturnUpdateForm = (productosSeleccionados) => {
           currentStatusId !== originalStatusId
         ) {
           if (!isPositiveInteger(returnMethodId)) {
-            erroresLinea.tipoDevolucion = "No se pudo identificar el metodo de devolucion.";
+            erroresLinea.tipoDevolucion = "No se pudo identificar el método de devolución.";
           } else if (
             !isValidReturnStatusTransition(
               returnMethodId,
