@@ -377,7 +377,7 @@ export const PurchaseReturnsService = {
       const response = await apiClient.get("/purchase-returns/metrics");
       return response.data.data;
     } catch (error) {
-      throw new Error(getErrorMessage(error, "No se pudieron obtener las metricas de devoluciones de compras."));
+      throw new Error(getErrorMessage(error, "No se pudieron obtener las métricas de devoluciones de compras."));
     }
   },
 
@@ -407,7 +407,7 @@ export const PurchaseReturnsService = {
       const response = await apiClient.get(`/purchase-returns/${id}`);
       return mapPurchaseReturnToDetail(response.data.data);
     } catch (error) {
-      throw new Error(getErrorMessage(error, "No se pudo obtener el detalle de la devolucion de compra."));
+      throw new Error(getErrorMessage(error, "No se pudo obtener el detalle de la devolución de compra."));
     }
   },
 
@@ -416,7 +416,7 @@ export const PurchaseReturnsService = {
       const response = await apiClient.post("/purchase-returns", payload);
       return mapPurchaseReturnToDetail(response.data.data);
     } catch (error) {
-      throw new Error(getErrorMessage(error, "No se pudo registrar la devolucion de compra."));
+      throw new Error(getErrorMessage(error, "No se pudo registrar la devolución de compra."));
     }
   },
 
@@ -425,7 +425,7 @@ export const PurchaseReturnsService = {
       const response = await apiClient.put(`/purchase-returns/${id}`, payload);
       return mapPurchaseReturnToDetail(response.data.data);
     } catch (error) {
-      throw new Error(getErrorMessage(error, "No se pudo actualizar la devolucion de compra."));
+      throw new Error(getErrorMessage(error, "No se pudo actualizar la devolución de compra."));
     }
   },
 
@@ -437,7 +437,7 @@ export const PurchaseReturnsService = {
 
       return mapPurchaseReturnToDetail(response.data.data);
     } catch (error) {
-      throw new Error(getErrorMessage(error, "No se pudo anular la devolucion de compra."));
+      throw new Error(getErrorMessage(error, "No se pudo anular la devolución de compra."));
     }
   },
 };
