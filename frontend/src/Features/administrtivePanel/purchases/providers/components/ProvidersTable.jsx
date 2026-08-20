@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Info, SquarePen, Trash2, PackageCheck } from "lucide-react";
 import ActiveToggle from "./ActiveToggle";
 import { formatPhoneNumber } from "../utils/providerHelpers";
@@ -35,41 +35,19 @@ const fallbackText = (value) => {
 
 const formatCategories = (categorias) => {
   if (!categorias || !Array.isArray(categorias) || categorias.length === 0) {
-    return '—';
+    return '-';
   }
   return categorias.map(cat => cat.name).join(', ');
 };
 
-const TABLE_PREVIEW_LIMIT = 28;
-
-const getPreviewText = (value, limit = TABLE_PREVIEW_LIMIT) => {
-  const text = String(value || '').trim();
-  if (text.length <= limit) return text;
-  return `${text.slice(0, limit).trim()}...`;
-};
-
-const ExpandableTableText = ({ value, searchTerm, expanded, onToggle, limit = TABLE_PREVIEW_LIMIT }) => {
+const TableTooltipText = ({ value, searchTerm }) => {
   const text = fallbackText(value);
-  const shouldCollapse = text !== 'N/A' && text !== 'â€”' && text.length > limit;
-  const visibleText = shouldCollapse && !expanded ? getPreviewText(text, limit) : text;
 
   return (
     <div className="mx-auto min-w-0 max-w-full text-center">
-      <span
-        className={`block min-w-0 ${expanded ? 'whitespace-normal break-words [overflow-wrap:anywhere] [word-break:break-word]' : 'truncate'}`}
-        title={text}
-      >
-        {highlightText(visibleText, searchTerm)}
+      <span className="block min-w-0 truncate" title={text}>
+        {highlightText(text, searchTerm)}
       </span>
-      {shouldCollapse && (
-        <button
-          type="button"
-          onClick={onToggle}
-          className="mt-0.5 text-[10px] font-semibold text-[#004D77] transition hover:underline"
-        >
-          {expanded ? 'Ver menos' : 'Ver más'}
-        </button>
-      )}
     </div>
   );
 };
@@ -84,7 +62,6 @@ function ProvidersTable({
   onToggleActive,
   onDelete,
 }) {
-  const [expandedCells, setExpandedCells] = useState({});
   const { hasPermission } = usePermissions();
   const canView = hasPermission("proveedores.ver");
   const canEdit = hasPermission("proveedores.editar");
@@ -102,7 +79,7 @@ function ProvidersTable({
           {isSearching ? 'No se encontraron resultados' : 'No hay proveedores registrados'}
         </p>
         <p className="text-sm text-gray-400 text-center max-w-xs">
-          {isSearching ? 'Ningún proveedor coincide con la búsqueda actual.' : 'Aún no se han registrado proveedores.'}
+          {isSearching ? 'Ningun proveedor coincide con la busqueda actual.' : 'Aun no se han registrado proveedores.'}
         </p>
       </div>
     );
@@ -139,10 +116,6 @@ function ProvidersTable({
             const rowBg = index % 2 === 0 ? "bg-gray-100 hover:bg-blue-50" : "bg-white hover:bg-blue-50";
             const recordNumber = (startIndex || 0) + index + 1;
             const categoriasTexto = formatCategories(provider.categorias);
-            const toggleCell = (field) => {
-              const key = `${provider.id}-${field}`;
-              setExpandedCells((prev) => ({ ...prev, [key]: !prev[key] }));
-            };
 
             return (
               <tr key={provider.id} className={`group h-[38px] transition-colors duration-150 ${rowBg}`}>
@@ -156,30 +129,24 @@ function ProvidersTable({
                   {highlightText(provider.numero, searchTerm)}
                 </td>
                 <td className="px-2.5 py-1.5 text-xs font-medium text-gray-800">
-                  <ExpandableTableText
+                  <TableTooltipText
                     value={provider.nombre}
                     searchTerm={searchTerm}
-                    expanded={Boolean(expandedCells[`${provider.id}-nombre`])}
-                    onToggle={() => toggleCell('nombre')}
                   />
                 </td>
                 <td className="px-2.5 py-1.5 text-xs text-gray-700">
-                  <ExpandableTableText
+                  <TableTooltipText
                     value={fallbackText(provider.pContacto)}
                     searchTerm={searchTerm}
-                    expanded={Boolean(expandedCells[`${provider.id}-contacto`])}
-                    onToggle={() => toggleCell('contacto')}
                   />
                 </td>
                 <td className="overflow-hidden text-ellipsis whitespace-nowrap px-2.5 py-1.5 text-center text-xs text-gray-700">
                   {highlightText(fallbackText(formatPhoneNumber(provider.nuContacto)), searchTerm)}
                 </td>
                 <td className="px-2.5 py-1.5 text-xs text-gray-700">
-                  <ExpandableTableText
+                  <TableTooltipText
                     value={categoriasTexto}
                     searchTerm={searchTerm}
-                    expanded={Boolean(expandedCells[`${provider.id}-categorias`])}
-                    onToggle={() => toggleCell('categorias')}
                   />
                 </td>
                 <td className="px-2.5 py-1.5">

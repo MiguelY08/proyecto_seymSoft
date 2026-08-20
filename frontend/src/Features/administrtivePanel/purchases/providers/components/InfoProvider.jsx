@@ -22,7 +22,7 @@ function DetailRow({ icon, label, value, fullWidth = false }) {
     displayValue = JSON.stringify(value);
   }
   const stringValue = String(displayValue ?? '').trim();
-  const hasValue = Boolean(stringValue && stringValue !== 'â€”' && stringValue !== '-');
+  const hasValue = Boolean(stringValue && stringValue !== '—' && stringValue !== '-');
   const shouldCollapse = hasValue && stringValue.length > DETAIL_VALUE_PREVIEW_LIMIT;
   const visibleValue = shouldCollapse && !expanded
     ? `${stringValue.slice(0, DETAIL_VALUE_PREVIEW_LIMIT).trim()}...`

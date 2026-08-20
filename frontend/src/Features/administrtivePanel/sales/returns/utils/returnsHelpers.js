@@ -24,6 +24,15 @@ export const formatCurrency = (value) => {
  */
 export const formatDate = (date) => {
   if (!date) return 'N/A';
+
+  if (typeof date === 'string') {
+    const isoDateMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoDateMatch) {
+      const [, year, month, day] = isoDateMatch;
+      return `${day}/${month}/${year}`;
+    }
+  }
+
   return new Date(date).toLocaleDateString('es-CO', {
     year: 'numeric',
     month: '2-digit',

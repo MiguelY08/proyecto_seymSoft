@@ -170,7 +170,7 @@ function Evidence({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-0 backdrop-blur-sm sm:p-4">
-      <div className="flex h-dvh w-full max-w-[520px] flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-lg">
+      <div className="flex h-dvh w-full max-w-[560px] flex-col overflow-hidden bg-white shadow-2xl sm:h-[92vh] sm:max-h-[760px] sm:rounded-lg">
         <div className="flex items-center justify-between bg-[#004D77] px-5 py-3.5">
           <h2 className="text-[15px] font-bold tracking-wide text-white">
             {isEdit ? 'Gestionar evidencias' : 'Evidencias'}
@@ -219,9 +219,9 @@ function Evidence({
 
           {fileError && <p className="text-center text-xs text-red-600">{fileError}</p>}
 
-          {allFiles.length > 0 && (
-            <div className="max-h-60 overflow-y-auto rounded-lg border border-gray-200">
-              {allFiles.map((file, index) => {
+          <div className="h-44 overflow-y-auto rounded-lg border border-gray-200 sm:h-48">
+            {allFiles.length > 0 ? (
+              allFiles.map((file, index) => {
                 const fileName = file.name || (file instanceof File ? file.name : 'Archivo');
                 const isExisting = !(file instanceof File) && file.id;
 
@@ -265,9 +265,14 @@ function Evidence({
                     </button>
                   </div>
                 );
-              })}
-            </div>
-          )}
+              })
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center px-4 text-center text-sm text-gray-400">
+                <Image className="mb-2 h-8 w-8 text-gray-300" />
+                No hay evidencias seleccionadas.
+              </div>
+            )}
+          </div>
 
           <div>
             <p className="mb-2 text-center text-sm text-gray-600">

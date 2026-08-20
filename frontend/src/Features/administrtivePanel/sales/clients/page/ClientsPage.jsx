@@ -6,12 +6,12 @@ import FormClient        from '../modals/FormClient';
 import InfoClient        from '../modals/InfoClient';
 import { useAlert }      from '../../../../shared/alerts/useAlert';
 import { clientsService } from '../services/clientsService';
+import { UserService } from '../../../users/services/userService';
 import Permission from "../../../configuration/roles/components/Permission";
 import Spinner from '../../../../shared/spinner';
 
 
 const RECORDS_PER_PAGE = 11;
-const CREDIT_EVENTS_SEEN_KEY = 'clients_seen_credit_balance_events';
 const SEARCH_FETCH_LIMIT = 10000;
 const SEARCH_DEBOUNCE_MS = 350;
 
@@ -28,6 +28,22 @@ const useDebouncedValue = (value, delay = SEARCH_DEBOUNCE_MS) => {
 
 const normalizeSearch = (value) =>
   String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+const buildClientUserPayload = (formData) => {
+  const isJuridica = String(formData?.personType || '').toLowerCase() === 'juridica';
+  const fullName = isJuridica
+    ? String(formData?.firstName || '').trim()
+    : `${String(formData?.firstName || '').trim()} ${String(formData?.lastName || '').trim()}`
+        .replace(/\s+/g, ' ')
+        .trim();
+
+  return {
+    name: fullName,
+    email: String(formData?.email || '').trim(),
+    phone: String(formData?.phone || '').trim() || null,
+    roleId: null,
+  };
+};
 
 const flattenSearchValues = (value) => {
   if (value === null || value === undefined) return [];
@@ -162,40 +178,9 @@ function ClientsPage() {
   const [loading,         setLoading]         = useState(true);
   const debouncedSearchTerm = useDebouncedValue(searchTerm);
 
-  const { showConfirm, showSuccess, showError, showWarning } = useAlert();
+  const { showConfirm, showSuccess, showError } = useAlert();
 
-  useEffect(() => {
-    const notifyCreditEvents = async () => {
-      try {
-        const events = await clientsService.getCreditBalanceEvents({ limit: 20 });
-        const seen = new Set(JSON.parse(localStorage.getItem(CREDIT_EVENTS_SEEN_KEY) || '[]'));
-        const unseen = events.filter((event) => !seen.has(event.id));
-        if (unseen.length === 0) return;
 
-        localStorage.setItem(
-          CREDIT_EVENTS_SEEN_KEY,
-          JSON.stringify([...seen, ...unseen.map((event) => event.id)].slice(-200))
-        );
-
-        const latest = unseen[0];
-        const action = latest.type === 'REVERSAL' ? 'revertido' : 'aplicado';
-        const value = new Intl.NumberFormat('es-CO', {
-          style: 'currency',
-          currency: 'COP',
-          maximumFractionDigits: 0
-        }).format(latest.amount || 0);
-
-        showWarning(
-          `Saldo a favor ${action}`,
-          `${latest.clientName}: ${value}. ${latest.reason}. Devolución ${latest.returnNumber}, producto ${latest.productName}. Procesado por: ${latest.processedBy || 'Sistema'}.`
-        );
-      } catch {
-        return;
-      }
-    };
-
-    notifyCreditEvents();
-  }, [showWarning]);
 
   const loadClients = useCallback(async () => {
     setLoading(true);
@@ -286,7 +271,33 @@ const handleSave = async (formData) => {
         await loadClients();
         showSuccess('Cliente actualizado', 'Los datos se actualizaron correctamente');
       } else {
-        await clientsService.create(formData);
+        let createdUserId = formData?.userId ?? null;
+
+        if (!createdUserId) {
+          const createdUser = await UserService.create(buildClientUserPayload(formData));
+          createdUserId = createdUser?.id ?? null;
+        }
+
+        if (!createdUserId) {
+          throw new Error('No fue posible asociar el usuario del cliente');
+        }
+
+        try {
+          await clientsService.create({
+            ...formData,
+            userId: createdUserId,
+          });
+        } catch (clientError) {
+          if (!formData?.userId && createdUserId) {
+            try {
+              await UserService.delete(createdUserId);
+            } catch {
+              // rollback de mejor esfuerzo
+            }
+          }
+          throw clientError;
+        }
+
         await loadClients();
         showSuccess('Cliente creado', 'El nuevo cliente se creó exitosamente');
       }
@@ -311,7 +322,7 @@ const handleDelete = async (client) => {
       await loadClients();
       showSuccess('Cliente eliminado', 'El cliente ha sido eliminado');
     } catch (error) {
-      // 🔥 Obtener el mensaje desde error.response.data
+      // ðŸ”¥ Obtener el mensaje desde error.response.data
       const errorMessage = error.response?.data?.message || error.message || '';
       const errorCode = error.response?.data?.errorCode || '';
 

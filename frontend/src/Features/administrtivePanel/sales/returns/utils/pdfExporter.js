@@ -19,7 +19,7 @@ const text = (value, fallback = 'No registrado') => {
   return normalized || fallback;
 };
 
-const wrapLongTokens = (value, chunkSize = 28) => {
+const wrapLongTokens = (value, chunkSize = 22) => {
   const normalized = text(value, '');
   if (!normalized) return '';
 
@@ -33,17 +33,22 @@ const wrapLongTokens = (value, chunkSize = 28) => {
     .trim();
 };
 
+const splitLines = (doc, value, maxWidth, chunkSize = 22) =>
+  doc.splitTextToSize(wrapLongTokens(value, chunkSize), maxWidth);
+
 const normalizeProducts = (saleReturn = {}) =>
   (saleReturn.details || saleReturn.productosDevueltos || []).map((product) => {
     const quantity = Number(product.quantity ?? product.cantidad ?? 1) || 1;
-    const unitPrice = Number(
-      product.unitPrice ?? product.precioUnit ?? product.valor ?? 0,
-    ) || 0;
+    const unitPrice =
+      Number(product.unitPrice ?? product.precioUnit ?? product.valor ?? 0) || 0;
 
     return {
-      name: wrapLongTokens(text(product.productName ?? product.nombre, 'Producto'), 26),
-      reason: wrapLongTokens(text(product.reason ?? product.motivo, '-'), 24),
-      description: wrapLongTokens(text(product.description ?? product.descripcionMotivo, ''), 24),
+      name: wrapLongTokens(text(product.productName ?? product.nombre, 'Producto'), 18),
+      reason: wrapLongTokens(text(product.reason ?? product.motivo, '-'), 18),
+      description: wrapLongTokens(
+        text(product.description ?? product.descripcionMotivo, ''),
+        18,
+      ),
       method: text(product.method ?? product.metodo, '-'),
       status: text(product.status ?? product.estado, 'En Proceso'),
       quantity,
@@ -52,7 +57,9 @@ const normalizeProducts = (saleReturn = {}) =>
     };
   });
 
-const addLabelValue = (doc, label, value, x, y, maxWidth = 78) => {
+const addLabelValue = (doc, label, value, x, y, maxWidth = 78, chunkSize = 22) => {
+  const lines = splitLines(doc, text(value), maxWidth, chunkSize);
+
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(100, 116, 139);
@@ -60,7 +67,26 @@ const addLabelValue = (doc, label, value, x, y, maxWidth = 78) => {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.setTextColor(30, 41, 59);
-  doc.text(doc.splitTextToSize(wrapLongTokens(text(value), 24), maxWidth), x, y + 5);
+  doc.text(lines, x, y + 5);
+
+  return 6 + lines.length * 4.5;
+};
+
+const addFooter = (doc, pageWidth, page, pages) => {
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(148, 163, 184);
+  doc.text(
+    `Generado el ${new Date().toLocaleString('es-CO')}`,
+    14,
+    doc.internal.pageSize.getHeight() - 10,
+  );
+  doc.text(
+    `Página ${page} de ${pages}`,
+    pageWidth - 14,
+    doc.internal.pageSize.getHeight() - 10,
+    { align: 'right' },
+  );
 };
 
 const loadLogoDataUrl = async () => {
@@ -97,6 +123,7 @@ export const exportReturnToPDF = async (saleReturn = {}) => {
 
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   const logoDataUrl = await loadLogoDataUrl();
 
   doc.setFillColor(...BLUE);
@@ -110,62 +137,92 @@ export const exportReturnToPDF = async (saleReturn = {}) => {
   doc.text('Papelería Magic · Comprobante de devolución', 14, 21);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
+
   if (logoDataUrl) {
     doc.setFillColor(255, 255, 255);
     doc.roundedRect(pageWidth - 58, 5, 44, 16, 2, 2, 'F');
     doc.addImage(logoDataUrl, 'PNG', pageWidth - 55, 8, 38, 10);
   }
+
   doc.text(returnNumber, pageWidth - 14, 29, { align: 'right' });
 
   let y = 44;
+
   if (isCancelled) {
+    const cancellationLines = splitLines(
+      doc,
+      `Motivo: ${text(saleReturn.cancellationReason ?? saleReturn.cancelReason)}`,
+      pageWidth - 38,
+      24,
+    );
+    const cancellationHeight = Math.max(18, 13 + cancellationLines.length * 4);
+
     doc.setFillColor(254, 242, 242);
     doc.setDrawColor(254, 202, 202);
-    doc.roundedRect(14, y, pageWidth - 28, 18, 2, 2, 'FD');
+    doc.roundedRect(14, y, pageWidth - 28, cancellationHeight, 2, 2, 'FD');
     doc.setTextColor(...RED);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.text('DEVOLUCIÓN ANULADA', 18, y + 6);
     doc.setFont('helvetica', 'normal');
-    doc.text(
-      doc.splitTextToSize(
-        wrapLongTokens(
-          `Motivo: ${text(saleReturn.cancellationReason ?? saleReturn.cancelReason)}`,
-          34,
-        ),
-        pageWidth - 38,
-      ),
-      18,
-      y + 12,
-    );
-    y += 25;
+    doc.text(cancellationLines, 18, y + 12);
+    y += cancellationHeight + 7;
   }
 
   doc.setFillColor(248, 250, 252);
   doc.roundedRect(14, y, pageWidth - 28, 39, 2, 2, 'F');
-  addLabelValue(doc, 'Factura', invoiceNumber, 19, y + 8);
-  addLabelValue(doc, 'Cliente', saleReturn.clientName ?? saleReturn.cliente, 19, y + 23);
-  addLabelValue(
+
+  const invoiceHeight = addLabelValue(doc, 'Factura', invoiceNumber, 19, y + 8);
+  const clientHeight = addLabelValue(
+    doc,
+    'Cliente',
+    saleReturn.clientName ?? saleReturn.cliente,
+    19,
+    y + 23,
+  );
+  const dateHeight = addLabelValue(
     doc,
     'Fecha',
     formatDate(saleReturn.createdAt ?? saleReturn.fechaCreacion),
     108,
     y + 8,
   );
-  addLabelValue(doc, 'Estado', status, 108, y + 23);
-  y += 47;
+  const statusHeight = addLabelValue(doc, 'Estado', status, 108, y + 23);
 
-  addLabelValue(doc, 'Asesor', saleReturn.employeeName ?? saleReturn.asesor, 14, y);
-  addLabelValue(doc, 'Teléfono', saleReturn.clientPhone ?? saleReturn.telefono, 78, y, 50);
-  addLabelValue(
+  y += Math.max(47, 19 + invoiceHeight + clientHeight, 19 + dateHeight + statusHeight);
+
+  const advisorHeight = addLabelValue(
+    doc,
+    'Asesor',
+    saleReturn.employeeName ?? saleReturn.asesor,
+    14,
+    y,
+    55,
+  );
+  const phoneHeight = addLabelValue(
+    doc,
+    'Teléfono',
+    saleReturn.clientPhone ?? saleReturn.telefono,
+    78,
+    y,
+    45,
+  );
+  const addressHeight = addLabelValue(
     doc,
     'Dirección',
     saleReturn.deliveryAddress ?? saleReturn.clientAddress ?? saleReturn.direccion,
     135,
     y,
-    58,
+    52,
+    18,
   );
-  y += 17;
+
+  y += Math.max(17, advisorHeight, phoneHeight, addressHeight) + 6;
+
+  if (y > pageHeight - 55) {
+    doc.addPage();
+    y = 20;
+  }
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
@@ -174,7 +231,7 @@ export const exportReturnToPDF = async (saleReturn = {}) => {
 
   autoTable(doc, {
     startY: y + 4,
-    margin: { left: 14, right: 14 },
+    margin: { left: 14, right: 14, bottom: 18 },
     head: [['Producto', 'Motivo / detalle', 'Método', 'Estado', 'Cant.', 'Valor', 'Total']],
     body: products.length
       ? products.map((product) => [
@@ -190,45 +247,46 @@ export const exportReturnToPDF = async (saleReturn = {}) => {
     theme: 'grid',
     styles: {
       font: 'helvetica',
-      fontSize: 7.5,
-      cellPadding: 2.2,
+      fontSize: 7.3,
+      cellPadding: 2,
       lineColor: [220, 230, 236],
       lineWidth: 0.2,
-      valign: 'middle',
+      valign: 'top',
       overflow: 'linebreak',
+      minCellHeight: 10,
     },
     headStyles: {
       fillColor: BLUE,
       textColor: [255, 255, 255],
       fontStyle: 'bold',
       halign: 'center',
+      valign: 'middle',
     },
     alternateRowStyles: { fillColor: [248, 250, 252] },
     columnStyles: {
-      0: { cellWidth: 35 },
-      1: { cellWidth: 39 },
-      2: { cellWidth: 26 },
-      3: { cellWidth: 23 },
+      0: { cellWidth: 35, overflow: 'linebreak' },
+      1: { cellWidth: 39, overflow: 'linebreak' },
+      2: { cellWidth: 26, overflow: 'linebreak' },
+      3: { cellWidth: 23, overflow: 'linebreak' },
       4: { cellWidth: 12, halign: 'center' },
       5: { cellWidth: 25, halign: 'right' },
       6: { cellWidth: 25, halign: 'right' },
     },
+    rowPageBreak: 'avoid',
   });
 
   y = doc.lastAutoTable.finalY + 9;
-  if (y > 245) {
-    doc.addPage();
-    y = 20;
-  }
 
-  const descriptionLines = doc.splitTextToSize(
-    wrapLongTokens(text(saleReturn.description ?? saleReturn.descripcion, 'Sin descripción adicional'), 34),
+  const descriptionLines = splitLines(
+    doc,
+    text(saleReturn.description ?? saleReturn.descripcion, 'Sin descripción adicional'),
     104,
+    22,
   );
   const descriptionBoxHeight = Math.max(28, 15 + descriptionLines.length * 3.8);
   const summaryBoxHeight = Math.max(28, descriptionBoxHeight);
 
-  if (y + summaryBoxHeight > 280) {
+  if (y + summaryBoxHeight > pageHeight - 18) {
     doc.addPage();
     y = 20;
   }
@@ -258,13 +316,7 @@ export const exportReturnToPDF = async (saleReturn = {}) => {
   const pages = doc.getNumberOfPages();
   for (let page = 1; page <= pages; page += 1) {
     doc.setPage(page);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(148, 163, 184);
-    doc.text(`Generado el ${new Date().toLocaleString('es-CO')}`, 14, doc.internal.pageSize.getHeight() - 10);
-    doc.text(`Página ${page} de ${pages}`, pageWidth - 14, doc.internal.pageSize.getHeight() - 10, {
-      align: 'right',
-    });
+    addFooter(doc, pageWidth, page, pages);
   }
 
   doc.save(`devolucion_${returnNumber.replace(/[^a-z0-9_-]/gi, '_')}.pdf`);

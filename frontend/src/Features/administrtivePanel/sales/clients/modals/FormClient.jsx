@@ -20,6 +20,12 @@ import { checkEmailAvailability } from '../../../../access/services/authService'
 const EMAIL_MAX_LENGTH = 100;
 const ADDRESS_MAX_LENGTH = 120;
 const CIU_CODE_LENGTH = 4;
+const DOCUMENT_MAX_LENGTH = 15;
+const NIT_MAX_LENGTH = 20;
+const PERSON_NAME_MAX_LENGTH = 80;
+const BUSINESS_NAME_MAX_LENGTH = 120;
+const CONTACT_NAME_MAX_LENGTH = 100;
+const PHONE_MAX_LENGTH = 10;
 
 const onlyDigits = (value, maxLength = 10) =>
   String(value ?? '').replace(/\D/g, '').slice(0, maxLength);
@@ -86,6 +92,24 @@ const buildSanitizedInputValue = (target, input, sanitizer) => {
   const start = target.selectionStart ?? value.length;
   const end = target.selectionEnd ?? value.length;
   return sanitizer(`${value.slice(0, start)}${input}${value.slice(end)}`);
+};
+
+const IconInput = ({ icon: Icon, className, ...props }) => (
+  <div className="relative">
+    {Icon && (
+      <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
+    )}
+    <input {...props} className={Icon ? `${className} pl-9` : className} />
+  </div>
+);
+
+const FieldCounter = ({ value, maxLength, hidden = false }) => {
+  if (hidden || !maxLength) return null;
+  return (
+    <span className="mt-0.5 block text-right text-[10px] font-medium leading-none text-slate-400">
+      {String(value ?? '').length}/{maxLength}
+    </span>
+  );
 };
 
 // Componente Mini Gráfica para el formulario (solo edición) - CON DATOS REALES
@@ -1001,18 +1025,6 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
     </label>
   );
 
-  const iconInputClass = (field, className) =>
-    `${className} pl-9`;
-
-  const IconInput = ({ icon: Icon, className, ...props }) => (
-    <div className="relative">
-      {Icon && (
-        <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
-      )}
-      <input {...props} className={Icon ? iconInputClass(props.name, className) : className} />
-    </div>
-  );
-
   const hasBlockingErrors = isUserOwnedFieldLocked
     ? Boolean(errors.document)
     : Boolean(errors.email || errors.phone || errors.document);
@@ -1146,9 +1158,11 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                       autoComplete="off"
                       inputMode={formData.documentType === 'NIT' ? 'text' : 'numeric'}
                       pattern={formData.documentType === 'NIT' ? undefined : '[0-9]*'}
+                      maxLength={formData.documentType === 'NIT' ? NIT_MAX_LENGTH : DOCUMENT_MAX_LENGTH}
                       className={isEditing ? disabledInputClass('document') : inputClass('document')}
                       disabled={isEditing}
                     />
+                    <FieldCounter value={formData.document} maxLength={formData.documentType === 'NIT' ? NIT_MAX_LENGTH : DOCUMENT_MAX_LENGTH} />
                     {checkingDocument && touched.document && !errors.document && (
                       <p className="mt-0.5 text-xs text-[#004D77]">Verificando si el documento ya está registrado...</p>
                     )}
@@ -1168,10 +1182,12 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                     onBlur={handleBlur}
                     placeholder={isLegalPerson ? 'Empresa SAS' : 'Juan'}
                     autoComplete="off"
+                    maxLength={isLegalPerson ? BUSINESS_NAME_MAX_LENGTH : PERSON_NAME_MAX_LENGTH}
                     className={isEditing || isUserOwnedFieldLocked ? disabledInputClass('firstName') : inputClass('firstName')}
                     disabled={isEditing || isUserOwnedFieldLocked}
                     readOnly={isUserOwnedFieldLocked}
                   />
+                  <FieldCounter value={formData.firstName} maxLength={isLegalPerson ? BUSINESS_NAME_MAX_LENGTH : PERSON_NAME_MAX_LENGTH} />
                   <ErrorMsg field="firstName" />
                 </div>
 
@@ -1187,10 +1203,12 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                     onBlur={handleBlur}
                     placeholder="Pérez"
                     autoComplete="off"
+                    maxLength={PERSON_NAME_MAX_LENGTH}
                     className={isEditing || isUserOwnedFieldLocked ? disabledInputClass('lastName') : inputClass('lastName')}
                     disabled={isEditing || isUserOwnedFieldLocked}
                     readOnly={isUserOwnedFieldLocked}
                   />
+                  <FieldCounter value={formData.lastName} maxLength={PERSON_NAME_MAX_LENGTH} />
                   <ErrorMsg field="lastName" />
                 </div>
                   )}
@@ -1212,10 +1230,12 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                     autoComplete="off"
                     inputMode="numeric"
                     pattern="[0-9]*"
+                    maxLength={PHONE_MAX_LENGTH}
                     className={isUserOwnedFieldLocked ? disabledInputClass('phone') : inputClass('phone')}
                     disabled={isUserOwnedFieldLocked}
                     readOnly={isUserOwnedFieldLocked}
                   />
+                  <FieldCounter value={formData.phone} maxLength={PHONE_MAX_LENGTH} />
                   <ErrorMsg field="phone" />
                 </div>
                   <div className="flex min-w-0 flex-col gap-1">
@@ -1232,6 +1252,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                       maxLength={ADDRESS_MAX_LENGTH}
                       className={inputClass('address')}
                     />
+                    <FieldCounter value={formData.address} maxLength={ADDRESS_MAX_LENGTH} />
                     <ErrorMsg field="address" />
                   </div>
                 </div>
@@ -1254,6 +1275,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                   disabled={isUserOwnedFieldLocked}
                   readOnly={isUserOwnedFieldLocked}
                 />
+                <FieldCounter value={formData.email} maxLength={EMAIL_MAX_LENGTH} />
                 {checkingEmail && touched.email && !errors.email && (
                   <p className="mt-0.5 text-xs text-[#004D77]">Verificando si el correo ya está registrado...</p>
                 )}
@@ -1280,8 +1302,10 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                       onBlur={handleBlur}
                       placeholder="María"
                       autoComplete="off"
+                      maxLength={CONTACT_NAME_MAX_LENGTH}
                       className={inputClass('contactName')}
                     />
+                    <FieldCounter value={formData.contactName} maxLength={CONTACT_NAME_MAX_LENGTH} />
                     <ErrorMsg field="contactName" />
                   </div>
                   <div className="flex min-w-0 flex-col gap-1">
@@ -1299,8 +1323,10 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                       autoComplete="off"
                       inputMode="numeric"
                       pattern="[0-9]*"
+                      maxLength={PHONE_MAX_LENGTH}
                       className={inputClass('contactPhone')}
                     />
+                    <FieldCounter value={formData.contactPhone} maxLength={PHONE_MAX_LENGTH} />
                     <ErrorMsg field="contactPhone" />
                   </div>
                 </div>
@@ -1392,6 +1418,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                       disabled={formData.rut === 'no'}
                       readOnly={formData.rut === 'no'}
                     />
+                    <FieldCounter value={formData.ciuCode} maxLength={CIU_CODE_LENGTH} hidden={formData.rut === 'no'} />
                     <ErrorMsg field="ciuCode" />
                   </div>
                 </div>
