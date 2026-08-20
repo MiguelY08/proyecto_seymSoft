@@ -112,20 +112,30 @@ function DetailProduct({ producto, isOpen, onClose }) {
     <>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl flex flex-col overflow-hidden max-h-[90vh]">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] shrink-0">
-          <h3 className="text-white font-semibold text-lg">
-            Detalles del producto
-          </h3>
-
-          <button
-            onClick={onClose}
-            className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
-            title="Cerrar"
-          >
-            <X className="w-5 h-5" strokeWidth={2} />
-          </button>
-        </div>
+        <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-6 sm:py-6">
+          <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#004D77] ring-1 ring-[#004D77]">
+                <Package className="h-5 w-5 text-white" strokeWidth={1.8} />
+              </div>
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-bold text-[#f9f9f9] sm:text-xl">
+                  Detalles del producto
+                </h2>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Cerrar detalles del producto"
+              className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/80 transition hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70"
+            >
+              <X className="h-5 w-5" strokeWidth={2} />
+            </button>
+          </div>
+        </header>
 
         {/* Cuerpo */}
         <div className="overflow-y-auto flex-1">
@@ -357,15 +367,15 @@ function DetailProduct({ producto, isOpen, onClose }) {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
+        <footer className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
           <button
+            type="button"
             onClick={onClose}
-            className="px-6 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+            className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto"
           >
             Cerrar
           </button>
-        </div>
+        </footer>
       </div>
     </div>
     {isImageExpanded && selectedImage?.url && (

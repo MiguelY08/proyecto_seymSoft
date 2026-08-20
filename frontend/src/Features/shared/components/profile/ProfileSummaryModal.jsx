@@ -1,4 +1,4 @@
-import { RefreshCw, X } from "lucide-react";
+import { RefreshCw, WalletCards, X } from "lucide-react";
 import ProfileHeader from "./ProfileHeader.jsx";
 import CreditSummaryCards from "./CreditSummaryCards.jsx";
 import CreditStatusCard from "./CreditStatusCard.jsx";
@@ -180,25 +180,34 @@ export default function ProfileSummaryModal({ isOpen, onClose }) {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 px-4 py-6 backdrop-blur-sm sm:px-6 sm:py-8">
       <div className="relative mx-auto flex w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-gray-100 bg-gray-50 shadow-2xl">
-        <div className="flex shrink-0 items-center justify-between gap-4 bg-[#004D77] px-5 py-4 sm:px-6">
-          <div>
-            <p className="text-base font-semibold text-white">
-              Resumen financiero
-            </p>
-            <p className="text-xs text-white/75">
-              Perfil, cupo y estado de crédito
-            </p>
-          </div>
+        <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-6 sm:py-6">
+          <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#004D77] ring-1 ring-[#004D77]">
+                <WalletCards className="h-5 w-5 text-white" strokeWidth={1.8} />
+              </div>
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-bold text-[#f9f9f9] sm:text-xl">
+                  Resumen financiero
+                </h2>
+                <p className="mt-0.5 text-xs text-white/75">
+                  Perfil, cupo y estado de crédito
+                </p>
+              </div>
+            </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white transition hover:bg-white/20"
-            aria-label="Cerrar perfil"
-          >
-            <X size={18} />
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/80 transition hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70"
+              aria-label="Cerrar resumen financiero"
+            >
+              <X className="h-5 w-5" strokeWidth={2} />
+            </button>
+          </div>
+        </header>
 
         <div className="relative p-4 sm:p-6">
           {error && (

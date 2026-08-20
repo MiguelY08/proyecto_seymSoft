@@ -936,20 +936,20 @@ function ProductForm({
 
 
 
-          <div className="flex justify-end gap-3 pt-1 mt-auto">
-            <button type="button" onClick={onClose} className="px-6 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer">
-              Cancelar
+          <div className="flex flex-col-reverse gap-2 pt-1 mt-auto sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+            <button type="button" onClick={onClose} className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto">
+              Cerrar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`px-6 py-2.5 text-white bg-[#004D77] hover:bg-[#003a5c] rounded-lg transition-colors font-medium text-sm flex items-center justify-center gap-2 ${
-                isSubmitting ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'
+              className={`inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto ${
+                isSubmitting ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-[#003b5c] hover:shadow-md'
               }`}
             >
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {!isSubmitting && <Save className="w-4 h-4" strokeWidth={1.8} />}
-              {isSubmitting ? 'Cargando...' : isEditMode ? 'Guardar cambios' : 'Crear Producto'}
+              {isSubmitting ? 'Cargando...' : isEditMode ? 'Guardar cambios' : 'Crear producto'}
             </button>
           </div>
         </form>
