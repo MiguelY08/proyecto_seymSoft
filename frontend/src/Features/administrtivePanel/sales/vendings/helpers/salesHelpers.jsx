@@ -80,6 +80,11 @@ export const filterSales = (data, search) => {
   const term = normalizeSearchText(search);
   if (!term) return data;
 
+  const getSearchableOrderStatus = (status) => {
+    const normalizedStatus = normalizeSearchText(status);
+    return normalizedStatus === 'cancelado' ? `${status} Anulado` : status;
+  };
+
   return data.filter((row) => {
     const searchableFields = [
       row.factura,
@@ -97,7 +102,7 @@ export const filterSales = (data, search) => {
       row.total,
       row.totalNumerico,
       row.estado,
-      row.estadoPedido,
+      getSearchableOrderStatus(row.estadoPedido),
       row.estadoPedidoId,
       row.tipoVenta,
       row.entrega,
@@ -288,7 +293,7 @@ const buildSummarySheet = (workbook, sales, subtitle, logoId) => {
     'Cliente',
     'Vendedor',
     'Fecha',
-    'Metodo de pago',
+    'Método de pago',
     'Total',
     'Estado',
     'Registrado desde',
@@ -384,12 +389,12 @@ const buildProductsSheet = (workbook, sales, subtitle, logoId) => {
 };
 
 const buildStatsSheet = (workbook, sales, subtitle, typeLabel, logoId) => {
-  const worksheet = workbook.addWorksheet('Estadisticas');
+  const worksheet = workbook.addWorksheet('Estadísticas');
   worksheet.columns = [
     { key: 'metric', width: 34 },
     { key: 'value', width: 24 },
   ];
-  setupWorksheetHeader(worksheet, 'ESTADISTICAS DE VENTAS', subtitle, 'B', logoId);
+  setupWorksheetHeader(worksheet, 'ESTADÍSTICAS DE VENTAS', subtitle, 'B', logoId);
 
   const totalSales = sales.length;
   const totalValue = sales.reduce((sum, sale) => sum + Number(sale.totalNumerico ?? 0), 0);

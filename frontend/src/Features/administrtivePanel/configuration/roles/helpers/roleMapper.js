@@ -227,46 +227,171 @@ const getPrivilegeLabel = (
 // MAPEAR ROL API → FRONT
 // ─────────────────────────────────────────────
 
+const getRoleValue = (role, keys, fallback = null) => {
+  for (const key of keys) {
+    if (role?.[key] !== undefined && role?.[key] !== null) {
+      return role[key];
+    }
+  }
+
+  return fallback;
+};
+
+const getRolePermissions = (role, originalRole) =>
+  getRoleValue(
+    role,
+    [
+      "assigned_permissions",
+      "assignedPermissions",
+      "permissions",
+      "permisos",
+    ],
+    getRoleValue(
+      originalRole,
+      [
+        "assigned_permissions",
+        "assignedPermissions",
+        "permissions",
+        "permisos",
+      ],
+      []
+    )
+  );
+
+const mapAssignedPermission = (permission) => ({
+  id_module:
+    permission.id_module ??
+    permission.idModule ??
+    permission.module_id ??
+    permission.moduleId ??
+    permission.module?.id_module ??
+    permission.module?.id ??
+    null,
+
+  id_privilege:
+    permission.id_privilege ??
+    permission.idPrivilege ??
+    permission.privilege_id ??
+    permission.privilegeId ??
+    permission.privilege?.id_privilege ??
+    permission.privilege?.id ??
+    null,
+});
+
+const mapRoleActive = (statusId, activeValue) => {
+  if (statusId !== null) {
+    return Number(statusId) === 1;
+  }
+
+  if (activeValue === null) {
+    return true;
+  }
+
+  if (typeof activeValue === "string") {
+    const normalized = activeValue.trim().toLowerCase();
+
+    if (["inactivo", "inactive", "false", "0"].includes(normalized)) {
+      return false;
+    }
+
+    if (["activo", "active", "true", "1"].includes(normalized)) {
+      return true;
+    }
+  }
+
+  return Boolean(activeValue);
+};
+
 export const mapRoleFromApi = (
-  role
+  role = {}
 ) => {
+
+  const sourceRole =
+    role.role ||
+    role.data ||
+    role;
+
+  const statusId =
+    getRoleValue(
+      sourceRole,
+      ["id_status", "idStatus"],
+      null
+    );
+
+  const activeValue =
+    getRoleValue(
+      sourceRole,
+      ["active", "isActive", "status"],
+      null
+    );
+
+  const permissions =
+    getRolePermissions(
+      sourceRole,
+      role
+    );
 
   return {
 
     id:
-      role.id_role,
+      getRoleValue(
+        sourceRole,
+        ["id_role", "idRole", "id"]
+      ),
 
     name:
-      role.name_role,
+      getRoleValue(
+        sourceRole,
+        ["name_role", "nameRole", "name"],
+        ""
+      ),
 
     description:
-      role.description,
+      getRoleValue(
+        sourceRole,
+        ["description"],
+        ""
+      ),
 
     createdAt:
-      role.date_creation,
+      getRoleValue(
+        sourceRole,
+        ["date_creation", "dateCreation", "createdAt", "created_at"],
+        null
+      ),
 
     active:
-      role.id_status === 1,
+      mapRoleActive(
+        statusId,
+        activeValue
+      ),
 
     isAdmin:
-      role.is_admin,
+      Boolean(
+        getRoleValue(
+          sourceRole,
+          ["is_admin", "isAdmin"],
+          false
+        )
+      ),
 
     totalPermissions:
-      role.total_permissions,
+      getRoleValue(
+        sourceRole,
+        ["total_permissions", "totalPermissions"],
+        Array.isArray(permissions) ? permissions.length : 0
+      ),
 
     // ✅ MAPEAR PERMISOS
     permisos:
 
-      (role.assigned_permissions || [])
-        .map((permiso) => ({
-
-          id_module:
-            permiso.id_module,
-
-          id_privilege:
-            permiso.id_privilege
-
-        }))
+      (Array.isArray(permissions) ? permissions : [])
+        .map(mapAssignedPermission)
+        .filter(
+          (permission) =>
+            permission.id_module !== null &&
+            permission.id_privilege !== null
+        )
 
         
 

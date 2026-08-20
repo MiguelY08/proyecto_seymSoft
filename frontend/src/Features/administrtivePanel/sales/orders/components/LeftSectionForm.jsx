@@ -14,7 +14,6 @@ function LeftSectionForm({
   departamentos = [],
   ciudades = [],
   loadingCiudades = false,
-  user,
   loading,
   readOnly = false,
   isEditMode,
@@ -36,13 +35,13 @@ function LeftSectionForm({
 }) {
   const isEstadoPersistidoInmutable = [
     ESTADOS_LOGISTICOS.ENTREGADO,
-    ESTADOS_LOGISTICOS.CANCELADO,
+    ESTADOS_LOGISTICOS.ANULADO,
   ].includes(estadoLogisticoOriginal);
   const mostrarAvisoEntregadoPendiente =
     !isEstadoPersistidoInmutable &&
     formData.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO;
   const mensajeEntregadoPendiente = isEditMode
-    ? 'Al guardar como Entregado, el pedido quedara inmutable y el pago debe estar completo. Si el pago se completa ahora, tambien se generara la venta manual.'
+    ? 'Al guardar como Entregado, el pedido quedará inmutable y el pago debe estar completo. Si el pago se completa ahora, también se generará la venta manual.'
     : 'Al guardar como Entregado, se registrara como venta directa. Debes agregar el pago completo antes de crear el registro.';
   const mostrarDireccionManual = formData.tipoEntrega === 'domicilio';
   const showShippingAmountHighlight = mostrarDireccionManual && highlightShippingAmount;
@@ -158,7 +157,7 @@ function LeftSectionForm({
         return 'bg-green-50 text-green-800 border-green-300';
       case ESTADOS_LOGISTICOS.ENTREGADO:
         return 'bg-blue-50 text-blue-800 border-blue-300';
-      case ESTADOS_LOGISTICOS.CANCELADO:
+      case ESTADOS_LOGISTICOS.ANULADO:
         return 'bg-red-50 text-red-800 border-red-300';
       default:
         return '';
@@ -184,8 +183,8 @@ function LeftSectionForm({
     { value: ESTADOS_LOGISTICOS.EN_PROCESO, label: 'En proceso' },
     { value: ESTADOS_LOGISTICOS.LISTO, label: 'Listo' },
     { value: ESTADOS_LOGISTICOS.ENTREGADO, label: 'Entregado' },
-    ...(formData.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO
-      ? [{ value: ESTADOS_LOGISTICOS.CANCELADO, label: 'Cancelado' }]
+    ...(formData.estadoLogistico === ESTADOS_LOGISTICOS.ANULADO
+      ? [{ value: ESTADOS_LOGISTICOS.ANULADO, label: 'Anulado' }]
       : []),
   ];
 
@@ -458,7 +457,7 @@ function LeftSectionForm({
               Total del envío <span className="text-red-500">*</span>
               {showShippingAmountHighlight && (
                 <span className="ml-2 inline-flex rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800">
-                  Envio pendiente
+                  Envío pendiente
                 </span>
               )}
             </label>
@@ -485,7 +484,7 @@ function LeftSectionForm({
             </div>
             {showShippingAmountHighlight && !errors.shippingAmount && (
               <p className="text-xs font-semibold text-amber-800">
-                Este pedido web a domicilio necesita que el asesor registre el valor del envio.
+                Este pedido web a domicilio necesita que el asesor registre el valor del envío.
               </p>
             )}
             {errorMsg('shippingAmount')}
@@ -522,7 +521,7 @@ function LeftSectionForm({
             />
             {errorMsg('estadoLogistico')}
             {isEditMode && isEstadoPersistidoInmutable && (
-              <p className="mt-0.5 text-xs text-gray-500">Los pedidos entregados o cancelados no se pueden modificar.</p>
+              <p className="mt-0.5 text-xs text-gray-500">Los pedidos entregados o anulados no se pueden modificar.</p>
             )}
             {mostrarAvisoEntregadoPendiente && (
               <div className="mt-2 flex items-start gap-3 rounded-lg border border-green-100 bg-green-50 px-3 py-3 sm:px-4">
@@ -537,10 +536,10 @@ function LeftSectionForm({
         )}
 
         {/* Motivo de cancelación (condicional) */}
-        {formData.estadoLogistico === ESTADOS_LOGISTICOS.CANCELADO && (
+        {formData.estadoLogistico === ESTADOS_LOGISTICOS.ANULADO && (
           <div className="flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
-              Motivo de cancelación <span className="text-red-500">*</span>
+              Motivo de anulación <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <FileX className="absolute left-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={1.8} />
@@ -549,7 +548,7 @@ function LeftSectionForm({
                 onChange={onMotivoCancelacionChange}
                 rows={3}
                 className={textareaClass('motivoCancelacion', loading)}
-                placeholder="Explique por qué se cancela el pedido..."
+                placeholder="Explique por qué se anula el pedido..."
                 disabled={loading || readOnly}
               />
             </div>
@@ -557,14 +556,6 @@ function LeftSectionForm({
           </div>
         )}
 
-        {/* Asesor asignado (solo lectura) */}
-        {user && (
-          <div className="mt-2 p-3 bg-gray-100 rounded-lg border border-gray-200">
-            <p className="text-sm text-gray-600">
-              <span className="font-medium">Asesor asignado:</span> {user.name || user.fullName || user.email || 'Usuario actual'}
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

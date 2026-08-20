@@ -7,6 +7,7 @@ import {
   FileSpreadsheet,
   Calendar,
   ShoppingCart,
+  PackageCheck,
   X,
   Eraser,
 } from 'lucide-react';
@@ -38,11 +39,21 @@ const SALES_TYPE_OPTIONS = [
   { value: 'manual', label: 'Manual', icon: ShoppingCart, iconClassName: 'text-amber-600' },
 ];
 
+const ORDER_STATUS_OPTIONS = [
+  { value: 'all', label: 'Todos', icon: PackageCheck, iconClassName: 'text-gray-400' },
+  { value: 'en proceso', label: 'En proceso', icon: PackageCheck, iconClassName: 'text-yellow-600' },
+  { value: 'listo', label: 'Listo', icon: PackageCheck, iconClassName: 'text-green-600' },
+  { value: 'entregado', label: 'Entregado', icon: PackageCheck, iconClassName: 'text-blue-600' },
+  { value: 'anulado', label: 'Anulado', icon: PackageCheck, iconClassName: 'text-red-600' },
+];
+
 function TopBar({
   search,
   onSearchChange,
   activeType = 'all',
   onTypeChange,
+  orderStatusFilter = 'all',
+  onOrderStatusFilterChange,
   fechaInicial,
   setFechaInicial,
   fechaFinal,
@@ -59,13 +70,16 @@ function TopBar({
   const searchWrapperRef = useRef(null);
   const saleTypeMenuTriggerRef = useRef(null);
   const saleTypeMenuRef = useRef(null);
-  const hasActiveFilters = Boolean(search || fechaInicial || fechaFinal || activeType !== 'all');
+  const hasActiveFilters = Boolean(
+    search || fechaInicial || fechaFinal || activeType !== 'all' || orderStatusFilter !== 'all'
+  );
 
   const handleClearFilters = () => {
     onSearchChange('');
     setFechaInicial('');
     setFechaFinal('');
     onTypeChange('all');
+    onOrderStatusFilterChange('all');
     setCurrentPage(1);
     setIsSearchOpen(false);
   };
@@ -277,11 +291,22 @@ function TopBar({
           />
         </div>
 
+        <div className="w-full min-w-0 sm:col-span-2 lg:w-40">
+          <FormSelect
+            value={orderStatusFilter}
+            options={ORDER_STATUS_OPTIONS}
+            onChange={onOrderStatusFilterChange}
+            icon={PackageCheck}
+            placeholder="Estado pedido"
+            ariaLabel="Filtrar por estado del pedido"
+          />
+        </div>
+
         {hasActiveFilters && (
           <button
             type="button"
             onClick={handleClearFilters}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white text-gray-600 transition-all duration-200 hover:bg-gray-100 hover:text-gray-800 sm:col-span-2 lg:w-auto"
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white text-gray-600 transition-all duration-200 hover:bg-gray-100 hover:text-gray-800 sm:col-span-2 lg:w-10"
             title="Limpiar filtros"
             aria-label="Limpiar filtros"
           >

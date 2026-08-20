@@ -16,6 +16,7 @@ import {
   getSubcategories,
   createCategory,
   updateCategory,
+  updateSubcategory,
   normalizeCategoryStatus,
 } from "../data/categoriesService";
 
@@ -141,10 +142,31 @@ const CategoriesPage = () => {
   const handleSave = async (categoryData, isEditing) => {
     try {
       if (isEditing) {
+        const currentCategory = categories.find(
+          (category) => category.id === categoryData.id
+        );
+        const statusChanged =
+          currentCategory && currentCategory.estado !== categoryData.estado;
+
         await updateCategory(categoryData.id, {
           nombre: categoryData.nombre,
           estado: categoryData.estado,
         });
+
+        if (statusChanged) {
+          const subcategories = await getSubcategories(categoryData.id);
+          const subcategoriesToUpdate = subcategories.filter(
+            (subcategory) => subcategory.estado !== categoryData.estado
+          );
+
+          await Promise.all(
+            subcategoriesToUpdate.map((subcategory) =>
+              updateSubcategory(subcategory.id, {
+                estado: categoryData.estado,
+              })
+            )
+          );
+        }
         showSuccess("Categoría actualizada", "Los cambios se guardaron correctamente.");
       } else {
         const result = await showConfirm(

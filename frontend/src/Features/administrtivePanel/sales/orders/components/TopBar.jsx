@@ -35,7 +35,7 @@ function TopBar({
   orders,
 }) {
   const navigate = useNavigate();
-  const { showWarning, showSuccess, showConfirm } = useAlert();
+  const { showWarning, showSuccess, showError, showConfirm } = useAlert();
   const [isSearchOpen, setIsSearchOpen] = useState(Boolean(search));
   const searchWrapperRef = useRef(null);
   const hasActiveFilters = Boolean(
@@ -72,6 +72,31 @@ function TopBar({
     setEnvioFilter('');
     setCurrentPage(1);
     setIsSearchOpen(false);
+  };
+
+  const handleDownloadExcel = async () => {
+    if (!Array.isArray(orders) || orders.length === 0) {
+      showWarning('Sin registros', 'No hay pedidos para exportar.');
+      return;
+    }
+
+    try {
+      const result = await showConfirm(
+        'question',
+        '¿Exportar pedidos?',
+        `Se exportarán ${orders.length} pedido${orders.length !== 1 ? 's' : ''} en formato Excel.`,
+        { confirmButtonText: 'Exportar', cancelButtonText: 'Cancelar' },
+      );
+
+      if (!result.isConfirmed) return;
+
+      const exported = await exportOrdersToExcel(orders);
+      if (exported) {
+        showSuccess('Exportación completada', 'El archivo Excel se generó correctamente.');
+      }
+    } catch (error) {
+      showError('Error al exportar', error?.message || 'No se pudo generar el archivo Excel.');
+    }
   };
 
   useEffect(() => {

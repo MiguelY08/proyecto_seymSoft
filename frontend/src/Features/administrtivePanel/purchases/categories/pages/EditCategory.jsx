@@ -1,6 +1,6 @@
 // features/categories/pages/EditCategory.jsx
 import React, { useState, useEffect } from "react";
-import { X, Plus, AlertCircle, Layers } from "lucide-react";
+import { X, Plus, AlertCircle, Layers, LoaderCircle } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import ActiveToggle from "../components/ActiveToggle";
 import SubcategoriesTable from "../components/SubcategoriesTable";
@@ -8,7 +8,6 @@ import { useOutsideCloseWarning } from "../../../../shared/hooks/useOutsideClose
 import {
   getSubcategories,
   createSubcategory,
-  updateCategory,
 } from "../data/categoriesService";
 
 const normalizeName = (str = "") =>
@@ -185,7 +184,7 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
 
 const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategories }) => {
   const { handleOutsideClick } = useOutsideCloseWarning(onClose);
-  const { showWarning, showSuccess, showConfirm } = useAlert();
+  const { showWarning, showConfirm } = useAlert();
   const [form, setForm] = useState({
     nombre: category?.nombre || "",
     activo: category?.estado === "Activo",
@@ -194,6 +193,7 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
   const [subCount, setSubCount] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showAddSubModal, setShowAddSubModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const refreshSubCount = async () => {
     if (category) {
@@ -220,6 +220,8 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
   }, [form.nombre, allCategories, category]);
 
   const handleSubmit = async () => {
+    if (isSaving) return;
+
     if (error) {
       showWarning("Campo inválido", error);
       return;
@@ -228,20 +230,34 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
     const wasActive = category?.estado === "Activo";
     const willBeActive = form.activo;
 
-    if (wasActive && !willBeActive) {
+    if (wasActive !== willBeActive) {
       const result = await showConfirm(
-        "warning",
-        "Desactivar categoría",
-        `Al desactivar "${category.nombre}" también se desactivarán todas sus subcategorías y los productos asociados a ellas. ¿Deseas continuar?`,
-        { confirmButtonText: "Sí, desactivar", cancelButtonText: "Cancelar" }
+        willBeActive ? "question" : "warning",
+        willBeActive ? "Activar categoría" : "Desactivar categoría",
+        willBeActive
+          ? `Al activar "${category.nombre}" también se activarán todas sus subcategorías. ¿Deseas continuar?`
+          : `Al desactivar "${category.nombre}" también se desactivarán todas sus subcategorías y los productos asociados a ellas. ¿Deseas continuar?`,
+        {
+          confirmButtonText: willBeActive ? "Sí, activar" : "Sí, desactivar",
+          cancelButtonText: "Cancelar",
+        }
       );
       if (!result?.isConfirmed) return;
     }
 
-    onSave({ ...category, nombre: form.nombre.trim(), estado: form.activo ? "Activo" : "Inactivo" }, true);
-    if (refreshCategories) refreshCategories();
-    showSuccess("Categoría actualizada", "Los cambios se guardaron correctamente.");
-    onClose();
+    try {
+      setIsSaving(true);
+      await onSave(
+        {
+          ...category,
+          nombre: form.nombre.trim(),
+          estado: form.activo ? "Activo" : "Inactivo",
+        },
+        true
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSubcategoryCreated = () => {
@@ -324,12 +340,16 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
           <div className="px-6 py-4 flex gap-4 shrink-0 border-t border-gray-100">
             <button
               onClick={handleSubmit}
-              disabled={!!error}
-              className={`flex-1 py-2.5 text-sm font-medium text-white rounded-lg transition-colors ${
-                error ? "bg-gray-400 cursor-not-allowed" : "bg-[#004D77] hover:bg-[#003a5c]"
+              disabled={!!error || isSaving}
+              aria-busy={isSaving}
+              className={`flex-1 py-2.5 text-sm font-medium text-white rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                error || isSaving
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-[#004D77] hover:bg-[#003a5c]"
               }`}
             >
-              Guardar cambios
+              {isSaving && <LoaderCircle className="w-4 h-4 animate-spin" />}
+              {isSaving ? "Guardando..." : "Guardar cambios"}
             </button>
             <button
               onClick={onClose}

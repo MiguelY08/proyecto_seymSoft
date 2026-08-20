@@ -119,7 +119,7 @@ const exportAccountsSummaryToExcel = async (accounts = []) => {
   workbook.created = currentDate;
 
   worksheet.columns = [
-    { key: "nro", width: 8 },
+    { key: "documento", width: 16 },
     { key: "nombre", width: 32 },
     { key: "creditoAsignado", width: 18 },
     { key: "cupoOcupado", width: 18 },
@@ -181,7 +181,7 @@ const exportAccountsSummaryToExcel = async (accounts = []) => {
   */
 
   const headerRow = worksheet.addRow([
-    "#",
+    "Documento",
     "Nombre",
     "Crédito Asignado",
     "Cupo Ocupado",
@@ -208,7 +208,7 @@ const exportAccountsSummaryToExcel = async (accounts = []) => {
 
   accounts.forEach((account, index) => {
     const row = worksheet.addRow({
-      nro: index + 1,
+      documento: account.documento || "-",
       nombre: account.nombre || "Sin nombre",
       creditoAsignado: Number(account.creditoAsignado ?? 0),
       cupoOcupado: Number(account.saldo ?? 0),
