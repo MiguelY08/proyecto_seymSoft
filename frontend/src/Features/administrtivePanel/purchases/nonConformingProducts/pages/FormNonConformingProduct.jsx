@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import { createNonConforming, getProductByBarcode } from "../data/nonConformingService";
 import { normalizeBarcode, useBarcodeScanner } from "../../../../shared/scanner";
+import { useOutsideCloseWarning } from "../../../../shared/hooks/useOutsideCloseWarning";
 
 const NON_CONFORMING_FORM_SCANNER_FIELD = "non-conforming-product-form-search";
 
 function FormNonConformingProduct({ onClose, onSuccess }) {
+  const { handleOutsideClick } = useOutsideCloseWarning(onClose);
   const { showWarning, showSuccess, showError } = useAlert();
 
   const [form, setForm] = useState({
@@ -175,7 +177,7 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-      onClick={handleCancel}
+      onClick={handleOutsideClick}
     >
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col"

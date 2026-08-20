@@ -7,6 +7,8 @@ import CategoryDetail from "./CategoryDetail";
 import FormCategory from "./FormCategory";
 import EditCategory from "./EditCategory";
 import Spinner from "../../../../shared/spinner"; // ← IMPORTAR SPINNER
+import PaginationAdmin from "../../../../shared/PaginationAdmin";
+import { getApiErrorMessage } from "../../../../shared/utils/apiErrorMessage";
 import {
   getCategories,
   deleteCategory,
@@ -14,7 +16,16 @@ import {
   getSubcategories,
   createCategory,
   updateCategory,
+  updateSubcategory,
+  normalizeCategoryStatus,
 } from "../data/categoriesService";
+
+const normalizeSearchValue = (value) =>
+  String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 
 const CategoriesPage = () => {
   const [categories, setCategories] = useState([]);
@@ -37,17 +48,17 @@ const CategoriesPage = () => {
       const categoriesWithCount = await Promise.all(
         cats.map(async (cat) => {
           const subs = await getSubcategories(cat.id);
-          const rawStatus = cat.status ?? cat.statusName ?? cat.estado ?? "";
-          const isActive =
-            rawStatus === "Active" ||
-            rawStatus === "Activo" ||
-            rawStatus === 1 ||
-            rawStatus === "1";
           return {
             id: cat.id,
             nombre: cat.name ?? cat.nombre,
-            estado: isActive ? "Activo" : "Inactivo",
+            estado: normalizeCategoryStatus(cat),
             subcategorias: subs.length,
+            searchableSubcategories: subs.flatMap((sub) => [
+              sub.id,
+              sub.nombre ?? sub.name,
+              sub.descripcion ?? sub.description,
+              sub.estado ?? sub.status,
+            ]),
           };
         })
       );
@@ -117,17 +128,45 @@ const CategoriesPage = () => {
       await fetchCategories();
       showSuccess("Eliminado", "La categoría y sus subcategorías fueron eliminadas.");
     } catch (err) {
-      showError("Error", err.message || "No se pudo eliminar la categoría.");
+      showError(
+        "No se puede eliminar",
+        getApiErrorMessage(err, {
+          conflictMessage:
+            "Esta categoría tiene productos asociados. Reasigna o elimina esos productos antes de eliminar la categoría.",
+          fallback: "No se pudo eliminar la categoría.",
+        })
+      );
     }
   };
 
   const handleSave = async (categoryData, isEditing) => {
     try {
       if (isEditing) {
+        const currentCategory = categories.find(
+          (category) => category.id === categoryData.id
+        );
+        const statusChanged =
+          currentCategory && currentCategory.estado !== categoryData.estado;
+
         await updateCategory(categoryData.id, {
           nombre: categoryData.nombre,
           estado: categoryData.estado,
         });
+
+        if (statusChanged) {
+          const subcategories = await getSubcategories(categoryData.id);
+          const subcategoriesToUpdate = subcategories.filter(
+            (subcategory) => subcategory.estado !== categoryData.estado
+          );
+
+          await Promise.all(
+            subcategoriesToUpdate.map((subcategory) =>
+              updateSubcategory(subcategory.id, {
+                estado: categoryData.estado,
+              })
+            )
+          );
+        }
         showSuccess("Categoría actualizada", "Los cambios se guardaron correctamente.");
       } else {
         const result = await showConfirm(
@@ -158,11 +197,18 @@ const CategoriesPage = () => {
     setCategoryDetail(category);
   };
 
-  const filteredCategories = categories.filter((cat) =>
-    Object.values(cat).some((value) =>
-      String(value).toLowerCase().includes(search.toLowerCase())
-    )
-  );
+  const filteredCategories = categories.filter((category) => {
+    const query = normalizeSearchValue(search);
+    if (!query) return true;
+
+    return [
+      category.id,
+      category.nombre,
+      category.estado,
+      category.subcategorias,
+      ...(category.searchableSubcategories || []),
+    ].some((value) => normalizeSearchValue(value).includes(query));
+  });
 
   const highlightText = (text = "") => {
     if (!search) return text;
@@ -180,8 +226,7 @@ const CategoriesPage = () => {
       );
   };
 
-  const RECORDS_PER_PAGE = 13;
-  const totalPages = Math.ceil(filteredCategories.length / RECORDS_PER_PAGE);
+  const RECORDS_PER_PAGE = 11;
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
   const currentData = filteredCategories.slice(startIndex, startIndex + RECORDS_PER_PAGE);
 
@@ -199,30 +244,43 @@ const CategoriesPage = () => {
   }
 
   return (
-    <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-hidden p-3 sm:p-4">
       <CategoriesToolbar
         search={search}
-        setSearch={setSearch}
+        setSearch={(value) => {
+          setSearch(value);
+          setCurrentPage(1);
+        }}
         onOpenForm={() => {
           setCategoryToEdit(null);
           setShowForm(true);
         }}
       />
 
-      <CategoriesTable
-        currentData={currentData}
-        filteredCategories={filteredCategories}
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-        totalPages={totalPages}
-        startIndex={startIndex}
-        endIndex={Math.min(startIndex + RECORDS_PER_PAGE, filteredCategories.length)}
-        handleToggleStatus={handleToggleStatus}
-        handleDelete={handleDelete}
-        handleEdit={handleEdit}
-        handleViewDetail={handleViewDetail}
-        highlightText={highlightText}
-      />
+      <div className="w-full min-w-0 shrink-0 overflow-hidden rounded-xl bg-white shadow-md">
+        <CategoriesTable
+          currentData={currentData}
+          startIndex={startIndex}
+          handleToggleStatus={handleToggleStatus}
+          handleDelete={handleDelete}
+          handleEdit={handleEdit}
+          handleViewDetail={handleViewDetail}
+          highlightText={highlightText}
+        />
+      </div>
+
+      <div className="min-h-0 flex-1" />
+
+      {filteredCategories.length > 0 && (
+        <div className="shrink-0">
+          <PaginationAdmin
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            totalRecords={filteredCategories.length}
+            recordsPerPage={RECORDS_PER_PAGE}
+          />
+        </div>
+      )}
 
       {showForm &&
         (categoryToEdit ? (

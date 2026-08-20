@@ -1,6 +1,35 @@
 // features/categories/data/categoriesApi.js
 import apiClient from '../../../../../setting/apiClient.js';
 
+const ACTIVE_STATUS_VALUES = new Set(['active', 'activo', 'enabled', '1']);
+const INACTIVE_STATUS_VALUES = new Set(['inactive', 'inactivo', 'disabled', '2']);
+
+export const normalizeCategoryStatus = (entityOrStatus) => {
+  const entity =
+    entityOrStatus && typeof entityOrStatus === 'object'
+      ? entityOrStatus
+      : { status: entityOrStatus };
+
+  if (entity.active === true || entity.isActive === true) return 'Activo';
+  if (entity.active === false || entity.isActive === false) return 'Inactivo';
+
+  const statusId = entity.idStatus ?? entity.statusId ?? entity.status?.id;
+  if (Number(statusId) === 1) return 'Activo';
+  if (Number(statusId) === 2) return 'Inactivo';
+
+  const rawStatus =
+    entity.status?.name ??
+    entity.statusName ??
+    entity.status ??
+    entity.estado ??
+    '';
+  const normalizedStatus = String(rawStatus).trim().toLowerCase();
+
+  if (ACTIVE_STATUS_VALUES.has(normalizedStatus)) return 'Activo';
+  if (INACTIVE_STATUS_VALUES.has(normalizedStatus)) return 'Inactivo';
+  return 'Inactivo';
+};
+
 // ==========================================
 // ENDPOINTS
 // ==========================================
@@ -79,7 +108,7 @@ export const getSubcategories = async (categoryId = null) => {
       id: sub.id,
       nombre: sub.name,
       descripcion: sub.description,
-      estado: sub.status === "Active" ? "Activo" : "Inactivo",
+      estado: normalizeCategoryStatus(sub),
       categoriaId: categoryId,
     }));
   }
@@ -94,7 +123,7 @@ export const getSubcategories = async (categoryId = null) => {
         id: sub.id,
         nombre: sub.name,
         descripcion: sub.description,
-        estado: sub.status === "Active" ? "Activo" : "Inactivo",
+        estado: normalizeCategoryStatus(sub),
         categoriaId: cat.id,
       }));
     })

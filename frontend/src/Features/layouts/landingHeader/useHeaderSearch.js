@@ -38,7 +38,7 @@ function useHeaderSearch() {
 
       const [productsResult, categoriesResult] = await Promise.allSettled([
         ProductsService.list({ active: true }),
-        categoriesService.getAllWithSubcategories(),
+        categoriesService.getAllActiveWithSubcategories(),
       ]);
 
       if (!isMounted) {

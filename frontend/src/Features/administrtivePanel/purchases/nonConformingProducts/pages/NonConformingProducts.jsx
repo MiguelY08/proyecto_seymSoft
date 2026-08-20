@@ -7,12 +7,23 @@ import ViewDetailsPN from "./ViewDetailsPN";
 import { PurchasesFilters } from "../../../../shared/DateFilter";
 import { Plus, FileSpreadsheet } from "lucide-react";
 import { getNonConforming, cancelNonConforming } from "../data/nonConformingService";
-import Spinner from "../../../../shared/spinner"; // â† IMPORTAR SPINNER
+import Spinner from "../../../../shared/spinner";
 import { normalizeBarcode, useBarcodeScanner } from "../../../../shared/scanner";
 import Permission from "../../../configuration/roles/components/Permission";
 import { exportStyledWorkbook } from "../../../../shared/excel/exportStyledWorkbook";
+import { getApiErrorMessage } from "../../../../shared/utils/apiErrorMessage";
+import PaginationAdmin from "../../../../shared/PaginationAdmin";
 
 const NON_CONFORMING_SEARCH_SCANNER_FIELD = "non-conforming-product-search";
+const RECORDS_PER_PAGE = 11;
+const SEARCH_FETCH_LIMIT = 100;
+
+const normalizeSearchValue = (value) =>
+  String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 
 const findReportByBarcode = (reports, barcode) =>
   reports.find(
@@ -29,11 +40,10 @@ export const NonConformingProducts = () => {
   const [fechaFinal, setFechaFinal] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
-  const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
 
   const { showConfirm, showSuccess, showError, showInfo } = useAlert();
 
-  const handleScannedReportSearch = useCallback(async (code) => {
+  const handleScannedReportSearch = useCallback((code) => {
     const normalizedCode = normalizeBarcode(code, { numericOnly: true });
     setSearch(normalizedCode);
     setCurrentPage(1);
@@ -44,32 +54,11 @@ export const NonConformingProducts = () => {
       return;
     }
 
-    try {
-      const result = await getNonConforming({
-        page: 1,
-        limit: 13,
-        search: normalizedCode,
-        startDate: fechaInicial,
-        endDate: fechaFinal,
-      });
-
-      setReports(result.data);
-      setPagination(result.pagination);
-
-      const matchedReport = findReportByBarcode(result.data, normalizedCode);
-      if (matchedReport) {
-        setSelectedReport(matchedReport);
-        return;
-      }
-
-      showError(
-        "Codigo no registrado",
-        `No se encontro ningun reporte con el codigo de barras ${normalizedCode}.`
-      );
-    } catch (err) {
-      showError("Error", err.message || "No se pudo buscar el reporte.");
-    }
-  }, [fechaFinal, fechaInicial, reports, showError]);
+    showError(
+      "Código no registrado",
+      `No se encontró ningún reporte con el código de barras ${normalizedCode}.`
+    );
+  }, [reports, showError]);
 
   useBarcodeScanner({
     enabled: !showModal,
@@ -89,22 +78,32 @@ export const NonConformingProducts = () => {
     try {
       setLoading(true);
       setError(null);
-      const result = await getNonConforming({
-        page: currentPage,
-        limit: 13,
-        search,
+      const firstPage = await getNonConforming({
+        page: 1,
+        limit: SEARCH_FETCH_LIMIT,
         startDate: fechaInicial,
         endDate: fechaFinal,
       });
-      setReports(result.data);
-      setPagination(result.pagination);
+      const allReports = [...firstPage.data];
+
+      for (let page = 2; page <= firstPage.pagination.totalPages; page += 1) {
+        const nextPage = await getNonConforming({
+          page,
+          limit: SEARCH_FETCH_LIMIT,
+          startDate: fechaInicial,
+          endDate: fechaFinal,
+        });
+        allReports.push(...nextPage.data);
+      }
+
+      setReports(allReports);
     } catch (err) {
       setError("Error al cargar reportes");
       showError("Error", err.message || "No se pudieron cargar los reportes.");
     } finally {
       setLoading(false);
     }
-  }, [currentPage, search, fechaInicial, fechaFinal, showError]);
+  }, [fechaInicial, fechaFinal, showError]);
 
   useEffect(() => {
     fetchReports();
@@ -120,8 +119,8 @@ export const NonConformingProducts = () => {
     const result = await showConfirm(
       "warning",
       "Anular reporte",
-      `Â¿Deseas anular el reporte de "${report.nombre}"?`,
-      { confirmButtonText: "SÃ­, anular", cancelButtonText: "Cancelar" }
+      `¿Deseas anular el reporte de "${report.nombre}"?`,
+      { confirmButtonText: "Sí, anular", cancelButtonText: "Cancelar" }
     );
     if (!result?.isConfirmed) return;
 
@@ -130,7 +129,14 @@ export const NonConformingProducts = () => {
       await fetchReports();
       showSuccess("Anulado", "El reporte fue anulado correctamente.");
     } catch (err) {
-      showError("Error", err.message || "No se pudo anular el reporte.");
+      showError(
+        "No se puede anular",
+        getApiErrorMessage(err, {
+          conflictMessage:
+            "Este reporte ya fue anulado o tiene movimientos asociados que impiden anularlo.",
+          fallback: "No se pudo anular el reporte.",
+        })
+      );
     }
   };
 
@@ -165,7 +171,7 @@ export const NonConformingProducts = () => {
       const activos = reports.filter((r) => r.estado === "Activo").length;
       const anulados = reports.filter((r) => r.estado === "Anulado").length;
       const porCategoria = reports.reduce((acc, r) => {
-        const cat = r.categoria || "Sin categorÃ­a";
+        const cat = r.categoria || "Sin categoría";
         acc[cat] = (acc[cat] || 0) + (Number(r.cantidadAfectada) || 0);
         return acc;
       }, {});
@@ -178,10 +184,10 @@ export const NonConformingProducts = () => {
             name: "Resumen Reportes",
             columns: [
               { header: "Nombre", key: "nombre", width: 35 },
-              { header: "CÃ³digo de barras", key: "codigoBarras", width: 20 },
-              { header: "CategorÃ­a", key: "categoria", width: 24 },
+              { header: "Código de barras", key: "codigoBarras", width: 20 },
+              { header: "Categoría", key: "categoria", width: 24 },
               { header: "Cantidad afectada", key: "cantidadAfectada", width: 18 },
-              { header: "Fecha detecciÃ³n", key: "fechaDeteccion", width: 18 },
+              { header: "Fecha detección", key: "fechaDeteccion", width: 18 },
               { header: "Motivo", key: "motivo", width: 45 },
               { header: "Estado", key: "estado", width: 16 },
             ],
@@ -196,9 +202,9 @@ export const NonConformingProducts = () => {
             })),
           },
           {
-            name: "EstadÃ­sticas",
+            name: "Estadísticas",
             columns: [
-              { header: "MÃ©trica", key: "metric", width: 42 },
+              { header: "Métrica", key: "metric", width: 42 },
               { header: "Valor", key: "value", width: 28 },
             ],
             rows: [
@@ -215,7 +221,7 @@ export const NonConformingProducts = () => {
                 value: total,
               })),
               {
-                metric: "Fecha de exportaciÃ³n",
+                metric: "Fecha de exportación",
                 value: currentDate.toLocaleString("es-CO", {
                   year: "numeric",
                   month: "2-digit",
@@ -231,17 +237,17 @@ export const NonConformingProducts = () => {
       });
 
 
-      showSuccess("ExportaciÃ³n exitosa", "El archivo Excel se generÃ³ correctamente");
+      showSuccess("Exportación exitosa", "El archivo Excel se generó correctamente");
       return;
       }
       const formattedDate = currentDate.toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" });
       const formattedDateTime = currentDate.toLocaleString("es-CO", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
       const titleRow = [["PRODUCTOS NO CONFORMES"]];
-      const dateRow = [[`Fecha de exportaciÃ³n: ${formattedDate} - ${formattedDateTime}`]];
+      const dateRow = [[`Fecha de exportación: ${formattedDate} - ${formattedDateTime}`]];
       const emptyRow = [[""]];
 
-      const summaryHeaders = ["Nombre", "CÃ³digo de Barras", "CategorÃ­a", "Cantidad Afectada", "Fecha DetecciÃ³n", "Motivo", "Estado"];
+      const summaryHeaders = ["Nombre", "Código de barras", "Categoría", "Cantidad afectada", "Fecha detección", "Motivo", "Estado"];
       const summaryData = reports.map((r) => [
         r.nombre || "",
         r.codigoBarras || "",
@@ -259,7 +265,7 @@ export const NonConformingProducts = () => {
       summaryWs["!merges"].push({ s: { r: 1, c: 0 }, e: { r: 1, c: summaryHeaders.length - 1 } });
       summaryWs["!merges"].push({ s: { r: 3, c: 0 }, e: { r: 3, c: summaryHeaders.length - 1 } });
       summaryWs["A1"] = { v: "PRODUCTOS NO CONFORMES", t: "s" };
-      summaryWs["A2"] = { v: `Fecha de exportaciÃ³n: ${formattedDate} - ${formattedDateTime}`, t: "s" };
+      summaryWs["A2"] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: "s" };
       summaryWs["A4"] = { v: "RESUMEN DE REPORTES", t: "s" };
       summaryWs["!cols"] = [{ wch: 35 }, { wch: 18 }, { wch: 20 }, { wch: 18 }, { wch: 18 }, { wch: 25 }, { wch: 12 }];
 
@@ -268,12 +274,12 @@ export const NonConformingProducts = () => {
       const activos = reports.filter((r) => r.estado === "Activo").length;
       const anulados = reports.filter((r) => r.estado === "Anulado").length;
       const porCategoria = reports.reduce((acc, r) => {
-        const cat = r.categoria || "Sin categorÃ­a";
+        const cat = r.categoria || "Sin categoría";
         acc[cat] = (acc[cat] || 0) + (Number(r.cantidadAfectada) || 0);
         return acc;
       }, {});
 
-      const statsHeaders = ["MÃ©trica", "Valor"];
+      const statsHeaders = ["Métrica", "Valor"];
       const statsData = [
         ["Total Reportes", totalReportes],
         ["Total Unidades Afectadas", totalAfectados],
@@ -282,29 +288,29 @@ export const NonConformingProducts = () => {
         ["Reportes Activos", activos],
         ["Reportes Anulados", anulados],
         [""],
-        ["â€” Unidades afectadas por categorÃ­a â€”", ""],
+        ["— Unidades afectadas por categoría —", ""],
         ...Object.entries(porCategoria).map(([cat, total]) => [cat, total]),
         [""],
-        ["Fecha de ExportaciÃ³n", formattedDateTime],
+        ["Fecha de exportación", formattedDateTime],
       ];
 
-      const statsSheetData = [...titleRow, ...dateRow, ...emptyRow, [["ESTADÃSTICAS"]], ...emptyRow, statsHeaders, ...statsData];
+      const statsSheetData = [...titleRow, ...dateRow, ...emptyRow, [["ESTADÍSTICAS"]], ...emptyRow, statsHeaders, ...statsData];
       const statsWs = XLSX.utils.aoa_to_sheet(statsSheetData);
       if (!statsWs["!merges"]) statsWs["!merges"] = [];
       statsWs["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } });
       statsWs["!merges"].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 1 } });
       statsWs["!merges"].push({ s: { r: 3, c: 0 }, e: { r: 3, c: 1 } });
       statsWs["A1"] = { v: "PRODUCTOS NO CONFORMES", t: "s" };
-      statsWs["A2"] = { v: `Fecha de exportaciÃ³n: ${formattedDate} - ${formattedDateTime}`, t: "s" };
-      statsWs["A4"] = { v: "ESTADÃSTICAS", t: "s" };
+      statsWs["A2"] = { v: `Fecha de exportación: ${formattedDate} - ${formattedDateTime}`, t: "s" };
+      statsWs["A4"] = { v: "ESTADÍSTICAS", t: "s" };
       statsWs["!cols"] = [{ wch: 35 }, { wch: 20 }];
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, summaryWs, "Resumen Reportes");
-      XLSX.utils.book_append_sheet(wb, statsWs, "EstadÃ­sticas");
+      XLSX.utils.book_append_sheet(wb, statsWs, "Estadísticas");
       XLSX.writeFile(wb, `productos_no_conformes_${new Date().toISOString().split("T")[0]}.xlsx`);
 
-      showSuccess("ExportaciÃ³n exitosa", "El archivo Excel se generÃ³ correctamente");
+      showSuccess("Exportación exitosa", "El archivo Excel se generó correctamente");
     } catch {
       showError("Error", "No se pudo exportar el archivo");
     }
@@ -322,12 +328,26 @@ export const NonConformingProducts = () => {
     );
   };
 
-  const totalPages = pagination.totalPages || 1;
-  const startIndex = (currentPage - 1) * 13;
-  const endIndex = startIndex + 13;
-  const currentData = reports;
+  const filteredReports = reports.filter((report) => {
+    const query = normalizeSearchValue(search);
+    if (!query) return true;
 
-  // âœ… USAR SPINNER IGUAL QUE EN LAS DEMÃS PÃGINAS
+    return [
+      report.id,
+      report.nombre,
+      report.codigoBarras,
+      report.categoria,
+      report.cantidadAfectada,
+      report.fechaDeteccion,
+      report.motivo,
+      report.estado,
+    ].some((value) => normalizeSearchValue(value).includes(query));
+  });
+
+  const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
+  const currentData = filteredReports.slice(startIndex, startIndex + RECORDS_PER_PAGE);
+
+  // Mostrar el spinner durante la carga inicial.
   if (loading && reports.length === 0) {
     return <Spinner message="Cargando reportes..." />;
   }
@@ -342,7 +362,7 @@ export const NonConformingProducts = () => {
 
   return (
     <>
-      <div className="h-full flex flex-col gap-4 p-3 sm:p-4">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-hidden p-3 sm:p-4">
         <div className="flex flex-wrap items-end gap-3">
           <PurchasesFilters
             search={search}
@@ -379,23 +399,29 @@ export const NonConformingProducts = () => {
           </div>
         </div>
 
-        {!loading && !error && reports.length > 0 && (
-          <NonConformingProductsTable
-            currentData={currentData}
-            filteredReports={reports}
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-            totalPages={totalPages}
-            startIndex={startIndex}
-            endIndex={endIndex}
-            handleCancel={handleCancel}
-            highlightText={highlightText}
-            handleViewDetails={(report) => setSelectedReport(report)}
-          />
+        {!loading && !error && (
+          <div className="w-full min-w-0 shrink-0 overflow-hidden rounded-xl bg-white shadow-md">
+            <NonConformingProductsTable
+              currentData={currentData}
+              startIndex={startIndex}
+              handleCancel={handleCancel}
+              highlightText={highlightText}
+              handleViewDetails={(report) => setSelectedReport(report)}
+            />
+          </div>
         )}
 
-        {!loading && !error && reports.length === 0 && (
-          <div className="text-center py-8 text-gray-500">No hay reportes de productos no conformes.</div>
+        <div className="min-h-0 flex-1" />
+
+        {filteredReports.length > 0 && (
+          <div className="shrink-0">
+            <PaginationAdmin
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              totalRecords={filteredReports.length}
+              recordsPerPage={RECORDS_PER_PAGE}
+            />
+          </div>
         )}
       </div>
 

@@ -398,9 +398,15 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
                   <div className="w-full">
                     <p className="text-xs font-bold text-red-700 mb-1">DEVOLUCIÓN ANULADA</p>
                     {cancellationReason && (
-                      <p className="text-xs text-red-600">
-                        <span className="font-semibold">Motivo:</span> {cancellationReason}
-                      </p>
+                      <div className="min-w-0 max-w-full text-xs text-red-600">
+                        <span className="font-semibold">Motivo:</span>
+                        <CollapsibleText
+                          text={cancellationReason}
+                          limit={160}
+                          className="mt-0.5 text-xs text-red-600"
+                          buttonClassName="text-red-700"
+                        />
+                      </div>
                     )}
                     {cancelledAt && (
                       <p className="text-[10px] text-red-400 mt-1">

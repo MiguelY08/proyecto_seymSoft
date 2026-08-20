@@ -166,7 +166,7 @@ export default function RoleModal({
   }, [isOpen, showError]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || mode === "view") return;
 
     const localNameError = validateCurrentRole({
       name: nombre,

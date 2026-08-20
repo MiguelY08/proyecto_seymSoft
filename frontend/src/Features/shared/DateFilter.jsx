@@ -76,7 +76,7 @@ export const PurchasesFilters = ({
             title="Limpiar todos los filtros"
           >
             <Eraser className="w-4 h-4" strokeWidth={2} />
-            <span>Limpiar filtros</span>
+            
           </button>
         </div>
       )}

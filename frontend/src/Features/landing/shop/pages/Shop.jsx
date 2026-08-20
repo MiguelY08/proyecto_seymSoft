@@ -266,7 +266,7 @@ function Shop() {
     const loadCategories = async () => {
       try {
         setLoadingCategories(true);
-        const allCategories = await categoriesService.getAllWithSubcategories();
+        const allCategories = await categoriesService.getAllActiveWithSubcategories();
         setCategories(allCategories);
       } catch (error) {
         console.error('Error cargando categorías:', error);
@@ -279,65 +279,15 @@ function Shop() {
     loadCategories();
   }, []);
 
-  // ═══ EXTRAER MARCAS DINÁMICAMENTE ═══
-  // ═══ CONSTRUIR CATEGORÍAS CON CONTEOS ═══
-  const categoriesWithCount = useMemo(() => {
-    const catMap = {};
-
-    categories.forEach(category => {
-      const name = category.name ?? category.categoryName;
-      if (!name) return;
-
-      catMap[name] = {
-        count: 0,
-        id: Number(category.id),
-        subcategories: Object.fromEntries(
-          (category.subcategories || []).map(subcategory => [
-            subcategory.name,
-            { count: 0, id: Number(subcategory.id) },
-          ])
-        ),
-      };
-    });
-
-    products.forEach(product => {
-      // Contar por categoría
-      if (product.categories && product.categories.length > 0) {
-        product.categories.forEach(cat => {
-          if (!catMap[cat.name]) {
-            catMap[cat.name] = { count: 0, id: cat.id, subcategories: {} };
-          }
-          catMap[cat.name].count++;
-
-          // Contar subcategorías dentro de cada categoría
-          if (product.subcategories && product.subcategories.length > 0) {
-            product.subcategories.forEach(sub => {
-              if (!catMap[cat.name].subcategories[sub.name]) {
-                catMap[cat.name].subcategories[sub.name] = { count: 0, id: sub.id };
-              }
-              catMap[cat.name].subcategories[sub.name].count++;
-            });
-          }
-        });
-      }
-    });
-
-    // Convertir a array con estructura esperada
-    return Object.entries(catMap).map(([name, data]) => ({
-      name,
-      id: data.id,
-      count: data.count,
-      subcategories: Object.entries(data.subcategories).map(([subName, subData]) => ({
-        name: subName,
-        id: subData.id,
-        count: subData.count
-      }))
-    }));
-  }, [categories, products]);
+  // Los contadores y el catálogo deben partir del mismo conjunto de productos.
+  const activeProducts = useMemo(
+    () => products.filter(product => product.isActive),
+    [products]
+  );
 
   const categoryFilters = useMemo(
-    () => buildCategoryFilters(categories, products),
-    [categories, products]
+    () => buildCategoryFilters(categories, activeProducts),
+    [categories, activeProducts]
   );
 
   // ═══ MANEJAR CAMBIOS DE CATEGORÍA ═══
@@ -412,10 +362,7 @@ function Shop() {
 
   // ═══ FILTRAR PRODUCTOS ═══
   const filteredProducts = useMemo(() => {
-    return products.filter(product => {
-      // Filtrar solo productos activos
-      if (!product.isActive) return false;
-
+    return activeProducts.filter(product => {
       // Filtrar por categorías
       if (selectedCategoryIds.length > 0) {
         const hasSelectedCategory = product.categories?.some(cat =>
@@ -434,7 +381,7 @@ function Shop() {
 
       return true;
     });
-  }, [products, selectedCategoryIds, selectedSubcategoryIds]);
+  }, [activeProducts, selectedCategoryIds, selectedSubcategoryIds]);
 
   // ═══ ORDENAR PRODUCTOS ═══
   const sortedProducts = useMemo(() => {
@@ -480,11 +427,7 @@ function Shop() {
             ) : (
               <Filters
                 totalProducts={totalProducts}
-                categories={
-                  categoryFilters.length > 0
-                    ? categoryFilters
-                    : categoriesWithCount
-                }
+                categories={categoryFilters}
                 categoryOpen={categoryOpen}
                 setCategoryOpen={setCategoryOpen}
                 selectedCategoryIds={selectedCategoryIds}

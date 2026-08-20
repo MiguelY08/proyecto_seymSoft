@@ -17,6 +17,7 @@ import {
   Droplet,
 } from "lucide-react";
 import Pagination from "../../../../shared/PaginationLanding";
+import { useOutsideCloseWarning } from "../../../../shared/hooks/useOutsideCloseWarning";
 
 const TYPE_ICONS = {
   "Unidad": Package,
@@ -131,6 +132,7 @@ const BarcodeCell = ({ codigoBarras, codigosExtra = [] }) => (
 );
 
 const DetailPurchases = ({ purchase, onClose, loading = false }) => {
+  const { handleOutsideClick } = useOutsideCloseWarning(onClose, { hasUnsavedChanges: false });
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 5;
@@ -177,7 +179,7 @@ const DetailPurchases = ({ purchase, onClose, loading = false }) => {
 
   return (
     <div
-      onClick={onClose}
+      onClick={handleOutsideClick}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
     >
       <div

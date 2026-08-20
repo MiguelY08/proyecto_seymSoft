@@ -1,9 +1,10 @@
 // features/categories/components/SubcategoriesTable.jsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Trash2, SquarePen } from "lucide-react";
 import Pagination from "../../../../shared/PaginationLanding";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import ActiveToggle from "./ActiveToggle";
+import { getApiErrorMessage } from "../../../../shared/utils/apiErrorMessage";
 import {
   getSubcategories,
   updateSubcategory,
@@ -17,20 +18,6 @@ const normalizeName = (str = "") =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
-// ✅ Función local para verificar si una subcategoría tiene productos
-// (fallback por si el servicio falla)
-const checkSubcategoryHasProducts = async (subcategoryId) => {
-  try {
-    // Intentar importar el servicio
-    const { subcategoryHasProducts } = await import("../data/categoryproductsService");
-    return await subcategoryHasProducts(subcategoryId);
-  } catch (error) {
-    console.warn('categoryproductsService no disponible, usando fallback');
-    // Fallback: asumir que no tiene productos (permitir eliminación)
-    return false;
-  }
-};
-
 const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
   const { showConfirm, showSuccess, showWarning, showError } = useAlert();
   const [subcategories, setSubcategories] = useState([]);
@@ -41,6 +28,8 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 4;
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const deleteLockRef = useRef(false);
 
   const loadSubcategories = async () => {
     try {
@@ -61,7 +50,7 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
       });
       normalized.sort((a, b) => a.id - b.id);
       setSubcategories(normalized);
-    } catch (error) {
+    } catch {
       showError("Error", "No se pudieron cargar las subcategorías.");
     } finally {
       setLoading(false);
@@ -126,23 +115,7 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
     }
   };
 
-  const handleDelete = async (id) => {
-    // ✅ Verificar si la subcategoría tiene productos asociados
-    try {
-      const hasProducts = await checkSubcategoryHasProducts(id);
-      
-      if (hasProducts) {
-        showWarning(
-          "No se puede eliminar",
-          "Esta subcategoría tiene productos asociados. Reasígnelos o elimínelos antes de continuar."
-        );
-        return;
-      }
-    } catch (error) {
-      // Si hay error al verificar, mostrar advertencia y permitir continuar
-      console.warn('Error verificando productos:', error);
-    }
-
+  const executeDelete = async (id) => {
     const result = await showConfirm(
       "warning",
       "Eliminar subcategoría",
@@ -157,7 +130,28 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
       showSuccess("Eliminado", "La subcategoría fue eliminada correctamente.");
       if (refreshCategories) refreshCategories();
     } catch (error) {
-      showError("Error", error.message || "No se pudo eliminar la subcategoría.");
+      showError(
+        "No se puede eliminar",
+        getApiErrorMessage(error, {
+          conflictMessage:
+            "Esta subcategoría tiene productos asociados. Reasigna o elimina esos productos antes de eliminarla.",
+          fallback: "No se pudo eliminar la subcategoría.",
+        })
+      );
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (deleteLockRef.current) return;
+
+    deleteLockRef.current = true;
+    setDeletingId(id);
+
+    try {
+      await executeDelete(id);
+    } finally {
+      deleteLockRef.current = false;
+      setDeletingId(null);
     }
   };
 
@@ -277,9 +271,19 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
                         </button>
                         <button
                           onClick={() => handleDelete(sub.id)}
-                          className="text-gray-400 hover:text-red-600 transition-all duration-200 transform hover:scale-125"
+                          disabled={deletingId !== null}
+                          aria-busy={deletingId === sub.id}
+                          title={deletingId === sub.id ? "Procesando..." : "Eliminar subcategoría"}
+                          className={`transition-all duration-200 transform ${
+                            deletingId !== null
+                              ? "text-gray-300 cursor-not-allowed"
+                              : "text-gray-400 hover:text-red-600 hover:scale-125"
+                          }`}
                         >
-                          <Trash2 size={14} />
+                          <Trash2
+                            size={14}
+                            className={deletingId === sub.id ? "animate-pulse" : ""}
+                          />
                         </button>
                        </td>
                     </>

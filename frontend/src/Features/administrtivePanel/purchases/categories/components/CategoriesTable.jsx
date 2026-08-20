@@ -1,165 +1,98 @@
-// categories/components/CategoriesTable.jsx
-import React from "react";
-import { Edit, Trash2, Info, Layers } from "lucide-react";
-import Pagination from "../../../../shared/PaginationAdmin";
+import { Edit, Info, Layers, Trash2 } from "lucide-react";
 import ActiveToggle from "./ActiveToggle";
-import  Permission  from "../../../configuration/roles/components/Permission";
+import Permission from "../../../configuration/roles/components/Permission";
 
-function SubcategoriasBadge({ count }) {
+function SubcategoriesBadge({ count }) {
   const total = Number(count) || 0;
-
-  if (total === 0) {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-400">
-        <Layers size={13} />
-        0
-      </span>
-    );
-  }
+  const classes = total > 0
+    ? "border-sky-200 bg-sky-50 text-[#004D77]"
+    : "border-gray-200 bg-gray-100 text-gray-500";
 
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-semibold bg-[#004D77]/10 text-[#004D77]">
-      <Layers size={13} />
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${classes}`}>
+      <Layers size={11} />
       {total}
     </span>
   );
 }
 
 export const CategoriesTable = ({
-  currentData,
-  filteredCategories,
-  currentPage,
-  setCurrentPage,
-  totalPages,
-  startIndex,
-  endIndex,
+  currentData = [],
+  startIndex = 0,
   handleToggleStatus,
   handleDelete,
   handleEdit,
   handleViewDetail,
   highlightText,
-}) => {
-  return (
-    <>
-      <div className="overflow-x-auto rounded-xl shadow-md min-h-0 mb-4">
-        <table className="w-full" style={{ tableLayout: "fixed" }}>
-          <colgroup>
-            <col style={{ width: "6%" }} />
-            <col style={{ width: "42%" }} />
-            <col style={{ width: "16%" }} />
-            <col style={{ width: "16%" }} />
-            <col style={{ width: "20%" }} />
-          </colgroup>
-
-          <thead className="bg-[#004D77] text-white">
-            <tr>
-              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">#</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Nombre Categoría</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Subcategorías</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Estado</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">Acciones</th>
+}) => (
+  <div className="min-w-0 w-full overflow-x-auto overscroll-x-contain rounded-xl [-webkit-overflow-scrolling:touch]">
+    <table className="min-w-max w-full table-auto">
+      <thead className="sticky top-0 z-20 bg-[#004D77] text-white">
+        <tr>
+          <th className="sticky left-0 z-30 bg-[#004D77] px-3 py-2.5 text-center text-xs font-semibold">#</th>
+          <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Nombre categoría</th>
+          <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Subcategorías</th>
+          <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Estado</th>
+          <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {currentData.length === 0 ? (
+          <tr>
+            <td colSpan={5} className="py-12 text-center text-sm text-gray-400">
+              No se encontraron categorías.
+            </td>
+          </tr>
+        ) : currentData.map((category, index) => {
+          const rowBackground = index % 2 === 0 ? "bg-gray-100" : "bg-white";
+          return (
+            <tr key={category.id} className={`group transition-colors duration-150 ${rowBackground} hover:bg-blue-50`}>
+              <td className={`sticky left-0 z-10 px-3 py-2 text-center font-mono text-xs text-gray-700 whitespace-nowrap transition-colors duration-150 ${rowBackground} group-hover:bg-blue-50`}>
+                {startIndex + index + 1}
+              </td>
+              <td className="max-w-sm truncate px-3 py-2 text-center text-xs font-medium text-gray-800 whitespace-nowrap">
+                {highlightText(category.nombre || "")}
+              </td>
+              <td className="px-3 py-2 text-center whitespace-nowrap">
+                <SubcategoriesBadge count={category.subcategorias} />
+              </td>
+              <td className="px-3 py-2 text-center whitespace-nowrap">
+                <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                  category.estado === "Activo"
+                    ? "border-green-300 bg-green-100 text-green-700"
+                    : "border-red-200 bg-red-100 text-red-600"
+                }`}>
+                  {highlightText(category.estado || "")}
+                </span>
+              </td>
+              <td className="px-3 py-2">
+                <div className="flex items-center justify-center gap-1 sm:gap-1.5">
+                  <Permission permission="categorias.activar_desactivar">
+                    <ActiveToggle activo={category.estado === "Activo"} onChange={() => handleToggleStatus(category.id)} />
+                  </Permission>
+                  <Permission permission="categorias.ver_informacion">
+                    <button onClick={() => handleViewDetail(category)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]" title="Ver detalle">
+                      <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+                    </button>
+                  </Permission>
+                  <Permission permission="categorias.editar">
+                    <button onClick={() => handleEdit(category)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]" title="Editar categoría">
+                      <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+                    </button>
+                  </Permission>
+                  <Permission permission="categorias.eliminar">
+                    <button onClick={() => handleDelete(category.id)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-red-500" title="Eliminar categoría">
+                      <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+                    </button>
+                  </Permission>
+                </div>
+              </td>
             </tr>
-          </thead>
-
-          <tbody>
-            {!currentData.length ? (
-              <tr>
-                <td colSpan={5} className="py-8 text-center text-sm text-gray-400">
-                  No se encontraron categorías.
-                </td>
-              </tr>
-            ) : (
-              currentData.map((category, index) => {
-                const recordNumber = startIndex + index + 1;
-
-                return (
-                  <tr
-                    key={category.id}
-                    className={`${
-                      index % 2 === 0
-                        ? "bg-white hover:bg-gray-50"
-                        : "bg-gray-50 hover:bg-gray-100"
-                    }`}
-                  >
-                    <td className="px-4 py-2.5 text-center text-sm text-gray-500 font-medium whitespace-nowrap">
-                      {recordNumber}
-                    </td>
-
-                    <td className="px-4 py-2.5 text-center text-sm text-gray-800 font-medium truncate">
-                      {highlightText(category.nombre || "")}
-                    </td>
-
-                    <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
-                      <SubcategoriasBadge count={category.subcategorias} />
-                    </td>
-
-                    <td className="px-4 py-2.5 text-center text-sm text-gray-700 whitespace-nowrap">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-sm font-medium ${
-                          category.estado === "Activo"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
-                      >
-                        {highlightText(category.estado || "")}
-                      </span>
-                    </td>
-
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center justify-center gap-2">
-                        <Permission permission ="categorias.activar_desactivar" >
-                          <ActiveToggle
-                            activo={category.estado === "Activo"}
-                            onChange={() => handleToggleStatus(category.id)}
-                          />
-                        </Permission>
-                        <Permission permission ="categorias.ver_informacion" >
-                          <button
-                            onClick={() => handleViewDetail(category)}
-                            className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
-                            title="Ver detalle"
-                          >
-                            <Info className="w-4.5 h-4.5" strokeWidth={1.5} />
-                          </button>
-                        </Permission>
-                        <Permission permission ="categorias.editar" >
-                          <button
-                            onClick={() => handleEdit(category)}
-                            className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
-                            title="Editar categoría"
-                          >
-                            <Edit className="w-4.5 h-4.5" strokeWidth={1.5} />
-                          </button>
-                        </Permission>
-                        <Permission permission ="categorias.eliminar" >
-                          <button
-                            onClick={() => handleDelete(category.id)}
-                            className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
-                            title="Eliminar categoría"
-                          >
-                            <Trash2 className="w-4.5 h-4.5" strokeWidth={1.5} />
-                          </button>
-                        </Permission>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <Pagination
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-        totalPages={totalPages}
-        startIndex={startIndex}
-        endIndex={endIndex}
-        totalRecords={filteredCategories.length}
-      />
-    </>
-  );
-};
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+);
 
 export default CategoriesTable;

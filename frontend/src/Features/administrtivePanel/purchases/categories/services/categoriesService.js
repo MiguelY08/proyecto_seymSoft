@@ -2,6 +2,36 @@
 
 import apiClient from '../../../../../setting/apiClient.js';
 
+const INACTIVE_STATUS_VALUES = new Set([
+  'inactive',
+  'inactivo',
+  'disabled',
+  'desactivado',
+]);
+
+const isActiveCategory = (category) => {
+  if (!category) return false;
+
+  if (category.active === false || category.isActive === false) return false;
+  if (Number(category.idStatus ?? category.statusId ?? category.status?.id) === 2) return false;
+
+  const rawStatus =
+    category.status?.name ??
+    category.statusName ??
+    category.status ??
+    category.estado;
+
+  return !INACTIVE_STATUS_VALUES.has(String(rawStatus ?? '').trim().toLowerCase());
+};
+
+const keepOnlyActiveCategories = (categories) =>
+  categories.filter(isActiveCategory).map((category) => ({
+    ...category,
+    ...(Array.isArray(category.subcategories)
+      ? { subcategories: category.subcategories.filter(isActiveCategory) }
+      : {}),
+  }));
+
 export const categoriesService = {
   /**
    * Obtener todas las categorías
@@ -15,6 +45,12 @@ export const categoriesService = {
       console.error('Error fetching categories:', error);
       throw error;
     }
+  },
+
+  /** Obtener únicamente las categorías disponibles en la tienda pública. */
+  getAllActive: async () => {
+    const categories = await categoriesService.getAll();
+    return keepOnlyActiveCategories(categories);
   },
 
   /**
@@ -66,6 +102,12 @@ export const categoriesService = {
         }
       })
     );
+  },
+
+  /** Obtener categorías y subcategorías activas para la tienda pública. */
+  getAllActiveWithSubcategories: async () => {
+    const categories = await categoriesService.getAllWithSubcategories();
+    return keepOnlyActiveCategories(categories);
   },
 };
 

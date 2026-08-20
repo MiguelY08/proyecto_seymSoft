@@ -676,8 +676,7 @@ function InfoClient({ isOpen, onClose, client }) {
             </button>
           </div>
         </div>
-
-        {/* PANEL DE GRÃƒÆ’Ã†â€™Ãƒâ€šÃ‚ÂFICA GRANDE */}
+        {/* PANEL DE GRÁFICA GRANDE */}
         <div
           className={`hidden min-h-0 shrink-0 overflow-hidden transition-all duration-500 ease-in-out border-l border-gray-100 lg:block ${
             showGraph ? 'w-1/2 opacity-100' : 'w-0 opacity-0'

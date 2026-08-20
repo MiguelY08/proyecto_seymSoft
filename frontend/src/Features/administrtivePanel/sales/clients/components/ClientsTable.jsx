@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Info, SquarePen, Trash2, Users } from 'lucide-react';
 import ActiveToggle from './ActiveToggle';
 import { formatClientType, formatCurrency } from '../helpers/clientHelpers';
@@ -49,14 +49,6 @@ const getClientDisplayName = (client) => {
   return client.fullName;
 };
 
-const NAME_PREVIEW_LIMIT = 32;
-
-const getPreviewText = (value, limit = NAME_PREVIEW_LIMIT) => {
-  const text = String(value || '').trim();
-  if (text.length <= limit) return text;
-  return `${text.slice(0, limit).trim()}...`;
-};
-
 const TableHeader = () => (
   <thead className="sticky top-0 z-20 bg-[#004D77] text-white">
     <tr>
@@ -81,19 +73,17 @@ function ClientsTable({
   onToggleActive,
   onDelete,
 }) {
-  const [expandedNames, setExpandedNames] = useState({});
-
   if (!clients.length) {
     const isSearching = totalData > 0 || searchTerm.trim().length > 0;
     return (
-      <div className="flex h-full min-h-[420px] w-full flex-1 flex-col items-center justify-center px-4 py-16 gap-4">
-        <div className="w-20 h-20 rounded-full bg-[#004D77]/10 flex items-center justify-center">
-          <Users className="w-10 h-10 text-[#004D77]/40" strokeWidth={1.5} />
+      <div className="flex h-full min-h-[420px] w-full flex-1 flex-col items-center justify-center gap-4 px-4 py-16">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#004D77]/10">
+          <Users className="h-10 w-10 text-[#004D77]/40" strokeWidth={1.5} />
         </div>
         <p className="text-base font-semibold text-gray-500">
           {isSearching ? 'No se encontraron resultados' : 'No hay clientes registrados'}
         </p>
-        <p className="text-sm text-gray-400 text-center max-w-xs">
+        <p className="max-w-xs text-center text-sm text-gray-400">
           {isSearching ? 'Ningún cliente coincide con la búsqueda actual.' : 'Aún no se han registrado clientes.'}
         </p>
       </div>
@@ -121,15 +111,10 @@ function ClientsTable({
             const recordNumber = (startIndex || 0) + index + 1;
             const isSystemClient = client.id === 999999999;
             const displayName = isSystemClient ? 'Cliente Sistema' : getClientDisplayName(client);
-            const shouldCollapseName = !isSystemClient && String(displayName || '').length > NAME_PREVIEW_LIMIT;
-            const isNameExpanded = Boolean(expandedNames[client.id]);
-            const visibleName = shouldCollapseName && !isNameExpanded
-              ? getPreviewText(displayName)
-              : displayName;
 
             return (
               <tr key={client.id} className={`h-[38px] transition-colors duration-150 ${rowBg}`}>
-                <td className="px-2.5 py-1.5 text-center text-xs text-gray-500 font-medium whitespace-nowrap">
+                <td className="px-2.5 py-1.5 text-center text-xs font-medium whitespace-nowrap text-gray-500">
                   {recordNumber}
                 </td>
 
@@ -146,21 +131,9 @@ function ClientsTable({
 
                 <td className="px-2.5 py-1.5 text-center text-xs font-medium text-gray-800">
                   <div className="mx-auto min-w-0 max-w-full">
-                    <span
-                      className={`block min-w-0 ${isNameExpanded ? 'whitespace-normal break-words [overflow-wrap:anywhere]' : 'truncate'}`}
-                      title={displayName}
-                    >
-                      {isSystemClient ? 'Cliente Sistema' : highlightText(visibleName, searchTerm)}
+                    <span className="block min-w-0 truncate" title={displayName}>
+                      {isSystemClient ? 'Cliente Sistema' : highlightText(displayName, searchTerm)}
                     </span>
-                    {shouldCollapseName && (
-                      <button
-                        type="button"
-                        onClick={() => setExpandedNames((prev) => ({ ...prev, [client.id]: !prev[client.id] }))}
-                        className="mt-0.5 text-[10px] font-semibold text-[#004D77] transition hover:underline"
-                      >
-                        {isNameExpanded ? 'Ver menos' : 'Ver más'}
-                      </button>
-                    )}
                   </div>
                 </td>
 
@@ -179,7 +152,7 @@ function ClientsTable({
                 <td className="px-2.5 py-1.5">
                   {isSystemClient ? (
                     <div className="flex items-center justify-center">
-                      <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#004D77]/10 text-[#004D77] border border-[#004D77]/20 whitespace-nowrap">
+                      <span className="whitespace-nowrap rounded-full border border-[#004D77]/20 bg-[#004D77]/10 px-2 py-0.5 text-[11px] font-semibold text-[#004D77]">
                         Sistema
                       </span>
                     </div>
@@ -195,7 +168,7 @@ function ClientsTable({
                       <Permission permission="clientes.ver_informacion">
                         <button
                           onClick={() => onInfo(client)}
-                          className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                          className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]"
                           title="Información del cliente"
                         >
                           <Info className="h-4 w-4" strokeWidth={1.5} />
@@ -205,7 +178,7 @@ function ClientsTable({
                       <Permission permission="clientes.editar">
                         <button
                           onClick={() => onEdit(client)}
-                          className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
+                          className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]"
                           title="Editar cliente"
                         >
                           <SquarePen className="h-4 w-4" strokeWidth={1.5} />
@@ -215,7 +188,7 @@ function ClientsTable({
                       <Permission permission="clientes.eliminar">
                         <button
                           onClick={() => onDelete(client)}
-                          className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
+                          className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-red-500"
                           title="Eliminar cliente"
                         >
                           <Trash2 className="h-4 w-4" strokeWidth={1.5} />

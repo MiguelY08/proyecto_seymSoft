@@ -1,163 +1,94 @@
-// features/administrtivePanel/purchases/nonConformingProducts/components/NonConformingProductsTable.jsx
-import { Info, XCircle, Ban } from "lucide-react";
-import Pagination from "../../../../shared/PaginationAdmin";
+import { Ban, Info, XCircle } from "lucide-react";
 import Permission from "../../../configuration/roles/components/Permission";
 
-const EstadoBadge = ({ estado }) => {
-  const isAnulado = estado === "Anulado";
-
+const StatusBadge = ({ status }) => {
+  const isCancelled = status === "Anulado";
   return (
-    <span
-      className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-        isAnulado
-          ? "bg-red-100 text-red-700"
-          : "bg-emerald-100 text-emerald-700"
-      }`}
-    >
-      {estado || "Activo"}
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${
+      isCancelled
+        ? "border-red-200 bg-red-100 text-red-600"
+        : "border-green-300 bg-green-100 text-green-700"
+    }`}>
+      {status || "Activo"}
     </span>
   );
 };
 
-// Función para truncar texto con límite de caracteres
-const truncateText = (text, maxLength = 50) => {
+const truncateText = (text, maxLength = 42) => {
   if (!text) return "-";
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength) + "...";
+  return text.length <= maxLength ? text : `${text.slice(0, maxLength)}...`;
 };
 
 export const NonConformingProductsTable = ({
   currentData = [],
-  filteredReports = [],
-  currentPage,
-  setCurrentPage,
-  totalPages,
-  startIndex,
-  endIndex,
+  startIndex = 0,
   handleCancel,
   highlightText,
   handleViewDetails,
-}) => {
-  const safeData = Array.isArray(currentData) ? currentData : [];
-  const safeFiltered = Array.isArray(filteredReports) ? filteredReports : [];
-
-  return (
-    <>
-      <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
-        <div className="overflow-x-auto">
-          <table className="min-w-max w-full">
-            <thead className="bg-[#004D77] text-white">
-              <tr>
-                <th className="px-3 py-2 text-center font-semibold">#</th>
-                <th className="px-3 py-2 text-left font-semibold">Nombre</th>
-                <th className="px-3 py-2 text-center font-semibold">Código de Barras</th>
-                <th className="px-3 py-2 text-center font-semibold">Categoría</th>
-                <th className="px-3 py-2 text-center font-semibold">Cantidad Afectada</th>
-                <th className="px-3 py-2 text-center font-semibold">Fecha de Detección</th>
-                <th className="px-3 py-2 text-left font-semibold max-w-[200px]">Motivo del Reporte</th>
-                <th className="px-3 py-2 text-center font-semibold">Acciones</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {safeData.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-8 text-center text-sm text-gray-400">
-                    No se encontraron reportes.
-                  </td>
-                </tr>
-              ) : (
-                safeData.map((report, index) => {
-                  const motivoCompleto = report.motivo || "";
-                  const motivoTruncado = truncateText(motivoCompleto, 50);
-
-                  return (
-                    <tr
-                      key={report.id}
-                      className={`${
-                        report.estado === "Anulado"
-                          ? "bg-red-50 opacity-70"
-                          : index % 2 === 0
-                          ? "bg-white hover:bg-gray-50"
-                          : "bg-gray-50 hover:bg-gray-100"
-                      }`}
-                    >
-                      <td className="px-3 py-2.5 text-center">
-                        {highlightText(startIndex + index + 1)}
-                      </td>
-                      <td className="px-3 py-2.5 max-w-[150px] truncate">
-                        <span title={report.nombre || ""}>
-                          {highlightText(report.nombre)}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2.5 text-center">
-                        {highlightText(report.codigoBarras)}
-                      </td>
-                      <td className="px-3 py-2.5 text-center">
-                        {highlightText(report.categoria)}
-                      </td>
-                      <td className="px-3 py-2.5 text-center">
-                        {highlightText(report.cantidadAfectada)}
-                      </td>
-                      <td className="px-3 py-2.5 text-center">
-                        {highlightText(report.fechaDeteccion)}
-                      </td>
-                      <td className="px-3 py-2.5 max-w-[200px]">
-                        <span
-                          className="block truncate"
-                          title={motivoCompleto}
-                        >
-                          {highlightText(motivoTruncado)}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2.5 text-center">
-                        <div className="flex justify-center gap-3">
-                          <Permission permission="producto_no_conforme.ver_informacion">
-                            <button
-                              onClick={() => handleViewDetails(report)}
-                              className="text-gray-400 hover:text-blue-600 transition-all duration-200 transform hover:scale-125"
-                              title="Ver detalles completos"
-                            >
-                              <Info size={16} />
-                            </button>
-                          </Permission>
-                          <Permission permission="producto_no_conforme.anular">
-                            <button
-                              onClick={() => {
-                                if (report.estado !== "Anulado") {
-                                  handleCancel(report.id);
-                                }
-                              }}
-                              className={`transition-all duration-200 transform hover:scale-125 ${
-                                report.estado === "Anulado"
-                                  ? "text-red-600 cursor-not-allowed"
-                                  : "text-gray-400 hover:text-red-600"
-                              }`}
-                            >
-                              {report.estado === "Anulado" ? <Ban size={16} /> : <XCircle size={16} />}
-                            </button>
-                          </Permission>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <Pagination
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-        totalPages={totalPages}
-        startIndex={startIndex}
-        endIndex={endIndex}
-        totalRecords={safeFiltered.length}
-      />
-    </>
-  );
-};
+}) => (
+  <div className="min-w-0 w-full overflow-x-auto overscroll-x-contain rounded-xl [-webkit-overflow-scrolling:touch]">
+    <table className="min-w-max w-full table-auto">
+      <thead className="sticky top-0 z-20 bg-[#004D77] text-white">
+        <tr>
+          <th className="sticky left-0 z-30 bg-[#004D77] px-3 py-2.5 text-center text-xs font-semibold">#</th>
+          <th className="px-3 py-2.5 text-center text-xs font-semibold">Nombre</th>
+          <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Código de barras</th>
+          <th className="px-3 py-2.5 text-center text-xs font-semibold">Categoría</th>
+          <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Cantidad afectada</th>
+          <th className="px-3 py-2.5 text-center text-xs font-semibold whitespace-nowrap">Fecha de detección</th>
+          <th className="px-3 py-2.5 text-center text-xs font-semibold">Motivo</th>
+          <th className="px-3 py-2.5 text-center text-xs font-semibold">Estado</th>
+          <th className="px-3 py-2.5 text-center text-xs font-semibold">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {currentData.length === 0 ? (
+          <tr>
+            <td colSpan={9} className="py-12 text-center text-sm text-gray-400">No se encontraron reportes.</td>
+          </tr>
+        ) : currentData.map((report, index) => {
+          const isCancelled = report.estado === "Anulado";
+          const rowBackground = index % 2 === 0 ? "bg-gray-100" : "bg-white";
+          return (
+            <tr key={report.id} className={`group transition-colors duration-150 ${rowBackground} hover:bg-blue-50 ${isCancelled ? "opacity-70" : ""}`}>
+              <td className={`sticky left-0 z-10 px-3 py-2 text-center font-mono text-xs text-gray-700 whitespace-nowrap transition-colors duration-150 ${rowBackground} group-hover:bg-blue-50`}>
+                {highlightText(startIndex + index + 1)}
+              </td>
+              <td className="max-w-[180px] truncate px-3 py-2 text-center text-xs font-medium text-gray-800 whitespace-nowrap" title={report.nombre || ""}>
+                {highlightText(report.nombre)}
+              </td>
+              <td className="px-3 py-2 text-center font-mono text-xs text-gray-700 whitespace-nowrap">{highlightText(report.codigoBarras)}</td>
+              <td className="max-w-[150px] truncate px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">{highlightText(report.categoria)}</td>
+              <td className="px-3 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">{highlightText(report.cantidadAfectada)}</td>
+              <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">{highlightText(report.fechaDeteccion)}</td>
+              <td className="max-w-[220px] px-3 py-2 text-center text-xs text-gray-700" title={report.motivo || ""}>
+                <span className="block truncate">{highlightText(truncateText(report.motivo))}</span>
+              </td>
+              <td className="px-3 py-2 text-center whitespace-nowrap"><StatusBadge status={report.estado} /></td>
+              <td className="px-3 py-2">
+                <div className="flex items-center justify-center gap-1 sm:gap-1.5">
+                  <Permission permission="producto_no_conforme.ver_informacion">
+                    <button onClick={() => handleViewDetails(report)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]" title="Ver información">
+                      <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+                    </button>
+                  </Permission>
+                  <Permission permission="producto_no_conforme.anular">
+                    {isCancelled ? (
+                      <span className="cursor-not-allowed text-gray-200" title="Reporte anulado"><Ban className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} /></span>
+                    ) : (
+                      <button onClick={() => handleCancel(report.id)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-red-500" title="Anular reporte">
+                        <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+                      </button>
+                    )}
+                  </Permission>
+                </div>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+);
 
 export default NonConformingProductsTable;
