@@ -832,14 +832,14 @@ function SaleForm() {
         <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
           <button
             onClick={handleCancel}
-            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 sm:w-auto"
+            className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
             disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#003b5c] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
           >
             {loading ? (
               <>

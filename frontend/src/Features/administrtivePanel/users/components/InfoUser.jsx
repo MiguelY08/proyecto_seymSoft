@@ -65,7 +65,7 @@ function InfoUser({
 
   // Filas de información (se eliminó el campo de documento)
   const fields = [
-    { icon: User,         label: 'Nombre completo',      value: user.name                               },
+    { icon: User, label: 'Nombre completo', value: user.name },
     { icon: Mail,         label: 'Correo electrónico',   value: user.email                              },
     { icon: Phone,        label: 'Teléfono / Celular',   value: user.phone || 'No registrado'           },
     { icon: ShieldCheck,  label: 'Tipo de usuario',      value: roleDisplay                             },
@@ -88,68 +88,69 @@ function InfoUser({
           ${visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
       >
         {/* Header del modal */}
-        <div className="flex items-center justify-between bg-[#004D77] px-4 py-4 shrink-0 sm:px-6">
-          <h2 className="text-white font-semibold text-lg">Detalles</h2>
+        <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-6 sm:py-6">
+          <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#004D77] ring-1 ring-[#004D77]">
+                <span className="text-base font-bold leading-none tracking-tight text-white">
+                  {initials || 'U'}
+                </span>
+              </div>
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-bold text-[#f9f9f9] sm:text-xl">{user.name || 'Usuario sin nombre'}</h2>
+                <span className={`mt-2 inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
+                  user.active
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : 'border-red-200 bg-red-50 text-red-500'
+                }`}>
+                  {user.active ? 'Activo' : 'Inactivo'}
+                </span>
+              </div>
+            </div>
           <button
             onClick={handleClose}
-            className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
+            aria-label="Cerrar detalle"
+            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/80 transition hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70"
           >
-            <X className="w-5 h-5" strokeWidth={2} />
+            <X className="h-5 w-5" strokeWidth={2} />
           </button>
-        </div>
+          </div>
+        </header>
 
         {/* Cuerpo */}
         <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-4 pb-5 pt-6 sm:px-6 sm:pb-4">
 
-          {/* Avatar + nombre + estado */}
-          <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:gap-4 sm:text-left">
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-2 border-[#004D77]/20 bg-[#004D77]/10 sm:h-14 sm:w-14">
-              <span className="text-2xl font-bold leading-none tracking-tight text-[#004D77] sm:text-lg">
-                {initials}
-              </span>
-            </div>
-            <div className="flex min-w-0 flex-col items-center gap-1 sm:items-start">
-              <p className="max-w-full text-lg font-semibold leading-tight text-gray-800 sm:text-base sm:truncate">
-                {user.name}
-              </p>
-              <span className={`self-start px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
-                user.active
-                  ? 'bg-green-50 text-green-700 border-green-200'
-                  : 'bg-red-50 text-red-500 border-red-200'
-              }`}>
-                {user.active ? 'Activo' : 'Inactivo'}
-              </span>
-            </div>
-          </div>
-
-          {/* Separador */}
-          <div className="h-px bg-gray-100" />
-
           {/* Lista de campos */}
-          <div className="flex flex-col gap-3">
-            {fields.map(({ icon: Icon, label, value }) => (
-              <div key={label} className="flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50/70 p-3 sm:border-0 sm:bg-transparent sm:p-0">
-                <div className="w-8 h-8 rounded-lg bg-[#004D77]/8 flex items-center justify-center shrink-0 mt-0.5">
-                  <Icon className="w-4 h-4 text-[#004D77]/60" strokeWidth={1.8} />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {fields.map(({ icon: Icon, label, value }) => {
+              const isFullWidth = value === user.name || value === user.email;
+
+              return (
+              <div key={label} className={`flex min-w-0 items-start gap-3 rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-sm sm:p-4 ${isFullWidth ? 'sm:col-span-2' : ''}`}>
+                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-[#004D77] ring-1 ring-sky-100">
+                  <Icon className="h-5 w-5" strokeWidth={1.8} />
                 </div>
-                <div className="flex flex-col gap-0.5 min-w-0">
-                  <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide leading-none">
+                <div className="min-w-0 pt-0.5">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">
                     {label}
-                  </span>
-                  <span className="text-sm font-medium text-gray-800 break-all leading-snug">
+                  </p>
+                  <p className="mt-1 break-words text-sm font-semibold leading-snug text-slate-700">
                     {value}
-                  </span>
+                  </p>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-gray-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
+        <footer className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
           <button
             onClick={handleClose}
-            className="w-full rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 cursor-pointer sm:w-auto sm:py-2"
+            className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto"
           >
             Cerrar
           </button>
@@ -157,13 +158,13 @@ function InfoUser({
           {!isSystemUser && !isSelf && (
             <button
               onClick={handleEdit}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] cursor-pointer sm:w-auto sm:py-2"
+              className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto"
             >
               <SquarePen className="w-4 h-4" strokeWidth={1.8} />
               Editar usuario
             </button>
           )}
-        </div>
+        </footer>
       </div>
     </div>
   );

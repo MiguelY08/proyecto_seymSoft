@@ -1,9 +1,10 @@
 // features/categories/pages/FormCategory.jsx
 import React, { useState } from "react";
-import { X, AlertCircle, Plus, Trash2, ChevronRight, ChevronLeft, Tag, Layers } from "lucide-react";
+import { AlertCircle, Plus, Trash2, ChevronRight, ChevronLeft, Tag, Layers, FolderPlus } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import ActiveToggle from "../components/ActiveToggle";
 import { useOutsideCloseWarning } from "../../../../shared/hooks/useOutsideCloseWarning";
+import PurchaseModalHeader from "../../../../shared/PurchaseModalHeader";
 
 const normalizeName = (str = "") =>
   str
@@ -164,12 +165,13 @@ function FormCategory({ allCategories = [], onClose, onSave }) {
         className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 bg-[#004D77]">
-          <h2 className="text-white font-semibold text-lg">Crear Categoría</h2>
-          <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        <PurchaseModalHeader
+          icon={FolderPlus}
+          eyebrow="Gestión de categorías"
+          title="Crear categoría"
+          onClose={onClose}
+          closeLabel="Cerrar formulario de categoría"
+        />
 
         <StepIndicator currentStep={step} />
 

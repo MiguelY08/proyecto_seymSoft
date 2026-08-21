@@ -1,10 +1,11 @@
 // features/administrtivePanel/purchases/nonConformingProducts/pages/FormNonConformingProduct.jsx
-import { X, AlertCircle, Search, Check, PackageX } from "lucide-react";
+import { AlertCircle, Search, Check, PackageX, ClipboardPlus } from "lucide-react";
 import { useState } from "react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import { createNonConforming, getProductByBarcode } from "../data/nonConformingService";
 import { normalizeBarcode, useBarcodeScanner } from "../../../../shared/scanner";
 import { useOutsideCloseWarning } from "../../../../shared/hooks/useOutsideCloseWarning";
+import PurchaseModalHeader from "../../../../shared/PurchaseModalHeader";
 
 const NON_CONFORMING_FORM_SCANNER_FIELD = "non-conforming-product-form-search";
 
@@ -183,13 +184,13 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
         className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* HEADER */}
-        <div className="flex items-center justify-between px-6 py-4 bg-[#0E5679]">
-          <h2 className="text-white font-semibold text-xl">Reporte de Producto No Conforme</h2>
-          <button onClick={handleCancel} className="text-white hover:bg-white/20 rounded-full p-1 transition">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+        <PurchaseModalHeader
+          icon={ClipboardPlus}
+          eyebrow="Control de calidad"
+          title="Reporte de producto no conforme"
+          onClose={handleCancel}
+          closeLabel="Cerrar reporte de producto no conforme"
+        />
 
         {/* BODY */}
         <div className="px-6 py-6 flex flex-col gap-5">

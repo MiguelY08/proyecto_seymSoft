@@ -137,18 +137,25 @@ function PurchaseReturnModal({
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-0 backdrop-blur-sm sm:p-4">
-      <div className="relative flex h-dvh w-full max-w-xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:rounded-lg">
+      <div className="relative flex h-dvh w-full max-w-xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:rounded-2xl">
         <LoadingOverlay show={loading} message="Generando devolución de compra..." />
-        <header className="flex items-center justify-between bg-[#004D77] px-5 py-4">
-          <div>
-            <h2 className="text-base font-bold text-white">Generar devolución de compra</h2>
-            <p className="mt-0.5 text-xs text-white/70">Producto defectuoso recibido y listo</p>
+        <header className="relative flex items-center justify-between overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-4">
+          <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
+          <div className="relative flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+              <CheckCircle2 className="h-5 w-5 text-white" strokeWidth={2} />
+            </div>
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-bold text-white">Generar devolución de compra</h2>
+              <p className="mt-0.5 text-xs text-white/70">Producto defectuoso recibido y listo</p>
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="rounded-lg p-2 text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+            className="relative rounded-full border border-white/10 p-2 text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
             aria-label="Cerrar"
           >
             <X className="h-5 w-5" />
@@ -265,7 +272,7 @@ function PurchaseReturnModal({
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="flex-1 rounded-lg bg-gray-500 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 disabled:opacity-60"
+            className="flex-1 rounded-full border border-[#004D77] bg-white py-2.5 text-sm font-medium text-[#004D77] shadow-sm transition-colors hover:bg-sky-100 hover:shadow-md disabled:opacity-60"
           >
             Cancelar
           </button>
@@ -273,7 +280,7 @@ function PurchaseReturnModal({
             type="button"
             onClick={handleSubmit}
             disabled={loading || maximumQuantity < 1 || Object.keys(errors).length > 0}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#004D77] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="flex flex-1 items-center justify-center gap-2 rounded-full border border-[#004D77] bg-[#004D77] py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:border-[#003a5c] hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-300"
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             {loading ? 'Generando...' : 'Generar devolución'}
@@ -285,3 +292,4 @@ function PurchaseReturnModal({
 }
 
 export default PurchaseReturnModal;
+

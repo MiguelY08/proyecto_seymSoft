@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2, Trash2, X } from "lucide-react";
 import { cancelInstallment } from "../services/paymentsServices";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 
@@ -198,30 +198,48 @@ export default function CancelPaymentModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-2 sm:p-4 z-50">
-      <div className="bg-white w-full max-w-160 max-h-[95vh] rounded-2xl shadow-xl font-lexend overflow-hidden flex flex-col">
-        {/* HEADER */}
-        <div className="bg-[#0E3B5F] text-white px-4 sm:px-5 py-3 sm:py-4 rounded-t-2xl flex justify-between items-center gap-3">
-          <h2 className="text-base sm:text-lg font-semibold">Anular Abono</h2>
-          <button onClick={onClose} className="cursor-pointer">
-            ✕
-          </button>
-        </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-0 sm:p-4">
+      <div className="flex h-[100dvh] max-h-[100dvh] w-full max-w-160 flex-col overflow-hidden rounded-none bg-white font-lexend shadow-xl sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl">
+        <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-6 sm:py-6">
+          <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#004D77] ring-1 ring-[#004D77]">
+                <Trash2 className="h-5 w-5 text-white" strokeWidth={1.8} />
+              </div>
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-bold text-[#f9f9f9] sm:text-xl">
+                  Anular abono
+                </h2>
+                <p className="mt-0.5 truncate text-sm text-sky-100">
+                  {account?.nombre || "Cliente sin nombre"}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              aria-label="Cerrar anulación de abono"
+              className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/80 transition hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <X className="h-5 w-5" strokeWidth={2} />
+            </button>
+          </div>
+        </header>
 
-        <div className="flex-1 min-h-0 p-3 sm:p-4 md:p-5 flex flex-col gap-3 sm:gap-4 overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 sm:gap-4 sm:p-4 md:p-5">
           <p className="text-sm text-gray-600 leading-relaxed">
             Esta acción marcará el abono como anulado. El saldo de la factura
             será recalculado automáticamente.
           </p>
 
           {/* DATOS DEL ABONO */}
-          <div className="bg-gray-100 p-3 sm:p-4 rounded-xl text-sm space-y-1.5 wrap-break-word">
+          <div className="grid grid-cols-1 gap-2 text-sm wrap-break-word sm:grid-cols-2 lg:grid-cols-3 [&>p]:rounded-xl [&>p]:border [&>p]:border-slate-200 [&>p]:bg-slate-50 [&>p]:p-3 [&>p]:text-slate-700 [&>p]:shadow-sm">
             <p>
               <strong>Nro Abono:</strong> #
               {payment?.displayId ?? payment?.nroAbono ?? "-"}
-            </p>
-            <p>
-              <strong>Cliente:</strong> {account?.nombre ?? "-"}
             </p>
             <p>
               <strong>Fecha:</strong>{" "}
@@ -311,24 +329,30 @@ export default function CancelPaymentModal({
             </div>
           </div>
 
-          {/* BOTONES */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-1 mt-auto shrink-0">
-            <button
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="flex-1 bg-gray-400 text-white py-2 rounded-xl cursor-pointer hover:bg-gray-500 transition disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-              className="flex-1 text-white py-2 rounded-xl cursor-pointer bg-[#004D77] hover:bg-[#003D5e] transition disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? "Anulando..." : "Confirmar anulación"}
-            </button>
-          </div>
         </div>
+        <footer className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+          >
+            Cerrar
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+          >
+            {isSubmitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" strokeWidth={1.8} />
+            )}
+            {isSubmitting ? "Anulando..." : "Confirmar anulación"}
+          </button>
+        </footer>
       </div>
     </div>
   );

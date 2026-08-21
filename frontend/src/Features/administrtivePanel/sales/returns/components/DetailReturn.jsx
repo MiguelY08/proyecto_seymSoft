@@ -378,12 +378,19 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-0 backdrop-blur-sm sm:p-4">
-        <div className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] sm:h-auto sm:max-h-[92vh] sm:max-w-[920px] sm:rounded-3xl">
+        <div className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] sm:h-auto sm:max-h-[92vh] sm:max-w-[920px] sm:rounded-2xl">
 
-          <div className="bg-[#004D77] px-6 py-3.5 flex items-center justify-between flex-shrink-0">
-            <h2 className="text-white font-bold text-[15px] tracking-wide">Detalles de la devolución</h2>
-            <div className="flex items-center gap-2">
-              <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-xl bg-white/20 hover:bg-white/30 text-white transition cursor-pointer hover:scale-105">
+          <div className="relative flex flex-shrink-0 items-center justify-between overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-6 py-3.5">
+            <div className="pointer-events-none absolute -right-10 -top-14 h-32 w-32 rounded-full bg-white/10" />
+            <div className="pointer-events-none absolute -bottom-16 right-16 h-28 w-28 rounded-full bg-sky-300/10" />
+            <div className="relative flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+                <ReceiptText className="h-5 w-5 text-white" strokeWidth={2} />
+              </div>
+              <h2 className="min-w-0 truncate text-[15px] font-bold tracking-wide text-white">Detalles de la devolución</h2>
+            </div>
+            <div className="relative flex items-center gap-2">
+              <button onClick={onClose} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/15 text-white transition hover:scale-105 hover:bg-white/25">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -579,7 +586,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
             <button
               type="button"
               onClick={onClose}
-              className="w-full rounded-lg bg-gray-500 px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-600 sm:w-auto"
+              className="w-full rounded-full border border-[#004D77] bg-white px-6 py-2 text-sm font-medium text-[#004D77] shadow-sm transition-colors hover:bg-sky-100 hover:shadow-md sm:w-auto"
             >
               Cancelar
             </button>

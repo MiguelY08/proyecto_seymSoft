@@ -77,16 +77,23 @@ const ViewEvidence = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-0 backdrop-blur-sm sm:p-4">
-      <div className="flex h-dvh w-full max-w-5xl flex-col overflow-hidden bg-white shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] sm:h-auto sm:max-h-[95vh] sm:rounded-lg">
+      <div className="flex h-dvh w-full max-w-5xl flex-col overflow-hidden bg-white shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] sm:h-auto sm:max-h-[95vh] sm:rounded-2xl">
 
-        <div className="flex items-center justify-between px-6 py-3.5 flex-shrink-0 bg-gradient-to-r from-[#004D77] to-[#006699]">
-          <div>
-            <h2 className="text-base font-bold text-white">{title}</h2>
-            <p className="text-xs text-white/70">
-              {evidences.length} {evidences.length === 1 ? 'evidencia' : 'evidencias'}
-            </p>
+        <div className="relative flex flex-shrink-0 items-center justify-between overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-6 py-3.5">
+          <div className="pointer-events-none absolute -right-10 -top-14 h-32 w-32 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-16 right-16 h-28 w-28 rounded-full bg-sky-300/10" />
+          <div className="relative flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+              <ImageIcon className="h-5 w-5 text-white" strokeWidth={2} />
+            </div>
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-bold text-white">{title}</h2>
+              <p className="text-xs text-white/70">
+                {evidences.length} {evidences.length === 1 ? 'evidencia' : 'evidencias'}
+              </p>
+            </div>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-lg transition text-white cursor-pointer">
+          <button onClick={onClose} className="relative cursor-pointer rounded-full border border-white/10 p-1.5 text-white transition hover:bg-white/20">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -200,7 +207,7 @@ const ViewEvidence = ({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg bg-gray-500 px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-600"
+              className="rounded-full border border-[#004D77] bg-white px-6 py-2 text-sm font-medium text-[#004D77] shadow-sm transition-colors hover:bg-sky-100 hover:shadow-md"
             >
               Cancelar
             </button>

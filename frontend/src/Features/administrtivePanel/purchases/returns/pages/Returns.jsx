@@ -371,10 +371,6 @@ function Returns() {
       {formLoading && (
         <FullScreenSpinner message="Cargando formulario de devolución..." />
       )}
-      {annulLoading && (
-        <FullScreenSpinner message="Anulando devolución..." />
-      )}
-
       {selectedReturn && (
         <ReturnInfo
           devolucion={selectedReturn}

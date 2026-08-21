@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Loader2, RotateCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { resetPassword as resetPasswordService, forgotPassword } from "../services/authService.js";
 import apiClient from "../../../setting/apiClient.js";
@@ -350,12 +350,18 @@ export default function ResetPasswordForm() {
   return (
     <div className="w-full max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
 
-      {/* Header */}
-      <div className="bg-[#004D77] py-4">
-        <h2 className="font-lexend text-lg md:text-xl font-semibold text-white text-center">
-          Restablecer Contraseña
-        </h2>
-      </div>
+      <header className="relative overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-6 sm:py-6">
+        <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
+        <div className="relative flex items-center justify-center gap-3.5">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#004D77] ring-1 ring-[#004D77]">
+            <KeyRound className="h-5 w-5 text-white" strokeWidth={1.8} />
+          </div>
+          <h2 className="font-lexend text-lg font-bold text-[#f9f9f9] sm:text-xl">
+            Restablecer contraseña
+          </h2>
+        </div>
+      </header>
 
       {/* Body */}
       <div className="px-6 py-5 md:px-7 md:py-6">
@@ -491,15 +497,18 @@ export default function ResetPasswordForm() {
           <button
               type="submit"
               disabled={loading || codeStatus !== "valid"}
-              className={`w-full py-2.5 rounded-lg transition cursor-pointer text-sm font-medium
-                ${
-                  loading || codeStatus !== "valid"
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-[#004D77] text-white hover:bg-[#003D5E]"
-                }
-              `}
+              className={`inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 ${
+                loading || codeStatus !== "valid"
+                  ? "cursor-not-allowed opacity-70"
+                  : "cursor-pointer hover:bg-[#003b5c] hover:shadow-md"
+              }`}
               >
-              {loading ? "Actualizando..." : "Restablecer Contraseña"}
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <KeyRound className="h-4 w-4" strokeWidth={1.8} />
+              )}
+              {loading ? "Actualizando..." : "Restablecer contraseña"}
             </button>
 
           {/* Reenviar Código */}
@@ -513,8 +522,9 @@ export default function ResetPasswordForm() {
                 type="button"
                 onClick={handleResendCode}
                 disabled={loading}
-                className="text-xs text-blue-700 hover:underline cursor-pointer disabled:opacity-50"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-[#004D77] transition hover:bg-[#004D77]/10 focus:outline-none focus:ring-2 focus:ring-[#004D77]/30 disabled:cursor-not-allowed disabled:opacity-50"
               >
+                <RotateCcw className="h-3.5 w-3.5" strokeWidth={1.8} />
                 Reenviar código
               </button>
             )}

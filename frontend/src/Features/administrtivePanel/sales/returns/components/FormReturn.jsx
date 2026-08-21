@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { X, ChevronDown, ChevronLeft, Minus, Plus, Image, Search, Loader, Lock } from 'lucide-react';
+import { X, ChevronDown, ChevronLeft, Minus, Plus, Image, Search, Loader, Lock, ClipboardList } from 'lucide-react';
 import Evidence from './Evidence';
 import FormSelect from '../../../../shared/FormSelect';
 import { useAlert } from '../../../../shared/alerts/useAlert';
@@ -1678,18 +1678,25 @@ useEffect(() => {
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-0 backdrop-blur-sm sm:p-4">
-      <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-white shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] sm:h-auto sm:max-h-[92vh] sm:max-w-[1320px] sm:rounded-lg">
-        <div className="flex flex-shrink-0 items-center justify-between bg-gradient-to-r from-[#004D77] to-[#006699] px-4 py-3.5 sm:rounded-t-lg sm:px-6">
-          <h2 className="min-w-0 truncate pr-3 text-[15px] font-bold tracking-wide text-white">
-            {isEdit ? `Editar devolución — ${returnData?.returnNumber || returnData?.numeroDevolucion || ''}` : 'Nueva devolución'}
-          </h2>
+      <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-white shadow-[0_20px_60px_-10px_rgba(0,77,119,0.3)] sm:h-auto sm:max-h-[92vh] sm:max-w-[1320px] sm:rounded-2xl">
+        <div className="relative flex flex-shrink-0 items-center justify-between overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-4 py-3.5 sm:px-6">
+          <div className="pointer-events-none absolute -right-10 -top-14 h-32 w-32 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-16 right-16 h-28 w-28 rounded-full bg-sky-300/10" />
+          <div className="relative flex min-w-0 items-center gap-3 pr-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+              <ClipboardList className="h-5 w-5 text-white" strokeWidth={2} />
+            </div>
+            <h2 className="min-w-0 truncate text-[15px] font-bold tracking-wide text-white">
+              {isEdit ? `Editar devolución — ${returnData?.returnNumber || returnData?.numeroDevolucion || ''}` : 'Nueva devolución'}
+            </h2>
+          </div>
           {isEdit && (
-            <div className="hidden items-center gap-2 rounded-lg bg-white/20 px-3 py-1 md:flex">
+            <div className="relative hidden items-center gap-2 rounded-lg bg-white/20 px-3 py-1 md:flex">
               <span className="text-white text-[10px] font-medium">Modo edición: solo estados</span>
             </div>
           )}
           <button type="button" onClick={handleClose}
-            className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 text-white transition cursor-pointer">
+            className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/15 text-white transition hover:bg-white/25">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -2236,13 +2243,13 @@ useEffect(() => {
         <div className="flex flex-shrink-0 flex-col-reverse gap-3 border-t border-gray-200 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:rounded-b-lg sm:px-6 sm:py-4">
           <button type="button" onClick={handleSubmit}
             disabled={saving}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-7 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
+            className="flex w-full items-center justify-center gap-2 rounded-full border border-[#004D77] bg-[#004D77] px-7 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:border-[#003a5c] hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
             {saving && <Loader className="h-4 w-4 animate-spin" />}
             {isEdit ? 'Guardar cambios' : 'Crear devolución'}
           </button>
           <button type="button" onClick={handleClose}
             disabled={saving}
-            className="w-full rounded-lg bg-gray-500 px-7 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
+            className="w-full rounded-full border border-[#004D77] bg-white px-7 py-2.5 text-sm font-medium text-[#004D77] shadow-sm transition-colors hover:bg-sky-100 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
             Cancelar
           </button>
         </div>

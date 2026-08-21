@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   X, Plus, Minus, AlertCircle, CheckCircle2,
-  ChevronDown, Trash2, Lock, ChevronUp, Loader2,
+  ChevronDown, Trash2, Lock, ChevronUp, Loader2, SquarePen,
 } from 'lucide-react';
 import {
   MOTIVOS_DEVOLUCION,
@@ -949,25 +949,35 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
         className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-[92vh] sm:w-[min(920px,96vw)] sm:rounded-lg"
       >
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between gap-3 bg-[#004D77] px-4 py-3 sm:px-6 sm:py-4">
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold leading-tight text-white sm:text-lg">
+        <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-6 sm:py-6">
+          <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#004D77] ring-1 ring-[#004D77]">
+                {isEdit
+                  ? <SquarePen className="h-5 w-5 text-white" strokeWidth={1.8} />
+                  : <Plus className="h-5 w-5 text-white" strokeWidth={1.8} />}
+              </div>
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-bold text-[#f9f9f9] sm:text-xl">
               {isEdit
                 ? `Editando devolución ${devolucion?.id}`
                 : `Nueva devolución - ${purchase?.numeroFacturacion ?? ''}`}
             </h2>
-            {isEdit && (
-              <span className="text-white/60 text-xs">Compra: {devolucion?.idCompra}</span>
-            )}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleCerrar}
+              disabled={isSaving}
+              aria-label="Cerrar formulario de devolución"
+              className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/80 transition hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <X className="h-5 w-5" strokeWidth={2} />
+            </button>
           </div>
-          <button
-            onClick={handleCerrar}
-            disabled={isSaving}
-            className="shrink-0 rounded-full p-1 text-white transition-colors hover:bg-white/20 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <X className="w-5 h-5" strokeWidth={2} />
-          </button>
-        </div>
+        </header>
 
         {/* Body */}
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -1083,23 +1093,25 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
         </div>
 
         {/* Footer */}
-        <div className="flex shrink-0 flex-col-reverse items-stretch gap-2 border-t border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
+        <footer className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
           <button
+            type="button"
             onClick={handleCerrar}
             disabled={isSaving}
-            className="w-full rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed sm:w-auto"
+            className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >
             Cancelar
           </button>
           <button
+            type="button"
             onClick={handleGuardar}
             disabled={isSaving}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed sm:w-auto"
+            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >
             {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
             {isSaving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Guardar'}
           </button>
-        </div>
+        </footer>
       </div>
     </div>
   );

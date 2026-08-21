@@ -329,7 +329,7 @@ function DetailOrder({
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={handleDownloadPDF}
-                  className="flex items-center justify-center gap-2 rounded-lg border border-gray-400 px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2"
                 >
                   <FileDown className="h-4 w-4" strokeWidth={1.8} />
                   Exportar PDF
@@ -337,7 +337,7 @@ function DetailOrder({
                 {showEditButton && (
                   <button
                     onClick={handleEditClick}
-                    className="flex items-center justify-center gap-2 rounded-lg bg-[#004D77] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#003a5c]"
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2"
                   >
                     <Edit className="h-4 w-4" strokeWidth={1.8} />
                     Editar pedido
@@ -345,7 +345,7 @@ function DetailOrder({
                 )}
                 <button
                   onClick={onClose}
-                  className="rounded-lg bg-gray-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-600"
+                  className="inline-flex items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2"
                 >
                   Cerrar
                 </button>
@@ -537,14 +537,14 @@ function DetailOrder({
         <div className="flex shrink-0 flex-col-reverse items-stretch gap-2 border-t border-gray-200 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
           <button
             onClick={handleDownloadPDF}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-400 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200 cursor-pointer sm:w-auto"
+            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto"
           >
             <FileDown className="w-4 h-4" strokeWidth={1.8} />
             Exportar PDF
           </button>
           <button
             onClick={onClose}
-            className="w-full rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 cursor-pointer sm:w-auto"
+            className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto"
           >
             Cerrar
           </button>
@@ -552,7 +552,7 @@ function DetailOrder({
             {modo === 'pedido' && (
               <>
                 {showEditButton && (
-                  <button onClick={handleEditClick} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] sm:w-auto">
+                  <button onClick={handleEditClick} className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto">
                     <Edit className="w-4 h-4" strokeWidth={1.8} />
                     Editar pedido
                   </button>
