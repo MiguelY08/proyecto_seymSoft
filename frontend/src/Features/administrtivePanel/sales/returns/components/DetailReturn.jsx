@@ -58,7 +58,7 @@ const buildNonConformingReason = (detail = {}, info = {}, returnNumber = '') => 
   return `${productReason} detectado en ${source}. ${detailReason}`;
 };
 
-const actionButtonClass = 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 border border-gray-400 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer';
+const actionButtonClass = 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 border border-gray-400 rounded-full hover:bg-gray-200 transition-colors cursor-pointer';
 const evidenceButtonClass = 'flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-[#004D77]/10 text-[#004D77] hover:bg-[#004D77]/20 transition cursor-pointer';
 
 const DetailDataRow = ({ icon, label, value, valueClassName = 'text-gray-800' }) => {

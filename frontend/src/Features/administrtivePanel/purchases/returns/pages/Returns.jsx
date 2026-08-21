@@ -11,6 +11,7 @@ import AnnulReturn from "../modals/AnnulReturn";
 import ReturnForm from "../modals/ReturnForm";
 import ReturnInfo from "../modals/ReturnInfo";
 import { PurchaseReturnsService } from "../services/returnsServices";
+import { getPurchaseReturnProviderName } from "../helpers/returnsHelpers";
 import { getPurchaseById } from "../../purchases/data/PurchasesService";
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 
@@ -274,8 +275,7 @@ function Returns() {
         devolucion.id,
         devolucion.idCompra,
         devolucion.invoiceNumber,
-        devolucion.proveedor,
-        devolucion.provider?.name,
+        getPurchaseReturnProviderName(devolucion, ""),
         devolucion.fechaDevolucion,
         devolucion.estado,
         devolucion.status,

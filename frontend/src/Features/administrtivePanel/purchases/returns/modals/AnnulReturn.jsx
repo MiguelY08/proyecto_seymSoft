@@ -10,6 +10,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
+import { getPurchaseReturnProviderName } from "../helpers/returnsHelpers";
 import { validateMotivoCancelacion } from "../validators/returnsValidators";
 
 const MAX_REASON_LENGTH = 250;
@@ -140,11 +141,7 @@ const AnnulReturn = ({ devolucion, onClose, onConfirm, loading = false }) => {
               <DetailRow
                 icon={Truck}
                 label="Proveedor"
-                value={
-                  devolucion?.proveedor ??
-                  devolucion?.provider?.name ??
-                  devolucion?.purchase?.provider?.name
-                }
+                value={getPurchaseReturnProviderName(devolucion, "-")}
               />
               <DetailRow
                 icon={Calendar}
