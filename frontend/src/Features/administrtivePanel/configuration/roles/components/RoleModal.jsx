@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { Loader2, ShieldCheck, SquarePen, UserPlus, X } from "lucide-react";
 
 import Spinner from "../../../../shared/spinner/Spinner";
 
@@ -541,17 +541,40 @@ export default function RoleModal({
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
       <div className="relative w-full max-w-6xl max-h-[94vh] sm:max-h-[90vh] bg-white rounded-xl shadow-2xl flex flex-col font-lexend z-10">
-        <div className="bg-[#0E5676] text-white px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center gap-3 rounded-t-xl">
-          <h2 className="text-base sm:text-lg font-semibold">
-            {mode === "create" && "Crear Rol"}
-            {mode === "edit" && "Editar Rol"}
-            {mode === "view" && "Ver Rol"}
-          </h2>
+        <header className="relative shrink-0 overflow-hidden rounded-t-xl bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-6 sm:py-6">
+          <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#004D77] ring-1 ring-[#004D77]">
+                {mode === "create" ? (
+                  <UserPlus className="h-5 w-5 text-white" strokeWidth={1.8} />
+                ) : mode === "edit" ? (
+                  <SquarePen className="h-5 w-5 text-white" strokeWidth={1.8} />
+                ) : (
+                  <ShieldCheck className="h-5 w-5 text-white" strokeWidth={1.8} />
+                )}
+              </div>
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-bold text-[#f9f9f9] sm:text-xl">
+                  {mode === "create" && "Crear rol"}
+                  {mode === "edit" && "Editar rol"}
+                  {mode === "view" && "Ver rol"}
+                </h2>
+              </div>
+            </div>
 
-          <button onClick={onClose} className="shrink-0">
-            <X size={22} />
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              aria-label="Cerrar formulario de rol"
+              className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/80 transition hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <X className="h-5 w-5" strokeWidth={2} />
+            </button>
+          </div>
+        </header>
 
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-6 sm:space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
@@ -633,16 +656,18 @@ export default function RoleModal({
         </div>
 
         {mode !== "view" && (
-          <div className="px-4 sm:px-6 py-4 flex flex-col-reverse sm:flex-row sm:justify-between gap-3 sm:gap-4 border-t border-gray-100">
+          <footer className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
             <button
+              type="button"
               onClick={onClose}
               disabled={saving}
-              className="w-full sm:w-1/3 bg-gray-400 text-white py-2 rounded-lg hover:bg-gray-500 transition"
+              className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
             >
-              Cancelar
+              Cerrar
             </button>
 
             <button
+              type="button"
               onClick={handleSubmit}
               disabled={
                 saving ||
@@ -650,11 +675,18 @@ export default function RoleModal({
                 permisosSistema.length === 0 ||
                 nameAvailable === false
               }
-              className="w-full sm:w-1/3 bg-[#004D77] text-white py-2 rounded-lg hover:bg-[#003b5c] transition disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
             >
-              {saving ? "Guardando..." : "Guardar"}
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : mode === "create" ? (
+                <UserPlus className="h-4 w-4" strokeWidth={1.8} />
+              ) : (
+                <SquarePen className="h-4 w-4" strokeWidth={1.8} />
+              )}
+              {saving ? "Guardando..." : mode === "create" ? "Crear rol" : "Guardar cambios"}
             </button>
-          </div>
+          </footer>
         )}
       </div>
     </div>

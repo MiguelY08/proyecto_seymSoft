@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { ContactRound, X } from "lucide-react";
 import { useState, useMemo } from "react";
 import GenerateInterestModal from "./GenerateInterestModal";
 import { generateInterest } from "../services/paymentsServices";
@@ -88,13 +88,32 @@ export default function ContactClientModal({
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
       <div className="bg-white w-full max-w-md max-h-[94vh] rounded-xl shadow-xl overflow-hidden font-lexend flex flex-col">
-        {/* HEADER */}
-        <div className="bg-[#004D77] text-white px-4 py-3 flex justify-between items-center gap-3">
-          <h3 className="font-semibold text-sm sm:text-base">Gestión de contacto al cliente</h3>
-          <X size={18} className="cursor-pointer" onClick={onClose} />
-        </div>
+        <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-6 sm:py-6">
+          <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#004D77] ring-1 ring-[#004D77]">
+                <ContactRound className="h-5 w-5 text-white" strokeWidth={1.8} />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold text-[#f9f9f9] sm:text-xl">
+                  Gestión de contacto al cliente
+                </h2>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Cerrar gestión de contacto"
+              className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/80 transition hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70"
+            >
+              <X className="h-5 w-5" strokeWidth={2} />
+            </button>
+          </div>
+        </header>
 
-        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto">
+        <div className="flex-1 p-4 sm:p-5 space-y-4 overflow-y-auto">
           {/* INFO CLIENTE */}
           <div className="bg-gray-100 rounded-xl p-4 shadow-sm space-y-3">
             <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
@@ -170,10 +189,11 @@ export default function ContactClientModal({
                   </div>
                   <Permission permission="pagos_y_abonos.generar_interes">
                   <button
+                    type="button"
                     onClick={() => handleOpenInterest(credit)}
-                    className="w-full sm:w-auto text-xs px-3 py-2 sm:py-1 bg-[#004D77] text-white rounded-lg hover:bg-[#003D5e] transition cursor-pointer"
+                    className="w-full sm:w-auto rounded-full bg-[#004D77] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 cursor-pointer"
                   >
-                    Interés
+                    Aplicar interés
                   </button>
                   </Permission>
                 </div>
@@ -181,16 +201,16 @@ export default function ContactClientModal({
             </div>
           )}
 
-          {/* BOTÓN CERRAR */}
-          <div className="flex justify-stretch sm:justify-end pt-2">
-            <button
-              onClick={onClose}
-              className="w-full sm:w-auto px-4 py-2 bg-gray-400 rounded-lg text-sm text-white hover:bg-gray-600 transition-colors cursor-pointer"
-            >
-              Cerrar
-            </button>
-          </div>
         </div>
+        <footer className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto"
+          >
+            Cerrar
+          </button>
+        </footer>
       </div>
     </div>
   );

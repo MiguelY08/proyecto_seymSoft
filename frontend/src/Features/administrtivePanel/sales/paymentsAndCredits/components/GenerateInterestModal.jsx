@@ -1,5 +1,5 @@
 ﻿import { useState, useMemo, useRef } from "react";
-import { X } from "lucide-react";
+import { CirclePercent, Loader2, X } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 
 export default function GenerateInterestModal({
@@ -165,14 +165,31 @@ export default function GenerateInterestModal({
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-2 sm:p-4 z-50">
       <div className="bg-white w-full max-w-160 max-h-[95vh] rounded-2xl shadow-xl font-lexend overflow-hidden flex flex-col">
-        <div className="bg-[#004D77] text-white px-4 sm:px-5 py-3 sm:py-4 rounded-t-2xl flex justify-between items-center gap-3">
-          <h2 className="text-base sm:text-lg font-semibold">
-            Aplicar interés
-          </h2>
-          <button onClick={onClose} className="cursor-pointer">
-            <X size={18} />
-          </button>
-        </div>
+        <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-6 sm:py-6">
+          <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#004D77] ring-1 ring-[#004D77]">
+                <CirclePercent className="h-5 w-5 text-white" strokeWidth={1.8} />
+              </div>
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-bold text-[#f9f9f9] sm:text-xl">
+                  Aplicar interés
+                </h2>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              aria-label="Cerrar aplicación de interés"
+              className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/80 transition hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <X className="h-5 w-5" strokeWidth={2} />
+            </button>
+          </div>
+        </header>
 
         <div className="flex-1 min-h-0 p-4 sm:p-5 space-y-3 sm:space-y-4 overflow-y-auto">
           <div className="bg-gray-100 p-3 sm:p-4 rounded-xl text-sm space-y-2">
@@ -239,23 +256,31 @@ export default function GenerateInterestModal({
             </div>
           </div>
 
-          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-1 mt-auto">
-            <button
-              onClick={onClose}
-              className="flex-1 bg-gray-400 text-white py-2 rounded-xl cursor-pointer hover:bg-gray-500 transition"
-            >
-              Cancelar
-            </button>
-
-            <button
-              onClick={handleSubmit}
-              disabled={isSubmitting || !isValidPercentage}
-              className="flex-1 text-white py-2 rounded-xl cursor-pointer bg-[#004D77] hover:bg-[#003D5e] transition disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? "Aplicando..." : "Aplicar interés"}
-            </button>
-          </div>
         </div>
+        <footer className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+          >
+            Cerrar
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting || !isValidPercentage}
+            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+          >
+            {isSubmitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CirclePercent className="h-4 w-4" strokeWidth={1.8} />
+            )}
+            {isSubmitting ? "Aplicando..." : "Aplicar interés"}
+          </button>
+        </footer>
       </div>
     </div>
   );

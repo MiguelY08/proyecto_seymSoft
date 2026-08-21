@@ -275,7 +275,7 @@ export const Purchases = () => {
 
   return (
     <>
-      <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-hidden p-3 sm:p-4">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto touch-pan-y p-3 sm:p-4">
         <div className="flex flex-wrap items-end gap-3">
           <PurchasesFilters
             search={search}
