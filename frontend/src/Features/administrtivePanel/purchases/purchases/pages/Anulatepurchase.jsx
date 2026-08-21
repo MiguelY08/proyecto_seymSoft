@@ -6,11 +6,11 @@ import {
   FileText,
   Package,
   Truck,
-  X,
   XCircle,
 } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import { useOutsideCloseWarning } from "../../../../shared/hooks/useOutsideCloseWarning";
+import PurchaseModalHeader from "../../../../shared/PurchaseModalHeader";
 
 const MAX_REASON_LENGTH = 250;
 
@@ -89,35 +89,13 @@ const AnulatePurchase = ({ purchase, onClose, onConfirm }) => {
         onClick={(event) => event.stopPropagation()}
         className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl"
       >
-        <div
-          className={`flex shrink-0 items-center justify-between px-6 py-4 ${
-            isAlreadyAnnulled ? "bg-slate-600" : "bg-[#004D77]"
-          }`}
-        >
-          <div className="flex min-w-0 items-center gap-2.5">
-            <XCircle className="h-5 w-5 shrink-0 text-white" strokeWidth={2} />
-            <div className="min-w-0">
-              <h2 className="truncate text-base font-semibold leading-tight text-white">
-                {isAlreadyAnnulled ? "Compra anulada" : "Anular compra"}
-              </h2>
-              <p
-                className={`truncate text-xs ${
-                  isAlreadyAnnulled ? "text-slate-200" : "text-white/75"
-                }`}
-              >
-                Factura {purchase?.numeroFacturacion ?? "-"}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="cursor-pointer rounded-full p-1 text-white transition-colors hover:bg-white/20"
-            title="Cerrar"
-          >
-            <X className="h-5 w-5" strokeWidth={2} />
-          </button>
-        </div>
+        <PurchaseModalHeader
+          icon={XCircle}
+          eyebrow={`Factura ${purchase?.numeroFacturacion ?? "-"}`}
+          title={isAlreadyAnnulled ? "Compra anulada" : "Anular compra"}
+          onClose={onClose}
+          closeLabel="Cerrar anulación de compra"
+        />
 
         {!isAlreadyAnnulled && (
           <div className="flex shrink-0 items-start gap-3 border-b border-yellow-100 bg-yellow-50 px-6 py-3">
