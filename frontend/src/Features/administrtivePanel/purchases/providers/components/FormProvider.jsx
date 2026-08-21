@@ -839,18 +839,27 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
         onClick={handleClose}
       />
 
-      <div className="relative flex h-dvh w-full min-h-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[94vh] sm:max-w-2xl sm:rounded-lg">
-          <div className="bg-[#004D77] text-white px-4 py-3.5 sm:px-5 sm:py-4 flex items-center justify-between shrink-0">
-          <h2 className="text-white font-semibold text-lg">
-            {isEditing ? 'Editar proveedor' : 'Nuevo proveedor'}
-          </h2>
-          <button
-            onClick={handleClose}
-            disabled={saving}
-            className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" strokeWidth={2} />
-          </button>
+      <div className="relative flex h-dvh w-full min-h-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[94vh] sm:max-w-2xl sm:rounded-2xl">
+          <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-4 py-3.5 text-white sm:px-5 sm:py-4">
+          <div className="pointer-events-none absolute -right-10 -top-14 h-32 w-32 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-16 right-16 h-28 w-28 rounded-full bg-sky-300/10" />
+          <div className="relative flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+                <Building2 className="h-5 w-5 text-white" strokeWidth={2} />
+              </div>
+              <h2 className="text-lg font-semibold text-white">
+                {isEditing ? 'Editar proveedor' : 'Nuevo proveedor'}
+              </h2>
+            </div>
+            <button
+              onClick={handleClose}
+              disabled={saving}
+              className="cursor-pointer rounded-full border border-white/10 p-1 text-white transition-colors hover:bg-white/20"
+            >
+              <X className="w-5 h-5" strokeWidth={2} />
+            </button>
+          </div>
         </div>
 
           <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -1221,14 +1230,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
               type="button"
               onClick={handleClose}
               disabled={saving}
-              className="w-full rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              className="w-full rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-medium text-[#004D77] shadow-sm transition-colors hover:bg-sky-100 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              className="flex w-full items-center justify-center gap-2 rounded-full border border-[#004D77] bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:border-[#003a5c] hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               {saving ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}

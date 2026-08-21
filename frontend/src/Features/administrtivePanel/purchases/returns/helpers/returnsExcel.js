@@ -1,4 +1,5 @@
 import { exportStyledWorkbook } from "../../../../shared/excel/exportStyledWorkbook";
+import { getPurchaseReturnProviderName } from "./returnsHelpers";
 
 const formatDate = (dateValue) => {
   if (!dateValue) return "";
@@ -20,7 +21,7 @@ export const exportPurchaseReturnsExcel = async (returns = []) => {
     return {
       returnNumber: returnItem.id ?? "",
       invoice: returnItem.invoiceNumber ?? returnItem.idCompra ?? "",
-      provider: returnItem.proveedor ?? returnItem.provider?.name ?? "",
+      provider: getPurchaseReturnProviderName(returnItem, ""),
       date: formatDate(returnItem.creationDate ?? returnItem.fechaDevolucion),
       status: returnItem.status ?? returnItem.estado ?? "",
       progress: progress.label ?? `${completed}/${total}`,

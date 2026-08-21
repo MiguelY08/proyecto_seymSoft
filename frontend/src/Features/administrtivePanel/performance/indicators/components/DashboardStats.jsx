@@ -23,6 +23,7 @@ const StatCard = ({
       gap: "12px",
       flex: 1,
       minWidth: "0",
+      overflow: "hidden",
     }}
   >
     {/* Fila 1 – Icono + Label */}
@@ -31,6 +32,7 @@ const StatCard = ({
         display: "flex",
         alignItems: "center",
         gap: "10px",
+        minWidth: 0,
       }}
     >
       <div
@@ -57,6 +59,8 @@ const StatCard = ({
           fontSize: "13px",
           color: "#64748b",
           fontWeight: "500",
+          minWidth: 0,
+          overflowWrap: "break-word",
         }}
       >
         {label}
@@ -70,15 +74,20 @@ const StatCard = ({
         alignItems: "flex-end",
         justifyContent: "space-between",
         gap: "8px",
+        flexWrap: "wrap",
+        rowGap: "8px",
+        minWidth: 0,
       }}
     >
       <span
         style={{
-          fontSize: "28px",
+          fontSize: "clamp(24px, 2vw, 28px)",
           fontWeight: "700",
           color: "#0f172a",
           lineHeight: 1,
           letterSpacing: "-0.02em",
+          minWidth: 0,
+          overflowWrap: "break-word",
         }}
       >
         {value}
@@ -99,6 +108,7 @@ const StatCard = ({
             padding: "4px 10px",
             flexShrink: 0,
             marginBottom: "2px",
+            marginLeft: "auto",
           }}
         >
           {trend}

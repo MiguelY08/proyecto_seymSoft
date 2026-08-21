@@ -120,17 +120,21 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
 
   return (
     <div onClick={onClose} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-0 backdrop-blur-sm sm:p-4">
-      <div onClick={(e) => e.stopPropagation()} className="flex h-dvh w-full max-w-5xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:rounded-lg">
+      <div onClick={(e) => e.stopPropagation()} className="flex h-dvh w-full max-w-5xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:rounded-2xl">
         
-        <div className="flex shrink-0 items-center justify-between bg-[#004D77] px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-2.5">
-            <XCircle className="w-5 h-5 text-white" strokeWidth={2} />
+        <div className="relative flex shrink-0 items-center justify-between overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-4 py-4 sm:px-6">
+          <div className="pointer-events-none absolute -right-10 -top-14 h-32 w-32 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-16 right-16 h-28 w-28 rounded-full bg-sky-300/10" />
+          <div className="relative flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+              <XCircle className="h-5 w-5 text-white" strokeWidth={2} />
+            </div>
             <div>
               <h2 className="text-white font-semibold text-base leading-tight">Anular devolución</h2>
               <p className="text-white/75 text-xs">Devolución No. {returnData.returnNumber}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1 transition-colors cursor-pointer">
+          <button onClick={onClose} className="relative cursor-pointer rounded-full border border-white/10 p-1 text-white transition-colors hover:bg-white/20">
             <X className="w-5 h-5" strokeWidth={2} />
           </button>
         </div>
@@ -250,13 +254,13 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
         </div>
 
         <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6 sm:py-4">
-          <button onClick={onClose} className="w-full rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 sm:w-auto">
+          <button onClick={onClose} className="w-full rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-medium text-[#004D77] shadow-sm transition-colors hover:bg-sky-100 hover:shadow-md sm:w-auto">
             Cancelar
           </button>
           <button
             onClick={handleConfirm}
             disabled={Boolean(validateMotivo(motivo)) || submitting}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            className="flex w-full items-center justify-center gap-2 rounded-full border border-[#004D77] bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:border-[#003a5c] hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             {submitting ? (
               <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />

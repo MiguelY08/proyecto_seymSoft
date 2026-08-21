@@ -17,6 +17,7 @@ import {
   formatCurrency,
   getBadgeEstadoDevolucion,
   getBadgeEstadoProducto,
+  getPurchaseReturnProviderName,
   isEstadoAnulado,
 } from "../helpers/returnsHelpers";
 
@@ -90,11 +91,7 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
     isAnnulled || status === "Listo" || status.startsWith("Procesada");
   const canEdit = !isClosed;
   const statusStyle = getBadgeEstadoDevolucion(status);
-  const providerName =
-    devolucion?.proveedor ??
-    devolucion?.provider?.name ??
-    devolucion?.purchase?.provider?.name ??
-    "-";
+  const providerName = getPurchaseReturnProviderName(devolucion, "-");
   const progressLabel =
     devolucion?.progress?.label ??
     `${devolucion?.progress?.completed ?? 0}/${

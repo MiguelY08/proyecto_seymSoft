@@ -1067,7 +1067,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
         onClick={handleClose}
       />
 
-      <div className={`relative flex h-dvh w-full min-h-0 overflow-hidden bg-white shadow-2xl transition-all duration-500 ease-in-out sm:h-auto sm:max-h-[94vh] sm:rounded-lg lg:flex-row ${
+      <div className={`relative flex h-dvh w-full min-h-0 overflow-hidden bg-white shadow-2xl transition-all duration-500 ease-in-out sm:h-auto sm:max-h-[94vh] sm:rounded-2xl lg:flex-row ${
         showGraph ? 'sm:w-[95vw] sm:max-w-[90rem] max-lg:flex-col' : 'sm:max-w-2xl'
       }`}>
         {/* Panel izquierdo - sin borde derecho blanco */}
@@ -1077,17 +1077,26 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
           }`}
         >
           {/* CABECERA - sin línea blanca */}
-          <div className="flex shrink-0 items-center justify-between gap-3 bg-[#004D77] px-4 py-3.5 sm:px-5 sm:py-4">
-            <h2 className="min-w-0 text-lg font-semibold leading-tight text-white">
-              {isEditing ? 'Editar cliente' : 'Nuevo cliente'}
-            </h2>
-            <button
-              onClick={handleClose}
-              className="cursor-pointer rounded-full p-1.5 text-white transition-colors hover:bg-white/20"
-              disabled={saving}
-            >
-              <X className="w-5 h-5" strokeWidth={2} />
-            </button>
+          <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-4 py-3.5 text-white sm:px-5 sm:py-4">
+            <div className="pointer-events-none absolute -right-10 -top-14 h-32 w-32 rounded-full bg-white/10" />
+            <div className="pointer-events-none absolute -bottom-16 right-16 h-28 w-28 rounded-full bg-sky-300/10" />
+            <div className="relative flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+                  <UserCircle className="h-5 w-5 text-white" strokeWidth={2} />
+                </div>
+                <h2 className="min-w-0 text-lg font-semibold leading-tight text-white">
+                  {isEditing ? 'Editar cliente' : 'Nuevo cliente'}
+                </h2>
+              </div>
+              <button
+                onClick={handleClose}
+                className="cursor-pointer rounded-full border border-white/10 p-1.5 text-white transition-colors hover:bg-white/20"
+                disabled={saving}
+              >
+                <X className="w-5 h-5" strokeWidth={2} />
+              </button>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -1455,14 +1464,14 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                   type="button"
                   onClick={handleClose}
                   disabled={saving}
-                  className="rounded-lg bg-gray-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50 sm:px-6"
+                  className="rounded-full border border-[#004D77] bg-white px-4 py-2.5 text-sm font-medium text-[#004D77] shadow-sm transition-colors hover:bg-sky-100 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 sm:px-6"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={saving || checkingEmail || checkingDocument || hasBlockingErrors}
-                  className="flex items-center justify-center gap-2 rounded-lg bg-[#004D77] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-60 sm:px-6"
+                  className="flex items-center justify-center gap-2 rounded-full border border-[#004D77] bg-[#004D77] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:border-[#003a5c] hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-60 sm:px-6"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {saving ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}

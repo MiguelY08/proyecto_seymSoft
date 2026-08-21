@@ -5,6 +5,7 @@ import { useAlert } from "../../../../shared/alerts/useAlert";
 import ButtonComponent from "../../../../shared/ButtonComponent";
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 import { exportPurchaseReturnsExcel } from "../helpers/returnsExcel";
+import { getPurchaseReturnProviderName } from "../helpers/returnsHelpers";
 import FormSelect from "../../../../shared/FormSelect";
 
 const RETURN_STATUS_OPTIONS = [
@@ -104,7 +105,7 @@ function TopBar({
       const rows = returns.map((returnItem) => [
         returnItem.id ?? "",
         returnItem.invoiceNumber ?? returnItem.idCompra ?? "",
-        returnItem.proveedor ?? returnItem.provider?.name ?? "",
+        getPurchaseReturnProviderName(returnItem, ""),
         formatDate(returnItem.creationDate ?? returnItem.fechaDevolucion),
         returnItem.status ?? returnItem.estado ?? "",
         getProgressLabel(returnItem),
