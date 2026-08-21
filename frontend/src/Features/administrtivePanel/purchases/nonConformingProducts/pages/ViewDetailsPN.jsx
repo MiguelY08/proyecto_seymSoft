@@ -126,7 +126,7 @@ const ViewDetailsPN = ({ report, onClose }) => {
         <footer className="flex justify-end border-t border-slate-200 bg-white px-5 py-4 sm:px-7">
           <button
             type="button" onClick={onClose}
-            className="inline-flex w-full items-center justify-center rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto"
+            className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto"
           >
             Cerrar detalle
           </button>

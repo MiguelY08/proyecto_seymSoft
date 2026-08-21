@@ -94,7 +94,6 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
       onClick={handleOutsideClick}
-      onClick={handleCancel}
     >
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden"

@@ -148,24 +148,34 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
         onClick={(event) => event.stopPropagation()}
         className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:max-w-5xl sm:rounded-lg"
       >
-        <div className="flex shrink-0 items-center justify-between gap-3 bg-[#004D77] px-4 py-3 sm:px-6 sm:py-4">
-          <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold text-white sm:text-lg">
+        <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-6 sm:py-6">
+          <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#004D77] ring-1 ring-[#004D77]">
+                <FileText className="h-5 w-5 text-white" strokeWidth={1.8} />
+              </div>
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-bold text-[#f9f9f9] sm:text-xl">
               Devolución #{devolucion?.id ?? "-"}
             </h2>
             <p className="mt-0.5 text-xs text-white/60">
               Detalle de devolución en compra
             </p>
-          </div>
-          <button
+              </div>
+            </div>
+            <button
             type="button"
             onClick={onClose}
-            className="shrink-0 cursor-pointer rounded-full p-1 text-white transition-colors hover:bg-white/20"
             title="Cerrar"
+            aria-label="Cerrar información de devolución"
+            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/80 transition hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70"
           >
             <X className="h-5 w-5" strokeWidth={2} />
           </button>
-        </div>
+          </div>
+        </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {isAnnulled && (
@@ -420,11 +430,11 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col-reverse items-stretch gap-2 border-t border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
+        <footer className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
           <button
             type="button"
             onClick={onClose}
-            className="w-full cursor-pointer rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 sm:w-auto"
+            className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto"
           >
             Cerrar
           </button>
@@ -435,13 +445,13 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
                 onClose();
                 onEdit(devolucion);
               }}
-              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] sm:w-auto"
+              className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto"
             >
               <SquarePen className="h-4 w-4" strokeWidth={1.8} />
               Editar devolución
             </button>
           )}
-        </div>
+        </footer>
       </div>
     </div>
   );
