@@ -1,4 +1,5 @@
 import LoginCard from "../components/LoginCard";
+import AuthAnimatedBackground from "../components/AuthAnimatedBackground";
 // import LoginBanner from "../components/LoginBanner";
 import AuthFooter from "../../shared/AuthFooter";
 import HeaderLanding from "../../layouts/HeaderLanding"
@@ -19,9 +20,11 @@ export default function RegisterPage() {
         <HeaderLanding />
 
         {/* Contenedor del formulario */}
-        <div className="flex flex-1 justify-center items-start bg-gray-100 px-4 py-6 md:items-center">
-          <LoginCard initialMode="register" />
-        </div>
+        <AuthAnimatedBackground>
+          <div className="flex flex-1 justify-center items-start px-4 py-6 md:items-center">
+            <LoginCard initialMode="register" />
+          </div>
+        </AuthAnimatedBackground>
 
       </main>
 

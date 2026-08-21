@@ -11,6 +11,8 @@ const toNumber = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const roundMoney = (value) => Math.round(toNumber(value) * 100) / 100;
+
 const normalizePaymentStatus = (status, totalPagado, total) => {
   if (total > 0 && totalPagado >= total) return ESTADOS_PAGO.PAGADO;
 
@@ -101,13 +103,17 @@ const mapSaleToOrderDetail = (sale) => {
   const productos = (sale.items ?? []).map((item) => {
     const cantidad = toNumber(item.cantidad);
     const precioUnitario = toNumber(item.precioUnitario ?? item.product?.precioDetalle);
+    // En ventas el API entrega la base gravable y el IVA de la línea por separado.
+    // DetailOrder muestra el total de la línea, igual que en el detalle del pedido.
+    const subtotalSinIva = toNumber(item.subtotal, cantidad * precioUnitario);
+    const iva = toNumber(item.iva ?? item.ivaAmount);
 
     return {
       id: item.product?.id,
       nombre: item.product?.nombre ?? 'Producto sin nombre',
       cantidad,
       precioUnitario,
-      subtotal: toNumber(item.subtotal, cantidad * precioUnitario),
+      subtotal: roundMoney(subtotalSinIva + iva),
     };
   });
 
@@ -144,6 +150,14 @@ const mapSaleToOrderDetail = (sale) => {
       sale.employee?.user?.name ??
       '',
     direccionEntrega: order.deliveryAddress ?? order.deliveryAdress ?? sale.direccion,
+    tipoEntrega: order.deliveryType ?? order.tipoEntrega,
+    shippingAmount: toNumber(
+      order.shippingAmount ??
+        order.shipping_amount ??
+        order.deliveryShippingAmount ??
+        order.delivery_shipping_amount ??
+        sale.shippingAmount
+    ),
     total,
     productos,
     pagos,

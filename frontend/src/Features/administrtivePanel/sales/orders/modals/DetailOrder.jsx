@@ -130,13 +130,22 @@ function DetailOrder({
 
       if (modo === 'venta') {
         const salePayments = order.pagos || [];
+        let saleReceipts = order.comprobantesPago || [];
+
+        if (!saleReceipts.length) {
+          try {
+            saleReceipts = await PaymentReceiptService.getByPedidoId(order.id);
+          } catch {
+            saleReceipts = [];
+          }
+        }
         setPagos(salePayments);
         setTotalPagado(
           Number.isFinite(Number(order.totalPagado))
             ? Number(order.totalPagado)
             : salePayments.reduce((sum, payment) => sum + Number(payment.monto || 0), 0)
         );
-        setPaymentReceipts(order.comprobantesPago || []);
+        setPaymentReceipts(saleReceipts);
 
         if (order.asesorNombre) {
           setAsesorNombre(order.asesorNombre);
@@ -209,6 +218,12 @@ function DetailOrder({
     ? [clienteTipoDocumento, clienteDocumento].filter(Boolean).join(' ')
     : '';
   const shippingAmount = Number(order.shippingAmount ?? 0);
+  const productsSubtotal = (order.productos || []).reduce(
+    (sum, producto) => sum + Number(producto.subtotal || 0),
+    0
+  );
+  const orderTotal = Number(order.total || 0);
+  const pendingBalance = Math.max(0, orderTotal - totalPagado);
   const isCancelado = order.estadoLogistico === ESTADOS_LOGISTICOS.ANULADO;
   const isEntregado = order.estadoLogistico === ESTADOS_LOGISTICOS.ENTREGADO;
   const canChangeOrder = !isCancelado && !isEntregado;
@@ -373,18 +388,6 @@ function DetailOrder({
           <div className="min-h-0 flex-1 overflow-y-auto">
             <StatusBanner order={order} />
 
-            {paymentReceipts.length > 0 && (
-              <div className="px-4 pt-4 sm:px-6 sm:pt-5">
-                <PaymentReceiptsSection
-                  receipts={paymentReceipts}
-                  compact
-                  onApprove={!esModoVenta ? handleOpenApproveReceipt : undefined}
-                  onReject={!esModoVenta ? handleOpenRejectReceipt : undefined}
-                  reviewingReceiptId={!esModoVenta ? reviewingReceiptId : null}
-                />
-              </div>
-            )}
-
           <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5">
             {/* ── Columna izquierda: Detalles ─────────────────── */}
             <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
@@ -483,25 +486,35 @@ function DetailOrder({
 
               {/* Pagos */}
               <div className="mt-2 border-t border-gray-100 pt-3">
-                <div className="flex justify-between items-center px-1 py-1">
-                  <span className="text-xs font-semibold text-gray-500">Total</span>
-                  <span className="text-sm font-bold text-[#004D77]">{formatCurrency(order.total)}</span>
-                </div>
-                {!isRecoge && (
-                  <div className="flex justify-between items-center px-1 py-1">
-                    <span className="text-xs text-gray-500">Envío</span>
-                    <span className="text-sm font-bold text-gray-700">{formatCurrency(shippingAmount)}</span>
+                <div className="space-y-1 px-1 pb-3">
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>Subtotal de productos</span>
+                    <span className="font-medium text-gray-700">{formatCurrency(productsSubtotal)}</span>
                   </div>
-                )}
-                <div className="flex justify-between items-center px-1 py-1">
-                  <span className="text-xs text-gray-500">Total pagado</span>
-                  <span className="text-sm font-bold text-green-600">{formatCurrency(totalPagado)}</span>
+                  {!isRecoge && (
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>Envío</span>
+                      <span className="font-medium text-gray-700">{formatCurrency(shippingAmount)}</span>
+                    </div>
+                  )}
                 </div>
-                <div className="flex justify-between items-center px-1 py-1 mb-3">
-                  <span className="text-xs text-gray-500">Saldo pendiente</span>
-                  <span className={`text-sm font-bold ${totalPagado >= order.total ? 'text-green-600' : 'text-amber-600'}`}>
-                    {formatCurrency(Math.max(0, order.total - totalPagado))}
-                  </span>
+
+                <div className="mb-3 flex items-center justify-between rounded-lg bg-[#004D77]/10 px-3 py-2.5">
+                  <span className="text-sm font-bold text-[#004D77]">Total a pagar</span>
+                  <span className="text-base font-extrabold text-[#004D77]">{formatCurrency(orderTotal)}</span>
+                </div>
+
+                <div className="mb-3 space-y-1 border-b border-gray-100 px-1 pb-3">
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>Total pagado</span>
+                    <span className="text-sm font-bold text-green-600">{formatCurrency(totalPagado)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>Saldo pendiente</span>
+                    <span className={`text-sm font-bold ${pendingBalance === 0 ? 'text-green-600' : 'text-amber-600'}`}>
+                      {formatCurrency(pendingBalance)}
+                    </span>
+                  </div>
                 </div>
 
                 {pagos.length > 0 ? (
@@ -527,6 +540,18 @@ function DetailOrder({
                   </div>
                 ) : (
                   <p className="text-xs text-gray-400 italic">No hay pagos registrados.</p>
+                )}
+
+                {paymentReceipts.length > 0 && (
+                  <div className="mt-4">
+                    <PaymentReceiptsSection
+                      receipts={paymentReceipts}
+                      compact
+                      onApprove={!esModoVenta ? handleOpenApproveReceipt : undefined}
+                      onReject={!esModoVenta ? handleOpenRejectReceipt : undefined}
+                      reviewingReceiptId={!esModoVenta ? reviewingReceiptId : null}
+                    />
+                  </div>
                 )}
               </div>
             </section>
