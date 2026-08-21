@@ -164,7 +164,7 @@ export default function GenerateInterestModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-2 sm:p-4 z-50">
-      <div className="bg-white w-full max-w-160 max-h-[95vh] rounded-2xl shadow-xl font-lexend overflow-hidden flex flex-col">
+      <div className="bg-white w-full max-w-160 rounded-2xl shadow-xl font-lexend overflow-hidden flex flex-col">
         <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-6 sm:py-6">
           <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
           <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
@@ -191,7 +191,7 @@ export default function GenerateInterestModal({
           </div>
         </header>
 
-        <div className="flex-1 min-h-0 p-4 sm:p-5 space-y-3 sm:space-y-4 overflow-y-auto">
+        <div className="p-4 sm:p-5 space-y-3 sm:space-y-4 overflow-visible">
           <div className="bg-gray-100 p-3 sm:p-4 rounded-xl text-sm space-y-2">
             <p>
               <strong>Crédito:</strong> #{factura.idCredit}

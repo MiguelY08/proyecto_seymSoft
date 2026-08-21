@@ -87,7 +87,7 @@ export default function ContactClientModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white w-full max-w-md max-h-[94vh] rounded-xl shadow-xl overflow-hidden font-lexend flex flex-col">
+      <div className="bg-white w-full max-w-md rounded-xl shadow-xl overflow-hidden font-lexend flex flex-col">
         <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-6 sm:py-6">
           <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
           <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
@@ -113,7 +113,7 @@ export default function ContactClientModal({
           </div>
         </header>
 
-        <div className="flex-1 p-4 sm:p-5 space-y-4 overflow-y-auto">
+        <div className="p-4 sm:p-5 space-y-4 overflow-visible">
           {/* INFO CLIENTE */}
           <div className="bg-gray-100 rounded-xl p-4 shadow-sm space-y-3">
             <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
