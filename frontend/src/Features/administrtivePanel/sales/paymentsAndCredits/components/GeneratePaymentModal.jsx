@@ -240,8 +240,8 @@ export default function GeneratePaymentModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 font-lexend p-2 sm:p-4">
-      <div className="bg-white w-full max-w-160 rounded-2xl shadow-xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-0 font-lexend backdrop-blur-sm sm:p-4">
+      <div className="flex h-[100dvh] max-h-[100dvh] w-full max-w-160 flex-col overflow-hidden rounded-none bg-white shadow-xl sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl">
         <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-6 sm:py-6">
           <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
           <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
@@ -254,6 +254,9 @@ export default function GeneratePaymentModal({
                 <h2 className="truncate text-lg font-bold text-[#f9f9f9] sm:text-xl">
                   Registrar abono
                 </h2>
+                <p className="mt-0.5 truncate text-sm text-sky-100">
+                  {cliente?.nombre || "Cliente sin nombre"}
+                </p>
               </div>
             </div>
 
@@ -270,20 +273,16 @@ export default function GeneratePaymentModal({
         </header>
 
         <div className="flex-1 min-h-0 flex flex-col">
-          <div className="p-4 sm:p-5 space-y-3 overflow-visible">
-            <div className="bg-gray-50 rounded-xl p-2.5 sm:p-3 text-sm space-y-1 border border-gray-200">
-              <p className="font-semibold text-gray-800 wrap-break-word">
-                {cliente?.nombre}
-              </p>
-
-              <p className="text-gray-500">
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3 sm:p-5">
+            <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+              <p className="rounded-xl border border-sky-100 bg-sky-50 p-3 text-gray-500">
                 Factura:
                 <span className="font-medium text-gray-700 ml-1">
                   {factura?.nroFactura}
                 </span>
               </p>
 
-              <p className="text-gray-500">
+              <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-gray-500">
                 Capital pendiente:
                 <span className="font-semibold text-gray-700 ml-1">
                   ${formatNumber(capitalPendiente)}
@@ -291,7 +290,7 @@ export default function GeneratePaymentModal({
               </p>
 
               {Number(interesPendiente) > 0 && (
-                <p className="text-gray-500">
+                <p className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-gray-500 sm:col-span-2">
                   Interés pendiente:
                   <span className="font-semibold text-amber-600 ml-1">
                     ${formatNumber(interesPendiente)}
@@ -299,14 +298,14 @@ export default function GeneratePaymentModal({
                 </p>
               )}
 
-              <p className="text-gray-500">
+              <p className="rounded-xl border border-red-100 bg-red-50 p-3 text-gray-500">
                 Saldo pendiente:
                 <span className="font-semibold text-red-600 ml-1">
                   ${formatNumber(deudaTotal)}
                 </span>
               </p>
 
-              <p className="text-gray-500">
+              <p className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-gray-500">
                 Saldo a favor disponible:
                 <span className="font-semibold text-emerald-600 ml-1">
                   ${formatNumber(favorBalance)}
@@ -314,7 +313,7 @@ export default function GeneratePaymentModal({
               </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
                 <label className="text-xs text-gray-500">Monto de Abono</label>
 
@@ -345,12 +344,11 @@ export default function GeneratePaymentModal({
                   <p className="text-xs text-red-500 mt-1">{errors.monto}</p>
                 )}
               </div>
-            </div>
 
-            <div>
-              <label className="text-xs text-gray-500">Medio de Pago</label>
+              <div>
+                <label className="text-xs text-gray-500">Medio de Pago</label>
 
-              <select
+                <select
                 value={idPaymentMethod}
                 disabled={loadingMethods}
                 onChange={(e) => {
@@ -384,13 +382,14 @@ export default function GeneratePaymentModal({
                       {method.nombre}
                     </option>
                   ))}
-              </select>
+                </select>
 
-              {isFavorBalanceMethod && (
-                <p className="text-xs text-emerald-600 mt-1">
-                  Disponible: ${formatNumber(favorBalance)}
-                </p>
-              )}
+                {isFavorBalanceMethod && (
+                  <p className="text-xs text-emerald-600 mt-1">
+                    Disponible: ${formatNumber(favorBalance)}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div>
