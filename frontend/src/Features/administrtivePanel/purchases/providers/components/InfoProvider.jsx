@@ -136,7 +136,9 @@ function InfoProvider({ isOpen, onClose, provider }) {
       <div className="absolute inset-0 hidden bg-black/40 backdrop-blur-sm sm:block" onClick={onClose} />
 
       <div className="relative flex h-dvh w-full min-h-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:max-w-2xl sm:rounded-2xl lg:max-w-xl">
-        <div className="relative shrink-0 bg-[#004D77] px-5 py-6 sm:px-7 sm:py-7 lg:px-6 lg:py-4">
+        <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-6 sm:px-7 sm:py-7 lg:px-6 lg:py-4">
+          <div className="pointer-events-none absolute -right-10 -top-14 h-32 w-32 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-16 right-16 h-28 w-28 rounded-full bg-sky-300/10" />
           <button
             onClick={onClose}
             className="absolute right-3 top-3 rounded-full p-1.5 text-white/70 transition-all hover:bg-white/20 hover:text-white"
@@ -210,7 +212,7 @@ function InfoProvider({ isOpen, onClose, provider }) {
         <div className="flex shrink-0 items-center justify-end border-t border-gray-100 bg-white px-4 py-3 sm:px-6 lg:px-5">
           <button
             onClick={onClose}
-            className="w-full cursor-pointer rounded-xl bg-gray-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-gray-600 sm:w-auto sm:min-w-32 lg:rounded-lg lg:py-2 lg:font-medium"
+            className="w-full cursor-pointer rounded-full border border-[#004D77] bg-white px-5 py-2.5 text-sm font-medium text-[#004D77] shadow-sm transition-colors hover:bg-sky-100 hover:shadow-md sm:w-auto sm:min-w-32 lg:py-2"
           >
             Cerrar
           </button>

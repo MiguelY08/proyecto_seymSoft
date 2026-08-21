@@ -4,6 +4,7 @@ import { usePermissions } from "../../../configuration/roles/hooks/usePermission
 import {
   getBadgeEstadoDevolucionClasses,
   getBadgeEstadoProducto,
+  getPurchaseReturnProviderName,
   isEstadoAnulado,
 } from "../helpers/returnsHelpers";
 import { PurchaseReturnsService } from "../services/returnsServices";
@@ -355,7 +356,15 @@ function ReturnsTable({
           {currentData.map((devolucion, index) => {
             const rowBg         = index % 2 === 0 ? "bg-gray-100 hover:bg-blue-50" : "bg-white hover:bg-blue-50";
             const stickyCellBg  = index % 2 === 0 ? "bg-gray-100 group-hover:bg-blue-50" : "bg-white group-hover:bg-blue-50";
-            const proveedor     = devolucion.proveedor ?? devolucion.provider?.name ?? proveedorMap[devolucion.idCompra] ?? "—";
+            const proveedor = getPurchaseReturnProviderName(
+              {
+                ...devolucion,
+                proveedor:
+                  devolucion.proveedor ??
+                  proveedorMap[devolucion.idCompra],
+              },
+              "—"
+            );
             const progress      = devolucion.progress ?? {};
             const productos = productsByReturnId[devolucion.id] ?? devolucion.productos;
             const totalUnidades = (devolucion.productos ?? []).reduce(

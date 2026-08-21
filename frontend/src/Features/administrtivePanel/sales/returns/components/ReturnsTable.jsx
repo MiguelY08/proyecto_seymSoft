@@ -310,10 +310,10 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
                         <button
                           type="button"
                           
-                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-400 "
+                          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-gray-300"
                           
                         >
-                          <Info className="h-4 w-4" strokeWidth={1.7} />
+                          <Info className="h-3.5 w-3.5" strokeWidth={1.5} />
                         </button>
                       )}
                     </div>

@@ -547,10 +547,14 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
 
   return (
     <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/50 p-0 backdrop-blur-sm sm:p-3">
-      <div className="relative flex h-dvh w-full max-w-2xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[94vh] sm:rounded-lg">
-        <header className="flex shrink-0 items-center justify-between bg-[#004D77] px-4 py-4 text-white sm:px-5">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="rounded-lg bg-white/15 p-2"><UserRound size={19} /></span>
+      <div className="relative flex h-dvh w-full max-w-2xl flex-col overflow-hidden rounded-none bg-white shadow-2xl sm:h-auto sm:max-h-[94vh] sm:rounded-2xl">
+        <header className="relative flex shrink-0 items-center justify-between overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-4 py-5 text-white sm:px-6">
+          <div className="pointer-events-none absolute -left-10 -top-10 h-28 w-28 rounded-full bg-white/10 blur-sm" />
+          <div className="pointer-events-none absolute -bottom-16 right-10 h-32 w-32 rounded-full bg-white/10 blur-sm" />
+          <div className="relative z-10 flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+              <UserRound size={20} />
+            </span>
             <div className="min-w-0">
               <h2 className="truncate font-serif text-xl font-bold">Completa tus datos</h2>
               <p className="text-xs text-white/75">Los necesitamos para registrar tu compra.</p>
@@ -560,7 +564,7 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
             type="button"
             onClick={handleClose}
             disabled={submitting}
-            className="rounded-full bg-white/15 p-2 transition duration-200 hover:scale-105 hover:bg-white/30 disabled:opacity-50"
+            className="relative z-10 rounded-full border border-white/10 bg-white/10 p-2 transition duration-200 hover:scale-105 hover:bg-white/20 disabled:opacity-50"
             aria-label="Cerrar"
           >
             <X size={18} />
@@ -630,14 +634,14 @@ function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
               type="button"
               onClick={handleClose}
               disabled={submitting}
-              className="rounded-lg bg-gray-500 px-5 py-2.5 text-xs font-medium text-white transition-colors hover:bg-gray-600 disabled:opacity-50"
+              className="rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-medium text-[#004D77] shadow-sm transition-colors hover:bg-sky-100 hover:shadow-md disabled:opacity-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={submitting || checkingEmail || checkingDocument}
-              className="flex items-center justify-center gap-2 rounded-lg bg-[#004D77] px-5 py-2.5 text-xs font-medium text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex items-center justify-center gap-2 rounded-full border border-[#004D77] bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#003a5c] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting && <LoaderCircle size={15} className="animate-spin" />}
               {submitting ? 'Guardando...' : 'Guardar y continuar'}

@@ -375,3 +375,36 @@ export const calcularTotalesProducto = (producto) => {
   const total    = subtotal + ivaValor;
   return { subtotal, ivaValor, total };
 };
+
+const GENERIC_PROVIDER_NAMES = new Set(["proveedor", "-", "—", ""]);
+
+const cleanProviderName = (value) => String(value ?? "").trim();
+
+const isGenericProviderName = (value) =>
+  GENERIC_PROVIDER_NAMES.has(cleanProviderName(value).toLowerCase());
+
+export const getPurchaseReturnProviderName = (source, fallback = "Sin proveedor") => {
+  const directCandidates = [
+    source?.purchase?.provider?.name,
+    source?.purchase?.provider?.name_provider,
+    source?.purchase?.providers?.name,
+    source?.purchase?.providers?.name_provider,
+    source?.purchases?.provider?.name,
+    source?.purchases?.provider?.name_provider,
+    source?.purchases?.providers?.name,
+    source?.purchases?.providers?.name_provider,
+    source?.provider?.name,
+    source?.provider?.name_provider,
+    source?.providerName,
+    source?.purchaseProviderName,
+  ];
+
+  const realProvider = directCandidates
+    .map(cleanProviderName)
+    .find((name) => !isGenericProviderName(name));
+
+  if (realProvider) return realProvider;
+
+  const fallbackProvider = cleanProviderName(source?.proveedor);
+  return isGenericProviderName(fallbackProvider) ? fallback : fallbackProvider;
+};

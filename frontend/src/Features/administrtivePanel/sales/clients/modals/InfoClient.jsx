@@ -339,7 +339,9 @@ function InfoClient({ isOpen, onClose, client }) {
         }`}>
 
           {/* CABECERA */}
-          <div className="relative bg-[#004D77] px-4 py-3.5 shrink-0 sm:px-6 sm:py-4">
+          <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-4 py-3.5 sm:px-6 sm:py-4">
+            <div className="pointer-events-none absolute -right-10 -top-14 h-32 w-32 rounded-full bg-white/10" />
+            <div className="pointer-events-none absolute -bottom-16 right-16 h-28 w-28 rounded-full bg-sky-300/10" />
             <button
               onClick={onClose}
               className="absolute top-3 right-3 text-white/70 hover:text-white hover:bg-white/20 rounded-full p-1.5 transition-all"
@@ -670,7 +672,7 @@ function InfoClient({ isOpen, onClose, client }) {
             </button>
             <button
               onClick={onClose}
-              className="w-full rounded-lg bg-gray-500 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 hover:cursor-pointer sm:w-auto sm:py-2"
+              className="w-full rounded-full border border-[#004D77] bg-white px-5 py-2.5 text-sm font-medium text-[#004D77] shadow-sm transition-colors hover:cursor-pointer hover:bg-sky-100 hover:shadow-md sm:w-auto sm:py-2"
             >
               Cerrar
             </button>
