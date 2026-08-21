@@ -11,13 +11,14 @@ import {
   Package,
   PackageCheck,
   Truck,
-  X,
+  ReceiptText,
   Ruler,
   Scale,
   Droplet,
 } from "lucide-react";
 import Pagination from "../../../../shared/PaginationLanding";
 import { useOutsideCloseWarning } from "../../../../shared/hooks/useOutsideCloseWarning";
+import PurchaseModalHeader from "../../../../shared/PurchaseModalHeader";
 
 const TYPE_ICONS = {
   "Unidad": Package,
@@ -186,24 +187,13 @@ const DetailPurchases = ({ purchase, onClose, loading = false }) => {
         onClick={(event) => event.stopPropagation()}
         className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl"
       >
-        <div className="flex shrink-0 items-center justify-between bg-[#004D77] px-6 py-4">
-          <div className="min-w-0">
-            <h2 className="truncate text-lg font-semibold text-white">
-              Compra #{purchase.numeroFacturacion ?? purchase.id ?? "-"}
-            </h2>
-            <p className="mt-0.5 text-xs text-white/60">
-              Detalle de compra
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="cursor-pointer rounded-full p-1 text-white transition-colors hover:bg-white/20"
-            title="Cerrar"
-          >
-            <X className="h-5 w-5" strokeWidth={2} />
-          </button>
-        </div>
+        <PurchaseModalHeader
+          icon={ReceiptText}
+          eyebrow="Gestión de compras"
+          title={`Detalle de compra #${purchase.numeroFacturacion ?? purchase.id ?? "-"}`}
+          onClose={onClose}
+          closeLabel="Cerrar detalle de compra"
+        />
 
         <div className="flex-1 overflow-y-auto">
           {isAnnulled && (

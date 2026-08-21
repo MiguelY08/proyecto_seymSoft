@@ -1,9 +1,10 @@
 import { createElement, useEffect } from "react";
 import {
   AlertTriangle, Barcode, CalendarDays, CheckCircle2, ClipboardList,
-  Layers3, PackageX, X, XCircle,
+  Layers3, PackageX, XCircle,
 } from "lucide-react";
 import { useOutsideCloseWarning } from "../../../../shared/hooks/useOutsideCloseWarning";
+import PurchaseModalHeader from "../../../../shared/PurchaseModalHeader";
 
 const formatDate = (value) => {
   if (!value) return "Sin fecha registrada";
@@ -64,29 +65,14 @@ const ViewDetailsPN = ({ report, onClose }) => {
         aria-labelledby="non-conforming-detail-title"
         className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-slate-50 shadow-[0_24px_80px_rgba(15,23,42,0.35)] ring-1 ring-white/20"
       >
-        <header className="relative overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-7 sm:py-6">
-          <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
-          <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
-          <div className="relative flex items-start justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-3.5">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#004D77] ring-[#004D77] ring-1">
-                <ClipboardList className="h-6 w-6" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#f9f9f9]">Control de calidad</p>
-                <h2 id="non-conforming-detail-title" className="mt-0.5 text-lg font-bold sm:text-xl text-[#f9f9f9]">
-                  Detalle del producto no conforme
-                </h2>
-              </div>
-            </div>
-            <button
-              type="button" onClick={onClose} aria-label="Cerrar detalle"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/80 transition hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </header>
+        <PurchaseModalHeader
+          icon={ClipboardList}
+          eyebrow="Control de calidad"
+          title="Detalle del producto no conforme"
+          titleId="non-conforming-detail-title"
+          onClose={onClose}
+          closeLabel="Cerrar detalle"
+        />
 
         <div className="overflow-y-auto">
           <div className="border-b border-slate-200 bg-white px-5 py-5 sm:px-7">

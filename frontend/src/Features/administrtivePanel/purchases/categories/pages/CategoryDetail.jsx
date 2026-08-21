@@ -1,9 +1,10 @@
 // features/categories/pages/CategoryDetail.jsx
 import React, { useState, useEffect, useMemo } from "react";
-import { X } from "lucide-react";
+import { FolderSearch } from "lucide-react";
 import Pagination from "../../../../shared/PaginationLanding";
 import { getCategoryById, normalizeCategoryStatus } from "../data/categoriesService";
 import { useOutsideCloseWarning } from "../../../../shared/hooks/useOutsideCloseWarning";
+import PurchaseModalHeader from "../../../../shared/PurchaseModalHeader";
 
 function CategoryDetail({ category, onClose }) {
   const { handleOutsideClick } = useOutsideCloseWarning(onClose, { hasUnsavedChanges: false });
@@ -48,14 +49,13 @@ function CategoryDetail({ category, onClose }) {
         className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 bg-[#004D77]">
-          <h2 className="text-white font-semibold text-lg">
-            {category.nombre} - Detalle
-          </h2>
-          <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        <PurchaseModalHeader
+          icon={FolderSearch}
+          eyebrow="Gestión de categorías"
+          title={`Detalle de ${category.nombre}`}
+          onClose={onClose}
+          closeLabel="Cerrar detalle de categoría"
+        />
 
         <div className="px-6 py-6 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
           <div className="text-sm">

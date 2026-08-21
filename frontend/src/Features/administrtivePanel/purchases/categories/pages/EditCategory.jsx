@@ -1,10 +1,11 @@
 // features/categories/pages/EditCategory.jsx
 import React, { useState, useEffect } from "react";
-import { X, Plus, AlertCircle, Layers, LoaderCircle } from "lucide-react";
+import { Plus, AlertCircle, Layers, LoaderCircle, FolderPen, ListPlus } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import ActiveToggle from "../components/ActiveToggle";
 import SubcategoriesTable from "../components/SubcategoriesTable";
 import { useOutsideCloseWarning } from "../../../../shared/hooks/useOutsideCloseWarning";
+import PurchaseModalHeader from "../../../../shared/PurchaseModalHeader";
 import {
   getSubcategories,
   createSubcategory,
@@ -98,15 +99,13 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
         className="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 bg-[#004D77]">
-          <div>
-            <h2 className="text-white font-semibold text-base">Nueva Subcategoría</h2>
-            <p className="text-white/60 text-xs mt-0.5">en {categoryNombre}</p>
-          </div>
-          <button onClick={handleCancel} className="text-white hover:bg-white/20 rounded-full p-1">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        <PurchaseModalHeader
+          icon={ListPlus}
+          eyebrow={`Categoría: ${categoryNombre}`}
+          title="Nueva subcategoría"
+          onClose={handleCancel}
+          closeLabel="Cerrar formulario de subcategoría"
+        />
 
         <div className="px-6 py-5 flex flex-col gap-4">
           <div>
@@ -271,16 +270,17 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
         onClick={handleOutsideClick}
       >
         <div
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col"
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden"
           style={{ height: "calc(100vh - 2rem)", maxHeight: "680px" }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between px-6 py-4 bg-[#004D77] rounded-t-2xl shrink-0">
-            <h2 className="text-white font-semibold text-lg">Editar Categoría</h2>
-            <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1 transition-colors">
-              <X className="w-5 h-5" strokeWidth={2} />
-            </button>
-          </div>
+          <PurchaseModalHeader
+            icon={FolderPen}
+            eyebrow="Gestión de categorías"
+            title="Editar categoría"
+            onClose={onClose}
+            closeLabel="Cerrar edición de categoría"
+          />
 
           <div className="px-6 pt-5 pb-3 flex gap-6 shrink-0 border-b border-gray-100">
             <div className="flex-1 flex flex-col gap-1">
