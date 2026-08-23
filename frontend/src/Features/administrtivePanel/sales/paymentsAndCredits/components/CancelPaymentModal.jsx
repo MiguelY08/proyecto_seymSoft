@@ -3,6 +3,72 @@ import { Eye, EyeOff, Loader2, Trash2, X } from "lucide-react";
 import { cancelInstallment } from "../services/paymentsServices";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 
+const WRONG_PASSWORD_MESSAGE =
+  "Contraseña incorrecta. Verifica e intenta de nuevo.";
+
+const getErrorText = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.map(getErrorText).filter(Boolean).join(" ");
+  if (typeof value === "object") {
+    return [
+      value.message,
+      value.error,
+      value.detail,
+      value.errors,
+      value.data,
+      value.response,
+      value.userMessage,
+    ]
+      .map(getErrorText)
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  return "";
+};
+
+const normalizeErrorText = (value) =>
+  getErrorText(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+const isWrongPasswordError = (error) => {
+  const status = error?.response?.status;
+  const text = normalizeErrorText([
+    error?.response?.data,
+    error?.userMessage,
+    error?.message,
+  ]);
+
+  if (
+    /(password|contrasena|credencial|unauthorized|forbidden|incorrect)/i.test(
+      text,
+    )
+  ) {
+    return true;
+  }
+
+  if (status === 401 || status === 403) return true;
+
+  return (
+    status === 500 &&
+    /(error interno|internal server error|ocurrio un error interno)/i.test(text)
+  );
+};
+
+const getCancelInstallmentErrorMessage = (error) => {
+  if (isWrongPasswordError(error)) return WRONG_PASSWORD_MESSAGE;
+
+  return (
+    getErrorText(error?.response?.data) ||
+    error?.userMessage ||
+    error?.message ||
+    "No fue posible anular el abono."
+  );
+};
+
 /*
   Modal para anular un abono de una factura específica.
 
@@ -180,10 +246,7 @@ export default function CancelPaymentModal({
 
       onClose();
     } catch (error) {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "No fue posible anular el abono.";
+      const message = getCancelInstallmentErrorMessage(error);
 
       setErrors((prev) => ({
         ...prev,
