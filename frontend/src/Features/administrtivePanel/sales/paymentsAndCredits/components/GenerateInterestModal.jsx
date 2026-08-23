@@ -131,12 +131,12 @@ export default function GenerateInterestModal({
 
     const confirm = await showConfirm(
       "question",
-      "Aplicar interés?",
-      `Se generarÃ¡ un interes de $${formatCOP(
+      "¿Aplicar interés?",
+      `Se generará un interés de $${formatCOP(
         interestGenerated,
       )} para el crédito #${factura?.idCredit}.`,
       {
-        confirmButtonText: "SÃ­, aplicar",
+        confirmButtonText: "Sí, aplicar",
         cancelButtonText: "Revisar",
       },
     );
