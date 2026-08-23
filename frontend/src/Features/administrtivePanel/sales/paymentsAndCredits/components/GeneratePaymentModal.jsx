@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { CircleDollarSign, Loader2, X } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
+import FormSelect from "../../../../shared/FormSelect";
 import { getPaymentMethods } from "../services/paymentsServices";
 import { mapPaymentMethods } from "../mappers/paymentsMapper";
 
@@ -348,11 +349,17 @@ export default function GeneratePaymentModal({
               <div>
                 <label className="text-xs text-gray-500">Medio de Pago</label>
 
-                <select
-                value={idPaymentMethod}
-                disabled={loadingMethods}
-                onChange={(e) => {
-                  const nextIdPaymentMethod = Number(e.target.value);
+                <FormSelect
+                  value={idPaymentMethod}
+                  options={paymentMethods.map((method) => ({
+                    value: method.id,
+                    label: method.nombre,
+                  }))}
+                  disabled={loadingMethods}
+                  placeholder={loadingMethods ? "Cargando..." : "Seleccionar medio de pago"}
+                  ariaLabel="Medio de pago"
+                  onChange={(value) => {
+                  const nextIdPaymentMethod = Number(value);
                   const nextMethod = paymentMethods.find(
                     (method) => Number(method.id) === nextIdPaymentMethod,
                   );
@@ -369,20 +376,8 @@ export default function GeneratePaymentModal({
                       nextIsFavorBalanceMethod,
                     ),
                   }));
-                }}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#004D77] disabled:bg-gray-100 disabled:text-gray-500"
-              >
-                {loadingMethods && (
-                  <option value={idPaymentMethod}>Cargando...</option>
-                )}
-
-                {!loadingMethods &&
-                  paymentMethods.map((method) => (
-                    <option key={method.id} value={method.id}>
-                      {method.nombre}
-                    </option>
-                  ))}
-                </select>
+                  }}
+                />
 
                 {isFavorBalanceMethod && (
                   <p className="text-xs text-emerald-600 mt-1">

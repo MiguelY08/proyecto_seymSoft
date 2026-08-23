@@ -23,6 +23,7 @@ import {
   productoTieneErrorConLineas,
 } from '../validators/returnsValidators';
 import { useAlert } from '../../../../shared/alerts/useAlert';
+import FormSelect from '../../../../shared/FormSelect';
 import {
   PurchaseReturnsService,
   mapReturnFormToCreatePayload,
@@ -217,48 +218,31 @@ function EstadoDropdown({ value, disabled, estados, onChange, hasError, allowEmp
 // ─── Clases base de inputs ────────────────────────────────────────────────────
 const inputBase = 'w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200';
 
-// ─── Selector de motivo (editable) ───────────────────────────────────────────
+// ─── Selectores reutilizables de motivo y tipo ────────────────────────────────
 const MotivoSelect = ({ value, onChange, hasError, disabled = false }) => (
-  <div className="relative">
-    <select
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-      disabled={disabled}
-      className={`appearance-none w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white cursor-pointer ${inputBase} ${
-        hasError
-          ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-          : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
-      }`}
-    >
-      <option value="">Seleccionar...</option>
-      {MOTIVOS_DEVOLUCION.map((m) => (
-        <option key={m} value={m}>{m}</option>
-      ))}
-    </select>
-    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
-  </div>
+  <FormSelect
+    value={value || ''}
+    options={MOTIVOS_DEVOLUCION.map((motivo) => ({ value: motivo, label: motivo }))}
+    onChange={onChange}
+    disabled={disabled}
+    error={hasError}
+    placeholder="Seleccionar..."
+    ariaLabel="Motivo de devolución"
+    className="py-2 text-xs"
+  />
 );
 
-// ─── Selector de tipo (editable) ─────────────────────────────────────────────
 const TipoSelect = ({ value, onChange, hasError, disabled = false }) => (
-  <div className="relative">
-    <select
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-      disabled={disabled}
-      className={`appearance-none w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white cursor-pointer ${inputBase} ${
-        hasError
-          ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-          : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
-      }`}
-    >
-      <option value="">Seleccionar...</option>
-      {TIPOS_DEVOLUCION.map((t) => (
-        <option key={t} value={t}>{t}</option>
-      ))}
-    </select>
-    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
-  </div>
+  <FormSelect
+    value={value || ''}
+    options={TIPOS_DEVOLUCION.map((tipo) => ({ value: tipo, label: tipo }))}
+    onChange={onChange}
+    disabled={disabled}
+    error={hasError}
+    placeholder="Seleccionar..."
+    ariaLabel="Tipo de devolución"
+    className="py-2 text-xs"
+  />
 );
 
 // ─── Campo cantidad editable con botones (+/-) (mejorado) ─────────────────────

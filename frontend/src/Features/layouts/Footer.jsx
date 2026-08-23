@@ -113,7 +113,7 @@ function Footer() {
               {[
                 { href: 'https://www.instagram.com/papeleriamagic/', src: instagramLogo, alt: 'Instagram' },
                 { href: 'https://www.tiktok.com/@papeleria_magic?is_from_webapp=1&sender_device=pc', src: tiktokLogo, alt: 'TikTok' },
-                { href: 'https://wa.me/573002936722', src: whatsappLogo, alt: 'WhatsApp' },
+                { href: 'https://wa.me/573212828628', src: whatsappLogo, alt: 'WhatsApp' },
               ].map(({ href, src, alt }) => (
                 <a
                   key={alt}
