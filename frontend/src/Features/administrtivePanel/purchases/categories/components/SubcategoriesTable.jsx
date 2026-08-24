@@ -1,7 +1,6 @@
 // features/categories/components/SubcategoriesTable.jsx
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Trash2, SquarePen } from "lucide-react";
-import Pagination from "../../../../shared/PaginationLanding";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import ActiveToggle from "./ActiveToggle";
 import { getApiErrorMessage } from "../../../../shared/utils/apiErrorMessage";
@@ -25,8 +24,6 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
   const [editedName, setEditedName] = useState("");
   const [editedDesc, setEditedDesc] = useState("");
   const [editedEstado, setEditedEstado] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const productsPerPage = 4;
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const deleteLockRef = useRef(false);
@@ -181,36 +178,31 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
     }
   };
 
-  const currentData = useMemo(() => {
-    const start = (currentPage - 1) * productsPerPage;
-    return subcategories.slice(start, start + productsPerPage);
-  }, [currentPage, subcategories]);
-
   if (loading) {
-    return <p className="text-gray-500 text-sm">Cargando subcategorías...</p>;
+    return <p className="py-10 text-center text-xs text-gray-400">Cargando subcategorías...</p>;
   }
 
   return (
-    <div className="bg-white shadow rounded-xl overflow-hidden mt-0.5">
-      <div className="px-6 py-4 overflow-y-auto flex-1">
+    <div className="mt-0.5 overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div className="overflow-x-auto">
         {subcategories.length === 0 ? (
-          <p className="text-gray-500 text-sm">No hay subcategorías registradas.</p>
+          <p className="px-3 py-10 text-center text-xs text-gray-400">No hay subcategorías registradas.</p>
         ) : (
-          <table className="w-full border-collapse text-xs">
-            <thead>
-              <tr className="text-left border-b border-gray-300">
-                <th className="pb-1.5 font-semibold text-gray-700">Nombre</th>
-                <th className="pb-1.5 font-semibold text-gray-700">Descripción</th>
-                <th className="pb-1.5 font-semibold text-gray-700 text-center">Estado</th>
-                <th className="pb-1.5 font-semibold text-gray-700 text-center">Acciones</th>
+          <table className="min-w-[680px] w-full">
+            <thead className="bg-[#004D77]/5">
+              <tr>
+                <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Nombre</th>
+                <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Descripción</th>
+                <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Estado</th>
+                <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {currentData.map((sub) => (
-                <tr key={sub.id} className="border-b border-gray-100">
+              {subcategories.map((sub, index) => (
+                <tr key={sub.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                   {editingId === sub.id ? (
                     <>
-                      <td className="py-1.5">
+                      <td className="px-3 py-2">
                         <input
                           type="text"
                           value={editedName}
@@ -219,7 +211,7 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
                           className="w-full px-3 py-2 border border-gray-400 rounded-md"
                         />
                       </td>
-                      <td className="py-1.5">
+                      <td className="px-3 py-2">
                         <input
                           type="text"
                           value={editedDesc}
@@ -229,35 +221,40 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
                           className="w-full px-3 py-2 border border-gray-400 rounded-md"
                         />
                       </td>
-                      <td className="py-1.5 text-center">
+                      <td className="px-3 py-2 text-center">
                         <ActiveToggle activo={editedEstado} onChange={(nuevo) => setEditedEstado(nuevo)} />
                       </td>
-                      <td className="py-1.5 text-center flex justify-center gap-2">
+                      <td className="px-3 py-2 text-center">
+                        <div className="flex justify-center gap-2">
                         <button
+                          type="button"
                           onClick={handleSaveEdit}
-                          className="px-3 py-1 bg-green-600 text-white rounded text-xs"
+                          className="rounded-full bg-[#004D77] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#003b5c]"
                         >
                           Guardar
                         </button>
                         <button
+                          type="button"
                           onClick={() => setEditingId(null)}
-                          className="px-3 py-1 bg-gray-400 text-white rounded text-xs"
+                          className="rounded-full border border-[#004D77] bg-white px-3 py-1.5 text-xs font-semibold text-[#004D77] transition hover:bg-sky-100"
                         >
                           Cancelar
                         </button>
-                       </td>
+                        </div>
+                      </td>
                     </>
                   ) : (
                     <>
-                      <td className="py-1.5">{sub.nombre}</td>
-                      <td className="py-1.5">{sub.descripcion || "—"}</td>
-                      <td className="py-1.5 text-center">
+                      <td className="max-w-[220px] truncate px-3 py-2 text-xs font-medium text-gray-800">{sub.nombre}</td>
+                      <td className="max-w-[300px] truncate px-3 py-2 text-xs text-gray-600">{sub.descripcion || "—"}</td>
+                      <td className="px-3 py-2 text-center">
                         <ActiveToggle
                           activo={sub.estado === "Activo"}
                           onChange={(nuevo) => handleToggleEstado(sub.id, nuevo)}
                         />
                        </td>
-                      <td className="py-1.5 text-center flex justify-center gap-2">
+                      <td className="px-3 py-2 text-center">
+                        <div className="flex justify-center gap-2">
                         <button
                           onClick={() => {
                             setEditingId(sub.id);
@@ -285,7 +282,8 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
                             className={deletingId === sub.id ? "animate-pulse" : ""}
                           />
                         </button>
-                       </td>
+                        </div>
+                      </td>
                     </>
                   )}
                  </tr>
@@ -294,14 +292,6 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
           </table>
         )}
 
-        <div className="scale-80 ">
-          <Pagination
-            totalProducts={subcategories.length}
-            productsPerPage={productsPerPage}
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-          />
-        </div>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import LoginBanner from "../components/LoginBanner";
+import AuthAnimatedBackground from "../components/AuthAnimatedBackground";
 import LoginCard from "../components/LoginCard";
 // import BackHeader from "../../shared/BackHeader"
 import AuthFooter from "../../shared/AuthFooter";
@@ -73,18 +74,18 @@ export default function LoginPage() {
         logo={logo}
       /> */}
 
-      <div className="bg-gray-100 flex flex-col flex-1">
+      <AuthAnimatedBackground>
 
         {/* <BackHeader
           title="Volver"
           to="/"
         /> */}
 
-        <div className="flex justify-center items-center flex-1 px-4 py-6">
+        <div className="flex flex-1 items-center justify-center px-4 py-6">
           <LoginCard />
         </div>
 
-      </div>
+      </AuthAnimatedBackground>
 
       <AuthFooter />
 

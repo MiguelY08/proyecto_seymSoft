@@ -206,14 +206,15 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
 
               {productos.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-[minmax(0,1fr)_56px_88px_88px] gap-x-3 border-b-2 border-gray-200 pb-1.5 mb-1">
-                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Producto</span>
-                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide text-right">Cant</span>
-                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide text-right">V. Unit</span>
-                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide text-right">Total</span>
-                  </div>
+                  <div className="mb-4 overflow-hidden rounded-lg border border-gray-200">
+                    <div className="grid grid-cols-[minmax(0,1fr)_56px_88px_88px] gap-x-3 bg-[#004D77]/5 px-3 py-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Producto</span>
+                      <span className="text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Cant</span>
+                      <span className="text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">V. Unit</span>
+                      <span className="text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Total</span>
+                    </div>
 
-                  <div className="mb-4 flex flex-1 flex-col divide-y divide-gray-100">
+                    <div className="flex flex-1 flex-col">
                     {productos.map((producto, index) => {
                       // ✅ FALLBACKS
                       const nombre = producto.productName || 'Producto sin nombre';
@@ -224,9 +225,9 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
                       return (
                         <div
                           key={index}
-                          className="grid grid-cols-[minmax(0,1fr)_56px_88px_88px] gap-x-3 py-2 items-start"
+                          className={`grid grid-cols-[minmax(0,1fr)_56px_88px_88px] items-start gap-x-3 px-3 py-2 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
                         >
-                          <span className="text-xs text-gray-700 truncate">{nombre}</span>
+                          <span className="truncate text-xs font-medium text-gray-800">{nombre}</span>
                           <span className="text-xs text-gray-600 text-right tabular-nums">{cantidad}</span>
                           <span className="text-xs text-gray-600 text-right tabular-nums">
                             ${formatCurrency(precioUnit)}
@@ -237,6 +238,7 @@ function CancelReturn({ isOpen, onClose, returnData = null, onSuccess }) {
                         </div>
                       );
                     })}
+                    </div>
                   </div>
 
                   <div className="mt-auto border-t border-gray-200 pt-3 flex flex-col gap-1.5">

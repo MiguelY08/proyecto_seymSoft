@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../Context/CartContext';
 import { useFavorites } from '../../Context/Favoritescontext';
 import { useAlert } from '../../alerts/useAlert';
+import { useStorefrontAuthGuard } from '../../hooks/useStorefrontAuthGuard';
 
 import {
   normalizeProduct,
@@ -22,6 +23,7 @@ export function useProductCard(productData = {}, clientType = 'DETAL') {
   const { addToCart } = useCart();
   const { toggleFavorite, isFavorite } = useFavorites();
   const { showError, showSuccess } = useAlert();
+  const requireAuthentication = useStorefrontAuthGuard();
 
   /**
    * Producto normalizado.
@@ -141,7 +143,7 @@ export function useProductCard(productData = {}, clientType = 'DETAL') {
    * Maneja favoritos.
    */
   const handleFavorite = useCallback(
-    (event) => {
+    async (event) => {
       event.stopPropagation();
 
       if (!product.id) {
@@ -151,6 +153,8 @@ export function useProductCard(productData = {}, clientType = 'DETAL') {
         );
         return;
       }
+
+      if (!await requireAuthentication('favoritos')) return;
 
       const wasAdded = toggleFavorite(product);
 
@@ -171,7 +175,7 @@ export function useProductCard(productData = {}, clientType = 'DETAL') {
           : `${product.name} se eliminó de tu lista de deseos.`
       );
     },
-    [product, showSuccess, toggleFavorite]
+    [product, requireAuthentication, showSuccess, toggleFavorite]
   );
 
   /**
@@ -188,6 +192,8 @@ export function useProductCard(productData = {}, clientType = 'DETAL') {
         );
         return;
       }
+
+      if (!await requireAuthentication('carrito')) return;
 
       if (!available) {
         showError(
@@ -216,6 +222,7 @@ export function useProductCard(productData = {}, clientType = 'DETAL') {
       addToCart,
       available,
       product,
+      requireAuthentication,
       showError,
       showSuccess,
     ]

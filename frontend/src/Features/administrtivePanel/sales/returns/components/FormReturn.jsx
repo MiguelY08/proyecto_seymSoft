@@ -2240,7 +2240,7 @@ useEffect(() => {
           </div>
         </div>
 
-        <div className="flex flex-shrink-0 flex-col-reverse gap-3 border-t border-gray-200 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:rounded-b-lg sm:px-6 sm:py-4">
+        <div className="flex flex-shrink-0 flex-col gap-3 border-t border-gray-200 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:rounded-b-lg sm:px-6 sm:py-4">
           <button type="button" onClick={handleSubmit}
             disabled={saving}
             className="flex w-full items-center justify-center gap-2 rounded-full border border-[#004D77] bg-[#004D77] px-7 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:border-[#003a5c] hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">

@@ -468,8 +468,8 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
             {details.length > 0 && (
               <div className="mb-4">
                 <h3 className="text-sm font-bold text-gray-800 mb-2">Productos devueltos</h3>
-                <div className="overflow-x-auto rounded-xl border border-gray-200">
-                  <table className="w-full min-w-[720px] table-fixed text-xs">
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                  <table className="min-w-[720px] w-full table-fixed">
                     <colgroup>
                       <col className="w-[28%]" />
                       <col className="w-[23%]" />
@@ -478,14 +478,14 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
                       <col className="w-[8%]" />
                       <col className="w-[12%]" />
                     </colgroup>
-                    <thead>
-                      <tr className="bg-[#004D77] text-white">
-                        <th className="px-3 py-2.5 text-left font-semibold">Producto</th>
-                        <th className="px-3 py-2.5 text-left font-semibold">Motivo</th>
-                        <th className="px-3 py-2.5 text-left font-semibold">Método</th>
-                        <th className="px-3 py-2.5 text-left font-semibold">Estado</th>
-                        <th className="px-3 py-2.5 text-center font-semibold">Cant.</th>
-                        <th className="px-3 py-2.5 text-right font-semibold">Valor</th>
+                    <thead className="bg-[#004D77]/5">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Producto</th>
+                        <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Motivo</th>
+                        <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Método</th>
+                        <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Estado</th>
+                        <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Cant.</th>
+                        <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Valor</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -503,8 +503,8 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
                         const isAnulado = estadoProducto === 'Anulado';
                         
                         return (
-                          <tr key={i} className={`border-t border-gray-100 ${isAnulado ? 'bg-red-50/40' : 'hover:bg-gray-50'}`}>
-                            <td className="px-3 py-2.5 text-gray-700 font-medium">
+                          <tr key={i} className={isAnulado ? 'bg-red-50/50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="px-3 py-2 text-xs font-medium text-gray-800">
                               <span className="block break-words [overflow-wrap:anywhere]">{p.productName || 'N/A'}</span>
                               {mostrarDescripcionOtro && (
                                 <div className="mt-1.5 max-w-full rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] font-medium text-amber-800">
@@ -518,20 +518,20 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
                                 </div>
                               )}
                             </td>
-                            <td className="px-3 py-2.5 text-gray-600">
+                            <td className="px-3 py-2 text-xs text-gray-600">
                               <div className="flex min-w-0 flex-col items-start gap-1.5">
                                 <span>{motivo}</span>
                                 {renderDefectiveAction(p)}
                               </div>
                             </td>
-                            <td className="px-3 py-2.5 text-gray-600 break-words [overflow-wrap:anywhere]">{metodo}</td>
-                            <td className="px-3 py-2.5">
-                              <span className={`inline-flex min-w-[84px] items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold ${isAnulado ? 'text-red-600 bg-red-100' : getStatusColor(estadoProducto)}`}>
+                            <td className="px-3 py-2 text-xs text-gray-600 break-words [overflow-wrap:anywhere]">{metodo}</td>
+                            <td className="px-3 py-2">
+                              <span className={`inline-flex min-w-[84px] items-center justify-center rounded-full border border-black/5 px-2.5 py-0.5 text-[10px] font-semibold ${isAnulado ? 'text-red-600 bg-red-100' : getStatusColor(estadoProducto)}`}>
                                 {estadoProducto}
                               </span>
                             </td>
-                            <td className="px-3 py-2.5 text-center text-gray-700 font-medium">{cantidad}</td>
-                            <td className="px-3 py-2.5 text-right text-gray-700 font-medium">
+                            <td className="px-3 py-2 text-center text-xs font-semibold text-gray-700">{cantidad}</td>
+                            <td className="px-3 py-2 text-right text-xs font-semibold text-gray-800">
                               {precioUnit > 0 ? `$${formatNum(Math.round(total))}` : 'N/A'}
                             </td>
                           </tr>
@@ -571,7 +571,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
             </div>
 
           </div>
-          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6 sm:py-4">
+          <div className="flex shrink-0 flex-col gap-3 border-t border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6 sm:py-4">
             <button
               type="button"
               onClick={handleExportPDF}

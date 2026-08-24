@@ -302,6 +302,11 @@ function Shop() {
     setSelectedSubcategoryIds(current => toggleSelectedId(current, normalizedSubcategoryId));
   };
 
+  const handleClearFilters = () => {
+    setSelectedCategoryIds([]);
+    setSelectedSubcategoryIds([]);
+  };
+
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedCategoryIds, selectedSubcategoryIds]);
@@ -434,6 +439,7 @@ function Shop() {
                 selectedSubcategoryIds={selectedSubcategoryIds}
                 onCategoryChange={handleCategoryChange}
                 onSubcategoryChange={handleSubcategoryChange}
+                onClearFilters={handleClearFilters}
               />
             )}
           </div>

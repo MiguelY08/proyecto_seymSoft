@@ -23,6 +23,7 @@ import {
   productoTieneErrorConLineas,
 } from '../validators/returnsValidators';
 import { useAlert } from '../../../../shared/alerts/useAlert';
+import FormSelect from '../../../../shared/FormSelect';
 import {
   PurchaseReturnsService,
   mapReturnFormToCreatePayload,
@@ -217,48 +218,31 @@ function EstadoDropdown({ value, disabled, estados, onChange, hasError, allowEmp
 // ─── Clases base de inputs ────────────────────────────────────────────────────
 const inputBase = 'w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200';
 
-// ─── Selector de motivo (editable) ───────────────────────────────────────────
+// ─── Selectores reutilizables de motivo y tipo ────────────────────────────────
 const MotivoSelect = ({ value, onChange, hasError, disabled = false }) => (
-  <div className="relative">
-    <select
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-      disabled={disabled}
-      className={`appearance-none w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white cursor-pointer ${inputBase} ${
-        hasError
-          ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-          : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
-      }`}
-    >
-      <option value="">Seleccionar...</option>
-      {MOTIVOS_DEVOLUCION.map((m) => (
-        <option key={m} value={m}>{m}</option>
-      ))}
-    </select>
-    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
-  </div>
+  <FormSelect
+    value={value || ''}
+    options={MOTIVOS_DEVOLUCION.map((motivo) => ({ value: motivo, label: motivo }))}
+    onChange={onChange}
+    disabled={disabled}
+    error={hasError}
+    placeholder="Seleccionar..."
+    ariaLabel="Motivo de devolución"
+    className="py-2 text-xs"
+  />
 );
 
-// ─── Selector de tipo (editable) ─────────────────────────────────────────────
 const TipoSelect = ({ value, onChange, hasError, disabled = false }) => (
-  <div className="relative">
-    <select
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-      disabled={disabled}
-      className={`appearance-none w-full px-3 py-2 text-xs border rounded-lg outline-none bg-white cursor-pointer ${inputBase} ${
-        hasError
-          ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-          : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'
-      }`}
-    >
-      <option value="">Seleccionar...</option>
-      {TIPOS_DEVOLUCION.map((t) => (
-        <option key={t} value={t}>{t}</option>
-      ))}
-    </select>
-    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" strokeWidth={2} />
-  </div>
+  <FormSelect
+    value={value || ''}
+    options={TIPOS_DEVOLUCION.map((tipo) => ({ value: tipo, label: tipo }))}
+    onChange={onChange}
+    disabled={disabled}
+    error={hasError}
+    placeholder="Seleccionar..."
+    ariaLabel="Tipo de devolución"
+    className="py-2 text-xs"
+  />
 );
 
 // ─── Campo cantidad editable con botones (+/-) (mejorado) ─────────────────────
@@ -1093,12 +1077,12 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
         </div>
 
         {/* Footer */}
-        <footer className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
+        <footer className="flex shrink-0 flex-col gap-2 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
           <button
             type="button"
             onClick={handleCerrar}
             disabled={isSaving}
-            className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            className="order-2 inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >
             Cancelar
           </button>
@@ -1106,7 +1090,7 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
             type="button"
             onClick={handleGuardar}
             disabled={isSaving}
-            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            className="order-1 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >
             {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
             {isSaving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Guardar'}

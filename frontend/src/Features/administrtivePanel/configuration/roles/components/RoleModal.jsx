@@ -537,11 +537,11 @@ export default function RoleModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+    <div className="fixed inset-0 z-50 flex items-stretch justify-stretch bg-white sm:items-center sm:justify-center sm:p-4">
+      <div className="absolute inset-0 hidden bg-black/40 backdrop-blur-sm sm:block" />
 
-      <div className="relative w-full max-w-6xl max-h-[94vh] sm:max-h-[90vh] bg-white rounded-xl shadow-2xl flex flex-col font-lexend z-10">
-        <header className="relative shrink-0 overflow-hidden rounded-t-xl bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-6 sm:py-6">
+      <div className="relative z-10 flex h-dvh w-full flex-col overflow-hidden bg-white font-lexend shadow-2xl sm:h-auto sm:max-h-[90vh] sm:max-w-6xl sm:rounded-xl">
+        <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:rounded-t-xl sm:px-6 sm:py-6">
           <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
           <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
           <div className="relative flex items-start justify-between gap-4">
@@ -576,7 +576,7 @@ export default function RoleModal({
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-6 sm:space-y-8">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 space-y-6 sm:space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label className="text-sm font-medium">Nombre del Rol</label>

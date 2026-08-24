@@ -3,8 +3,8 @@
 // import BackHeader from "../../shared/BackHeader"
 import HeaderLanding from "../../layouts/HeaderLanding"
 import AuthFooter from "../../shared/AuthFooter"
+import AuthAnimatedBackground from "../components/AuthAnimatedBackground"
 import ResetPasswordForm from "../components/ResetPasswordForm"
-import logo from "../../../assets/PapeleriaMagicLogo_512x512.png"
 
 export default function ResetPasswordPage() {
   return (
@@ -20,7 +20,7 @@ export default function ResetPasswordPage() {
           logo={logo}
         /> */}
 
-        <div className="bg-gray-100 flex flex-col flex-1 overflow-hidden">
+        <AuthAnimatedBackground>
 
           {/* <BackHeader
             title="Volver"
@@ -31,7 +31,7 @@ export default function ResetPasswordPage() {
             <ResetPasswordForm />
           </div>
 
-        </div>
+        </AuthAnimatedBackground>
 
       </main>
 
