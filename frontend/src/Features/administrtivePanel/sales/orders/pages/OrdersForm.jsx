@@ -1092,7 +1092,7 @@ function OrdersForm() {
             {isEditMode ? `Editando Pedido #${id}` : 'Nuevo Pedido'}
           </h1>
         </div>
-        <div className="sticky top-0 z-30 -mx-3 grid grid-cols-2 gap-2 bg-white px-3 py-3 shadow-sm sm:-mx-6 sm:px-6 sm:py-3 lg:static lg:mx-0 lg:flex lg:bg-transparent lg:p-0 lg:shadow-none lg:gap-3">
+        <div className="sticky top-0 z-30 -mx-3 grid grid-cols-1 gap-2 bg-white px-3 py-3 shadow-sm sm:-mx-6 sm:px-6 sm:py-3 lg:static lg:mx-0 lg:flex lg:bg-transparent lg:p-0 lg:shadow-none lg:gap-3">
           <button
             onClick={handleCancel}
             className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto"

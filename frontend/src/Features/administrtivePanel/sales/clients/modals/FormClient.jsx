@@ -1459,19 +1459,19 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                 <span className="hidden md:block" />
               )}
 
-              <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
+              <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center sm:gap-3">
                 <button
                   type="button"
                   onClick={handleClose}
                   disabled={saving}
-                  className="rounded-full border border-[#004D77] bg-white px-4 py-2.5 text-sm font-medium text-[#004D77] shadow-sm transition-colors hover:bg-sky-100 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 sm:px-6"
+                  className="order-2 rounded-full border border-[#004D77] bg-white px-4 py-2.5 text-sm font-medium text-[#004D77] shadow-sm transition-colors hover:bg-sky-100 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 sm:px-6"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={saving || checkingEmail || checkingDocument || hasBlockingErrors}
-                  className="flex items-center justify-center gap-2 rounded-full border border-[#004D77] bg-[#004D77] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:border-[#003a5c] hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-60 sm:px-6"
+                  className="order-1 flex items-center justify-center gap-2 rounded-full border border-[#004D77] bg-[#004D77] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:border-[#003a5c] hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-60 sm:px-6"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {saving ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}

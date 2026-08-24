@@ -505,11 +505,11 @@ export default function RegisterForm({ embedded = false, onSwitchToLogin }) {
             <button
               type="submit"
               disabled={loading || checkingEmail || hasBlockingErrors}
-              className={`w-full bg-[#004D77] text-white ${embedded ? "py-2" : "py-2.5"} rounded-lg text-sm font-medium transition cursor-pointer
+              className={`w-full rounded-full bg-[#004D77] px-6 ${embedded ? "py-2" : "py-2.5"} text-sm font-bold text-white shadow-sm transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2
                 ${
                   loading || checkingEmail || hasBlockingErrors
                     ? "opacity-70 cursor-not-allowed"
-                    : "hover:bg-[#003D5e]"
+                    : "hover:bg-[#003b5c] hover:shadow-md"
                 }
               `}
             >
@@ -520,11 +520,11 @@ export default function RegisterForm({ embedded = false, onSwitchToLogin }) {
               type="button"
               onClick={handleBackToLogin}
               disabled={loading}
-              className={`w-full bg-gray-500 text-white ${embedded ? "py-2" : "py-2.5"} rounded-lg text-sm font-medium transition cursor-pointer
+              className={`w-full rounded-full border border-[#004D77] bg-white px-6 ${embedded ? "py-2" : "py-2.5"} text-sm font-bold text-[#004D77] shadow-sm transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2
                 ${
                   loading
                     ? "opacity-70 cursor-not-allowed"
-                    : "hover:bg-gray-600"
+                    : "hover:bg-sky-100 hover:shadow-md"
                 }
               `}
             >

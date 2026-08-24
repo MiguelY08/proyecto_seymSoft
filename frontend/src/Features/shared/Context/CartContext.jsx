@@ -249,6 +249,8 @@ export const CartProvider = ({ children }) => {
   const addToCart = useCallback(async (product, quantity = 1) => {
     const requestedQuantity = Math.max(1, Number(quantity) || 1);
 
+    if (!isAuthenticated) return false;
+
     if (!clientId) {
       updateItems((previousItems) => {
         const existing = previousItems.find((item) => item.id === product.id);
@@ -301,6 +303,7 @@ export const CartProvider = ({ children }) => {
     cartItems,
     clientId,
     createCartItemRequest,
+    isAuthenticated,
     isLatestCartItemRequest,
     updateItems,
   ]);

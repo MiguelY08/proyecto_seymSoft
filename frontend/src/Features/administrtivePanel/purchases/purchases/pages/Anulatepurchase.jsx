@@ -83,11 +83,11 @@ const AnulatePurchase = ({ purchase, onClose, onConfirm }) => {
   return (
     <div
       onClick={handleOutsideClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-stretch justify-stretch bg-white sm:items-center sm:justify-center sm:bg-black/40 sm:p-4 sm:backdrop-blur-sm"
     >
       <div
         onClick={(event) => event.stopPropagation()}
-        className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl"
+        className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:max-w-2xl sm:rounded-lg"
       >
         <PurchaseModalHeader
           icon={XCircle}
@@ -107,7 +107,7 @@ const AnulatePurchase = ({ purchase, onClose, onConfirm }) => {
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="grid grid-cols-1 divide-y divide-gray-100 md:grid-cols-2 md:divide-x md:divide-y-0">
             <div className="px-6 py-5">
               <SectionTitle>Detalles de la compra</SectionTitle>
@@ -189,11 +189,11 @@ const AnulatePurchase = ({ purchase, onClose, onConfirm }) => {
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
+        <div className="flex shrink-0 flex-col gap-2 border-t border-gray-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
           <button
             type="button"
             onClick={onClose}
-            className="cursor-pointer rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600"
+            className="order-2 inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto"
           >
             {isAlreadyAnnulled ? "Cerrar" : "Cancelar"}
           </button>
@@ -202,7 +202,7 @@ const AnulatePurchase = ({ purchase, onClose, onConfirm }) => {
             <button
               type="button"
               onClick={handleSubmit}
-              className="flex cursor-pointer items-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#003D5e]"
+              className="order-1 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto"
             >
               <XCircle className="h-4 w-4" strokeWidth={2} />
               Confirmar anulación

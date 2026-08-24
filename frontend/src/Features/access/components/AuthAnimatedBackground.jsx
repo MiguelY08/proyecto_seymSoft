@@ -10,7 +10,7 @@ export default function AuthAnimatedBackground({ children }) {
         @keyframes auth-float { 0%,100% { transform:translate3d(0,0,0) } 50% { transform:translate3d(0,-12px,0) } }
         @keyframes auth-dots-drift { 0%,100% { transform:translate3d(0,0,0);opacity:.85 } 50% { transform:translate3d(7px,-5px,0);opacity:.55 } }
         .auth-wave-top { animation:auth-wave-drift 6s ease-in-out infinite;transform-box:fill-box;transform-origin:center }.auth-wave-bottom { animation:auth-wave-rise 7s ease-in-out infinite;transform-box:fill-box;transform-origin:center }.auth-float { animation:auth-float 7s ease-in-out infinite }.auth-dots { animation:auth-dots-drift 9s ease-in-out infinite }
-        @media (prefers-reduced-motion:reduce) { .auth-wave-top,.auth-wave-bottom,.auth-float,.auth-dots { animation:none } }
+        @media (max-width:767px), (prefers-reduced-motion:reduce) { .auth-wave-top,.auth-wave-bottom,.auth-float,.auth-dots { animation:none } }
       `}</style>
       <div className="auth-float pointer-events-none absolute left-[13%] top-[53%] size-7 rounded-full bg-blue-100/80" />
       <div className="auth-float pointer-events-none absolute left-[63%] top-[26%] size-5 rounded-full bg-blue-300/60 [animation-delay:-3s]" />

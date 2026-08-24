@@ -181,11 +181,11 @@ const DetailPurchases = ({ purchase, onClose, loading = false }) => {
   return (
     <div
       onClick={handleOutsideClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-stretch justify-stretch bg-white sm:items-center sm:justify-center sm:bg-black/40 sm:p-4 sm:backdrop-blur-sm"
     >
       <div
         onClick={(event) => event.stopPropagation()}
-        className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl"
+        className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:max-w-5xl sm:rounded-lg"
       >
         <PurchaseModalHeader
           icon={ReceiptText}
@@ -195,7 +195,7 @@ const DetailPurchases = ({ purchase, onClose, loading = false }) => {
           closeLabel="Cerrar detalle de compra"
         />
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {isAnnulled && (
             <div className="mx-4 mt-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 shadow-sm">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
@@ -413,11 +413,11 @@ const DetailPurchases = ({ purchase, onClose, loading = false }) => {
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
+        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 px-4 py-4 sm:px-6">
           <button
             type="button"
             onClick={onClose}
-            className="cursor-pointer rounded-lg bg-gray-500 px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-600"
+            className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto"
           >
             Cerrar
           </button>

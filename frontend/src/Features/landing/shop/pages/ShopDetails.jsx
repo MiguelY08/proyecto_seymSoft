@@ -11,6 +11,7 @@ import {
 import ProductsService from "../../../administrtivePanel/purchases/products/services/productsServices.js";
 import { useAlert } from "../../../shared/alerts/useAlert";
 import { useCart } from "../../../shared/Context/CartContext";
+import { useStorefrontAuthGuard } from "../../../shared/hooks/useStorefrontAuthGuard";
 import useClientType from "../../../shared/hooks/useClientType.js";
 import ProductCard from "../../../shared/productCard/ProductCard";
 import { getDisplayPricing } from "../../../shared/utils/shopPricingHelper.js";
@@ -31,6 +32,7 @@ function ShopDetail() {
   const navigate = useNavigate();
   const relatedRef = useRef(null);
   const { addToCart } = useCart();
+  const requireAuthentication = useStorefrontAuthGuard();
   const { showError, showSuccess } = useAlert();
   const { clientType } = useClientType();
 
@@ -196,6 +198,8 @@ function ShopDetail() {
   };
 
   const handleAddToCart = async () => {
+    if (!await requireAuthentication("carrito")) return;
+
     if (!cartProduct || !available) {
       showError("Producto no disponible", "Este producto no tiene stock.");
       return;

@@ -391,7 +391,7 @@ export const NonConformingProducts = () => {
               onClick={() => setShowModal(true)}
               className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 whitespace-nowrap"
             >
-              <span className="hidden sm:inline">Crear Reporte</span>
+              <span className="hidden sm:inline">Nuevo</span>
               <span className="sm:hidden">Nuevo</span>
               <Plus className="w-4 h-4" strokeWidth={2} />
             </button>

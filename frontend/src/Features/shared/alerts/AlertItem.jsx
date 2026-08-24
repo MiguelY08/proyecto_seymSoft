@@ -92,7 +92,7 @@ const motionClass = (position, visible) => {
 };
 
 function AlertItem({ alert, onRemove, position = 'center' }) {
-  const { id, type, title, text, isConfirm, confirmButtonText, cancelButtonText, timer, resolve, html, didOpen } = alert;
+  const { id, type, title, text, isConfirm, confirmButtonText, cancelButtonText, timer, resolve, html, didOpen, showCloseButton } = alert;
   const v = variants[type] ?? variants.info;
 
   const effectiveTimer = isConfirm ? null : (timer ?? DEFAULT_TIMER);
@@ -149,7 +149,7 @@ function AlertItem({ alert, onRemove, position = 'center' }) {
   const handleCancel = () => {
     setVisible(false);
     setTimeout(() => {
-      resolve?.({ isConfirmed: false, isDismissed: true });
+      resolve?.({ isConfirmed: false, isDismissed: false });
       onRemove(id);
     }, 300);
   };
@@ -177,7 +177,7 @@ function AlertItem({ alert, onRemove, position = 'center' }) {
             <p id={`alert-message-${id}`} className={`mt-1 text-xs leading-relaxed [overflow-wrap:anywhere] sm:text-sm ${v.text}`} dangerouslySetInnerHTML={{ __html: html }} />
           )}
         </div>
-        {!isConfirm && (
+        {(!isConfirm || showCloseButton) && (
           <button
             onClick={handleClose}
             className={`rounded-full p-1 -mr-1 -mt-1 transition-colors duration-200 cursor-pointer ${v.close}`}

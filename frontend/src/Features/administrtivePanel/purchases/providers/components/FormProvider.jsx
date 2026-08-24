@@ -1230,14 +1230,14 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
               type="button"
               onClick={handleClose}
               disabled={saving}
-              className="w-full rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-medium text-[#004D77] shadow-sm transition-colors hover:bg-sky-100 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              className="order-2 w-full rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-medium text-[#004D77] shadow-sm transition-colors hover:bg-sky-100 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex w-full items-center justify-center gap-2 rounded-full border border-[#004D77] bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:border-[#003a5c] hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              className="order-1 flex w-full items-center justify-center gap-2 rounded-full border border-[#004D77] bg-[#004D77] px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:border-[#003a5c] hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               {saving ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}
