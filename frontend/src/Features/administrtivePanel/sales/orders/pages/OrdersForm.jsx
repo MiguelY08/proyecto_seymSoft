@@ -1,4 +1,4 @@
-﻿// src/features/orders/pages/OrdersForm.jsx
+// src/features/orders/pages/OrdersForm.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -269,7 +269,7 @@ function OrdersForm() {
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        const clientsResponse = await clientsService.getAll();
+        const clientsResponse = await clientsService.getAllActive();
         setClientes((clientsResponse.data || clientsResponse || []).map(normalizeClientForForm));
 
         try {

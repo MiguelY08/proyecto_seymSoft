@@ -132,6 +132,23 @@ export const CartProvider = ({ children }) => {
   const synchronizationRef = useRef(null);
   const activeIdentityRef = useRef(cartIdentity);
   const cartItemRequestVersions = useRef(new Map());
+  const cartItemsRef = useRef([]);
+
+  const replaceCartItems = useCallback((items) => {
+    const normalizedItems = normalizeItems(items);
+    cartItemsRef.current = normalizedItems;
+    setCartItems(normalizedItems);
+  }, []);
+
+  const invalidatePendingCartLoad = useCallback(() => {
+    requestVersion.current += 1;
+    synchronizationRef.current = null;
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    cartItemsRef.current = cartItems;
+  }, [cartItems]);
 
   useEffect(() => {
     if (authLoading) return undefined;
@@ -150,7 +167,7 @@ export const CartProvider = ({ children }) => {
         const localItems = isAuthenticated
           ? claimGuestCart(userCartKey)
           : readStoredCart(GUEST_CART_KEY);
-        setCartItems(localItems);
+        replaceCartItems(localItems);
         setLoading(false);
         return;
       }
@@ -172,12 +189,12 @@ export const CartProvider = ({ children }) => {
       synchronization.promise
         .then((cartResponse) => {
           if (!active || version !== requestVersion.current) return;
-          setCartItems(normalizeItems(cartResponse?.items));
+          replaceCartItems(cartResponse?.items);
           if (userCartKey) localStorage.removeItem(userCartKey);
         })
         .catch((syncError) => {
           if (!active || version !== requestVersion.current) return;
-          setCartItems(synchronization.pendingCart);
+          replaceCartItems(synchronization.pendingCart);
           setError(
             syncError?.response?.data?.message
             || 'No fue posible sincronizar el carrito.',
@@ -197,6 +214,7 @@ export const CartProvider = ({ children }) => {
     cartIdentity,
     clientId,
     isAuthenticated,
+    replaceCartItems,
     userCartKey,
   ]);
 
@@ -205,30 +223,29 @@ export const CartProvider = ({ children }) => {
 
     const synchronizeLocalCart = (event) => {
       if (event.key === localCartKey) {
-        setCartItems(readStoredCart(localCartKey));
+        replaceCartItems(readStoredCart(localCartKey));
       }
     };
 
     window.addEventListener('storage', synchronizeLocalCart);
     return () => window.removeEventListener('storage', synchronizeLocalCart);
-  }, [clientId, localCartKey]);
+  }, [clientId, localCartKey, replaceCartItems]);
 
   const updateItems = useCallback(
     (updater, remoteChange) => {
-      setCartItems((previousItems) => {
-        const nextItems = updater(previousItems);
-        setError(null);
+      const previousItems = cartItemsRef.current;
+      const nextItems = normalizeItems(updater(previousItems));
+      invalidatePendingCartLoad();
+      setError(null);
+      replaceCartItems(nextItems);
 
-        if (!clientId) {
-          writeStoredCart(localCartKey, nextItems);
-        } else {
-          remoteChange?.(nextItems, previousItems);
-        }
-
-        return nextItems;
-      });
+      if (!clientId) {
+        writeStoredCart(localCartKey, nextItems);
+      } else {
+        remoteChange?.(nextItems, previousItems);
+      }
     },
-    [clientId, localCartKey],
+    [clientId, invalidatePendingCartLoad, localCartKey, replaceCartItems],
   );
 
   const createCartItemRequest = useCallback((productId) => {
@@ -248,8 +265,6 @@ export const CartProvider = ({ children }) => {
 
   const addToCart = useCallback(async (product, quantity = 1) => {
     const requestedQuantity = Math.max(1, Number(quantity) || 1);
-
-    if (!isAuthenticated) return false;
 
     if (!clientId) {
       updateItems((previousItems) => {
@@ -272,14 +287,24 @@ export const CartProvider = ({ children }) => {
 
     const requestedIdentity = cartIdentity;
     const cartItemRequest = createCartItemRequest(product.id);
-    const existing = cartItems.find((item) => item.id === product.id);
+    const previousItems = cartItemsRef.current;
+    const existing = previousItems.find((item) => item.id === product.id);
     const nextQuantity = clampQuantity(
       product,
       (existing?.quantity || 0) + requestedQuantity,
     );
+    const nextItems = existing
+      ? previousItems.map((item) => (
+          item.id === product.id
+            ? { ...item, ...product, quantity: nextQuantity }
+            : item
+        ))
+      : [...previousItems, { ...product, quantity: nextQuantity }];
 
     try {
+      invalidatePendingCartLoad();
       setError(null);
+      replaceCartItems(nextItems);
       const cartResponse = await storefrontService.setCartItem(
         product.id,
         nextQuantity,
@@ -287,10 +312,11 @@ export const CartProvider = ({ children }) => {
 
       if (!isLatestCartItemRequest(cartItemRequest, requestedIdentity)) return false;
 
-      setCartItems(normalizeItems(cartResponse?.items));
+      replaceCartItems(cartResponse?.items);
       return true;
     } catch (requestError) {
       if (isLatestCartItemRequest(cartItemRequest, requestedIdentity)) {
+        replaceCartItems(previousItems);
         setError(
           requestError?.response?.data?.message
           || 'No fue posible actualizar el carrito.',
@@ -300,61 +326,70 @@ export const CartProvider = ({ children }) => {
     }
   }, [
     cartIdentity,
-    cartItems,
     clientId,
     createCartItemRequest,
-    isAuthenticated,
+    invalidatePendingCartLoad,
     isLatestCartItemRequest,
+    replaceCartItems,
     updateItems,
   ]);
 
   const updateQuantity = useCallback((productId, newQuantity) => {
-    updateItems(
-      (previousItems) => previousItems.map((item) => (
-        item.id === productId
-          ? { ...item, quantity: clampQuantity(item, newQuantity) }
-          : item
-      )),
-      (nextItems, previousItems) => {
-        const item = nextItems.find((entry) => entry.id === productId);
-        if (!item) return;
+    const previousItems = cartItemsRef.current;
+    const nextItems = normalizeItems(previousItems.map((item) => (
+      item.id === productId
+        ? { ...item, quantity: clampQuantity(item, newQuantity) }
+        : item
+    )));
+    const item = nextItems.find((entry) => entry.id === productId);
+    if (!item) return;
 
-        const requestedIdentity = cartIdentity;
-        const cartItemRequest = createCartItemRequest(productId);
-        storefrontService.setCartItem(productId, item.quantity)
-          .then((cartResponse) => {
-            if (!isLatestCartItemRequest(cartItemRequest, requestedIdentity)) return;
-            setCartItems(normalizeItems(cartResponse?.items));
-          })
-          .catch((requestError) => {
-            if (!isLatestCartItemRequest(cartItemRequest, requestedIdentity)) return;
+    invalidatePendingCartLoad();
+    setError(null);
+    replaceCartItems(nextItems);
 
-            setCartItems(previousItems);
-            setError(
-              requestError?.response?.data?.message
-              || 'No fue posible actualizar el carrito.',
-            );
-          });
-      },
-    );
+    if (!clientId) {
+      writeStoredCart(localCartKey, nextItems);
+      return;
+    }
+
+    const requestedIdentity = cartIdentity;
+    const cartItemRequest = createCartItemRequest(productId);
+    storefrontService.setCartItem(productId, item.quantity)
+      .then((cartResponse) => {
+        if (!isLatestCartItemRequest(cartItemRequest, requestedIdentity)) return;
+        replaceCartItems(cartResponse?.items);
+      })
+      .catch((requestError) => {
+        if (!isLatestCartItemRequest(cartItemRequest, requestedIdentity)) return;
+
+        replaceCartItems(previousItems);
+        setError(
+          requestError?.response?.data?.message
+          || 'No fue posible actualizar el carrito.',
+        );
+      });
   }, [
     cartIdentity,
+    clientId,
     createCartItemRequest,
+    invalidatePendingCartLoad,
     isLatestCartItemRequest,
-    updateItems,
+    localCartKey,
+    replaceCartItems,
   ]);
 
   const increaseQuantity = useCallback((productId) => {
-    const item = cartItems.find((entry) => entry.id === productId);
+    const item = cartItemsRef.current.find((entry) => entry.id === productId);
     if (item) updateQuantity(productId, item.quantity + 1);
-  }, [cartItems, updateQuantity]);
+  }, [updateQuantity]);
 
   const decreaseQuantity = useCallback((productId) => {
-    const item = cartItems.find((entry) => entry.id === productId);
+    const item = cartItemsRef.current.find((entry) => entry.id === productId);
     if (item && item.quantity > 1) {
       updateQuantity(productId, item.quantity - 1);
     }
-  }, [cartItems, updateQuantity]);
+  }, [updateQuantity]);
 
   const removeFromCart = useCallback((productId) => {
     const requestedIdentity = cartIdentity;
@@ -366,12 +401,12 @@ export const CartProvider = ({ children }) => {
         storefrontService.removeCartItem(productId)
           .then((cartResponse) => {
             if (!isLatestCartItemRequest(cartItemRequest, requestedIdentity)) return;
-            setCartItems(normalizeItems(cartResponse?.items));
+            replaceCartItems(cartResponse?.items);
           })
           .catch((requestError) => {
             if (!isLatestCartItemRequest(cartItemRequest, requestedIdentity)) return;
 
-            setCartItems(previousItems);
+            replaceCartItems(previousItems);
             setError(
               requestError?.response?.data?.message
               || 'No fue posible eliminar el producto del carrito.',
@@ -383,14 +418,16 @@ export const CartProvider = ({ children }) => {
     cartIdentity,
     createCartItemRequest,
     isLatestCartItemRequest,
+    replaceCartItems,
     updateItems,
   ]);
 
   const clearCart = useCallback(async () => {
-    const previousItems = cartItems;
+    const previousItems = cartItemsRef.current;
     const requestedIdentity = cartIdentity;
     cartItemRequestVersions.current.clear();
-    setCartItems([]);
+    invalidatePendingCartLoad();
+    replaceCartItems([]);
     setError(null);
 
     if (!clientId) {
@@ -401,12 +438,12 @@ export const CartProvider = ({ children }) => {
     try {
       const cartResponse = await storefrontService.clearCart();
       if (activeIdentityRef.current === requestedIdentity) {
-        setCartItems(normalizeItems(cartResponse?.items));
+        replaceCartItems(cartResponse?.items);
       }
       return true;
     } catch (requestError) {
       if (activeIdentityRef.current === requestedIdentity) {
-        setCartItems(previousItems);
+        replaceCartItems(previousItems);
         setError(
           requestError?.response?.data?.message
           || 'No fue posible vaciar el carrito.',
@@ -414,7 +451,7 @@ export const CartProvider = ({ children }) => {
       }
       return false;
     }
-  }, [cartIdentity, cartItems, clientId, localCartKey]);
+  }, [cartIdentity, clientId, invalidatePendingCartLoad, localCartKey, replaceCartItems]);
 
   const getSubtotal = () => cartItems.reduce(
     (total, item) => total + (item.price * item.quantity),

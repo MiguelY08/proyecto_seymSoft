@@ -92,6 +92,34 @@ export const clientsService = {
     };
   },
 
+  getAllActive: async (params = {}) => {
+    const { page: _page, limit = 10000, ...filters } = params;
+    const firstResult = await clientsService.getAll({ ...filters, page: 1, limit });
+    const clients = [...(firstResult.data || [])];
+    const totalPages = firstResult.pagination?.totalPages || 1;
+
+    if (totalPages > 1) {
+      const pendingPages = [];
+      for (let page = 2; page <= totalPages; page += 1) {
+        pendingPages.push(clientsService.getAll({ ...filters, page, limit }));
+      }
+
+      const results = await Promise.all(pendingPages);
+      results.forEach((result) => {
+        clients.push(...(result.data || []));
+      });
+    }
+
+    const uniqueClients = Array.from(
+      new Map(clients.map((client) => [client.id, client])).values()
+    );
+
+    return uniqueClients.filter((client) => {
+      const statusName = String(client.status?.name ?? client.status ?? '').toLowerCase();
+      return client.active === true || statusName === 'activo';
+    });
+  },
+
   getById: async (id) => {
     const response = await apiClient.get(`/clients/${id}`);
     return response.data.data;

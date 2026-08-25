@@ -549,7 +549,7 @@ function Products() {
         )}
 
         {!loading && canView && lowStockCount > 0 && (
-          <div className="flex flex-col items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800 shadow-sm sm:flex-row">
+          <div className="flex flex-col items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800 shadow-sm sm:flex-row sm:items-center">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold">Productos con stock bajo</p>

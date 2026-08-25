@@ -246,6 +246,14 @@ function ProductForm({
 
   const isNewProduct = mode === 'create' && productType === 'new';
   const isExistingProduct = mode === 'edit' || !isNewProduct;
+  const willCreateInactive = mode === 'create' && (
+    isNewProduct || [
+      formData.precioDetalle,
+      formData.precioMayorista,
+      formData.precioColegas,
+      formData.precioPacas,
+    ].some((price) => Number(price) <= 0)
+  );
 
   const getCurrentProductId = () =>
     isEditMode ? producto?.id ?? producto?.idProduct ?? null : null;
@@ -296,6 +304,7 @@ function ProductForm({
       const trimmed = value?.trim() ?? '';
       if (!trimmed) return 'El codigo de barras es obligatorio.';
       if (trimmed.length < 8) return 'El codigo de barras debe tener minimo 8 caracteres.';
+      if (trimmed.length > 13) return 'El codigo de barras no puede superar los 13 caracteres.';
 
       const conflictMessage = getBarcodeConflictMessage(trimmed);
       if (conflictMessage) return conflictMessage;
@@ -310,6 +319,7 @@ function ProductForm({
     if (name === 'referencia') {
       const trimmed = value?.trim() ?? '';
       if (!trimmed) return 'La referencia es obligatoria.';
+      if (trimmed.length > 50) return 'La referencia no puede superar los 50 caracteres.';
 
       const conflictMessage = getReferenceConflictMessage(trimmed);
       if (conflictMessage) return conflictMessage;
@@ -329,6 +339,7 @@ function ProductForm({
     else if (d.nombre.trim().length < 3) e.nombre = 'El nombre debe tener al menos 3 caracteres.';
     if (!d.codBarras?.trim()) e.codBarras = 'El codigo de barras es obligatorio.';
     else if (d.codBarras.trim().length < 8) e.codBarras = 'El codigo de barras debe tener minimo 8 caracteres.';
+    else if (d.codBarras.trim().length > 13) e.codBarras = 'El codigo de barras no puede superar los 13 caracteres.';
     else {
       const conflictMessage = getBarcodeConflictMessage(d.codBarras);
       if (conflictMessage) e.codBarras = conflictMessage;
@@ -341,8 +352,17 @@ function ProductForm({
       .map((code) => getBarcodeConflictMessage(code))
       .find(Boolean);
     if (extraConflict) e.codsBarrasExtra = extraConflict;
+    const invalidExtraLength = (d.codsBarrasExtra || []).find((item) => {
+      const length = String(item?.cod || '').trim().length;
+      return length > 0 && (length < 8 || length > 13);
+    });
+    if (invalidExtraLength) {
+      e.codsBarrasExtra = 'Los codigos adicionales deben tener entre 8 y 13 caracteres.';
+    }
     if (isEditMode ? d.referencia === '' : !d.referencia.trim()) {
       e.referencia = 'La referencia es obligatoria.';
+    } else if (d.referencia.trim().length > 50) {
+      e.referencia = 'La referencia no puede superar los 50 caracteres.';
     }
     if (isExistingProduct) {
       if (d.stockPrincipal === '') e.stockPrincipal = 'El stock es obligatorio.';
@@ -610,7 +630,10 @@ function ProductForm({
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Referencia <span className="text-red-500">*</span></label>
                 <div className="relative">
                   <Tag className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                  <input type="text" name="referencia" value={formData.referencia || ''} onChange={handleChange} placeholder="REF-001" className={`${inputCls('referencia')} pl-10`} />
+                  <input type="text" name="referencia" value={formData.referencia || ''} onChange={handleChange} maxLength={50} placeholder="REF-001" className={`${inputCls('referencia')} pl-10 pr-14`} />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">
+                    {(formData.referencia || '').length}/50
+                  </span>
                 </div>
                 <ErrMsg field="referencia" />
               </div>
@@ -643,9 +666,13 @@ function ProductForm({
                       name="codBarras"
                       value={formData.codBarras || ''}
                       onChange={handleChange}
+                      maxLength={13}
                       placeholder="Escanea o escribe el código"
-                      className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400"
+                      className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-12 text-sm text-gray-700 outline-none placeholder-gray-400"
                     />
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">
+                      {(formData.codBarras || '').length}/13
+                    </span>
                   </div>
                   {isExistingProduct ? (
                     <>
@@ -750,9 +777,13 @@ function ProductForm({
                               type="text"
                               value={item.cod || ''}
                               onChange={(e) => handleCodBarrasExtraChange(i, 'cod', e.target.value)}
+                              maxLength={13}
                               placeholder={`Código de barras ${i + 2}`}
-                              className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400"
+                              className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-12 text-sm text-gray-700 outline-none placeholder-gray-400"
                             />
+                            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">
+                              {(item.cod || '').length}/13
+                            </span>
                           </div>
                           {isExistingProduct ? (
                             <div className="relative border-l border-gray-200 bg-gray-50">
@@ -774,7 +805,9 @@ function ProductForm({
                 )}
                 <ErrMsg field="codsBarrasExtra" />
                 <div className="border-t border-gray-100 pt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Cantidad x paca</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Cantidad x paca <span className="text-xs font-normal text-gray-400">(opcional)</span>
+                  </label>
                   <input type="text" inputMode="numeric" name="cantidadXPaca" value={formData.cantidadXPaca || ''} onChange={(e) => setFormData((prev) => ({ ...prev, cantidadXPaca: numeric(e.target.value) }))} onKeyDown={block} placeholder="12" className="w-full max-w-xs px-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 text-sm transition-colors duration-200" />
                 </div>
 
@@ -786,6 +819,11 @@ function ProductForm({
                       <p className="text-xs text-gray-400">Los precios son opcionales y pueden configurarse posteriormente.</p>
                     </div>
                   </div>
+                  {willCreateInactive && (
+                    <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
+                      Este producto se creará inactivo porque aún no tiene todos los precios de venta. Podrás activarlo después de completarlos.
+                    </div>
+                  )}
                   {isExistingProduct ? (
                     <>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

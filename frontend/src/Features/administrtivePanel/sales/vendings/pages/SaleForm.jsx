@@ -276,7 +276,7 @@ function SaleForm() {
   useEffect(() => {
     const loadCatalogs = async () => {
       try {
-        const clients = await clientsService.getAll();
+        const clients = await clientsService.getAllActive();
         setClientes(normalizeClientList(clients).map(normalizeClientForForm));
 
         const creditCustomers = await getCreditCustomers();
