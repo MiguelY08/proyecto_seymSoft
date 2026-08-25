@@ -666,7 +666,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
     }
 
     if (normalizedFormData.categoryIds.length === 0) {
-      validationErrors.categoryIds = 'Seleccione al menos una categor?a';
+      validationErrors.categoryIds = 'Seleccione al menos una categoría';
     }
 
     setErrors(validationErrors);
