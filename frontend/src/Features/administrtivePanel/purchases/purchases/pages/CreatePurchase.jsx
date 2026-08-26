@@ -32,13 +32,6 @@ import {
   Pencil,
 } from "lucide-react";
 
-const PURCHASE_TYPES = {
-  UNIT: { value: "unit", label: "Unidad" },
-  PACK: { value: "pack", label: "X Paca" },
-  LITER: { value: "liter", label: "Litros" },
-  KILO: { value: "kilo", label: "Kilos" },
-};
-
 const CreatePurchase = () => {
   const navigate = useNavigate();
   const { showError, showWarning, showSuccess, showConfirm, showInfo } = useAlert();
@@ -290,6 +283,7 @@ const CreatePurchase = () => {
       editingQuantity: item.cantidad,
       editingPurchasePrice: item.supplierPrice || item.valorUnit || "",
       editingPurchaseType: item.purchaseType || "Unidad",
+      editingPurchaseTypeValue: item.purchaseTypeValue || null,
       editingRetailPrice: item.retailPrice || product.retailPrice || 0,
       editingWholesalePrice: item.wholesalePrice || product.wholesalePrice || 0,
       editingPartnerPrice: item.partnerPrice || product.partnerPrice || 0,
@@ -327,14 +321,18 @@ const CreatePurchase = () => {
     }
 
     const unitPrice = Number(purchasePrice) || foundProduct.supplierPrice || foundProduct.wholesalePrice || foundProduct.valorUnit;
-    const finalQuantity = purchaseTypeInfo?.quantity || quantity;
-    const stockToAdd = purchaseTypeInfo?.type === "pack" 
+    const currentItem = purchaseItems[itemIndex];
+    const selectedPurchaseType = purchaseTypeInfo?.type || currentItem.purchaseTypeValue || "unit";
+    const selectedPurchaseTypeLabel = purchaseTypeInfo?.label || currentItem.purchaseType || "Unidad";
+    const finalQuantity = purchaseTypeInfo?.quantity || currentItem.cantidad || quantity;
+    const stockToAdd = selectedPurchaseType === "pack"
       ? finalQuantity * (foundProduct.quantityPerPack || 0) 
       : finalQuantity;
 
-    const subtotal = unitPrice * finalQuantity;
+    const subtotal = unitPrice * stockToAdd;
     const ivaValor = (subtotal * foundProduct.iva) / 100;
     const total = subtotal + ivaValor;
+    const currentExtraBarcodes = extraBarcodes[foundProduct.codigoBarras] || [];
 
     const updatedItems = [...purchaseItems];
     updatedItems[itemIndex] = {
@@ -343,9 +341,15 @@ const CreatePurchase = () => {
       stockTotal: stockToAdd,
       valorUnit: unitPrice,
       supplierPrice: unitPrice,
-      purchaseType: purchaseTypeInfo?.label || "Unidad",
-      purchaseTypeValue: purchaseTypeInfo?.type || "unit",
-      quantityPerPack: purchaseTypeInfo?.type === "pack" ? (foundProduct.quantityPerPack || 0) : 0,
+      purchaseType: selectedPurchaseTypeLabel,
+      purchaseTypeValue: selectedPurchaseType,
+      quantityPerPack: selectedPurchaseType === "pack" ? (foundProduct.quantityPerPack || 0) : 0,
+      codigosExtra: [
+        ...new Set([
+          ...(updatedItems[itemIndex].codigosExtra || []),
+          ...currentExtraBarcodes,
+        ]),
+      ],
       retailPrice: salePrices.retailPrice ? Number(salePrices.retailPrice) : foundProduct.retailPrice,
       wholesalePrice: salePrices.wholesalePrice ? Number(salePrices.wholesalePrice) : foundProduct.wholesalePrice,
       partnerPrice: salePrices.partnerPrice ? Number(salePrices.partnerPrice) : foundProduct.partnerPrice,
@@ -445,15 +449,20 @@ const CreatePurchase = () => {
     stockToAdd = Number(stockToAdd) || finalQuantity;
 
     const existingItem = purchaseItems.find(
-      (item) => item.codigoBarras === foundProduct.codigoBarras
+      (item) =>
+        item.codigoBarras === foundProduct.codigoBarras &&
+        (item.purchaseTypeValue || "unit") === purchaseTypeValue
     );
 
     if (existingItem) {
       const updatedItems = purchaseItems.map((item) => {
-        if (item.codigoBarras === foundProduct.codigoBarras) {
+        if (
+          item.codigoBarras === foundProduct.codigoBarras &&
+          (item.purchaseTypeValue || "unit") === purchaseTypeValue
+        ) {
           const nuevaCantidad = item.cantidad + finalQuantity;
           const nuevoStockTotal = item.stockTotal + stockToAdd;
-          const subtotal = unitPrice * nuevaCantidad;
+          const subtotal = unitPrice * nuevoStockTotal;
           const ivaValor = (subtotal * foundProduct.iva) / 100;
           const total = subtotal + ivaValor;
           return {
@@ -480,7 +489,7 @@ const CreatePurchase = () => {
       setPurchaseItems(updatedItems);
       showSuccess("Cantidad actualizada", `Se sumó la cantidad al producto existente (${purchaseTypeLabel})`);
     } else {
-      const subtotal = unitPrice * finalQuantity;
+      const subtotal = unitPrice * stockToAdd;
       const ivaValor = (subtotal * foundProduct.iva) / 100;
       const total = subtotal + ivaValor;
 

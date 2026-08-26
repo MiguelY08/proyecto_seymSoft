@@ -10,6 +10,7 @@ import {
   updateSubcategory,
   deleteSubcategory,
 } from "../data/categoriesService";
+import { synchronizeProductsBySubcategory } from "../data/categoryproductsService";
 
 const normalizeName = (str = "") =>
   str
@@ -30,6 +31,8 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const deleteLockRef = useRef(false);
+  const [changingStatusId, setChangingStatusId] = useState(null);
+  const statusChangeLockRef = useRef(false);
 
   const loadSubcategories = async () => {
     try {
@@ -94,12 +97,33 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
       return;
     }
 
+    const currentSubcategory = subcategories.find((subcategory) => subcategory.id === editingId);
+    const isBeingDeactivated = currentSubcategory?.estado === "Activo" && !editedEstado;
+
+    if (statusChangeLockRef.current) return;
+    statusChangeLockRef.current = true;
+    setChangingStatusId(editingId);
+
     try {
+      if (isBeingDeactivated) {
+        const result = await showConfirm(
+          "warning",
+          "Desactivar subcategoría",
+          "Al desactivar esta subcategoría también se desactivarán los productos asociados a ella. ¿Deseas continuar?",
+          { confirmButtonText: "Sí, desactivar", cancelButtonText: "Cancelar" }
+        );
+        if (!result?.isConfirmed) return;
+      }
+
       await updateSubcategory(editingId, {
         nombre: nameTrim,
         descripcion: descTrim || "",
         estado: editedEstado ? "Activo" : "Inactivo"
       });
+
+      if (currentSubcategory?.estado !== (editedEstado ? "Activo" : "Inactivo")) {
+        await synchronizeProductsBySubcategory(editingId, editedEstado);
+      }
 
       setSubcategories(subcategories.map((s) =>
         s.id === editingId
@@ -112,6 +136,9 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
       if (refreshCategories) refreshCategories();
     } catch (error) {
       showError("Error", error.message || "No se pudo actualizar la subcategoría.");
+    } finally {
+      statusChangeLockRef.current = false;
+      setChangingStatusId(null);
     }
   };
 
@@ -156,6 +183,10 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
   };
 
   const handleToggleEstado = async (subId, nuevoEstado) => {
+    if (statusChangeLockRef.current) return;
+    statusChangeLockRef.current = true;
+    setChangingStatusId(subId);
+
     if (!nuevoEstado) {
       const result = await showConfirm(
         "warning",
@@ -163,13 +194,19 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
         "Al desactivar esta subcategoría también se desactivarán los productos asociados a ella. ¿Deseas continuar?",
         { confirmButtonText: "Sí, desactivar", cancelButtonText: "Cancelar" }
       );
-      if (!result?.isConfirmed) return;
+      if (!result?.isConfirmed) {
+        statusChangeLockRef.current = false;
+        setChangingStatusId(null);
+        return;
+      }
     }
 
     try {
       await updateSubcategory(subId, {
         estado: nuevoEstado ? "Activo" : "Inactivo"
       });
+
+      await synchronizeProductsBySubcategory(subId, nuevoEstado);
 
       setSubcategories(subcategories.map((s) =>
         s.id === subId ? { ...s, estado: nuevoEstado ? "Activo" : "Inactivo" } : s
@@ -178,6 +215,9 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
       if (refreshCategories) refreshCategories();
     } catch (error) {
       showError("Error", error.message || "No se pudo cambiar el estado.");
+    } finally {
+      statusChangeLockRef.current = false;
+      setChangingStatusId(null);
     }
   };
 
@@ -235,9 +275,15 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
                       <td className="py-1.5 text-center flex justify-center gap-2">
                         <button
                           onClick={handleSaveEdit}
-                          className="px-3 py-1 bg-green-600 text-white rounded text-xs"
+                          disabled={changingStatusId !== null}
+                          aria-busy={changingStatusId === sub.id}
+                          className={`px-3 py-1 text-white rounded text-xs ${
+                            changingStatusId !== null
+                              ? "bg-gray-400 cursor-not-allowed"
+                              : "bg-green-600"
+                          }`}
                         >
-                          Guardar
+                          {changingStatusId === sub.id ? "Guardando..." : "Guardar"}
                         </button>
                         <button
                           onClick={() => setEditingId(null)}
@@ -255,6 +301,8 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
                         <ActiveToggle
                           activo={sub.estado === "Activo"}
                           onChange={(nuevo) => handleToggleEstado(sub.id, nuevo)}
+                          disabled={changingStatusId !== null}
+                          loading={changingStatusId === sub.id}
                         />
                        </td>
                       <td className="py-1.5 text-center flex justify-center gap-2">
