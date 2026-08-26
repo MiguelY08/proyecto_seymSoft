@@ -90,10 +90,14 @@ const getClientId = (client) => (
   client?.idClient ?? client?.id_client ?? client?.id ?? null
 );
 
+const getProductStock = (product) => {
+  const stock = Number(product?.totalStock ?? product?.stock ?? 0);
+  return Number.isFinite(stock) ? Math.max(0, stock) : 0;
+};
+
 const clampQuantity = (product, quantity) => {
   const requested = Math.max(1, Number(quantity) || 1);
-  const stock = Number(product.totalStock ?? product.stock ?? 0);
-  return stock > 0 ? Math.min(requested, stock) : requested;
+  return Math.min(requested, getProductStock(product));
 };
 
 const getCartItemKey = (productId) => String(productId);
@@ -132,6 +136,7 @@ export const CartProvider = ({ children }) => {
   const synchronizationRef = useRef(null);
   const activeIdentityRef = useRef(cartIdentity);
   const cartItemRequestVersions = useRef(new Map());
+  const cartItemUpdateQueues = useRef(new Map());
   const cartItemsRef = useRef([]);
 
   const replaceCartItems = useCallback((items) => {
@@ -156,6 +161,7 @@ export const CartProvider = ({ children }) => {
     const version = ++requestVersion.current;
     activeIdentityRef.current = cartIdentity;
     cartItemRequestVersions.current.clear();
+    cartItemUpdateQueues.current.clear();
     let active = true;
     const timer = window.setTimeout(() => {
       if (!active) return;
@@ -263,8 +269,36 @@ export const CartProvider = ({ children }) => {
     [],
   );
 
+  const mergeCartItemFromResponse = useCallback((productId, items) => {
+    const serverItem = items?.find((item) => item.id === productId);
+    if (!serverItem) {
+      replaceCartItems(
+        cartItemsRef.current.filter((item) => item.id !== productId),
+      );
+      return;
+    }
+
+    replaceCartItems(cartItemsRef.current.map((item) => (
+      item.id === productId ? { ...item, ...serverItem } : item
+    )));
+  }, [replaceCartItems]);
+
+  const restoreCartItemFromServer = useCallback(async (productId) => {
+    try {
+      const cartResponse = await storefrontService.getCart();
+      mergeCartItemFromResponse(productId, cartResponse?.items);
+    } catch (syncError) {
+      setError(
+        syncError?.response?.data?.message
+        || 'No fue posible sincronizar el carrito.',
+      );
+    }
+  }, [mergeCartItemFromResponse]);
+
   const addToCart = useCallback(async (product, quantity = 1) => {
     const requestedQuantity = Math.max(1, Number(quantity) || 1);
+
+    if (getProductStock(product) <= 0) return false;
 
     if (!clientId) {
       updateItems((previousItems) => {
@@ -336,13 +370,16 @@ export const CartProvider = ({ children }) => {
 
   const updateQuantity = useCallback((productId, newQuantity) => {
     const previousItems = cartItemsRef.current;
+    const currentItem = previousItems.find((item) => item.id === productId);
+    if (!currentItem || getProductStock(currentItem) <= 0) return false;
+
     const nextItems = normalizeItems(previousItems.map((item) => (
       item.id === productId
         ? { ...item, quantity: clampQuantity(item, newQuantity) }
         : item
     )));
     const item = nextItems.find((entry) => entry.id === productId);
-    if (!item) return;
+    if (!item) return false;
 
     invalidatePendingCartLoad();
     setError(null);
@@ -350,25 +387,39 @@ export const CartProvider = ({ children }) => {
 
     if (!clientId) {
       writeStoredCart(localCartKey, nextItems);
-      return;
+      return true;
     }
 
     const requestedIdentity = cartIdentity;
     const cartItemRequest = createCartItemRequest(productId);
-    storefrontService.setCartItem(productId, item.quantity)
+    const queueKey = getCartItemKey(productId);
+    const previousRequest = cartItemUpdateQueues.current.get(queueKey) || Promise.resolve();
+    const queuedRequest = previousRequest
+      .catch(() => undefined)
+      .then(() => storefrontService.setCartItem(productId, item.quantity));
+
+    cartItemUpdateQueues.current.set(queueKey, queuedRequest);
+
+    queuedRequest
       .then((cartResponse) => {
         if (!isLatestCartItemRequest(cartItemRequest, requestedIdentity)) return;
-        replaceCartItems(cartResponse?.items);
+        mergeCartItemFromResponse(productId, cartResponse?.items);
       })
       .catch((requestError) => {
         if (!isLatestCartItemRequest(cartItemRequest, requestedIdentity)) return;
 
-        replaceCartItems(previousItems);
         setError(
           requestError?.response?.data?.message
           || 'No fue posible actualizar el carrito.',
         );
+        restoreCartItemFromServer(productId);
+      })
+      .finally(() => {
+        if (cartItemUpdateQueues.current.get(queueKey) === queuedRequest) {
+          cartItemUpdateQueues.current.delete(queueKey);
+        }
       });
+    return true;
   }, [
     cartIdentity,
     clientId,
@@ -376,7 +427,9 @@ export const CartProvider = ({ children }) => {
     invalidatePendingCartLoad,
     isLatestCartItemRequest,
     localCartKey,
+    mergeCartItemFromResponse,
     replaceCartItems,
+    restoreCartItemFromServer,
   ]);
 
   const increaseQuantity = useCallback((productId) => {
@@ -426,6 +479,7 @@ export const CartProvider = ({ children }) => {
     const previousItems = cartItemsRef.current;
     const requestedIdentity = cartIdentity;
     cartItemRequestVersions.current.clear();
+    cartItemUpdateQueues.current.clear();
     invalidatePendingCartLoad();
     replaceCartItems([]);
     setError(null);
