@@ -27,11 +27,20 @@ const calculateIncludedIva = (total, ivaPercentage = DEFAULT_IVA_PERCENTAGE) => 
   return roundMoney(toNumber(total) - (toNumber(total) / (1 + (percentage / 100))));
 };
 
-const getLineTotal = (item = {}) => {
-  const explicitTotal = item.total ?? item.totalLinea ?? item.lineTotal ?? item.subtotal;
+const getLineTotal = (item = {}, includeSeparateIva = false) => {
+  const explicitTotal = item.total ?? item.totalLinea ?? item.lineTotal;
 
   if (explicitTotal !== undefined && explicitTotal !== null && explicitTotal !== '') {
     return roundMoney(explicitTotal);
+  }
+
+  const subtotal = item.subtotal;
+  if (subtotal !== undefined && subtotal !== null && subtotal !== '') {
+    const explicitIva = item.iva ?? item.ivaAmount;
+    const iva = includeSeparateIva && explicitIva !== undefined && explicitIva !== null && explicitIva !== ''
+      ? toNumber(explicitIva)
+      : 0;
+    return roundMoney(toNumber(subtotal) + iva);
   }
 
   return roundMoney(toNumber(item.precioUnitario) * toNumber(item.cantidad));
@@ -268,10 +277,20 @@ function CancelOrder({
     : (activeSale?.items ?? activeSale?.details ?? activeSale?.products ?? activeSale?.order?.details ?? activeSale?.order?.productos ?? []).map(normalizeItem);
 
   const totals = useMemo(() => {
-    const itemsTotal = roundMoney(items.reduce((acc, item) => acc + getLineTotal(item), 0));
+    const itemsTotal = roundMoney(items.reduce(
+      (acc, item) => acc + getLineTotal(item, contexto === 'venta'),
+      0
+    ));
     const itemsIva = roundMoney(items.reduce((acc, item) => acc + getLineIva(item), 0));
     const source = contexto === 'pedido' ? activeOrder : activeSale;
     const sourceOrder = contexto === 'venta' ? activeSale?.order : null;
+    const shippingAmount = roundMoney(toNumber(
+      sourceOrder?.shippingAmount ??
+        sourceOrder?.shipping_amount ??
+        sourceOrder?.deliveryShippingAmount ??
+        sourceOrder?.delivery_shipping_amount ??
+        source?.shippingAmount
+    ));
 
     const providedTotal = toNumber(
       source?.totalNumerico ??
@@ -300,11 +319,12 @@ function CancelOrder({
     return {
       subtotal: subtotalValue,
       iva: ivaValue,
+      shippingAmount,
       total: totalValue,
     };
   }, [contexto, items, activeOrder, activeSale]);
 
-  const { subtotal, iva, total } = totals;
+  const { subtotal, iva, shippingAmount, total } = totals;
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('es-CO', {
@@ -397,18 +417,18 @@ function CancelOrder({
               </span>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
             <button
               onClick={handleClose}
               disabled={isSubmitting}
-              className="inline-flex items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex w-full items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
             >
               Cerrar
             </button>
             <button
               onClick={handleConfirm}
               disabled={isSubmitting}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
             >
               {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />
@@ -541,7 +561,7 @@ function CancelOrder({
                               {formatCurrency(producto.precioUnitario)}
                             </span>
                             <span className="text-xs font-semibold text-gray-700 text-right tabular-nums">
-                              {formatCurrency(getLineTotal(producto))}
+                              {formatCurrency(getLineTotal(producto, contexto === 'venta'))}
                             </span>
                           </div>
                         ))}
@@ -558,6 +578,12 @@ function CancelOrder({
                       <span className="text-xs text-gray-400">IVA (19%)</span>
                       <span className="text-xs text-gray-600 tabular-nums">{formatCurrency(iva)}</span>
                     </div>
+                    {shippingAmount > 0 && (
+                      <div className="flex justify-between items-center px-2">
+                        <span className="text-xs text-gray-400">Envío</span>
+                        <span className="text-xs text-gray-600 tabular-nums">{formatCurrency(shippingAmount)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center mt-1 px-3 py-2.5 bg-[#004D77] rounded-lg">
                       <span className="text-xs font-bold text-white/80 uppercase tracking-wide">Total</span>
                       <span className="text-sm font-bold text-white tabular-nums">{formatCurrency(total)}</span>

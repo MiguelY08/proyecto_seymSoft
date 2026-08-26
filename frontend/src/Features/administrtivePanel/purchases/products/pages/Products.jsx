@@ -16,7 +16,7 @@ import { createExcelLogoId, prepareExcelLogoHeader } from "../../../../shared/ex
 
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 import ActiveToggle from "../components/ActiveToggle";
-import ProductsPagination from "../components/ProductsPagination";
+import PaginationAdmin from "../../../../shared/PaginationAdmin";
 import ProductsToolbar from "../components/ProductsToolbar";
 import DetailProduct from "../modals/DetailProduct";
 import { useAlert } from "../../../../shared/alerts/useAlert";
@@ -549,7 +549,7 @@ function Products() {
         )}
 
         {!loading && canView && lowStockCount > 0 && (
-          <div className="flex flex-col items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800 shadow-sm sm:flex-row">
+          <div className="flex flex-col items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800 shadow-sm sm:flex-row sm:items-center">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold">Productos con stock bajo</p>
@@ -794,41 +794,16 @@ function Products() {
               </table>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
-              <p className="text-xs sm:text-sm font-semibold text-gray-700">
-                {search.trim() || hasActiveFilters ? (
-                  <>
-                    <span className="text-[#004D77]">
-                      {filteredData.length}
-                    </span>{" "}
-                    resultado{filteredData.length !== 1 ? "s" : ""} encontrado
-                    {filteredData.length !== 1 ? "s" : ""}
-                  </>
-                ) : (
-                  <>
-                    Mostrando{" "}
-                    <span className="text-[#004D77]">{startIndex + 1}</span> a{" "}
-                    <span className="text-[#004D77]">
-                      {Math.min(endIndex, filteredData.length)}
-                    </span>{" "}
-                    de{" "}
-                    <span className="text-[#004D77]">
-                      {filteredData.length}
-                    </span>{" "}
-                    productos
-                  </>
-                )}
-              </p>
-              {totalPages > 1 && (
-                <div className="bg-white shadow-md rounded-xl px-3 py-2">
-                  <ProductsPagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                  />
-                </div>
-              )}
-            </div>
+            {totalPages > 1 && (
+              <div className="shrink-0">
+                <PaginationAdmin
+                  currentPage={currentPage}
+                  onPageChange={setCurrentPage}
+                  totalRecords={filteredData.length}
+                  recordsPerPage={RECORDS_PER_PAGE}
+                />
+              </div>
+            )}
           </>
         )}
 

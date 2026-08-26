@@ -1,45 +1,20 @@
-import imagenBanner from "../../../assets/imagenBanner.png"
-// import LoginBanner from "../components/LoginBanner"
-// import BackHeader from "../../shared/BackHeader"
 import AuthFooter from "../../shared/AuthFooter"
 import HeaderLanding from "../../layouts/HeaderLanding"
-
-import logo from "../../../assets/PapeleriaMagicLogo_512x512.png"
+import AuthAnimatedBackground from "../components/AuthAnimatedBackground"
 import ForgotPasswordForm from "../components/ForgotPasswordForm"
 
 export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen flex flex-col">
-
-      <main className="flex flex-col flex-1">
-
+      <main className="flex flex-1 flex-col">
         <HeaderLanding />
-
-        {/* <LoginBanner 
-          titulo="Recuperar contraseña"
-          imagen={imagenBanner}
-          logo={logo}
-        /> */}
-
-        {/* Contenedor gris */}
-        <div className="bg-gray-100 flex flex-col flex-1">
-
-          {/* <BackHeader
-            title="Volver"
-            to="/login"
-          /> */}
-
-          {/* Formulario */}
-          <div className="flex justify-center items-center flex-1 px-4 py-4">
+        <AuthAnimatedBackground>
+          <div className="flex flex-1 items-center justify-center px-4 py-4">
             <ForgotPasswordForm />
           </div>
-
-        </div>
-
+        </AuthAnimatedBackground>
       </main>
-
       <AuthFooter />
-
     </div>
   )
 }

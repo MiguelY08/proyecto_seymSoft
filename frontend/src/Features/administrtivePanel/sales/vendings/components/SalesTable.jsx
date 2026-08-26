@@ -365,6 +365,12 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
             const { puedeDevolver, puedeAnular, deshabilitado } = getPermisos(
               row.estado,
             );
+            const editDisabledByCompletedSale =
+              isDeliveredSale(row) && normalizeStatusText(row.estado) === 'aprobada';
+            const isEditDisabled = deshabilitado || editDisabledByCompletedSale;
+            const editDisabledTitle = deshabilitado
+              ? 'No disponible para ventas anuladas'
+              : 'No disponible para ventas aprobadas con pedido entregado';
             const hasAssociatedReturn = Boolean(row.hasSaleReturn || row.saleReturnNumber);
             const returnTitle = hasAssociatedReturn
               ? `Esta venta ya tiene asociada la devolución de venta ${row.saleReturnNumber || "registrada"}.`
@@ -437,10 +443,10 @@ function SalesTable({ data = [], search = "", totalData = 0, hasActiveFilters = 
                     </Permission>
 
                     <Permission permission="ventas.editar">
-                      {deshabilitado ? (
+                      {isEditDisabled ? (
                         <span
                           className="text-gray-200 cursor-not-allowed"
-                          title="No disponible para ventas anuladas"
+                          title={editDisabledTitle}
                         >
                           <SquarePen className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
                         </span>

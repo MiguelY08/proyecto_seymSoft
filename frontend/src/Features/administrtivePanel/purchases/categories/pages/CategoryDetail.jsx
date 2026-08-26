@@ -1,6 +1,6 @@
 // features/categories/pages/CategoryDetail.jsx
 import React, { useState, useEffect, useMemo } from "react";
-import { FolderSearch } from "lucide-react";
+import { CheckCircle2, FolderSearch, Layers, Tag } from "lucide-react";
 import Pagination from "../../../../shared/PaginationLanding";
 import { getCategoryById, normalizeCategoryStatus } from "../data/categoriesService";
 import { useOutsideCloseWarning } from "../../../../shared/hooks/useOutsideCloseWarning";
@@ -40,13 +40,29 @@ function CategoryDetail({ category, onClose }) {
     return subcategories.slice(start, start + productsPerPage);
   }, [currentPage, subcategories]);
 
+  const InfoCard = ({ icon: Icon, label, children, accent = false }) => (
+    <div className="flex min-w-0 items-start gap-3 rounded-lg border border-gray-100 bg-gray-50/70 p-3 transition-colors hover:border-[#004D77]/20 hover:bg-[#004D77]/[0.03]">
+      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#004D77]/10">
+        <Icon className="h-4 w-4 text-[#004D77]" strokeWidth={1.8} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide leading-none text-gray-400">
+          {label}
+        </span>
+        <div className={`truncate text-sm font-medium ${accent ? "font-semibold text-[#004D77]" : "text-gray-800"}`}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-stretch justify-stretch bg-white sm:items-center sm:justify-center sm:bg-black/40 sm:p-4 sm:backdrop-blur-sm"
       onClick={handleOutsideClick}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col"
+        className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:max-w-3xl sm:rounded-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <PurchaseModalHeader
@@ -57,37 +73,47 @@ function CategoryDetail({ category, onClose }) {
           closeLabel="Cerrar detalle de categoría"
         />
 
-        <div className="px-6 py-6 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
-          <div className="text-sm">
-            <p><strong>Nombre:</strong> {category.nombre}</p>
-            <p><strong>Estado:</strong> {category.estado}</p>
-            <p><strong>Subcategorías:</strong> {subcategories.length}</p>
+        <div className="min-h-0 flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <InfoCard icon={Tag} label="Categoría" accent>
+              {category.nombre || "-"}
+            </InfoCard>
+            <InfoCard icon={CheckCircle2} label="Estado">
+              <span className={`inline-flex items-center rounded-full border border-black/5 px-2.5 py-0.5 text-[10px] font-semibold whitespace-nowrap ${category.estado === "Activo" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                {category.estado || "-"}
+              </span>
+            </InfoCard>
+            <InfoCard icon={Layers} label="Subcategorías" accent>
+              {subcategories.length}
+            </InfoCard>
           </div>
 
-          <hr className="my-2" />
-
-          <div className="bg-white rounded-xl shadow overflow-hidden mb-2">
-            <div className="overflow-x-auto">
-              <table className="min-w-full w-full text-xs">
-                <thead className="bg-[#004D77] text-white">
+          <div>
+            <h3 className="mb-3 text-center text-sm font-semibold text-[#004D77]">
+              Subcategorías de {category.nombre || "la categoría seleccionada"}
+            </h3>
+            <div className="overflow-hidden rounded-lg border border-gray-200">
+              <div className="overflow-x-auto">
+                <table className="min-w-[620px] w-full">
+                <thead className="bg-[#004D77]/5">
                   <tr>
-                    <th className="px-3 py-2 text-left font-semibold">Nombre</th>
-                    <th className="px-3 py-2 text-left font-semibold">Descripción</th>
-                    <th className="px-3 py-2 text-center font-semibold">Estado</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Nombre</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Descripción</th>
+                    <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan="3" className="text-center py-4 text-gray-500">Cargando...</td></tr>
+                    <tr><td colSpan="3" className="px-3 py-10 text-center text-xs text-gray-400">Cargando...</td></tr>
                   ) : currentData.length === 0 ? (
-                    <tr><td colSpan="3" className="text-center py-4 text-gray-500">No hay subcategorías</td></tr>
+                    <tr><td colSpan="3" className="px-3 py-10 text-center text-xs text-gray-400">No hay subcategorías</td></tr>
                   ) : (
                     currentData.map((sub, index) => (
-                      <tr key={sub.id} className={index % 2 === 0 ? "bg-white hover:bg-gray-50" : "bg-gray-50 hover:bg-gray-100"}>
-                        <td className="px-3 py-2.5">{sub.nombre}</td>
-                        <td className="px-3 py-2.5">{sub.descripcion || "-"}</td>
+                      <tr key={sub.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                        <td className="max-w-[220px] truncate px-3 py-2 text-xs font-medium text-gray-800">{sub.nombre}</td>
+                        <td className="max-w-[320px] truncate px-3 py-2 text-xs text-gray-600">{sub.descripcion || "-"}</td>
                         <td className="px-3 py-2.5 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${sub.estado === "Activo" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                          <span className={`inline-flex items-center rounded-full border border-black/5 px-2.5 py-0.5 text-[10px] font-semibold whitespace-nowrap ${sub.estado === "Activo" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                             {sub.estado}
                           </span>
                         </td>
@@ -95,7 +121,8 @@ function CategoryDetail({ category, onClose }) {
                     ))
                   )}
                 </tbody>
-              </table>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -112,7 +139,11 @@ function CategoryDetail({ category, onClose }) {
         )}
 
         <div className="px-6 pb-6 flex justify-end">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto"
+          >
             Cerrar
           </button>
         </div>

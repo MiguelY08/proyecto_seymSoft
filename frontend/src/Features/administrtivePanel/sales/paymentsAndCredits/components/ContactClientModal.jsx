@@ -86,8 +86,8 @@ export default function ContactClientModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white w-full max-w-md max-h-[94vh] rounded-xl shadow-xl overflow-hidden font-lexend flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-0 backdrop-blur-sm sm:p-4">
+      <div className="flex h-[100dvh] max-h-[100dvh] w-full max-w-md flex-col overflow-hidden rounded-none bg-white font-lexend shadow-xl sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-xl">
         <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-6 sm:py-6">
           <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
           <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
@@ -100,6 +100,9 @@ export default function ContactClientModal({
                 <h2 className="text-lg font-bold text-[#f9f9f9] sm:text-xl">
                   Gestión de contacto al cliente
                 </h2>
+                <p className="mt-0.5 truncate text-sm text-sky-100">
+                  {account.fullName ?? account.nombre ?? "Cliente sin nombre"}
+                </p>
               </div>
             </div>
             <button
@@ -113,17 +116,11 @@ export default function ContactClientModal({
           </div>
         </header>
 
-        <div className="flex-1 p-4 sm:p-5 space-y-4 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-4 sm:p-5">
           {/* INFO CLIENTE */}
-          <div className="bg-gray-100 rounded-xl p-4 shadow-sm space-y-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 [&>div]:contents [&>div>div]:flex [&>div>div]:min-h-20 [&>div>div]:flex-col [&>div>div]:justify-center [&>div>div]:gap-1 [&>div>div]:rounded-xl [&>div>div]:border [&>div>div]:border-slate-200 [&>div>div]:bg-slate-50 [&>div>div]:p-3 [&>div>div]:shadow-sm">
             <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
               <div>
-                <p className="text-xs text-gray-500">Nombre</p>
-                <p className="font-medium">
-                  {account.fullName ?? account.nombre}
-                </p>
-              </div>
-              <div className="sm:text-right">
                 <p className="text-xs text-gray-500">Teléfono</p>
                 <p className="font-medium">
                   {account.phone ?? account.telefono}
@@ -147,7 +144,7 @@ export default function ContactClientModal({
                     : "Sin registros"}
                 </p>
               </div>
-              <div className="sm:text-right">
+              <div>
                 <p className="text-xs text-gray-500">Días de atraso</p>
                 <p
                   className={`font-semibold ${daysLate > 0 ? "text-red-600" : "text-green-600"}`}

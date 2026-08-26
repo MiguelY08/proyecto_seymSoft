@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import BgFavoritos from '../../../assets/BgFavoritos.png';
 import { useFavorites } from '../../shared/Context/Favoritescontext';
 import { useCart } from '../../shared/Context/CartContext';
+import { useStorefrontAuthGuard } from '../../shared/hooks/useStorefrontAuthGuard';
 import { useAlert } from '../../shared/alerts/useAlert';
 import useClientType from '../../shared/hooks/useClientType';
 import { getDisplayPricing } from '../../shared/utils/shopPricingHelper';
@@ -598,6 +599,7 @@ function Favorites() {
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
   const { addToCart } = useCart();
   const { showSuccess, showConfirm, showError } = useAlert();
+  const requireAuthentication = useStorefrontAuthGuard();
   const { clientType } = useClientType();
 
   const [ordenar, setOrdenar] = useState('A - Z');
@@ -645,14 +647,20 @@ function Favorites() {
     }
   };
 
-  const handleAgregarAlCarrito = (producto) => {
+  const handleAgregarAlCarrito = async (producto) => {
+    if (!await requireAuthentication('carrito')) return;
+
     const stock = Number(producto.totalStock ?? producto.stock ?? 0);
     if (!producto.isActive || stock <= 0) {
       showError('Producto no disponible', 'Este producto no tiene stock disponible.');
       return;
     }
 
-    addToCart(producto, 1);
+    const wasAdded = await addToCart(producto, 1);
+    if (!wasAdded) {
+      showError('No se pudo agregar', 'Intenta nuevamente en unos segundos.');
+      return;
+    }
     showSuccess('Añadido al carrito', `${producto.name} se ha agregado al carrito.`);
   };
 

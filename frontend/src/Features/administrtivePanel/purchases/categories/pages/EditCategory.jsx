@@ -92,11 +92,11 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[60] flex items-stretch justify-stretch bg-white sm:items-center sm:justify-center sm:bg-black/40 sm:p-4 sm:backdrop-blur-sm"
       onClick={handleOutsideClick}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden"
+        className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-sm sm:rounded-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <PurchaseModalHeader
@@ -107,7 +107,8 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
           closeLabel="Cerrar formulario de subcategoría"
         />
 
-        <div className="px-6 py-5 flex flex-col gap-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+          <div className="flex flex-col gap-4">
           <div>
             <label className="text-sm font-medium text-gray-700">Nombre</label>
             <div className="relative mt-1">
@@ -153,24 +154,29 @@ function ModalAddSubcategory({ categoryId, categoryNombre, onClose, onCreated })
               onChange={(nuevo) => setSubForm({ ...subForm, activo: nuevo })}
             />
           </div>
+          </div>
         </div>
 
-        <div className="px-6 pb-6 flex flex-col gap-3">
+        <div className="flex shrink-0 flex-col gap-3 px-4 pb-5 sm:px-6 sm:pb-6">
           <button
+            type="button"
             onClick={handleGuardar}
             disabled={isSubmitting}
-            className={`w-full py-2.5 text-sm font-medium text-white rounded-lg transition-colors ${
+            className={`inline-flex w-full items-center justify-center rounded-full px-6 py-2.5 text-sm font-bold text-white shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 ${
               isSubmitting
                 ? "bg-gray-400 cursor-not-allowed opacity-70"
-                : "bg-[#004D77] hover:bg-[#003a5c]"
+                : "cursor-pointer bg-[#004D77] hover:bg-[#003b5c] hover:shadow-md"
             }`}
           >
             {isSubmitting ? "Creando..." : "Crear subcategoría"}
           </button>
           <button
+            type="button"
             onClick={handleCancel}
             disabled={isSubmitting}
-            className="w-full py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors"
+            className={`inline-flex w-full items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 ${
+              isSubmitting ? "cursor-not-allowed opacity-70" : "cursor-pointer"
+            }`}
           >
             Cancelar
           </button>
@@ -270,12 +276,11 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
   return (
     <>
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+        className="fixed inset-0 z-50 flex items-stretch justify-stretch bg-white sm:items-center sm:justify-center sm:bg-black/40 sm:p-4 sm:backdrop-blur-sm"
         onClick={handleOutsideClick}
       >
         <div
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden"
-          style={{ height: "calc(100vh - 2rem)", maxHeight: "680px" }}
+          className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-[calc(100dvh-2rem)] sm:max-h-[680px] sm:max-w-3xl sm:rounded-lg"
           onClick={(e) => e.stopPropagation()}
         >
           <PurchaseModalHeader
@@ -286,7 +291,7 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
             closeLabel="Cerrar edición de categoría"
           />
 
-          <div className="px-6 pt-5 pb-3 flex gap-6 shrink-0 border-b border-gray-100">
+          <div className="flex shrink-0 flex-col gap-4 border-b border-gray-100 px-4 pb-3 pt-5 sm:flex-row sm:gap-6 sm:px-6">
             <div className="flex-1 flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">Nombre</label>
               <input
@@ -312,7 +317,7 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
             </div>
           </div>
 
-          <div className="flex items-center justify-between px-6 py-3 shrink-0">
+          <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 sm:px-6">
             <div className="flex items-center gap-2">
               <Layers className="w-4 h-4 text-[#004D77]" />
               <p className="text-sm font-semibold text-gray-700">
@@ -323,15 +328,16 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
               </p>
             </div>
             <button
+              type="button"
               onClick={() => setShowAddSubModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#004D77] text-white hover:bg-[#003a5c] transition-colors"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[#004D77] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2"
             >
               <Plus className="w-3.5 h-3.5" />
               Añadir subcategoría
             </button>
           </div>
 
-          <div className="flex-1 min-h-0 px-6 pb-3">
+          <div className="min-h-0 flex-1 px-4 pb-3 sm:px-6">
             <SubcategoriesTable
               key={refreshKey}
               categoryId={category?.id}
@@ -342,25 +348,27 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
             />
           </div>
 
-          <div className="px-6 py-4 flex gap-4 shrink-0 border-t border-gray-100">
+          <div className="flex shrink-0 flex-col gap-2 border-t border-gray-100 px-4 py-4 sm:flex-row sm:gap-4 sm:px-6">
             <button
+              type="button"
+              onClick={onClose}
+              className="order-2 inline-flex flex-1 cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
               onClick={handleSubmit}
               disabled={!!error || isSaving}
               aria-busy={isSaving}
-              className={`flex-1 py-2.5 text-sm font-medium text-white rounded-lg transition-colors flex items-center justify-center gap-2 ${
+              className={`order-1 inline-flex flex-1 items-center justify-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold text-white shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 ${
                 error || isSaving
                   ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-[#004D77] hover:bg-[#003a5c]"
+                  : "cursor-pointer bg-[#004D77] hover:bg-[#003b5c] hover:shadow-md"
               }`}
             >
               {isSaving && <LoaderCircle className="w-4 h-4 animate-spin" />}
               {isSaving ? "Guardando..." : "Guardar cambios"}
-            </button>
-            <button
-              onClick={onClose}
-              className="flex-1 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-lg transition-colors"
-            >
-              Cancelar
             </button>
           </div>
         </div>

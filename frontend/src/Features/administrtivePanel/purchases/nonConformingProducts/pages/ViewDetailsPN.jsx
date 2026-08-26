@@ -56,14 +56,14 @@ const ViewDetailsPN = ({ report, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-3 backdrop-blur-sm sm:p-6"
+      className="fixed inset-0 z-50 flex items-stretch justify-stretch bg-white sm:items-center sm:justify-center sm:bg-slate-950/50 sm:p-6 sm:backdrop-blur-sm"
       onMouseDown={handleOutsideClick}
     >
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="non-conforming-detail-title"
-        className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-slate-50 shadow-[0_24px_80px_rgba(15,23,42,0.35)] ring-1 ring-white/20"
+        className="flex h-dvh w-full flex-col overflow-hidden bg-slate-50 shadow-[0_24px_80px_rgba(15,23,42,0.35)] sm:h-auto sm:max-h-[92vh] sm:max-w-2xl sm:rounded-2xl sm:ring-1 sm:ring-white/20"
       >
         <PurchaseModalHeader
           icon={ClipboardList}
@@ -74,7 +74,7 @@ const ViewDetailsPN = ({ report, onClose }) => {
           closeLabel="Cerrar detalle"
         />
 
-        <div className="overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="border-b border-slate-200 bg-white px-5 py-5 sm:px-7">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">

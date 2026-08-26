@@ -170,16 +170,23 @@ function Evidence({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-0 backdrop-blur-sm sm:p-4">
-      <div className="flex h-dvh w-full max-w-[560px] flex-col overflow-hidden bg-white shadow-2xl sm:h-[92vh] sm:max-h-[760px] sm:rounded-lg">
-        <div className="flex items-center justify-between bg-[#004D77] px-5 py-3.5">
-          <h2 className="text-[15px] font-bold tracking-wide text-white">
-            {isEdit ? 'Gestionar evidencias' : 'Evidencias'}
-          </h2>
+      <div className="flex h-dvh w-full max-w-[560px] flex-col overflow-hidden bg-white shadow-2xl sm:h-[92vh] sm:max-h-[760px] sm:rounded-2xl">
+        <div className="relative flex items-center justify-between overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-3.5">
+          <div className="pointer-events-none absolute -right-10 -top-14 h-32 w-32 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-16 right-16 h-28 w-28 rounded-full bg-sky-300/10" />
+          <div className="relative flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+              <Image className="h-5 w-5 text-white" strokeWidth={2} />
+            </div>
+            <h2 className="min-w-0 truncate text-[15px] font-bold tracking-wide text-white">
+              {isEdit ? 'Gestionar evidencias' : 'Evidencias'}
+            </h2>
+          </div>
           <button
             type="button"
             onClick={handleClose}
             disabled={saving}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg bg-white/20 text-white transition hover:bg-white/30 disabled:cursor-not-allowed disabled:opacity-60"
+            className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/15 text-white transition hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <X className="h-4 w-4" />
           </button>
@@ -199,7 +206,7 @@ function Evidence({
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={saving}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#004D77] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-[#004D77] bg-[#004D77] py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:border-[#003a5c] hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Link className="h-4 w-4" />
             Subir imágenes
@@ -312,7 +319,7 @@ function Evidence({
               type="button"
               onClick={handleSave}
               disabled={saving || Boolean(fileError || descriptionError)}
-              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#004D77] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full border border-[#004D77] bg-[#004D77] py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:border-[#003a5c] hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {saving ? 'Guardando...' : (isEdit ? 'Actualizar' : 'Guardar')}
@@ -321,7 +328,7 @@ function Evidence({
               type="button"
               onClick={handleClose}
               disabled={saving}
-              className="flex-1 cursor-pointer rounded-lg bg-gray-500 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex-1 cursor-pointer rounded-full border border-[#004D77] bg-white py-2.5 text-sm font-medium text-[#004D77] shadow-sm transition-colors hover:bg-sky-100 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
             >
               Cancelar
             </button>

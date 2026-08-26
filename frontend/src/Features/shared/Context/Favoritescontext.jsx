@@ -135,6 +135,8 @@ export function FavoritesProvider({ children }) {
 
   const toggleFavorite = useCallback(
     (product) => {
+      if (!isAuthenticated) return false;
+
       const alreadyFavorite = favorites.some((item) => item.id === product.id);
       const nextFavorites = alreadyFavorite
         ? favorites.filter((item) => item.id !== product.id)
@@ -143,9 +145,7 @@ export function FavoritesProvider({ children }) {
       setFavorites(nextFavorites);
       setError(null);
 
-      if (!isAuthenticated) {
-        writeGuestFavorites(nextFavorites);
-      } else if (clientId) {
+      if (clientId) {
         const request = alreadyFavorite
           ? storefrontService.removeFavorite(product.id)
           : storefrontService.addFavorite(product.id);

@@ -1,10 +1,10 @@
-﻿// src/features/orders/pages/OrdersForm.jsx
+// src/features/orders/pages/OrdersForm.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 
 // Servicios
-import OrdersService, { PaymentService, LocationService, ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES, METODOS_PAGO, PAYMENT_METHOD_IDS } from '../services/ordersService';
+import OrdersService, { PaymentService, PaymentReceiptService, LocationService, ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES, METODOS_PAGO, PAYMENT_METHOD_IDS } from '../services/ordersService';
 import { SalesServices } from '../../vendings/services/salesServices';
 import ProductsService from '../../../purchases/products/services/productsServices';
 import { clientsService } from '../../clients/services/clientsService';
@@ -25,6 +25,8 @@ import LeftSectionForm from '../components/LeftSectionForm';
 import RightSectionForm from '../components/RightSectionForm';
 import PaymentsSection from '../components/PaymentsSection';
 import PaymentReceiptsSection from '../components/PaymentReceiptsSection';
+import ApprovePaymentReceiptModal from '../modals/ApprovePaymentReceiptModal';
+import RejectPaymentReceiptModal from '../modals/RejectPaymentReceiptModal';
 import FormClient from '../../clients/modals/FormClient';
 
 const toNumber = (value, fallback = 0) => {
@@ -168,6 +170,10 @@ function OrdersForm() {
   // Pagos existentes (solo en edición)
   const [pagos, setPagos] = useState([]);
   const [paymentReceipts, setPaymentReceipts] = useState([]);
+  const [orderForReceiptReview, setOrderForReceiptReview] = useState(null);
+  const [receiptToApprove, setReceiptToApprove] = useState(null);
+  const [receiptToReject, setReceiptToReject] = useState(null);
+  const [reviewingReceiptId, setReviewingReceiptId] = useState(null);
   const [totalPagado, setTotalPagado] = useState(0);
   const [favorBalance, setFavorBalance] = useState(0);
   const [creditAccounts, setCreditAccounts] = useState([]);
@@ -269,7 +275,7 @@ function OrdersForm() {
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        const clientsResponse = await clientsService.getAll();
+        const clientsResponse = await clientsService.getAllActive();
         setClientes((clientsResponse.data || clientsResponse || []).map(normalizeClientForForm));
 
         try {
@@ -317,6 +323,7 @@ function OrdersForm() {
           })));
           setTotalPagado(await PaymentService.getTotalPagado(order.id));
           setPaymentReceipts(order.comprobantesPago || []);
+          setOrderForReceiptReview(order);
 
           const productosNormalizados = (order.productos || []).map(p => {
             const catalogProduct = normalizedProductsList.find(product => product.id === p.id || product.idProduct === p.id);
@@ -1069,6 +1076,54 @@ function OrdersForm() {
     }
   };
 
+  const isPendingReceipt = (receipt) =>
+    String(receipt?.status || 'Pendiente').trim().toLowerCase() === 'pendiente';
+
+  const refreshReceiptReviewData = async () => {
+    const freshOrder = await OrdersService.findById(Number(id));
+    if (!freshOrder) return;
+
+    const freshPayments = await PaymentService.getByPedidoId(freshOrder.id);
+    const freshTotalPaid = await PaymentService.getTotalPagado(freshOrder.id);
+
+    setOrderForReceiptReview(freshOrder);
+    setPaymentReceipts(freshOrder.comprobantesPago || []);
+    setPagos((freshPayments || []).map((payment) => ({
+      ...payment,
+      locked: true,
+      persisted: true,
+    })));
+    setTotalPagado(freshTotalPaid);
+    setFormData((current) => ({
+      ...current,
+      pagoEstado: freshOrder.pagoEstado,
+      tieneVenta: freshOrder.tieneVenta,
+    }));
+  };
+
+  const handleReviewReceipt = async (receipt, payload, successMessage) => {
+    if (!receipt?.id || reviewingReceiptId || !isPendingReceipt(receipt)) return;
+
+    setReviewingReceiptId(receipt.id);
+    try {
+      await PaymentReceiptService.review(Number(id), receipt.id, payload);
+      await refreshReceiptReviewData();
+      showSuccess('Comprobante revisado', successMessage);
+      setReceiptToApprove(null);
+      setReceiptToReject(null);
+    } catch (error) {
+      showError(
+        'No se pudo revisar',
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          'No se pudo actualizar el comprobante.'
+      );
+    } finally {
+      setReviewingReceiptId(null);
+    }
+  };
+
   // --- Render ---
   if (initialLoading) {
     return (
@@ -1092,7 +1147,7 @@ function OrdersForm() {
             {isEditMode ? `Editando Pedido #${id}` : 'Nuevo Pedido'}
           </h1>
         </div>
-        <div className="sticky top-0 z-30 -mx-3 grid grid-cols-2 gap-2 bg-white px-3 py-3 shadow-sm sm:-mx-6 sm:px-6 sm:py-3 lg:static lg:mx-0 lg:flex lg:bg-transparent lg:p-0 lg:shadow-none lg:gap-3">
+        <div className="sticky top-0 z-30 -mx-3 grid grid-cols-1 gap-2 bg-white px-3 py-3 shadow-sm sm:-mx-6 sm:px-6 sm:py-3 lg:static lg:mx-0 lg:flex lg:bg-transparent lg:p-0 lg:shadow-none lg:gap-3">
           <button
             onClick={handleCancel}
             className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:w-auto"
@@ -1173,7 +1228,16 @@ function OrdersForm() {
       {/* Sección de pagos */}
       {isEditMode && paymentReceipts.length > 0 && (
         <div className="mt-5">
-          <PaymentReceiptsSection receipts={paymentReceipts} />
+          <PaymentReceiptsSection
+            receipts={paymentReceipts}
+            onApprove={(receipt) => {
+              if (isPendingReceipt(receipt)) setReceiptToApprove(receipt);
+            }}
+            onReject={(receipt) => {
+              if (isPendingReceipt(receipt)) setReceiptToReject(receipt);
+            }}
+            reviewingReceiptId={reviewingReceiptId}
+          />
         </div>
       )}
 
@@ -1225,6 +1289,42 @@ function OrdersForm() {
         client={null}
         onSave={handleQuickCreateClient}
       />
+
+      {receiptToApprove && orderForReceiptReview && (
+        <ApprovePaymentReceiptModal
+          key={receiptToApprove.id}
+          order={orderForReceiptReview}
+          receipt={receiptToApprove}
+          isOpen
+          isSubmitting={reviewingReceiptId === receiptToApprove.id}
+          onClose={() => setReceiptToApprove(null)}
+          onConfirm={(payload) =>
+            handleReviewReceipt(
+              receiptToApprove,
+              payload,
+              'El comprobante fue aprobado y el abono quedo registrado.'
+            )
+          }
+        />
+      )}
+
+      {receiptToReject && orderForReceiptReview && (
+        <RejectPaymentReceiptModal
+          key={receiptToReject.id}
+          order={orderForReceiptReview}
+          receipt={receiptToReject}
+          isOpen
+          isSubmitting={reviewingReceiptId === receiptToReject.id}
+          onClose={() => setReceiptToReject(null)}
+          onConfirm={(payload) =>
+            handleReviewReceipt(
+              receiptToReject,
+              payload,
+              'El comprobante fue rechazado y el cliente podra enviar uno nuevo.'
+            )
+          }
+        />
+      )}
     </div>
   );
 }

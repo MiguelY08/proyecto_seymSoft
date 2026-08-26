@@ -5,16 +5,17 @@ import { useAlert } from "../../../../shared/alerts/useAlert";
 import ButtonComponent from "../../../../shared/ButtonComponent";
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 import { exportPurchaseReturnsExcel } from "../helpers/returnsExcel";
+import { getPurchaseReturnProviderName } from "../helpers/returnsHelpers";
 import FormSelect from "../../../../shared/FormSelect";
 
 const RETURN_STATUS_OPTIONS = [
   { value: "", label: "Todos los estados" },
-  { value: "Pend. envÃ­o", label: "Pend. envÃ­o" },
+  { value: "Pend. envío", label: "Pend. envío" },
   { value: "Pend. reemplazo", label: "Pend. reemplazo" },
   { value: "Pend. reembolso", label: "Pend. reembolso" },
   { value: "Listo", label: "Listo" },
   { value: "Anulado", label: "Anulado" },
-  { value: "Prov. rechazÃ³", label: "Prov. rechazÃ³" },
+  { value: "Prov. rechazó", label: "Prov. rechazó" },
 ];
 
 const formatDate = (dateStr) => {
@@ -104,7 +105,7 @@ function TopBar({
       const rows = returns.map((returnItem) => [
         returnItem.id ?? "",
         returnItem.invoiceNumber ?? returnItem.idCompra ?? "",
-        returnItem.proveedor ?? returnItem.provider?.name ?? "",
+        getPurchaseReturnProviderName(returnItem, ""),
         formatDate(returnItem.creationDate ?? returnItem.fechaDevolucion),
         returnItem.status ?? returnItem.estado ?? "",
         getProgressLabel(returnItem),

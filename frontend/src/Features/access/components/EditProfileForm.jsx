@@ -692,7 +692,7 @@ function EditProfileForm({ onClose, isModal = false }) {
         </div>
       </header>
 
-      <div className="px-6 py-5 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2 flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
@@ -859,8 +859,8 @@ function EditProfileForm({ onClose, isModal = false }) {
 
   if (shouldRenderAsModal) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-        <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="fixed inset-0 z-50 flex items-stretch justify-stretch bg-white sm:items-center sm:justify-center sm:bg-black/40 sm:p-4 sm:backdrop-blur-sm">
+        <div className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:max-w-md sm:rounded-lg md:max-w-lg">
           {formContent}
         </div>
       </div>

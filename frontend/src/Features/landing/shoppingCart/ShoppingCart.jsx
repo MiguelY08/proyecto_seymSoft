@@ -191,6 +191,29 @@ const STYLES = `
     transform: translateY(-2px);
     border-color: #afd0e6;
   }
+  .cart-item-card.out-of-stock {
+    background: #fff8f8;
+    border-color: #f6b9b9;
+  }
+  .cart-item-card.out-of-stock:hover {
+    border-color: #e88383;
+    box-shadow: 0 8px 28px rgba(197, 48, 48, 0.1);
+  }
+  .cart-item-unavailable-notice {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: fit-content;
+    margin-bottom: 7px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #fee2e2;
+    color: #b42318;
+    font-size: 0.62rem;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
   .cart-item-inner {
     display: flex;
     gap: 12px;
@@ -240,6 +263,15 @@ const STYLES = `
     font-weight: 900;
     color: #004D77;
   }
+  .cart-item-stock {
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 0.66rem;
+    font-weight: 800;
+  }
+  .cart-item-stock.out-of-stock {
+    color: #c53030;
+  }
   .cart-item-actions {
     display: flex;
     flex-direction: column;
@@ -271,6 +303,10 @@ const STYLES = `
   .qty-btn:hover {
     background: #eef6fb;
     border-color: #afd0e6;
+  }
+  .qty-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
   }
   .qty-number {
     font-weight: 800;
@@ -648,11 +684,39 @@ const STYLES = `
   /* Responsive */
   @media (max-width: 768px) {
     .cart-item-inner {
-      flex-direction: column;
-      align-items: stretch;
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr);
+      align-items: start;
+      gap: 10px;
+    }
+    .cart-item-img {
+      width: 58px;
+      height: 58px;
+      border-radius: 10px;
+    }
+    .cart-item-info {
+      min-width: 0;
+    }
+    .cart-item-name {
+      line-height: 1.3;
     }
     .cart-item-actions {
-      align-items: flex-start;
+      grid-column: 1 / -1;
+      width: 100%;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 10px;
+      border-top: 1px solid #eef2f6;
+    }
+    .item-total {
+      white-space: nowrap;
+    }
+    .delete-btn {
+      white-space: nowrap;
+    }
+    .cart-item-card:hover {
+      transform: none;
     }
     .delivery-method-grid {
       grid-template-columns: 1fr;
@@ -664,6 +728,20 @@ const STYLES = `
       width: 32px;
       height: 32px;
       border-radius: 10px;
+    }
+  }
+  @media (max-width: 380px) {
+    .cart-item-actions {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px 10px;
+    }
+    .item-total {
+      justify-self: end;
+    }
+    .delete-btn {
+      grid-column: 1 / -1;
+      justify-self: end;
     }
   }
 `;
@@ -706,6 +784,11 @@ const getProfileAddress = (user, client) => firstText(
   user?.delivery_address,
 );
 
+const getCartItemStock = (item) => {
+  const stock = Number(item?.totalStock ?? item?.stock ?? 0);
+  return Number.isFinite(stock) ? Math.max(0, stock) : 0;
+};
+
 function ShoppingCart() {
   injectStyles();
   const navigate = useNavigate();
@@ -727,6 +810,10 @@ function ShoppingCart() {
     clearCart,
     loading: cartLoading,
   } = useCart();
+  const unavailableCartItems = useMemo(
+    () => cartItems.filter((item) => getCartItemStock(item) <= 0),
+    [cartItems],
+  );
 
   const [deliveryMethod, setDeliveryMethod] = useState('tienda');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -855,6 +942,16 @@ function ShoppingCart() {
 
   useEffect(() => {
     if (!resumeCheckout || !clientId || cartLoading || cartItems.length === 0) return;
+
+    if (unavailableCartItems.length > 0) {
+      setResumeCheckout(false);
+      showError(
+        'Productos agotados',
+        'Elimina los productos agotados del carrito antes de continuar con la compra.'
+      );
+      return;
+    }
+
     const timer = window.setTimeout(() => {
       setResumeCheckout(false);
       if (deliveryMethod === 'domicilio') {
@@ -864,7 +961,15 @@ function ShoppingCart() {
       setShowPaymentModal(true);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [cartItems.length, cartLoading, clientId, deliveryMethod, resumeCheckout]);
+  }, [
+    cartItems.length,
+    cartLoading,
+    clientId,
+    deliveryMethod,
+    resumeCheckout,
+    showError,
+    unavailableCartItems.length,
+  ]);
 
   useEffect(() => {
     if (!isAuthenticated || !clientId) {
@@ -1214,6 +1319,14 @@ function ShoppingCart() {
   };
 
   const handleProcederPago = async () => {
+    if (unavailableCartItems.length > 0) {
+      showError(
+        'Productos agotados',
+        'Elimina los productos agotados del carrito antes de continuar con la compra.'
+      );
+      return;
+    }
+
     if (!isAuthenticated) {
       showError('Inicia sesión', 'Debes iniciar sesión para crear y consultar tu pedido.');
       navigate('/login', { state: { from: '/cart' } });
@@ -1481,7 +1594,7 @@ function ShoppingCart() {
             {displayCartItems.map((item, idx) => (
               <div
                 key={`${item.id}-${item.idBarcode || item.barcode || item.presentation || idx}`}
-                className="cart-item-card"
+                className={`cart-item-card ${getCartItemStock(item) <= 0 ? 'out-of-stock' : ''}`}
                 style={{ animationDelay: `${idx * 0.05}s` }}
               >
                 <div className="cart-item-inner">
@@ -1495,6 +1608,11 @@ function ShoppingCart() {
                     />
                   </div>
                   <div className="cart-item-info">
+                    {getCartItemStock(item) <= 0 && (
+                      <div className="cart-item-unavailable-notice">
+                        <AlertCircle size={12} /> Agotado · elimínalo del carrito
+                      </div>
+                    )}
                     <div
                       className="cart-item-name"
                       onClick={() => navigate(`/shop/detail/${item.id}`)}
@@ -1507,21 +1625,29 @@ function ShoppingCart() {
                     <div className="cart-item-price">
                       ${item.price.toLocaleString()} COP
                     </div>
+                    <div
+                      className={`cart-item-stock ${getCartItemStock(item) <= 0 ? 'out-of-stock' : ''}`}
+                    >
+                      {getCartItemStock(item) > 0
+                        ? `Stock disponible: ${getCartItemStock(item)}`
+                        : 'Producto agotado'}
+                    </div>
                   </div>
                   <div className="cart-item-actions">
                     <div className="quantity-control">
                       <button
                         className="qty-btn"
                         onClick={() => decreaseQuantity(item.id)}
-                        disabled={item.quantity <= 1}
+                        disabled={item.quantity <= 1 || getCartItemStock(item) <= 0}
                       >
                         <Minus size={12} />
                       </button>
                       <input
                         type="number"
                         min="1"
-                        max={Number(item.totalStock ?? item.stock) || undefined}
+                        max={getCartItemStock(item) || undefined}
                         value={item.quantity}
+                        disabled={getCartItemStock(item) <= 0}
                         aria-label={`Cantidad de ${item.name}`}
                         onFocus={(event) => event.currentTarget.select()}
                         onChange={(event) => updateQuantity(item.id, event.target.value)}
@@ -1531,8 +1657,8 @@ function ShoppingCart() {
                         className="qty-btn"
                         onClick={() => increaseQuantity(item.id)}
                         disabled={
-                          Number(item.totalStock ?? item.stock) > 0 &&
-                          item.quantity >= Number(item.totalStock ?? item.stock)
+                          getCartItemStock(item) <= 0 ||
+                          item.quantity >= getCartItemStock(item)
                         }
                       >
                         <Plus size={12} />

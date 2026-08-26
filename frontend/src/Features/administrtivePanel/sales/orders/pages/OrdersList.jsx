@@ -1,10 +1,10 @@
 // src/features/orders/pages/OrdersList.jsx
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, CreditCard } from 'lucide-react';
 import TopBar from '../components/TopBar';
 import OrdersTable from '../components/OrdersTable';
-import OrdersService, { ESTADOS_LOGISTICOS, ORIGENES } from '../services/ordersService';
+import OrdersService, { ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES } from '../services/ordersService';
 import { clientsService } from '../../clients/services/clientsService';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import Spinner from '../../../../shared/spinner';
@@ -23,6 +23,13 @@ const requiresShippingAmount = (order = {}) => {
   const deliveryType = String(order.tipoEntrega ?? order.deliveryType ?? '').toLowerCase();
   const shippingAmount = Number(order.shippingAmount ?? 0);
   return origin === ORIGENES.WEB && deliveryType === 'domicilio' && shippingAmount <= 0;
+};
+
+const isActionableWebOrder = (order = {}) => {
+  const origin = String(order.origen ?? order.origin ?? '').trim().toLowerCase();
+  const logisticStatus = String(order.estadoLogistico ?? order.logisticStatus ?? '').trim().toLowerCase();
+
+  return origin === ORIGENES.WEB && logisticStatus !== ESTADOS_LOGISTICOS.ANULADO;
 };
 
 const getDeliverySearchText = (order = {}) => {
@@ -56,6 +63,7 @@ function OrdersList() {
   const [origenFilter, setOrigenFilter] = useState('');
   const [pagoEstadoFilter, setPagoEstadoFilter] = useState('');
   const [envioFilter, setEnvioFilter] = useState('');
+  const [onlyActionableWebPaymentReviews, setOnlyActionableWebPaymentReviews] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [actionLoadingMessage, setActionLoadingMessage] = useState('');
@@ -190,15 +198,39 @@ function OrdersList() {
         (envioFilter === ENVIO_FILTERS.PENDIENTE && needsShippingAmount) ||
         (envioFilter === ENVIO_FILTERS.COMPLETO && !needsShippingAmount);
 
-      return matchesSearch && matchesFecha && matchesOrigen && matchesPagoEstado && matchesEnvio;
+      const matchesPaymentReviewScope =
+        !onlyActionableWebPaymentReviews || isActionableWebOrder(order);
+
+      return matchesSearch && matchesFecha && matchesOrigen && matchesPagoEstado && matchesEnvio && matchesPaymentReviewScope;
     });
-  }, [enrichedOrders, search, fechaInicial, fechaFinal, origenFilter, pagoEstadoFilter, envioFilter]);
+  }, [enrichedOrders, search, fechaInicial, fechaFinal, origenFilter, pagoEstadoFilter, envioFilter, onlyActionableWebPaymentReviews]);
 
   const pendingShippingOrders = useMemo(() => {
     return enrichedOrders.filter(requiresShippingAmount);
   }, [enrichedOrders]);
 
   const pendingShippingCount = pendingShippingOrders.length;
+
+  const pendingPaymentReview = useMemo(() => {
+    const webPendingPaymentOrders = enrichedOrders.filter((order) => (
+      isActionableWebOrder(order)
+      && order.pagoEstado === ESTADOS_PAGO.PENDIENTE
+    ));
+    const pendingReceiptOrders = enrichedOrders.filter(
+      (order) => isActionableWebOrder(order) && order.paymentReceiptSummary?.hasPendingReceipt,
+    );
+    const ordersNeedingReview = new Map();
+
+    [...webPendingPaymentOrders, ...pendingReceiptOrders].forEach((order) => {
+      ordersNeedingReview.set(order.id, order);
+    });
+
+    return {
+      total: ordersNeedingReview.size,
+      webPendingPaymentCount: webPendingPaymentOrders.length,
+      pendingReceiptCount: pendingReceiptOrders.length,
+    };
+  }, [enrichedOrders]);
 
   // Paginación
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
@@ -210,13 +242,14 @@ function OrdersList() {
     fechaFinal ||
     origenFilter ||
     pagoEstadoFilter ||
-    envioFilter
+    envioFilter ||
+    onlyActionableWebPaymentReviews
   );
 
   // Resetear página al cambiar filtros
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, fechaInicial, fechaFinal, origenFilter, pagoEstadoFilter, envioFilter]);
+  }, [search, fechaInicial, fechaFinal, origenFilter, pagoEstadoFilter, envioFilter, onlyActionableWebPaymentReviews]);
 
   // Handlers
   const handleViewDetail = (order) => {
@@ -244,6 +277,17 @@ function OrdersList() {
 
   const handleShowPendingShipping = useCallback(() => {
     setEnvioFilter(ENVIO_FILTERS.PENDIENTE);
+    setCurrentPage(1);
+  }, []);
+
+  const handleShowPendingPayments = useCallback(() => {
+    setSearch('');
+    setFechaInicial('');
+    setFechaFinal('');
+    setOrigenFilter(ORIGENES.WEB);
+    setEnvioFilter('');
+    setPagoEstadoFilter(ESTADOS_PAGO.PENDIENTE);
+    setOnlyActionableWebPaymentReviews(true);
     setCurrentPage(1);
   }, []);
 
@@ -277,6 +321,8 @@ function OrdersList() {
         setPagoEstadoFilter={setPagoEstadoFilter}
         envioFilter={envioFilter}
         setEnvioFilter={setEnvioFilter}
+        hasPendingPaymentReviewFilter={onlyActionableWebPaymentReviews}
+        clearPendingPaymentReviewFilter={() => setOnlyActionableWebPaymentReviews(false)}
         setCurrentPage={setCurrentPage}
         orders={filteredOrders}
       />
@@ -297,6 +343,25 @@ function OrdersList() {
             type="button"
             onClick={handleShowPendingShipping}
             className="ml-auto shrink-0 rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-100"
+          >
+            Ver pendientes
+          </button>
+        </div>
+      )}
+
+      {pendingPaymentReview.total > 0 && (
+        <div className="flex items-start gap-3 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sky-900 shadow-sm">
+          <CreditCard className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Pedidos pendientes de revisión de pago</p>
+            <p className="text-xs leading-relaxed text-sky-800">
+              Hay pedidos de la Web-Tienda que requieren revisión de pago.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleShowPendingPayments}
+            className="ml-auto shrink-0 rounded-md border border-sky-300 bg-white px-3 py-1.5 text-xs font-semibold text-sky-800 transition hover:bg-sky-100"
           >
             Ver pendientes
           </button>

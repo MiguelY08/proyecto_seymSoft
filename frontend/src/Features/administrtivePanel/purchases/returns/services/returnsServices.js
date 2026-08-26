@@ -6,6 +6,7 @@ import {
   getReturnReasonLabelById,
   getReturnStatusIdByLabel,
   getReturnStatusLabelById,
+  getPurchaseReturnProviderName,
 } from "../helpers/returnsHelpers";
 
 const formatErrorDetail = (detail) => {
@@ -203,7 +204,7 @@ export const mapPurchaseReturnToList = (purchaseReturn) => {
     status,
     progress,
     provider: purchaseReturn.provider ?? null,
-    proveedor: purchaseReturn.provider?.name ?? "-",
+    proveedor: getPurchaseReturnProviderName(purchaseReturn, "-"),
     totalDetails: purchaseReturn.totalDetails ?? purchaseReturn.progress?.total ?? 0,
     completedDetails: purchaseReturn.completedDetails ?? purchaseReturn.progress?.completed ?? 0,
     productos: [],
@@ -270,7 +271,11 @@ export const mapPurchaseReturnToDetail = (purchaseReturn) => {
     purchaseReturn.invoiceNumber ??
     purchaseReturn.purchaseId;
   const statusName = getLabel(purchaseReturn.status);
-  const provider = purchaseReturn.purchase?.provider ?? purchaseReturn.provider ?? null;
+  const provider =
+    purchaseReturn.purchase?.provider ??
+    purchaseReturn.purchase?.providers ??
+    purchaseReturn.provider ??
+    null;
   const cancellationReason = getCancellationReason(purchaseReturn);
   const cancellationDate = getCancellationDate(purchaseReturn);
 
@@ -306,8 +311,15 @@ export const mapPurchaseReturnToDetail = (purchaseReturn) => {
     purchaseStatus: purchaseReturn.purchase?.status ?? null,
     totalAmount: purchaseReturn.purchase?.totalAmount ?? 0,
     provider,
-    providerId: provider?.id ?? purchaseReturn.purchase?.providerId ?? null,
-    proveedor: provider?.name ?? "-",
+    providerId: provider?.id ?? provider?.id_provider ?? purchaseReturn.purchase?.providerId ?? null,
+    proveedor: getPurchaseReturnProviderName(
+      {
+        ...purchaseReturn,
+        provider,
+        purchase: purchaseReturn.purchase,
+      },
+      "-"
+    ),
     details,
     statusHistory: purchaseReturn.statusHistory ?? [],
     productos: details.map((detail) => {

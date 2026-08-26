@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 import CreateSidebar from "../Components/CreatePurchaseSideBar";
-import CreatePagination from "../Components/CreatePagination";
 import CreateTable from "../Components/TableCreate";
 import CreateProduct from "../../products/modals/CreateProduct";
 import { useAlert } from "../../../../shared/alerts/useAlert";
@@ -43,7 +42,6 @@ const CreatePurchase = () => {
   const [purchaseDate, setPurchaseDate] = useState("");
   const [searchProduct, setSearchProduct] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [currentPage, setCurrentPage] = useState(1);
   const [purchaseItems, setPurchaseItems] = useState([]);
   const [invoiceTouched, setInvoiceTouched] = useState(false);
   const [dateTouched, setDateTouched] = useState(false);
@@ -249,11 +247,6 @@ const CreatePurchase = () => {
       throw error;
     }
   };
-
-  const RECORDS_PER_PAGE = 6;
-  const totalPages = Math.ceil(purchaseItems.length / RECORDS_PER_PAGE);
-  const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
-  const currentData = purchaseItems.slice(startIndex, startIndex + RECORDS_PER_PAGE);
 
   const totalCompra = purchaseItems.reduce((sum, item) => sum + item.total, 0);
   const totalIVA = purchaseItems.reduce((sum, item) => sum + item.ivaValor, 0);
@@ -763,27 +756,19 @@ const CreatePurchase = () => {
                 </div>
               ) : (
                 <CreateTable 
-                  currentData={currentData} 
+                  currentData={purchaseItems} 
                   handleDeleteItem={handleDeleteItem} 
                   handleEditItem={handleEditItem}
                 />
               )}
 
-              {purchaseItems.length > 0 && (
-                <CreatePagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  setCurrentPage={setCurrentPage}
-                  purchaseItems={purchaseItems}
-                />
-              )}
             </div>
 
-            <div className="flex items-center justify-end gap-3 border-t border-gray-200 px-5 py-4">
+            <div className="flex flex-col gap-2 border-t border-gray-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-5">
               <button
                 type="button"
                 onClick={handleCancelPurchase}
-                className="flex cursor-pointer items-center gap-2 rounded-lg bg-gray-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-60"
+                className="order-2 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                 disabled={loading}
               >
                 <X className="h-4 w-4" strokeWidth={2} />
@@ -792,7 +777,7 @@ const CreatePurchase = () => {
               <button
                 type="button"
                 onClick={handleSavePurchase}
-                className="flex cursor-pointer items-center gap-2 rounded-lg bg-[#004D77] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#003a5c] disabled:cursor-not-allowed disabled:opacity-60"
+                className="order-1 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                 disabled={loading}
               >
                 <Save className="h-4 w-4" strokeWidth={2} />

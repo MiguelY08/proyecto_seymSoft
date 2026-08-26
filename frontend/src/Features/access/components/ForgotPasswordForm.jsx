@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Info, KeyRound, Loader2, Send } from "lucide-react";
 import { forgotPassword } from "../services/authService.js";
 import { useAlert } from "../../shared/alerts/useAlert.js";
 
@@ -116,19 +117,28 @@ export default function ForgotPasswordForm() {
 
   return (
     <div className="w-full max-w-xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
-      {/* Header */}
-      <div className="bg-[#004D77] py-4">
-        <h2 className="font-lexend text-xl md:text-2xl font-semibold text-white text-center">
-          Recuperar Contraseña
-        </h2>
-      </div>
+      <header className="relative overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-6 sm:py-6">
+        <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
+        <div className="relative flex items-center justify-center gap-3.5">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#004D77] ring-1 ring-[#004D77]">
+            <KeyRound className="h-5 w-5 text-white" strokeWidth={1.8} />
+          </div>
+          <h2 className="font-lexend text-lg font-bold text-[#f9f9f9] sm:text-xl">
+            Recuperar contraseña
+          </h2>
+        </div>
+      </header>
 
       {/* Body */}
-      <div className="p-8 md:p-10">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-          <p className="text-sm text-gray-600 text-center">
-            Ingresa tu correo registrado y te enviaremos un código para restablecer tu contraseña.
-          </p>
+      <div className="p-6 sm:p-7 md:p-8">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:gap-5">
+          <div className="flex items-start gap-2.5 rounded-lg border border-[#004D77]/15 bg-[#004D77]/5 px-3.5 py-3 text-sm text-[#003b5c]">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#004D77]" strokeWidth={2} />
+            <p className="leading-relaxed">
+              Ingresa tu correo registrado y te enviaremos un código para restablecer tu contraseña.
+            </p>
+          </div>
 
           {/* Input Email */}
           <div>
@@ -183,15 +193,18 @@ export default function ForgotPasswordForm() {
           <button
             type="submit"
             disabled={loading || !isValid}
-            className={`w-full py-2.5 rounded-lg transition cursor-pointer text-sm font-medium
-              ${
-                !isValid
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-[#004D77] text-white hover:bg-[#003D5E]"
-              }
-            `}
+            className={`inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 ${
+              loading || !isValid
+                ? "cursor-not-allowed opacity-70"
+                : "cursor-pointer hover:bg-[#003b5c] hover:shadow-md"
+            }`}
           >
-            {loading ? "Enviando..." : "Enviar Código"}
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" strokeWidth={1.8} />
+            )}
+            {loading ? "Enviando..." : "Enviar código"}
           </button>
 
           {/* Link volver */}

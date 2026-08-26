@@ -3,6 +3,72 @@ import { Eye, EyeOff, Loader2, Trash2, X } from "lucide-react";
 import { cancelInstallment } from "../services/paymentsServices";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 
+const WRONG_PASSWORD_MESSAGE =
+  "Contraseña incorrecta. Verifica e intenta de nuevo.";
+
+const getErrorText = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.map(getErrorText).filter(Boolean).join(" ");
+  if (typeof value === "object") {
+    return [
+      value.message,
+      value.error,
+      value.detail,
+      value.errors,
+      value.data,
+      value.response,
+      value.userMessage,
+    ]
+      .map(getErrorText)
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  return "";
+};
+
+const normalizeErrorText = (value) =>
+  getErrorText(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+const isWrongPasswordError = (error) => {
+  const status = error?.response?.status;
+  const text = normalizeErrorText([
+    error?.response?.data,
+    error?.userMessage,
+    error?.message,
+  ]);
+
+  if (
+    /(password|contrasena|credencial|unauthorized|forbidden|incorrect)/i.test(
+      text,
+    )
+  ) {
+    return true;
+  }
+
+  if (status === 401 || status === 403) return true;
+
+  return (
+    status === 500 &&
+    /(error interno|internal server error|ocurrio un error interno)/i.test(text)
+  );
+};
+
+const getCancelInstallmentErrorMessage = (error) => {
+  if (isWrongPasswordError(error)) return WRONG_PASSWORD_MESSAGE;
+
+  return (
+    getErrorText(error?.response?.data) ||
+    error?.userMessage ||
+    error?.message ||
+    "No fue posible anular el abono."
+  );
+};
+
 /*
   Modal para anular un abono de una factura específica.
 
@@ -180,10 +246,7 @@ export default function CancelPaymentModal({
 
       onClose();
     } catch (error) {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "No fue posible anular el abono.";
+      const message = getCancelInstallmentErrorMessage(error);
 
       setErrors((prev) => ({
         ...prev,
@@ -198,8 +261,8 @@ export default function CancelPaymentModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-2 sm:p-4 z-50">
-      <div className="bg-white w-full max-w-160 max-h-[95vh] rounded-2xl shadow-xl font-lexend overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-0 sm:p-4">
+      <div className="flex h-[100dvh] max-h-[100dvh] w-full max-w-160 flex-col overflow-hidden rounded-none bg-white font-lexend shadow-xl sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl">
         <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-6 sm:py-6">
           <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
           <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
@@ -212,6 +275,9 @@ export default function CancelPaymentModal({
                 <h2 className="truncate text-lg font-bold text-[#f9f9f9] sm:text-xl">
                   Anular abono
                 </h2>
+                <p className="mt-0.5 truncate text-sm text-sky-100">
+                  {account?.nombre || "Cliente sin nombre"}
+                </p>
               </div>
             </div>
             <button
@@ -226,20 +292,17 @@ export default function CancelPaymentModal({
           </div>
         </header>
 
-        <div className="flex-1 min-h-0 p-3 sm:p-4 md:p-5 flex flex-col gap-3 sm:gap-4 overflow-y-auto">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 sm:gap-4 sm:p-4 md:p-5">
           <p className="text-sm text-gray-600 leading-relaxed">
             Esta acción marcará el abono como anulado. El saldo de la factura
             será recalculado automáticamente.
           </p>
 
           {/* DATOS DEL ABONO */}
-          <div className="bg-gray-100 p-3 sm:p-4 rounded-xl text-sm space-y-1.5 wrap-break-word">
+          <div className="grid grid-cols-1 gap-2 text-sm wrap-break-word sm:grid-cols-2 lg:grid-cols-3 [&>p]:rounded-xl [&>p]:border [&>p]:border-slate-200 [&>p]:bg-slate-50 [&>p]:p-3 [&>p]:text-slate-700 [&>p]:shadow-sm">
             <p>
               <strong>Nro Abono:</strong> #
               {payment?.displayId ?? payment?.nroAbono ?? "-"}
-            </p>
-            <p>
-              <strong>Cliente:</strong> {account?.nombre ?? "-"}
             </p>
             <p>
               <strong>Fecha:</strong>{" "}

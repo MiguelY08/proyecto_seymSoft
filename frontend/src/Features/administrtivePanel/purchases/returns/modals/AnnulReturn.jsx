@@ -10,6 +10,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
+import { getPurchaseReturnProviderName } from "../helpers/returnsHelpers";
 import { validateMotivoCancelacion } from "../validators/returnsValidators";
 
 const MAX_REASON_LENGTH = 250;
@@ -140,11 +141,7 @@ const AnnulReturn = ({ devolucion, onClose, onConfirm, loading = false }) => {
               <DetailRow
                 icon={Truck}
                 label="Proveedor"
-                value={
-                  devolucion?.proveedor ??
-                  devolucion?.provider?.name ??
-                  devolucion?.purchase?.provider?.name
-                }
+                value={getPurchaseReturnProviderName(devolucion, "-")}
               />
               <DetailRow
                 icon={Calendar}
@@ -191,12 +188,12 @@ const AnnulReturn = ({ devolucion, onClose, onConfirm, loading = false }) => {
           </div>
         </div>
 
-        <footer className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
+        <footer className="flex shrink-0 flex-col gap-2 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            className="order-2 inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >
             Cancelar
           </button>
@@ -204,7 +201,7 @@ const AnnulReturn = ({ devolucion, onClose, onConfirm, loading = false }) => {
             type="button"
             onClick={handleSubmit}
             disabled={loading}
-            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            className="order-1 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >
             {loading ? (
               <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />

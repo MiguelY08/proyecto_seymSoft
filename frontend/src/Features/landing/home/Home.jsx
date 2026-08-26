@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ShoppingBag, Briefcase, ClipboardPen, FileText, Palette, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 
 import { getActiveBanners } from '../../administrtivePanel/configuration/carousel/services/bannerService.js';
 import ProductsService from '../../administrtivePanel/purchases/products/services/productsServices.js';
@@ -135,21 +135,44 @@ const PAGE_STYLES = `
     right: -2px;
   }
   .cat-card {
+    position: relative;
+    overflow: hidden;
     background: #ffffff;
     border: 1.5px solid #e2edf5;
     border-radius: 16px;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
     flex: 0 0 clamp(118px, 36vw, 148px);
-    min-height: 104px;
-    padding: 14px 10px;
+    min-height: 94px;
+    padding: 18px 14px;
     scroll-snap-align: start;
     cursor: pointer;
     text-decoration: none;
+    isolation: isolate;
     transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+  }
+  .cat-card::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    width: 76px;
+    height: 76px;
+    border-radius: 999px;
+    background: #eaf5fb;
+    top: -42px;
+    right: -28px;
+    transition: transform 0.35s ease, background 0.25s ease;
+  }
+  .cat-card::after {
+    content: '';
+    position: absolute;
+    bottom: 14px;
+    width: 28px;
+    height: 2px;
+    border-radius: 999px;
+    background: #9bc9e2;
+    transition: width 0.25s ease, background 0.25s ease;
   }
   .cat-card:hover {
     box-shadow: 0 8px 28px rgba(0,77,119,0.13);
@@ -157,29 +180,18 @@ const PAGE_STYLES = `
     border-color: #afd0e6;
     background: #f0f8ff;
   }
+  .cat-card:hover::before { transform: scale(1.35); background: #d9edf8; }
+  .cat-card:hover::after { width: 46px; background: #004D77; }
   .cat-card:active { transform: scale(0.96); }
-  .cat-icon-wrap {
-    width: 42px; height: 42px;
-    border-radius: 12px;
-    background: linear-gradient(140deg, #e8f4fd 0%, #d4ebf8 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.25s ease;
-  }
-  .cat-card:hover .cat-icon-wrap {
-    transform: scale(1.1) rotate(-4deg);
-  }
   .cat-label {
     display: -webkit-box;
     max-width: 100%;
     overflow: hidden;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
-    font-size: 0.62rem;
+    font-size: 0.94rem;
     font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    letter-spacing: 0.035em;
     color: #1e4060;
     text-align: center;
     line-height: 1.3;
@@ -187,16 +199,11 @@ const PAGE_STYLES = `
   @media (min-width: 390px) {
     .cat-card {
       flex-basis: clamp(132px, 34vw, 156px);
-      min-height: 112px;
-      padding: 16px 12px;
-    }
-    .cat-icon-wrap {
-      width: 46px; height: 46px;
-      border-radius: 13px;
+      min-height: 104px;
+      padding: 20px 16px;
     }
     .cat-label {
-      font-size: 0.68rem;
-      letter-spacing: 0.08em;
+      font-size: 1rem;
     }
   }
   @media (min-width: 768px) {
@@ -213,14 +220,12 @@ const PAGE_STYLES = `
     }
     .cat-card {
       flex: initial;
-      gap: 10px;
-      min-height: 120px;
-      padding: 20px 12px;
+      min-height: 116px;
+      padding: 24px 18px;
       scroll-snap-align: none;
     }
-    .cat-icon-wrap {
-      width: 52px; height: 52px;
-      border-radius: 14px;
+    .cat-label {
+      font-size: 1.06rem;
     }
   }
 
@@ -455,14 +460,6 @@ function Home() {
   const { clientType, loading: loadingClientType } = useClientType();
 
   // Iconos para categorías (placeholder - se reemplazarán con dinámicos si es necesario)
-  const categoryIcons = {
-    1: ShoppingBag,
-    2: Briefcase,
-    3: ClipboardPen,
-    4: FileText,
-    5: Palette,
-  };
-
   // ═══ CARGAR CARRUSEL ═══
   useEffect(() => {
     const loadCarousel = async () => {
@@ -710,22 +707,16 @@ function Home() {
                 <div key={`skeleton-${i}`} className="cat-card loading-skeleton" />
               ))
             ) : categories.length > 0 ? (
-              categories.slice(0, 5).map((cat, index) => {
-                const Icon = categoryIcons[cat.id] || ShoppingBag;
-                return (
+              categories.slice(0, 5).map((cat, index) => (
                   <Link
                     key={cat.id}
                     to={`/shop?category=${cat.id}`}
                     className="cat-card scroll-reveal"
                     style={{ animationDelay: `${Math.min(index, 5) * 0.08}s` }}
                   >
-                    <div className="cat-icon-wrap">
-                      <Icon size={24} color="#004D77" strokeWidth={1.75} />
-                    </div>
                     <span className="cat-label">{cat.name}</span>
                   </Link>
-                );
-              })
+              ))
             ) : (
               <p className="section-subtitle">No hay categorías disponibles</p>
             )}

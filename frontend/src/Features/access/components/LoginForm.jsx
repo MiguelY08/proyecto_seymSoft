@@ -181,10 +181,10 @@ const handleSubmit = async (e) => {
         <button
           type="submit"
           disabled={loading}
-          className={`w-full bg-[#004D77] text-white py-2 rounded-lg transition cursor-pointer mt-4 text-sm font-medium
+          className={`w-full rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition cursor-pointer mt-4 focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2
             ${loading 
               ? "opacity-70 cursor-not-allowed" 
-              : "hover:bg-[#003D5e]"
+              : "hover:bg-[#003b5c] hover:shadow-md"
             }
           `}
         >
@@ -205,10 +205,10 @@ const handleSubmit = async (e) => {
             window.location.href = `${import.meta.env.VITE_API_BASE_URL}/auth/google`;
           }}
           disabled={loading}
-          className={`w-full flex cursor-pointer items-center justify-center gap-2 border border-gray-300 text-gray-700 py-2 rounded-lg transition mt-4
+          className={`w-full flex cursor-pointer items-center justify-center gap-2 rounded-full border border-gray-300 bg-white px-6 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition mt-4 focus:outline-none focus:ring-2 focus:ring-[#004D77]/30 focus:ring-offset-2
             ${loading 
               ? "opacity-70 cursor-not-allowed" 
-              : "hover:bg-gray-100"
+              : "hover:bg-gray-100 hover:shadow-md"
             }
           `}
           aria-label="Iniciar sesión con Google"

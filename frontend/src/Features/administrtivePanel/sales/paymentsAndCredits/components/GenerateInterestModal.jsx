@@ -131,12 +131,12 @@ export default function GenerateInterestModal({
 
     const confirm = await showConfirm(
       "question",
-      "Aplicar interés?",
-      `Se generarÃ¡ un interes de $${formatCOP(
+      "¿Aplicar interés?",
+      `Se generará un interés de $${formatCOP(
         interestGenerated,
       )} para el crédito #${factura?.idCredit}.`,
       {
-        confirmButtonText: "SÃ­, aplicar",
+        confirmButtonText: "Sí, aplicar",
         cancelButtonText: "Revisar",
       },
     );
@@ -163,8 +163,8 @@ export default function GenerateInterestModal({
   if (!factura) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-2 sm:p-4 z-50">
-      <div className="bg-white w-full max-w-160 max-h-[95vh] rounded-2xl shadow-xl font-lexend overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-0 sm:p-4">
+      <div className="flex h-[100dvh] max-h-[100dvh] w-full max-w-160 flex-col overflow-hidden rounded-none bg-white font-lexend shadow-xl sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl">
         <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-5 text-white sm:px-6 sm:py-6">
           <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
           <div className="pointer-events-none absolute -bottom-20 right-20 h-36 w-36 rounded-full bg-sky-300/10" />
@@ -177,6 +177,9 @@ export default function GenerateInterestModal({
                 <h2 className="truncate text-lg font-bold text-[#f9f9f9] sm:text-xl">
                   Aplicar interés
                 </h2>
+                <p className="mt-0.5 truncate text-sm text-sky-100">
+                  {cliente?.fullName ?? cliente?.nombre ?? "Cliente sin nombre"}
+                </p>
               </div>
             </div>
             <button
@@ -191,15 +194,10 @@ export default function GenerateInterestModal({
           </div>
         </header>
 
-        <div className="flex-1 min-h-0 p-4 sm:p-5 space-y-3 sm:space-y-4 overflow-y-auto">
-          <div className="bg-gray-100 p-3 sm:p-4 rounded-xl text-sm space-y-2">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3 sm:space-y-4 sm:p-5">
+          <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3 [&>p]:flex [&>p]:min-h-20 [&>p]:flex-col [&>p]:justify-center [&>p]:gap-1 [&>p]:rounded-xl [&>p]:border [&>p]:border-slate-200 [&>p]:bg-slate-50 [&>p]:p-3 [&>p]:text-slate-700 [&>p]:shadow-sm">
             <p>
               <strong>Crédito:</strong> #{factura.idCredit}
-            </p>
-
-            <p>
-              <strong>Cliente:</strong>{" "}
-              {cliente?.fullName ?? cliente?.nombre ?? "-"}
             </p>
 
             <p>
@@ -236,25 +234,49 @@ export default function GenerateInterestModal({
             {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
           </div>
 
-          <div className="bg-gray-50 p-3 sm:p-4 rounded-xl border border-gray-200 text-sm space-y-2">
-            <p className="font-medium">Resumen de interés</p>
-            <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-3">
-              <span className="text-gray-600">Saldo pendiente</span>
-              <span className="font-medium">
-                ${formatCOP(factura.remainingBalance ?? 0)}
-              </span>
+          <section className="space-y-2">
+            <p className="text-sm font-medium text-gray-800">Resumen de interés</p>
+            <div className="overflow-x-auto rounded-lg border border-gray-200 [-webkit-overflow-scrolling:touch]">
+              <table className="min-w-[320px] w-full">
+                <thead className="bg-[#004D77]/5">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                      Detalle
+                    </th>
+                    <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">
+                      Totales
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="bg-white">
+                    <td className="px-3 py-2 text-xs text-gray-600">
+                      Saldo pendiente
+                    </td>
+                    <td className="px-3 py-2 text-right text-xs font-medium text-gray-700">
+                      ${formatCOP(factura.remainingBalance ?? 0)}
+                    </td>
+                  </tr>
+                  <tr className="bg-gray-50">
+                    <td className="px-3 py-2 text-xs text-gray-600">
+                      Interés generado
+                    </td>
+                    <td className="px-3 py-2 text-right text-xs font-semibold text-emerald-600">
+                      ${formatCOP(interestGenerated)}
+                    </td>
+                  </tr>
+                  <tr className="bg-white">
+                    <td className="px-3 py-2 text-xs font-semibold text-gray-800">
+                      Total
+                    </td>
+                    <td className="px-3 py-2 text-right text-xs font-semibold text-gray-800">
+                      ${formatCOP(totalDebt)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-            <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-3">
-              <span className="text-gray-600">Interés generado</span>
-              <span className="font-medium text-green-600">
-                ${formatCOP(interestGenerated)}
-              </span>
-            </div>
-            <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-3">
-              <span className="text-gray-600">Nueva deuda total</span>
-              <span className="font-semibold">${formatCOP(totalDebt)}</span>
-            </div>
-          </div>
+          </section>
 
         </div>
         <footer className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">

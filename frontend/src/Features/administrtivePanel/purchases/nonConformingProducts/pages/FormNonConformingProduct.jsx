@@ -194,11 +194,11 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-stretch justify-stretch bg-white sm:items-center sm:justify-center sm:bg-black/40 sm:p-4 sm:backdrop-blur-sm"
       onClick={handleOutsideClick}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col"
+        className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:rounded-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <PurchaseModalHeader
@@ -210,7 +210,7 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
         />
 
         {/* BODY */}
-        <div className="px-6 py-6 flex flex-col gap-5">
+        <div className="min-h-0 flex flex-1 flex-col gap-5 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
           {/* CÓDIGO DE BARRAS */}
           <div>
             <label className="text-sm font-medium text-gray-700">Código de Barras</label>
@@ -355,14 +355,14 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
         </div>
 
         {/* FOOTER */}
-        <div className="px-6 pb-6 flex gap-4">
+        <div className="flex shrink-0 flex-col gap-2 px-4 pb-5 sm:flex-row sm:gap-4 sm:px-6 sm:pb-6">
           <button
             onClick={handleSubmit}
             disabled={hasErrors || !productInfo || submitting || isStockEmpty}
-            className={`flex-1 py-2.5 text-sm font-medium text-white rounded-xl transition ${
+            className={`order-1 inline-flex w-full items-center justify-center rounded-full px-6 py-2.5 text-sm font-bold text-white shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 sm:flex-1 ${
               hasErrors || !productInfo || submitting || isStockEmpty
                 ? "bg-gray-400 cursor-not-allowed"
-                : "bg-[#0E5679] hover:bg-[#0a435c]"
+                : "cursor-pointer bg-[#004D77] hover:bg-[#003b5c] hover:shadow-md"
             }`}
           >
             {submitting ? "Guardando..." : isStockEmpty ? "Stock agotado" : "Guardar"}
@@ -370,7 +370,7 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
           <button
             onClick={handleCancel}
             disabled={submitting}
-            className="flex-1 py-2.5 text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 rounded-xl transition disabled:opacity-50"
+            className="order-2 inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
           >
             Cancelar
           </button>

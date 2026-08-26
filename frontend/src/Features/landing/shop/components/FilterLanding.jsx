@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 
 const SIDEBAR_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
@@ -26,6 +26,26 @@ const SIDEBAR_STYLES = `
     color: #9abcce;
     letter-spacing: 0.05em;
     text-transform: uppercase;
+  }
+  .filter-clear-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 10px;
+    padding: 6px 9px;
+    border: 1px solid #d8e4ec;
+    border-radius: 8px;
+    background: #fff;
+    color: #44677d;
+    font-size: 0.72rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .filter-clear-btn:hover {
+    border-color: #004D77;
+    background: #f0f7fb;
+    color: #004D77;
   }
   .filter-section {
     border-top: 1px solid #eef2f6;
@@ -131,6 +151,7 @@ function Filters({
   selectedSubcategoryIds,
   onCategoryChange,
   onSubcategoryChange,
+  onClearFilters,
 }) {
   injectSidebarStyles();
   const [expandedCategories, setExpandedCategories] = useState({});
@@ -141,12 +162,24 @@ function Filters({
       [categoryId]: !current[categoryId],
     }));
   };
+  const hasActiveFilters =
+    selectedCategoryIds.length > 0 || selectedSubcategoryIds.length > 0;
 
   return (
     <div className="filter-sidebar">
       <div className="filter-header">
         <h2 className="filter-title">Filtros</h2>
         <p className="filter-results">{totalProducts} resultados</p>
+        {hasActiveFilters && (
+          <button
+            type="button"
+            className="filter-clear-btn"
+            onClick={onClearFilters}
+          >
+            <X size={14} />
+            Limpiar filtros
+          </button>
+        )}
       </div>
 
       <div className="filter-section">

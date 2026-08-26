@@ -4,6 +4,30 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+
+          if (id.includes('exceljs') || id.includes('/xlsx/') || id.includes('xlsx-js-style')) {
+            return 'vendor-excel'
+          }
+
+          if (id.includes('jspdf') || id.includes('html2canvas')) {
+            return 'vendor-pdf'
+          }
+
+          if (id.includes('recharts') || id.includes('d3-')) {
+            return 'vendor-charts'
+          }
+
+          // Let Rollup place the remaining dependencies with their consumers.
+          return undefined
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),
