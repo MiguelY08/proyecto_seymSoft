@@ -31,6 +31,8 @@ function TopBar({
   setPagoEstadoFilter,
   envioFilter,
   setEnvioFilter,
+  hasPendingPaymentReviewFilter = false,
+  clearPendingPaymentReviewFilter,
   setCurrentPage,
   orders,
 }) {
@@ -39,7 +41,7 @@ function TopBar({
   const [isSearchOpen, setIsSearchOpen] = useState(Boolean(search));
   const searchWrapperRef = useRef(null);
   const hasActiveFilters = Boolean(
-    search || fechaInicial || fechaFinal || origenFilter || pagoEstadoFilter || envioFilter
+    search || fechaInicial || fechaFinal || origenFilter || pagoEstadoFilter || envioFilter || hasPendingPaymentReviewFilter
   );
 
   const origenOptions = [
@@ -59,11 +61,13 @@ function TopBar({
   ];
 
   const resetPageAndSet = (setter) => (value) => {
+    clearPendingPaymentReviewFilter?.();
     setter(value);
     setCurrentPage(1);
   };
 
   const handleClearFilters = () => {
+    clearPendingPaymentReviewFilter?.();
     setSearch('');
     setFechaInicial('');
     setFechaFinal('');

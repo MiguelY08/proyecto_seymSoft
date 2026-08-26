@@ -83,6 +83,7 @@ const normalizePayment = (payment = {}, pedidoId = null) => ({
   fechaPago: payment.fechaPago ?? payment.paymentDate ?? payment.createdAt ?? payment.date ?? new Date().toISOString(),
   metodoPago: payment.metodoPago ?? payment.paymentMethod?.namePaymentMethod ?? payment.paymentMethod?.name ?? payment.paymentMethod ?? payment.method ?? payment.metodo ?? METODOS_PAGO.EFECTIVO,
   monto: toNumber(payment.monto ?? payment.amount ?? payment.value),
+  referencia: payment.reference ?? payment.referencia ?? payment.comprobante ?? null,
   comprobante: payment.comprobante ?? payment.receipt ?? payment.reference ?? payment.voucher ?? null,
   observaciones: payment.observations ?? payment.observaciones ?? '',
 });

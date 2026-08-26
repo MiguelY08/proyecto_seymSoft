@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import {
   X, User, Phone, Mail, MapPin, Calendar, CreditCard,
   CheckCircle, Edit, AlertTriangle, Tag, DollarSign, FileDown,
-  IdCard, UserCheck, Truck
+  IdCard, UserCheck, Truck, LoaderCircle
 } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import {
@@ -118,6 +118,7 @@ function DetailOrder({
   const [pagos, setPagos] = useState([]);
   const [totalPagado, setTotalPagado] = useState(0);
   const [paymentReceipts, setPaymentReceipts] = useState([]);
+  const [isLoadingPaymentReceipts, setIsLoadingPaymentReceipts] = useState(false);
   const [asesorNombre, setAsesorNombre] = useState('');
   const [receiptToApprove, setReceiptToApprove] = useState(null);
   const [receiptToReject, setReceiptToReject] = useState(null);
@@ -131,13 +132,25 @@ function DetailOrder({
       if (modo === 'venta') {
         const salePayments = order.pagos || [];
         let saleReceipts = order.comprobantesPago || [];
+        const expectedSaleReceipts = Math.max(
+          Number(order.paymentReceiptSummary?.totalReceipts) || 0,
+          saleReceipts.length,
+        );
 
-        if (!saleReceipts.length) {
+        // El detalle de venta no siempre incluye los comprobantes; en ese caso
+        // se consultan por el pedido asociado antes de decidir que no existen.
+        if (expectedSaleReceipts > 0 || !saleReceipts.length) {
+          setPaymentReceipts([]);
+          setIsLoadingPaymentReceipts(true);
           try {
             saleReceipts = await PaymentReceiptService.getByPedidoId(order.id);
           } catch {
-            saleReceipts = [];
+            // Conserva los comprobantes recibidos inicialmente si la recarga falla.
+          } finally {
+            setIsLoadingPaymentReceipts(false);
           }
+        } else {
+          setIsLoadingPaymentReceipts(false);
         }
         setPagos(salePayments);
         setTotalPagado(
@@ -157,10 +170,32 @@ function DetailOrder({
         return;
       }
 
+      let orderReceipts = order.comprobantesPago || [];
+      let receiptRequest = null;
+      const expectedOrderReceipts = Math.max(
+        Number(order.paymentReceiptSummary?.totalReceipts) || 0,
+        orderReceipts.length,
+      );
+
+      if (expectedOrderReceipts > 0) {
+        setPaymentReceipts([]);
+        setIsLoadingPaymentReceipts(true);
+        receiptRequest = PaymentReceiptService.getByPedidoId(order.id)
+          .catch(() => orderReceipts);
+      } else {
+        setIsLoadingPaymentReceipts(false);
+      }
+
       const pagosPedido = await PaymentService.getByPedidoId(order.id);
       setPagos(pagosPedido);
       setTotalPagado(await PaymentService.getTotalPagado(order.id));
-      setPaymentReceipts(order.comprobantesPago || []);
+
+      if (receiptRequest) {
+        orderReceipts = await receiptRequest;
+        setIsLoadingPaymentReceipts(false);
+      }
+
+      setPaymentReceipts(orderReceipts);
 
       if (order.asesorNombre) {
         setAsesorNombre(order.asesorNombre);
@@ -232,12 +267,19 @@ function DetailOrder({
   const handleEditClick = () => {
     if (!showEditButton) return;
     onEdit(order);
-    onClose();
+    // En la vista de detalle, onClose vuelve a la lista y anulaba la
+    // navegación iniciada por onEdit hacia el formulario.
+    if (!isPage) onClose();
   };
 
   const handleDownloadPDF = async () => {
     await exportOrderToPDF(order, pagos, asesorNombre);
   };
+
+  const expectedReceiptCount = Math.max(
+    Number(order.paymentReceiptSummary?.totalReceipts) || 0,
+    Array.isArray(order.comprobantesPago) ? order.comprobantesPago.length : 0,
+  );
 
   const ensurePendingReceipt = (receipt) => {
     if (normalizeReceiptStatus(receipt?.status) === 'pendiente') return true;
@@ -540,6 +582,17 @@ function DetailOrder({
                   </div>
                 ) : (
                   <p className="text-xs text-gray-400 italic">No hay pagos registrados.</p>
+                )}
+
+                {isLoadingPaymentReceipts && (expectedReceiptCount > 0 || esModoVenta) && (
+                  <div className="mt-4 flex items-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2.5 text-xs font-semibold text-sky-800">
+                    <LoaderCircle size={15} className="shrink-0 animate-spin" />
+                    {expectedReceiptCount === 1
+                      ? 'Cargando 1 comprobante de pago...'
+                      : expectedReceiptCount > 1
+                        ? `Cargando ${expectedReceiptCount} comprobantes de pago...`
+                        : 'Cargando comprobantes de pago...'}
+                  </div>
                 )}
 
                 {paymentReceipts.length > 0 && (

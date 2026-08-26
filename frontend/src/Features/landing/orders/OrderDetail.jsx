@@ -593,6 +593,12 @@ function OrderDetail() {
                               {proof.reviewObservations}
                             </p>
                           )}
+                          {normalizedStatus === 'aprobado' && proof.reviewObservations && (
+                            <p className="break-words rounded-lg bg-green-50 p-2 text-[11px] font-semibold leading-snug text-green-700 [overflow-wrap:anywhere]">
+                              <span className="font-black">Observacion interna: </span>
+                              {proof.reviewObservations}
+                            </p>
+                          )}
                         </div>
                       </button>
                     );
@@ -607,7 +613,7 @@ function OrderDetail() {
                 {order.pagos.map((payment) => (
                   <div key={payment.id} className="mt-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
                     <p className="font-bold text-slate-800">{payment.metodoPago} · {formatMoney(payment.monto)}</p>
-                    {payment.comprobante && <p className="mt-1 break-all">Referencia: {payment.comprobante}</p>}
+                    {payment.referencia && <p className="mt-1 break-all">Referencia: {payment.referencia}</p>}
                   </div>
                 ))}
               </div>
