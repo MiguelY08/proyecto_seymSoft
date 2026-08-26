@@ -269,17 +269,13 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
                         <button
                           type="button"
                           onClick={handleSaveEdit}
-<<<<<<< HEAD
                           disabled={changingStatusId !== null}
                           aria-busy={changingStatusId === sub.id}
-                          className={`px-3 py-1 text-white rounded text-xs ${
+                          className={`rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition ${
                             changingStatusId !== null
                               ? "bg-gray-400 cursor-not-allowed"
-                              : "bg-green-600"
+                              : "bg-[#004D77] hover:bg-[#003b5c]"
                           }`}
-=======
-                          className="rounded-full bg-[#004D77] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#003b5c]"
->>>>>>> ed5886cb31c4a2e0cc961690e9ba4e8f7413228a
                         >
                           {changingStatusId === sub.id ? "Guardando..." : "Guardar"}
                         </button>
