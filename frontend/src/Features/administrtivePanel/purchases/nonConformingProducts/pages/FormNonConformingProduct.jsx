@@ -6,6 +6,7 @@ import { createNonConforming, getProductByBarcode } from "../data/nonConformingS
 import { normalizeBarcode, useBarcodeScanner } from "../../../../shared/scanner";
 import { useOutsideCloseWarning } from "../../../../shared/hooks/useOutsideCloseWarning";
 import PurchaseModalHeader from "../../../../shared/PurchaseModalHeader";
+import { getApiErrorMessage } from "../../../../shared/utils/apiErrorMessage";
 
 const NON_CONFORMING_FORM_SCANNER_FIELD = "non-conforming-product-form-search";
 
@@ -39,6 +40,9 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
   const cantidadError = (() => {
     if (!cantidadTouched) return null;
     if (!form.cantidad) return "La cantidad es obligatoria.";
+    if (!/^\d+$/.test(String(form.cantidad)) || !Number.isInteger(Number(form.cantidad))) {
+      return "La cantidad debe ser un número entero.";
+    }
     if (Number(form.cantidad) <= 0) return "La cantidad debe ser mayor a 0.";
     if (Number(form.cantidad) > 10000) return "Cantidad demasiado grande.";
     
@@ -95,7 +99,13 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
       }
     } catch (error) {
       setProductInfo(null);
-      showError("Error", error.message || "No se pudo buscar el producto.");
+      showError(
+        "Producto no encontrado",
+        getApiErrorMessage(error, {
+          notFoundMessage: "No se encontró un producto con ese código de barras.",
+          fallback: "No se pudo buscar el producto. Intenta nuevamente.",
+        })
+      );
     } finally {
       setLoadingProduct(false);
     }
@@ -157,7 +167,14 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
       onSuccess?.();
       onClose();
     } catch (error) {
-      showError("Error", error.message || "No se pudo guardar el reporte.");
+      showError(
+        "No se pudo guardar",
+        getApiErrorMessage(error, {
+          notFoundMessage:
+            "El producto o código de barras seleccionado ya no se encuentra disponible.",
+          fallback: "No se pudo guardar el reporte. Intenta nuevamente.",
+        })
+      );
     } finally {
       setSubmitting(false);
     }
@@ -283,6 +300,7 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
               <input
                 type="number"
                 min="1"
+                step="1"
                 max={productInfo?.stock ?? undefined}
                 value={form.cantidad}
                 onChange={(e) => {

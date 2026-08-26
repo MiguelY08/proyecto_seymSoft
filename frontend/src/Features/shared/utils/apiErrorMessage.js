@@ -1,10 +1,11 @@
 const isTechnicalAxiosMessage = (message = '') =>
   /^request failed with status code \d+$/i.test(String(message).trim());
 
-export function getApiErrorMessage(error, { conflictMessage, fallback } = {}) {
+export function getApiErrorMessage(error, { conflictMessage, notFoundMessage, fallback } = {}) {
   const status = error?.response?.status;
 
   if (status === 409 && conflictMessage) return conflictMessage;
+  if (status === 404 && notFoundMessage) return notFoundMessage;
 
   const backendMessage =
     error?.response?.data?.message ??

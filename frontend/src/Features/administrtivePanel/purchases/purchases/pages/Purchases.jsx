@@ -26,6 +26,31 @@ const SORT_OPTIONS = {
 
 const RECORDS_PER_PAGE = 11;
 const SEARCH_FETCH_LIMIT = 100;
+const DETAIL_REQUEST_BATCH_SIZE = 8;
+
+const addRealProductQuantities = async (purchases) => {
+  const enrichedPurchases = [];
+
+  for (let index = 0; index < purchases.length; index += DETAIL_REQUEST_BATCH_SIZE) {
+    const batch = purchases.slice(index, index + DETAIL_REQUEST_BATCH_SIZE);
+    const enrichedBatch = await Promise.all(
+      batch.map(async (purchase) => {
+        try {
+          const detail = await getPurchaseById(purchase.id);
+          return {
+            ...purchase,
+            cantidadProductos: detail.cantidadProductos,
+          };
+        } catch {
+          return purchase;
+        }
+      })
+    );
+    enrichedPurchases.push(...enrichedBatch);
+  }
+
+  return enrichedPurchases;
+};
 
 const normalizeSearchValue = (value) =>
   String(value ?? "")
@@ -138,7 +163,7 @@ export const Purchases = () => {
         allPurchases.push(...nextPage.data);
       }
 
-      setProducts(allPurchases);
+      setProducts(await addRealProductQuantities(allPurchases));
     } catch (err) {
       showError("Error", err.message || "No se pudieron cargar las compras.");
     } finally {
