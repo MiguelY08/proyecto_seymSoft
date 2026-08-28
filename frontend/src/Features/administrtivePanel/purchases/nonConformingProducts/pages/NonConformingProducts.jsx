@@ -100,7 +100,13 @@ export const NonConformingProducts = () => {
       setReports(allReports);
     } catch (err) {
       setError("Error al cargar reportes");
-      showError("Error", err.message || "No se pudieron cargar los reportes.");
+      showError(
+        "Error al cargar",
+        getApiErrorMessage(err, {
+          notFoundMessage: "No se encontraron reportes de productos no conformes.",
+          fallback: "No se pudieron cargar los reportes.",
+        })
+      );
     } finally {
       setLoading(false);
     }

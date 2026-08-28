@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 
+<<<<<<< HEAD
 function ActiveToggle({ activo, onChange }) {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -23,6 +24,18 @@ function ActiveToggle({ activo, onChange }) {
       disabled={isLoading}
       title={activo ? 'Desactivar categoría' : 'Activar categoría'}
       className={`relative h-5.5 w-11 shrink-0 rounded-full transition-colors duration-300 ${
+=======
+function ActiveToggle({ activo, onChange, disabled = false, loading = false }) {
+  return (
+    <button
+      type="button"
+      onClick={() => !disabled && !loading && onChange(!activo)}
+      disabled={disabled || loading}
+      aria-busy={loading}
+      className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${
+        disabled || loading ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+      } ${
+>>>>>>> c4c085514cb3bb5d8b419a17d8c597e4131857e3
         activo ? "bg-green-500" : "bg-red-400"
       } ${isLoading ? 'cursor-wait opacity-50' : 'cursor-pointer'}`}
     >

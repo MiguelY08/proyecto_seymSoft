@@ -280,10 +280,32 @@ function Shop() {
   }, []);
 
   // Los contadores y el catálogo deben partir del mismo conjunto de productos.
-  const activeProducts = useMemo(
-    () => products.filter(product => product.isActive),
-    [products]
-  );
+  const activeProducts = useMemo(() => {
+    const activeCategoryIds = new Set(categories.map(category => Number(category.id)));
+    const activeSubcategoryIds = new Set(
+      categories.flatMap(category =>
+        (category.subcategories || []).map(subcategory => Number(subcategory.id))
+      )
+    );
+
+    return products
+      .filter(product => product.isActive)
+      .map(product => {
+        const visibleCategories = (product.categories || []).filter(category =>
+          activeCategoryIds.has(Number(category.id))
+        );
+        const visibleSubcategories = (product.subcategories || []).filter(subcategory =>
+          activeSubcategoryIds.has(Number(subcategory.id))
+        );
+
+        return {
+          ...product,
+          categories: visibleCategories,
+          subcategories: visibleSubcategories,
+          mainCategory: visibleCategories[0] || null,
+        };
+      });
+  }, [products, categories]);
 
   const categoryFilters = useMemo(
     () => buildCategoryFilters(categories, activeProducts),

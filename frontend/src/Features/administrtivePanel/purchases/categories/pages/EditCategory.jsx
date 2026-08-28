@@ -1,5 +1,5 @@
 // features/categories/pages/EditCategory.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Plus, AlertCircle, Layers, LoaderCircle, FolderPen, ListPlus } from "lucide-react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import ActiveToggle from "../components/ActiveToggle";
@@ -198,6 +198,7 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
   const [refreshKey, setRefreshKey] = useState(0);
   const [showAddSubModal, setShowAddSubModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const saveLockRef = useRef(false);
 
   const refreshSubCount = async () => {
     if (category) {
@@ -224,33 +225,35 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
   }, [form.nombre, allCategories, category]);
 
   const handleSubmit = async () => {
-    if (isSaving) return;
+    if (saveLockRef.current) return;
 
     if (error) {
       showWarning("Campo inválido", error);
       return;
     }
 
-    const wasActive = category?.estado === "Activo";
-    const willBeActive = form.activo;
-
-    if (wasActive !== willBeActive) {
-      const result = await showConfirm(
-        willBeActive ? "question" : "warning",
-        willBeActive ? "Activar categoría" : "Desactivar categoría",
-        willBeActive
-          ? `Al activar "${category.nombre}" también se activarán todas sus subcategorías. ¿Deseas continuar?`
-          : `Al desactivar "${category.nombre}" también se desactivarán todas sus subcategorías y los productos asociados a ellas. ¿Deseas continuar?`,
-        {
-          confirmButtonText: willBeActive ? "Sí, activar" : "Sí, desactivar",
-          cancelButtonText: "Cancelar",
-        }
-      );
-      if (!result?.isConfirmed) return;
-    }
+    saveLockRef.current = true;
+    setIsSaving(true);
 
     try {
-      setIsSaving(true);
+      const wasActive = category?.estado === "Activo";
+      const willBeActive = form.activo;
+
+      if (wasActive !== willBeActive) {
+        const result = await showConfirm(
+          willBeActive ? "question" : "warning",
+          willBeActive ? "Activar categoría" : "Desactivar categoría",
+          willBeActive
+            ? `Al activar "${category.nombre}" también se activarán todas sus subcategorías. ¿Deseas continuar?`
+            : `Al desactivar "${category.nombre}" también se desactivarán todas sus subcategorías y los productos asociados a ellas. ¿Deseas continuar?`,
+          {
+            confirmButtonText: willBeActive ? "Sí, activar" : "Sí, desactivar",
+            cancelButtonText: "Cancelar",
+          }
+        );
+        if (!result?.isConfirmed) return;
+      }
+
       await onSave(
         {
           ...category,
@@ -260,6 +263,7 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
         true
       );
     } finally {
+      saveLockRef.current = false;
       setIsSaving(false);
     }
   };
@@ -307,6 +311,8 @@ const EditCategory = ({ category, allCategories, onClose, onSave, refreshCategor
               <ActiveToggle
                 activo={form.activo}
                 onChange={(nuevo) => setForm({ ...form, activo: nuevo })}
+                disabled={isSaving}
+                loading={isSaving}
               />
             </div>
           </div>

@@ -62,6 +62,7 @@ export const CategoriesTable = ({
   handleEdit,
   handleViewDetail,
   highlightText,
+<<<<<<< HEAD
   isSearching = false,
   onCreateCategory,
 }) => {
@@ -83,6 +84,10 @@ export const CategoriesTable = ({
   }
 
   return (
+=======
+  changingStatusId,
+}) => (
+>>>>>>> c4c085514cb3bb5d8b419a17d8c597e4131857e3
   <div className="min-w-0 w-full overflow-x-auto overscroll-x-contain rounded-xl [-webkit-overflow-scrolling:touch]">
     <table className="min-w-max w-full table-auto">
       <thead className="sticky top-0 z-20 bg-[#004D77] text-white">
@@ -121,7 +126,12 @@ export const CategoriesTable = ({
               <td className="px-3 py-2">
                 <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                   <Permission permission="categorias.activar_desactivar">
-                    <ActiveToggle activo={category.estado === "Activo"} onChange={() => handleToggleStatus(category.id)} />
+                    <ActiveToggle
+                      activo={category.estado === "Activo"}
+                      onChange={() => handleToggleStatus(category.id)}
+                      disabled={changingStatusId !== null}
+                      loading={changingStatusId === category.id}
+                    />
                   </Permission>
                   <Permission permission="categorias.ver_informacion">
                     <button type="button" onClick={() => handleViewDetail(category)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]" title="Ver detalle">
