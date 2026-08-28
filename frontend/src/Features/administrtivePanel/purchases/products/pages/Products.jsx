@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import {
-  Search,
   Plus,
   Info,
   SquarePen,
@@ -52,33 +51,38 @@ const getProductTotalStock = (product) =>
 const hasLowStock = (product) =>
   getProductTotalStock(product) < LOW_STOCK_THRESHOLD;
 
-function EmptyState({ onCreateProduct, canCreate }) {
+function EmptyState({ onCreateProduct, canCreate, isSearching }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4">
-      <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-        <Plus className="w-12 h-12 text-gray-400" strokeWidth={1.5} />
+    <div className="flex flex-col items-center justify-center gap-3 px-4 py-12">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#004D77]/10">
+        <Package className="h-8 w-8 text-[#004D77]/40" strokeWidth={1.5} />
       </div>
-      <h3 className="text-xl font-bold text-gray-800 mb-2">
-        No hay productos registrados
-      </h3>
-      <p className="text-gray-600 text-center mb-6 max-w-md">
-        Comienza agregando tu primer producto al inventario. Podrás gestionar
-        stock, precios y categorías fácilmente.
-      </p>
-      {canCreate && (
-        <button
-          onClick={onCreateProduct}
-          className="flex items-center gap-2 px-6 py-3 text-white rounded-lg hover:opacity-90 transition-all duration-200 font-medium"
-          style={{ backgroundColor: "#004D77" }}
-        >
-          <Plus className="w-5 h-5" strokeWidth={2} />
-          Crear primer producto
-        </button>
-      )}
-      {!canCreate && (
-        <p className="text-sm text-gray-500">
-          No tiene permisos para crear productos.
-        </p>
+
+      {isSearching ? (
+        <>
+          <p className="text-sm font-semibold text-gray-500">No se encontraron resultados</p>
+          <p className="max-w-xs text-center text-xs text-gray-400">
+            Ningún producto coincide con la búsqueda.
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="text-sm font-semibold text-gray-500">No hay productos registrados</p>
+          <p className="max-w-xs text-center text-xs text-gray-400">
+            Aún no se han registrado productos.
+          </p>
+
+          {canCreate && (
+            <button
+              type="button"
+              onClick={onCreateProduct}
+              className="flex cursor-pointer items-center gap-1.5 rounded-lg border bg-[#004D77] px-2 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#003a5c] sm:px-3"
+            >
+              <span>Nuevo producto</span>
+              <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+            </button>
+          )}
+        </>
       )}
     </div>
   );
@@ -101,6 +105,7 @@ function Products() {
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterSubcategory, setFilterSubcategory] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
@@ -131,7 +136,7 @@ function Products() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, filterCategory, filterSubcategory, showLowStockOnly]);
+  }, [search, filterCategory, filterSubcategory, filterStatus, showLowStockOnly]);
 
   // Resetear subcategoría cuando cambia la categoría
   useEffect(() => {
@@ -171,7 +176,11 @@ function Products() {
   }, [data, filterCategory]);
   // Verificar si hay filtros activos
   const hasActiveFilters =
-    filterCategory !== "all" || filterSubcategory !== "all" || showLowStockOnly;
+    Boolean(search.trim()) ||
+    filterCategory !== "all" ||
+    filterSubcategory !== "all" ||
+    filterStatus !== "all" ||
+    showLowStockOnly;
 
   const lowStockCount = useMemo(
     () => data.filter(hasLowStock).length,
@@ -208,12 +217,15 @@ function Products() {
         filterSubcategory === "all" ||
         subcategoryNames.includes(filterSubcategory);
 
+      const matchesStatus =
+        filterStatus === "all" || row.status === filterStatus;
+
       const matchesLowStock =
         !showLowStockOnly || hasLowStock(row);
 
-      return matchesSearch && matchesCategory && matchesSubcategory && matchesLowStock;
+      return matchesSearch && matchesCategory && matchesSubcategory && matchesStatus && matchesLowStock;
     });
-  }, [data, search, filterCategory, filterSubcategory, showLowStockOnly]);
+  }, [data, search, filterCategory, filterSubcategory, filterStatus, showLowStockOnly]);
 
   const totalPages = Math.max(
     1,
@@ -510,8 +522,10 @@ function Products() {
   };
 
   const resetFilters = () => {
+    setSearch("");
     setFilterCategory("all");
     setFilterSubcategory("all");
+    setFilterStatus("all");
     setShowLowStockOnly(false);
   };
 
@@ -527,25 +541,25 @@ function Products() {
       >
         {/* Toolbar con busqueda, filtros y acciones */}
         {!loading && canView && data.length > 0 && (
-          <div className="rounded-xl bg-white p-3 shadow-sm">
-            <ProductsToolbar
-              search={search}
-              onSearchChange={setSearch}
-              categories={categories}
-              subcategories={subcategories}
-              filterCategory={filterCategory}
-              onCategoryChange={setFilterCategory}
-              filterSubcategory={filterSubcategory}
-              onSubcategoryChange={setFilterSubcategory}
-              hasActiveFilters={hasActiveFilters}
-              onClearFilters={resetFilters}
-              canExport={canExport}
-              exporting={exporting}
-              onExport={handleExportExcel}
-              canCreate={canCreate}
-              onCreate={() => navigate('/admin/purchases/products/new')}
-            />
-          </div>
+          <ProductsToolbar
+            search={search}
+            onSearchChange={setSearch}
+            categories={categories}
+            subcategories={subcategories}
+            filterCategory={filterCategory}
+            onCategoryChange={setFilterCategory}
+            filterSubcategory={filterSubcategory}
+            onSubcategoryChange={setFilterSubcategory}
+            filterStatus={filterStatus}
+            onStatusChange={setFilterStatus}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={resetFilters}
+            canExport={canExport}
+            exporting={exporting}
+            onExport={handleExportExcel}
+            canCreate={canCreate}
+            onCreate={() => navigate('/admin/purchases/products/new')}
+          />
         )}
 
         {!loading && canView && lowStockCount > 0 && (
@@ -593,31 +607,10 @@ function Products() {
           <EmptyState
             canCreate={canCreate}
             onCreateProduct={() => navigate('/admin/purchases/products/new')}
+            isSearching={false}
           />
         ) : filteredData.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4">
-            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-              <Search className="w-12 h-12 text-gray-400" strokeWidth={1.5} />
-            </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">
-              No se encontraron resultados
-            </h3>
-            <p className="text-gray-600 text-center mb-6 max-w-md">
-              {search
-                ? `No hay productos que coincidan con "${search}".`
-                : "No hay productos con los filtros seleccionados."}
-            </p>
-            <button
-              onClick={() => {
-                resetFilters();
-                setSearch("");
-              }}
-              className="px-6 py-2.5 text-white rounded-lg hover:opacity-90 transition-all duration-200 font-medium"
-              style={{ backgroundColor: "#004D77" }}
-            >
-              Limpiar filtros y búsqueda
-            </button>
-          </div>
+          <EmptyState isSearching />
         ) : (
           <>
             <div className="min-w-0 w-full shrink-0 overflow-x-auto overscroll-x-contain rounded-xl bg-white shadow-md [-webkit-overflow-scrolling:touch]">
@@ -742,6 +735,7 @@ function Products() {
 
                             {canViewInfo && (
                               <button
+                                type="button"
                                 onClick={() => handleVerDetalles(row)}
                                 className="text-gray-400 hover:text-[#004D77] hover:scale-110 transition cursor-pointer"
                                 title="Ver detalles"
@@ -755,6 +749,7 @@ function Products() {
 
                             {canEdit && (
                               <button
+                                type="button"
                                 onClick={() => handleEditarProducto(row)}
                                 className="text-gray-400 hover:text-[#004D77] hover:scale-110 transition cursor-pointer"
                                 title="Editar"
@@ -768,6 +763,7 @@ function Products() {
 
                             {canDelete && (
                               <button
+                                type="button"
                                 onClick={() => handleDelete(row)}
                                 disabled={deletingIds.includes(row.id)}
                                 className={`text-gray-400 hover:text-red-600 hover:scale-110 transition ${

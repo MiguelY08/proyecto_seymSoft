@@ -6,12 +6,16 @@ import NotificationSkeleton from "./NotificationSkeleton";
 function NotificationDropdown({
   notifications,
   loading,
+  loadingMore,
   error,
+  loadMoreError,
   unreadCount,
   onMarkAsRead,
   onMarkAllAsRead,
   onDelete,
   onDeleteAll,
+  hasMore,
+  onLoadMore,
   onClose,
   onOpenNotification,
 }) {
@@ -64,16 +68,36 @@ function NotificationDropdown({
         )}
 
         {!loading && !error && notifications.length > 0 && (
-          notifications.map((notification) => (
-            <NotificationItem
-              key={notification.id}
-              notification={notification}
-              onMarkAsRead={onMarkAsRead}
-              onDelete={onDelete}
-              onClose={onClose}
-              onOpenNotification={onOpenNotification}
-            />
-          ))
+          <>
+            {notifications.map((notification) => (
+              <NotificationItem
+                key={notification.id}
+                notification={notification}
+                onMarkAsRead={onMarkAsRead}
+                onDelete={onDelete}
+                onClose={onClose}
+                onOpenNotification={onOpenNotification}
+              />
+            ))}
+
+            {hasMore && (
+              <div className="border-t border-slate-100 px-3 py-2.5 sm:px-4">
+                {loadMoreError && (
+                  <p className="mb-2 text-center text-xs text-red-500">
+                    {loadMoreError}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={onLoadMore}
+                  disabled={loadingMore}
+                  className="w-full rounded-lg px-3 py-2 text-xs font-semibold text-[#004D77] transition-colors hover:bg-[#004D77]/10 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {loadingMore ? "Cargando..." : "Ver más"}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

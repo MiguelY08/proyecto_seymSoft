@@ -199,7 +199,9 @@ function OrdersList() {
         (envioFilter === ENVIO_FILTERS.COMPLETO && !needsShippingAmount);
 
       const matchesPaymentReviewScope =
-        !onlyActionableWebPaymentReviews || isActionableWebOrder(order);
+        !onlyActionableWebPaymentReviews || (
+          isActionableWebOrder(order) && order.paymentReceiptSummary?.hasPendingReceipt
+        );
 
       return matchesSearch && matchesFecha && matchesOrigen && matchesPagoEstado && matchesEnvio && matchesPaymentReviewScope;
     });
@@ -212,23 +214,12 @@ function OrdersList() {
   const pendingShippingCount = pendingShippingOrders.length;
 
   const pendingPaymentReview = useMemo(() => {
-    const webPendingPaymentOrders = enrichedOrders.filter((order) => (
-      isActionableWebOrder(order)
-      && order.pagoEstado === ESTADOS_PAGO.PENDIENTE
-    ));
     const pendingReceiptOrders = enrichedOrders.filter(
       (order) => isActionableWebOrder(order) && order.paymentReceiptSummary?.hasPendingReceipt,
     );
-    const ordersNeedingReview = new Map();
-
-    [...webPendingPaymentOrders, ...pendingReceiptOrders].forEach((order) => {
-      ordersNeedingReview.set(order.id, order);
-    });
 
     return {
-      total: ordersNeedingReview.size,
-      webPendingPaymentCount: webPendingPaymentOrders.length,
-      pendingReceiptCount: pendingReceiptOrders.length,
+      total: pendingReceiptOrders.length,
     };
   }, [enrichedOrders]);
 
@@ -286,7 +277,7 @@ function OrdersList() {
     setFechaFinal('');
     setOrigenFilter(ORIGENES.WEB);
     setEnvioFilter('');
-    setPagoEstadoFilter(ESTADOS_PAGO.PENDIENTE);
+    setPagoEstadoFilter('');
     setOnlyActionableWebPaymentReviews(true);
     setCurrentPage(1);
   }, []);

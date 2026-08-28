@@ -32,6 +32,7 @@ function PaymentsSection({
   allowFavorBalance = false,
   favorBalance = 0,
   financialSummary = null,
+  paymentReceipts = [],
 }) {
   const [showForm, setShowForm] = useState(false);
   const [newPayment, setNewPayment] = useState({
@@ -43,6 +44,7 @@ function PaymentsSection({
   const [editingPaymentId, setEditingPaymentId] = useState(null);
   const [editingAmount, setEditingAmount] = useState('');
   const [editError, setEditError] = useState('');
+  const [paymentReceiptPreview, setPaymentReceiptPreview] = useState(null);
   const paymentFormRef = useRef(null);
   const amountInputRef = useRef(null);
 
@@ -101,6 +103,16 @@ function PaymentsSection({
     if (!isoString) return '';
     const date = new Date(isoString);
     return isNaN(date.getTime()) ? isoString : date.toLocaleDateString('es-CO');
+  };
+
+  const formatPaymentRegisteredAt = (payment) => {
+    const value = payment?.fechaRegistro ?? payment?.createdAt ?? payment?.fechaPago;
+    if (!value) return '-';
+
+    const date = new Date(value);
+    return Number.isNaN(date.getTime())
+      ? value
+      : date.toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
   };
 
   const handleMontoChange = (e) => {
@@ -181,6 +193,19 @@ function PaymentsSection({
     setEditingPaymentId(pago.id);
     setEditingAmount(String(roundMoney(pago.monto)));
     setEditError('');
+  };
+
+  const getReceiptForPayment = (payment) => {
+    const reference = String(
+      payment?.referencia ?? payment?.comprobante ?? payment?.reference ?? ''
+    ).trim().toLowerCase();
+
+    if (!reference) return null;
+
+    return paymentReceipts.find((receipt) => {
+      const fileName = String(receipt?.fileName || '').trim().toLowerCase();
+      return String(receipt?.status || '').trim().toLowerCase() === 'aprobado' && fileName && reference.includes(fileName);
+    }) || null;
   };
 
   const cancelPaymentEdit = () => {
@@ -438,7 +463,7 @@ function PaymentsSection({
               <table className="w-full min-w-[680px] divide-y divide-gray-200 lg:min-w-0">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha de registro</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Método</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Monto</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Comprobante</th>
@@ -450,11 +475,12 @@ function PaymentsSection({
                 <tbody className="bg-white divide-y divide-gray-200">
                   {pagos.map((pago) => {
                     const removable = canRemovePayment(pago);
+                    const receipt = getReceiptForPayment(pago);
 
                     return (
                       <tr key={pago.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-3 py-2 text-sm text-gray-700 whitespace-nowrap">
-                          {formatDate(pago.fechaPago)}
+                          {formatPaymentRegisteredAt(pago)}
                         </td>
                         <td className="px-3 py-2 text-sm text-gray-700">
                           <span className="inline-flex items-center gap-1">
@@ -484,7 +510,21 @@ function PaymentsSection({
                           )}
                         </td>
                         <td className="px-3 py-2 text-sm text-gray-500">
-                          {pago.comprobante ? (
+                          {receipt ? (
+                            <button
+                              type="button"
+                              onClick={() => setPaymentReceiptPreview(receipt)}
+                              className="inline-flex max-w-full items-center gap-1.5 text-[#004D77] transition hover:text-[#003a5c]"
+                              title="Ver comprobante"
+                            >
+                              <img
+                                src={receipt.imageUrl}
+                                alt={receipt.fileName || 'Comprobante'}
+                                className="h-7 w-7 shrink-0 rounded object-cover"
+                              />
+                              <span className="truncate text-xs font-semibold">{receipt.fileName || 'Comprobante de pago'}</span>
+                            </button>
+                          ) : pago.comprobante ? (
                             <span className="inline-flex items-center gap-1">
                               <FileText className="w-3.5 h-3.5" strokeWidth={1.8} />
                               {pago.comprobante}
@@ -551,6 +591,32 @@ function PaymentsSection({
           </div>
         )}
       </div>
+
+      {paymentReceiptPreview?.imageUrl && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-black/80 p-3 sm:p-5"
+          onClick={() => setPaymentReceiptPreview(null)}
+        >
+          <div
+            className="relative w-full max-w-[520px] rounded-2xl bg-white p-3 pt-12 shadow-2xl sm:max-w-3xl sm:rounded-3xl sm:p-4 sm:pt-14"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setPaymentReceiptPreview(null)}
+              className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition hover:bg-slate-200"
+              aria-label="Cerrar comprobante"
+            >
+              <X className="h-4 w-4" strokeWidth={1.8} />
+            </button>
+            <img
+              src={paymentReceiptPreview.imageUrl}
+              alt={paymentReceiptPreview.fileName || 'Comprobante de pago'}
+              className="mx-auto max-h-[76vh] w-full rounded-2xl object-contain"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

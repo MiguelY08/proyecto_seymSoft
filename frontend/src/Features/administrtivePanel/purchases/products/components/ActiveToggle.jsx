@@ -7,29 +7,32 @@ function ActiveToggle({ activo, onChange, disabled = false, loading = false }) {
 
   return hasPermission("productos.activar_desactivar") && (
     <button
+      type="button"
       onClick={onChange}
       disabled={disabled || loading}
-      className={`relative w-10 h-5 rounded-full transition-colors duration-300 shrink-0 ${
+      title={disabled || loading ? "Procesando..." : (activo ? "Desactivar producto" : "Activar producto")}
+      className={`relative h-5.5 w-11 rounded-full transition-colors duration-300 shrink-0 ${
         activo ? 'bg-green-500' : 'bg-red-400'
-      } ${disabled || loading ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
+      } ${disabled || loading ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
     >
       {loading ? (
-        <Loader2 className="absolute left-1/2 top-1/2 w-3.5 h-3.5 -translate-x-1/2 -translate-y-1/2 animate-spin text-white" />
+        <Loader2 className="absolute inset-0 m-auto h-4 w-4 animate-spin text-white" />
       ) : (
-        <span
-          className={`absolute top-0 h-full flex items-center text-white font-bold text-[9px] transition-all duration-300 ${
-            activo ? 'left-1' : 'right-1'
-          }`}
-        >
-          {activo ? 'A' : 'I'}
-        </span>
+        <>
+          <span
+            className={`absolute top-1/2 -translate-y-1/2 text-[10px] font-bold text-white transition-all duration-300 ${
+              activo ? 'left-1' : 'right-1'
+            }`}
+          >
+            {activo ? 'A' : 'I'}
+          </span>
+          <span
+            className={`absolute top-0.5 h-4.5 w-4.5 rounded-full bg-white shadow transition-all duration-300 ${
+              activo ? 'left-[24px]' : 'left-0.5'
+            }`}
+          />
+        </>
       )}
-
-      <span
-        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
-          activo ? 'left-5' : 'left-0.5'
-        }`}
-      />
     </button>
   );
 }

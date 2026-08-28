@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, Eraser } from "lucide-react";
+import { Eraser, Search } from "lucide-react";
 
 export const PurchasesFilters = ({
   search,
@@ -13,74 +13,65 @@ export const PurchasesFilters = ({
   searchScannerField,
 }) => {
   const hasActiveFilters = search !== "" || fechaInicial !== "" || fechaFinal !== "";
+  const inputClassName = "w-full rounded-lg border border-gray-300 bg-white py-2.5 text-sm text-gray-700 outline-none transition-colors duration-200 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20";
 
   return (
-    <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-end">
-
-      {/* ===== BÚSQUEDA ===== */}
-      <div className="relative w-full sm:w-72">
+    <div className="flex min-w-0 flex-col gap-3 lg:flex-1 lg:flex-row lg:flex-wrap lg:items-end lg:gap-4">
+      <div className="relative w-full lg:w-52 xl:w-56">
         <input
           type="text"
           placeholder="Buscar"
           value={search}
           data-scanner-field={searchScannerField}
-          onChange={(e) => {
-            setSearch(e.target.value);
+          onChange={(event) => {
+            setSearch(event.target.value);
             setCurrentPage(1);
           }}
-          className="w-full pl-4 pr-10 py-2 bg-white rounded-lg border border-gray-300 shadow-sm outline-none focus:ring-2 focus:ring-sky-900 text-black text-sm"
+          className={`${inputClassName} pl-4 pr-10 placeholder:text-gray-400`}
         />
-        <Search
-          size={18}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
-        />
+        <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={2} />
       </div>
 
-      {/* ===== FECHA INICIAL ===== */}
-      <div className="w-full sm:w-auto">
+      <div className="w-full lg:w-40">
         <input
           type="date"
           value={fechaInicial}
           max={fechaFinal || undefined}
           aria-label="Fecha inicial"
-          onChange={(e) => {
-            setFechaInicial(e.target.value);
+          onChange={(event) => {
+            setFechaInicial(event.target.value);
             setCurrentPage(1);
           }}
-          className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm outline-none focus:ring-2 focus:ring-sky-900 text-sm text-gray-700 cursor-pointer sm:w-auto"
+          className={`${inputClassName} cursor-pointer px-3`}
         />
       </div>
 
-      {/* ===== FECHA FINAL ===== */}
-      <div className="w-full sm:w-auto">
+      <div className="w-full lg:w-40">
         <input
           type="date"
           value={fechaFinal}
           min={fechaInicial || undefined}
           aria-label="Fecha final"
-          onChange={(e) => {
-            setFechaFinal(e.target.value);
+          onChange={(event) => {
+            setFechaFinal(event.target.value);
             setCurrentPage(1);
           }}
-          className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 shadow-sm outline-none focus:ring-2 focus:ring-sky-900 text-sm text-gray-700 cursor-pointer sm:w-auto"
+          className={`${inputClassName} cursor-pointer px-3`}
         />
       </div>
 
-      {/* ===== LIMPIAR FILTROS ===== */}
       {hasActiveFilters && (
-        <div className="w-full sm:w-auto">
-          <button
-            onClick={onClearFilters}
-            className="flex w-full items-center justify-center gap-2 px-3 py-2 text-sm font-medium border border-gray-400 rounded-lg text-gray-600 bg-white hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 cursor-pointer whitespace-nowrap sm:w-auto"
-            aria-label="Limpiar filtros"
-            title="Limpiar todos los filtros"
-          >
-            <Eraser className="w-4 h-4" strokeWidth={2} />
-            
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onClearFilters}
+          className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white text-gray-600 transition-all duration-200 hover:bg-gray-100 hover:text-gray-800 lg:w-10"
+          aria-label="Limpiar filtros"
+          title="Limpiar todos los filtros"
+        >
+          <Eraser className="h-4 w-4" strokeWidth={2} />
+          <span className="lg:hidden">Limpiar filtros</span>
+        </button>
       )}
-
     </div>
   );
 };
