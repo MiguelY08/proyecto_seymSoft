@@ -307,18 +307,21 @@ export default function PaymentsPage() {
           onAbonar={handleAbonar}
           onContact={handleContact}
           search={search}
+          isSearching={Boolean(search.trim() || estado !== "todos")}
         />
       </div>
 
       {/* PAGINADOR */}
-      <div className="mt-4">
-        <PaymentsPaginator
-          itemsPerPage={itemsPerPage}
-          totalItems={formattedData.length}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-        />
-      </div>
+      {formattedData.length > 0 && (
+        <div className="mt-4">
+          <PaymentsPaginator
+            itemsPerPage={itemsPerPage}
+            totalItems={formattedData.length}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      )}
 
       {/* MODAL */}
       {selectedAccount && (

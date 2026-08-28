@@ -1,5 +1,5 @@
 import React from "react";
-import { Info, Loader2, SquarePen, Trash2 } from "lucide-react";
+import { Info, Loader2, Plus, ShieldCheck, SquarePen, Trash2 } from "lucide-react";
 
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import { usePermissions } from "../hooks/usePermissions";
@@ -135,6 +135,37 @@ function RoleActiveToggle({
   );
 }
 
+function EmptyState({ isSearching, canCreate, onCreateRole }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 px-4 py-12">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#004D77]/10">
+        <ShieldCheck className="h-8 w-8 text-[#004D77]/40" strokeWidth={1.5} />
+      </div>
+      {isSearching ? (
+        <>
+          <p className="text-sm font-semibold text-gray-500">No se encontraron resultados</p>
+          <p className="max-w-xs text-center text-xs text-gray-400">Ningún rol coincide con la búsqueda.</p>
+        </>
+      ) : (
+        <>
+          <p className="text-sm font-semibold text-gray-500">No hay roles registrados</p>
+          <p className="max-w-xs text-center text-xs text-gray-400">Aún no se han registrado roles.</p>
+          {canCreate && (
+            <button
+              type="button"
+              onClick={onCreateRole}
+              className="flex cursor-pointer items-center gap-1.5 rounded-lg border bg-[#004D77] px-2 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#003a5c] sm:px-3"
+            >
+              <span>Nuevo rol</span>
+              <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function RolesTable({
 
   roles = [],
@@ -144,7 +175,9 @@ export default function RolesTable({
   //  NUEVO
   reloadRoles,
 
-  search = ""
+  search = "",
+  isSearching = false,
+  onCreateRole,
 
 }) {
 
@@ -164,6 +197,8 @@ export default function RolesTable({
     hasPermission
 
   } = usePermissions();
+
+  const canCreate = hasPermission("roles.crear");
 
   const {
 
@@ -472,11 +507,11 @@ export default function RolesTable({
 
     return (
 
-      <div className="text-center py-10 text-gray-500">
-
-        No hay roles disponibles
-
-      </div>
+      <EmptyState
+        isSearching={isSearching}
+        canCreate={canCreate}
+        onCreateRole={onCreateRole}
+      />
 
     );
 

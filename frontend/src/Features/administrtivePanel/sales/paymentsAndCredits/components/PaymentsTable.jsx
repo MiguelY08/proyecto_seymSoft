@@ -1,4 +1,4 @@
-import { Info, DollarSign, Phone } from "lucide-react";
+import { Info, DollarSign, Phone, WalletCards } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import { highlight } from "../utils/paymentHelpers";
 import Permission from "../../../configuration/roles/components/Permission";
@@ -9,6 +9,7 @@ export default function PaymentsTable({
   onAbonar,
   onContact,
   search = "",
+  isSearching = false,
 }) {
   // Formato COP
   const formatCOP = (value) =>
@@ -35,15 +36,35 @@ export default function PaymentsTable({
     );
   };
 
+  if (data.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 px-4 py-12">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#004D77]/10">
+          <WalletCards className="h-8 w-8 text-[#004D77]/40" strokeWidth={1.5} />
+        </div>
+
+        {isSearching ? (
+          <>
+            <p className="text-sm font-semibold text-gray-500">No se encontraron resultados</p>
+            <p className="max-w-xs text-center text-xs text-gray-400">
+              Ninguna cuenta coincide con la búsqueda.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm font-semibold text-gray-500">No hay cuentas con crédito registradas</p>
+            <p className="max-w-xs text-center text-xs text-gray-400">
+              Aún no hay cuentas disponibles para gestionar pagos y abonos.
+            </p>
+          </>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="min-w-0 font-lexend">
       <div className="grid gap-3 md:hidden">
-        {data.length === 0 && (
-          <div className="rounded-xl border border-gray-200 bg-white py-6 text-center text-xs text-gray-400 shadow-sm">
-            No hay registros para mostrar
-          </div>
-        )}
-
         {data.map((item) => {
           const documentNumber =
             item.documento ?? item.document ?? item.doc_number ?? "-";
@@ -181,16 +202,6 @@ export default function PaymentsTable({
             </tr>
           </thead>
           <tbody>
-            {data.length === 0 && (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="text-center py-8 text-gray-400 text-sm"
-                >
-                  No hay registros para mostrar
-                </td>
-              </tr>
-            )}
             {data.map((item, index) => {
               const documentNumber =
                 item.documento ?? item.document ?? item.doc_number ?? "-";

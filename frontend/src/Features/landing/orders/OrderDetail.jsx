@@ -613,6 +613,14 @@ function OrderDetail() {
                 {order.pagos.map((payment) => (
                   <div key={payment.id} className="mt-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
                     <p className="font-bold text-slate-800">{payment.metodoPago} · {formatMoney(payment.monto)}</p>
+                    {(payment.fechaRegistro || payment.createdAt || payment.fechaPago) && (
+                      <p className="mt-1">
+                        Fecha de registro: {formatOrderDate(
+                          payment.fechaRegistro || payment.createdAt || payment.fechaPago,
+                          { hour: '2-digit', minute: '2-digit' }
+                        )}
+                      </p>
+                    )}
                     {payment.referencia && <p className="mt-1 break-all">Referencia: {payment.referencia}</p>}
                   </div>
                 ))}

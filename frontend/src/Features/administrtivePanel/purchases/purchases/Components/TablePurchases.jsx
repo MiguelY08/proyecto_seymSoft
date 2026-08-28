@@ -1,5 +1,5 @@
 import React from "react";
-import { Info, Package, RefreshCw, XCircle } from "lucide-react";
+import { Info, Loader2, Package, Plus, RefreshCw, XCircle } from "lucide-react";
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 import Permission from "../../../configuration/roles/components/Permission";
 
@@ -65,22 +65,38 @@ const getStatusClasses = (status) => {
   return "border-amber-300 bg-amber-100 text-amber-700";
 };
 
-function EmptyState({ isSearching }) {
+function EmptyState({ isSearching, onCreatePurchase }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 px-4 py-12">
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#004D77]/10">
         <Package className="h-8 w-8 text-[#004D77]/40" strokeWidth={1.5} />
       </div>
-      <p className="text-sm font-semibold text-gray-500">
-        {isSearching
-          ? "No se encontraron resultados"
-          : "No hay compras registradas"}
-      </p>
-      <p className="max-w-xs text-center text-xs text-gray-400">
-        {isSearching
-          ? "Ninguna compra coincide con los filtros aplicados. Intenta con otros criterios."
-          : "Aún no se han registrado compras en el sistema. Crea la primera para comenzar."}
-      </p>
+      {isSearching ? (
+        <>
+          <p className="text-sm font-semibold text-gray-500">No se encontraron resultados</p>
+          <p className="max-w-xs text-center text-xs text-gray-400">
+            Ninguna compra coincide con la búsqueda.
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="text-sm font-semibold text-gray-500">No hay compras registradas</p>
+          <p className="max-w-xs text-center text-xs text-gray-400">
+            Aún no se han registrado compras.
+          </p>
+
+          <Permission permission="compras.crear">
+            <button
+              type="button"
+              onClick={onCreatePurchase}
+              className="flex cursor-pointer items-center gap-1.5 rounded-lg border bg-[#004D77] px-2 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#003a5c] sm:px-3"
+            >
+              <span>Nueva compra</span>
+              <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+            </button>
+          </Permission>
+        </>
+      )}
     </div>
   );
 }
@@ -92,12 +108,14 @@ export const PurchasesTable = ({
   handleReturn,
   search = "",
   isSearching = false,
+  onCreatePurchase,
+  annullingId = null,
 }) => {
   const { hasPermission } = usePermissions();
   const canCreateReturn = hasPermission("devoluciones_en_compras.crear");
 
   if (currentData.length === 0) {
-    return <EmptyState isSearching={isSearching} />;
+    return <EmptyState isSearching={isSearching} onCreatePurchase={onCreatePurchase} />;
   }
 
   return (
@@ -124,6 +142,7 @@ export const PurchasesTable = ({
           {currentData.map((purchase, index) => {
             const baseRowBg = index % 2 === 0 ? "bg-gray-100" : "bg-white";
             const isAnnulled = purchase.estado === "Anulada";
+            const isAnnulling = annullingId === purchase.id;
             const isExpired =
               Boolean(purchase.maxReturnDate) &&
               new Date(purchase.maxReturnDate) < new Date();
@@ -230,10 +249,19 @@ export const PurchasesTable = ({
                       <button
                         type="button"
                         onClick={() => handleCancel(purchase)}
-                        className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-red-500"
-                        title="Anular compra"
+                        disabled={isAnnulling}
+                        className={`text-gray-400 transition ${
+                          isAnnulling
+                            ? "cursor-wait opacity-50"
+                            : "cursor-pointer hover:scale-110 hover:text-red-500"
+                        }`}
+                        title={isAnnulling ? "Procesando..." : "Anular compra"}
                       >
+                        {isAnnulling ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
+                        ) : (
                           <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+                        )}
                       </button>
                     )}
                     </Permission>

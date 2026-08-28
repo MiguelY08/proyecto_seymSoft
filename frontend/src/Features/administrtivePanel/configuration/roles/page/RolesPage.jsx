@@ -481,15 +481,19 @@ export default function RolesPage() {
           onView={handleView}
           onToggleActive={handleToggleActive}
           search={search}
+          isSearching={Boolean(search.trim())}
+          onCreateRole={handleCreate}
           reloadRoles={loadRoles}
         />
 
-        <PaginationAdmin
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          totalRecords={filteredRoles.length}
-          recordsPerPage={RECORDS_PER_PAGE}
-        />
+        {filteredRoles.length > 0 && (
+          <PaginationAdmin
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            totalRecords={filteredRoles.length}
+            recordsPerPage={RECORDS_PER_PAGE}
+          />
+        )}
 
         <RoleModal
           isOpen={isModalOpen}

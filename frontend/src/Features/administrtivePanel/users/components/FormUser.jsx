@@ -19,7 +19,6 @@ import {
   normalizeDigits,
   normalizeEmailInput,
   normalizeFullNameInput,
-  toTitleCaseName,
 } from '../validators/usersValidators';
 
 const validateField = (name, value) => {
@@ -27,7 +26,7 @@ const validateField = (name, value) => {
     if (!value.trim()) return 'El nombre completo es obligatorio.';
     if (value.trim().length < 3) return 'Minimo 3 caracteres.';
     if (value.trim().length > USER_NAME_MAX) return `Maximo ${USER_NAME_MAX} caracteres.`;
-    if (!/^[\p{L}\s]+$/u.test(value)) return 'Solo letras y espacios.';
+    if (!/^[\p{L}\s.]+$/u.test(value)) return 'Solo letras, puntos y espacios.';
     return null;
   }
   if (name === 'correo') {
@@ -301,9 +300,9 @@ function FormUser({
       filtered = normalizeDigits(value, PHONE_MAX);
       if (/\D/.test(String(value))) forcedError = 'Solo se permiten numeros.';
     } else if (name === 'nombreCompleto') {
-      const lettersOnly = value.replace(/[^\p{L}\s]/gu, '');
-      filtered = normalizeFullNameInput(lettersOnly).slice(0, USER_NAME_MAX);
-      if (value !== lettersOnly) forcedError = 'Solo letras y espacios.';
+      const allowedCharacters = value.replace(/[^\p{L}\s.]/gu, '');
+      filtered = normalizeFullNameInput(allowedCharacters).slice(0, USER_NAME_MAX);
+      if (value !== allowedCharacters) forcedError = 'Solo letras, puntos y espacios.';
     } else if (name === 'correo') {
       filtered = normalizeEmailInput(value).slice(0, USER_EMAIL_MAX);
     }
@@ -359,21 +358,6 @@ function FormUser({
     setErrors((prev) => ({ ...prev, correo: errorMsg || '' }));
   };
 
-  const handleBlur = (e) => {
-    const { name } = e.target;
-    if (name !== 'nombreCompleto') return;
-
-    const formattedName = toTitleCaseName(form.nombreCompleto).slice(0, USER_NAME_MAX);
-    const updatedForm = { ...form, nombreCompleto: formattedName };
-
-    setForm(updatedForm);
-    setTouched((prev) => ({ ...prev, nombreCompleto: true }));
-    setErrors((prev) => ({
-      ...prev,
-      nombreCompleto: validateField('nombreCompleto', formattedName) || '',
-    }));
-  };
-
   const handleSubmit = async () => {
     if (isSubmitting) return;
 
@@ -387,7 +371,7 @@ function FormUser({
 
     const normalizedForm = {
       ...form,
-      nombreCompleto: toTitleCaseName(form.nombreCompleto).slice(0, USER_NAME_MAX),
+      nombreCompleto: normalizeFullNameInput(form.nombreCompleto).slice(0, USER_NAME_MAX),
       correo: normalizeEmailInput(form.correo).slice(0, USER_EMAIL_MAX),
       telefono: normalizeDigits(form.telefono, PHONE_MAX),
     };
@@ -455,6 +439,7 @@ function FormUser({
           ...prev,
           correo: fieldErrors.email,
         }));
+        setEmailAvailability(EMAIL_AVAILABILITY.DUPLICATED);
       }
 
       const mensaje = getUserActionErrorMessage(error);
@@ -469,7 +454,7 @@ function FormUser({
 
     const normalizedForm = {
       ...form,
-      nombreCompleto: toTitleCaseName(form.nombreCompleto).slice(0, USER_NAME_MAX),
+      nombreCompleto: normalizeFullNameInput(form.nombreCompleto).slice(0, USER_NAME_MAX),
       correo: normalizeEmailInput(form.correo).slice(0, USER_EMAIL_MAX),
       telefono: normalizeDigits(form.telefono, PHONE_MAX),
     };
@@ -582,7 +567,11 @@ function FormUser({
     return null;
   };
 
-  const hasBlockingErrors = Boolean(errors.correo || errors.telefono || errors.nombreCompleto);
+  const currentFieldErrors = useMemo(
+    () => validateUserForm(form),
+    [form],
+  );
+  const hasBlockingErrors = Object.keys(currentFieldErrors).length > 0;
   const isEmailAvailabilityBlocking = [
     EMAIL_AVAILABILITY.CHECKING,
     EMAIL_AVAILABILITY.DUPLICATED,
@@ -645,8 +634,7 @@ function FormUser({
                 name="nombreCompleto"
                 value={form.nombreCompleto}
                 onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="Min. 3 letras"
+                placeholder="Mín. 3 caracteres; se permiten puntos"
                 autoComplete="off"
                 maxLength={USER_NAME_MAX}
                 className={inputClass('nombreCompleto')}

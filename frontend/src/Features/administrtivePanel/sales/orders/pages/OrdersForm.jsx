@@ -1255,6 +1255,7 @@ function OrdersForm() {
           allowFavorBalance
           favorBalance={favorBalance}
           financialSummary={financialSummary}
+          paymentReceipts={paymentReceipts}
         />
       </div>
 

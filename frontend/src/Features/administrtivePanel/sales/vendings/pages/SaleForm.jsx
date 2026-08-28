@@ -492,7 +492,7 @@ function SaleForm() {
   };
 
   const handleShippingAmountChange = (e) => {
-    const value = e.target.value;
+    const value = String(e.target.value ?? '').replace(/\D/g, '');
     setFormData(prev => ({ ...prev, shippingAmount: value }));
     if (errors.shippingAmount) setErrors(prev => ({ ...prev, shippingAmount: null }));
   };

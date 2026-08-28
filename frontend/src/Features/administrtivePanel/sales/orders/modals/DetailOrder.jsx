@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import {
   X, User, Phone, Mail, MapPin, Calendar, CreditCard,
   CheckCircle, Edit, AlertTriangle, Tag, DollarSign, FileDown,
-  IdCard, UserCheck, Truck, LoaderCircle
+  IdCard, UserCheck, Truck, LoaderCircle, ExternalLink
 } from 'lucide-react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import {
@@ -122,6 +122,7 @@ function DetailOrder({
   const [asesorNombre, setAsesorNombre] = useState('');
   const [receiptToApprove, setReceiptToApprove] = useState(null);
   const [receiptToReject, setReceiptToReject] = useState(null);
+  const [paymentReceiptPreview, setPaymentReceiptPreview] = useState(null);
   const [reviewingReceiptId, setReviewingReceiptId] = useState(null);
   const visible = isOpen;
 
@@ -221,6 +222,37 @@ function DetailOrder({
     if (!isoString) return '';
     const date = new Date(isoString);
     return isNaN(date.getTime()) ? isoString : date.toLocaleDateString('es-CO');
+  };
+
+  const formatPaymentRegisteredAt = (payment) => {
+    const value = payment?.fechaRegistro ?? payment?.createdAt ?? payment?.fechaPago;
+    if (!value) return '-';
+
+    const date = new Date(value);
+    return Number.isNaN(date.getTime())
+      ? value
+      : date.toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
+  };
+
+  const getReceiptForPayment = (payment) => {
+    const reference = String(
+      payment?.referencia ?? payment?.comprobante ?? payment?.reference ?? ''
+    ).trim().toLowerCase();
+
+    if (!reference) return null;
+
+    return paymentReceipts.find((receipt) => {
+      const fileName = String(receipt?.fileName || '').trim().toLowerCase();
+      return normalizeReceiptStatus(receipt?.status) === 'aprobado' && fileName && reference.includes(fileName);
+    }) || null;
+  };
+
+  const getManualPaymentProof = (payment) => {
+    const reference = String(
+      payment?.referencia ?? payment?.comprobante ?? payment?.reference ?? ''
+    ).trim();
+
+    return reference && !/^P\d+-\d+$/i.test(reference) ? reference : null;
   };
 
   const formatCurrency = (value) => {
@@ -564,19 +596,47 @@ function DetailOrder({
                     <table className="w-full table-fixed divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="w-[28%] px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Fecha</th>
-                          <th className="w-[42%] px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Método</th>
-                          <th className="w-[30%] px-2 py-1 text-right text-[10px] font-medium text-gray-500 uppercase">Monto</th>
+                          <th className="w-[24%] px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Fecha de registro</th>
+                          <th className="w-[27%] px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Método</th>
+                          <th className="w-[25%] px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Comprobante</th>
+                          <th className="w-[24%] px-2 py-1 text-right text-[10px] font-medium text-gray-500 uppercase">Monto</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-100">
-                        {pagos.map((pago) => (
-                          <tr key={pago.id}>
-                            <td className="px-2 py-1 text-xs text-gray-700">{formatDate(pago.fechaPago)}</td>
-                            <td className="break-words px-2 py-1 text-xs text-gray-700">{pago.metodoPago}</td>
-                            <td className="px-2 py-1 text-xs font-medium text-gray-900 text-right">{formatCurrency(pago.monto)}</td>
-                          </tr>
-                        ))}
+                        {pagos.map((pago) => {
+                          const receipt = getReceiptForPayment(pago);
+                          const manualProof = getManualPaymentProof(pago);
+
+                          return (
+                            <tr key={pago.id}>
+                              <td className="px-2 py-1 text-xs text-gray-700">{formatPaymentRegisteredAt(pago)}</td>
+                              <td className="break-words px-2 py-1 text-xs text-gray-700">{pago.metodoPago}</td>
+                              <td className="px-2 py-1 text-xs text-gray-700">
+                                {receipt ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setPaymentReceiptPreview(receipt)}
+                                    className="inline-flex max-w-full items-center gap-1.5 text-[#004D77] transition hover:text-[#003a5c]"
+                                    title="Ver comprobante"
+                                  >
+                                    <img
+                                      src={receipt.imageUrl}
+                                      alt={receipt.fileName || 'Comprobante'}
+                                      className="h-7 w-7 shrink-0 rounded object-cover"
+                                    />
+                                    <span className="truncate text-[11px] font-semibold">{receipt.fileName || 'Comprobante de pago'}</span>
+                                    <ExternalLink className="h-3 w-3 shrink-0" />
+                                  </button>
+                                ) : manualProof ? (
+                                  <span className="block break-words text-[11px] font-medium text-gray-700">
+                                    {manualProof}
+                                  </span>
+                                ) : '-'}
+                              </td>
+                              <td className="px-2 py-1 text-xs font-medium text-gray-900 text-right">{formatCurrency(pago.monto)}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -676,6 +736,32 @@ function DetailOrder({
             )
           }
         />
+      )}
+
+      {paymentReceiptPreview?.imageUrl && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-black/80 p-3 sm:p-5"
+          onClick={() => setPaymentReceiptPreview(null)}
+        >
+          <div
+            className="relative w-full max-w-[520px] rounded-2xl bg-white p-3 pt-12 shadow-2xl sm:max-w-3xl sm:rounded-3xl sm:p-4 sm:pt-14"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setPaymentReceiptPreview(null)}
+              className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition hover:bg-slate-200"
+              aria-label="Cerrar comprobante"
+            >
+              <X size={18} />
+            </button>
+            <img
+              src={paymentReceiptPreview.imageUrl}
+              alt={paymentReceiptPreview.fileName || 'Comprobante de pago'}
+              className="mx-auto max-h-[76vh] w-full rounded-2xl object-contain"
+            />
+          </div>
+        </div>
       )}
     </>
   );

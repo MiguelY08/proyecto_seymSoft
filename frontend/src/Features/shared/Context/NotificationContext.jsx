@@ -11,6 +11,32 @@ import { NotificationContext } from "./notificationContextValue";
 
 const NOTIFICATION_REFRESH_INTERVAL_MS = 60 * 1000;
 
+const getPaginationPage = (pagination) => Number(
+  pagination?.page
+  ?? pagination?.currentPage
+  ?? pagination?.current_page
+  ?? 1,
+);
+
+const hasMoreNotificationPages = (pagination) => {
+  if (!pagination) return false;
+
+  if (typeof pagination.hasNextPage === "boolean") {
+    return pagination.hasNextPage;
+  }
+
+  if (typeof pagination.has_next_page === "boolean") {
+    return pagination.has_next_page;
+  }
+
+  const totalPages = Number(
+    pagination.totalPages
+    ?? pagination.total_pages,
+  );
+
+  return Number.isFinite(totalPages) && getPaginationPage(pagination) < totalPages;
+};
+
 export const NotificationProvider = ({ children }) => {
   const {
     isAuthenticated,
@@ -21,7 +47,9 @@ export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
+  const [loadMoreError, setLoadMoreError] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const refreshNotifications = useCallback(async (params = {}) => {
@@ -29,12 +57,14 @@ export const NotificationProvider = ({ children }) => {
       setNotifications([]);
       setPagination(null);
       setUnreadCount(0);
+      setLoadMoreError(null);
       return;
     }
 
     try {
       setLoading(true);
       setError(null);
+      setLoadMoreError(null);
 
       const [notificationResult, countResult] = await Promise.all([
         notificationService.getNotifications(params),
@@ -53,6 +83,45 @@ export const NotificationProvider = ({ children }) => {
       setLoading(false);
     }
   }, [isAuthenticated]);
+
+  const loadMoreNotifications = useCallback(async () => {
+    if (
+      !isAuthenticated
+      || loadingMore
+      || !hasMoreNotificationPages(pagination)
+    ) {
+      return;
+    }
+
+    try {
+      setLoadingMore(true);
+      setLoadMoreError(null);
+
+      const notificationResult = await notificationService.getNotifications({
+        page: getPaginationPage(pagination) + 1,
+      });
+
+      setNotifications((currentNotifications) => {
+        const existingIds = new Set(
+          currentNotifications.map((notification) => notification.id),
+        );
+
+        const newNotifications = notificationResult.notifications.filter(
+          (notification) => !existingIds.has(notification.id),
+        );
+
+        return [...currentNotifications, ...newNotifications];
+      });
+      setPagination(notificationResult.pagination);
+    } catch (requestError) {
+      setLoadMoreError(
+        requestError?.response?.data?.message
+        || "No fue posible cargar más notificaciones.",
+      );
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [isAuthenticated, loadingMore, pagination]);
 
   const markAsRead = useCallback(async (id) => {
     const notification = await notificationService.markAsRead(id);
@@ -136,6 +205,7 @@ export const NotificationProvider = ({ children }) => {
       setPagination(null);
       setUnreadCount(0);
       setError(null);
+      setLoadMoreError(null);
       return;
     }
 
@@ -167,9 +237,12 @@ export const NotificationProvider = ({ children }) => {
     notifications,
     pagination,
     loading,
+    loadingMore,
     error,
+    loadMoreError,
     unreadCount,
     refreshNotifications,
+    loadMoreNotifications,
     markAsRead,
     markAllAsRead,
     deleteNotification,
@@ -178,9 +251,12 @@ export const NotificationProvider = ({ children }) => {
     notifications,
     pagination,
     loading,
+    loadingMore,
     error,
+    loadMoreError,
     unreadCount,
     refreshNotifications,
+    loadMoreNotifications,
     markAsRead,
     markAllAsRead,
     deleteNotification,

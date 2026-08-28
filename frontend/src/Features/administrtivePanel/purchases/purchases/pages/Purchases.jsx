@@ -368,6 +368,8 @@ export const Purchases = () => {
             handleReturn={handleReturn}
             search={search}
             isSearching={isSearching}
+            onCreatePurchase={() => navigate("/admin/purchases/create")}
+            annullingId={annulLoading ? cancelPurchase?.id : null}
           />
         </div>
 

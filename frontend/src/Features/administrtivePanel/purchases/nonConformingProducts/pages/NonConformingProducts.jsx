@@ -33,6 +33,7 @@ const findReportByBarcode = (reports, barcode) =>
 export const NonConformingProducts = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [cancellingId, setCancellingId] = useState(null);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -125,6 +126,7 @@ export const NonConformingProducts = () => {
     if (!result?.isConfirmed) return;
 
     try {
+      setCancellingId(id);
       await cancelNonConforming(id, "Anulado por el usuario");
       await fetchReports();
       showSuccess("Anulado", "El reporte fue anulado correctamente.");
@@ -137,6 +139,8 @@ export const NonConformingProducts = () => {
           fallback: "No se pudo anular el reporte.",
         })
       );
+    } finally {
+      setCancellingId(null);
     }
   };
 
@@ -407,6 +411,9 @@ export const NonConformingProducts = () => {
               handleCancel={handleCancel}
               highlightText={highlightText}
               handleViewDetails={(report) => setSelectedReport(report)}
+              isSearching={Boolean(search.trim())}
+              onCreateReport={() => setShowModal(true)}
+              cancellingId={cancellingId}
             />
           </div>
         )}

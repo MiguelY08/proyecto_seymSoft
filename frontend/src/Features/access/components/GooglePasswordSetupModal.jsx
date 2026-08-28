@@ -79,12 +79,36 @@ export default function GooglePasswordSetupModal() {
       value
     } = e.target;
 
-    setFormData(
-      prev => ({
-        ...prev,
-        [name]: value
-      })
-    );
+    const updatedFormData = {
+      ...formData,
+      [name]: value
+    };
+
+    setFormData(updatedFormData);
+
+    if (
+      name === "password" ||
+      name === "confirmPassword"
+    ) {
+      setErrors(prev => {
+
+        const nextErrors = {
+          ...prev
+        };
+
+        if (
+          updatedFormData.confirmPassword &&
+          updatedFormData.password !== updatedFormData.confirmPassword
+        ) {
+          nextErrors.confirmPassword =
+            "Las contraseñas no coinciden";
+        } else {
+          delete nextErrors.confirmPassword;
+        }
+
+        return nextErrors;
+      });
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -316,7 +340,7 @@ export default function GooglePasswordSetupModal() {
           <button
             type="submit"
             disabled={saving}
-            className="w-full bg-[#004D77] hover:bg-[#003A5C] text-white py-2 rounded-lg transition disabled:opacity-70"
+            className="inline-flex w-full cursor-pointer items-center justify-center rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {
               saving

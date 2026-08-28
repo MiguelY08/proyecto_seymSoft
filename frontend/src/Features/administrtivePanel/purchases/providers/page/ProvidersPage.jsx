@@ -126,6 +126,7 @@ function ProvidersPage() {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
   const debouncedSearchTerm = useDebouncedValue(searchTerm);
 
   const { showConfirm, showSuccess, showError } = useAlert();
@@ -271,6 +272,7 @@ function ProvidersPage() {
 
     if (result.isConfirmed) {
       try {
+        setDeletingId(provider.id);
         await providersService.delete(provider.id);
         setProviders(prev => prev.filter(p => p.id !== provider.id));
         
@@ -285,6 +287,8 @@ function ProvidersPage() {
       } catch (error) {
         const alertData = getProviderDeleteError(error);
         await showError(alertData.title, alertData.text);
+      } finally {
+        setDeletingId(null);
       }
     }
   };
@@ -323,10 +327,13 @@ function ProvidersPage() {
           startIndex={startIndex}
           searchTerm={searchTerm}
           totalData={totalRecords}
+          hasActiveFilters={Boolean(searchTerm.trim() || statusFilter)}
           onInfo={handleInfo}
           onEdit={handleEdit}
           onToggleActive={handleToggleActive}
           onDelete={handleDelete}
+          deletingId={deletingId}
+          onCreateProvider={handleNewProvider}
         />
       </div>
 

@@ -176,6 +176,7 @@ function ClientsPage() {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedClient,  setSelectedClient]  = useState(null);
   const [loading,         setLoading]         = useState(true);
+  const [deletingId,      setDeletingId]      = useState(null);
   const debouncedSearchTerm = useDebouncedValue(searchTerm);
 
   const { showConfirm, showSuccess, showError } = useAlert();
@@ -316,12 +317,13 @@ const handleDelete = async (client) => {
     { confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar' }
   );
 
-  if (result.isConfirmed) {
-    try {
-      await clientsService.delete(client.id);
+    if (result.isConfirmed) {
+      try {
+        setDeletingId(client.id);
+        await clientsService.delete(client.id);
       await loadClients();
       showSuccess('Cliente eliminado', 'El cliente ha sido eliminado');
-    } catch (error) {
+      } catch (error) {
       // ðŸ”¥ Obtener el mensaje desde error.response.data
       const errorMessage = error.response?.data?.message || error.message || '';
       const errorCode = error.response?.data?.errorCode || '';
@@ -349,8 +351,10 @@ const handleDelete = async (client) => {
       else {
         showError('Error', errorMessage || 'No se pudo eliminar el cliente');
       }
+      } finally {
+        setDeletingId(null);
+      }
     }
-  }
 };
 
   const handleSearchChange = (term) => {
@@ -392,6 +396,7 @@ const handleDelete = async (client) => {
             onEdit={handleEdit}
             onToggleActive={handleToggleActive}
             onDelete={handleDelete}
+            deletingId={deletingId}
           />
         </div>
 
