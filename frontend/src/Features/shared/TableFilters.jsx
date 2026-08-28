@@ -13,8 +13,8 @@ export default function TableFilters({
   searchWidth = "flex-1 min-w-[220px]"
 }) {
   return (
-    <div className="mb-4">
-      <div className="flex flex-wrap items-end gap-4 w-full">
+    <div>
+      <div className="flex w-full flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end lg:gap-4">
 
         {/* BUSCADOR */}
         <div className={`relative ${searchWidth}`}>
@@ -26,12 +26,12 @@ export default function TableFilters({
               setSearch(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full pl-4 pr-10 py-2.5 bg-white rounded-xl border border-gray-300 shadow-sm outline-none focus:ring-2 focus:ring-sky-900 text-black text-sm"
+            className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-4 pr-10 text-sm text-gray-700 outline-none transition-colors duration-200 placeholder:text-gray-400 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
           />
 
           <Search
-            size={18}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
+            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+            strokeWidth={2}
           />
         </div>
 

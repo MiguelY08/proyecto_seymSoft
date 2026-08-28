@@ -102,12 +102,9 @@ export const mapPurchaseToFrontend = (purchase) => {
   const cantidadProductos = getPurchaseUnitsAdded(purchase);
 
   const productos = details.map(detail => {
-    const cantidadComprada = Number(
-      detail.purchasedQuantity ??
-      detail.returnAvailability?.purchasedQuantity ??
-      detail.quantity ??
-      0
-    );
+    // Las devoluciones y el inventario se controlan siempre en unidades físicas.
+    // `quantity` conserva la cantidad comercial de la compra (por ejemplo, pacas).
+    const cantidadComprada = getDetailUnitsAdded(detail);
     const cantidadDisponibleDevolucion = Number(
       detail.returnEligibleQuantity ??
       detail.returnAvailability?.eligibleQuantity ??
@@ -153,6 +150,7 @@ export const mapPurchaseToFrontend = (purchase) => {
       // ========== NUEVOS CAMPOS ==========
       purchaseType: detail.purchaseType || "Unidad",
       quantityPerPack: detail.quantityPerPack || 0,
+      cantidadComercial: Number(detail.quantity ?? 0),
       stockAdded: getDetailUnitsAdded(detail),
       valorUnit: detail.netUnitPrice || detail.grossUnitPrice || 0,
       iva: detail.taxPercentage || 0,

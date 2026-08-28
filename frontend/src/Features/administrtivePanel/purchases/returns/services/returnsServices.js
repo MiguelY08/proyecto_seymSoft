@@ -230,6 +230,7 @@ const getDetailReturnAvailability = (detail) => {
   const purchasedQuantity = Number(
     purchaseDetail?.purchasedQuantity ??
     availability?.purchasedQuantity ??
+    purchaseDetail?.stockAdded ??
     purchaseDetail?.quantity ??
     0
   );
@@ -354,6 +355,9 @@ export const mapPurchaseReturnToDetail = (purchaseReturn) => {
         valorUnit: getDetailUnitPrice(detail),
         iva: getDetailTaxPercentage(detail),
         cantidadComprada: returnAvailability.purchasedQuantity,
+        stockAdded: detail.purchaseDetail?.stockAdded ?? returnAvailability.purchasedQuantity,
+        purchaseType: detail.purchaseDetail?.purchaseType ?? "Unidad",
+        quantityPerPack: detail.purchaseDetail?.quantityPerPack ?? 0,
         cantidadDisponibleDevolucion: returnAvailability.availableQuantity,
         cantidadDevueltaDefinitiva: returnAvailability.finalReturnedQuantity,
         cantidadReservadaDevolucion: returnAvailability.reservedQuantity,

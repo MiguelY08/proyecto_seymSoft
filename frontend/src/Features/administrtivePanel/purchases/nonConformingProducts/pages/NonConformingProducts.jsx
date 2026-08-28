@@ -373,7 +373,7 @@ export const NonConformingProducts = () => {
   return (
     <>
       <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-hidden p-3 sm:p-4">
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="flex shrink-0 flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <PurchasesFilters
             search={search}
             setSearch={setSearch}
@@ -385,24 +385,22 @@ export const NonConformingProducts = () => {
             onClearFilters={handleClearFilters}
             searchScannerField={NON_CONFORMING_SEARCH_SCANNER_FIELD}
           />
-          <div className="flex-1" />
-          <div className="flex items-center gap-2">
+          <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
             <Permission permission="producto_no_conforme.exportar">
             <button
               onClick={handleDownloadExcel}
-              className="flex items-center gap-2 px-2 sm:px-4 py-2 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap"
+              className="flex flex-1 items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-400 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap sm:flex-none"
             >
               <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
-              <span className="hidden sm:inline">Export Excel</span>
+              <span className="hidden sm:inline">Exportar Excel</span>
             </button>
             </Permission>
             <Permission permission="producto_no_conforme.crear">
             <button
               onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 whitespace-nowrap"
+              className="flex flex-1 items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 whitespace-nowrap sm:flex-none"
             >
               <span className="hidden sm:inline">Nuevo</span>
-              <span className="sm:hidden">Nuevo</span>
               <Plus className="w-4 h-4" strokeWidth={2} />
             </button>
             </Permission>

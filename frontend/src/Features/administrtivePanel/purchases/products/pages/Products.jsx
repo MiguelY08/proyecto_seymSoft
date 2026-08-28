@@ -105,6 +105,7 @@ function Products() {
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterSubcategory, setFilterSubcategory] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
@@ -135,7 +136,7 @@ function Products() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, filterCategory, filterSubcategory, showLowStockOnly]);
+  }, [search, filterCategory, filterSubcategory, filterStatus, showLowStockOnly]);
 
   // Resetear subcategoría cuando cambia la categoría
   useEffect(() => {
@@ -175,7 +176,11 @@ function Products() {
   }, [data, filterCategory]);
   // Verificar si hay filtros activos
   const hasActiveFilters =
-    filterCategory !== "all" || filterSubcategory !== "all" || showLowStockOnly;
+    Boolean(search.trim()) ||
+    filterCategory !== "all" ||
+    filterSubcategory !== "all" ||
+    filterStatus !== "all" ||
+    showLowStockOnly;
 
   const lowStockCount = useMemo(
     () => data.filter(hasLowStock).length,
@@ -212,12 +217,15 @@ function Products() {
         filterSubcategory === "all" ||
         subcategoryNames.includes(filterSubcategory);
 
+      const matchesStatus =
+        filterStatus === "all" || row.status === filterStatus;
+
       const matchesLowStock =
         !showLowStockOnly || hasLowStock(row);
 
-      return matchesSearch && matchesCategory && matchesSubcategory && matchesLowStock;
+      return matchesSearch && matchesCategory && matchesSubcategory && matchesStatus && matchesLowStock;
     });
-  }, [data, search, filterCategory, filterSubcategory, showLowStockOnly]);
+  }, [data, search, filterCategory, filterSubcategory, filterStatus, showLowStockOnly]);
 
   const totalPages = Math.max(
     1,
@@ -514,8 +522,10 @@ function Products() {
   };
 
   const resetFilters = () => {
+    setSearch("");
     setFilterCategory("all");
     setFilterSubcategory("all");
+    setFilterStatus("all");
     setShowLowStockOnly(false);
   };
 
@@ -531,25 +541,25 @@ function Products() {
       >
         {/* Toolbar con busqueda, filtros y acciones */}
         {!loading && canView && data.length > 0 && (
-          <div className="rounded-xl bg-white p-3 shadow-sm">
-            <ProductsToolbar
-              search={search}
-              onSearchChange={setSearch}
-              categories={categories}
-              subcategories={subcategories}
-              filterCategory={filterCategory}
-              onCategoryChange={setFilterCategory}
-              filterSubcategory={filterSubcategory}
-              onSubcategoryChange={setFilterSubcategory}
-              hasActiveFilters={hasActiveFilters}
-              onClearFilters={resetFilters}
-              canExport={canExport}
-              exporting={exporting}
-              onExport={handleExportExcel}
-              canCreate={canCreate}
-              onCreate={() => navigate('/admin/purchases/products/new')}
-            />
-          </div>
+          <ProductsToolbar
+            search={search}
+            onSearchChange={setSearch}
+            categories={categories}
+            subcategories={subcategories}
+            filterCategory={filterCategory}
+            onCategoryChange={setFilterCategory}
+            filterSubcategory={filterSubcategory}
+            onSubcategoryChange={setFilterSubcategory}
+            filterStatus={filterStatus}
+            onStatusChange={setFilterStatus}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={resetFilters}
+            canExport={canExport}
+            exporting={exporting}
+            onExport={handleExportExcel}
+            canCreate={canCreate}
+            onCreate={() => navigate('/admin/purchases/products/new')}
+          />
         )}
 
         {!loading && canView && lowStockCount > 0 && (

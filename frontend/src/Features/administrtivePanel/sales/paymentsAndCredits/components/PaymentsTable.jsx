@@ -141,31 +141,22 @@ export default function PaymentsTable({
 
               <div className="mt-4 flex items-center justify-end gap-4 border-t border-gray-100 pt-3">
                 <Permission permission="pagos_y_abonos.ver_informacion">
-                  <Info
-                    size={18}
-                    className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-[#004D77]"
-                    title="Ver detalle"
-                    onClick={() => onView(item.id)}
-                  />
+                  <button type="button" onClick={() => onView(item.id)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]" title="Ver detalle">
+                    <Info className="h-4 w-4" strokeWidth={1.5} />
+                  </button>
                 </Permission>
                 <Permission permission="pagos_y_abonos.abonar">
                   {(status === "pendiente" || status === "vencido") && (
-                    <DollarSign
-                      size={18}
-                      className="cursor-pointer text-gray-400 hover:scale-110 transition hover:text-green-600"
-                      title="Registrar abono"
-                      onClick={() => onAbonar(item.id)}
-                    />
+                    <button type="button" onClick={() => onAbonar(item.id)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-green-600" title="Registrar abono">
+                      <DollarSign className="h-4 w-4" strokeWidth={1.5} />
+                    </button>
                   )}
                 </Permission>
                 <Permission permission="pagos_y_abonos.contactar">
                   {status === "vencido" && (
-                    <Phone
-                      size={18}
-                      className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-red-500"
-                      title="Contactar cliente"
-                      onClick={() => onContact(item)}
-                    />
+                    <button type="button" onClick={() => onContact(item)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-red-500" title="Contactar cliente">
+                      <Phone className="h-4 w-4" strokeWidth={1.5} />
+                    </button>
                   )}
                 </Permission>
               </div>
@@ -287,33 +278,24 @@ export default function PaymentsTable({
 
                   {/* Funciones */}
                   <td className="px-3 py-1">
-                    <div className="flex justify-center gap-2">
+                    <div className="flex justify-center gap-1 sm:gap-1.5">
                       <Permission permission="pagos_y_abonos.ver_informacion">
-                        <Info
-                          size={14}
-                          className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-[#004D77]"
-                          title="Ver detalle"
-                          onClick={() => onView(item.id)}
-                        />
+                        <button type="button" onClick={() => onView(item.id)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]" title="Ver detalle">
+                          <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+                        </button>
                       </Permission>
                       <Permission permission="pagos_y_abonos.abonar">
                         {(status === "pendiente" || status === "vencido") && (
-                          <DollarSign
-                            size={14}
-                            className="cursor-pointer text-gray-400 hover:scale-110 transition hover:text-green-600"
-                            title="Registrar abono"
-                            onClick={() => onAbonar(item.id)}
-                          />
+                          <button type="button" onClick={() => onAbonar(item.id)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-green-600" title="Registrar abono">
+                            <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+                          </button>
                         )}
                       </Permission>
                       <Permission permission="pagos_y_abonos.contactar">
                         {status === "vencido" && (
-                          <Phone
-                            size={14}
-                            className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-red-500"
-                            title="Contactar cliente"
-                            onClick={() => onContact(item)}
-                          />
+                          <button type="button" onClick={() => onContact(item)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-red-500" title="Contactar cliente">
+                            <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+                          </button>
                         )}
                       </Permission>
                     </div>

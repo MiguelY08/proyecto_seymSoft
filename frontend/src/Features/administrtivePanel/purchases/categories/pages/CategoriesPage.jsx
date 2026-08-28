@@ -290,15 +290,12 @@ const CategoriesPage = () => {
           handleEdit={handleEdit}
           handleViewDetail={handleViewDetail}
           highlightText={highlightText}
-<<<<<<< HEAD
           isSearching={Boolean(search.trim())}
           onCreateCategory={() => {
             setCategoryToEdit(null);
             setShowForm(true);
           }}
-=======
           changingStatusId={changingStatusId}
->>>>>>> c4c085514cb3bb5d8b419a17d8c597e4131857e3
         />
       </div>
 

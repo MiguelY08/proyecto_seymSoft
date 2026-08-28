@@ -23,6 +23,7 @@ import {
 import SidebarItem from "./SIdebarItem";
 
 import HorizontalLogo from "../../assets/PMLogo_Horizontal.png";
+import SmallLogo from "../../assets/PapeleriaMagicLogo_192x192.png";
 
 import {
   usePermissions
@@ -261,12 +262,12 @@ export default function Sidebar({
 
         {/* HEADER */}
         <div className={`relative px-3 pt-3 ${isCollapsed ? "pb-3" : "pb-4"}`}>
-          <div className={`items-center pr-8 ${isCollapsed ? "hidden md:hidden" : "flex"}`}>
-            <div className="h-20 w-full overflow-hidden">
+          <div className={`flex items-center ${isCollapsed ? "justify-center" : "pr-8"}`}>
+            <div className={`${isCollapsed ? "h-12 w-12" : "h-20 w-full"} overflow-hidden`}>
               <img
-                src={HorizontalLogo}
+                src={isCollapsed ? SmallLogo : HorizontalLogo}
                 alt="Logo Papelería Magic"
-                className="h-full w-full object-contain object-left"
+                className={`h-full w-full object-contain ${isCollapsed ? "" : "object-left"}`}
               />
             </div>
           </div>

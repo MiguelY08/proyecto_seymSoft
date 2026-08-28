@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { Plus } from "lucide-react";
 
 import ButtonComponent from "../../../../shared/ButtonComponent";
 import TableFilters from "../../../../shared/TableFilters";
@@ -439,18 +440,18 @@ export default function RolesPage() {
   return (
 
     <Permission permission="roles.ver">
-      <div className="p-3 sm:p-4 lg:p-6 font-lexend">
+      <div className="p-3 sm:p-4 font-lexend">
 
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 sm:gap-4 mb-4">
+        <div className="flex shrink-0 flex-col gap-3 lg:flex-row lg:items-end lg:justify-between mb-4">
 
-          <div className="w-full lg:w-auto lg:-mb-4">
+          <div className="w-full lg:flex-1">
 
             <TableFilters
               search={search}
               setSearch={setSearch}
               setCurrentPage={setCurrentPage}
               showDateFilters={false}
-              searchWidth="w-full sm:min-w-[260px] lg:w-[380px]"
+              searchWidth="w-full lg:max-w-md"
             />
 
           </div>
@@ -460,10 +461,11 @@ export default function RolesPage() {
             <ButtonComponent
               onClick={handleCreate}
               disabled={isModalOpen}
-              className="w-full sm:w-auto"
+              title="Nuevo"
+              className="flex w-full items-center justify-center gap-2 sm:w-auto"
             >
-
-              Nuevo +
+              <span>Nuevo</span>
+              <Plus className="h-4 w-4" strokeWidth={2} />
 
             </ButtonComponent>
 

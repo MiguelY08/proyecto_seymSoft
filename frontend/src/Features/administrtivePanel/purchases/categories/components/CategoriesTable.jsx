@@ -62,9 +62,9 @@ export const CategoriesTable = ({
   handleEdit,
   handleViewDetail,
   highlightText,
-<<<<<<< HEAD
   isSearching = false,
   onCreateCategory,
+  changingStatusId = null,
 }) => {
   const [deletingId, setDeletingId] = useState(null);
 
@@ -84,10 +84,6 @@ export const CategoriesTable = ({
   }
 
   return (
-=======
-  changingStatusId,
-}) => (
->>>>>>> c4c085514cb3bb5d8b419a17d8c597e4131857e3
   <div className="min-w-0 w-full overflow-x-auto overscroll-x-contain rounded-xl [-webkit-overflow-scrolling:touch]">
     <table className="min-w-max w-full table-auto">
       <thead className="sticky top-0 z-20 bg-[#004D77] text-white">

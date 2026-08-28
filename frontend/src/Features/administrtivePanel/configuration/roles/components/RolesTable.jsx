@@ -104,7 +104,7 @@ function RoleActiveToggle({
         type="button"
         onClick={onClick}
         disabled={disabled || loading}
-        className={`relative h-6 w-12 shrink-0 rounded-full transition-colors duration-300 ${
+        className={`relative h-5.5 w-11 shrink-0 rounded-full transition-colors duration-300 ${
           active ? "bg-green-500" : "bg-red-400"
         } ${
           disabled || loading
@@ -113,19 +113,19 @@ function RoleActiveToggle({
         }`}
       >
         {loading ? (
-          <Loader2 className="absolute inset-0 m-auto h-4.5 w-4.5 animate-spin text-white" />
+          <Loader2 className="absolute inset-0 m-auto h-4 w-4 animate-spin text-white" />
         ) : (
           <>
             <span
               className={`absolute top-1/2 -translate-y-1/2 text-[10px] font-bold text-white transition-all duration-300 ${
-                active ? "left-1.5" : "right-1.5"
+                active ? "left-1" : "right-1"
               }`}
             >
               {active ? "A" : "I"}
             </span>
             <span
-              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-300 ${
-                active ? "left-6" : "left-0.5"
+              className={`absolute top-0.5 h-4.5 w-4.5 rounded-full bg-white shadow transition-all duration-300 ${
+                active ? "left-[24px]" : "left-0.5"
               }`}
             />
           </>
@@ -594,7 +594,7 @@ export default function RolesTable({
                     &&
 
                     <Info
-                      size={18}
+                      size={16}
                       onClick={() =>
                         handleViewRole(role)
                       }
@@ -616,7 +616,7 @@ export default function RolesTable({
                     &&
 
                     <SquarePen
-                      size={18}
+                      size={16}
                       onClick={() =>
                         handleEditRole(role)
                       }
@@ -638,7 +638,7 @@ export default function RolesTable({
                     &&
 
                     <Trash2
-                      size={18}
+                      size={16}
                       onClick={() =>
                         handleDeleteRole(role)
                       }
@@ -757,7 +757,7 @@ export default function RolesTable({
 
                   <td className="px-4 py-2.5">
 
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center justify-center gap-1 sm:gap-1.5">
 
                       {
 
@@ -791,7 +791,7 @@ export default function RolesTable({
                         &&
 
                         <Info
-                          size={20}
+                          size={16}
                           onClick={() =>
                             handleViewRole(role)
                           }
@@ -813,7 +813,7 @@ export default function RolesTable({
                         &&
 
                         <SquarePen
-                          size={20}
+                          size={16}
                           onClick={() =>
                             handleEditRole(role)
                           }
@@ -835,7 +835,7 @@ export default function RolesTable({
                         &&
 
                         <Trash2
-                          size={20}
+                          size={16}
                           onClick={() =>
                             handleDeleteRole(role)
                           }
