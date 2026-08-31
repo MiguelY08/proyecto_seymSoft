@@ -78,7 +78,7 @@ const CreateSidebar = ({
   editingProductData = null,
 }) => {
   const navigate = useNavigate();
-  const { showConfirm, showError, showWarning } = useAlert();
+  const { showConfirm, showSuccess, showError, showWarning } = useAlert();
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchProvider, setSearchProvider] = useState("");
@@ -111,6 +111,7 @@ const CreateSidebar = ({
   const productWrapperRef = useRef(null);
   const purchasePriceInputRef = useRef(null);
   const sidebarRef = useRef(null);
+  const preservePurchaseTypeRef = useRef(false);
 
   // ========== EFECTO PARA CARGAR DATOS DE EDICIÓN ==========
   useEffect(() => {
@@ -131,14 +132,26 @@ const CreateSidebar = ({
         setPurchasePrice(product.editingPurchasePrice?.toString() || fullProduct.supplierPrice?.toString() || "");
         setQuantity(product.editingQuantity || 1);
         
+        const normalizedPurchaseType = String(product.editingPurchaseType || "").trim().toLowerCase();
         const typeMap = {
-          "Unidad": "unit",
-          "X Paca": "pack",
-          "Litros": "liter",
-          "Kilos": "kilo"
+          unidad: "unit",
+          "x unidad": "unit",
+          paca: "pack",
+          "x paca": "pack",
+          litros: "liter",
+          litro: "liter",
+          kilos: "kilo",
+          kilo: "kilo",
         };
-        const typeValue = typeMap[product.editingPurchaseType] || "unit";
-        const foundType = Object.values(PURCHASE_TYPES).find(t => t.value === typeValue);
+        const typeValue =
+          product.editingPurchaseTypeValue ||
+          typeMap[normalizedPurchaseType] ||
+          "unit";
+        const foundType =
+          Object.values(PURCHASE_TYPES).find(t => t.value === typeValue) ||
+          Object.values(PURCHASE_TYPES).find(
+            t => t.label.toLowerCase() === normalizedPurchaseType
+          );
         if (foundType) {
           setPurchaseType(foundType);
         }
@@ -199,6 +212,11 @@ const CreateSidebar = ({
 
   useEffect(() => {
     if (selectedProduct && !isEditing) {
+      if (preservePurchaseTypeRef.current) {
+        preservePurchaseTypeRef.current = false;
+        return;
+      }
+
       setEditingPrices({
         retailPrice: selectedProduct.retailPrice?.toString() || "",
         wholesalePrice: selectedProduct.wholesalePrice?.toString() || "",
@@ -286,6 +304,15 @@ const CreateSidebar = ({
   };
 
   const handleSelectProduct = (product, activeBarcode = "") => {
+    const editingProductId = editingProductData?.id;
+    if (
+      isEditing &&
+      editingProductId !== undefined &&
+      Number(product.id) !== Number(editingProductId)
+    ) {
+      onCancelEdit?.();
+    }
+
     const normalizedActiveBarcode = normalizeBarcode(activeBarcode);
     const productBarcodes = getProductBarcodeValues(getProductWithLocalBarcodes(product));
     const nextActiveBarcodeIndex = normalizedActiveBarcode
@@ -315,6 +342,9 @@ const CreateSidebar = ({
 
   const handleSearchChange = (e) => {
     const val = e.target.value;
+    if (isEditing && val !== editingProductData?.nombre) {
+      onCancelEdit?.();
+    }
     setSearchProduct(val);
     setShowSuggestions(true);
     if (selectedProduct && val !== selectedProduct.nombre) {
@@ -411,11 +441,12 @@ const CreateSidebar = ({
     const key = selectedProduct.codigoBarras;
     onExtraBarcodesChange((prev) => ({
       ...prev,
-      [key]: [...(prev[key] || []), trimmed],
+      [key]: [...new Set([...(prev[key] || []), trimmed])],
     }));
 
     setBarcodeError("");
     setBarcodeSaved(true);
+    showSuccess("Código agregado", "El código se guardará cuando confirmes la compra.");
     setTimeout(() => {
       setBarcodeSaved(false);
       setShowBarcodeForm(false);
@@ -580,7 +611,7 @@ const CreateSidebar = ({
       const updated = await updateProductPrices(selectedProduct.id, pricesToUpdate);
       
       if (updated) {
-        showConfirm("info", "Precios actualizados", "Los precios de venta se han actualizado correctamente en la base de datos.");
+        showSuccess("Precios actualizados", "Los precios de venta se actualizaron correctamente.");
         setShowPriceEditor(false);
         setPriceErrors({});
         
@@ -592,6 +623,7 @@ const CreateSidebar = ({
           bulkPrice: pricesToUpdate.bulkPrice,
           supplierPrice: pricesToUpdate.supplierPrice || selectedProduct.supplierPrice,
         };
+        preservePurchaseTypeRef.current = true;
         setSelectedProduct(updatedProduct);
         
         setEditingPrices({
@@ -871,7 +903,7 @@ const CreateSidebar = ({
                 </div>
                 {barcodeError && <p className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={12} /> {barcodeError}</p>}
                 <button type="button" onClick={handleSaveBarcode} className={`w-full py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all ${barcodeSaved ? "bg-green-500 text-white" : "bg-blue-600 text-white hover:bg-blue-700"}`}>
-                  {barcodeSaved ? <><Check size={15} /> Guardado!</> : "Guardar codigo"}
+                  {barcodeSaved ? <><Check size={15} /> Agregado!</> : "Agregar codigo"}
                 </button>
               </div>
             </div>

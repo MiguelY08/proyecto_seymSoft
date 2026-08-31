@@ -62,6 +62,22 @@ const getExistingReturnQuantity = (producto) =>
 const getReturnQuantityLimit = (producto) =>
   getReturnAvailableQuantity(producto) + getExistingReturnQuantity(producto);
 
+const getPackEquivalence = (quantity, product) => {
+  const quantityPerPack = Number(product?.quantityPerPack ?? 0);
+  const purchaseType = String(product?.purchaseType ?? '').trim().toLowerCase();
+  const isPackPurchase = purchaseType.includes('paca') || purchaseType === 'pack';
+
+  if (!isPackPurchase || !Number.isInteger(quantityPerPack) || quantityPerPack <= 0) return null;
+
+  const units = Math.max(0, Number(quantity) || 0);
+  const packs = Math.floor(units / quantityPerPack);
+  const remainingUnits = units % quantityPerPack;
+  const parts = [];
+  if (packs > 0) parts.push(`${packs} paca${packs === 1 ? '' : 's'}`);
+  if (remainingUnits > 0 || parts.length === 0) parts.push(`${remainingUnits} unidad${remainingUnits === 1 ? '' : 'es'}`);
+  return parts.join(' + ');
+};
+
 const getProductOverallStatus = (producto) => {
   const lineas = producto?.lineas ?? [];
   if (lineas.length === 0) return getEstadoInicial();
@@ -301,7 +317,7 @@ const ReadonlyField = ({ value, placeholder = '-' }) => (
 );
 
 // ─── LineaConfig - una fila de devolucion por producto (con editable condicional) ──
-const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errores, editableCompleto, isEditMode, disabled = false }) => {
+const LineaConfig = ({ linea, producto, maxCantidad, onChange, onRemove, canRemove, errores, editableCompleto, isEditMode, disabled = false }) => {
   const esTerminal     = isEstadoTerminal(linea.estado) || isEstadoProveedorRechazado(linea.estado);
   const esRechazoProveedor = isEstadoProveedorRechazado(linea.estado);
   const badgeStyle     = getBadgeEstadoProducto(linea.estado);
@@ -440,7 +456,7 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
 
         {/* Cantidad */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-600">Cantidad <span className="text-red-500">*</span></label>
+          <label className="text-xs font-medium text-gray-600">Unidades a devolver <span className="text-red-500">*</span></label>
           {mostrarInputs ? (
             <CantidadInput
               value={linea.cantidadDevolver}
@@ -451,6 +467,11 @@ const LineaConfig = ({ linea, maxCantidad, onChange, onRemove, canRemove, errore
             />
           ) : (
             <ReadonlyField value={linea.cantidadDevolver} placeholder="1" />
+          )}
+          {getPackEquivalence(linea.cantidadDevolver, producto) && (
+            <p className="text-[10px] text-gray-500">
+              Equivale a {getPackEquivalence(linea.cantidadDevolver, producto)}.
+            </p>
           )}
           {fieldError('cantidadDevolver') && (
             <p className="text-xs text-red-500 flex items-center gap-1">
@@ -526,6 +547,7 @@ const ProductConfig = ({ producto, onAddLinea, onRemoveLinea, onLineaChange, err
                   <LineaConfig
                     key={linea.lineaId}
                     linea={linea}
+                    producto={producto}
                     maxCantidad={maxParaEstaLinea}
                     onChange={(cambios) => onLineaChange(idx, cambios)}
                     onRemove={() => onRemoveLinea(idx)}
@@ -584,7 +606,10 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
       codigoBarras:     p.codigoBarras,
       valorUnit:        p.valorUnit,
       iva:              p.iva          ?? 0,
-      cantidadComprada: p.cantidad     ?? p.cantidadProductos ?? 1,
+      cantidadComprada: p.stockAdded ?? p.cantidad ?? p.cantidadProductos ?? 1,
+      cantidadComercial: p.cantidadComercial ?? p.cantidad ?? p.cantidadProductos ?? 1,
+      purchaseType: p.purchaseType ?? 'Unidad',
+      quantityPerPack: p.quantityPerPack ?? 0,
       cantidadDisponibleDevolucion:
         p.cantidadDisponibleDevolucion ??
         p.returnAvailability?.availableQuantity ??
@@ -625,6 +650,9 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
             valorUnit:        p.valorUnit,
             iva:              p.iva ?? 0,
             cantidadComprada: original?.cantidadComprada ?? p.cantidadComprada ?? 1,
+            cantidadComercial: original?.cantidadComercial ?? p.cantidadComercial ?? 1,
+            purchaseType: original?.purchaseType ?? p.purchaseType ?? 'Unidad',
+            quantityPerPack: original?.quantityPerPack ?? p.quantityPerPack ?? 0,
             cantidadDisponibleDevolucion:
               original?.cantidadDisponibleDevolucion ??
               p.cantidadDisponibleDevolucion ??
@@ -1019,13 +1047,16 @@ const ReturnForm = ({ mode = 'create', purchase, devolucion, onClose, onSaved })
                           </div>
                           <div className="grid grid-cols-4 gap-x-1.5 text-[10px] text-gray-500">
                             <span>Cant.</span><span>Precio</span><span>%IVA</span><span className="text-right">Total</span>
-                            <span className="text-gray-700">{p.cantidadComprada}</span>
+                            <span className="text-gray-700">{p.cantidadComprada} u.</span>
                             <span className="text-gray-700">{formatCurrency(p.valorUnit)}</span>
                             <span className="text-gray-700">{p.iva}%</span>
                             <span className="text-right font-semibold text-gray-800">{formatCurrency(total)}</span>
                           </div>
                           <div className="mt-1 text-[10px] text-gray-500">
                             Disponible para devolver: <span className="font-semibold text-gray-700">{getReturnAvailableQuantity(p)} u.</span>
+                            {getPackEquivalence(getReturnAvailableQuantity(p), p) && (
+                              <span className="ml-1">({getPackEquivalence(getReturnAvailableQuantity(p), p)})</span>
+                            )}
                           </div>
                         </div>
                       </div>

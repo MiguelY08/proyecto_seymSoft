@@ -349,6 +349,7 @@ function Returns() {
           onViewDetail={handleViewDetail}
           onEdit={handleEdit}
           onAnnul={handleAnnul}
+          annullingId={annulLoading ? returnToAnnul?.id : null}
         />
       </div>
 

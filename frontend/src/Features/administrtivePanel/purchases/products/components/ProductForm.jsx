@@ -30,6 +30,10 @@ import {
 function PriceCard({ label, fieldMain, fieldPaca, valueMain, valuePaca, placeholderMain, placeholderPaca, onChange, errMain, errPaca }) {
   const block = (e) => { if (['e', 'E', '+', '-', '.'].includes(e.key)) e.preventDefault(); };
   const numeric = (v) => v.replace(/[^0-9]/g, '');
+  const percentage = (v) => {
+    const digits = numeric(v);
+    return digits === '' ? '' : String(Math.min(100, Number(digits)));
+  };
   const formatCop = (value) => {
     const digits = numeric(String(value ?? ''));
     if (!digits) return '';
@@ -70,8 +74,9 @@ function PriceCard({ label, fieldMain, fieldPaca, valueMain, valuePaca, placehol
             inputMode="numeric"
             name={fieldPaca}
             value={valuePaca}
-            onChange={(e) => onChange({ target: { name: fieldPaca, value: numeric(e.target.value) } })}
+            onChange={(e) => onChange({ target: { name: fieldPaca, value: percentage(e.target.value) } })}
             onKeyDown={block}
+            maxLength={3}
             placeholder={placeholderPaca}
             aria-label={`Descuento de ${label}`}
             className={`h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm font-semibold outline-none ${
@@ -225,6 +230,10 @@ function ProductForm({
   }, [isEditMode, producto]);
 
   const numeric = (v) => v.replace(/[^0-9]/g, '');
+  const percentage = (v) => {
+    const digits = numeric(v);
+    return digits === '' ? '' : String(Math.min(100, Number(digits)));
+  };
   const block = (e) => { if (['e', 'E', '+', '-', '.'].includes(e.key)) e.preventDefault(); };
 
   const calcStock = (d) => {
@@ -238,9 +247,20 @@ function ProductForm({
     const det = Number(d.precioDetalle);
     const may = Number(d.precioMayorista);
     const col = Number(d.precioColegas);
+    const pac = Number(d.precioPacas);
+    const supplier = Number(d.supplierPrice);
+    const hasSupplier = d.supplierPrice !== '' && d.supplierPrice !== null && d.supplierPrice !== undefined;
 
     if (d.precioMayorista && det && may >= det) e.precioMayorista = 'Debe ser menor al precio detal.';
     if (d.precioColegas && may && col > may) e.precioColegas = 'Debe ser menor o igual al precio mayorista.';
+    if (d.precioPacas && d.precioColegas && pac > col) e.precioPacas = 'Debe ser menor o igual al precio colegas.';
+
+    if (hasSupplier) {
+      if (d.precioDetalle && det > supplier) e.precioDetalle = 'No puede superar el precio de compra al proveedor.';
+      if (d.precioMayorista && may > supplier) e.precioMayorista = 'No puede superar el precio de compra al proveedor.';
+      if (d.precioColegas && col > supplier) e.precioColegas = 'No puede superar el precio de compra al proveedor.';
+      if (d.precioPacas && pac > supplier) e.precioPacas = 'No puede superar el precio de compra al proveedor.';
+    }
     return e;
   };
 
@@ -702,7 +722,7 @@ function ProductForm({
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">IVA %</label>
                 <div className="relative">
                   <Percent className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                  <input type="number" name="ivaPercentage" value={formData.ivaPercentage} onChange={handleChange} min="0" max="100" placeholder="19" className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 text-sm transition-colors duration-200" />
+                  <input type="text" inputMode="numeric" name="ivaPercentage" value={formData.ivaPercentage} onChange={(e) => handleChange({ target: { name: 'ivaPercentage', value: percentage(e.target.value) } })} onKeyDown={block} maxLength={3} placeholder="19" className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 text-sm transition-colors duration-200" />
                 </div>
               </div>
               </div>
@@ -726,9 +746,14 @@ function ProductForm({
                 <p className="text-sm font-semibold text-gray-800">Resumen inicial</p>
                 <p className="mt-1 text-xs text-gray-500">Se actualiza al agregar presentaciones adicionales.</p>
                 <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-1">
-                  <div className="rounded-lg border border-gray-200 bg-white p-3">
+                  <div className="min-w-0 overflow-hidden rounded-lg border border-gray-200 bg-white p-3">
                     <p className="text-xs text-gray-500">Stock general</p>
-                    <p className="mt-1 text-lg font-semibold text-[#004D77]">{calcStock(formData).toLocaleString('es-CO')}</p>
+                    <p
+                      className="mt-1 max-w-full break-all text-base font-semibold leading-tight text-[#004D77] tabular-nums sm:text-lg"
+                      title={calcStock(formData).toLocaleString('es-CO')}
+                    >
+                      {calcStock(formData).toLocaleString('es-CO')}
+                    </p>
                   </div>
                   <div className="rounded-lg border border-gray-200 bg-white p-3">
                     <p className="text-xs text-gray-500">Códigos</p>

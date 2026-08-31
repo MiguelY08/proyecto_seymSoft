@@ -1,5 +1,5 @@
 // features/categories/pages/CategoriesPage.jsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import CategoriesTable from "../components/CategoriesTable";
 import CategoriesToolbar from "../components/CategoriesToolbar";
@@ -19,6 +19,7 @@ import {
   updateSubcategory,
   normalizeCategoryStatus,
 } from "../data/categoriesService";
+import { synchronizeProductsByCategory } from "../data/categoryproductsService";
 
 const normalizeSearchValue = (value) =>
   String(value ?? "")
@@ -36,6 +37,8 @@ const CategoriesPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState(null);
   const [categoryDetail, setCategoryDetail] = useState(null);
+  const [changingStatusId, setChangingStatusId] = useState(null);
+  const statusChangeLockRef = useRef(false);
 
   const { showConfirm, showSuccess, showError } = useAlert();
 
@@ -83,8 +86,16 @@ const CategoriesPage = () => {
   };
 
   const handleToggleStatus = async (id) => {
+    if (statusChangeLockRef.current) return;
+    statusChangeLockRef.current = true;
+    setChangingStatusId(id);
+
     const category = categories.find((c) => c.id === id);
-    if (!category) return;
+    if (!category) {
+      statusChangeLockRef.current = false;
+      setChangingStatusId(null);
+      return;
+    }
 
     const isActivating = category.estado === "Inactivo";
 
@@ -100,14 +111,22 @@ const CategoriesPage = () => {
       }
     );
 
-    if (!result?.isConfirmed) return;
+    if (!result?.isConfirmed) {
+      statusChangeLockRef.current = false;
+      setChangingStatusId(null);
+      return;
+    }
 
     try {
       await toggleCategoryStatus(id);
+      await synchronizeProductsByCategory(id, isActivating);
       await fetchCategories();
       showSuccess("Actualizado", "El estado fue actualizado.");
     } catch (err) {
       showError("Error", err.message || "No se pudo cambiar el estado.");
+    } finally {
+      statusChangeLockRef.current = false;
+      setChangingStatusId(null);
     }
   };
 
@@ -165,6 +184,11 @@ const CategoriesPage = () => {
                 estado: categoryData.estado,
               })
             )
+          );
+
+          await synchronizeProductsByCategory(
+            categoryData.id,
+            categoryData.estado === "Activo"
           );
         }
         showSuccess("Categoría actualizada", "Los cambios se guardaron correctamente.");
@@ -266,6 +290,12 @@ const CategoriesPage = () => {
           handleEdit={handleEdit}
           handleViewDetail={handleViewDetail}
           highlightText={highlightText}
+          isSearching={Boolean(search.trim())}
+          onCreateCategory={() => {
+            setCategoryToEdit(null);
+            setShowForm(true);
+          }}
+          changingStatusId={changingStatusId}
         />
       </div>
 

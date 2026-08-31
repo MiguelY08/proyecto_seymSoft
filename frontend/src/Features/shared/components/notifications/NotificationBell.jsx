@@ -81,10 +81,14 @@ function NotificationBell() {
   const { isAuthenticated } = useAuth();
   const {
     notifications,
+    pagination,
     loading,
+    loadingMore,
     error,
+    loadMoreError,
     unreadCount,
     refreshNotifications,
+    loadMoreNotifications,
     markAsRead,
     markAllAsRead,
     deleteNotification,
@@ -151,12 +155,23 @@ function NotificationBell() {
         <NotificationDropdown
           notifications={notifications}
           loading={loading}
+          loadingMore={loadingMore}
           error={error}
+          loadMoreError={loadMoreError}
           unreadCount={unreadCount}
           onMarkAsRead={markAsRead}
           onMarkAllAsRead={markAllAsRead}
           onDelete={deleteNotification}
           onDeleteAll={deleteAllNotifications}
+          hasMore={Boolean(
+            pagination && (
+              pagination.hasNextPage
+              ?? pagination.has_next_page
+              ?? Number(pagination.page ?? pagination.currentPage ?? pagination.current_page ?? 1)
+                < Number(pagination.totalPages ?? pagination.total_pages ?? 1)
+            )
+          )}
+          onLoadMore={loadMoreNotifications}
           onClose={() => setOpen(false)}
           onOpenNotification={handleOpenNotification}
         />

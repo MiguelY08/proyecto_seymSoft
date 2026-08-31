@@ -13,6 +13,14 @@ import { METODOS_PAGO, PAYMENT_METHOD_IDS } from '../services/ordersService';
 const roundMoney = (value) =>
   Math.round((Number(value) || 0) * 100) / 100;
 
+const formatAmountInput = (value) => {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  return digits ? new Intl.NumberFormat('es-CO').format(Number(digits)) : '';
+};
+
+const parseAmountInput = (value) =>
+  Number(String(value ?? '').replace(/\D/g, '')) || 0;
+
 const formatCurrency = (value) =>
   new Intl.NumberFormat('es-CO', {
     style: 'currency',
@@ -57,10 +65,13 @@ function ApprovePaymentReceiptModal({
   if (!isOpen || !receipt) return null;
 
   const hasNoPendingBalance = pendingBalance <= 0;
-  const numericAmount = Number(amount);
+  const numericAmount = parseAmountInput(amount);
   const hasValidAmount =
     Number.isFinite(numericAmount) && numericAmount > 0 && numericAmount <= pendingBalance;
   const exceedsPendingBalance = Number.isFinite(numericAmount) && numericAmount > pendingBalance;
+  const pendingBalanceAfterApproval = hasValidAmount
+    ? Math.max(0, roundMoney(pendingBalance - roundMoney(numericAmount)))
+    : pendingBalance;
   const canSubmit = !hasNoPendingBalance && hasValidAmount;
 
   const handleClose = () => {
@@ -146,11 +157,17 @@ function ApprovePaymentReceiptModal({
           <div className="space-y-4">
             <div className="rounded-lg border border-[#004D77]/20 bg-[#004D77]/5 p-3">
               <p className="text-xs font-semibold text-[#004D77]">
-                Saldo pendiente: {formatCurrency(pendingBalance)}
+                Saldo pendiente actual: {formatCurrency(pendingBalance)}
               </p>
-              <p className="mt-1 text-xs text-[#004D77]/80">
-                El abono se registrará en el historial de pagos del pedido.
-              </p>
+              {hasValidAmount ? (
+                <p className="mt-1 text-xs font-semibold text-[#004D77]/80">
+                  Después de aprobar este abono, el saldo pendiente será: {formatCurrency(pendingBalanceAfterApproval)}.
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-[#004D77]/80">
+                  El abono se registrará en el historial de pagos del pedido.
+                </p>
+              )}
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -165,13 +182,10 @@ function ApprovePaymentReceiptModal({
                 <label className="text-sm font-semibold text-gray-700" htmlFor="receipt-payment-amount">Monto a abonar</label>
                 <input
                   id="receipt-payment-amount"
-                  type="number"
-                  min="0.01"
-                  max={pendingBalance}
-                  step="0.01"
-                  inputMode="decimal"
+                  type="text"
+                  inputMode="numeric"
                   value={amount}
-                  onChange={(event) => setAmount(event.target.value)}
+                  onChange={(event) => setAmount(formatAmountInput(event.target.value))}
                   disabled={isSubmitting || hasNoPendingBalance}
                   placeholder="0"
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 disabled:bg-gray-100"

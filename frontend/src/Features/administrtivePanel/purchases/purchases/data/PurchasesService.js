@@ -29,15 +29,53 @@ const api = {
 
 const mapStatusFromBackend = (statusId, statusName) => {
   if (statusName) {
-    if (statusName === "Completada") return "Completada";
-    if (statusName === "Proc. devolución") return "Proc. devolución";
-    if (statusName === "Anulada") return "Anulada";
-    return statusName;
+    const normalizedStatus = String(statusName)
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+    if (normalizedStatus.startsWith("completada")) return "Completada";
+    if (normalizedStatus.includes("devolucion")) return "Proc. devolución";
+    if (normalizedStatus === "anulada") return "Anulada";
   }
-  if (statusId === 1) return "Completada";
-  if (statusId === 2) return "Proc. devolución";
-  if (statusId === 3) return "Anulada";
+  if (Number(statusId) === 1) return "Completada";
+  if (Number(statusId) === 2) return "Proc. devolución";
+  if (Number(statusId) === 3) return "Anulada";
   return "Completada";
+};
+
+const getDetailUnitsAdded = (detail = {}) => {
+  const quantity = Number(
+    detail.purchasedQuantity ??
+    detail.returnAvailability?.purchasedQuantity ??
+    detail.quantity ??
+    0
+  );
+  const quantityPerPack = Number(detail.quantityPerPack ?? 0);
+  const purchaseType = String(detail.purchaseType ?? '').trim().toLowerCase();
+  const isPack = purchaseType.includes('paca') || purchaseType === 'pack';
+
+  return Number(
+    detail.stockAdded ??
+    (isPack && quantityPerPack > 0 ? quantity * quantityPerPack : quantity)
+  );
+};
+
+const getPurchaseUnitsAdded = (purchase = {}) => {
+  if (Array.isArray(purchase.details) && purchase.details.length > 0) {
+    return purchase.details.reduce(
+      (total, detail) => total + getDetailUnitsAdded(detail),
+      0
+    );
+  }
+
+  return Number(
+    purchase.totalStockAdded ??
+    purchase.totalUnits ??
+    purchase.totalQuantity ??
+    0
+  );
 };
 
 // Mapear compra para la lista
@@ -49,7 +87,7 @@ export const mapPurchaseToList = (purchase) => {
     numeroFacturacion: purchase.invoiceNumber,
     fechaCompra: purchase.purchaseDate?.split('T')[0] || purchase.purchaseDate,
     proveedor: purchase.providerName,
-    cantidadProductos: purchase.totalQuantity || 0,
+    cantidadProductos: getPurchaseUnitsAdded(purchase),
     precioTotal: purchase.totalAmount || 0,
     estado: mapStatusFromBackend(purchase.statusId, purchase.status),
     maxReturnDate: purchase.maxReturnDate,
@@ -61,15 +99,12 @@ export const mapPurchaseToFrontend = (purchase) => {
   if (!purchase) return null;
 
   const details = purchase.details || [];
-  const cantidadProductos = details.reduce((sum, d) => sum + (d.quantity || 0), 0);
+  const cantidadProductos = getPurchaseUnitsAdded(purchase);
 
   const productos = details.map(detail => {
-    const cantidadComprada = Number(
-      detail.purchasedQuantity ??
-      detail.returnAvailability?.purchasedQuantity ??
-      detail.quantity ??
-      0
-    );
+    // Las devoluciones y el inventario se controlan siempre en unidades físicas.
+    // `quantity` conserva la cantidad comercial de la compra (por ejemplo, pacas).
+    const cantidadComprada = getDetailUnitsAdded(detail);
     const cantidadDisponibleDevolucion = Number(
       detail.returnEligibleQuantity ??
       detail.returnAvailability?.eligibleQuantity ??
@@ -115,7 +150,8 @@ export const mapPurchaseToFrontend = (purchase) => {
       // ========== NUEVOS CAMPOS ==========
       purchaseType: detail.purchaseType || "Unidad",
       quantityPerPack: detail.quantityPerPack || 0,
-      stockAdded: detail.stockAdded || cantidadComprada,
+      cantidadComercial: Number(detail.quantity ?? 0),
+      stockAdded: getDetailUnitsAdded(detail),
       valorUnit: detail.netUnitPrice || detail.grossUnitPrice || 0,
       iva: detail.taxPercentage || 0,
       ivaValor: detail.ivaSubtotal || 0,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Info, SquarePen, Trash2, Users } from 'lucide-react';
+import { Info, Loader2, SquarePen, Trash2, Users } from 'lucide-react';
 import ActiveToggle from './ActiveToggle';
 import { formatClientType, formatCurrency } from '../helpers/clientHelpers';
 import Permission from '../../../configuration/roles/components/Permission';
@@ -72,6 +72,7 @@ function ClientsTable({
   onEdit,
   onToggleActive,
   onDelete,
+  deletingId = null,
 }) {
   if (!clients.length) {
     const isSearching = totalData > 0 || searchTerm.trim().length > 0;
@@ -157,7 +158,7 @@ function ClientsTable({
                       </span>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center gap-1.5">
+                    <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                       <Permission permission="clientes.activar_desactivar">
                         <ActiveToggle
                           activo={client.active}
@@ -167,31 +168,43 @@ function ClientsTable({
 
                       <Permission permission="clientes.ver_informacion">
                         <button
+                          type="button"
                           onClick={() => onInfo(client)}
                           className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]"
                           title="Información del cliente"
                         >
-                          <Info className="h-4 w-4" strokeWidth={1.5} />
+                          <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
                         </button>
                       </Permission>
 
                       <Permission permission="clientes.editar">
                         <button
+                          type="button"
                           onClick={() => onEdit(client)}
                           className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]"
                           title="Editar cliente"
                         >
-                          <SquarePen className="h-4 w-4" strokeWidth={1.5} />
+                          <SquarePen className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
                         </button>
                       </Permission>
 
                       <Permission permission="clientes.eliminar">
                         <button
+                          type="button"
                           onClick={() => onDelete(client)}
-                          className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-red-500"
-                          title="Eliminar cliente"
+                          disabled={deletingId === client.id}
+                          className={`text-gray-400 transition ${
+                            deletingId === client.id
+                              ? 'cursor-wait opacity-50'
+                              : 'cursor-pointer hover:scale-110 hover:text-red-500'
+                          }`}
+                          title={deletingId === client.id ? 'Procesando...' : 'Eliminar cliente'}
                         >
-                          <Trash2 className="h-4 w-4" strokeWidth={1.5} />
+                          {deletingId === client.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+                          )}
                         </button>
                       </Permission>
                     </div>

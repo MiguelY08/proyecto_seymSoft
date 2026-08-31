@@ -1,4 +1,4 @@
-import { Ban, Info, XCircle } from "lucide-react";
+import { Ban, Info, Loader2, XCircle, Plus, Users } from "lucide-react";
 import Permission from "../../../configuration/roles/components/Permission";
 
 const StatusBadge = ({ status }) => {
@@ -19,13 +19,56 @@ const truncateText = (text, maxLength = 42) => {
   return text.length <= maxLength ? text : `${text.slice(0, maxLength)}...`;
 };
 
+const EmptyState = ({ isSearching, onCreateReport }) => (
+  <div className="flex flex-col items-center justify-center gap-3 px-4 py-12">
+    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#004D77]/10">
+      <Users className="h-8 w-8 text-[#004D77]/40" strokeWidth={1.5} />
+    </div>
+
+    {isSearching ? (
+      <>
+        <p className="text-sm font-semibold text-gray-500">No se encontraron resultados</p>
+        <p className="max-w-xs text-center text-xs text-gray-400">
+          Ningún producto no conforme coincide con la búsqueda.
+        </p>
+      </>
+    ) : (
+      <>
+        <p className="text-sm font-semibold text-gray-500">No hay reportes registrados</p>
+        <p className="max-w-xs text-center text-xs text-gray-400">
+          Aún no se han registrado productos no conformes.
+        </p>
+
+        <Permission permission="producto_no_conforme.crear">
+          <button
+            type="button"
+            onClick={onCreateReport}
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg border bg-[#004D77] px-2 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#003a5c] sm:px-3"
+          >
+            <span>Nuevo reporte</span>
+            <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+          </button>
+        </Permission>
+      </>
+    )}
+  </div>
+);
+
 export const NonConformingProductsTable = ({
   currentData = [],
   startIndex = 0,
   handleCancel,
   highlightText,
   handleViewDetails,
-}) => (
+  isSearching = false,
+  onCreateReport,
+  cancellingId = null,
+}) => {
+  if (currentData.length === 0) {
+    return <EmptyState isSearching={isSearching} onCreateReport={onCreateReport} />;
+  }
+
+  return (
   <div className="min-w-0 w-full overflow-x-auto overscroll-x-contain rounded-xl [-webkit-overflow-scrolling:touch]">
     <table className="min-w-max w-full table-auto">
       <thead className="sticky top-0 z-20 bg-[#004D77] text-white">
@@ -42,12 +85,9 @@ export const NonConformingProductsTable = ({
         </tr>
       </thead>
       <tbody>
-        {currentData.length === 0 ? (
-          <tr>
-            <td colSpan={9} className="py-12 text-center text-sm text-gray-400">No se encontraron reportes.</td>
-          </tr>
-        ) : currentData.map((report, index) => {
+        {currentData.map((report, index) => {
           const isCancelled = report.estado === "Anulado";
+          const isCancelling = cancellingId === report.id;
           const rowBackground = index % 2 === 0 ? "bg-gray-100" : "bg-white";
           return (
             <tr key={report.id} className={`group transition-colors duration-150 ${rowBackground} hover:bg-blue-50 ${isCancelled ? "opacity-70" : ""}`}>
@@ -68,7 +108,7 @@ export const NonConformingProductsTable = ({
               <td className="px-3 py-2">
                 <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                   <Permission permission="producto_no_conforme.ver_informacion">
-                    <button onClick={() => handleViewDetails(report)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]" title="Ver información">
+                    <button type="button" onClick={() => handleViewDetails(report)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]" title="Ver información">
                       <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
                     </button>
                   </Permission>
@@ -76,8 +116,22 @@ export const NonConformingProductsTable = ({
                     {isCancelled ? (
                       <span className="cursor-not-allowed text-gray-200" title="Reporte anulado"><Ban className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} /></span>
                     ) : (
-                      <button onClick={() => handleCancel(report.id)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-red-500" title="Anular reporte">
-                        <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+                      <button
+                        type="button"
+                        onClick={() => handleCancel(report.id)}
+                        disabled={isCancelling}
+                        className={`text-gray-400 transition ${
+                          isCancelling
+                            ? "cursor-wait opacity-50"
+                            : "cursor-pointer hover:scale-110 hover:text-red-500"
+                        }`}
+                        title={isCancelling ? "Procesando..." : "Anular reporte"}
+                      >
+                        {isCancelling ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
+                        ) : (
+                          <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+                        )}
                       </button>
                     )}
                   </Permission>
@@ -89,6 +143,7 @@ export const NonConformingProductsTable = ({
       </tbody>
     </table>
   </div>
-);
+  );
+};
 
 export default NonConformingProductsTable;

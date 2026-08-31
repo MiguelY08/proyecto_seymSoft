@@ -214,14 +214,14 @@ function TopBar({
   };
 
   return (
-    <div className="flex flex-col gap-3 shrink-0 xl:flex-row xl:items-end xl:justify-between">
-      <div className="relative w-full min-w-0 xl:flex-1">
+    <div className="flex flex-col gap-3 shrink-0 xl:flex-row xl:items-end xl:justify-start">
+      <div className="relative w-full min-w-0 xl:w-56">
         <input
           type="text"
           placeholder="Buscar por devolución, factura, proveedor o estado..."
           value={search}
           onChange={(event) => handleSearchChange(event.target.value)}
-          className="w-full pl-4 pr-10 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400"
+          className="w-full pl-4 pr-10 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200"
         />
         <Search
           className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
@@ -229,8 +229,8 @@ function TopBar({
         />
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 xl:ml-4 xl:w-auto xl:justify-end">
-        <div className="w-full sm:w-44">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 xl:flex-1">
+        <div className="w-full sm:w-44 sm:order-1">
           <div className="relative">
             <Calendar
               className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
@@ -250,7 +250,7 @@ function TopBar({
           </div>
         </div>
 
-        <div className="w-full sm:w-48">
+        <div className="w-full sm:w-44 sm:order-3">
           <FormSelect
             value={estadoFilter}
             options={RETURN_STATUS_OPTIONS}
@@ -263,7 +263,7 @@ function TopBar({
           />
         </div>
 
-        <div className="w-full sm:w-44">
+        <div className="w-full sm:w-44 sm:order-2">
           <div className="relative">
             <Calendar
               className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
@@ -284,20 +284,20 @@ function TopBar({
         </div>
 
         {hayFiltrosActivos && (
-          <div className="w-full sm:w-auto">
+          <div className="w-full sm:w-auto sm:order-4">
             <button
               onClick={handleClearFilters}
               className="flex w-full items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium border border-gray-400 rounded-lg text-gray-600 bg-white hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 cursor-pointer whitespace-nowrap sm:w-auto"
             >
               <Eraser className="w-4 h-4" strokeWidth={2} />
-              <span>Limpiar filtros</span>
+              <span className="xl:hidden">Limpiar filtros</span>
             </button>
           </div>
         )}
 
         {canExport && (
           <ButtonComponent
-            className="w-full sm:w-auto bg-white text-green-600 border-green-600 hover:bg-green-400 px-3 flex items-center justify-center gap-2"
+            className="w-full sm:w-auto sm:order-5 xl:ml-auto bg-white text-green-600 border-green-600 hover:bg-green-400 px-3 flex items-center justify-center gap-2"
             onClick={handleDownload}
           >
             <FileSpreadsheet className="w-4 h-4" />

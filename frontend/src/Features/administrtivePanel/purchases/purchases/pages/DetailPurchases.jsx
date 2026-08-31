@@ -356,11 +356,17 @@ const DetailPurchases = ({ purchase, onClose, loading = false }) => {
                             <TypeBadge type={product.purchaseType || "Unidad"} />
                           </td>
                           <td className="px-3 py-2 text-center text-xs font-medium text-gray-600">
-                            {product.cantidad ?? 0}
-                            {product.purchaseType === "X Paca" && product.quantityPerPack > 0 && (
-                              <span className="block text-[9px] text-gray-400 font-normal">
-                                {product.cantidad} pacas × {product.quantityPerPack} und = {product.cantidad * product.quantityPerPack} und
-                              </span>
+                            {product.purchaseType === "X Paca" && Number(product.quantityPerPack) > 0 ? (
+                              <>
+                                <span className="font-semibold text-gray-700">
+                                  {product.cantidadComercial ?? product.cantidad ?? 0} pacas
+                                </span>
+                                <span className="block text-[9px] text-gray-400 font-normal">
+                                  × {product.quantityPerPack} und/paca = {product.stockAdded ?? product.cantidad ?? 0} unidades
+                                </span>
+                              </>
+                            ) : (
+                              `${product.cantidad ?? 0} unidades`
                             )}
                           </td>
                           <td className="px-3 py-2 text-right text-xs text-gray-600">
