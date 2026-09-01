@@ -256,10 +256,10 @@ function ProductForm({
     if (d.precioPacas && d.precioColegas && pac > col) e.precioPacas = 'Debe ser menor o igual al precio colegas.';
 
     if (hasSupplier) {
-      if (d.precioDetalle && det > supplier) e.precioDetalle = 'No puede superar el precio de compra al proveedor.';
-      if (d.precioMayorista && may > supplier) e.precioMayorista = 'No puede superar el precio de compra al proveedor.';
-      if (d.precioColegas && col > supplier) e.precioColegas = 'No puede superar el precio de compra al proveedor.';
-      if (d.precioPacas && pac > supplier) e.precioPacas = 'No puede superar el precio de compra al proveedor.';
+      if (d.precioDetalle && det <= supplier) e.precioDetalle = 'Debe ser mayor al precio de compra al proveedor.';
+      if (d.precioMayorista && may <= supplier) e.precioMayorista = 'Debe ser mayor al precio de compra al proveedor.';
+      if (d.precioColegas && col <= supplier) e.precioColegas = 'Debe ser mayor al precio de compra al proveedor.';
+      if (d.precioPacas && pac <= supplier) e.precioPacas = 'Debe ser mayor al precio de compra al proveedor.';
     }
     return e;
   };
@@ -864,16 +864,17 @@ function ProductForm({
                             <BadgeDollarSign className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 pointer-events-none ${errors.supplierPrice ? 'text-red-400' : 'text-gray-400'}`} strokeWidth={1.8} />
                             <input
                               type="text"
-                              inputMode="decimal"
+                              inputMode="numeric"
                               name="supplierPrice"
-                              value={formData.supplierPrice || ''}
+                              value={formData.supplierPrice ? `$ ${Number(formData.supplierPrice).toLocaleString('es-CO')}` : ''}
                               onChange={(e) => handleChange({
                                 target: {
                                   name: 'supplierPrice',
-                                  value: e.target.value.replace(',', '.').replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'),
+                                  value: numeric(e.target.value),
                                 },
                               })}
-                              placeholder="Ej: 2500.50"
+                              onKeyDown={block}
+                              placeholder="$ 2.500"
                               className={`h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm font-medium outline-none ${errors.supplierPrice ? 'text-red-900 placeholder-red-300' : 'text-gray-700 placeholder-gray-400'}`}
                             />
                           </div>
