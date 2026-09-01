@@ -4,6 +4,7 @@ import ProductForm from '../components/ProductForm';
 import ProductsService from '../services/productsServices';
 import Spinner from '../../../../shared/spinner';
 import { useAlert } from '../../../../shared/alerts/useAlert';
+import { getProductAlertError } from '../helpers/productAlertMessages';
 
 function EditProductPage() {
   const { id } = useParams();
@@ -22,7 +23,7 @@ function EditProductPage() {
         ]);
 
         if (!selectedProduct) {
-          showError('Producto no encontrado', 'El producto solicitado no existe.');
+          showError('Producto no encontrado', 'El producto solicitado ya no existe. Regresarás al listado para consultar los productos disponibles.');
           navigate('/admin/purchases/products', { replace: true });
           return;
         }
@@ -31,7 +32,8 @@ function EditProductPage() {
         setExistingProducts(products);
       } catch (error) {
         console.error('Error al cargar el producto:', error);
-        showError('Error de carga', 'No se pudo cargar la información del producto.');
+        const alert = getProductAlertError(error, 'loadForm');
+        showError(alert.title, alert.text);
         navigate('/admin/purchases/products', { replace: true });
       } finally {
         setLoading(false);
