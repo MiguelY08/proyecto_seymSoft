@@ -20,6 +20,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 import ProductsService from '../services/productsServices';
+import { getProductAlertError } from '../helpers/productAlertMessages';
 import CategorySelector from '../components/CategorySelector';
 import FormSelect from '../../../../shared/FormSelect';
 import {
@@ -478,7 +479,11 @@ function ProductForm({
     if (Object.keys(all).length > 0) {
       setErrors(all);
       setPriceErrors(validatePrices(formData));
-      showError('Formulario incompleto', 'Revisa los campos marcados en rojo antes de continuar.');
+      const firstValidationError = Object.values(all).find(Boolean);
+      showError(
+        isEditMode ? 'No se pueden guardar los cambios' : 'No se puede crear el producto',
+        `${firstValidationError || 'Hay información incompleta o inválida.'} Corrige los campos marcados en rojo antes de continuar.`,
+      );
       return;
     }
 
@@ -514,7 +519,7 @@ function ProductForm({
           subcategories: selectedSubcategoryIds,
           images: imagenesNuevas,
         });
-        showSuccess('Producto actualizado', `"${saved.name}" fue actualizado correctamente.`);
+        showSuccess('Producto actualizado', `Los datos de "${saved.name}" quedaron guardados correctamente.`);
       } else {
         const formDataToSend = new FormData();
         const appendIfValue = (key, value) => {
@@ -564,16 +569,21 @@ function ProductForm({
         imagenesNuevas.forEach((file) => formDataToSend.append('images', file));
 
         saved = await ProductsService.create(formDataToSend);
-        showSuccess('Producto creado', `"${saved.name}" fue agregado al catalogo correctamente.`);
+        if (saved.status === 'Activo') {
+          showSuccess('Producto creado y publicado', `"${saved.name}" quedó activo y ya puede mostrarse en la landing.`);
+        } else {
+          showSuccess(
+            'Producto creado como inactivo',
+            `"${saved.name}" quedó guardado, pero no se mostrará en la landing porque aún le faltan precios. Complétalos y luego activa el producto.`,
+          );
+        }
       }
 
       onSuccess?.(saved);
       onClose();
     } catch (error) {
-      showError(
-        'Error',
-        error.message || `No se pudo ${isEditMode ? 'actualizar' : 'guardar'} el producto. Intenta de nuevo.`,
-      );
+      const alert = getProductAlertError(error, isEditMode ? 'update' : 'create');
+      showError(alert.title, alert.text);
     } finally {
       setIsSubmitting(false);
     }
