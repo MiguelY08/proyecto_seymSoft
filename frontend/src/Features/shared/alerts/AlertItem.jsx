@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckCircle, XCircle, AlertTriangle, Info, HelpCircle, X } from 'lucide-react';
-import DOMPurify from 'dompurify';
 
 const DEFAULT_TIMER = 4000;
 const bgAlert = 'bg-white';
@@ -95,42 +94,11 @@ const motionClass = (position, visible) => {
 function AlertItem({ alert, onRemove, position = 'center' }) {
   const { id, type, title, text, isConfirm, confirmButtonText, cancelButtonText, timer, resolve, html, didOpen, showCloseButton } = alert;
   const v = variants[type] ?? variants.info;
-  const sanitizedHtml = useMemo(() => {
-    if (!html) return '';
-
-    return DOMPurify.sanitize(String(html), {
-      ALLOWED_TAGS: [
-        'a',
-        'b',
-        'br',
-        'em',
-        'i',
-        'li',
-        'ol',
-        'p',
-        'small',
-        'span',
-        'strong',
-        'u',
-        'ul',
-      ],
-      ALLOWED_ATTR: ['href', 'rel', 'target', 'title'],
-      ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i,
-    });
-  }, [html]);
 
   const effectiveTimer = isConfirm ? null : (timer ?? DEFAULT_TIMER);
 
   const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(100);
-
-  const handleClose = useCallback(() => {
-    setVisible(false);
-    setTimeout(() => {
-      resolve?.({ isConfirmed: false, isDismissed: true });
-      onRemove(id);
-    }, 300);
-  }, [id, onRemove, resolve]);
 
   // Efecto de entrada
   useEffect(() => {
@@ -160,7 +128,15 @@ function AlertItem({ alert, onRemove, position = 'center' }) {
     }, interval);
 
     return () => clearInterval(tick);
-  }, [effectiveTimer, handleClose]);
+  }, [effectiveTimer]);
+
+  const handleClose = (isFromTimer = false) => {
+    setVisible(false);
+    setTimeout(() => {
+      resolve?.({ isConfirmed: false, isDismissed: true });
+      onRemove(id);
+    }, 300);
+  };
 
   const handleConfirm = () => {
     setVisible(false);
@@ -197,8 +173,8 @@ function AlertItem({ alert, onRemove, position = 'center' }) {
         <div className="min-w-0 flex-1 break-words">
           <p id={`alert-title-${id}`} className={`text-sm font-semibold leading-snug [overflow-wrap:anywhere] sm:text-base ${v.title}`}>{title}</p>
           {text && <p id={`alert-message-${id}`} className={`mt-1 whitespace-pre-line text-xs leading-relaxed [overflow-wrap:anywhere] sm:text-sm ${v.text}`}>{text}</p>}
-          {sanitizedHtml && (
-            <p id={`alert-message-${id}`} className={`mt-1 text-xs leading-relaxed [overflow-wrap:anywhere] sm:text-sm ${v.text}`} dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />
+          {html && (
+            <p id={`alert-message-${id}`} className={`mt-1 text-xs leading-relaxed [overflow-wrap:anywhere] sm:text-sm ${v.text}`} dangerouslySetInnerHTML={{ __html: html }} />
           )}
         </div>
         {(!isConfirm || showCloseButton) && (

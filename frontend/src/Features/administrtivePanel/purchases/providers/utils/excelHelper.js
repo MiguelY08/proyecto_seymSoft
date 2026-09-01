@@ -1,3 +1,4 @@
+import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { formatPhoneNumber, getStatusText } from './providerHelpers';
 import { createExcelLogoId, prepareExcelLogoHeader } from '../../../../shared/excel/logoHeader';
@@ -6,11 +7,6 @@ const COMPANY_COLOR = '004D77';
 const LIGHT_BLUE = 'DCEBF3';
 const LIGHT_GRAY = 'F3F4F6';
 const WHITE = 'FFFFFF';
-
-const createExcelWorkbook = async () => {
-  const { default: ExcelJS } = await import('exceljs');
-  return new ExcelJS.Workbook();
-};
 
 const formatCategories = (categories) => {
   if (!Array.isArray(categories) || categories.length === 0) return 'Sin categorías';
@@ -34,7 +30,7 @@ const buildProviderRows = (providers) =>
 export const downloadProvidersExcel = async (providers = []) => {
   if (!Array.isArray(providers) || providers.length === 0) return false;
 
-  const workbook = await createExcelWorkbook();
+  const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Proveedores');
 
   const currentDate = new Date();
