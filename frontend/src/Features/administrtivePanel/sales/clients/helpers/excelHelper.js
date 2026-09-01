@@ -1,4 +1,3 @@
-import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { formatClientType, formatCurrency, formatDate } from './clientHelpers';
 import { createExcelLogoId, prepareExcelLogoHeader } from '../../../../shared/excel/logoHeader';
@@ -7,6 +6,11 @@ const COMPANY_COLOR = '004D77';
 const LIGHT_BLUE = 'DCEBF3';
 const LIGHT_GRAY = 'F3F4F6';
 const WHITE = 'FFFFFF';
+
+const createExcelWorkbook = async () => {
+  const { default: ExcelJS } = await import('exceljs');
+  return new ExcelJS.Workbook();
+};
 
 const getStatusText = (active) => (active ? 'Activo' : 'Inactivo');
 
@@ -26,7 +30,7 @@ const buildClientRows = (clients) =>
 export const downloadClientsExcel = async (clients = []) => {
   if (!Array.isArray(clients) || clients.length === 0) return false;
 
-  const workbook = new ExcelJS.Workbook();
+  const workbook = await createExcelWorkbook();
   const worksheet = workbook.addWorksheet('Clientes');
 
   const currentDate = new Date();

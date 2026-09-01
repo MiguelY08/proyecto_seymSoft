@@ -1,4 +1,3 @@
-import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import React from "react";
 import { createExcelLogoId, prepareExcelLogoHeader } from "../../../../shared/excel/logoHeader";
@@ -7,6 +6,11 @@ const COMPANY_COLOR = "004D77";
 const LIGHT_BLUE = "DCEBF3";
 const LIGHT_GRAY = "F3F4F6";
 const WHITE = "FFFFFF";
+
+const createExcelWorkbook = async () => {
+  const { default: ExcelJS } = await import("exceljs");
+  return new ExcelJS.Workbook();
+};
 
 /* =============================================================================
    paymentHelpers.js
@@ -110,7 +114,7 @@ export const getTotalAbonadoCliente = (cliente) => {
  *           Saldo Interés | Saldo Total | Estado
  */
 const exportAccountsSummaryToExcel = async (accounts = []) => {
-  const workbook = new ExcelJS.Workbook();
+  const workbook = await createExcelWorkbook();
   const worksheet = workbook.addWorksheet("Pagos y Abonos");
   const currentDate = new Date();
   const fileDate = currentDate.toISOString().split("T")[0];
@@ -286,7 +290,7 @@ export const exportAccountsToExcel = async (accounts = []) => {
     const hasInvoiceRows = accounts.some((account) => (account.facturas ?? []).length > 0);
     if (!hasInvoiceRows) return exportAccountsSummaryToExcel(accounts);
 
-    const workbook = new ExcelJS.Workbook();
+    const workbook = await createExcelWorkbook();
     const worksheet = workbook.addWorksheet("Créditos");
     const currentDate = new Date();
     const fileDate = currentDate.toISOString().split("T")[0];

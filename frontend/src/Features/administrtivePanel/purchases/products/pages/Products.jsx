@@ -9,7 +9,6 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react";
-import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { createExcelLogoId, prepareExcelLogoHeader } from "../../../../shared/excel/logoHeader";
 
@@ -32,6 +31,11 @@ const COMPANY_COLOR = "004D77";
 const LIGHT_BLUE = "DCEBF3";
 const LIGHT_GRAY = "F3F4F6";
 const WHITE = "FFFFFF";
+
+const createExcelWorkbook = async () => {
+  const { default: ExcelJS } = await import("exceljs");
+  return new ExcelJS.Workbook();
+};
 
 const getProductCategories = (product) =>
   Array.isArray(product.categories) ? product.categories : [];
@@ -330,7 +334,7 @@ function Products() {
         return;
       }
 
-      const workbook = new ExcelJS.Workbook();
+      const workbook = await createExcelWorkbook();
       const worksheet = workbook.addWorksheet("Productos");
       const currentDate = new Date();
       const fileDate = currentDate.toISOString().split("T")[0];

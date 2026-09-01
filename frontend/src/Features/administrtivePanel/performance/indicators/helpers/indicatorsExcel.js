@@ -1,11 +1,15 @@
-﻿import ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
+﻿import { saveAs } from "file-saver";
 import { createExcelLogoId, addExcelLogo } from "../../../../shared/excel/logoHeader";
 
 const BLUE = "004D77";
 const LIGHT_BLUE = "DCEBF3";
 const LIGHT_GRAY = "F3F4F6";
 const WHITE = "FFFFFF";
+
+const createExcelWorkbook = async () => {
+  const { default: ExcelJS } = await import("exceljs");
+  return new ExcelJS.Workbook();
+};
 
 const moneyFormat = "$ #,##0";
 const numberFormat = "#,##0";
@@ -171,7 +175,7 @@ const addLogo = (worksheet, logoId, columnCount) => {
 export const exportIndicatorsExcel = async (indicators, range = {}) => {
   if (!indicators) return false;
 
-  const workbook = new ExcelJS.Workbook();
+  const workbook = await createExcelWorkbook();
   workbook.creator = "PapelerÃ­a Magic";
   workbook.created = new Date();
   const logoId = await createExcelLogoId(workbook);

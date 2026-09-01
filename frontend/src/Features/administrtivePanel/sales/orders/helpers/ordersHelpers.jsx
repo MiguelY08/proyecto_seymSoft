@@ -1,12 +1,16 @@
 // src/features/orders/helpers/ordersHelpers.jsx
 import React from 'react';
-import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { DollarSign, Package } from 'lucide-react';
 import { ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES } from '../services/ordersService';
 import { createExcelLogoId, prepareExcelLogoHeader } from '../../../../shared/excel/logoHeader';
+
+const createExcelWorkbook = async () => {
+  const { default: ExcelJS } = await import('exceljs');
+  return new ExcelJS.Workbook();
+};
 
 // ─── Textos capitalizados para mostrar ───────────────────────────────────────
 export const ESTADO_LOGISTICO_LABELS = {
@@ -613,7 +617,7 @@ const buildOrdersStatsSheet = (workbook, orders, subtitle, logoId) => {
 export const exportOrdersToExcel = async (orders) => {
   if (!orders || orders.length === 0) return false;
 
-  const workbook = new ExcelJS.Workbook();
+  const workbook = await createExcelWorkbook();
   const currentDate = new Date();
   const fileDate = currentDate.toISOString().split('T')[0];
   const subtitle = `Fecha de exportacion: ${currentDate.toLocaleString('es-CO')}`;

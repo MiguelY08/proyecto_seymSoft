@@ -1,5 +1,4 @@
 // src/features/administrtivePanel/sales/helpers/salesHelpers.js
-import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { UserService } from '../../../users/services/userService';
 import { SalesServices } from '../services/salesServices';
@@ -8,6 +7,11 @@ import { createExcelLogoId, prepareExcelLogoHeader } from '../../../../shared/ex
 // ─── Claves de almacenamiento (deprecadas, pero mantenidas por compatibilidad) ─
 export const SALES_STORAGE_KEY = 'pm_sales';
 export const USERS_STORAGE_KEY = 'users';
+
+const createExcelWorkbook = async () => {
+  const { default: ExcelJS } = await import('exceljs');
+  return new ExcelJS.Workbook();
+};
 
 // ─── Constantes de formulario ─────────────────────────────────────────────────
 export const METODOS_PAGO = ['Efectivo', 'Crédito', 'Transferencia'];
@@ -438,7 +442,7 @@ export const downloadSalesExcel = async (salesToExport, options = {}) => {
   const sales = salesToExport ?? await getSalesForExcel();
   if (sales.length === 0) return false;
 
-  const workbook = new ExcelJS.Workbook();
+  const workbook = await createExcelWorkbook();
   const currentDate = new Date();
   const fileDate = currentDate.toISOString().split('T')[0];
   const typeLabel = options.typeLabel ?? 'Todas';

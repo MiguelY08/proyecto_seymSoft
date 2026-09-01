@@ -1,4 +1,3 @@
-import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { createExcelLogoId, prepareExcelLogoHeader } from "./logoHeader";
 
@@ -7,6 +6,11 @@ const LIGHT_BLUE = "DCEBF3";
 const LIGHT_GRAY = "F3F4F6";
 const WHITE = "FFFFFF";
 const CURRENCY_FORMAT = '"$"#,##0';
+
+const createExcelWorkbook = async () => {
+  const { default: ExcelJS } = await import("exceljs");
+  return new ExcelJS.Workbook();
+};
 
 const styleHeaderRow = (row) => {
   row.height = 22;
@@ -82,7 +86,7 @@ export const exportStyledWorkbook = async ({
   subtitle,
   title,
 }) => {
-  const workbook = new ExcelJS.Workbook();
+  const workbook = await createExcelWorkbook();
   const currentDate = new Date();
 
   workbook.creator = "SeymSoft";
