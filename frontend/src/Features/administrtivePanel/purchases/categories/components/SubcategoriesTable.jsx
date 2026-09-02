@@ -9,7 +9,10 @@ import {
   updateSubcategory,
   deleteSubcategory,
 } from "../data/categoriesService";
-import { synchronizeProductsBySubcategory } from "../data/categoryproductsService";
+import {
+  subcategoryHasProducts,
+  synchronizeProductsBySubcategory,
+} from "../data/categoryproductsService";
 
 const normalizeName = (str = "") =>
   str
@@ -140,6 +143,24 @@ const SubcategoriesTable = ({ categoryId, refreshCategories }) => {
   };
 
   const executeDelete = async (id) => {
+    try {
+      const hasProducts = await subcategoryHasProducts(id);
+
+      if (hasProducts) {
+        showWarning(
+          "No se puede eliminar",
+          "Esta subcategoría tiene productos asociados. Reasigna o elimina esos productos antes de eliminarla."
+        );
+        return;
+      }
+    } catch {
+      showError(
+        "No se pudo verificar",
+        "No fue posible comprobar si la subcategoría tiene productos asociados. Inténtalo nuevamente."
+      );
+      return;
+    }
+
     const result = await showConfirm(
       "warning",
       "Eliminar subcategoría",
