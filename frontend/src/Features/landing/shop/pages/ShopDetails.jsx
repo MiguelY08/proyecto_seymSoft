@@ -57,21 +57,29 @@ function ShopDetail() {
 
     const loadDetail = async () => {
       const productId = Number(id);
+      const isNumericProductId = Number.isInteger(productId) && productId > 0;
+      const productSlug = isNumericProductId ? null : String(id || "").trim();
 
-      if (!Number.isInteger(productId) || productId <= 0) {
-        setError("El producto solicitado no es válido.");
-        setLoading(false);
-        return;
-      }
+      if (!isNumericProductId && !productSlug) {
+          setError("El producto solicitado no es válido.");
+          setLoading(false);
+          return;
+        }
 
       try {
         setLoading(true);
         setError("");
 
-        const [currentProduct, allProducts] = await Promise.all([
-          ProductsService.findById(productId),
-          ProductsService.list({ active: true }),
-        ]);
+        const activeProductsRequest = ProductsService.list({ active: true });
+        const [productById, allProducts] = isNumericProductId
+          ? await Promise.all([
+              ProductsService.findById(productId),
+              activeProductsRequest,
+            ])
+          : [null, await activeProductsRequest];
+        const currentProduct = isNumericProductId
+          ? productById
+          : allProducts.find(item => item.slug === productSlug) || null;
 
         if (!active) return;
 

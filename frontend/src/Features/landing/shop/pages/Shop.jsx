@@ -65,7 +65,7 @@ const SHOP_STYLES = `
     min-width: 0;
   }
 
-  .products-grid {
+  .shop-products-grid {
     display: grid;
     grid-template-columns: 1fr;
     gap: 12px;
@@ -74,28 +74,28 @@ const SHOP_STYLES = `
   }
 
   @media (min-width: 340px) {
-    .products-grid {
+    .shop-products-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
     }
   }
 
   @media (min-width: 640px) {
-    .products-grid {
+    .shop-products-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
     }
   }
 
   @media (min-width: 1024px) {
-    .products-grid {
+    .shop-products-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 14px;
     }
   }
 
   @media (min-width: 1180px) {
-    .products-grid {
+    .shop-products-grid {
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
   }
@@ -478,7 +478,7 @@ function Shop() {
 
             {loadingProducts ? (
               // Loading skeletons
-              <div className="products-grid">
+              <div className="shop-products-grid">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div key={`skeleton-${i}`} className="loading-skeleton" style={{ minHeight: '300px' }} />
                 ))}
@@ -496,7 +496,7 @@ function Shop() {
               </div>
             ) : (
               <>
-                <div className="products-grid">
+                <div className="shop-products-grid">
                   {currentProducts.map(product => (
                     <ProductCard
                       key={product.id}
