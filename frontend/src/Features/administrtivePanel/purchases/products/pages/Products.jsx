@@ -21,6 +21,7 @@ import DetailProduct from "../modals/DetailProduct";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import Spinner from "../../../../shared/spinner";
 import ProductsService from "../services/productsServices";
+import { getProductAlertError } from "../helpers/productAlertMessages";
 import { HighlightText } from "../helpers/productsHelpers";
 import {
   productMatchesBarcodeSearch,
@@ -124,12 +125,14 @@ function Products() {
       } catch (error) {
         console.error("Error al cargar productos:", error);
         setData([]);
+        const alert = getProductAlertError(error, "load");
+        showError(alert.title, alert.text);
       } finally {
         setLoading(false);
       }
     };
     loadProducts();
-  }, []);
+    }, [showError]);
   useEffect(() => {
     window.__data = data;
   }, [data]);
@@ -264,18 +267,18 @@ function Products() {
         // Actualizar estado local SIN hacer refreshData
         setData(data.map((p) => (p.id === id ? updated : p)));
 
-        const newStatus =
-          updated.status === "Activo" ? "activado" : "desactivado";
-        showSuccess(
-          `Producto ${newStatus}`,
-          `"${updated.name}" fue ${newStatus} exitosamente.`,
-        );
+        if (updated.status === "Activo") {
+          showSuccess("Producto publicado en la landing", `"${updated.name}" quedó activo y ya está disponible para los clientes.`);
+        } else {
+          showSuccess(
+            "Producto retirado de la landing",
+            `"${updated.name}" quedó inactivo: conserva su información e inventario, pero ya no se muestra a los clientes.`,
+          );
+        }
       }
     } catch (error) {
-      showError(
-        "Error",
-        error.message || "No se pudo cambiar el estado del producto",
-      );
+      const alert = getProductAlertError(error, "toggle");
+      showError(alert.title, alert.text);
     } finally {
       setTogglingIds((prev) => prev.filter((item) => item !== id));
     }
@@ -287,8 +290,8 @@ function Products() {
     // Validar que esté desactivado
     if (producto.status === "Activo") {
       showError(
-        "No se puede eliminar",
-        "No puedes eliminar un producto que está activo. Desactívalo primero.",
+        "Producto activo: no se puede eliminar",
+        `"${producto.name}" está publicado en la landing. Desactívalo primero para retirarlo de la vista de los clientes y luego intenta eliminarlo.`,
       );
       return;
     }
@@ -308,13 +311,11 @@ function Products() {
       setData(data.filter((p) => p.id !== producto.id));
       showSuccess(
         "Producto eliminado",
-        `"${producto.name}" fue eliminado exitosamente.`,
+        `"${producto.name}" fue eliminado definitivamente del catálogo de productos.`,
       );
     } catch (error) {
-      showError(
-        "Error",
-        error.message || "No se pudo eliminar el producto. Intenta de nuevo.",
-      );
+      const alert = getProductAlertError(error, "delete");
+      showError(alert.title, alert.text);
     } finally {
       setDeletingIds((prev) => prev.filter((id) => id !== producto.id));
     }
@@ -326,7 +327,10 @@ function Products() {
     try {
       setExporting(true);
       if (filteredData.length === 0) {
-        showError("Sin registros", "No hay productos para exportar.");
+        showError(
+          "No hay productos para exportar",
+          "La búsqueda o los filtros actuales no tienen resultados. Limpia los filtros o registra productos antes de generar el Excel.",
+        );
         return;
       }
 
