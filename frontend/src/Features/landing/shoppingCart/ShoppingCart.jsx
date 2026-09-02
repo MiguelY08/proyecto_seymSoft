@@ -37,7 +37,9 @@ import {
 } from '../../administrtivePanel/sales/orders/services/ordersService';
 import { getProductBarcode } from '../orders/helpers/customerOrderHelpers';
 
-const buildDeliveryAddress = (deliveryInfo = {}) => {
+const DELIVERY_ADDRESS_MAX_LENGTH = 255;
+
+const getDeliveryAddressBase = (deliveryInfo = {}) => {
   const addressParts = [
     deliveryInfo?.direccion,
     deliveryInfo?.ciudadEntregaNombre || deliveryInfo?.ciudad,
@@ -46,8 +48,23 @@ const buildDeliveryAddress = (deliveryInfo = {}) => {
     .map((part) => String(part || '').trim())
     .filter(Boolean);
 
-  const notes = String(deliveryInfo?.notas || '').trim();
-  const address = addressParts.join(', ');
+  return addressParts.join(', ');
+};
+
+const getDeliveryNotesMaxLength = (deliveryInfo = {}) => {
+  const address = getDeliveryAddressBase(deliveryInfo);
+
+  if (!address) return DELIVERY_ADDRESS_MAX_LENGTH;
+
+  // Se reservan tres caracteres para " (" y ")" al anexar las notas.
+  return Math.max(0, DELIVERY_ADDRESS_MAX_LENGTH - address.length - 3);
+};
+
+const buildDeliveryAddress = (deliveryInfo = {}) => {
+  const address = getDeliveryAddressBase(deliveryInfo);
+  const notes = String(deliveryInfo?.notas || '')
+    .trim()
+    .slice(0, getDeliveryNotesMaxLength(deliveryInfo));
 
   if (!address) return notes;
   return notes ? `${address} (${notes})` : address;
@@ -1318,6 +1335,19 @@ function ShoppingCart() {
     if (result.isConfirmed) clearCart();
   };
 
+  const handleQuantityChange = (productId, rawQuantity) => {
+    if (!/^\d+$/.test(rawQuantity)) return;
+    updateQuantity(productId, Number(rawQuantity));
+  };
+
+  const handleNotesChange = (event) => {
+    handleInputChange(event);
+
+    const textarea = event.currentTarget;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  };
+
   const handleProcederPago = async () => {
     if (unavailableCartItems.length > 0) {
       showError(
@@ -1401,6 +1431,8 @@ function ShoppingCart() {
       }),
     [cartItems, clientType]
   );
+
+  const deliveryNotesMaxLength = getDeliveryNotesMaxLength(formData);
 
   const checkoutDeliveryInfo = useMemo(
     () => ({
@@ -1643,14 +1675,16 @@ function ShoppingCart() {
                         <Minus size={12} />
                       </button>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         min="1"
                         max={getCartItemStock(item) || undefined}
                         value={item.quantity}
                         disabled={getCartItemStock(item) <= 0}
                         aria-label={`Cantidad de ${item.name}`}
                         onFocus={(event) => event.currentTarget.select()}
-                        onChange={(event) => updateQuantity(item.id, event.target.value)}
+                        onChange={(event) => handleQuantityChange(item.id, event.target.value)}
                         className="qty-number w-12 bg-transparent text-center outline-none"
                       />
                       <button
@@ -1822,13 +1856,23 @@ function ShoppingCart() {
                     <MessageSquare size={12} /> Notas adicionales (opcional)
                   </label>
                   <textarea
+                    ref={(textarea) => {
+                      if (!textarea) return;
+                      textarea.style.height = 'auto';
+                      textarea.style.height = `${textarea.scrollHeight}px`;
+                    }}
                     name="notas"
                     value={formData.notas}
-                    onChange={handleInputChange}
-                    rows="2"
+                    onChange={handleNotesChange}
+                    rows="1"
+                    maxLength={deliveryNotesMaxLength}
                     className="form-input"
+                    style={{ overflow: 'hidden', resize: 'none' }}
                     placeholder="Barrio, apartamento, torre, referencias o instrucciones para la entrega..."
                   />
+                  <p className="mt-1 text-right text-[11px] text-slate-500">
+                    {formData.notas.length}/{deliveryNotesMaxLength} caracteres
+                  </p>
                 </div>
 
                 <div className="summary-card" style={{ marginTop: 18 }}>

@@ -14,6 +14,7 @@ import {
 } from '../helpers/clientHelpers';
 import FormSelect from '../../../../shared/FormSelect';
 import { useAlert } from '../../../../shared/alerts/useAlert';
+import useBodyScrollLock from '../../../../shared/hooks/useBodyScrollLock';
 import { clientsService } from '../services/clientsService';
 import { checkEmailAvailability } from '../../../../access/services/authService';
 
@@ -260,6 +261,7 @@ function MiniFormGraph({ clientId, onExpand }) {
 }
 
 function FormClient({ isOpen, onClose, client, onSave, initialData = null, linkedUser = null }) {
+  useBodyScrollLock(isOpen);
   const [showGraph, setShowGraph] = useState(false);
   const [saving, setSaving] = useState(false);
   const { showConfirm } = useAlert();

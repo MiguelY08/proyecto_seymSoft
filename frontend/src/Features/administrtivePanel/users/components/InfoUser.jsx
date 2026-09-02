@@ -2,6 +2,7 @@ import { X, SquarePen, User, Mail, Phone, ShieldCheck, CalendarDays } from 'luci
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../../access/context/AuthContext';
 import { isSelfUser } from '../helpers/selfUser';
+import useBodyScrollLock from '../../../shared/hooks/useBodyScrollLock';
 
 /**
  * Modal de solo lectura para mostrar detalles completos de un usuario.
@@ -15,6 +16,7 @@ function InfoUser({
   onEdit,
 }) {
   const { user: authUser } = useAuth();
+  useBodyScrollLock(isOpen && Boolean(user));
   const [visible, setVisible] = useState(false);
   const SYSTEM_ID_USER = 999999999;
   const isSystemUser = user?.id === SYSTEM_ID_USER;

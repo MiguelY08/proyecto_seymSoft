@@ -409,6 +409,10 @@ const normalizeOrder = (order = {}) => {
     tieneVenta: Boolean(order.hasSale ?? order.sale ?? order.venta),
     venta: order.sale ?? null,
     fechaLimitePago: order.paymentDeadline ?? null,
+    favorBalanceRestoredAmount: toNumber(
+      order.favorBalanceRestoredAmount ?? order.favor_balance_restored_amount
+    ),
+    paymentDataHidden: Boolean(order.paymentDataHidden ?? order.payment_data_hidden),
     estadoLogistico: normalizeEstadoLogistico(order.estadoLogistico ?? order.logisticStatus ?? order.status),
     pagoEstado: normalizePagoEstado(order.pagoEstado ?? order.paymentStatus, totalPagado, total),
     saleType: order.saleType ?? order.sale_type ?? ORIGENES.MANUAL,
