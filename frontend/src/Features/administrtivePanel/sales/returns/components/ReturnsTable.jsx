@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Info, RotateCcw, SquarePen, XCircle } from 'lucide-react';
+import { Info, Loader2, RotateCcw, SquarePen, XCircle } from 'lucide-react';
 import { usePermissions } from '../../../configuration/roles/hooks/usePermissions';
 import {
   formatCurrency,
@@ -227,9 +227,21 @@ const StatusProcessTooltip = ({ row, status }) => {
 
 function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }) {
   const { hasPermission } = usePermissions();
+  const [loadingCancelId, setLoadingCancelId] = useState(null);
   const canView = hasPermission('devoluciones_en_ventas.ver');
   const canEdit = hasPermission('devoluciones_en_ventas.editar');
   const canAnnul = hasPermission('devoluciones_en_ventas.anular');
+
+  const handleCancelClick = async (row) => {
+    if (loadingCancelId !== null) return;
+
+    setLoadingCancelId(row.id);
+    try {
+      await onCancel?.(row);
+    } finally {
+      setLoadingCancelId(null);
+    }
+  };
 
   if (!data?.length) {
     const isSearching = searchTerm?.trim?.().length > 0;
@@ -279,6 +291,7 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
               const total = getField(row, ['totalValor', 'totalAmount'], 0);
               const status = getField(row, ['estado', 'status'], 'En Proceso');
               const cancelled = status === 'Anulado';
+              const isCancelling = loadingCancelId === row.id;
 
               return (
                 <tr key={row.id || returnNumber || index} className={`${rowBg} transition-colors duration-150`}>
@@ -319,15 +332,15 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
                     </div>
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">
-                    <div className="mx-auto flex min-w-[92px] items-center justify-center gap-1.5">
+                    <div className="mx-auto flex items-center justify-center gap-1 sm:gap-1.5">
                       {canView && (
                         <button
                           type="button"
                           onClick={() => onInfo(row)}
-                          className="text-gray-400 transition-colors duration-200 hover:text-[#004D77] cursor-pointer"
+                          className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]"
                           title="Ver detalle"
                         >
-                          <Info className="h-5 w-5" strokeWidth={1.5} />
+                          <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
                         </button>
                       )}
                       {canEdit && (
@@ -335,21 +348,33 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
                           type="button"
                           onClick={() => onEdit(row)}
                           disabled={cancelled}
-                          className="text-gray-400 transition-colors duration-200 hover:text-[#004D77] disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer"
+                          className={`text-gray-400 transition ${
+                            cancelled
+                              ? 'cursor-not-allowed opacity-30'
+                              : 'cursor-pointer hover:scale-110 hover:text-[#004D77]'
+                          }`}
                           title={cancelled ? 'No se puede editar una devolución anulada' : 'Editar'}
                         >
-                          <SquarePen className="h-5 w-5" strokeWidth={1.5} />
+                          <SquarePen className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
                         </button>
                       )}
                       {canAnnul && (
                         <button
                           type="button"
-                          onClick={() => onCancel(row)}
-                          disabled={cancelled}
-                          className="text-gray-400 transition-colors duration-200 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer"
-                          title={cancelled ? 'Ya está anulada' : 'Anular devolución'}
+                          onClick={() => handleCancelClick(row)}
+                          disabled={cancelled || isCancelling}
+                          className={`text-gray-400 transition ${
+                            cancelled || isCancelling
+                              ? `opacity-30 ${isCancelling ? 'cursor-wait' : 'cursor-not-allowed'}`
+                              : 'cursor-pointer hover:scale-110 hover:text-red-500'
+                          }`}
+                          title={cancelled ? 'Ya está anulada' : (isCancelling ? 'Procesando...' : 'Anular devolución')}
                         >
-                          <XCircle className="h-5 w-5" strokeWidth={1.5} />
+                          {isCancelling ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
+                          ) : (
+                            <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+                          )}
                         </button>
                       )}
                     </div>

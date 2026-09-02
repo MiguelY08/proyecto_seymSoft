@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from "react";
-import { Info, SquarePen, XCircle, PackageX } from "lucide-react";
+import { Info, Loader2, SquarePen, XCircle, PackageX } from "lucide-react";
 import { usePermissions } from "../../../configuration/roles/hooks/usePermissions";
 import {
   getBadgeEstadoDevolucionClasses,
@@ -300,6 +300,7 @@ function ReturnsTable({
   onViewDetail,
   onEdit,
   onAnnul,
+  annullingId = null,
 }) {
   const { hasPermission } = usePermissions();
   const [productsByReturnId, setProductsByReturnId] = useState({});
@@ -372,6 +373,7 @@ function ReturnsTable({
             ) || devolucion.totalDetails || progress.total || 0;
             const progressLabel = progress.label ?? `${devolucion.completedDetails ?? progress.completed ?? 0}/${devolucion.totalDetails ?? progress.total ?? 0}`;
             const actionsDisabled = isClosed(devolucion);
+            const isAnnulling = annullingId === devolucion.id;
             const disabledActionTitle = getDisabledActionTitle(devolucion);
 
             return (
@@ -429,6 +431,7 @@ function ReturnsTable({
                   <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                     {canViewInfo && (
                       <button
+                        type="button"
                         onClick={() => onViewDetail(devolucion)}
                         title="Ver detalle"
                         className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
@@ -443,6 +446,7 @@ function ReturnsTable({
                         </span>
                       ) : (
                         <button
+                          type="button"
                           onClick={() => onEdit?.(devolucion)}
                           title="Editar devolución"
                           className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
@@ -458,11 +462,21 @@ function ReturnsTable({
                         </span>
                       ) : (
                         <button
+                          type="button"
                           onClick={() => onAnnul(devolucion)}
-                          title="Anular devolución"
-                          className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
+                          disabled={isAnnulling}
+                          title={isAnnulling ? "Procesando..." : "Anular devolución"}
+                          className={`text-gray-400 transition ${
+                            isAnnulling
+                              ? "cursor-wait opacity-50"
+                              : "cursor-pointer hover:scale-110 hover:text-red-500"
+                          }`}
                         >
-                          <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                          {isAnnulling ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
+                          ) : (
+                            <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+                          )}
                         </button>
                       )
                     )}

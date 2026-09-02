@@ -1,5 +1,5 @@
 import React from "react";
-import { Info, SquarePen, Trash2, PackageCheck } from "lucide-react";
+import { Info, Loader2, SquarePen, Trash2, PackageCheck, Plus } from "lucide-react";
 import ActiveToggle from "./ActiveToggle";
 import { formatPhoneNumber } from "../utils/providerHelpers";
 import Permission from "../../../configuration/roles/components/Permission";
@@ -57,10 +57,13 @@ function ProvidersTable({
   startIndex = 0,
   searchTerm,
   totalData = 0,
+  hasActiveFilters = false,
   onInfo,
   onEdit,
   onToggleActive,
   onDelete,
+  onCreateProvider,
+  deletingId = null,
 }) {
   const { hasPermission } = usePermissions();
   const canView = hasPermission("proveedores.ver");
@@ -69,18 +72,39 @@ function ProvidersTable({
   const canDelete = hasPermission("proveedores.eliminar");
 
   if (!providers.length) {
-    const isSearching = totalData > 0 || searchTerm.trim().length > 0;
+    const isSearching = hasActiveFilters || totalData > 0 || searchTerm.trim().length > 0;
     return (
-      <div className="flex h-full min-h-[420px] w-full flex-1 flex-col items-center justify-center px-4 py-16 gap-4">
-        <div className="w-20 h-20 rounded-full bg-[#004D77]/10 flex items-center justify-center">
-          <PackageCheck className="w-10 h-10 text-[#004D77]/40" strokeWidth={1.5} />
+      <div className="flex flex-col items-center justify-center gap-3 px-4 py-12">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#004D77]/10">
+          <PackageCheck className="h-8 w-8 text-[#004D77]/40" strokeWidth={1.5} />
         </div>
-        <p className="text-base font-semibold text-gray-500">
-          {isSearching ? 'No se encontraron resultados' : 'No hay proveedores registrados'}
-        </p>
-        <p className="text-sm text-gray-400 text-center max-w-xs">
-          {isSearching ? 'Ningun proveedor coincide con la busqueda actual.' : 'Aun no se han registrado proveedores.'}
-        </p>
+
+        {isSearching ? (
+          <>
+            <p className="text-sm font-semibold text-gray-500">No se encontraron resultados</p>
+            <p className="max-w-xs text-center text-xs text-gray-400">
+              Ningún proveedor coincide con la búsqueda.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm font-semibold text-gray-500">No hay proveedores registrados</p>
+            <p className="max-w-xs text-center text-xs text-gray-400">
+              Aún no se han registrado proveedores.
+            </p>
+
+            <Permission permission="proveedores.crear">
+              <button
+                type="button"
+                onClick={onCreateProvider}
+                className="flex cursor-pointer items-center gap-1.5 rounded-lg border bg-[#004D77] px-2 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#003a5c] sm:px-3"
+              >
+                <span>Nuevo proveedor</span>
+                <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+              </button>
+            </Permission>
+          </>
+        )}
       </div>
     );
   }
@@ -150,7 +174,7 @@ function ProvidersTable({
                   />
                 </td>
                 <td className="px-2.5 py-1.5">
-                  <div className="flex items-center justify-center gap-1.5">
+                  <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                     {canToggle && (
                       <ActiveToggle
                         activo={provider.activo}
@@ -161,11 +185,12 @@ function ProvidersTable({
                     {canView && (
                       <Permission permission="proveedores.ver_informacion">
                         <button
+                          type="button"
                           onClick={() => onInfo(provider)}
                           className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                           title="Información del proveedor"
                         >
-                          <Info className="h-4 w-4" strokeWidth={1.5} />
+                          <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
                         </button>
                       </Permission>
                     )}
@@ -173,11 +198,12 @@ function ProvidersTable({
                     {canEdit && (
                       <Permission permission="proveedores.editar">
                         <button
+                          type="button"
                           onClick={() => onEdit(provider)}
                           className="text-gray-400 hover:scale-110 hover:text-[#004D77] transition cursor-pointer"
                           title="Editar proveedor"
                         >
-                          <SquarePen className="h-4 w-4" strokeWidth={1.5} />
+                          <SquarePen className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
                         </button>
                       </Permission>
                     )}
@@ -185,11 +211,21 @@ function ProvidersTable({
                     {canDelete && (
                       <Permission permission="proveedores.eliminar">
                         <button
+                          type="button"
                           onClick={() => onDelete(provider)}
-                          className="text-gray-400 hover:scale-110 hover:text-red-500 transition cursor-pointer"
-                          title="Eliminar proveedor"
+                          disabled={deletingId === provider.id}
+                          className={`text-gray-400 transition ${
+                            deletingId === provider.id
+                              ? 'cursor-wait opacity-50'
+                              : 'cursor-pointer hover:scale-110 hover:text-red-500'
+                          }`}
+                          title={deletingId === provider.id ? 'Procesando...' : 'Eliminar proveedor'}
                         >
-                          <Trash2 className="h-4 w-4" strokeWidth={1.5} />
+                          {deletingId === provider.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+                          )}
                         </button>
                       </Permission>
                     )}

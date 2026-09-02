@@ -1,4 +1,4 @@
-import { Info, DollarSign, Phone } from "lucide-react";
+import { Info, DollarSign, Phone, WalletCards } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import { highlight } from "../utils/paymentHelpers";
 import Permission from "../../../configuration/roles/components/Permission";
@@ -9,6 +9,7 @@ export default function PaymentsTable({
   onAbonar,
   onContact,
   search = "",
+  isSearching = false,
 }) {
   // Formato COP
   const formatCOP = (value) =>
@@ -35,15 +36,35 @@ export default function PaymentsTable({
     );
   };
 
+  if (data.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 px-4 py-12">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#004D77]/10">
+          <WalletCards className="h-8 w-8 text-[#004D77]/40" strokeWidth={1.5} />
+        </div>
+
+        {isSearching ? (
+          <>
+            <p className="text-sm font-semibold text-gray-500">No se encontraron resultados</p>
+            <p className="max-w-xs text-center text-xs text-gray-400">
+              Ninguna cuenta coincide con la búsqueda.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm font-semibold text-gray-500">No hay cuentas con crédito registradas</p>
+            <p className="max-w-xs text-center text-xs text-gray-400">
+              Aún no hay cuentas disponibles para gestionar pagos y abonos.
+            </p>
+          </>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="min-w-0 font-lexend">
       <div className="grid gap-3 md:hidden">
-        {data.length === 0 && (
-          <div className="rounded-xl border border-gray-200 bg-white py-6 text-center text-xs text-gray-400 shadow-sm">
-            No hay registros para mostrar
-          </div>
-        )}
-
         {data.map((item) => {
           const documentNumber =
             item.documento ?? item.document ?? item.doc_number ?? "-";
@@ -120,31 +141,22 @@ export default function PaymentsTable({
 
               <div className="mt-4 flex items-center justify-end gap-4 border-t border-gray-100 pt-3">
                 <Permission permission="pagos_y_abonos.ver_informacion">
-                  <Info
-                    size={18}
-                    className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-[#004D77]"
-                    title="Ver detalle"
-                    onClick={() => onView(item.id)}
-                  />
+                  <button type="button" onClick={() => onView(item.id)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]" title="Ver detalle">
+                    <Info className="h-4 w-4" strokeWidth={1.5} />
+                  </button>
                 </Permission>
                 <Permission permission="pagos_y_abonos.abonar">
                   {(status === "pendiente" || status === "vencido") && (
-                    <DollarSign
-                      size={18}
-                      className="cursor-pointer text-gray-400 hover:scale-110 transition hover:text-green-600"
-                      title="Registrar abono"
-                      onClick={() => onAbonar(item.id)}
-                    />
+                    <button type="button" onClick={() => onAbonar(item.id)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-green-600" title="Registrar abono">
+                      <DollarSign className="h-4 w-4" strokeWidth={1.5} />
+                    </button>
                   )}
                 </Permission>
                 <Permission permission="pagos_y_abonos.contactar">
                   {status === "vencido" && (
-                    <Phone
-                      size={18}
-                      className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-red-500"
-                      title="Contactar cliente"
-                      onClick={() => onContact(item)}
-                    />
+                    <button type="button" onClick={() => onContact(item)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-red-500" title="Contactar cliente">
+                      <Phone className="h-4 w-4" strokeWidth={1.5} />
+                    </button>
                   )}
                 </Permission>
               </div>
@@ -181,16 +193,6 @@ export default function PaymentsTable({
             </tr>
           </thead>
           <tbody>
-            {data.length === 0 && (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="text-center py-8 text-gray-400 text-sm"
-                >
-                  No hay registros para mostrar
-                </td>
-              </tr>
-            )}
             {data.map((item, index) => {
               const documentNumber =
                 item.documento ?? item.document ?? item.doc_number ?? "-";
@@ -276,33 +278,24 @@ export default function PaymentsTable({
 
                   {/* Funciones */}
                   <td className="px-3 py-1">
-                    <div className="flex justify-center gap-2">
+                    <div className="flex justify-center gap-1 sm:gap-1.5">
                       <Permission permission="pagos_y_abonos.ver_informacion">
-                        <Info
-                          size={14}
-                          className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-[#004D77]"
-                          title="Ver detalle"
-                          onClick={() => onView(item.id)}
-                        />
+                        <button type="button" onClick={() => onView(item.id)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]" title="Ver detalle">
+                          <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+                        </button>
                       </Permission>
                       <Permission permission="pagos_y_abonos.abonar">
                         {(status === "pendiente" || status === "vencido") && (
-                          <DollarSign
-                            size={14}
-                            className="cursor-pointer text-gray-400 hover:scale-110 transition hover:text-green-600"
-                            title="Registrar abono"
-                            onClick={() => onAbonar(item.id)}
-                          />
+                          <button type="button" onClick={() => onAbonar(item.id)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-green-600" title="Registrar abono">
+                            <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+                          </button>
                         )}
                       </Permission>
                       <Permission permission="pagos_y_abonos.contactar">
                         {status === "vencido" && (
-                          <Phone
-                            size={14}
-                            className="text-gray-400 cursor-pointer hover:scale-110 transition hover:text-red-500"
-                            title="Contactar cliente"
-                            onClick={() => onContact(item)}
-                          />
+                          <button type="button" onClick={() => onContact(item)} className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-red-500" title="Contactar cliente">
+                            <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+                          </button>
                         )}
                       </Permission>
                     </div>

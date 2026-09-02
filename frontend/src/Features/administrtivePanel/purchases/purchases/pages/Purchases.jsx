@@ -301,26 +301,23 @@ export const Purchases = () => {
   return (
     <>
       <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto touch-pan-y p-3 sm:p-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <PurchasesFilters
-            search={search}
-            setSearch={setSearch}
-            fechaInicial={fechaInicial}
-            setFechaInicial={setFechaInicial}
-            fechaFinal={fechaFinal}
-            setFechaFinal={setFechaFinal}
-            setCurrentPage={setCurrentPage}
-            onClearFilters={handleClearFilters}
-          />
-          
-          <div className="flex-1" />
-          
-          <div className="flex w-full items-center gap-2 sm:w-auto">
-            {/* ========== BOTÓN DE ORDENAMIENTO ========== */}
-            <div className="relative flex-1 sm:flex-none" ref={sortDropdownRef}>
+        <div className="flex shrink-0 flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex min-w-0 flex-col gap-3 lg:flex-1 lg:flex-row lg:items-end lg:gap-4">
+            <PurchasesFilters
+              search={search}
+              setSearch={setSearch}
+              fechaInicial={fechaInicial}
+              setFechaInicial={setFechaInicial}
+              fechaFinal={fechaFinal}
+              setFechaFinal={setFechaFinal}
+              setCurrentPage={setCurrentPage}
+              onClearFilters={handleClearFilters}
+            />
+
+            <div className="relative w-full lg:w-auto" ref={sortDropdownRef}>
               <button
                 onClick={() => setShowSortDropdown(!showSortDropdown)}
-                className={`flex w-full items-center justify-center gap-2 px-3 py-2 text-sm font-semibold border rounded-lg transition-all duration-200 whitespace-nowrap sm:w-auto ${
+                className={`flex w-full items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold border rounded-lg transition-all duration-200 whitespace-nowrap lg:w-auto ${
                   showSortDropdown
                     ? "border-[#004D77] bg-[#004D77] text-white"
                     : "border-gray-300 bg-white text-gray-700 hover:border-[#004D77] hover:text-[#004D77]"
@@ -335,7 +332,6 @@ export const Purchases = () => {
                 </span>
               </button>
 
-              {/* Dropdown de opciones de ordenamiento */}
               {showSortDropdown && sortDropdownStyle && createPortal(
                 <div ref={sortDropdownMenuRef} style={sortDropdownStyle} className="overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-xl">
                   {Object.entries(SORT_OPTIONS).map(([key, option]) => {
@@ -353,9 +349,7 @@ export const Purchases = () => {
                       >
                         <Icon className={`w-4 h-4 ${isActive ? "text-[#004D77]" : "text-gray-400"}`} strokeWidth={1.8} />
                         <span className="flex-1 text-left">{option.label}</span>
-                        {isActive && (
-                          <span className="text-[#004D77] text-xs font-bold">✓</span>
-                        )}
+                        {isActive && <span className="text-[#004D77] text-xs font-bold">✓</span>}
                       </button>
                     );
                   })}
@@ -363,11 +357,13 @@ export const Purchases = () => {
                 document.body
               )}
             </div>
-
+          </div>
+          
+          <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
             <Permission permission="compras.exportar">
               <button
                 onClick={handleDownloadExcel}
-                className="flex flex-1 items-center justify-center gap-2 px-2 py-2 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap sm:flex-none sm:px-4"
+                className="flex flex-1 items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-400 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap sm:flex-none"
               >
                 <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
                 <span className="hidden sm:inline">Exportar Excel</span>
@@ -376,7 +372,7 @@ export const Purchases = () => {
             <Permission permission="compras.crear">
               <Link
                 to="/admin/purchases/create"
-                className="flex flex-1 items-center justify-center gap-2 px-3 py-2 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap sm:flex-none sm:px-4"
+                className="flex flex-1 items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold border border-[#004D77] rounded-lg text-[#004D77] bg-white hover:bg-sky-50 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap sm:flex-none"
               >
                 <span className="hidden sm:inline">Nueva</span>
                 <Plus className="w-4 h-4" strokeWidth={2} />
@@ -393,6 +389,8 @@ export const Purchases = () => {
             handleReturn={handleReturn}
             search={search}
             isSearching={isSearching}
+            onCreatePurchase={() => navigate("/admin/purchases/create")}
+            annullingId={annulLoading ? cancelPurchase?.id : null}
           />
         </div>
 

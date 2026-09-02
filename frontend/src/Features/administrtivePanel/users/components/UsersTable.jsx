@@ -125,7 +125,7 @@ function ActiveToggle({
         onClick={handleClick}
         disabled={isLoading || disabled}
         title={disabled ? disabledMessage : undefined}
-        className={`relative w-10 h-5 rounded-full transition-colors duration-300 cursor-pointer shrink-0 ${
+        className={`relative h-5.5 w-11 rounded-full transition-colors duration-300 cursor-pointer shrink-0 ${
           activo
             ? "bg-green-500"
             : "bg-red-400"
@@ -138,7 +138,7 @@ function ActiveToggle({
         {
           isLoading
             ?
-            <Loader2 className="absolute inset-0 m-auto w-4 h-4 text-white animate-spin" />
+            <Loader2 className="absolute inset-0 m-auto h-4 w-4 text-white animate-spin" />
             :
             <>
               <span
@@ -151,9 +151,9 @@ function ActiveToggle({
                 {activo ? "A" : "I"}
               </span>
               <span
-                className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
+                className={`absolute top-0.5 h-4.5 w-4.5 bg-white rounded-full shadow transition-all duration-300 ${
                   activo
-                    ? "left-[22px]"
+                    ? "left-[24px]"
                     : "left-0.5"
                 }`}
               />

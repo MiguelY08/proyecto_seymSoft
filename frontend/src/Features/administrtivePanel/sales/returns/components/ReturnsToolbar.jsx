@@ -18,47 +18,41 @@ function ReturnsToolbar({
 
   return (
     <div className="flex shrink-0 flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end lg:flex-1 lg:gap-4">
-        <div className="relative w-full md:w-[360px] lg:w-72">
+      <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end lg:flex-1 lg:gap-4">
+        <div className="relative w-full lg:w-52 xl:w-56">
           <input
             type="text"
             placeholder="Buscar por número, factura, cliente..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="h-11 w-full rounded-xl border border-slate-300 bg-white py-2 pl-4 pr-10 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 lg:h-10 lg:rounded-lg lg:py-2.5"
+            className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-4 pr-10 text-sm text-gray-700 outline-none transition-colors duration-200 placeholder:text-gray-400 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
             aria-label="Buscar devoluciones"
           />
           <Search
-            className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
             strokeWidth={2}
             aria-hidden="true"
           />
         </div>
 
-        <div className="flex w-full flex-col gap-1 md:w-44 lg:w-40">
-          <label className="pl-0.5 text-xs font-medium text-slate-500">
-            Fecha Inicial
-          </label>
+        <div className="w-full lg:w-40">
           <input
             type="date"
             value={startDate}
             max={endDate || undefined}
             onChange={(e) => onStartDate(e.target.value)}
-            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 lg:h-10 lg:rounded-lg"
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none transition-colors duration-200 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
             aria-label="Fecha inicial"
           />
         </div>
 
-        <div className="flex w-full flex-col gap-1 md:w-44 lg:w-40">
-          <label className="pl-0.5 text-xs font-medium text-slate-500">
-            Fecha Final
-          </label>
+        <div className="w-full lg:w-40">
           <input
             type="date"
             value={endDate}
             min={startDate || undefined}
             onChange={(e) => onEndDate(e.target.value)}
-            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 lg:h-10 lg:rounded-lg"
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none transition-colors duration-200 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
             aria-label="Fecha final"
           />
         </div>
@@ -66,7 +60,7 @@ function ReturnsToolbar({
         {hasActiveFilters && (
           <button
             onClick={onClearFilters}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-800 active:scale-95 md:w-auto lg:h-10 lg:w-10 lg:rounded-lg lg:px-0"
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-600 transition hover:bg-gray-100 hover:text-gray-800 active:scale-95 lg:w-10"
             aria-label="Limpiar filtros"
             title="Limpiar todos los filtros"
           >

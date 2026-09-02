@@ -1,5 +1,5 @@
 import React from "react";
-import { Info, Loader2, SquarePen, Trash2 } from "lucide-react";
+import { Info, Loader2, Plus, ShieldCheck, SquarePen, Trash2 } from "lucide-react";
 
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import { usePermissions } from "../hooks/usePermissions";
@@ -104,7 +104,7 @@ function RoleActiveToggle({
         type="button"
         onClick={onClick}
         disabled={disabled || loading}
-        className={`relative h-6 w-12 shrink-0 rounded-full transition-colors duration-300 ${
+        className={`relative h-5.5 w-11 shrink-0 rounded-full transition-colors duration-300 ${
           active ? "bg-green-500" : "bg-red-400"
         } ${
           disabled || loading
@@ -113,24 +113,55 @@ function RoleActiveToggle({
         }`}
       >
         {loading ? (
-          <Loader2 className="absolute inset-0 m-auto h-4.5 w-4.5 animate-spin text-white" />
+          <Loader2 className="absolute inset-0 m-auto h-4 w-4 animate-spin text-white" />
         ) : (
           <>
             <span
               className={`absolute top-1/2 -translate-y-1/2 text-[10px] font-bold text-white transition-all duration-300 ${
-                active ? "left-1.5" : "right-1.5"
+                active ? "left-1" : "right-1"
               }`}
             >
               {active ? "A" : "I"}
             </span>
             <span
-              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-300 ${
-                active ? "left-6" : "left-0.5"
+              className={`absolute top-0.5 h-4.5 w-4.5 rounded-full bg-white shadow transition-all duration-300 ${
+                active ? "left-[24px]" : "left-0.5"
               }`}
             />
           </>
         )}
       </button>
+    </div>
+  );
+}
+
+function EmptyState({ isSearching, canCreate, onCreateRole }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 px-4 py-12">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#004D77]/10">
+        <ShieldCheck className="h-8 w-8 text-[#004D77]/40" strokeWidth={1.5} />
+      </div>
+      {isSearching ? (
+        <>
+          <p className="text-sm font-semibold text-gray-500">No se encontraron resultados</p>
+          <p className="max-w-xs text-center text-xs text-gray-400">Ningún rol coincide con la búsqueda.</p>
+        </>
+      ) : (
+        <>
+          <p className="text-sm font-semibold text-gray-500">No hay roles registrados</p>
+          <p className="max-w-xs text-center text-xs text-gray-400">Aún no se han registrado roles.</p>
+          {canCreate && (
+            <button
+              type="button"
+              onClick={onCreateRole}
+              className="flex cursor-pointer items-center gap-1.5 rounded-lg border bg-[#004D77] px-2 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#003a5c] sm:px-3"
+            >
+              <span>Nuevo rol</span>
+              <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+            </button>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -144,7 +175,9 @@ export default function RolesTable({
   //  NUEVO
   reloadRoles,
 
-  search = ""
+  search = "",
+  isSearching = false,
+  onCreateRole,
 
 }) {
 
@@ -164,6 +197,8 @@ export default function RolesTable({
     hasPermission
 
   } = usePermissions();
+
+  const canCreate = hasPermission("roles.crear");
 
   const {
 
@@ -472,11 +507,11 @@ export default function RolesTable({
 
     return (
 
-      <div className="text-center py-10 text-gray-500">
-
-        No hay roles disponibles
-
-      </div>
+      <EmptyState
+        isSearching={isSearching}
+        canCreate={canCreate}
+        onCreateRole={onCreateRole}
+      />
 
     );
 
@@ -559,7 +594,7 @@ export default function RolesTable({
                     &&
 
                     <Info
-                      size={18}
+                      size={16}
                       onClick={() =>
                         handleViewRole(role)
                       }
@@ -581,7 +616,7 @@ export default function RolesTable({
                     &&
 
                     <SquarePen
-                      size={18}
+                      size={16}
                       onClick={() =>
                         handleEditRole(role)
                       }
@@ -603,7 +638,7 @@ export default function RolesTable({
                     &&
 
                     <Trash2
-                      size={18}
+                      size={16}
                       onClick={() =>
                         handleDeleteRole(role)
                       }
@@ -722,7 +757,7 @@ export default function RolesTable({
 
                   <td className="px-4 py-2.5">
 
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center justify-center gap-1 sm:gap-1.5">
 
                       {
 
@@ -756,7 +791,7 @@ export default function RolesTable({
                         &&
 
                         <Info
-                          size={20}
+                          size={16}
                           onClick={() =>
                             handleViewRole(role)
                           }
@@ -778,7 +813,7 @@ export default function RolesTable({
                         &&
 
                         <SquarePen
-                          size={20}
+                          size={16}
                           onClick={() =>
                             handleEditRole(role)
                           }
@@ -800,7 +835,7 @@ export default function RolesTable({
                         &&
 
                         <Trash2
-                          size={20}
+                          size={16}
                           onClick={() =>
                             handleDeleteRole(role)
                           }

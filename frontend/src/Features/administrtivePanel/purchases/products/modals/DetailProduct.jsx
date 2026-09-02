@@ -212,7 +212,7 @@ function DetailProduct({ producto, isOpen, onClose }) {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <PriceCard label="Precio proveedor" value={producto.supplierPrice} />
-                  <PriceCard label="Precio detalle" value={producto.retailPrice} discount={producto.retailDiscountPct} />
+                  <PriceCard label="Precio detal" value={producto.retailPrice} discount={producto.retailDiscountPct} />
                   <PriceCard label="Precio mayorista" value={producto.wholesalePrice} discount={producto.wholesaleDiscountPct} />
                   <PriceCard label="Precio colegas" value={producto.partnerPrice} discount={producto.partnerDiscountPct} />
                   <PriceCard label="Precio x pacas" value={producto.bulkPrice} discount={producto.bulkDiscountPct} />

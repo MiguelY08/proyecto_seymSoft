@@ -43,7 +43,7 @@ export const validateField = (name, value) => {
       if (!v) return 'El nombre completo es obligatorio.';
       if (v.length < 3) return 'Minimo 3 caracteres.';
       if (v.length > USER_NAME_MAX) return `Maximo ${USER_NAME_MAX} caracteres.`;
-      if (!/^[\p{L}\s]+$/u.test(v)) return 'Solo se permiten letras y espacios.';
+      if (!/^[\p{L}\s.]+$/u.test(v)) return 'Solo se permiten letras, puntos y espacios.';
       return '';
 
     case 'correo':

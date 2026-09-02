@@ -290,6 +290,11 @@ const CategoriesPage = () => {
           handleEdit={handleEdit}
           handleViewDetail={handleViewDetail}
           highlightText={highlightText}
+          isSearching={Boolean(search.trim())}
+          onCreateCategory={() => {
+            setCategoryToEdit(null);
+            setShowForm(true);
+          }}
           changingStatusId={changingStatusId}
         />
       </div>

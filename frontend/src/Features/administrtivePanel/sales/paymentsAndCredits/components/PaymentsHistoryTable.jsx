@@ -247,19 +247,19 @@ export default function PaymentHistoryTable({
                     <td className="px-3 py-2 text-center">
 
                       <Permission permission="pagos_y_abonos.anular">
-                        <XCircle
-                          size={15}
-                          onClick={() => {
-                            if (allowed) {
-                              onDelete(abono);
-                            }
-                          }}
+                        <button
+                          type="button"
+                          onClick={() => allowed && onDelete(abono)}
+                          disabled={!allowed}
                           className={`mx-auto transition ${
                             allowed
-                              ? "text-gray-400 hover:text-red-500 hover:scale-110 cursor-pointer"
-                              : "text-gray-200 cursor-not-allowed"
+                              ? "cursor-pointer text-gray-400 hover:scale-110 hover:text-red-500"
+                              : "cursor-not-allowed text-gray-200"
                           }`}
-                        />
+                          title={allowed ? "Anular abono" : "No disponible para este abono"}
+                        >
+                          <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+                        </button>
                       </Permission>
 
                     </td>
