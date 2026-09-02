@@ -237,8 +237,13 @@ function Orders() {
                   </div>
                 </div>
 
-                <div className="space-y-1 text-sm text-slate-600">
-                  <p><strong className="text-slate-800">Entrega:</strong> {order.tipoEntrega === 'recoge' ? 'Recoger en tienda' : order.direccionEntrega}</p>
+                <div className="min-w-0 space-y-1 text-sm text-slate-600">
+                  <p className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-1">
+                    <strong className="text-slate-800">Entrega:</strong>
+                    <span className="line-clamp-2 break-words [overflow-wrap:anywhere]">
+                      {order.tipoEntrega === 'recoge' ? 'Recoger en tienda' : order.direccionEntrega}
+                    </span>
+                  </p>
                   <p><strong className="text-slate-800">Productos:</strong> {order.productos.map((product) => product.nombre).join(', ')}</p>
                 </div>
 

@@ -20,6 +20,7 @@ import {
 } from '../../../administrtivePanel/sales/clients/helpers/clientHelpers';
 import FormSelect from '../../../shared/FormSelect';
 import { useAlert } from '../../../shared/alerts/useAlert';
+import useBodyScrollLock from '../../../shared/hooks/useBodyScrollLock';
 
 const EMAIL_MAX_LENGTH = 100;
 const ADDRESS_MAX_LENGTH = 120;
@@ -141,6 +142,7 @@ const SELECT_OPTIONS = {
 
 function CompleteClientProfile({ isOpen, user, onClose, onCreated }) {
   const { showConfirm } = useAlert();
+  useBodyScrollLock(isOpen);
   const initialForm = useMemo(() => {
     const names = splitName(user?.fullName);
     return {

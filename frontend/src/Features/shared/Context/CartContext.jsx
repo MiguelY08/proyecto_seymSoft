@@ -14,11 +14,16 @@ const GUEST_CART_KEY = 'cart:guest';
 const USER_CART_PREFIX = 'cart:user:';
 const CartContext = createContext();
 
+const toPositiveInteger = (value) => {
+  const quantity = Number(value);
+  return Number.isFinite(quantity) ? Math.max(1, Math.trunc(quantity)) : 1;
+};
+
 const normalizeItems = (items) => (
   Array.isArray(items)
     ? items.map((item) => ({
         ...item,
-        quantity: Math.max(1, Number(item.quantity) || 1),
+        quantity: toPositiveInteger(item.quantity),
       }))
     : []
 );
@@ -96,7 +101,7 @@ const getProductStock = (product) => {
 };
 
 const clampQuantity = (product, quantity) => {
-  const requested = Math.max(1, Number(quantity) || 1);
+  const requested = toPositiveInteger(quantity);
   return Math.min(requested, getProductStock(product));
 };
 
@@ -296,7 +301,7 @@ export const CartProvider = ({ children }) => {
   }, [mergeCartItemFromResponse]);
 
   const addToCart = useCallback(async (product, quantity = 1) => {
-    const requestedQuantity = Math.max(1, Number(quantity) || 1);
+    const requestedQuantity = toPositiveInteger(quantity);
 
     if (getProductStock(product) <= 0) return false;
 
