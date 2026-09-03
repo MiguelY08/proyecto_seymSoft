@@ -8,6 +8,7 @@ import {
   PaymentReceiptService,
 } from '../../../administrtivePanel/sales/orders/services/ordersService';
 import { useAlert } from '../../../shared/alerts/useAlert';
+import useBodyScrollLock from '../../../shared/hooks/useBodyScrollLock';
 import { getProductBarcode } from '../../orders/helpers/customerOrderHelpers';
 
 const INITIAL_SECONDS = 48 * 60 * 60;
@@ -76,6 +77,8 @@ function CompletePay({
   const [qrOpen, setQrOpen] = useState(false);
   const [favorBalanceAmount, setFavorBalanceAmount] = useState('');
   const fileInputRef = useRef(null);
+
+  useBodyScrollLock(isOpen);
 
   const orderTotal = Number(totalAmount) || 0;
   const availableFavorBalance = Math.max(0, Number(favorBalance) || 0);

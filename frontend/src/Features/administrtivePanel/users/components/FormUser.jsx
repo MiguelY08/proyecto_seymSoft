@@ -1,6 +1,7 @@
 import { X, SquarePen, User, Mail, Phone, ShieldCheck, Loader2, UserPlus, BadgeCheck } from 'lucide-react';
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAlert } from '../../../shared/alerts/useAlert';
+import useBodyScrollLock from '../../../shared/hooks/useBodyScrollLock';
 import { useAuth } from '../../../access/context/AuthContext';
 import { checkEmailAvailability } from '../../../access/services/authService';
 import FormSelect from '../../../shared/FormSelect';
@@ -101,6 +102,7 @@ function FormUser({
 }) {
   const { showWarning, showSuccess, showConfirm } = useAlert();
   const { user: authUser } = useAuth();
+  useBodyScrollLock(isOpen);
 
   const isEditing = userToEdit !== null;
   const isSelfEdit = isEditing && isSelfUser(userToEdit, authUser);

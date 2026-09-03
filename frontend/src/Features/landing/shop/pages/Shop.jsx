@@ -391,11 +391,12 @@ function Shop() {
   const filteredProducts = useMemo(() => {
     return activeProducts.filter(product => {
       // Filtrar por categorías
+      let hasSelectedCategory = false;
       if (selectedCategoryIds.length > 0) {
-        const hasSelectedCategory = product.categories?.some(cat =>
+        hasSelectedCategory = product.categories?.some(cat =>
           selectedCategoryIds.includes(Number(cat.id))
         );
-        if (!hasSelectedCategory) return false;
+        if (!hasSelectedCategory && selectedSubcategoryIds.length === 0) return false;
       }
 
       // Filtrar por subcategorías
@@ -403,7 +404,7 @@ function Shop() {
         const hasSelectedSubcategory = product.subcategories?.some(sub =>
           selectedSubcategoryIds.includes(Number(sub.id))
         );
-        if (!hasSelectedSubcategory) return false;
+        if (!hasSelectedSubcategory && !hasSelectedCategory) return false;
       }
 
       return true;
