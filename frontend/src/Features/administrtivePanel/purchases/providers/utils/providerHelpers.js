@@ -196,6 +196,7 @@ export const paginateData = (data, page, itemsPerPage) => {
 // Valida los campos del formulario de proveedor y devuelve errores
 export const validateProviderForm = (formData) => {
   const errors = {};
+  const isLegalPerson = formData.tipoPersona === 'juridica';
 
   // Validaciones básicas
   if (!formData.tipoPersona?.trim()) {
@@ -226,17 +227,17 @@ export const validateProviderForm = (formData) => {
     errors.nombres = 'Debe tener al menos 2 caracteres';
   } else if (formData.nombres.trim().length > PROVIDER_NAME_MAX_LENGTH) {
     errors.nombres = `No puede superar ${PROVIDER_NAME_MAX_LENGTH} caracteres`;
-  } else if (!isOnlyLetters(formData.nombres)) {
+  } else if (!isLegalPerson && !isOnlyLetters(formData.nombres)) {
     errors.nombres = 'Solo se permiten letras';
   }
 
-  if (!formData.apellidos?.trim()) {
+  if (!isLegalPerson && !formData.apellidos?.trim()) {
     errors.apellidos = 'El apellido es obligatorio';
-  } else if (formData.apellidos.trim().length < 2) {
+  } else if (!isLegalPerson && formData.apellidos.trim().length < 2) {
     errors.apellidos = 'Debe tener al menos 2 caracteres';
-  } else if (formData.apellidos.trim().length > PROVIDER_NAME_MAX_LENGTH) {
+  } else if (!isLegalPerson && formData.apellidos.trim().length > PROVIDER_NAME_MAX_LENGTH) {
     errors.apellidos = `No puede superar ${PROVIDER_NAME_MAX_LENGTH} caracteres`;
-  } else if (!isOnlyLetters(formData.apellidos)) {
+  } else if (!isLegalPerson && !isOnlyLetters(formData.apellidos)) {
     errors.apellidos = 'Solo se permiten letras';
   }
 

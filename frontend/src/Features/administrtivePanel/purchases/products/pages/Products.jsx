@@ -120,7 +120,6 @@ function Products() {
     const loadProducts = async () => {
       try {
         const products = await ProductsService.list();
-        console.log("Productos cargados:", products);
         setData(products || []);
       } catch (error) {
         console.error("Error al cargar productos:", error);

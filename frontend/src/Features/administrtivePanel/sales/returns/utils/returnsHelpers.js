@@ -147,10 +147,18 @@ export const calculateGeneralStatus = (productosDevueltos = [], isAnulada = fals
   
   // Estados que se consideran "completados"
   const completedStatuses = ['Listo'];
+  const cancelledStatuses = ['Anulado'];
+  const allCancelled = productosDevueltos.every(prod =>
+    cancelledStatuses.includes(prod.estado || prod.status)
+  );
+  const activeProducts = productosDevueltos.filter(prod =>
+    !cancelledStatuses.includes(prod.estado || prod.status)
+  );
+  if (allCancelled) return 'Anulado';
   
   // Verificar si todos los productos están completados
-  const allCompleted = productosDevueltos.every(prod => 
-    completedStatuses.includes(prod.estado)
+  const allCompleted = activeProducts.length > 0 && activeProducts.every(prod =>
+    completedStatuses.includes(prod.estado || prod.status)
   );
   
   return allCompleted ? 'Procesada' : 'En Proceso';
@@ -196,7 +204,12 @@ export const generateReturnNumber = () => {
 // ======================= FUNCIONALIDAD: FILTRADO =======================
 
 const normalizeSearch = (value) =>
-  String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  String(value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const normalizeDigits = (value) => String(value ?? '').replace(/\D/g, '');
 
 const flattenSearchValues = (value) => {
   if (value === null || value === undefined) return [];
@@ -205,10 +218,80 @@ const flattenSearchValues = (value) => {
   return [String(value)];
 };
 
+const formatSearchReasonLabel = (reason) => {
+  if (!reason) return 'Varios motivos';
+
+  const labels = {
+    DEFECTUOSO: 'Producto defectuoso',
+    PRODUCTO_DEFECTUOSO: 'Producto defectuoso',
+    PRODUCTO_EQUIVOCADO: 'Producto equivocado',
+    EQUIVOCADO: 'Producto equivocado',
+    PRODUCTO_INCOMPLETO: 'Producto incompleto',
+    INCOMPLETO: 'Producto incompleto',
+    MAL_ESTADO: 'Producto en mal estado',
+    PRODUCTO_EN_MAL_ESTADO: 'Producto en mal estado',
+    PRODUCTO_USADO: 'Producto usado',
+    USADO: 'Producto usado',
+    OTRO: 'Otro motivo',
+    OTRO_MOTIVO: 'Otro motivo',
+  };
+
+  const value = String(reason).trim();
+  const label = labels[value] || value.replace(/[_-]+/g, ' ');
+  const normalized = label.toLocaleLowerCase('es-CO');
+  return normalized.charAt(0).toLocaleUpperCase('es-CO') + normalized.slice(1);
+};
+
+const getReturnSearchValues = (record = {}) => {
+  const createdAt = record.fechaCreacion || record.createdAt || record.creationDate || '';
+  const totalValue = record.totalValor ?? record.totalAmount ?? record.valor ?? 0;
+  const reason = record.motivo || record.reason || '';
+
+  return [
+    record.id,
+    record.numeroDevolucion,
+    record.returnNumber,
+    record.numeroFactura,
+    record.invoiceNumber,
+    record.cliente,
+    record.clientName,
+    reason,
+    formatSearchReasonLabel(reason),
+    record.estado,
+    record.status,
+    createdAt,
+    formatDate(createdAt),
+    totalValue,
+    formatCurrency(totalValue),
+    `$${formatCurrency(totalValue)}`,
+  ];
+};
+
+const valueMatchesSearch = (value, term, digitTerm) => {
+  const normalizedValue = normalizeSearch(value);
+  const normalizedDigits = normalizeDigits(value);
+
+  return (
+    normalizedValue.includes(term) ||
+    (digitTerm.length > 0 && normalizedDigits.includes(digitTerm))
+  );
+};
+
 const matchesEverywhere = (record, searchTerm) => {
   const term = normalizeSearch(searchTerm).trim();
   if (!term) return true;
-  return flattenSearchValues(record).some((value) => normalizeSearch(value).includes(term));
+
+  const digitTerm = normalizeDigits(searchTerm);
+  const terms = term.split(/\s+/).filter(Boolean);
+  const values = getReturnSearchValues(record);
+
+  const matchesFullSearch = values.some((value) => valueMatchesSearch(value, term, digitTerm));
+  if (matchesFullSearch) return true;
+
+  return terms.every((singleTerm) => {
+    const singleDigitTerm = normalizeDigits(singleTerm);
+    return values.some((value) => valueMatchesSearch(value, singleTerm, singleDigitTerm));
+  });
 };
 
 /**

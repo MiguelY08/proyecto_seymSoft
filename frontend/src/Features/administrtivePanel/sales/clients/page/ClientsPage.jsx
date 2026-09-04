@@ -6,7 +6,6 @@ import FormClient        from '../modals/FormClient';
 import InfoClient        from '../modals/InfoClient';
 import { useAlert }      from '../../../../shared/alerts/useAlert';
 import { clientsService } from '../services/clientsService';
-import { UserService } from '../../../users/services/userService';
 import Permission from "../../../configuration/roles/components/Permission";
 import Spinner from '../../../../shared/spinner';
 
@@ -29,21 +28,8 @@ const useDebouncedValue = (value, delay = SEARCH_DEBOUNCE_MS) => {
 const normalizeSearch = (value) =>
   String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-const buildClientUserPayload = (formData) => {
-  const isJuridica = String(formData?.personType || '').toLowerCase() === 'juridica';
-  const fullName = isJuridica
-    ? String(formData?.firstName || '').trim()
-    : `${String(formData?.firstName || '').trim()} ${String(formData?.lastName || '').trim()}`
-        .replace(/\s+/g, ' ')
-        .trim();
-
-  return {
-    name: fullName,
-    email: String(formData?.email || '').trim(),
-    phone: String(formData?.phone || '').trim() || null,
-    roleId: null,
-  };
-};
+const normalizeDigits = (value) =>
+  String(value ?? '').replace(/\D/g, '');
 
 const flattenSearchValues = (value) => {
   if (value === null || value === undefined) return [];
@@ -54,6 +40,7 @@ const flattenSearchValues = (value) => {
 
 const clientMatchesSearch = (client, searchTerm) => {
   const term = normalizeSearch(searchTerm).trim();
+  const digitTerm = normalizeDigits(searchTerm);
   if (!term) return true;
 
   if (['activo', 'activos'].includes(term)) return client.active === true;
@@ -68,7 +55,14 @@ const clientMatchesSearch = (client, searchTerm) => {
     `${client.firstName || ''} ${client.lastName || ''}`,
   ];
 
-  return searchable.some((value) => normalizeSearch(value).includes(term));
+  return searchable.some((value) => {
+    const normalizedValue = normalizeSearch(value);
+    const digitValue = normalizeDigits(value);
+    return (
+      normalizedValue.includes(term) ||
+      (digitTerm && digitValue.includes(digitTerm))
+    );
+  });
 };
 
 const sortClientsWithSystemFirst = (clients) =>
@@ -176,6 +170,7 @@ function ClientsPage() {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedClient,  setSelectedClient]  = useState(null);
   const [loading,         setLoading]         = useState(true);
+  const [hasLoadedOnce,   setHasLoadedOnce]   = useState(false);
   const [deletingId,      setDeletingId]      = useState(null);
   const debouncedSearchTerm = useDebouncedValue(searchTerm);
 
@@ -207,6 +202,7 @@ function ClientsPage() {
     } catch (error) {
       showError('Error', error.message || 'No se pudieron cargar los clientes');
     } finally {
+      setHasLoadedOnce(true);
       setLoading(false);
     }
   }, [currentPage, debouncedSearchTerm, statusFilter, showError]);
@@ -272,32 +268,7 @@ const handleSave = async (formData) => {
         await loadClients();
         showSuccess('Cliente actualizado', 'Los datos se actualizaron correctamente');
       } else {
-        let createdUserId = formData?.userId ?? null;
-
-        if (!createdUserId) {
-          const createdUser = await UserService.create(buildClientUserPayload(formData));
-          createdUserId = createdUser?.id ?? null;
-        }
-
-        if (!createdUserId) {
-          throw new Error('No fue posible asociar el usuario del cliente');
-        }
-
-        try {
-          await clientsService.create({
-            ...formData,
-            userId: createdUserId,
-          });
-        } catch (clientError) {
-          if (!formData?.userId && createdUserId) {
-            try {
-              await UserService.delete(createdUserId);
-            } catch {
-              // rollback de mejor esfuerzo
-            }
-          }
-          throw clientError;
-        }
+        await clientsService.create(formData);
 
         await loadClients();
         showSuccess('Cliente creado', 'El nuevo cliente se creó exitosamente');
@@ -369,7 +340,7 @@ const handleDelete = async (client) => {
 
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
 
-  if (loading && clients.length === 0) {
+  if (loading && !hasLoadedOnce) {
     return (
       <Spinner message="Cargando clientes..." />
     );
@@ -396,6 +367,7 @@ const handleDelete = async (client) => {
             onEdit={handleEdit}
             onToggleActive={handleToggleActive}
             onDelete={handleDelete}
+            onCreateClient={handleNewClient}
             deletingId={deletingId}
           />
         </div>

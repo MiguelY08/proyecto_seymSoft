@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Calendar, CreditCard, LoaderCircle, Package, Search } from 'lucide-react';
+﻿import { useEffect, useMemo, useState } from 'react';
+import { Calendar, CreditCard, Eraser, LoaderCircle, Package, Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import OrdersService from '../../administrtivePanel/sales/orders/services/ordersService';
 import useAuthenticatedClient from '../../shared/hooks/useAuthenticatedClient';
@@ -77,6 +77,12 @@ function Orders() {
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const hasActiveFilters = search.trim() !== '' || startDate !== '' || endDate !== '';
+  const clearFilters = () => {
+    setSearch('');
+    setStartDate('');
+    setEndDate('');
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -185,9 +191,7 @@ function Orders() {
           action={orders.length ? 'Limpiar filtros' : 'Ir a la tienda'}
           onAction={() => {
             if (orders.length) {
-              setSearch('');
-              setStartDate('');
-              setEndDate('');
+              clearFilters();
             } else {
               navigate('/shop');
             }
@@ -260,7 +264,7 @@ function Orders() {
                   <button
                     type="button"
                     onClick={() => navigate(`/orders-l/${order.id}`)}
-                    className="mt-3 w-full rounded-full bg-[#004D77] px-4 py-2 text-xs font-black uppercase text-white"
+                    className="mt-3 w-full rounded-full bg-[#004D77] px-4 py-2 text-xs font-black uppercase text-white transition hover:bg-[#003A5A] hover:shadow-md active:scale-95"
                   >
                     Ver pedido
                   </button>
@@ -287,16 +291,40 @@ function Orders() {
               placeholder="Buscar pedido o producto"
               className="w-full bg-transparent text-sm outline-none"
             />
+            {search && (
+              <button
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => setSearch('')}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-200 hover:text-[#004D77]"
+                aria-label="Limpiar búsqueda"
+                title="Limpiar búsqueda"
+              >
+                <X size={14} />
+              </button>
+            )}
           </label>
           <DateField value={startDate} onChange={setStartDate} label="Desde" />
           <DateField value={endDate} onChange={setEndDate} label="Hasta" />
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-100 hover:text-[#004D77]"
+              aria-label="Limpiar filtros"
+              title="Limpiar filtros"
+            >
+              <Eraser size={14} />
+              Limpiar filtros
+            </button>
+          )}
           <span className="rounded-full bg-slate-100 px-4 py-2 text-xs font-bold text-slate-600">
             {filteredOrders.length} pedidos
           </span>
           <button
             type="button"
             onClick={() => navigate('/returnsOnOrders')}
-            className="rounded-full border-2 border-[#004D77] px-4 py-2 text-xs font-black uppercase text-[#004D77]"
+            className="rounded-full border-2 border-[#004D77] px-4 py-2 text-xs font-black uppercase text-[#004D77] transition hover:bg-[#004D77] hover:text-white hover:shadow-md active:scale-95"
           >
             Ver devoluciones
           </button>
@@ -343,3 +371,4 @@ function EmptyState({ title, description, action, onAction }) {
 }
 
 export default Orders;
+

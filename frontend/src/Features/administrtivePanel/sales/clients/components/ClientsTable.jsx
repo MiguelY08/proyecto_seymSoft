@@ -1,5 +1,5 @@
 import React from 'react';
-import { Info, Loader2, SquarePen, Trash2, Users } from 'lucide-react';
+import { Info, Loader2, Plus, SquarePen, Trash2, Users } from 'lucide-react';
 import ActiveToggle from './ActiveToggle';
 import { formatClientType, formatCurrency } from '../helpers/clientHelpers';
 import Permission from '../../../configuration/roles/components/Permission';
@@ -9,21 +9,100 @@ const TIPOS_DOC = ['cc', 'ce', 'nit', 'ti', 'pp'];
 const escapeRegExp = (value) =>
   String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+const normalizeHighlightValue = (value) =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+const getDigitMatches = (text, search) => {
+  const digitSearch = String(search ?? '').replace(/\D/g, '');
+  if (!digitSearch) return [];
+
+  const digitMap = [];
+  let digitText = '';
+
+  String(text ?? '').split('').forEach((char, index) => {
+    if (/\d/.test(char)) {
+      digitText += char;
+      digitMap.push(index);
+    }
+  });
+
+  const matches = [];
+  let start = digitText.indexOf(digitSearch);
+
+  while (start !== -1) {
+    const endDigitIndex = start + digitSearch.length - 1;
+    matches.push({
+      start: digitMap[start],
+      end: digitMap[endDigitIndex] + 1,
+    });
+    start = digitText.indexOf(digitSearch, start + 1);
+  }
+
+  return matches;
+};
+
 const highlightText = (text, search) => {
-  if (!search || !text) return text;
+  const originalText = String(text ?? '');
+  const cleanSearch = String(search ?? '').trim();
+  if (!cleanSearch || !originalText) return text;
 
-  const regex = new RegExp(`(${escapeRegExp(search)})`, 'gi');
-  const parts = text.toString().split(regex);
+  const terms = cleanSearch
+    .split(/\s+/)
+    .map(normalizeHighlightValue)
+    .filter(Boolean);
 
-  return parts.map((part, index) =>
-    part.toLowerCase() === search.toLowerCase() ? (
-      <span key={index} className="bg-[#004d7726] text-[#004D77] rounded px-0.5">
-        {part}
+  if (terms.length === 0) return text;
+
+  const normalizedText = normalizeHighlightValue(originalText);
+  const matches = getDigitMatches(originalText, cleanSearch);
+
+  terms.forEach((term) => {
+    const regex = new RegExp(escapeRegExp(term), 'g');
+    let match;
+    while ((match = regex.exec(normalizedText)) !== null) {
+      matches.push({ start: match.index, end: match.index + term.length });
+    }
+  });
+
+  if (matches.length === 0) return text;
+
+  const mergedMatches = matches
+    .sort((a, b) => a.start - b.start || b.end - a.end)
+    .reduce((acc, match) => {
+      const last = acc[acc.length - 1];
+      if (!last || match.start > last.end) {
+        acc.push({ ...match });
+      } else {
+        last.end = Math.max(last.end, match.end);
+      }
+      return acc;
+    }, []);
+
+  const parts = [];
+  let cursor = 0;
+
+  mergedMatches.forEach((match, index) => {
+    if (match.start > cursor) {
+      parts.push(originalText.slice(cursor, match.start));
+    }
+
+    parts.push(
+      <span key={`highlight-${index}`} className="bg-[#004d7726] text-[#004D77] rounded px-0.5">
+        {originalText.slice(match.start, match.end)}
       </span>
-    ) : (
-      part
-    )
-  );
+    );
+
+    cursor = match.end;
+  });
+
+  if (cursor < originalText.length) {
+    parts.push(originalText.slice(cursor));
+  }
+
+  return parts;
 };
 
 const parseSearchTerm = (term) => {
@@ -72,6 +151,7 @@ function ClientsTable({
   onEdit,
   onToggleActive,
   onDelete,
+  onCreateClient,
   deletingId = null,
 }) {
   if (!clients.length) {
@@ -87,6 +167,16 @@ function ClientsTable({
         <p className="max-w-xs text-center text-sm text-gray-400">
           {isSearching ? 'Ningún cliente coincide con la búsqueda actual.' : 'Aún no se han registrado clientes.'}
         </p>
+        <Permission permission="clientes.crear">
+          <button
+            type="button"
+            onClick={onCreateClient}
+            className="mt-1 flex cursor-pointer items-center gap-1.5 rounded-lg border bg-[#004D77] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#003a5c]"
+          >
+            <span>Crear cliente</span>
+            <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+          </button>
+        </Permission>
       </div>
     );
   }
@@ -133,7 +223,7 @@ function ClientsTable({
                 <td className="px-2.5 py-1.5 text-center text-xs font-medium text-gray-800">
                   <div className="mx-auto min-w-0 max-w-full">
                     <span className="block min-w-0 truncate" title={displayName}>
-                      {isSystemClient ? 'Cliente Sistema' : highlightText(displayName, searchTerm)}
+                      {highlightText(displayName, searchTerm)}
                     </span>
                   </div>
                 </td>

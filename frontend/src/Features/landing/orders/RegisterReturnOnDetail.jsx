@@ -1,11 +1,11 @@
-import { ChevronLeft, Package, Phone, MessageCircle, Info } from 'lucide-react';
+﻿import { ChevronLeft, Package, Phone, MessageCircle, Info } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaInstagram, FaTiktok } from 'react-icons/fa';
 import OrdersService from '../../administrtivePanel/sales/orders/services/ordersService';
 import useAuthenticatedClient from '../../shared/hooks/useAuthenticatedClient';
 
-/* ── Estilos inyectados (coherentes con el sistema) ── */
+/* â”€â”€ Estilos inyectados (coherentes con el sistema) â”€â”€ */
 const REGISTER_RETURN_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito:wght@400;600;700;800;900&display=swap');
 
@@ -444,3 +444,4 @@ function RegisterReturnOnDetail() {
 }
 
 export default RegisterReturnOnDetail;
+

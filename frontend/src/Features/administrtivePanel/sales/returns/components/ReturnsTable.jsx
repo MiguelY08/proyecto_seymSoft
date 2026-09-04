@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Info, Loader2, RotateCcw, SquarePen, XCircle } from 'lucide-react';
+import { Info, Loader2, Plus, RotateCcw, SquarePen, XCircle } from 'lucide-react';
+import Permission from '../../../configuration/roles/components/Permission';
 import { usePermissions } from '../../../configuration/roles/hooks/usePermissions';
 import {
   formatCurrency,
@@ -15,20 +16,110 @@ const getField = (object, names, fallback = '') => {
   return fallback;
 };
 
+const normalizeSearch = (value) =>
+  String(value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const normalizeDigits = (value) => String(value ?? '').replace(/\D/g, '');
+
+const mergeRanges = (ranges) => {
+  if (!ranges.length) return [];
+
+  return [...ranges]
+    .sort((a, b) => a.start - b.start || a.end - b.end)
+    .reduce((merged, range) => {
+      const last = merged[merged.length - 1];
+      if (!last || range.start > last.end) {
+        merged.push({ ...range });
+      } else {
+        last.end = Math.max(last.end, range.end);
+      }
+      return merged;
+    }, []);
+};
+
+const getDigitRanges = (text, digitTerm) => {
+  if (!digitTerm) return [];
+
+  const chars = Array.from(String(text));
+  const digitPositions = [];
+  let digits = '';
+
+  chars.forEach((char, index) => {
+    if (/\d/.test(char)) {
+      digitPositions.push(index);
+      digits += char;
+    }
+  });
+
+  const ranges = [];
+  let fromIndex = digits.indexOf(digitTerm);
+
+  while (fromIndex !== -1) {
+    const start = digitPositions[fromIndex];
+    const end = digitPositions[fromIndex + digitTerm.length - 1] + 1;
+    ranges.push({ start, end });
+    fromIndex = digits.indexOf(digitTerm, fromIndex + 1);
+  }
+
+  return ranges;
+};
+
+const getTextRanges = (text, term) => {
+  if (!term) return [];
+
+  const original = String(text);
+  const normalizedText = normalizeSearch(original);
+  const normalizedTerm = normalizeSearch(term);
+  const ranges = [];
+  let fromIndex = normalizedText.indexOf(normalizedTerm);
+
+  while (fromIndex !== -1) {
+    ranges.push({ start: fromIndex, end: fromIndex + normalizedTerm.length });
+    fromIndex = normalizedText.indexOf(normalizedTerm, fromIndex + 1);
+  }
+
+  return ranges;
+};
+
 const highlightText = (text, search) => {
   if (!search || text === null || text === undefined) return text;
-  const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const parts = String(text).split(new RegExp(`(${escaped})`, 'gi'));
 
-  return parts.map((part, index) =>
-    part.toLowerCase() === search.toLowerCase() ? (
-      <span key={`${part}-${index}`} className="rounded bg-[#004d7726] px-0.5 text-[#004D77]">
-        {part}
-      </span>
-    ) : (
-      part
-    ),
-  );
+  const original = String(text);
+  const cleanSearch = String(search).trim();
+  if (!cleanSearch) return original;
+
+  const ranges = [];
+  const terms = normalizeSearch(cleanSearch).split(/\s+/).filter(Boolean);
+  const fullSearchRanges = getTextRanges(original, cleanSearch);
+
+  ranges.push(...fullSearchRanges);
+  terms.forEach((term) => ranges.push(...getTextRanges(original, term)));
+
+  const fullDigitTerm = normalizeDigits(cleanSearch);
+  ranges.push(...getDigitRanges(original, fullDigitTerm));
+  terms.forEach((term) => ranges.push(...getDigitRanges(original, normalizeDigits(term))));
+
+  const mergedRanges = mergeRanges(ranges);
+  if (!mergedRanges.length) return original;
+
+  const nodes = [];
+  let cursor = 0;
+
+  mergedRanges.forEach(({ start, end }, index) => {
+    if (start > cursor) nodes.push(original.slice(cursor, start));
+    nodes.push(
+      <span key={`${start}-${end}-${index}`} className="rounded bg-[#004d7726] px-0.5 text-[#004D77]">
+        {original.slice(start, end)}
+      </span>,
+    );
+    cursor = end;
+  });
+
+  if (cursor < original.length) nodes.push(original.slice(cursor));
+  return nodes;
 };
 
 const HEADERS = ['#', 'Número', 'Factura', 'Cliente', 'Motivo', 'Fecha', 'Valor', 'Estado', 'Acciones'];
@@ -122,12 +213,19 @@ const FloatingTooltip = ({ position, children }) => {
   );
 };
 
-const StatusProcessTooltip = ({ row, status }) => {
+const StatusProcessTooltip = ({ row, status, searchTerm }) => {
   const { ref, position, show, hide } = useFloatingTooltip();
   const details = getProductDetails(row);
   const total = details.length;
   const ready = details.filter((detail) => getDetailStatus(detail) === 'Listo').length;
-  const pending = Math.max(total - ready, 0);
+  const cancelled = details.filter((detail) => getDetailStatus(detail) === 'Anulado').length;
+  const activeTotal = Math.max(total - cancelled, 0);
+  const pending = details.filter((detail) => {
+    const detailStatus = getDetailStatus(detail);
+    return detailStatus !== 'Listo' && detailStatus !== 'Anulado';
+  }).length;
+  const creditApplied = details.filter((detail) => detail.creditApplied === true && detail.creditReversed !== true).length;
+  const stockMoved = details.filter((detail) => detail.stockApplied === true && Number(detail.stockDelta || 0) !== 0).length;
 
   const statusCounts = details.reduce((acc, detail) => {
     const detailStatus = getDetailStatus(detail);
@@ -158,7 +256,7 @@ const StatusProcessTooltip = ({ row, status }) => {
           )}
           <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${getStatusDotClass(status)}`} />
         </span>
-        {getStatusText(status)}
+        {highlightText(getStatusText(status), searchTerm)}
       </span>
 
       <FloatingTooltip position={position}>
@@ -172,16 +270,33 @@ const StatusProcessTooltip = ({ row, status }) => {
           </div>
         ) : total > 0 ? (
           <>
-            <div className="mb-3 grid grid-cols-2 gap-2 text-xs">
+            <div className="mb-3 grid grid-cols-3 gap-2 text-xs">
               <div className="rounded-lg bg-white/10 px-2.5 py-2">
                 <p className="text-slate-300">Listos</p>
-                <p className="font-semibold text-emerald-300">{ready} de {total}</p>
+                <p className="font-semibold text-emerald-300">{ready} de {activeTotal}</p>
               </div>
               <div className="rounded-lg bg-white/10 px-2.5 py-2">
                 <p className="text-slate-300">Pendientes</p>
                 <p className="font-semibold text-yellow-300">{pending}</p>
               </div>
+              <div className="rounded-lg bg-white/10 px-2.5 py-2">
+                <p className="text-slate-300">Anulados</p>
+                <p className="font-semibold text-red-300">{cancelled}</p>
+              </div>
             </div>
+
+            {(creditApplied > 0 || stockMoved > 0) && (
+              <div className="mb-3 grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-lg bg-blue-500/10 px-2.5 py-2">
+                  <p className="text-slate-300">Saldo aplicado</p>
+                  <p className="font-semibold text-blue-200">{creditApplied}</p>
+                </div>
+                <div className="rounded-lg bg-emerald-500/10 px-2.5 py-2">
+                  <p className="text-slate-300">Stock movido</p>
+                  <p className="font-semibold text-emerald-200">{stockMoved}</p>
+                </div>
+              </div>
+            )}
 
             <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
               Estados de productos
@@ -225,7 +340,7 @@ const StatusProcessTooltip = ({ row, status }) => {
   );
 };
 
-function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }) {
+function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel, onCreateReturn }) {
   const { hasPermission } = usePermissions();
   const [loadingCancelId, setLoadingCancelId] = useState(null);
   const canView = hasPermission('devoluciones_en_ventas.ver');
@@ -259,6 +374,16 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
             ? 'Ninguna devolución coincide con la búsqueda actual.'
             : 'Aún no se han registrado devoluciones de ventas.'}
         </p>
+        <Permission permission="devoluciones_en_ventas.crear">
+          <button
+            type="button"
+            onClick={onCreateReturn}
+            className="mt-1 flex cursor-pointer items-center gap-1.5 rounded-lg border bg-[#004D77] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#003a5c]"
+          >
+            <span>Crear devolución</span>
+            <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+          </button>
+        </Permission>
       </div>
     );
   }
@@ -288,15 +413,18 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
               const client = getField(row, ['cliente', 'clientName']);
               const reason = formatReasonLabel(getField(row, ['motivo', 'reason'], 'Varios motivos'));
               const createdAt = getField(row, ['fechaCreacion', 'createdAt', 'creationDate']);
+              const createdAtText = formatDate(createdAt);
               const total = getField(row, ['totalValor', 'totalAmount'], 0);
+              const totalText = `$${formatCurrency(total)}`;
               const status = getField(row, ['estado', 'status'], 'En Proceso');
               const cancelled = status === 'Anulado';
               const isCancelling = loadingCancelId === row.id;
+              const rowNumber = String(startIndex + index + 1);
 
               return (
                 <tr key={row.id || returnNumber || index} className={`${rowBg} transition-colors duration-150`}>
                   <td className="px-3 py-2 text-center text-xs font-medium text-gray-500 whitespace-nowrap">
-                    {startIndex + index + 1}
+                    {highlightText(rowNumber, searchTerm)}
                   </td>
                   <td className="truncate px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap" title={returnNumber}>
                     {highlightText(returnNumber, searchTerm)}
@@ -310,15 +438,15 @@ function ReturnsTable({ data, startIndex, searchTerm, onInfo, onEdit, onCancel }
                   <td className="truncate px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap" title={reason}>
                     {highlightText(reason, searchTerm)}
                   </td>
-                  <td className="truncate px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
-                    {formatDate(createdAt)}
+                  <td className="truncate px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap" title={createdAtText}>
+                    {highlightText(createdAtText, searchTerm)}
                   </td>
-                  <td className="truncate px-3 py-2 text-center text-xs font-semibold text-gray-800 whitespace-nowrap" title={`$${formatCurrency(total)}`}>
-                    ${formatCurrency(total)}
+                  <td className="truncate px-3 py-2 text-center text-xs font-semibold text-gray-800 whitespace-nowrap" title={totalText}>
+                    {highlightText(totalText, searchTerm)}
                   </td>
                   <td className="px-3 py-2 text-center whitespace-nowrap">
                     <div className="flex items-center justify-center gap-2">
-                      <StatusProcessTooltip row={row} status={status} />
+                      <StatusProcessTooltip row={row} status={status} searchTerm={searchTerm} />
                       {canView && (
                         <button
                           type="button"

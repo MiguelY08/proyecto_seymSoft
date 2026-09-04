@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import {
   ChevronLeft,
   AlertTriangle,
@@ -290,14 +290,14 @@ function OrderDetail() {
         image={BgPedidos}
         title="Pedidos"
         tag="Detalle"
-        subtitle={`Pedido N.° ${order.numeroPedido || order.id}`}
+        subtitle={`Pedido No. ${order.numeroPedido || order.id}`}
       />
 
       <main className="mx-auto max-w-[var(--store-content-max)] px-[var(--store-content-x)] py-5 sm:py-8">
         <button
           type="button"
           onClick={() => navigate('/orders-l')}
-          className="mb-5 inline-flex items-center gap-2 text-sm font-bold text-[#004D77]"
+          className="mb-5 inline-flex items-center gap-2 rounded-full border border-transparent px-3 py-2 text-sm font-bold text-[#004D77] transition hover:border-[#004D77]/30 hover:bg-[#004D77]/10 active:scale-95"
         >
           <ChevronLeft size={17} /> Volver a pedidos
         </button>
@@ -720,3 +720,4 @@ function Summary({ label, value, strong = false, className = '' }) {
 }
 
 export default OrderDetail;
+
