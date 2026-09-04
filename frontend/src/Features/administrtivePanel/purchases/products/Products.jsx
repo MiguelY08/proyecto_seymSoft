@@ -180,7 +180,6 @@ function Products() {
   useEffect(() => {
     if (isLoaded) {
       localStorage.setItem('products', JSON.stringify(data));
-      console.log('Productos guardados en localStorage:', data.length);
     }
   }, [data, isLoaded]);
 
