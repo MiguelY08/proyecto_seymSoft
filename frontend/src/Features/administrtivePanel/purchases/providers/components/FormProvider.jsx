@@ -40,8 +40,6 @@ import { categoriesService } from '../data/categoriesService';
 import { providersService } from '../data/providersService';
 import FormSelect from '../../../../shared/FormSelect';
 
-let categoriesCache = null;
-
 const EMAIL_MAX_LENGTH = 100;
 const ADDRESS_MAX_LENGTH = 120;
 const CIU_CODE_LENGTH = 4;
@@ -216,16 +214,10 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
   useEffect(() => {
     const loadCategories = async () => {
       if (!isOpen) return;
-      if (categoriesCache) {
-        setCategoriesList(categoriesCache);
-        return;
-      }
-
       setLoadingCategories(true);
       try {
         const result = await categoriesService.getAll();
-        categoriesCache = result.data || [];
-        setCategoriesList(categoriesCache);
+        setCategoriesList(result.data || []);
       } catch {
         showError('Error', 'No se pudieron cargar las categorías');
       } finally {
@@ -698,7 +690,7 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
       documentType: formData.tipo,
       documentNumber: formData.numero,
       nameProvider: formData.nombres,
-      lastname: formData.tipoPersona === 'juridica' ? 'Empresa' : formData.apellidos,
+      lastname: formData.tipoPersona === 'juridica' ? '' : formData.apellidos,
       email: formData.correo,
       phone: formData.telefono,
       address: formData.direccion,
@@ -1251,4 +1243,3 @@ function FormProvider({ isOpen, onClose, provider, onSave }) {
 }
 
 export default FormProvider;
-

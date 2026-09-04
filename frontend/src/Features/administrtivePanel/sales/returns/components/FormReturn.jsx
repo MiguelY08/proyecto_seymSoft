@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { X, ChevronDown, ChevronLeft, Minus, Plus, Image, Search, Loader, Lock, ClipboardList } from 'lucide-react';
+import { X, XCircle, ChevronDown, ChevronLeft, Minus, Plus, Image, Search, Loader, Lock, ClipboardList } from 'lucide-react';
 import Evidence from './Evidence';
 import FormSelect from '../../../../shared/FormSelect';
 import { useAlert } from '../../../../shared/alerts/useAlert';
@@ -20,7 +20,7 @@ import {
   getInitialStateForMethod,
   calculateGeneralStatus
 } from '../utils/returnsHelpers';
-import { getAvailableInvoices, getReturnableSales } from '../data/returnsService';
+import { cancelReturnDetail, getAvailableInvoices, getReturnableSales } from '../data/returnsService';
 import { clientsService } from '../../clients/services/clientsService';
 
 // ======================= DATOS DE REFERENCIA =======================
@@ -31,6 +31,8 @@ const onlyDigits = (value, maxLength = 4) =>
 const ADDRESS_MAX_LENGTH = 120;
 const GENERAL_DESCRIPTION_MAX_LENGTH = 500;
 const REASON_DESCRIPTION_MAX_LENGTH = 255;
+const DETAIL_CANCEL_REASON_MIN = 10;
+const DETAIL_CANCEL_REASON_MAX = 250;
 
 const PRODUCTOS_VENTA = [];
 
@@ -122,6 +124,12 @@ function ProductoImg({ src, size = 'md' }) {
 
 const isFinalProductStatus = (status) =>
   String(status || '').trim().toLowerCase() === 'listo';
+
+const isCancelledProductStatus = (status) =>
+  String(status || '').trim().toLowerCase() === 'anulado';
+
+const isLockedProductStatus = (status) =>
+  isFinalProductStatus(status) || isCancelledProductStatus(status);
 
 function BlockedFieldHint({ title = 'Campo bloqueado' }) {
   return (
@@ -492,13 +500,13 @@ const isClientHistorySearch = (term, invoice = {}) => {
 
 // ======================= COMPONENTE: PRODUCTO SELECCIONADO (EDICIÓN) =======================
 
-function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange }) {
+function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange, onCancelConfig, cancellingDetailId }) {
   const [expanded, setExpanded] = useState(true);
   const maxTotalQuantity = producto?.cantidad || 0;
   const totalQuantityUsed = configs?.reduce((sum, cfg) => sum + (cfg.cantidad || 0), 0) || 0;
 
   const handleStatusChange = (index, newStatus) => {
-    if (isFinalProductStatus(configs[index]?.estado)) return;
+    if (isLockedProductStatus(configs[index]?.estado)) return;
     const newConfigs = [...configs];
     newConfigs[index] = { ...newConfigs[index], estado: newStatus };
     onConfigChange(newConfigs);
@@ -550,16 +558,34 @@ function ProductoSeleccionadoEditMode({ producto, configs, onConfigChange }) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Estado<span className="text-red-500">*</span></label>
-                  <EstadoBadgeSelect 
-                    value={config.estado} 
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <label className="block text-xs font-medium text-gray-700">Estado<span className="text-red-500">*</span></label>
+                    {!isCancelledProductStatus(config.estado) && (
+                      <button
+                        type="button"
+                        onClick={() => onCancelConfig?.(producto, config)}
+                        disabled={cancellingDetailId === config.id}
+                        className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        title="Anular solo este producto"
+                      >
+                        {cancellingDetailId === config.id ? (
+                          <Loader className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <XCircle className="h-3 w-3" />
+                        )}
+                        Anular
+                      </button>
+                    )}
+                  </div>
+                  <EstadoBadgeSelect
+                    value={config.estado}
                     onChange={(v) => handleStatusChange(index, v)}
                     metodo={config.metodo}
-                    disabled={isFinalProductStatus(config.estado)}
+                    disabled={isLockedProductStatus(config.estado)}
                   />
-                  {isFinalProductStatus(config.estado) && (
-                    <p className="mt-1 text-[10px] font-medium text-green-600">
-                      Estado final bloqueado
+                  {isLockedProductStatus(config.estado) && (
+                    <p className={`mt-1 text-[10px] font-medium ${isCancelledProductStatus(config.estado) ? 'text-red-600' : 'text-green-600'}`}>
+                      {isCancelledProductStatus(config.estado) ? 'Producto anulado bloqueado' : 'Estado final bloqueado'}
                     </p>
                   )}
                 </div>
@@ -897,7 +923,7 @@ function ProductoSeleccionadoCreateMode({ producto, configs, onConfigsChange, on
 
 // ======================= COMPONENTE PRINCIPAL =======================
 
-function FormReturn({ isOpen, onClose, returnData = null, preselectedSale = null, onSave }) {
+function FormReturn({ isOpen, onClose, returnData = null, preselectedSale = null, onSave, onDetailCancelled }) {
   const isEdit = Boolean(returnData);
   const { showConfirm, showError, showSuccess } = useAlert();
 
@@ -918,6 +944,10 @@ function FormReturn({ isOpen, onClose, returnData = null, preselectedSale = null
   const [seleccionados, setSeleccionados] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [detailToCancel, setDetailToCancel] = useState(null);
+  const [detailCancelReason, setDetailCancelReason] = useState('');
+  const [detailCancelTouched, setDetailCancelTouched] = useState(false);
+  const [cancellingDetailId, setCancellingDetailId] = useState(null);
   
   const [productosDisponibles, setProductosDisponibles] = useState([]);
   const [cargandoProductos, setCargandoProductos] = useState(false);
@@ -996,6 +1026,10 @@ useEffect(() => {
           metodo: p.method || p.metodo || '',
           applyCredit: (p.method || p.metodo || '') === 'Saldo a favor' ? true : p.applyCredit === true,
           creditApplied: p.creditApplied === true,
+          creditReversed: p.creditReversed === true,
+          stockApplied: p.stockApplied === true,
+          stockReversed: p.stockReversed === true,
+          cancellationReason: p.cancellationReason || '',
           cantidad: p.quantity || p.cantidad || 1
         });
       });
@@ -1466,6 +1500,62 @@ useEffect(() => {
     return newErrors;
   };
 
+  const closeDetailCancelModal = (force = false) => {
+    if (cancellingDetailId && !force) return;
+    setDetailToCancel(null);
+    setDetailCancelReason('');
+    setDetailCancelTouched(false);
+  };
+
+  const getDetailCancelError = (value = detailCancelReason) => {
+    const cleanValue = value.trim();
+    if (!cleanValue) return 'El motivo de anulación es obligatorio.';
+    if (cleanValue.length < DETAIL_CANCEL_REASON_MIN) {
+      return `El motivo debe tener al menos ${DETAIL_CANCEL_REASON_MIN} caracteres.`;
+    }
+    if (cleanValue.length > DETAIL_CANCEL_REASON_MAX) {
+      return `El motivo no puede superar ${DETAIL_CANCEL_REASON_MAX} caracteres.`;
+    }
+    return '';
+  };
+
+  const openDetailCancelModal = (producto, config) => {
+    setDetailToCancel({ producto, config });
+    setDetailCancelReason('');
+    setDetailCancelTouched(false);
+  };
+
+  const handleCancelDetailFromEdit = async () => {
+    const error = getDetailCancelError();
+    setDetailCancelTouched(true);
+    if (error || !detailToCancel || !returnData?.id) return;
+
+    const detailId = detailToCancel.config?.id;
+    const productName = detailToCancel.producto?.nombre || 'este producto';
+    const confirmation = await showConfirm(
+      'warning',
+      'Anular producto devuelto',
+      `Vas a anular únicamente "${productName}" dentro de la devolución ${returnData.returnNumber || returnData.numeroDevolucion || ''}. Esta acción no anula los demás productos.`,
+      {
+        confirmButtonText: 'Sí, anular',
+        cancelButtonText: 'Volver',
+      }
+    );
+    if (!confirmation?.isConfirmed) return;
+
+    try {
+      setCancellingDetailId(detailId);
+      await cancelReturnDetail(returnData.id, detailId, detailCancelReason.trim());
+      showSuccess('Producto anulado', 'El producto fue anulado correctamente dentro de la devolución.');
+      closeDetailCancelModal(true);
+      await onDetailCancelled?.(returnData.id);
+    } catch (errorCancel) {
+      showError('No se pudo anular el producto', errorCancel.message);
+    } finally {
+      setCancellingDetailId(null);
+    }
+  };
+
   // ==================== SUBMIT ====================
   const handleSubmit = async () => {
     if (saving) return;
@@ -1478,7 +1568,9 @@ useEffect(() => {
     const producto = productosDisponibles.find(p => String(p.id) === String(id));
     if (!producto) return;
     
-    configs.forEach((config) => {
+    configs
+      .filter((config) => !isCancelledProductStatus(config.estado))
+      .forEach((config) => {
       productosDevueltosData.push({
         id: config.id,
         productName: producto.nombre,
@@ -1690,11 +1782,6 @@ useEffect(() => {
               {isEdit ? `Editar devolución — ${returnData?.returnNumber || returnData?.numeroDevolucion || ''}` : 'Nueva devolución'}
             </h2>
           </div>
-          {isEdit && (
-            <div className="relative hidden items-center gap-2 rounded-lg bg-white/20 px-3 py-1 md:flex">
-              <span className="text-white text-[10px] font-medium">Modo edición: solo estados</span>
-            </div>
-          )}
           <button type="button" onClick={handleClose}
             className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/15 text-white transition hover:bg-white/25">
             <X className="w-4 h-4" />
@@ -2126,6 +2213,8 @@ useEffect(() => {
                         producto={prod}
                         configs={seleccionados[prod.id]}
                         onConfigChange={(nuevasConfigs) => updateConfigsEditMode(prod.id, nuevasConfigs)}
+                        onCancelConfig={openDetailCancelModal}
+                        cancellingDetailId={cancellingDetailId}
                       />
                     ) : (
                       <ProductoSeleccionadoCreateMode
@@ -2287,6 +2376,78 @@ useEffect(() => {
     }
   }} 
 />
+
+      {detailToCancel && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-[520px] overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="relative flex items-center justify-between overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-3.5">
+              <div className="relative flex min-w-0 items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+                  <XCircle className="h-5 w-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="truncate text-sm font-bold text-white">Anular producto devuelto</h3>
+                  <p className="truncate text-[11px] text-white/75">{detailToCancel.producto?.nombre || 'Producto'}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => closeDetailCancelModal()}
+                disabled={Boolean(cancellingDetailId)}
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/15 text-white transition hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="px-5 py-4">
+              <p className="mb-3 text-sm text-gray-600">
+                Escribe la razón por la cual se anula este producto. Solo se afectará este producto dentro de la devolución.
+              </p>
+              <textarea
+                value={detailCancelReason}
+                onChange={(event) => setDetailCancelReason(event.target.value.slice(0, DETAIL_CANCEL_REASON_MAX))}
+                onBlur={() => setDetailCancelTouched(true)}
+                rows={4}
+                placeholder="Describe el motivo de anulación del producto..."
+                className={`w-full resize-none rounded-xl border px-3 py-2 text-sm text-gray-700 outline-none transition ${
+                  detailCancelTouched && getDetailCancelError()
+                    ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-100'
+                    : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/15'
+                }`}
+              />
+              <div className="mt-1 flex items-center justify-between gap-3">
+                <p className="text-xs text-red-500">
+                  {detailCancelTouched ? getDetailCancelError() : ''}
+                </p>
+                <span className={`text-xs ${detailCancelReason.length >= DETAIL_CANCEL_REASON_MAX ? 'text-red-400' : 'text-gray-400'}`}>
+                  {detailCancelReason.length}/{DETAIL_CANCEL_REASON_MAX}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 border-t border-gray-100 px-5 py-4 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => closeDetailCancelModal()}
+                disabled={Boolean(cancellingDetailId)}
+                className="w-full rounded-full border border-[#004D77] bg-white px-5 py-2 text-sm font-medium text-[#004D77] shadow-sm transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelDetailFromEdit}
+                disabled={Boolean(cancellingDetailId) || Boolean(getDetailCancelError())}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-red-600 bg-red-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              >
+                {cancellingDetailId && <Loader className="h-4 w-4 animate-spin" />}
+                {cancellingDetailId ? 'Anulando...' : 'Anular producto'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

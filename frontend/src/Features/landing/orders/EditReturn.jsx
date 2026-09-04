@@ -1,4 +1,4 @@
-import { Navigate, useParams } from 'react-router-dom';
+﻿import { Navigate, useParams } from 'react-router-dom';
 
 /**
  * Las devoluciones de clientes son gestionadas por el equipo administrativo.
@@ -11,3 +11,4 @@ function EditReturn() {
 }
 
 export default EditReturn;
+

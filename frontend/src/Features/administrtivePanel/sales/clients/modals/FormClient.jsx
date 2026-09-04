@@ -981,7 +981,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
       : {
           ...clientOnlyData,
           firstName: normalizedFormData.firstName,
-          lastName: normalizedFormData.personType === 'juridica' ? 'Empresa' : normalizedFormData.lastName,
+          lastName: normalizedFormData.personType === 'juridica' ? '' : normalizedFormData.lastName,
           phone: normalizedFormData.phone,
           email: normalizedFormData.email,
         };
