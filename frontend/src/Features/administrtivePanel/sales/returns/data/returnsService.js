@@ -267,6 +267,24 @@ export const cancelReturn = async (id, cancellationReason) => {
   }
 };
 
+export const cancelReturnDetail = async (returnId, detailId, cancellationReason) => {
+  try {
+    if (!cancellationReason?.trim() || cancellationReason.trim().length < 10) {
+      throw new Error('El motivo de anulación debe tener al menos 10 caracteres');
+    }
+
+    const response = await apiClient.patch(
+      `/sales-returns/${returnId}/details/${detailId}/cancel`,
+      { cancellationReason: cancellationReason.trim() }
+    );
+
+    return response.data.data;
+  } catch (error) {
+    const message = error.response?.data?.message || error.message || 'Error al anular el producto';
+    throw new Error(message);
+  }
+};
+
 /**
  * Elimina una devolución (solo por compatibilidad)
  */
@@ -436,6 +454,7 @@ export default {
   createReturn,
   updateReturn,
   cancelReturn,
+  cancelReturnDetail,
   deleteReturn,
   saveEvidence,
   deleteEvidence,

@@ -1,4 +1,4 @@
-import { Search, Plus, ListFilter, CircleCheck, CircleX } from 'lucide-react';
+import { Search, Plus, ListFilter, CircleCheck, CircleX, X } from 'lucide-react';
 import Permission from '../../../configuration/roles/components/Permission';
 import ButtonComponent from '../../../../shared/ButtonComponent';
 import FormSelect from '../../../../shared/FormSelect';
@@ -25,8 +25,20 @@ function ClientsToolbar({
             placeholder="Buscar"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-4 pr-10 text-sm text-gray-700 placeholder-gray-400 outline-none transition-colors duration-200 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
+            className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-4 pr-16 text-sm text-gray-700 placeholder-gray-400 outline-none transition-colors duration-200 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onSearchChange('')}
+              className="absolute right-9 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-[#004D77]"
+              aria-label="Limpiar búsqueda"
+              title="Limpiar búsqueda"
+            >
+              <X className="h-3.5 w-3.5" strokeWidth={2} />
+            </button>
+          )}
           <Search
             className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
             strokeWidth={2}
