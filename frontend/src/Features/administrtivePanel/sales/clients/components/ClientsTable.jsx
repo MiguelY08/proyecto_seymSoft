@@ -3,6 +3,9 @@ import { Info, Loader2, Plus, SquarePen, Trash2, Users } from 'lucide-react';
 import ActiveToggle from './ActiveToggle';
 import { formatClientType, formatCurrency } from '../helpers/clientHelpers';
 import Permission from '../../../configuration/roles/components/Permission';
+import { useAuth } from '../../../../access/context/AuthContext';
+import { useAlert } from '../../../../shared/alerts/useAlert';
+import { getUserId } from '../../../users/helpers/selfUser';
 
 const TIPOS_DOC = ['cc', 'ce', 'nit', 'ti', 'pp'];
 
@@ -154,6 +157,10 @@ function ClientsTable({
   onCreateClient,
   deletingId = null,
 }) {
+  const { user: authUser } = useAuth();
+  const { showWarning } = useAlert();
+  const authUserId = getUserId(authUser);
+
   if (!clients.length) {
     const isSearching = totalData > 0 || searchTerm.trim().length > 0;
     return (
@@ -201,6 +208,7 @@ function ClientsTable({
             const { isCombined, tipoTerm, numTerm } = parseSearchTerm(searchTerm);
             const recordNumber = (startIndex || 0) + index + 1;
             const isSystemClient = client.id === 999999999;
+            const isSelfClient = authUserId && Number(client.idUser) === Number(authUserId);
             const displayName = isSystemClient ? 'Cliente Sistema' : getClientDisplayName(client);
 
             return (
@@ -270,9 +278,27 @@ function ClientsTable({
                       <Permission permission="clientes.editar">
                         <button
                           type="button"
-                          onClick={() => onEdit(client)}
-                          className="cursor-pointer text-gray-400 transition hover:scale-110 hover:text-[#004D77]"
-                          title="Editar cliente"
+                          onClick={() => {
+                            if (isSelfClient) {
+                              showWarning(
+                                'Acción no permitida',
+                                'No puedes editar tu propio cliente desde este módulo. Usa la sección de perfil.'
+                              );
+                              return;
+                            }
+                            onEdit(client);
+                          }}
+                          disabled={isSelfClient}
+                          className={`text-gray-400 transition ${
+                            isSelfClient
+                              ? 'cursor-not-allowed opacity-50'
+                              : 'cursor-pointer hover:scale-110 hover:text-[#004D77]'
+                          }`}
+                          title={
+                            isSelfClient
+                              ? 'Edita tu perfil desde la sección de perfil'
+                              : 'Editar cliente'
+                          }
                         >
                           <SquarePen className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
                         </button>

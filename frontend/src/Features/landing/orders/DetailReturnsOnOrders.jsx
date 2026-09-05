@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAlert } from '../../shared/alerts/useAlert';
 import useAuthenticatedClient from '../../shared/hooks/useAuthenticatedClient';
+import useBodyScrollLock from '../../shared/hooks/useBodyScrollLock';
 import { getMySalesReturnById } from './salesReturnsService';
 import {
   buildProductTracking,
@@ -27,6 +28,11 @@ import {
   getStatusClasses,
 } from './salesReturnTracking';
 import { ORDER_FONT_FAMILY, injectOrderTypography } from './orderTypography';
+import {
+  buildEvidenceViewerHtml,
+  getFileName,
+  normalizeImageUrl,
+} from '../../administrtivePanel/sales/returns/components/ViewEvidence';
 
 const POLL_INTERVAL = 30000;
 
@@ -52,12 +58,14 @@ function DetailReturnsOnOrders() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated, loading: authLoading } = useAuthenticatedClient();
-  const { showTimer } = useAlert();
+  const { showTimer, showError } = useAlert();
   const [saleReturn, setSaleReturn] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedEvidence, setSelectedEvidence] = useState(null);
   const previousSignature = useRef(null);
+
+  useBodyScrollLock(Boolean(selectedEvidence));
 
   const loadReturn = useCallback(async ({ silent = false } = {}) => {
     if (!isAuthenticated) {
@@ -112,6 +120,37 @@ function DetailReturnsOnOrders() {
 
     return () => window.clearInterval(interval);
   }, [authLoading, loadReturn]);
+
+  const handleOpenEvidenceInNewTab = (initialIndex = 0) => {
+    const evidences = (saleReturn?.evidences ?? []).map((evidence, index) => {
+      const imageUrl = evidence?.imageUrl || evidence?.image_path || evidence?.preview || evidence?.url || '';
+      return {
+        url: normalizeImageUrl(imageUrl),
+        name: evidence?.name || getFileName(imageUrl) || `Evidencia ${index + 1}`,
+        description: evidence?.image_description || evidence?.description || '',
+      };
+    });
+
+    if (!evidences.some((evidence) => evidence.url)) {
+      showError('No se pueden abrir las evidencias', 'La devolución no tiene rutas válidas para mostrar.');
+      return;
+    }
+
+    const newTab = window.open('', '_blank');
+    if (!newTab) {
+      showError('No se pudo abrir la pestaña', 'El navegador bloqueó la ventana emergente. Permite ventanas emergentes para continuar.');
+      return;
+    }
+
+    newTab.opener = null;
+    newTab.document.open();
+    newTab.document.write(buildEvidenceViewerHtml({
+      title: `Evidencias - ${saleReturn.returnNumber || `Devolución No. ${saleReturn.id}`}`,
+      evidences,
+      initialIndex,
+    }));
+    newTab.document.close();
+  };
 
   if (authLoading || loading) {
     return (
@@ -214,7 +253,7 @@ function DetailReturnsOnOrders() {
             <div>
               <h2 className="mb-4 text-lg font-black text-slate-800">Evidencias</h2>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                {saleReturn.evidences.map((evidence) => (
+                {saleReturn.evidences.map((evidence, index) => (
                   <div
                     key={evidence.id}
                     className="group overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm transition hover:border-[#004D77]/30 hover:shadow-md"
@@ -234,15 +273,14 @@ function DetailReturnsOnOrders() {
                         <Maximize2 size={15} />
                       </span>
                     </button>
-                    <a
-                      href={evidence.imageUrl}
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEvidenceInNewTab(index)}
                       className="flex items-center justify-center gap-1.5 border-t border-slate-200 bg-white px-3 py-2 text-[11px] font-black uppercase text-[#004D77] transition hover:bg-[#004D77]/10"
                     >
                       <ExternalLink size={13} />
                       Abrir en otra pestaña
-                    </a>
+                    </button>
                   </div>
                 ))}
               </div>
@@ -257,13 +295,13 @@ function DetailReturnsOnOrders() {
           onClick={() => setSelectedEvidence(null)}
         >
           <div
-            className="relative max-h-[90vh] w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+            className="relative flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-center justify-between gap-4 border-b border-slate-200 bg-slate-50 px-5 py-4">
+            <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-slate-50 px-5 py-4">
               <div className="min-w-0">
                 <p className="text-xs font-black uppercase tracking-wide text-slate-400">Evidencia</p>
-                <p className="truncate text-sm font-bold text-slate-700">
+                <p className="line-clamp-3 whitespace-pre-wrap break-words pr-2 text-sm font-bold leading-relaxed text-slate-700">
                   {selectedEvidence.image_description || 'Imagen de la devolución'}
                 </p>
               </div>
@@ -276,11 +314,11 @@ function DetailReturnsOnOrders() {
                 <X size={18} />
               </button>
             </div>
-            <div className="max-h-[calc(90vh-72px)] overflow-auto bg-slate-100 p-4">
+            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-slate-100 p-4">
               <img
                 src={selectedEvidence.imageUrl}
                 alt={selectedEvidence.image_description || 'Evidencia de devolución'}
-                className="mx-auto max-h-[78vh] max-w-full rounded-2xl object-contain shadow-sm"
+                className="max-h-[calc(90vh-118px)] max-w-full rounded-2xl object-contain shadow-sm"
               />
             </div>
           </div>
