@@ -4,15 +4,15 @@ import { useAlert } from '../../../../shared/alerts/useAlert';
 
 const DESCRIPTION_PREVIEW_LIMIT = 180;
 
-const getEvidenceImageUrl = (evidence) => evidence?.imageUrl || evidence?.image_path || evidence?.preview || evidence?.url || '';
+export const getEvidenceImageUrl = (evidence) => evidence?.imageUrl || evidence?.image_path || evidence?.preview || evidence?.url || '';
 
-const normalizeImageUrl = (imageUrl) => {
+export const normalizeImageUrl = (imageUrl) => {
   if (!imageUrl) return '';
   if (imageUrl.startsWith('http') || imageUrl.startsWith('data:image') || imageUrl.startsWith('blob:')) return imageUrl;
   return new URL(imageUrl, window.location.origin).href;
 };
 
-const getFileName = (url) => {
+export const getFileName = (url) => {
   if (!url) return 'evidencia.jpg';
   const parts = url.split('/');
   const filename = parts[parts.length - 1];
@@ -21,7 +21,7 @@ const getFileName = (url) => {
 
 const safeJson = (value) => JSON.stringify(value).replace(/</g, '\\u003c');
 
-const buildEvidenceViewerHtml = ({ title, evidences, initialIndex }) => `<!doctype html>
+export const buildEvidenceViewerHtml = ({ title, evidences, initialIndex }) => `<!doctype html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
