@@ -35,7 +35,11 @@ const getErrorMessage = (error, fallback) => {
     formatErrorDetail(responseData?.details) ||
     formatErrorDetail(responseData?.data);
 
-  return [responseData?.message, detail].filter(Boolean).join(" ") || error?.message || fallback;
+  return (
+    [responseData?.message, detail].filter(Boolean).join(" ") ||
+    error?.message ||
+    fallback
+  );
 };
 
 const formatDateOnly = (date) => {
@@ -52,11 +56,13 @@ const getLabel = (value, fallback = "") => {
 const getReasonLabel = (reason, fallback = "") => {
   if (!reason) return fallback;
 
-  const reasonId = reason?.id ?? reason?.returnReasonId ?? reason?.idReturnReason;
+  const reasonId =
+    reason?.id ?? reason?.returnReasonId ?? reason?.idReturnReason;
   const labelById = getReturnReasonLabelById(reasonId);
   if (labelById) return labelById;
 
-  const reasonCode = typeof reason === "string" ? reason : reason?.code ?? reason?.description;
+  const reasonCode =
+    typeof reason === "string" ? reason : (reason?.code ?? reason?.description);
   const labelByCode = getReturnReasonLabelByCode(reasonCode);
   if (labelByCode) return labelByCode;
 
@@ -97,27 +103,27 @@ const mapReturnLineToNewDetail = (product, line) => {
   const detail = {
     idPurchaseDetail: toPositiveIntegerOrNull(
       line?.idPurchaseDetail ??
-      line?.purchaseDetailId ??
-      product?.idPurchaseDetail ??
-      product?.purchaseDetailId ??
-      product?.id
+        line?.purchaseDetailId ??
+        product?.idPurchaseDetail ??
+        product?.purchaseDetailId ??
+        product?.id,
     ),
     quantity: toPositiveIntegerOrNull(line?.cantidadDevolver),
     idReturnReason: toPositiveIntegerOrNull(
       line?.idReturnReason ??
-      line?.returnReasonId ??
-      getReturnReasonIdByLabel(line?.motivo)
+        line?.returnReasonId ??
+        getReturnReasonIdByLabel(line?.motivo),
     ),
     idReturnMethod: toPositiveIntegerOrNull(
       line?.idReturnMethod ??
-      line?.returnMethodId ??
-      getReturnMethodIdByLabel(line?.tipoDevolucion)
+        line?.returnMethodId ??
+        getReturnMethodIdByLabel(line?.tipoDevolucion),
     ),
     idReturnStatus: toPositiveIntegerOrNull(
       getReturnStatusIdByLabel(line?.estado) ??
-      line?.idReturnStatus ??
-      line?.returnStatusId ??
-      line?.statusId
+        line?.idReturnStatus ??
+        line?.returnStatusId ??
+        line?.statusId,
     ),
   };
 
@@ -125,13 +131,18 @@ const mapReturnLineToNewDetail = (product, line) => {
   return supplierDate ? { ...detail, supplierDate } : detail;
 };
 
-export const mapReturnFormToCreatePayload = (purchase, selectedProducts = []) => {
+export const mapReturnFormToCreatePayload = (
+  purchase,
+  selectedProducts = [],
+) => {
   const idPurchase = toPositiveIntegerOrNull(
-    purchase?.idPurchase ?? purchase?.purchaseId ?? purchase?.id
+    purchase?.idPurchase ?? purchase?.purchaseId ?? purchase?.id,
   );
 
   const details = (selectedProducts ?? []).flatMap((product) =>
-    (product?.lineas ?? []).map((line) => mapReturnLineToNewDetail(product, line))
+    (product?.lineas ?? []).map((line) =>
+      mapReturnLineToNewDetail(product, line),
+    ),
   );
 
   return { idPurchase, details };
@@ -144,7 +155,7 @@ export const mapReturnFormToUpdatePayload = (selectedProducts = []) => {
   (selectedProducts ?? []).forEach((product) => {
     (product?.lineas ?? []).forEach((line) => {
       const idPurchaseReturnDetail = toPositiveIntegerOrNull(
-        line?.idPurchaseReturnDetail ?? line?.purchaseReturnDetailId
+        line?.idPurchaseReturnDetail ?? line?.purchaseReturnDetailId,
       );
 
       if (!idPurchaseReturnDetail) {
@@ -154,12 +165,12 @@ export const mapReturnFormToUpdatePayload = (selectedProducts = []) => {
 
       const originalStatusId = toPositiveIntegerOrNull(
         line?.originalReturnStatusId ??
-        getReturnStatusIdByLabel(line?.estadoOriginal)
+          getReturnStatusIdByLabel(line?.estadoOriginal),
       );
       const currentStatusId = toPositiveIntegerOrNull(
         getReturnStatusIdByLabel(line?.estado) ??
-        line?.idReturnStatus ??
-        line?.returnStatusId
+          line?.idReturnStatus ??
+          line?.returnStatusId,
       );
 
       if (currentStatusId && currentStatusId !== originalStatusId) {
@@ -205,8 +216,12 @@ export const mapPurchaseReturnToList = (purchaseReturn) => {
     progress,
     provider: purchaseReturn.provider ?? null,
     proveedor: getPurchaseReturnProviderName(purchaseReturn, "-"),
-    totalDetails: purchaseReturn.totalDetails ?? purchaseReturn.progress?.total ?? 0,
-    completedDetails: purchaseReturn.completedDetails ?? purchaseReturn.progress?.completed ?? 0,
+    totalDetails:
+      purchaseReturn.totalDetails ?? purchaseReturn.progress?.total ?? 0,
+    completedDetails:
+      purchaseReturn.completedDetails ??
+      purchaseReturn.progress?.completed ??
+      0,
     productos: [],
   };
 };
@@ -214,11 +229,11 @@ export const mapPurchaseReturnToList = (purchaseReturn) => {
 const getDetailUnitPrice = (detail) =>
   Number(
     detail?.purchaseDetail?.netUnitPrice ??
-    detail?.purchaseDetail?.grossUnitPrice ??
-    detail?.netUnitPrice ??
-    detail?.grossUnitPrice ??
-    detail?.unitPrice ??
-    0
+      detail?.purchaseDetail?.grossUnitPrice ??
+      detail?.netUnitPrice ??
+      detail?.grossUnitPrice ??
+      detail?.unitPrice ??
+      0,
   );
 
 const getDetailTaxPercentage = (detail) =>
@@ -229,25 +244,25 @@ const getDetailReturnAvailability = (detail) => {
   const availability = purchaseDetail?.returnAvailability ?? {};
   const purchasedQuantity = Number(
     purchaseDetail?.purchasedQuantity ??
-    availability?.purchasedQuantity ??
-    purchaseDetail?.stockAdded ??
-    purchaseDetail?.quantity ??
-    0
+      availability?.purchasedQuantity ??
+      purchaseDetail?.stockAdded ??
+      purchaseDetail?.quantity ??
+      0,
   );
   const reservedQuantity = Number(
     purchaseDetail?.returnReservedQuantity ??
-    availability?.reservedQuantity ??
-    0
+      availability?.reservedQuantity ??
+      0,
   );
   const finalReturnedQuantity = Number(
     purchaseDetail?.finalReturnedQuantity ??
-    availability?.finalReturnedQuantity ??
-    0
+      availability?.finalReturnedQuantity ??
+      0,
   );
   const availableQuantity = Number(
     purchaseDetail?.returnAvailableQuantity ??
-    availability?.availableQuantity ??
-    purchasedQuantity
+      availability?.availableQuantity ??
+      purchasedQuantity,
   );
 
   return {
@@ -312,21 +327,32 @@ export const mapPurchaseReturnToDetail = (purchaseReturn) => {
     purchaseStatus: purchaseReturn.purchase?.status ?? null,
     totalAmount: purchaseReturn.purchase?.totalAmount ?? 0,
     provider,
-    providerId: provider?.id ?? provider?.id_provider ?? purchaseReturn.purchase?.providerId ?? null,
+    providerId:
+      provider?.id ??
+      provider?.id_provider ??
+      purchaseReturn.purchase?.providerId ??
+      null,
     proveedor: getPurchaseReturnProviderName(
       {
         ...purchaseReturn,
         provider,
         purchase: purchaseReturn.purchase,
       },
-      "-"
+      "-",
     ),
     details,
     statusHistory: purchaseReturn.statusHistory ?? [],
     productos: details.map((detail) => {
       const product = getProductFromDetail(detail);
       const barcode = getBarcodeFromDetail(detail);
-      const reason = getReasonLabel(detail.reason);
+      const returnReasonId =
+        detail.returnReasonId ??
+        detail.idReturnReason ??
+        detail.reason?.id ??
+        null;
+      const reason =
+        getReturnReasonLabelById(returnReasonId) ||
+        getReasonLabel(detail.reason);
       const method = getLabel(detail.method);
       const detailStatusId =
         detail.returnStatusId ??
@@ -335,8 +361,7 @@ export const mapPurchaseReturnToDetail = (purchaseReturn) => {
         detail.status?.id ??
         null;
       const detailStatus =
-        getLabel(detail.status) ||
-        getReturnStatusLabelById(detailStatusId);
+        getLabel(detail.status) || getReturnStatusLabelById(detailStatusId);
       const returnAvailability = getDetailReturnAvailability(detail);
 
       return {
@@ -350,12 +375,22 @@ export const mapPurchaseReturnToDetail = (purchaseReturn) => {
         productId: product?.id ?? detail.productId ?? null,
         referencia: product?.reference ?? "",
         codigoBarras: detail.barcode ?? barcode?.code ?? "",
-        idBarcode: detail.barcodeId ?? detail.purchaseDetail?.barcodeId ?? barcode?.id ?? null,
-        barcodeId: detail.barcodeId ?? detail.purchaseDetail?.barcodeId ?? barcode?.id ?? null,
+        idBarcode:
+          detail.barcodeId ??
+          detail.purchaseDetail?.barcodeId ??
+          barcode?.id ??
+          null,
+        barcodeId:
+          detail.barcodeId ??
+          detail.purchaseDetail?.barcodeId ??
+          barcode?.id ??
+          null,
         valorUnit: getDetailUnitPrice(detail),
         iva: getDetailTaxPercentage(detail),
         cantidadComprada: returnAvailability.purchasedQuantity,
-        stockAdded: detail.purchaseDetail?.stockAdded ?? returnAvailability.purchasedQuantity,
+        stockAdded:
+          detail.purchaseDetail?.stockAdded ??
+          returnAvailability.purchasedQuantity,
         purchaseType: detail.purchaseDetail?.purchaseType ?? "Unidad",
         quantityPerPack: detail.purchaseDetail?.quantityPerPack ?? 0,
         cantidadDisponibleDevolucion: returnAvailability.availableQuantity,
@@ -367,8 +402,8 @@ export const mapPurchaseReturnToDetail = (purchaseReturn) => {
         motivo: reason,
         reason,
         reasonData: detail.reason ?? null,
-        idReturnReason: detail.returnReasonId ?? detail.reason?.id ?? null,
-        returnReasonId: detail.returnReasonId ?? detail.reason?.id ?? null,
+        idReturnReason: returnReasonId,
+        returnReasonId,
         tipoDevolucion: method,
         method,
         methodData: detail.method ?? null,
@@ -393,7 +428,12 @@ export const PurchaseReturnsService = {
       const response = await apiClient.get("/purchase-returns/metrics");
       return response.data.data;
     } catch (error) {
-      throw new Error(getErrorMessage(error, "No se pudieron obtener las métricas de devoluciones de compras."));
+      throw new Error(
+        getErrorMessage(
+          error,
+          "No se pudieron obtener las métricas de devoluciones de compras.",
+        ),
+      );
     }
   },
 
@@ -414,7 +454,12 @@ export const PurchaseReturnsService = {
         },
       };
     } catch (error) {
-      throw new Error(getErrorMessage(error, "No se pudieron obtener las devoluciones de compras."));
+      throw new Error(
+        getErrorMessage(
+          error,
+          "No se pudieron obtener las devoluciones de compras.",
+        ),
+      );
     }
   },
 
@@ -423,7 +468,12 @@ export const PurchaseReturnsService = {
       const response = await apiClient.get(`/purchase-returns/${id}`);
       return mapPurchaseReturnToDetail(response.data.data);
     } catch (error) {
-      throw new Error(getErrorMessage(error, "No se pudo obtener el detalle de la devolución de compra."));
+      throw new Error(
+        getErrorMessage(
+          error,
+          "No se pudo obtener el detalle de la devolución de compra.",
+        ),
+      );
     }
   },
 
@@ -432,7 +482,9 @@ export const PurchaseReturnsService = {
       const response = await apiClient.post("/purchase-returns", payload);
       return mapPurchaseReturnToDetail(response.data.data);
     } catch (error) {
-      throw new Error(getErrorMessage(error, "No se pudo registrar la devolución de compra."));
+      throw new Error(
+        getErrorMessage(error, "No se pudo registrar la devolución de compra."),
+      );
     }
   },
 
@@ -441,7 +493,12 @@ export const PurchaseReturnsService = {
       const response = await apiClient.put(`/purchase-returns/${id}`, payload);
       return mapPurchaseReturnToDetail(response.data.data);
     } catch (error) {
-      throw new Error(getErrorMessage(error, "No se pudo actualizar la devolución de compra."));
+      throw new Error(
+        getErrorMessage(
+          error,
+          "No se pudo actualizar la devolución de compra.",
+        ),
+      );
     }
   },
 
@@ -453,7 +510,9 @@ export const PurchaseReturnsService = {
 
       return mapPurchaseReturnToDetail(response.data.data);
     } catch (error) {
-      throw new Error(getErrorMessage(error, "No se pudo anular la devolución de compra."));
+      throw new Error(
+        getErrorMessage(error, "No se pudo anular la devolución de compra."),
+      );
     }
   },
 };
