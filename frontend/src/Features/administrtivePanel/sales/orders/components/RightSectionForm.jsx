@@ -117,9 +117,9 @@ function RightSectionForm({
     });
   }, [productosCatalogo, searchTerm]);
 
-  const handleSelectProduct = (productoId) => {
+  const handleSelectProduct = (productoId, barcodeId) => {
     if (productoId) {
-      onAddProduct(productoId);
+      onAddProduct(productoId, barcodeId);
       setSearchTerm('');
       setIsDropdownOpen(false);
     }
@@ -137,6 +137,10 @@ function RightSectionForm({
   const isProductSelected = (productoId) => {
     return productos.some(p => p.id === productoId);
   };
+
+  const isVariantSelected = (productoId, barcodeId) => (
+    productos.some((p) => p.id === productoId && p.idBarcode === barcodeId)
+  );
 
   useBarcodeScanner({
     enabled: !isDisabled,
@@ -174,7 +178,8 @@ function RightSectionForm({
         return;
       }
 
-      onAddProduct(product.id);
+      const scannedVariant = product.barcodes?.find((item) => normalizeBarcode(item.barcode) === normalizedCode);
+      onAddProduct(product.id, scannedVariant?.id);
       setSearchTerm('');
       setIsDropdownOpen(false);
       setScannerMessage({ type: 'success', message: `Leido: ${product.nombre}` });
@@ -295,33 +300,37 @@ function RightSectionForm({
                     const hasStock = Number(prod.stock ?? 0) > 0;
                     return (
                       <li key={prod.id}>
-                        <button
-                          type="button"
-                          onClick={() => !selected && hasStock && handleSelectProduct(prod.id)}
-                          disabled={selected || !hasStock}
-                          className={`
-                            w-full px-4 py-2 text-left text-sm transition-colors duration-150
-                            flex items-center justify-between gap-2
-                            ${selected || !hasStock
-                              ? 'opacity-60 bg-gray-100 cursor-not-allowed' 
-                              : 'hover:bg-[#004D77]/10'
-                            }
-                          `}
-                        >
-                          <div className="flex-1">
-                            <div className={`font-medium ${selected ? 'text-gray-500' : 'text-gray-800'}`}>
-                              {prod.nombre}
+                        <div className="px-4 py-2 text-left text-sm">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <div className="font-medium text-gray-800">{prod.nombre}</div>
+                              <div className="text-xs text-gray-500">{formatCurrency(prod.precioDetalle)}</div>
                             </div>
-                            <div className="text-xs text-gray-500 flex flex-wrap gap-x-3 gap-y-1 mt-0.5">
-                              <span>Stock: {Number(prod.stock || 0).toLocaleString('es-CO')}</span>
-                              <span>{formatCurrency(prod.precioDetalle)}</span>
-                              {prod.codBarras && <span>Cód: {prod.codBarras}</span>}
-                            </div>
+                            {selected && <CheckCircle className="h-4 w-4 text-green-600" strokeWidth={1.8} />}
                           </div>
-                          {selected && (
-                            <CheckCircle className="w-4 h-4 text-green-600 shrink-0" strokeWidth={1.8} />
-                          )}
-                        </button>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {(prod.variants?.length ? prod.variants : [prod.defaultVariant || {
+                              id: prod.idBarcode || prod.barcode || prod.id,
+                              barcode: prod.barcode || prod.codBarras,
+                              variantName: 'Estilo principal',
+                              stock: prod.stock,
+                            }]).filter(Boolean).map((variant) => {
+                              const variantStock = Number(variant.stock || 0);
+                              const variantSelected = isVariantSelected(prod.id, variant.id);
+                              return (
+                                <button
+                                  key={variant.id}
+                                  type="button"
+                                  disabled={variantSelected || variantStock <= 0}
+                                  onClick={() => handleSelectProduct(prod.id, variant.id)}
+                                  className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-700 hover:border-[#004D77] hover:bg-[#004D77]/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {variant.variantName || 'Estilo'} · {variantStock}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </li>
                     );
                   })}
@@ -355,9 +364,10 @@ function RightSectionForm({
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {productos.map((prod) => (
-                  <tr key={prod.id} className="hover:bg-gray-50 transition-colors duration-150">
+                  <tr key={`${prod.id}-${prod.idBarcode}`} className="hover:bg-gray-50 transition-colors duration-150">
                     <td className="px-2 py-2 text-sm text-gray-800 sm:px-3" title={prod.nombre}>
                       <span className="block truncate">{prod.nombre}</span>
+                      <span className="block text-xs text-gray-500">{prod.variantName}</span>
                     </td>
                     <td className="whitespace-nowrap px-2 py-2 text-sm text-gray-700 sm:px-3">{prod.stock ?? 0}</td>
                     <td className="px-2 py-2 sm:px-3">
@@ -366,7 +376,12 @@ function RightSectionForm({
                         min="1"
                         max={prod.stock ?? undefined}
                         value={prod.cantidad}
-                        onChange={(e) => onUpdateCantidad(prod.id, parseInt(e.target.value) || 1)}
+                        onChange={(e) => {
+                          const quantity = parseInt(e.target.value) || 1;
+                          prod.idBarcode
+                            ? onUpdateCantidad(prod.id, prod.idBarcode, quantity)
+                            : onUpdateCantidad(prod.id, quantity);
+                        }}
                         className="w-full max-w-16 px-1.5 py-1.5 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 transition-colors duration-200 focus:ring-2 focus:ring-[#004D77]/20 focus:border-[#004D77] disabled:bg-gray-100 disabled:cursor-not-allowed sm:max-w-20 sm:px-2"
                         disabled={isDisabled}
                       />
@@ -380,7 +395,9 @@ function RightSectionForm({
                     <td className="px-2 py-2 text-right sm:px-3">
                       <button
                         type="button"
-                        onClick={() => onRemoveProduct(prod.id)}
+                        onClick={() => prod.idBarcode
+                          ? onRemoveProduct(prod.id, prod.idBarcode)
+                          : onRemoveProduct(prod.id)}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-500 transition-colors duration-200 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:bg-transparent disabled:hover:text-gray-300"
                         title="Eliminar"
                         disabled={isDisabled}

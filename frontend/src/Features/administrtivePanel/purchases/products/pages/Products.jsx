@@ -24,7 +24,10 @@ import ProductsService from "../services/productsServices";
 import { getProductAlertError } from "../helpers/productAlertMessages";
 import { HighlightText } from "../helpers/productsHelpers";
 import {
+  findProductByBarcode,
+  normalizeBarcode,
   productMatchesBarcodeSearch,
+  useBarcodeScanner,
 } from "../../../../shared/scanner";
 
 const RECORDS_PER_PAGE = 11;
@@ -33,6 +36,7 @@ const COMPANY_COLOR = "004D77";
 const LIGHT_BLUE = "DCEBF3";
 const LIGHT_GRAY = "F3F4F6";
 const WHITE = "FFFFFF";
+const PRODUCTS_SEARCH_SCANNER_FIELD = "administrative-products-search";
 
 const getProductCategories = (product) =>
   Array.isArray(product.categories) ? product.categories : [];
@@ -511,6 +515,33 @@ function Products() {
     setSelectedProduct(p);
     setShowModal(true);
   };
+
+  useBarcodeScanner({
+    enabled: !loading && canView && canViewInfo,
+    numericOnly: true,
+    minLength: 6,
+    maxLength: 20,
+    scannerFields: [PRODUCTS_SEARCH_SCANNER_FIELD],
+    duplicateDelayMs: 800,
+    preventDefault: false,
+    onScan: ({ code, scannerField }) => {
+      if (scannerField !== PRODUCTS_SEARCH_SCANNER_FIELD) return;
+
+      const normalizedCode = normalizeBarcode(code, { numericOnly: true });
+      const product = findProductByBarcode(data, normalizedCode);
+
+      if (!product) {
+        showError(
+          "Producto no encontrado",
+          `No se encontró ningún producto con el código de barras ${normalizedCode}.`,
+        );
+        return;
+      }
+
+      handleVerDetalles(product);
+    },
+  });
+
   const handleEditarProducto = (p) => {
     navigate(`/admin/purchases/products/${p.id}/edit`);
   };
@@ -547,6 +578,7 @@ function Products() {
           <ProductsToolbar
             search={search}
             onSearchChange={setSearch}
+            searchScannerField={PRODUCTS_SEARCH_SCANNER_FIELD}
             categories={categories}
             subcategories={subcategories}
             filterCategory={filterCategory}

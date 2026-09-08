@@ -50,12 +50,16 @@ export const normalizeProduct = (rawProduct) => {
     isActive: rawProduct.status === 'Activo',
     
     // Códigos de barras
-    barcodes: Array.isArray(rawProduct.barcodes) 
+    barcodes: Array.isArray(rawProduct.barcodes)
       ? rawProduct.barcodes.map(b => ({
           id: b.id,
           barcode: b.barcode,
           barcodeType: b.barcodeType || 'EAN13',
-          stock: parseInt(b.stock) || 0
+          stock: parseInt(b.stock) || 0,
+          variantName: b.variantName || b.variant_name || 'Estilo pendiente',
+          variantImageUrl: b.variantImageUrl || b.variant_image_url || null,
+          isActive: b.isActive !== false && b.is_active !== false,
+          isDefault: b.isDefault === true || b.is_default === true,
         }))
       : [],
     
