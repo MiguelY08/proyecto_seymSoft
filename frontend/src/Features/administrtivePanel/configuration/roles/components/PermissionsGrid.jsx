@@ -1,20 +1,14 @@
-
 import React from "react";
 
 export default function PermissionsGrid({
-
   permisosSistema = [],
   permisosRol = [],
   onChange = () => {},
-  readOnly = false
-
+  readOnly = false,
 }) {
-
   const ACTION_HELP = {
-    "pagos_y_abonos.generar_interes":
-      "Se usa dentro de Contactar cliente.",
-    "pagos_y_abonos.anular":
-      "Se usa desde el historial de abonos.",
+    "pagos_y_abonos.generar_interes": "Se usa dentro de Contactar cliente.",
+    "pagos_y_abonos.anular": "Se usa desde el historial de abonos.",
   };
 
   const getModuleLabel = (moduleName) => {
@@ -26,10 +20,7 @@ export default function PermissionsGrid({
       .replaceAll("_", " ")
       .split(" ")
       .filter(Boolean)
-      .map((word) =>
-        word.charAt(0).toUpperCase() +
-        word.slice(1).toLowerCase()
-      )
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(" ");
   };
 
@@ -37,101 +28,80 @@ export default function PermissionsGrid({
   // TOGGLE ACCIÓN
   // ─────────────────────────────
 
-  const toggleAccion = (
-
-    moduloId,
-    accionKey
-
-  ) => {
-
+  const toggleAccion = (moduloId, accionKey) => {
     if (readOnly) return;
 
     const updated = permisosRol.map((modulo) => {
-
       if (modulo.id !== moduloId) {
         return modulo;
       }
 
       return {
-
         ...modulo,
 
         // ✅ NUEVO OBJETO
         selectedActions: {
-
           ...modulo.selectedActions,
 
-          [accionKey]:
-
-            !modulo.selectedActions?.[
-              accionKey
-            ]
-
-        }
-
+          [accionKey]: !modulo.selectedActions?.[accionKey],
+          ...(accionKey !== "read" && !modulo.selectedActions?.[accionKey]
+            ? { read: true }
+            : {}),
+          ...(accionKey === "read" &&
+          modulo.selectedActions?.[accionKey] &&
+          Object.entries(modulo.selectedActions).some(
+            ([key, selected]) => key !== "read" && selected,
+          )
+            ? { read: true }
+            : {}),
+        },
       };
-
     });
 
-    onChange(
-      structuredClone(updated)
-    );
-
+    onChange(structuredClone(updated));
   };
 
   // ─────────────────────────────
   // TOGGLE MÓDULO
   // ─────────────────────────────
 
-  const toggleModuloCompleto = (
-    moduloId
-  ) => {
-
+  const toggleModuloCompleto = (moduloId) => {
     if (readOnly) return;
 
     const updated = permisosRol.map((modulo) => {
-
       if (modulo.id !== moduloId) {
         return modulo;
       }
 
-      const allSelected =
+      const allSelected = Object.values(modulo.selectedActions || {}).every(
+        Boolean,
+      );
 
-        Object.values(
-
-          modulo.selectedActions || {}
-
-        ).every(Boolean);
-
-      const nuevasAcciones =
-
-        Object.keys(
-
-          modulo.selectedActions || {}
-
-        ).reduce((acc, key) => {
-
+      const nuevasAcciones = Object.keys(modulo.selectedActions || {}).reduce(
+        (acc, key) => {
           acc[key] = !allSelected;
 
           return acc;
+        },
+        {},
+      );
 
-        }, {});
+      if (
+        Object.entries(nuevasAcciones).some(
+          ([key, selected]) => key !== "read" && selected,
+        )
+      ) {
+        nuevasAcciones.read = true;
+      }
 
       return {
-
         ...modulo,
 
-        selectedActions:
-          nuevasAcciones
-
+        selectedActions: nuevasAcciones,
       };
-
     });
 
-    onChange(
-      structuredClone(updated)
-    );
-
+    onChange(structuredClone(updated));
   };
 
   // ─────────────────────────────
@@ -139,52 +109,38 @@ export default function PermissionsGrid({
   // ─────────────────────────────
 
   const toggleAllModules = () => {
-
     if (readOnly) return;
 
-    const allSelected = permisosRol.every(
-
-      (modulo) =>
-
-        Object.values(
-
-          modulo.selectedActions || {}
-
-        ).every(Boolean)
-
+    const allSelected = permisosRol.every((modulo) =>
+      Object.values(modulo.selectedActions || {}).every(Boolean),
     );
 
     const updated = permisosRol.map((modulo) => {
-
-      const nuevasAcciones =
-
-        Object.keys(
-
-          modulo.selectedActions || {}
-
-        ).reduce((acc, key) => {
-
+      const nuevasAcciones = Object.keys(modulo.selectedActions || {}).reduce(
+        (acc, key) => {
           acc[key] = !allSelected;
 
           return acc;
+        },
+        {},
+      );
 
-        }, {});
+      if (
+        Object.entries(nuevasAcciones).some(
+          ([key, selected]) => key !== "read" && selected,
+        )
+      ) {
+        nuevasAcciones.read = true;
+      }
 
       return {
-
         ...modulo,
 
-        selectedActions:
-          nuevasAcciones
-
+        selectedActions: nuevasAcciones,
       };
-
     });
 
-    onChange(
-      structuredClone(updated)
-    );
-
+    onChange(structuredClone(updated));
   };
 
   // ─────────────────────────────
@@ -192,179 +148,85 @@ export default function PermissionsGrid({
   // ─────────────────────────────
 
   return (
-
     <div>
-
-      {
-
-        !readOnly && (
-
-          <div className="flex justify-stretch sm:justify-end mb-3">
-
-            <button
-              onClick={toggleAllModules}
-              className="w-full sm:w-auto text-xs bg-blue-600 text-white px-3 py-2 sm:py-1 rounded-md hover:bg-blue-700 transition"
-            >
-
-              Seleccionar todos
-
-            </button>
-
-          </div>
-
-        )
-
-      }
+      {!readOnly && (
+        <div className="flex justify-stretch sm:justify-end mb-3">
+          <button
+            onClick={toggleAllModules}
+            className="w-full sm:w-auto text-xs bg-blue-600 text-white px-3 py-2 sm:py-1 rounded-md hover:bg-blue-700 transition"
+          >
+            Seleccionar todos
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+        {permisosSistema.map((modulo) => {
+          const rolModulo = permisosRol.find((p) => p.id === modulo.id);
 
-        {
+          const hasPermission =
+            rolModulo &&
+            Object.values(rolModulo.selectedActions || {}).some(Boolean);
 
-          permisosSistema.map((modulo) => {
+          const allChecked =
+            rolModulo &&
+            Object.values(rolModulo.selectedActions || {}).every(Boolean);
 
-            const rolModulo = permisosRol.find(
-
-              (p) => p.id === modulo.id
-
-            );
-
-            const hasPermission =
-
-              rolModulo &&
-
-              Object.values(
-
-                rolModulo.selectedActions || {}
-
-              ).some(Boolean);
-
-            const allChecked =
-
-              rolModulo &&
-
-              Object.values(
-
-                rolModulo.selectedActions || {}
-
-              ).every(Boolean);
-
-            return (
-
-              <div
-                key={modulo.id}
-                className={`border rounded-xl p-3 sm:p-4 shadow-sm bg-white transition
+          return (
+            <div
+              key={modulo.id}
+              className={`border rounded-xl p-3 sm:p-4 shadow-sm bg-white transition
 
                 ${
-
                   hasPermission
-
-                    ?
-
-                    "border-blue-500 ring-2 ring-blue-400"
-
-                    :
-
-                    "border-gray-400"
-
+                    ? "border-blue-500 ring-2 ring-blue-400"
+                    : "border-gray-400"
                 }
 
                 `}
-              >
+            >
+              <div className="flex justify-between items-start gap-3 mb-3">
+                <h4 className="font-semibold text-sm break-words">
+                  {getModuleLabel(modulo.modulo)}
+                </h4>
 
-                <div className="flex justify-between items-start gap-3 mb-3">
+                <input
+                  type="checkbox"
+                  checked={allChecked || false}
+                  disabled={readOnly}
+                  onChange={() => toggleModuloCompleto(modulo.id)}
+                  className={`accent-blue-600 ${
+                    readOnly ? "opacity-100 cursor-default" : "cursor-pointer"
+                  }`}
+                />
+              </div>
 
-                  <h4 className="font-semibold text-sm break-words">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-sm">
+                {modulo.acciones
+                  .filter((accion) => accion.key !== "read")
+                  .map((accion) => {
+                    const helpText =
+                      ACTION_HELP[`${modulo.modulo}.${accion.key}`];
 
-                    {getModuleLabel(modulo.modulo)}
-
-                  </h4>
-
-                  <input
-                    type="checkbox"
-                    checked={allChecked || false}
-                    disabled={readOnly}
-                    onChange={() =>
-                      toggleModuloCompleto(
-                        modulo.id
-                      )
-                    }
-                    className={`accent-blue-600 ${
-
-                      readOnly
-
-                        ?
-
-                        "opacity-100 cursor-default"
-
-                        :
-
-                        "cursor-pointer"
-
-                    }`}
-                  />
-
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-sm">
-
-                  {
-
-                    modulo.acciones.map((accion) => {
-
-                      const helpText =
-                        ACTION_HELP[
-                          `${modulo.modulo}.${accion.key}`
-                        ];
-
-                      return (
-
+                    return (
                       <label
                         key={accion.key}
                         className="flex items-start gap-2 cursor-pointer min-w-0"
                         title={helpText || accion.label}
                       >
-
                         <input
                           type="checkbox"
-
                           checked={
-
-                            rolModulo?.selectedActions?.[
-                              accion.key
-                            ] || false
-
+                            rolModulo?.selectedActions?.[accion.key] || false
                           }
-
-                          onChange={() =>
-
-                            toggleAccion(
-
-                              modulo.id,
-                              accion.key
-
-                            )
-
-                          }
-
+                          onChange={() => toggleAccion(modulo.id, accion.key)}
                           className={`accent-blue-600 ${
-
-                            readOnly
-
-                              ?
-
-                              "pointer-events-none"
-
-                              :
-
-                              "cursor-pointer"
-
+                            readOnly ? "pointer-events-none" : "cursor-pointer"
                           }`}
                         />
 
                         <span className="leading-tight min-w-0 break-words">
-                          <span>
-                            {accion.label}
-                          </span>
+                          <span>{accion.label}</span>
 
                           {helpText && (
                             <span className="block text-[10px] text-gray-500">
@@ -372,30 +234,14 @@ export default function PermissionsGrid({
                             </span>
                           )}
                         </span>
-
                       </label>
-
                     );
-
-                    })
-
-                  }
-
-                </div>
-
+                  })}
               </div>
-
-            );
-
-          })
-
-        }
-
+            </div>
+          );
+        })}
       </div>
-
     </div>
-
   );
-
 }
-
