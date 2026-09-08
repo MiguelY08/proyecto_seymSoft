@@ -648,15 +648,42 @@ function Favorites() {
   };
 
   const handleAgregarAlCarrito = async (producto) => {
+    const activeVariants = Array.isArray(producto.barcodes)
+      ? producto.barcodes.filter((variant) => variant.isActive !== false)
+      : [];
+
+    if (activeVariants.length > 1) {
+      navigate(`/shop/detail/${producto.slug ?? producto.id}`);
+      return;
+    }
+
+    const variant = activeVariants.find(
+      (item) => item.isDefault && Number(item.stock) > 0,
+    )
+      || activeVariants.find((item) => Number(item.stock) > 0)
+      || activeVariants[0]
+      || null;
+    const cartProduct = variant
+      ? {
+          ...producto,
+          barcodeId: variant.id,
+          barcode: variant.barcode,
+          variantName: variant.variantName,
+          variantStock: variant.stock,
+          variantImageUrl: variant.variantImageUrl,
+          image: variant.variantImageUrl || producto.mainImage?.url || producto.image || '',
+        }
+      : producto;
+
     if (!await requireAuthentication('carrito')) return;
 
-    const stock = Number(producto.totalStock ?? producto.stock ?? 0);
+    const stock = Number(cartProduct.variantStock ?? producto.totalStock ?? producto.stock ?? 0);
     if (!producto.isActive || stock <= 0) {
       showError('Producto no disponible', 'Este producto no tiene stock disponible.');
       return;
     }
 
-    const wasAdded = await addToCart(producto, 1);
+    const wasAdded = await addToCart(cartProduct, 1);
     if (!wasAdded) {
       showError('No se pudo agregar', 'Intenta nuevamente en unos segundos.');
       return;

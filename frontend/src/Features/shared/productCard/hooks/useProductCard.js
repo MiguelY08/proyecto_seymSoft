@@ -17,6 +17,18 @@ import { getDisplayPricing } from '../../utils/shopPricingHelper';
 
 const PRODUCT_CARD_IMAGE_INTERVAL_MS = 2200;
 
+const getCartVariant = (product) => {
+  const variants = Array.isArray(product?.barcodes)
+    ? product.barcodes.filter((variant) => variant.isActive !== false)
+    : [];
+
+  return variants.find((variant) => variant.isDefault && Number(variant.stock) > 0)
+    || variants.find((variant) => Number(variant.stock) > 0)
+    || variants.find((variant) => variant.isDefault)
+    || variants[0]
+    || null;
+};
+
 export function useProductCard(productData = {}, clientType = 'DETAL') {
   const navigate = useNavigate();
 
@@ -67,8 +79,24 @@ export function useProductCard(productData = {}, clientType = 'DETAL') {
    * Datos derivados del producto.
    */
   const favorited = product.id ? isFavorite(product.id) : false;
-  const available = isProductAvailable(product);
+  const cartVariant = getCartVariant(product);
+  const hasMultipleVariants = product.barcodes.filter(
+    (variant) => variant.isActive !== false,
+  ).length > 1;
+  const available = cartVariant
+    ? isProductAvailable({ ...product, stock: cartVariant.stock })
+    : isProductAvailable(product);
   const hasMultipleImages = product.images.length > 1;
+
+  const cartProduct = useMemo(() => ({
+    ...product,
+    barcodeId: cartVariant?.id ?? null,
+    barcode: cartVariant?.barcode ?? null,
+    variantName: cartVariant?.variantName ?? null,
+    variantStock: cartVariant?.stock ?? null,
+    variantImageUrl: cartVariant?.variantImageUrl ?? null,
+    image: cartVariant?.variantImageUrl || product.mainImage?.url || product.image || '',
+  }), [cartVariant, product]);
 
   /**
    * Limpia el intervalo del carrusel.
@@ -193,6 +221,11 @@ export function useProductCard(productData = {}, clientType = 'DETAL') {
         return;
       }
 
+      if (hasMultipleVariants) {
+        navigate(getProductDetailPath(product));
+        return;
+      }
+
       if (!await requireAuthentication('carrito')) return;
 
       if (!available) {
@@ -203,7 +236,7 @@ export function useProductCard(productData = {}, clientType = 'DETAL') {
         return;
       }
 
-      const wasAdded = await addToCart(product, 1);
+      const wasAdded = await addToCart(cartProduct, 1);
 
       if (!wasAdded) {
         showError(
@@ -221,6 +254,9 @@ export function useProductCard(productData = {}, clientType = 'DETAL') {
     [
       addToCart,
       available,
+      cartProduct,
+      hasMultipleVariants,
+      navigate,
       product,
       requireAuthentication,
       showError,

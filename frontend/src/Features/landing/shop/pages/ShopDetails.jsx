@@ -458,7 +458,7 @@ function ShopDetail() {
               )}
             </div>
 
-            {variants.length > 0 && (
+            {variants.length > 1 && (
               <div className="mt-6">
                 <div className="flex items-end justify-between gap-3">
                   <div>

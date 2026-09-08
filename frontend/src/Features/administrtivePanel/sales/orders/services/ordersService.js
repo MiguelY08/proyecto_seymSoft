@@ -181,7 +181,9 @@ const normalizeProduct = (product = {}) => {
 
   return {
     id: toNumber(product.productId ?? product.idProduct ?? product.id_product ?? productData.productId ?? productData.id ?? product.id),
+    idBarcode: toNumber(product.barcodeId ?? product.idBarcode ?? product.id_barcode ?? productData.barcodeId ?? productData.idBarcode, null),
     detalleId: product.id ?? product.detailId ?? null,
+    variantName: product.variantName ?? product.variant_name ?? productData.variantName ?? '',
     nombre: product.nombre ?? product.productName ?? product.name ?? productData.nombre ?? productData.name ?? 'Producto sin nombre',
     codBarras: product.codBarras ?? product.barcode ?? productData.codBarras ?? productData.barcode ?? '',
     cantidad,

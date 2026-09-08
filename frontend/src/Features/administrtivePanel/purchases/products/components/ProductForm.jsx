@@ -490,6 +490,11 @@ function ProductForm({
     ...(data.codsBarrasExtra || []).map((item) => ({ ...item, isDefault: false })),
   ];
 
+  const getVariantImagePayload = (data = formData) =>
+    getVariantRows(data)
+      .filter((variant) => variant.cod?.trim())
+      .map((variant, index) => ({ index, file: variant.variantImage }));
+
   const updateVariantRow = (index, field, value) => {
     if (index === 0) {
       setFormData((prev) => ({
@@ -589,7 +594,7 @@ function ProductForm({
           codBarrasVariantImageUrl: formData.variantImagePrincipalUrl,
           stock: Number(formData.stockPrincipal) || 0,
           codsBarrasExtra: formData.codsBarrasExtra || [],
-          variantImages: getVariantRows().map((variant, index) => ({ index, file: variant.variantImage })),
+          variantImages: getVariantImagePayload(),
           categories: selectedCategoryIds,
           subcategories: selectedSubcategoryIds,
           images: imagenesNuevas,
@@ -647,8 +652,8 @@ function ProductForm({
         selectedCategoryIds.forEach((catId) => formDataToSend.append('categories[]', catId));
         selectedSubcategoryIds.forEach((subId) => formDataToSend.append('subcategories[]', subId));
         imagenesNuevas.forEach((file) => formDataToSend.append('images', file));
-        getVariantRows().forEach((variant, index) => {
-          if (variant.variantImage) formDataToSend.append(`variantImage_${index}`, variant.variantImage);
+        getVariantImagePayload().forEach(({ index, file }) => {
+          if (file) formDataToSend.append(`variantImage_${index}`, file);
         });
 
         saved = await ProductsService.create(formDataToSend);

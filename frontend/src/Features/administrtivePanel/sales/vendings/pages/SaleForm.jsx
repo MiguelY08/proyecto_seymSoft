@@ -773,7 +773,6 @@ function SaleForm() {
           deliveryCityName: formData.tipoEntrega === 'domicilio' ? formData.ciudadEntregaNombre : null,
           items: formData.productos.map((producto) => ({
             idProduct: producto.id,
-            idBarcode: producto.idBarcode,
             barcode: producto.barcode,
             quantity: producto.cantidad,
           })),

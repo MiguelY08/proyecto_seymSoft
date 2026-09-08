@@ -164,21 +164,22 @@ function RightSectionForm({
         return;
       }
 
-      if (isProductSelected(product.id)) {
+      const scannedVariant = product.barcodes?.find((item) => normalizeBarcode(item.barcode) === normalizedCode);
+
+      if (isVariantSelected(product.id, scannedVariant?.id)) {
         setSearchTerm('');
         setIsDropdownOpen(false);
         setScannerMessage({ type: 'error', message: `Ya agregado: ${product.nombre}` });
         return;
       }
 
-      if (Number(product.stock ?? 0) <= 0) {
+      if (Number(scannedVariant?.stock ?? product.stock ?? 0) <= 0) {
         setSearchTerm(product.nombre ?? normalizedCode);
         setIsDropdownOpen(true);
         setScannerMessage({ type: 'error', message: `Sin stock: ${product.nombre}` });
         return;
       }
 
-      const scannedVariant = product.barcodes?.find((item) => normalizeBarcode(item.barcode) === normalizedCode);
       onAddProduct(product.id, scannedVariant?.id);
       setSearchTerm('');
       setIsDropdownOpen(false);
@@ -297,7 +298,6 @@ function RightSectionForm({
                 <ul className="py-1">
                   {productosMostrados.map(prod => {
                     const selected = isProductSelected(prod.id);
-                    const hasStock = Number(prod.stock ?? 0) > 0;
                     return (
                       <li key={prod.id}>
                         <div className="px-4 py-2 text-left text-sm">

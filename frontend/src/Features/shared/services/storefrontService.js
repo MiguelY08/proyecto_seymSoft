@@ -18,16 +18,22 @@ const unwrapCartResponse = (data) => {
 
   return {
     ...response,
-    items: items.map((entry) => ({
-      ...unwrapProduct(entry.product || entry),
-      idCartItem: entry.idCartItem,
-      barcodeId: entry.barcodeId ?? entry.product?.barcodeId ?? null,
-      barcode: entry.barcode ?? entry.product?.barcode ?? null,
-      variantName: entry.variantName ?? entry.product?.variantName ?? null,
-      variantImageUrl: entry.variantImageUrl ?? entry.product?.variantImageUrl ?? null,
-      variantStock: entry.variantStock ?? entry.product?.variantStock ?? null,
-      quantity: entry.quantity,
-    })),
+    items: items.map((entry) => {
+      const product = unwrapProduct(entry.product || entry);
+      const variantImageUrl = entry.variantImageUrl ?? entry.product?.variantImageUrl ?? null;
+
+      return {
+        ...product,
+        idCartItem: entry.idCartItem,
+        barcodeId: entry.barcodeId ?? entry.product?.barcodeId ?? null,
+        barcode: entry.barcode ?? entry.product?.barcode ?? null,
+        variantName: entry.variantName ?? entry.product?.variantName ?? null,
+        variantImageUrl,
+        variantStock: entry.variantStock ?? entry.product?.variantStock ?? null,
+        image: variantImageUrl || product.image,
+        quantity: entry.quantity,
+      };
+    }),
     changedItem: response.changedItem
       ? {
           ...unwrapProduct(response.changedItem.product || response.changedItem),
