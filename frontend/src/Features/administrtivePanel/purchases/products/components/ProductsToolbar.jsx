@@ -2,7 +2,7 @@ import { CircleCheck, CircleX, Eraser, FileSpreadsheet, FolderTree, Layers3, Lis
 import ButtonComponent from "../../../../shared/ButtonComponent";
 import FormSelect from "../../../../shared/FormSelect";
 
-function ProductsToolbar({ search, onSearchChange, categories = [], subcategories = [], filterCategory, onCategoryChange, filterSubcategory, onSubcategoryChange, filterStatus, onStatusChange, hasActiveFilters, onClearFilters, canExport, exporting, onExport, canCreate, onCreate }) {
+function ProductsToolbar({ search, onSearchChange, searchScannerField, categories = [], subcategories = [], filterCategory, onCategoryChange, filterSubcategory, onSubcategoryChange, filterStatus, onStatusChange, hasActiveFilters, onClearFilters, canExport, exporting, onExport, canCreate, onCreate }) {
   const statusOptions = [
     { value: "all", label: "Todos", icon: ListFilter, iconClassName: "text-gray-400" },
     { value: "Activo", label: "Activos", icon: CircleCheck, iconClassName: "text-green-600" },
@@ -19,6 +19,7 @@ function ProductsToolbar({ search, onSearchChange, categories = [], subcategorie
             type="text"
             placeholder="Buscar producto"
             value={search}
+            data-scanner-field={searchScannerField}
             onChange={(event) => onSearchChange(event.target.value)}
             className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-4 pr-10 text-sm text-gray-700 outline-none transition-colors duration-200 placeholder:text-gray-400 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20"
           />

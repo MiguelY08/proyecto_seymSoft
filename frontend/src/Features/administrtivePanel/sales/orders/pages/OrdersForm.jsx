@@ -301,6 +301,11 @@ function OrdersForm() {
           precioDetalle: getRetailPrice(product),
           stock: getTotalStock(product),
           ivaPercentage: toNumber(product.ivaPercentage, 19),
+          variants: (product.barcodes || []).filter((item) => item.isActive !== false),
+          defaultVariant: (product.barcodes || [])
+            .filter((item) => item.isActive !== false)
+            .find((item) => item.isDefault)
+            || (product.barcodes || []).find((item) => item.isActive !== false),
         }));
 
         setProductosCatalogo(normalizedProductsList);
@@ -326,12 +331,22 @@ function OrdersForm() {
 
           const productosNormalizados = (order.productos || []).map(p => {
             const catalogProduct = normalizedProductsList.find(product => product.id === p.id || product.idProduct === p.id);
+            const barcodeValue = p.codBarras || p.barcode || '';
+            const variant = catalogProduct?.variants?.find((item) => (
+              (p.idBarcode && Number(item.id) === Number(p.idBarcode))
+              || (barcodeValue && String(item.barcode) === String(barcodeValue))
+            )) || catalogProduct?.defaultVariant;
             const catalogStock = catalogProduct ? toNumber(catalogProduct.stock) : 0;
-            const stock = toNumber(p.stock) > 0 ? toNumber(p.stock) : (catalogStock || toNumber(p.cantidad));
+            const stock = toNumber(p.stock) > 0
+              ? toNumber(p.stock)
+              : toNumber(variant?.stock) || catalogStock || toNumber(p.cantidad);
             const subtotalLinea = toNumber(p.subtotal, calculateLineSubtotal(p.cantidad, p.precioUnitario));
 
             return {
               ...p,
+              idBarcode: p.idBarcode ?? variant?.id ?? null,
+              codBarras: barcodeValue || variant?.barcode || getPrimaryBarcode(catalogProduct || {}),
+              variantName: p.variantName || variant?.variantName || 'Estilo pendiente',
               precioUnitario: toNumber(p.precioUnitario),
               subtotal: subtotalLinea,
               iva: toNumber(p.iva, calculateLineIva(subtotalLinea, p.ivaPercentage)),
@@ -592,7 +607,7 @@ function OrdersForm() {
   };
 
   // --- Manejadores para RightSectionForm (productos) ---
-  const handleAddProduct = (productoId) => {
+  const handleAddProduct = (productoId, barcodeId = null) => {
     if (!productosEditables) return;
     const producto = productosCatalogo.find(p => p.id === Number(productoId));
     if (!producto) return;
@@ -602,12 +617,18 @@ function OrdersForm() {
       return;
     }
 
-    if (toNumber(producto.stock) <= 0) {
+    const variante = producto.variants?.find((item) => Number(item.id) === Number(barcodeId))
+      || producto.defaultVariant;
+    const variantStock = toNumber(variante?.stock ?? producto.stock);
+
+    if (!variante || variantStock <= 0) {
       showWarning('Sin stock', 'Este producto no tiene unidades disponibles.');
       return;
     }
 
-    const existe = formData.productos.find(p => p.id === producto.id);
+    const existe = formData.productos.find(
+      (p) => p.id === producto.id && p.idBarcode === variante.id,
+    );
     if (existe) {
       showWarning('Producto ya agregado', 'Puedes editar la cantidad en la tabla.');
       return;
@@ -620,14 +641,16 @@ function OrdersForm() {
     const subtotalLinea = calculateLineSubtotal(1, precio);
     const nuevoProducto = {
       id: producto.id,
+      idBarcode: variante.id,
       nombre: producto.nombre,
-      codBarras: getPrimaryBarcode(producto),
+      codBarras: variante.barcode || getPrimaryBarcode(producto),
+      variantName: variante.variantName || 'Estilo pendiente',
       cantidad: 1,
       precioUnitario: precio,
       ivaPercentage: toNumber(producto.ivaPercentage),
       iva: calculateLineIva(subtotalLinea, producto.ivaPercentage),
       subtotal: subtotalLinea,
-      stock: toNumber(producto.stock),
+      stock: variantStock,
     };
 
     setFormData(prev => ({
@@ -637,10 +660,12 @@ function OrdersForm() {
     }));
   };
 
-  const handleUpdateCantidad = (productoId, nuevaCantidad) => {
+  const handleUpdateCantidad = (productoId, barcodeId, nuevaCantidad) => {
     if (!productosEditables) return;
     if (nuevaCantidad < 1) return;
-    const producto = formData.productos.find(p => p.id === productoId);
+    const producto = formData.productos.find(
+      (p) => p.id === productoId && p.idBarcode === barcodeId,
+    );
     if (!producto) return;
     const stockDisponible = toNumber(producto?.stock, nuevaCantidad);
     const cantidad = Math.min(nuevaCantidad, stockDisponible);
@@ -658,7 +683,7 @@ function OrdersForm() {
       ...prev,
       estadoLogistico: getOrderStatusAfterItemsChange(prev.estadoLogistico),
       productos: prev.productos.map(p =>
-        p.id === productoId
+        p.id === productoId && p.idBarcode === barcodeId
           ? {
               ...p,
               cantidad,
@@ -673,14 +698,16 @@ function OrdersForm() {
     }));
   };
 
-  const handleRemoveProduct = (productoId) => {
+  const handleRemoveProduct = (productoId, barcodeId) => {
     if (!productosEditables) return;
     notifyReadyOrderReturnsToProcess();
     setProductosModificados(true);
     setFormData(prev => ({
       ...prev,
       estadoLogistico: getOrderStatusAfterItemsChange(prev.estadoLogistico),
-      productos: prev.productos.filter(p => p.id !== productoId),
+      productos: prev.productos.filter(
+        (p) => !(p.id === productoId && p.idBarcode === barcodeId),
+      ),
     }));
   };
 

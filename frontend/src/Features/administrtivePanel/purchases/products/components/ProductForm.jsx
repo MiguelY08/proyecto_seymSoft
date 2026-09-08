@@ -100,6 +100,9 @@ const initialForm = {
   nombre: '',
   codBarras: '',
   stockPrincipal: '',
+  variantNamePrincipal: '',
+  variantImagePrincipal: null,
+  variantImagePrincipalUrl: null,
   codsBarrasExtra: [],
   referencia: '',
   precioDetalle: '',
@@ -222,9 +225,20 @@ function ProductForm({
       descripcion: producto.description || '',
       cantidadXPaca: String(producto.quantityPerPack || 0),
       id_category: categoryIds[0] || null,
+      codBarrasId: producto.barcodes?.[0]?.id || null,
       codBarras: producto.barcodes?.[0]?.barcode || '',
       stockPrincipal: producto.barcodes?.[0]?.stock || 0,
-      codsBarrasExtra: producto.barcodes?.slice(1).map((b) => ({ id: b.id, cod: b.barcode, stock: b.stock })) || [],
+      variantNamePrincipal: producto.barcodes?.[0]?.variantName || '',
+      variantImagePrincipal: null,
+      variantImagePrincipalUrl: producto.barcodes?.[0]?.variantImageUrl || null,
+      codsBarrasExtra: producto.barcodes?.slice(1).map((b) => ({
+        id: b.id,
+        cod: b.barcode,
+        stock: b.stock,
+        variantName: b.variantName || '',
+        variantImage: null,
+        variantImageUrl: b.variantImageUrl || null,
+      })) || [],
     });
     setErrors({});
     setPriceErrors({});
@@ -236,6 +250,9 @@ function ProductForm({
     return digits === '' ? '' : String(Math.min(100, Number(digits)));
   };
   const block = (e) => { if (['e', 'E', '+', '-', '.'].includes(e.key)) e.preventDefault(); };
+  const preventBarcodeSubmit = (e) => {
+    if (e.key === 'Enter') e.preventDefault();
+  };
 
   const calcStock = (d) => {
     const principal = Number(d.stockPrincipal) || 0;
@@ -457,13 +474,73 @@ function ProductForm({
   };
 
   const handleAddCodBarras = () => {
-    setFormData((prev) => ({ ...prev, codsBarrasExtra: [...(prev.codsBarrasExtra || []), { cod: '', stock: '' }] }));
+    setFormData((prev) => ({ ...prev, codsBarrasExtra: [...(prev.codsBarrasExtra || []), { cod: '', stock: '', variantName: '', variantImage: null, variantImageUrl: null }] }));
+  };
+
+  const getVariantRows = (data = formData) => [
+    {
+      id: data.codBarrasId,
+      cod: data.codBarras,
+      stock: data.stockPrincipal,
+      variantName: data.variantNamePrincipal,
+      variantImage: data.variantImagePrincipal,
+      variantImageUrl: data.variantImagePrincipalUrl,
+      isDefault: true,
+    },
+    ...(data.codsBarrasExtra || []).map((item) => ({ ...item, isDefault: false })),
+  ];
+
+  const getVariantImagePayload = (data = formData) =>
+    getVariantRows(data)
+      .filter((variant) => variant.cod?.trim())
+      .map((variant, index) => ({ index, file: variant.variantImage }));
+
+  const updateVariantRow = (index, field, value) => {
+    if (index === 0) {
+      setFormData((prev) => ({
+        ...prev,
+        ...(field === 'cod' ? { codBarras: value } : {}),
+        ...(field === 'stock' ? { stockPrincipal: value } : {}),
+        ...(field === 'variantName' ? { variantNamePrincipal: value } : {}),
+        ...(field === 'variantImage' ? { variantImagePrincipal: value } : {}),
+      }));
+      return;
+    }
+    handleCodBarrasExtraChange(index - 1, field, value);
   };
 
   const handleCodBarrasExtraChange = (index, field, value) => {
+    const nextFormData = { ...formData };
+    const updated = [...(nextFormData.codsBarrasExtra || [])];
+    updated[index] = { ...updated[index], [field]: value };
+    nextFormData.codsBarrasExtra = updated;
+
+    setFormData(() => {
+      return nextFormData;
+    });
+
+    if (field !== 'cod') return;
+
+    const extraConflictMessage = updated
+      .map((item) => item?.cod)
+      .filter(Boolean)
+      .map((code) => getBarcodeConflictMessage(code))
+      .find(Boolean);
+    const duplicateMessage = getInternalDuplicateMessage(getFormBarcodeValues(nextFormData));
+    const extraError = extraConflictMessage || duplicateMessage;
+
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (extraError) next.codsBarrasExtra = extraError;
+      else delete next.codsBarrasExtra;
+      return next;
+    });
+  };
+
+  const handleCodBarrasExtraStockChange = (index, value) => {
     setFormData((prev) => {
       const updated = [...(prev.codsBarrasExtra || [])];
-      updated[index] = { ...updated[index], [field]: value };
+      updated[index] = { ...updated[index], stock: value };
       return { ...prev, codsBarrasExtra: updated };
     });
   };
@@ -513,8 +590,11 @@ function ProductForm({
           cantidadXPaca: Number(formData.cantidadXPaca),
           id_category: selectedPrimaryCategoryId,
           codBarras: formData.codBarras,
+          codBarrasVariantName: formData.variantNamePrincipal,
+          codBarrasVariantImageUrl: formData.variantImagePrincipalUrl,
           stock: Number(formData.stockPrincipal) || 0,
           codsBarrasExtra: formData.codsBarrasExtra || [],
+          variantImages: getVariantImagePayload(),
           categories: selectedCategoryIds,
           subcategories: selectedSubcategoryIds,
           images: imagenesNuevas,
@@ -555,6 +635,9 @@ function ProductForm({
             barcode: formData.codBarras,
             barcode_type: 'EAN13',
             stock: isExistingProduct ? Number(formData.stockPrincipal) || 0 : 0,
+            variant_name: formData.variantNamePrincipal || 'Estilo principal',
+            variant_image_url: formData.variantImagePrincipalUrl || null,
+            is_default: true,
           },
           ...(formData.codsBarrasExtra || [])
             .filter((barcode) => barcode?.cod)
@@ -562,11 +645,16 @@ function ProductForm({
               barcode: barcode.cod,
               barcode_type: 'SKU',
               stock: isExistingProduct ? Number(barcode.stock) || 0 : 0,
+              variant_name: barcode.variantName || 'Estilo pendiente',
+              variant_image_url: barcode.variantImageUrl || null,
             })),
         ]));
         selectedCategoryIds.forEach((catId) => formDataToSend.append('categories[]', catId));
         selectedSubcategoryIds.forEach((subId) => formDataToSend.append('subcategories[]', subId));
         imagenesNuevas.forEach((file) => formDataToSend.append('images', file));
+        getVariantImagePayload().forEach(({ index, file }) => {
+          if (file) formDataToSend.append(`variantImage_${index}`, file);
+        });
 
         saved = await ProductsService.create(formDataToSend);
         if (saved.status === 'Activo') {
@@ -680,54 +768,6 @@ function ProductForm({
                 />
                 <ErrMsg field="idUnitMeasure" />
               </div>
-              <div className="md:col-span-9">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Código de barras y stock <span className="text-red-500">*</span>
-                </label>
-                <div className={`grid grid-cols-[minmax(0,1fr)_110px] overflow-hidden rounded-lg border bg-white transition-colors duration-200 focus-within:ring-2 ${
-                  errors.codBarras || errors.stockPrincipal
-                    ? 'border-red-500 focus-within:ring-red-200'
-                    : 'border-gray-300 focus-within:border-[#004D77] focus-within:ring-[#004D77]/20'
-                }`}>
-                  <div className="relative min-w-0">
-                    <Barcode className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                    <input
-                      type="text"
-                      name="codBarras"
-                      value={formData.codBarras || ''}
-                      onChange={handleChange}
-                      maxLength={13}
-                      placeholder="Escanea o escribe el código"
-                      className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-12 text-sm text-gray-700 outline-none placeholder-gray-400"
-                    />
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">
-                      {(formData.codBarras || '').length}/13
-                    </span>
-                  </div>
-                  {isExistingProduct ? (
-                    <>
-                      <div className="relative border-l border-gray-200 bg-gray-50">
-                        <Boxes className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={formData.stockPrincipal ?? ''}
-                          onChange={(e) => setFormData((prev) => ({ ...prev, stockPrincipal: numeric(e.target.value) }))}
-                          onKeyDown={block}
-                          placeholder="0"
-                          className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm font-semibold text-gray-700 outline-none placeholder-gray-400"
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="relative border-l border-gray-200 bg-gray-50 px-3 py-2.5">
-                      <p className="text-sm text-gray-500">Sin stock.</p>
-                    </div>
-                  )}
-                </div>
-                <ErrMsg field="codBarras" />
-                <ErrMsg field="stockPrincipal" />
-              </div>
               <div className="md:col-span-3">
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">IVA %</label>
                 <div className="relative">
@@ -788,56 +828,40 @@ function ProductForm({
               <div className="p-5 flex flex-col gap-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-medium text-gray-700">Códigos adicionales</p>
-                    <p className="text-xs text-gray-400">Agrégalos solo cuando el producto tenga otras presentaciones.</p>
+                    <p className="text-sm font-medium text-gray-700">Variantes y códigos de barras</p>
+                    <p className="text-xs text-gray-400">Cada código puede tener estilo, stock e imagen propia.</p>
                   </div>
                   <button type="button" onClick={handleAddCodBarras} className="flex shrink-0 items-center gap-1 text-sm font-medium text-[#004D77] px-2 py-1 rounded-md hover:bg-[#004D77]/10 transition-colors duration-200 cursor-pointer">
                     <Plus className="w-3 h-3" />
                     Agregar
                   </button>
                 </div>
-                {(formData.codsBarrasExtra || []).length === 0 ? (
-                  <div className="rounded-lg border-2 border-dashed border-gray-200 px-4 py-8 text-center">
-                    <Package className="mx-auto h-7 w-7 text-gray-300" strokeWidth={1.5} />
-                    <p className="mt-2 text-sm text-gray-400">No hay presentaciones adicionales</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {(formData.codsBarrasExtra || []).map((item, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_110px] overflow-hidden rounded-lg border border-gray-300 bg-white transition-colors duration-200 focus-within:border-[#004D77] focus-within:ring-2 focus-within:ring-[#004D77]/20">
-                          <div className="relative min-w-0">
-                            <Barcode className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                            <input
-                              type="text"
-                              value={item.cod || ''}
-                              onChange={(e) => handleCodBarrasExtraChange(i, 'cod', e.target.value)}
-                              maxLength={13}
-                              placeholder={`Código de barras ${i + 2}`}
-                              className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-12 text-sm text-gray-700 outline-none placeholder-gray-400"
-                            />
-                            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">
-                              {(item.cod || '').length}/13
-                            </span>
-                          </div>
-                          {isExistingProduct ? (
-                            <div className="relative border-l border-gray-200 bg-gray-50">
-                              <Boxes className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                              <input type="text" inputMode="numeric" value={item.stock ?? ''} onChange={(e) => handleCodBarrasExtraChange(i, 'stock', numeric(e.target.value))} onKeyDown={block} placeholder="Stock" className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm font-semibold text-gray-700 outline-none placeholder-gray-400" />
-                            </div>
-                          ) : (
-                            <div className="relative border-l border-gray-200 bg-gray-50 px-3 py-2.5">
-                              <p className="text-sm text-gray-500">Sin stock definido</p>
-                            </div>
-                          )}
+                <div className="flex flex-col gap-3">
+                  {getVariantRows().map((item, i) => (
+                    <div key={item.id || `variant-${i}`} className="flex items-start gap-2">
+                      <div className="grid min-w-0 flex-1 grid-cols-1 overflow-hidden rounded-lg border border-gray-300 bg-white md:grid-cols-[minmax(150px,1.1fr)_minmax(120px,1fr)_105px_minmax(150px,0.9fr)]">
+                        <div className="relative min-w-0">
+                          <Barcode className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
+                          <input type="text" value={item.cod || ''} onChange={(e) => updateVariantRow(i, 'cod', e.target.value)} onKeyDown={preventBarcodeSubmit} maxLength={13} placeholder="Código de barras" className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400" />
                         </div>
-                        <button type="button" onClick={() => setFormData((prev) => ({ ...prev, codsBarrasExtra: (prev.codsBarrasExtra || []).filter((_, idx) => idx !== i) }))} className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-md bg-red-100 text-red-500 hover:bg-red-200 transition-colors cursor-pointer">
-                          <X className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="relative border-t border-gray-200 md:border-l md:border-t-0">
+                          <Tag className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
+                          <input type="text" value={item.variantName || ''} onChange={(e) => updateVariantRow(i, 'variantName', e.target.value)} maxLength={120} placeholder="Estilo" className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400" />
+                        </div>
+                        <div className="relative border-t border-gray-200 bg-gray-50 md:border-l md:border-t-0">
+                          <Boxes className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
+                          <input type="text" inputMode="numeric" value={item.stock ?? ''} onChange={(e) => updateVariantRow(i, 'stock', numeric(e.target.value))} onKeyDown={block} placeholder="Stock" className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm font-semibold text-gray-700 outline-none placeholder-gray-400" />
+                        </div>
+                        <label className="flex h-[42px] cursor-pointer items-center gap-2 border-t border-gray-200 px-3 text-xs text-gray-500 md:border-l md:border-t-0">
+                          <ImagePlus className="h-4 w-4 shrink-0 text-[#004D77]" />
+                          <span className="truncate">{item.variantImage?.name || (item.variantImageUrl ? 'Imagen asignada' : 'Asignar imagen')}</span>
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => updateVariantRow(i, 'variantImage', e.target.files?.[0] || null)} />
+                        </label>
                       </div>
-                    ))}
-                  </div>
-                )}
+                      {i > 0 && <button type="button" onClick={() => setFormData((prev) => ({ ...prev, codsBarrasExtra: (prev.codsBarrasExtra || []).filter((_, idx) => idx !== i - 1) }))} className="mt-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-red-100 text-red-500 hover:bg-red-200"><X className="h-3.5 w-3.5" /></button>}
+                    </div>
+                  ))}
+                </div>
                 <ErrMsg field="codsBarrasExtra" />
                 <div className="border-t border-gray-100 pt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">

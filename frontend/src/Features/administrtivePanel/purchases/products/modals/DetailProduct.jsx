@@ -89,6 +89,7 @@ function DetailProduct({ producto, isOpen, onClose }) {
   const [images, setImages] = useState([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isImageExpanded, setIsImageExpanded] = useState(false);
+  const [expandedImage, setExpandedImage] = useState(null);
 
   useEffect(() => {
     // Reinicia el visor cuando el modal recibe otro producto.
@@ -96,11 +97,23 @@ function DetailProduct({ producto, isOpen, onClose }) {
     setImages(producto?.images || []);
     setSelectedImageIndex(0);
     setIsImageExpanded(false);
+    setExpandedImage(null);
   }, [producto]);
 
   if (!isOpen || !producto) return null;
 
   const selectedImage = images[selectedImageIndex] || images[0];
+  const hasMultipleBarcodes = producto.barcodes?.length > 1;
+  const variantImages = hasMultipleBarcodes
+    ? producto.barcodes
+        .filter((barcode) => barcode.variantImageUrl)
+        .map((barcode) => ({
+          url: barcode.variantImageUrl,
+          alt: barcode.variantName || barcode.barcode,
+          barcode: barcode.barcode,
+          variantName: barcode.variantName || 'Estilo sin nombre',
+        }))
+    : [];
 
   const unitMeasure = producto.unitMeasure
     ? `${producto.unitMeasure.name || ''}${
@@ -148,7 +161,10 @@ function DetailProduct({ producto, isOpen, onClose }) {
                 <div className="w-full">
                   <button
                     type="button"
-                    onClick={() => setIsImageExpanded(true)}
+                    onClick={() => {
+                      setExpandedImage(selectedImage);
+                      setIsImageExpanded(true);
+                    }}
                     className="group relative block w-full cursor-pointer overflow-hidden rounded-lg border border-gray-200 bg-white text-left shadow-sm"
                     title="Ampliar imagen"
                   >
@@ -204,6 +220,47 @@ function DetailProduct({ producto, isOpen, onClose }) {
                   <p className="text-xs text-gray-400 mt-1 max-w-xs">
                     Edita el producto para agregar imágenes al catálogo.
                   </p>
+                </div>
+              )}
+
+              {hasMultipleBarcodes && (
+                <div className="mt-5 border-t border-gray-100 pt-5">
+                  <SectionTitle>Imágenes por presentación</SectionTitle>
+
+                  {variantImages.length > 0 ? (
+                    <div className="space-y-2">
+                      {variantImages.map((image) => (
+                        <button
+                          key={`${image.barcode}-${image.url}`}
+                          type="button"
+                          onClick={() => {
+                            setExpandedImage(image);
+                            setIsImageExpanded(true);
+                          }}
+                          className="group flex w-full items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-2 text-left transition hover:border-[#004D77]/50 hover:bg-[#004D77]/5"
+                        >
+                          <img
+                            src={image.url}
+                            alt={image.alt}
+                            className="h-14 w-14 shrink-0 rounded-md border border-gray-200 bg-white object-contain"
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-xs font-bold text-gray-800">
+                              {image.variantName}
+                            </span>
+                            <span className="mt-0.5 block truncate font-mono text-[10px] text-gray-500">
+                              {image.barcode}
+                            </span>
+                          </span>
+                          <Maximize2 className="h-4 w-4 shrink-0 text-[#004D77]/60 transition group-hover:text-[#004D77]" />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-gray-200 px-3 py-4 text-center text-xs text-gray-400">
+                      No hay imágenes asignadas a las presentaciones.
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -342,7 +399,9 @@ function DetailProduct({ producto, isOpen, onClose }) {
 
                           <div className="min-w-0">
                             <span className="block text-[9px] font-semibold text-gray-400 uppercase tracking-wide leading-none mb-0.5">
-                              {i === 0 ? 'Principal' : `Código #${i + 1}`}
+                              {hasMultipleBarcodes
+                                ? barcode.variantName || `Código #${i + 1}`
+                                : i === 0 ? 'Principal' : `Código #${i + 1}`}
                             </span>
                             <span className="block text-xs text-gray-700 font-mono truncate">
                               {barcode.barcode}
@@ -381,17 +440,23 @@ function DetailProduct({ producto, isOpen, onClose }) {
     {isImageExpanded && selectedImage?.url && (
       <div
         className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4"
-        onClick={() => setIsImageExpanded(false)}
+        onClick={() => {
+          setIsImageExpanded(false);
+          setExpandedImage(null);
+        }}
       >
         <div className="relative max-h-[92vh] max-w-6xl" onClick={(event) => event.stopPropagation()}>
           <img
-            src={selectedImage.url}
-            alt={producto.name}
+            src={expandedImage?.url || selectedImage.url}
+            alt={expandedImage?.alt || producto.name}
             className="max-h-[88vh] max-w-full rounded-xl object-contain shadow-2xl"
           />
           <button
             type="button"
-            onClick={() => setIsImageExpanded(false)}
+            onClick={() => {
+              setIsImageExpanded(false);
+              setExpandedImage(null);
+            }}
             className="absolute -right-3 -top-3 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white text-gray-700 shadow-lg hover:bg-gray-100"
             title="Cerrar imagen"
           >

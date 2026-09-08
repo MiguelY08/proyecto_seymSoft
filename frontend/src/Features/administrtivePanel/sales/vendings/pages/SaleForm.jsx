@@ -167,6 +167,8 @@ const getProductStock = (product) => {
 
 const normalizeProduct = (product) => {
   const barcode = getPrimaryProductBarcode(product);
+  const variants = (product.barcodes || []).filter((item) => item.isActive !== false);
+  const defaultVariant = variants.find((item) => item.isDefault) || variants[0];
 
   return {
     ...product,
@@ -181,6 +183,8 @@ const normalizeProduct = (product) => {
     stock: getProductStock(product),
     barcode,
     codBarras: barcode,
+    variants,
+    defaultVariant,
     categorias: product.categorias ?? product.categories?.map((category) => category.name) ?? [],
   };
 };
@@ -505,16 +509,19 @@ function SaleForm() {
   const handleMotivoCancelacionChange = () => {}; // No aplica en venta directa
 
   // ─── Manejadores para productos (RightSectionForm) ────────────────────────
-  const handleAddProduct = (productoId) => {
+  const handleAddProduct = (productoId, barcodeId = null) => {
     const producto = productosCatalogo.find(p => p.id === Number(productoId));
     if (!producto) return;
+    const variante = producto.variants?.find((item) => Number(item.id) === Number(barcodeId))
+      || producto.defaultVariant;
+    const variantStock = Number(variante?.stock ?? producto.stock ?? 0);
 
-    if (producto.stock <= 0) {
+    if (variantStock <= 0) {
       showWarning('Sin stock', 'Este producto no tiene unidades disponibles.');
       return;
     }
 
-    const existe = formData.productos.find(p => p.id === producto.id);
+    const existe = formData.productos.find(p => p.id === producto.id && p.idBarcode === variante?.id);
     if (existe) {
       showWarning('Producto ya agregado', 'Puedes editar la cantidad en la tabla.');
       return;
@@ -525,14 +532,16 @@ function SaleForm() {
     const ivaAmount = getIncludedIvaAmount(precio, ivaPercentage);
     const nuevoProducto = {
       id: producto.id,
+      idBarcode: variante?.id,
       nombre: producto.nombre,
-      barcode: producto.barcode,
+      barcode: variante?.barcode || producto.barcode,
+      variantName: variante?.variantName || 'Estilo pendiente',
       cantidad: 1,
       precioUnitario: precio,
       subtotal: precio,
       ivaPercentage,
       ivaAmount,
-      stock: producto.stock,
+      stock: variantStock,
     };
 
     setFormData(prev => ({
@@ -541,9 +550,9 @@ function SaleForm() {
     }));
   };
 
-  const handleUpdateCantidad = (productoId, nuevaCantidad) => {
+  const handleUpdateCantidad = (productoId, barcodeId, nuevaCantidad) => {
     if (nuevaCantidad < 1) return;
-    const producto = formData.productos.find(p => p.id === productoId);
+    const producto = formData.productos.find(p => p.id === productoId && p.idBarcode === barcodeId);
     const stockDisponible = producto?.stock ?? nuevaCantidad;
     const cantidad = Math.min(nuevaCantidad, stockDisponible);
 
@@ -554,7 +563,7 @@ function SaleForm() {
     setFormData(prev => ({
       ...prev,
       productos: prev.productos.map(p =>
-        p.id === productoId
+        p.id === productoId && p.idBarcode === barcodeId
           ? {
               ...p,
               cantidad,
@@ -569,10 +578,10 @@ function SaleForm() {
     }));
   };
 
-  const handleRemoveProduct = (productoId) => {
+  const handleRemoveProduct = (productoId, barcodeId) => {
     setFormData(prev => ({
       ...prev,
-      productos: prev.productos.filter(p => p.id !== productoId),
+      productos: prev.productos.filter(p => !(p.id === productoId && p.idBarcode === barcodeId)),
     }));
   };
 

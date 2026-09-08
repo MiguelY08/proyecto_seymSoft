@@ -73,6 +73,7 @@ const buildDeliveryAddress = (deliveryInfo = {}) => {
 const buildCheckoutProducts = (items = []) =>
   items.map((item) => ({
     id: Number(item.id),
+    idBarcode: Number(item.barcodeId),
     codBarras: getProductBarcode(item),
     cantidad: Number(item.quantity || 0),
     precioUnitario: Number(item.price || 0),
@@ -1323,7 +1324,7 @@ function ShoppingCart() {
       '¿Eliminar producto?',
       `¿Estás seguro de eliminar "${item.name}" del carrito?`
     );
-    if (result.isConfirmed) removeFromCart(item.id);
+    if (result.isConfirmed) removeFromCart(item.id, item.barcodeId);
   };
 
   const handleClearCart = async () => {
@@ -1337,7 +1338,8 @@ function ShoppingCart() {
 
   const handleQuantityChange = (productId, rawQuantity) => {
     if (!/^\d+$/.test(rawQuantity)) return;
-    updateQuantity(productId, Number(rawQuantity));
+    const item = cartItems.find((entry) => entry.id === productId);
+    updateQuantity(productId, item?.barcodeId, Number(rawQuantity));
   };
 
   const handleNotesChange = (event) => {
@@ -1669,7 +1671,7 @@ function ShoppingCart() {
                     <div className="quantity-control">
                       <button
                         className="qty-btn"
-                        onClick={() => decreaseQuantity(item.id)}
+                        onClick={() => decreaseQuantity(item.id, item.barcodeId)}
                         disabled={item.quantity <= 1 || getCartItemStock(item) <= 0}
                       >
                         <Minus size={12} />
@@ -1689,7 +1691,7 @@ function ShoppingCart() {
                       />
                       <button
                         className="qty-btn"
-                        onClick={() => increaseQuantity(item.id)}
+                        onClick={() => increaseQuantity(item.id, item.barcodeId)}
                         disabled={
                           getCartItemStock(item) <= 0 ||
                           item.quantity >= getCartItemStock(item)
