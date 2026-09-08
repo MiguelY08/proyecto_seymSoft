@@ -24,8 +24,18 @@ const getProductImages = product =>
         typeof image === "string"
           ? `${product.name} ${index + 1}`
           : image?.alt || `${product.name} ${index + 1}`,
+      variantId: image?.variantId ?? null,
     }))
-    .filter(image => image.url);
+    .concat(
+      (product?.barcodes || [])
+        .filter((variant) => variant.variantImageUrl && variant.isActive !== false)
+        .map((variant) => ({
+          url: variant.variantImageUrl,
+          alt: `${product.name} ${variant.variantName || "variante"}`,
+          variantId: variant.id,
+        }))
+    )
+    .filter((image, index, images) => image.url && images.findIndex((item) => item.url === image.url) === index);
 
 function ShopDetail() {
   const { id } = useParams();
@@ -39,6 +49,7 @@ function ShopDetail() {
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [selectedVariantId, setSelectedVariantId] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [addingToCart, setAddingToCart] = useState(false);
@@ -106,7 +117,15 @@ function ShopDetail() {
             .slice(0, 10)
         );
         setQuantity(1);
-        setSelectedImageIndex(0);
+        const initialVariant = currentProduct.barcodes?.find((variant) => variant.isDefault && variant.isActive)
+          || currentProduct.barcodes?.find((variant) => variant.isActive)
+          || null;
+        const initialImages = getProductImages(currentProduct);
+        const initialImageIndex = initialVariant?.variantImageUrl
+          ? initialImages.findIndex((image) => image.url === initialVariant.variantImageUrl)
+          : 0;
+        setSelectedImageIndex(initialImageIndex >= 0 ? initialImageIndex : 0);
+        setSelectedVariantId(initialVariant?.id || null);
       } catch (requestError) {
         if (!active) return;
         console.error("Error cargando el detalle del producto:", requestError);
@@ -147,10 +166,25 @@ function ShopDetail() {
     [clientType, product]
   );
   const images = useMemo(() => getProductImages(product), [product]);
+  const variants = useMemo(
+    () => (product?.barcodes || []).filter((variant) => variant.isActive !== false),
+    [product]
+  );
+  const selectedVariant = variants.find((variant) => Number(variant.id) === Number(selectedVariantId)) || null;
   const selectedImage = images[selectedImageIndex] || images[0];
 
-  const stock = Number(product?.totalStock ?? 0);
-  const available = Boolean(product?.isActive && stock > 0);
+  const selectVariant = (variant) => {
+    setSelectedVariantId(variant.id);
+    setQuantity(1);
+
+    const variantImageIndex = images.findIndex(
+      (image) => Number(image.variantId) === Number(variant.id),
+    );
+    if (variantImageIndex >= 0) setSelectedImageIndex(variantImageIndex);
+  };
+
+  const stock = Number(selectedVariant?.stock ?? product?.totalStock ?? 0);
+  const available = Boolean(product?.isActive && selectedVariant && stock > 0);
   const totalPrice = pricing.price * quantity;
   const categoryName =
     product?.mainCategory?.name ||
@@ -167,9 +201,13 @@ function ShopDetail() {
       discountPct: pricing.discountPct,
       priceLabel: pricing.label,
       clientType: pricing.clientType,
+      barcodeId: selectedVariant?.id,
+      barcode: selectedVariant?.barcode,
+      variantName: selectedVariant?.variantName,
+      variantStock: selectedVariant?.stock,
       image: product.mainImage?.url || product.images?.[0]?.url || "",
     };
-  }, [pricing, product]);
+  }, [pricing, product, selectedVariant]);
 
   const showPreviousImage = () => {
     if (images.length < 2) return;
@@ -183,6 +221,14 @@ function ShopDetail() {
     setSelectedImageIndex(current =>
       current === images.length - 1 ? 0 : current + 1
     );
+  };
+
+  const handleImageSelection = (image, index) => {
+    setSelectedImageIndex(index);
+    if (image.variantId) {
+      const variant = variants.find((item) => Number(item.id) === Number(image.variantId));
+      if (variant) selectVariant(variant);
+    }
   };
 
   const handleImageZoomMove = event => {
@@ -352,7 +398,7 @@ function ShopDetail() {
                   <button
                     key={`${image.url}-${index}`}
                     type="button"
-                    onClick={() => setSelectedImageIndex(index)}
+                    onClick={() => handleImageSelection(image, index)}
                     className={`h-16 w-16 rounded-xl border bg-white p-1.5 sm:h-20 sm:w-20 sm:rounded-2xl sm:p-2 ${
                       selectedImageIndex === index
                         ? "border-[#004D77]"
@@ -411,6 +457,70 @@ function ShopDetail() {
                 </span>
               )}
             </div>
+
+            {variants.length > 0 && (
+              <div className="mt-6">
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <h2 className="text-xs font-black uppercase tracking-wider text-slate-700">
+                      Elige tu presentación
+                    </h2>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Selecciona la imagen o el estilo que deseas llevar.
+                    </p>
+                  </div>
+                  {selectedVariant && (
+                    <span className="text-xs font-black text-[#004D77]">
+                      {selectedVariant.variantName || "Presentación seleccionada"}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {variants.map((variant) => {
+                    const variantStock = Number(variant.stock || 0);
+                    const isSelected = Number(variant.id) === Number(selectedVariantId);
+                    const variantImage = variant.variantImageUrl || images.find(
+                      (image) => Number(image.variantId) === Number(variant.id),
+                    )?.url;
+                    return (
+                      <button
+                        key={variant.id}
+                        type="button"
+                        disabled={variantStock <= 0}
+                        onClick={() => selectVariant(variant)}
+                        className={`overflow-hidden rounded-2xl border text-left transition ${
+                          isSelected
+                            ? "border-[#004D77] bg-[#eef7fc] ring-2 ring-[#004D77]/15"
+                            : "border-slate-200 bg-white hover:border-[#8ebbd2]"
+                        } disabled:cursor-not-allowed disabled:opacity-45`}
+                      >
+                        <div className="flex h-24 items-center justify-center bg-[#f4f9fc] p-2">
+                          {variantImage ? (
+                            <img
+                              src={variantImage}
+                              alt={variant.variantName || "Imagen de presentación"}
+                              className="h-full w-full object-contain"
+                            />
+                          ) : (
+                            <span className="px-2 text-center text-[11px] font-bold text-slate-400">
+                              Sin imagen
+                            </span>
+                          )}
+                        </div>
+                        <div className="p-3">
+                          <span className="block truncate text-sm font-black text-slate-800">
+                            {variant.variantName || "Estilo pendiente"}
+                          </span>
+                          <span className="mt-1 block text-xs text-slate-500">
+                            {variantStock > 0 ? `${variantStock} disponibles` : "Agotado"}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row sm:items-center">
               <div className="flex h-12 overflow-hidden rounded-full border border-slate-200 sm:w-auto">

@@ -21,10 +21,25 @@ const toPositiveInteger = (value) => {
 
 const normalizeItems = (items) => (
   Array.isArray(items)
-    ? items.map((item) => ({
-        ...item,
-        quantity: toPositiveInteger(item.quantity),
-      }))
+    ? items.map((item) => {
+        const variants = Array.isArray(item.barcodes) ? item.barcodes : [];
+        const legacyVariant = variants.find((variant) => variant.isDefault || variant.is_default)
+          || variants[0]
+          || null;
+        const barcodeId = item.barcodeId ?? legacyVariant?.id ?? legacyVariant?.id_barcode ?? null;
+        const barcode = item.barcode ?? legacyVariant?.barcode ?? null;
+        const variantStock = item.variantStock ?? legacyVariant?.stock ?? null;
+
+        return {
+          ...item,
+          barcodeId,
+          barcode,
+          variantName: item.variantName ?? legacyVariant?.variantName ?? legacyVariant?.variant_name ?? null,
+          variantImageUrl: item.variantImageUrl ?? legacyVariant?.variantImageUrl ?? legacyVariant?.variant_image_url ?? null,
+          variantStock,
+          quantity: toPositiveInteger(item.quantity),
+        };
+      })
     : []
 );
 
@@ -52,15 +67,25 @@ const writeStoredCart = (key, items) => {
   localStorage.setItem(key, JSON.stringify(normalizeItems(items)));
 };
 
+const getCartItemKey = (productId, barcodeId) => `${productId}:${barcodeId || 'legacy'}`;
+
+const resolveCartBarcodeId = (item) => (
+  item?.barcodeId
+  ?? item?.barcodes?.find((variant) => variant.barcode === item.barcode)?.id
+  ?? item?.barcodes?.find((variant) => variant.isDefault || variant.is_default)?.id
+  ?? item?.barcodes?.[0]?.id
+  ?? null
+);
+
 const mergeLocalCarts = (firstCart, secondCart) => {
   const merged = new Map();
 
   [...normalizeItems(firstCart), ...normalizeItems(secondCart)].forEach((item) => {
-    const productId = item.id;
-    const current = merged.get(String(productId));
+    const key = getCartItemKey(item.id, item.barcodeId);
+    const current = merged.get(key);
 
     merged.set(
-      String(productId),
+      key,
       current
         ? { ...current, quantity: current.quantity + item.quantity }
         : item,
@@ -96,7 +121,7 @@ const getClientId = (client) => (
 );
 
 const getProductStock = (product) => {
-  const stock = Number(product?.totalStock ?? product?.stock ?? 0);
+  const stock = Number(product?.variantStock ?? product?.totalStock ?? product?.stock ?? 0);
   return Number.isFinite(stock) ? Math.max(0, stock) : 0;
 };
 
@@ -104,8 +129,6 @@ const clampQuantity = (product, quantity) => {
   const requested = toPositiveInteger(quantity);
   return Math.min(requested, getProductStock(product));
 };
-
-const getCartItemKey = (productId) => String(productId);
 
 // Se conserva esta exportación por compatibilidad con los consumidores actuales.
 // eslint-disable-next-line react-refresh/only-export-components
@@ -259,8 +282,8 @@ export const CartProvider = ({ children }) => {
     [clientId, invalidatePendingCartLoad, localCartKey, replaceCartItems],
   );
 
-  const createCartItemRequest = useCallback((productId) => {
-    const key = getCartItemKey(productId);
+  const createCartItemRequest = useCallback((productId, barcodeId) => {
+    const key = getCartItemKey(productId, barcodeId);
     const version = (cartItemRequestVersions.current.get(key) || 0) + 1;
     cartItemRequestVersions.current.set(key, version);
     return { key, version };
@@ -274,24 +297,25 @@ export const CartProvider = ({ children }) => {
     [],
   );
 
-  const mergeCartItemFromResponse = useCallback((productId, items) => {
-    const serverItem = items?.find((item) => item.id === productId);
+  const mergeCartItemFromResponse = useCallback((productId, barcodeId, items) => {
+    const key = getCartItemKey(productId, barcodeId);
+    const serverItem = items?.find((item) => getCartItemKey(item.id, item.barcodeId) === key);
     if (!serverItem) {
       replaceCartItems(
-        cartItemsRef.current.filter((item) => item.id !== productId),
+        cartItemsRef.current.filter((item) => getCartItemKey(item.id, item.barcodeId) !== key),
       );
       return;
     }
 
     replaceCartItems(cartItemsRef.current.map((item) => (
-      item.id === productId ? { ...item, ...serverItem } : item
+      getCartItemKey(item.id, item.barcodeId) === key ? { ...item, ...serverItem } : item
     )));
   }, [replaceCartItems]);
 
-  const restoreCartItemFromServer = useCallback(async (productId) => {
+  const restoreCartItemFromServer = useCallback(async (productId, barcodeId) => {
     try {
       const cartResponse = await storefrontService.getCart();
-      mergeCartItemFromResponse(productId, cartResponse?.items);
+      mergeCartItemFromResponse(productId, barcodeId, cartResponse?.items);
     } catch (syncError) {
       setError(
         syncError?.response?.data?.message
@@ -307,7 +331,7 @@ export const CartProvider = ({ children }) => {
 
     if (!clientId) {
       updateItems((previousItems) => {
-        const existing = previousItems.find((item) => item.id === product.id);
+        const existing = previousItems.find((item) => getCartItemKey(item.id, item.barcodeId) === getCartItemKey(product.id, product.barcodeId));
         const nextQuantity = clampQuantity(
           product,
           (existing?.quantity || 0) + requestedQuantity,
@@ -315,7 +339,7 @@ export const CartProvider = ({ children }) => {
 
         return existing
           ? previousItems.map((item) => (
-              item.id === product.id
+              getCartItemKey(item.id, item.barcodeId) === getCartItemKey(product.id, product.barcodeId)
                 ? { ...item, ...product, quantity: nextQuantity }
                 : item
             ))
@@ -325,16 +349,16 @@ export const CartProvider = ({ children }) => {
     }
 
     const requestedIdentity = cartIdentity;
-    const cartItemRequest = createCartItemRequest(product.id);
+    const cartItemRequest = createCartItemRequest(product.id, product.barcodeId);
     const previousItems = cartItemsRef.current;
-    const existing = previousItems.find((item) => item.id === product.id);
+    const existing = previousItems.find((item) => getCartItemKey(item.id, item.barcodeId) === getCartItemKey(product.id, product.barcodeId));
     const nextQuantity = clampQuantity(
       product,
       (existing?.quantity || 0) + requestedQuantity,
     );
     const nextItems = existing
       ? previousItems.map((item) => (
-          item.id === product.id
+          getCartItemKey(item.id, item.barcodeId) === getCartItemKey(product.id, product.barcodeId)
             ? { ...item, ...product, quantity: nextQuantity }
             : item
         ))
@@ -346,6 +370,7 @@ export const CartProvider = ({ children }) => {
       replaceCartItems(nextItems);
       const cartResponse = await storefrontService.setCartItem(
         product.id,
+        product.barcodeId,
         nextQuantity,
       );
 
@@ -373,17 +398,17 @@ export const CartProvider = ({ children }) => {
     updateItems,
   ]);
 
-  const updateQuantity = useCallback((productId, newQuantity) => {
+  const updateQuantity = useCallback((productId, barcodeId, newQuantity) => {
     const previousItems = cartItemsRef.current;
-    const currentItem = previousItems.find((item) => item.id === productId);
+    const currentItem = previousItems.find((item) => getCartItemKey(item.id, item.barcodeId) === getCartItemKey(productId, barcodeId));
     if (!currentItem || getProductStock(currentItem) <= 0) return false;
 
     const nextItems = normalizeItems(previousItems.map((item) => (
-      item.id === productId
+      getCartItemKey(item.id, item.barcodeId) === getCartItemKey(productId, barcodeId)
         ? { ...item, quantity: clampQuantity(item, newQuantity) }
         : item
     )));
-    const item = nextItems.find((entry) => entry.id === productId);
+    const item = nextItems.find((entry) => getCartItemKey(entry.id, entry.barcodeId) === getCartItemKey(productId, barcodeId));
     if (!item) return false;
 
     invalidatePendingCartLoad();
@@ -396,19 +421,19 @@ export const CartProvider = ({ children }) => {
     }
 
     const requestedIdentity = cartIdentity;
-    const cartItemRequest = createCartItemRequest(productId);
-    const queueKey = getCartItemKey(productId);
+    const cartItemRequest = createCartItemRequest(productId, barcodeId);
+    const queueKey = getCartItemKey(productId, barcodeId);
     const previousRequest = cartItemUpdateQueues.current.get(queueKey) || Promise.resolve();
     const queuedRequest = previousRequest
       .catch(() => undefined)
-      .then(() => storefrontService.setCartItem(productId, item.quantity));
+      .then(() => storefrontService.setCartItem(productId, barcodeId, item.quantity));
 
     cartItemUpdateQueues.current.set(queueKey, queuedRequest);
 
     queuedRequest
       .then((cartResponse) => {
         if (!isLatestCartItemRequest(cartItemRequest, requestedIdentity)) return;
-        mergeCartItemFromResponse(productId, cartResponse?.items);
+        mergeCartItemFromResponse(productId, barcodeId, cartResponse?.items);
       })
       .catch((requestError) => {
         if (!isLatestCartItemRequest(cartItemRequest, requestedIdentity)) return;
@@ -417,7 +442,7 @@ export const CartProvider = ({ children }) => {
           requestError?.response?.data?.message
           || 'No fue posible actualizar el carrito.',
         );
-        restoreCartItemFromServer(productId);
+        restoreCartItemFromServer(productId, barcodeId);
       })
       .finally(() => {
         if (cartItemUpdateQueues.current.get(queueKey) === queuedRequest) {
@@ -437,26 +462,35 @@ export const CartProvider = ({ children }) => {
     restoreCartItemFromServer,
   ]);
 
-  const increaseQuantity = useCallback((productId) => {
-    const item = cartItemsRef.current.find((entry) => entry.id === productId);
-    if (item) updateQuantity(productId, item.quantity + 1);
+  const increaseQuantity = useCallback((productId, barcodeId) => {
+    const item = cartItemsRef.current.find((entry) => getCartItemKey(entry.id, entry.barcodeId) === getCartItemKey(productId, barcodeId));
+    if (item) updateQuantity(productId, barcodeId, item.quantity + 1);
   }, [updateQuantity]);
 
-  const decreaseQuantity = useCallback((productId) => {
-    const item = cartItemsRef.current.find((entry) => entry.id === productId);
+  const decreaseQuantity = useCallback((productId, barcodeId) => {
+    const item = cartItemsRef.current.find((entry) => getCartItemKey(entry.id, entry.barcodeId) === getCartItemKey(productId, barcodeId));
     if (item && item.quantity > 1) {
-      updateQuantity(productId, item.quantity - 1);
+      updateQuantity(productId, barcodeId, item.quantity - 1);
     }
   }, [updateQuantity]);
 
-  const removeFromCart = useCallback((productId) => {
+  const removeFromCart = useCallback((productId, barcodeId) => {
+    const currentItem = cartItemsRef.current.find((item) => (
+      getCartItemKey(item.id, item.barcodeId) === getCartItemKey(productId, barcodeId)
+      || (item.id === productId && !barcodeId)
+    ));
+    const resolvedBarcodeId = barcodeId ?? resolveCartBarcodeId(currentItem);
+    if (!resolvedBarcodeId) {
+      setError('No fue posible identificar la variante del producto.');
+      return;
+    }
     const requestedIdentity = cartIdentity;
-    const cartItemRequest = createCartItemRequest(productId);
+    const cartItemRequest = createCartItemRequest(productId, resolvedBarcodeId);
 
     updateItems(
-      (previousItems) => previousItems.filter((item) => item.id !== productId),
+      (previousItems) => previousItems.filter((item) => getCartItemKey(item.id, item.barcodeId) !== getCartItemKey(productId, resolvedBarcodeId)),
       (_nextItems, previousItems) => {
-        storefrontService.removeCartItem(productId)
+        storefrontService.removeCartItem(productId, resolvedBarcodeId)
           .then((cartResponse) => {
             if (!isLatestCartItemRequest(cartItemRequest, requestedIdentity)) return;
             replaceCartItems(cartResponse?.items);

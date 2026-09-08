@@ -10,9 +10,13 @@ const buildBarcodesPayload = (data) => {
 
   if (data.codBarras) {
     barcodes.push({
+        id: data.codBarrasId,
       barcode: data.codBarras,
       barcode_type: 'EAN13',
       stock: Number(data.stock) || 0,
+        variant_name: data.codBarrasVariantName,
+        variant_image_url: data.codBarrasVariantImageUrl,
+        is_default: true,
     });
   }
 
@@ -20,9 +24,13 @@ const buildBarcodesPayload = (data) => {
     data.codsBarrasExtra.forEach((barcode) => {
       if (barcode?.cod) {
         barcodes.push({
+          id: barcode.id,
           barcode: barcode.cod,
           barcode_type: 'SKU',
           stock: Number(barcode.stock) || 0,
+          variant_name: barcode.variantName,
+          variant_image_url: barcode.variantImageUrl,
+          is_default: barcode.isDefault === true,
         });
       }
     });
@@ -112,6 +120,10 @@ export const ProductsService = {
       });
     }
 
+    (data.variantImages || []).forEach(({ index, file }) => {
+      if (file) formData.append(`variantImage_${index}`, file);
+    });
+
     const response = await apiClient.post('/products', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
@@ -167,6 +179,10 @@ export const ProductsService = {
         formData.append('images', img);
       });
     }
+
+    (data.variantImages || []).forEach(({ index, file }) => {
+      if (file) formData.append(`variantImage_${index}`, file);
+    });
 
     const response = await apiClient.put(`/products/${id}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
