@@ -18,7 +18,6 @@ const MODULE_RULES = {
     "CREATE",
     "READ",
     "READ_DETAIL",
-    "UPDATE",
     "DELETE",
     "ACTIVATE_DEACTIVATE"
   ],
@@ -64,9 +63,7 @@ const MODULE_RULES = {
     "CREATE",
     "READ",
     "READ_DETAIL",
-    "UPDATE",
     "ANULAR",
-    "DEVOLVER",
     "EXPORT",
     "CREAR_DEVOLUCION"
   ],
@@ -129,7 +126,6 @@ const MODULE_RULES = {
   ],
 
   devoluciones_en_compras: [
-    "CREATE",
     "READ",
     "READ_DETAIL",
     "UPDATE",
