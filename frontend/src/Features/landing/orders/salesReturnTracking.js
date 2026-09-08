@@ -1,4 +1,4 @@
-const normalize = (value) =>
+﻿const normalize = (value) =>
   String(value ?? '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -50,6 +50,7 @@ export const buildProductTracking = (detail) => {
   const cancelled = normalize(detail.status).includes('anulad');
   const currentIndex = statusIndex(detail.method, detail.status, detail.creditApplied);
   const finalStepCompleted = method === 'saldo a favor' && detail.creditApplied === true;
+  const isFinalStep = !cancelled && currentIndex >= baseSteps.length - 1;
 
   return {
     cancelled,
@@ -60,7 +61,7 @@ export const buildProductTracking = (detail) => {
       ...step,
       state: cancelled
         ? 'cancelled'
-        : finalStepCompleted && index <= currentIndex
+        : (finalStepCompleted || isFinalStep) && index <= currentIndex
           ? 'completed'
         : index < currentIndex
           ? 'completed'
@@ -86,7 +87,10 @@ export const getReturnSignature = (saleReturn) =>
 export const getStatusClasses = (status) => {
   const normalized = normalize(status);
   if (normalized.includes('anulad')) return 'bg-red-100 text-red-700';
-  if (normalized.includes('proces') || normalized === 'listo') {
+  if (normalized.includes('en proceso') || normalized === 'proceso' || normalized.includes('pend')) {
+    return 'bg-amber-100 text-amber-700';
+  }
+  if (normalized.includes('procesad') || normalized === 'listo') {
     return 'bg-emerald-100 text-emerald-700';
   }
   return 'bg-amber-100 text-amber-700';
@@ -109,3 +113,5 @@ export const formatCurrency = (value) =>
     currency: 'COP',
     maximumFractionDigits: 0,
   }).format(Number(value ?? 0));
+
+

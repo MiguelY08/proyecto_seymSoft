@@ -8,29 +8,129 @@ import { usePermissions } from "../../../configuration/roles/hooks/usePermission
 const escapeRegExp = (value) =>
   String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+const normalizeHighlightValue = (value) =>
+  String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+const getDigitMatches = (text, search) => {
+  const digitSearch = String(search ?? "").replace(/\D/g, "");
+  if (!digitSearch) return [];
+
+  const digitMap = [];
+  let digitText = "";
+
+  String(text ?? "").split("").forEach((char, index) => {
+    if (/\d/.test(char)) {
+      digitText += char;
+      digitMap.push(index);
+    }
+  });
+
+  const matches = [];
+  let start = digitText.indexOf(digitSearch);
+
+  while (start !== -1) {
+    const endDigitIndex = start + digitSearch.length - 1;
+    matches.push({
+      start: digitMap[start],
+      end: digitMap[endDigitIndex] + 1,
+    });
+    start = digitText.indexOf(digitSearch, start + 1);
+  }
+
+  return matches;
+};
+
 const highlightText = (text, search) => {
-  if (!search || !text) return text;
+  const originalText = String(text ?? "");
+  const cleanSearch = String(search ?? "").trim();
+  if (!cleanSearch || !originalText) return text;
 
-  const regex = new RegExp(`(${escapeRegExp(search)})`, "gi");
-  const parts = text.toString().split(regex);
+  const terms = cleanSearch
+    .split(/\s+/)
+    .map(normalizeHighlightValue)
+    .filter(Boolean);
 
-  return parts.map((part, index) =>
-    part.toLowerCase() === search.toLowerCase() ? (
+  if (terms.length === 0) return text;
+
+  const normalizedText = normalizeHighlightValue(originalText);
+  const matches = getDigitMatches(originalText, cleanSearch);
+
+  terms.forEach((term) => {
+    const regex = new RegExp(escapeRegExp(term), "g");
+    let match;
+    while ((match = regex.exec(normalizedText)) !== null) {
+      matches.push({ start: match.index, end: match.index + term.length });
+    }
+  });
+
+  if (matches.length === 0) return text;
+
+  const mergedMatches = matches
+    .sort((a, b) => a.start - b.start || b.end - a.end)
+    .reduce((acc, match) => {
+      const last = acc[acc.length - 1];
+      if (!last || match.start > last.end) {
+        acc.push({ ...match });
+      } else {
+        last.end = Math.max(last.end, match.end);
+      }
+      return acc;
+    }, []);
+
+  const parts = [];
+  let cursor = 0;
+
+  mergedMatches.forEach((match, index) => {
+    if (match.start > cursor) {
+      parts.push(originalText.slice(cursor, match.start));
+    }
+
+    parts.push(
       <span
-        key={index}
+        key={`highlight-${index}`}
         className="bg-[#004d7726] text-[#004D77] rounded px-0.5"
       >
-        {part}
+        {originalText.slice(match.start, match.end)}
       </span>
-    ) : (
-      part
-    ),
-  );
+    );
+
+    cursor = match.end;
+  });
+
+  if (cursor < originalText.length) {
+    parts.push(originalText.slice(cursor));
+  }
+
+  return parts;
 };
 
 const fallbackText = (value) => {
   const text = String(value ?? '').trim();
   return text || 'N/A';
+};
+
+const DOCUMENT_TYPES = ["cc", "ce", "nit", "pp"];
+
+const parseSearchTerm = (term) => {
+  const parts = String(term || "").trim().split(/\s+/).filter(Boolean);
+  const first = normalizeHighlightValue(parts[0]);
+
+  if (parts.length > 1 && DOCUMENT_TYPES.includes(first)) {
+    return {
+      isCombined: true,
+      tipoTerm: parts[0],
+      numTerm: parts.slice(1).join(" "),
+    };
+  }
+
+  return {
+    isCombined: false,
+    tipoTerm: term,
+    numTerm: term,
+  };
 };
 
 const formatCategories = (categorias) => {
@@ -93,18 +193,18 @@ function ProvidersTable({
               Aún no se han registrado proveedores.
             </p>
 
-            <Permission permission="proveedores.crear">
-              <button
-                type="button"
-                onClick={onCreateProvider}
-                className="flex cursor-pointer items-center gap-1.5 rounded-lg border bg-[#004D77] px-2 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#003a5c] sm:px-3"
-              >
-                <span>Nuevo proveedor</span>
-                <Plus className="h-3.5 w-3.5" strokeWidth={2} />
-              </button>
-            </Permission>
           </>
         )}
+        <Permission permission="proveedores.crear">
+          <button
+            type="button"
+            onClick={onCreateProvider}
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg border bg-[#004D77] px-2 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#003a5c] sm:px-3"
+          >
+            <span>Crear proveedor</span>
+            <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+          </button>
+        </Permission>
       </div>
     );
   }
@@ -140,6 +240,7 @@ function ProvidersTable({
             const rowBg = index % 2 === 0 ? "bg-gray-100 hover:bg-blue-50" : "bg-white hover:bg-blue-50";
             const recordNumber = (startIndex || 0) + index + 1;
             const categoriasTexto = formatCategories(provider.categorias);
+            const { isCombined, tipoTerm, numTerm } = parseSearchTerm(searchTerm);
 
             return (
               <tr key={provider.id} className={`group h-[38px] transition-colors duration-150 ${rowBg}`}>
@@ -147,10 +248,10 @@ function ProvidersTable({
                   {String(recordNumber)}
                 </td>
                 <td className="overflow-hidden text-ellipsis whitespace-nowrap px-2.5 py-1.5 text-center text-xs text-gray-700">
-                  {provider.tipo}
+                  {highlightText(provider.tipo, isCombined ? tipoTerm : searchTerm)}
                 </td>
                 <td className="overflow-hidden text-ellipsis whitespace-nowrap px-2.5 py-1.5 text-center text-xs text-gray-700">
-                  {highlightText(provider.numero, searchTerm)}
+                  {highlightText(provider.numero, isCombined ? numTerm : searchTerm)}
                 </td>
                 <td className="px-2.5 py-1.5 text-xs font-medium text-gray-800">
                   <TableTooltipText
@@ -241,4 +342,3 @@ function ProvidersTable({
 }
 
 export default ProvidersTable;
-

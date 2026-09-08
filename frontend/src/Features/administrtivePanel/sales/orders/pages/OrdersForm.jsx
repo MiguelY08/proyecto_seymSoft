@@ -281,8 +281,7 @@ function OrdersForm() {
         try {
           const creditCustomers = await getCreditCustomers();
           setCreditAccounts(mapCreditCustomers(creditCustomers));
-        } catch (error) {
-          console.warn('No se pudo cargar la información de crédito de los clientes:', error);
+        } catch {
           setCreditAccounts([]);
         }
 
@@ -947,8 +946,7 @@ function OrdersForm() {
           const canonicalPayments = await PaymentService.getByPedidoId(orderId);
           setPagos((canonicalPayments || []).map((p) => ({ ...p, locked: true, persisted: true })));
           setTotalPagado(await PaymentService.getTotalPagado(orderId));
-        } catch (err) {
-          console.warn('No se pudieron sincronizar pagos tras la actualización:', err);
+        } catch {
         }
 
         showSuccess(
@@ -1014,8 +1012,7 @@ function OrdersForm() {
           canonicalPayments = await PaymentService.getByPedidoId(orderResult.id);
           setPagos((canonicalPayments || []).map((p) => ({ ...p, locked: true, persisted: true })));
           setTotalPagado(await PaymentService.getTotalPagado(orderResult.id));
-        } catch (err) {
-          console.warn('No se pudieron obtener los pagos del servidor tras crear el pedido:', err);
+        } catch {
         }
 
         // Registrar localmente los abonos que siguen pendientes y que NO aparecen en el servidor

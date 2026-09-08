@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import {
   ChevronLeft,
+  AlertTriangle,
   CheckCircle,
   Clock,
   CreditCard,
@@ -21,6 +22,7 @@ import OrdersService, {
 } from '../../administrtivePanel/sales/orders/services/ordersService';
 import { useAlert } from '../../shared/alerts/useAlert';
 import useAuthenticatedClient from '../../shared/hooks/useAuthenticatedClient';
+import useBodyScrollLock from '../../shared/hooks/useBodyScrollLock';
 import ShopHero from '../shop/components/ShopHero';
 import BgPedidos from '../../../assets/BgPedidos.png';
 import qrMagic from '../../../assets/QR_Magic.jpg';
@@ -102,6 +104,7 @@ function OrderDetail() {
   const [submitting, setSubmitting] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [proofPreview, setProofPreview] = useState(null);
+  useBodyScrollLock(qrOpen || Boolean(proofPreview));
   const [now, setNow] = useState(Date.now());
   const fileInputRef = useRef(null);
   const isDeliveryAwaitingShipping = Boolean(
@@ -274,6 +277,8 @@ function OrderDetail() {
   const hasPendingReceipt = order.comprobantesPago?.some(
     (proof) => normalizeReceiptStatus(proof.status) === 'pendiente'
   );
+  const paymentDataHidden = Boolean(order.paymentDataHidden);
+  const favorBalanceRestoredAmount = Number(order.favorBalanceRestoredAmount || 0);
   const orderNumber = order.numeroPedido || order.id;
   const returnWhatsAppUrl = `https://api.whatsapp.com/send/?phone=%2B573212828628&text=${encodeURIComponent(
     `Hola, necesito ayuda con una devolución de mi pedido No. ${orderNumber}`
@@ -285,14 +290,14 @@ function OrderDetail() {
         image={BgPedidos}
         title="Pedidos"
         tag="Detalle"
-        subtitle={`Pedido N.° ${order.numeroPedido || order.id}`}
+        subtitle={`Pedido No. ${order.numeroPedido || order.id}`}
       />
 
       <main className="mx-auto max-w-[var(--store-content-max)] px-[var(--store-content-x)] py-5 sm:py-8">
         <button
           type="button"
           onClick={() => navigate('/orders-l')}
-          className="mb-5 inline-flex items-center gap-2 text-sm font-bold text-[#004D77]"
+          className="mb-5 inline-flex items-center gap-2 rounded-full border border-transparent px-3 py-2 text-sm font-bold text-[#004D77] transition hover:border-[#004D77]/30 hover:bg-[#004D77]/10 active:scale-95"
         >
           <ChevronLeft size={17} /> Volver a pedidos
         </button>
@@ -317,11 +322,13 @@ function OrderDetail() {
                   value={order.tipoEntrega === 'recoge' ? 'Recoger en tienda' : order.direccionEntrega}
                   icon={<MapPin size={15} />}
                 />
-                <Info
-                  label="Estado del pago"
-                  value={order.saldoPendiente > 0 ? 'Pendiente' : 'Pago registrado'}
-                  icon={<CreditCard size={15} />}
-                />
+                {!paymentDataHidden && (
+                  <Info
+                    label="Estado del pago"
+                    value={order.saldoPendiente > 0 ? 'Pendiente' : 'Pago registrado'}
+                    icon={<CreditCard size={15} />}
+                  />
+                )}
                 {order.tipoEntrega !== 'recoge' && (
                   <>
                     <Info
@@ -359,7 +366,21 @@ function OrderDetail() {
               )}
             </section>
 
-            {isDeliveryAwaitingShipping && order.estadoLogistico !== 'cancelado' && (
+            {paymentDataHidden && (
+              <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:rounded-3xl sm:p-6">
+                <h2 className="flex items-center gap-2 text-xl font-black text-amber-900">
+                  <AlertTriangle size={21} /> Pedido anulado
+                </h2>
+                <p className="mt-3 text-sm font-semibold leading-relaxed text-amber-800">
+                  Este pedido fue anulado o cancelado antes de completar el pago.
+                  {favorBalanceRestoredAmount > 0
+                    ? ` El dinero depositado (${formatMoney(favorBalanceRestoredAmount)}) fue acreditado a tu saldo a favor.`
+                    : ' Si realizaste un depósito, contacta a un asesor para revisar tu saldo a favor.'}
+                </p>
+              </section>
+            )}
+
+            {isDeliveryAwaitingShipping && !paymentDataHidden && order.estadoLogistico !== 'cancelado' && (
               <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:rounded-3xl sm:p-6">
                 <h2 className="flex items-center gap-2 text-xl font-black text-amber-900">
                   <Clock size={21} /> Valor de envio pendiente
@@ -544,11 +565,15 @@ function OrderDetail() {
               <Summary label="IVA incluido" value={formatMoney(order.iva)} />
               <Summary label="Envío" value={formatMoney(order.shippingAmount)} />
               <Summary label="Total" value={formatMoney(order.total)} strong />
-              <Summary label="Pagado" value={formatMoney(order.totalPagado)} className="text-green-600" />
-              <Summary label="Pendiente" value={formatMoney(order.saldoPendiente)} className="text-red-600" />
+              {!paymentDataHidden && (
+                <>
+                  <Summary label="Pagado" value={formatMoney(order.totalPagado)} className="text-green-600" />
+                  <Summary label="Pendiente" value={formatMoney(order.saldoPendiente)} className="text-red-600" />
+                </>
+              )}
             </div>
 
-            {!!order.comprobantesPago?.length && (
+            {!paymentDataHidden && !!order.comprobantesPago?.length && (
               <div className="mt-5 border-t border-slate-200 pt-5">
                 <h3 className="text-sm font-black text-slate-800">Comprobantes enviados</h3>
                 <div className="mt-3 space-y-3">
@@ -607,7 +632,7 @@ function OrderDetail() {
               </div>
             )}
 
-            {!!order.pagos.length && (
+            {!paymentDataHidden && !!order.pagos.length && (
               <div className="mt-5 border-t border-slate-200 pt-5">
                 <h3 className="text-sm font-black text-slate-800">Comprobantes registrados</h3>
                 {order.pagos.map((payment) => (
@@ -695,3 +720,4 @@ function Summary({ label, value, strong = false, className = '' }) {
 }
 
 export default OrderDetail;
+

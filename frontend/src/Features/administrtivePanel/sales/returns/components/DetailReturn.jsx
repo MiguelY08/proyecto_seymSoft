@@ -5,6 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   X,
+  XCircle,
   FileDown,
   AlertTriangle,
   Image,
@@ -24,14 +25,29 @@ import { exportReturnToPDF } from '../utils/pdfExporter';
 import {
   getPurchaseReturnInfo,
   resolveDefectiveProduct,
+  cancelReturnDetail,
 } from '../data/returnsService';
 import { useAlert } from '../../../../shared/alerts/useAlert';
 
+const DETAIL_CANCEL_REASON_MIN = 10;
+const DETAIL_CANCEL_REASON_MAX = 250;
+
 const isDefectiveDetail = (detail = {}) => {
-  const reason = String(detail.reason || detail.motivo || '').toUpperCase();
-  return Number(detail.reasonId || detail.idReturnReason) === 5
-    || reason === 'DEFECTUOSO'
-    || reason.includes('PRODUCTO DEFECTUOSO');
+  const reason = String(detail.reason || detail.motivo || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[_-]+/g, ' ')
+    .toUpperCase();
+  return [
+    'DEFECTUOSO',
+    'PRODUCTO DEFECTUOSO',
+    'MAL ESTADO',
+    'PRODUCTO EN MAL ESTADO',
+    'PRODUCTO USADO',
+    'USADO',
+    'PRODUCTO INCOMPLETO',
+    'INCOMPLETO',
+  ].some((term) => reason.includes(term));
 };
 
 const formatReasonLabel = (reason) => {
@@ -115,12 +131,16 @@ const CollapsibleText = ({
   );
 };
 
-function DetailReturn({ isOpen, onClose, devolucion = null }) {
+function DetailReturn({ isOpen, onClose, devolucion = null, onDetailCancelled }) {
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [purchaseInfoByDetail, setPurchaseInfoByDetail] = useState({});
   const [selectedDefectiveProduct, setSelectedDefectiveProduct] = useState(null);
   const [resolvingDetailId, setResolvingDetailId] = useState(null);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [detailToCancel, setDetailToCancel] = useState(null);
+  const [detailCancelReason, setDetailCancelReason] = useState('');
+  const [detailCancelTouched, setDetailCancelTouched] = useState(false);
+  const [cancellingDetail, setCancellingDetail] = useState(false);
   const { showConfirm, showError, showSuccess } = useAlert();
 
   useEffect(() => {
@@ -289,6 +309,55 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
       showError('No se pudo registrar', error.message);
     } finally {
       setResolvingDetailId(null);
+    }
+  };
+
+  const closeDetailCancelModal = (force = false) => {
+    if (cancellingDetail && !force) return;
+    setDetailToCancel(null);
+    setDetailCancelReason('');
+    setDetailCancelTouched(false);
+  };
+
+  const getDetailCancelError = (value = detailCancelReason) => {
+    const cleanValue = value.trim();
+    if (!cleanValue) return 'El motivo de anulación es obligatorio.';
+    if (cleanValue.length < DETAIL_CANCEL_REASON_MIN) {
+      return `El motivo debe tener al menos ${DETAIL_CANCEL_REASON_MIN} caracteres.`;
+    }
+    if (cleanValue.length > DETAIL_CANCEL_REASON_MAX) {
+      return `El motivo no puede superar ${DETAIL_CANCEL_REASON_MAX} caracteres.`;
+    }
+    return '';
+  };
+
+  const handleCancelDetail = async () => {
+    const error = getDetailCancelError();
+    setDetailCancelTouched(true);
+    if (error || !detailToCancel) return;
+
+    const detailId = detailToCancel.idSaleReturnDetail || detailToCancel.id;
+    const confirmation = await showConfirm(
+      'warning',
+      'Anular producto devuelto',
+      `Vas a anular únicamente "${detailToCancel.productName || 'este producto'}" dentro de la devolución ${returnNumber}. Esta acción no anula los demás productos.`,
+      {
+        confirmButtonText: 'Sí, anular',
+        cancelButtonText: 'Volver',
+      }
+    );
+    if (!confirmation?.isConfirmed) return;
+
+    try {
+      setCancellingDetail(true);
+      await cancelReturnDetail(devolucion.id, detailId, detailCancelReason.trim());
+      showSuccess('Producto anulado', 'El producto fue anulado correctamente dentro de la devolución.');
+      closeDetailCancelModal(true);
+      await onDetailCancelled?.(devolucion.id);
+    } catch (errorCancel) {
+      showError('No se pudo anular el producto', errorCancel.message);
+    } finally {
+      setCancellingDetail(false);
     }
   };
 
@@ -469,14 +538,15 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
               <div className="mb-4">
                 <h3 className="text-sm font-bold text-gray-800 mb-2">Productos devueltos</h3>
                 <div className="overflow-x-auto rounded-lg border border-gray-200">
-                  <table className="min-w-[720px] w-full table-fixed">
+                  <table className="min-w-[860px] w-full table-fixed">
                     <colgroup>
-                      <col className="w-[28%]" />
-                      <col className="w-[23%]" />
-                      <col className="w-[15%]" />
+                      <col className="w-[25%]" />
+                      <col className="w-[21%]" />
                       <col className="w-[14%]" />
-                      <col className="w-[8%]" />
-                      <col className="w-[12%]" />
+                      <col className="w-[13%]" />
+                      <col className="w-[7%]" />
+                      <col className="w-[10%]" />
+                      <col className="w-[10%]" />
                     </colgroup>
                     <thead className="bg-[#004D77]/5">
                       <tr>
@@ -486,6 +556,7 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
                         <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Estado</th>
                         <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Cant.</th>
                         <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Valor</th>
+                        <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Acción</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -526,13 +597,39 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
                             </td>
                             <td className="px-3 py-2 text-xs text-gray-600 break-words [overflow-wrap:anywhere]">{metodo}</td>
                             <td className="px-3 py-2">
-                              <span className={`inline-flex min-w-[84px] items-center justify-center rounded-full border border-black/5 px-2.5 py-0.5 text-[10px] font-semibold ${isAnulado ? 'text-red-600 bg-red-100' : getStatusColor(estadoProducto)}`}>
-                                {estadoProducto}
-                              </span>
+                              <div className="flex flex-col items-start gap-1">
+                                <span className={`inline-flex min-w-[84px] items-center justify-center rounded-full border border-black/5 px-2.5 py-0.5 text-[10px] font-semibold ${isAnulado ? 'text-red-600 bg-red-100' : getStatusColor(estadoProducto)}`}>
+                                  {estadoProducto}
+                                </span>
+                                {isAnulado && p.cancellationReason && (
+                                  <span className="max-w-full truncate text-[10px] text-red-400" title={p.cancellationReason}>
+                                    Motivo: {p.cancellationReason}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="px-3 py-2 text-center text-xs font-semibold text-gray-700">{cantidad}</td>
                             <td className="px-3 py-2 text-right text-xs font-semibold text-gray-800">
                               {precioUnit > 0 ? `$${formatNum(Math.round(total))}` : 'N/A'}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {status !== 'Anulado' && !isAnulado ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setDetailToCancel(p);
+                                    setDetailCancelReason('');
+                                    setDetailCancelTouched(false);
+                                  }}
+                                  className="inline-flex items-center justify-center gap-1 rounded-full border border-red-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-red-600 transition hover:bg-red-50"
+                                  title="Anular solo este producto"
+                                >
+                                  <XCircle className="h-3 w-3" />
+                                  Anular
+                                </button>
+                              ) : (
+                                <span className="text-[10px] text-gray-300">—</span>
+                              )}
                             </td>
                           </tr>
                         );
@@ -611,6 +708,78 @@ function DetailReturn({ isOpen, onClose, devolucion = null }) {
           }
         }}
       />
+
+      {detailToCancel && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-[520px] overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="relative flex items-center justify-between overflow-hidden bg-gradient-to-br from-[#003b5c] via-[#004D77] to-[#0877a8] px-5 py-3.5">
+              <div className="relative flex min-w-0 items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+                  <XCircle className="h-5 w-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="truncate text-sm font-bold text-white">Anular producto devuelto</h3>
+                  <p className="truncate text-[11px] text-white/75">{detailToCancel.productName || 'Producto'}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeDetailCancelModal}
+                disabled={cancellingDetail}
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/15 text-white transition hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="px-5 py-4">
+              <p className="mb-3 text-sm text-gray-600">
+                Escribe la razón por la cual se anula este producto. Solo se afectará este registro dentro de la devolución.
+              </p>
+              <textarea
+                value={detailCancelReason}
+                onChange={(event) => setDetailCancelReason(event.target.value.slice(0, DETAIL_CANCEL_REASON_MAX))}
+                onBlur={() => setDetailCancelTouched(true)}
+                rows={4}
+                placeholder="Describe el motivo de anulación del producto..."
+                className={`w-full resize-none rounded-xl border px-3 py-2 text-sm text-gray-700 outline-none transition ${
+                  detailCancelTouched && getDetailCancelError()
+                    ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-100'
+                    : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/15'
+                }`}
+              />
+              <div className="mt-1 flex items-center justify-between gap-3">
+                <p className="text-xs text-red-500">
+                  {detailCancelTouched ? getDetailCancelError() : ''}
+                </p>
+                <span className={`text-xs ${detailCancelReason.length >= DETAIL_CANCEL_REASON_MAX ? 'text-red-400' : 'text-gray-400'}`}>
+                  {detailCancelReason.length}/{DETAIL_CANCEL_REASON_MAX}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 border-t border-gray-100 px-5 py-4 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={closeDetailCancelModal}
+                disabled={cancellingDetail}
+                className="w-full rounded-full border border-[#004D77] bg-white px-5 py-2 text-sm font-medium text-[#004D77] shadow-sm transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelDetail}
+                disabled={cancellingDetail || Boolean(getDetailCancelError())}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-red-600 bg-red-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              >
+                {cancellingDetail && <Loader2 className="h-4 w-4 animate-spin" />}
+                {cancellingDetail ? 'Anulando...' : 'Anular producto'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

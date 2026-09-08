@@ -1,4 +1,4 @@
-export const ORDER_FONT_FAMILY = "'Nunito', 'Segoe UI', sans-serif";
+﻿export const ORDER_FONT_FAMILY = "'Nunito', 'Segoe UI', sans-serif";
 
 let orderTypographyInjected = false;
 
@@ -12,3 +12,4 @@ export function injectOrderTypography() {
   document.head.appendChild(style);
   orderTypographyInjected = true;
 }
+

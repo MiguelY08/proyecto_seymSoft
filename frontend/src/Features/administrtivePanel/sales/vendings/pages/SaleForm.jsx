@@ -392,9 +392,7 @@ function SaleForm() {
       try {
         const creditCustomers = await getCreditCustomers();
         setCreditAccounts(mapCreditCustomers(creditCustomers));
-      } catch (error) {
-        console.warn('No se pudo refrescar cartera despues de crear cliente:', error);
-      }
+      } catch {}
 
       setFormData(prev => ({
         ...prev,

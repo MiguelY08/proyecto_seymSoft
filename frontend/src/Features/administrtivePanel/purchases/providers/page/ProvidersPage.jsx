@@ -33,6 +33,11 @@ const useDebouncedValue = (value, delay = SEARCH_DEBOUNCE_MS) => {
 const normalizeSearch = (value) =>
   String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
+const normalizeDigits = (value) =>
+  String(value ?? '').replace(/\D/g, '');
+
+const DOCUMENT_TYPES = ['cc', 'ce', 'nit', 'pp'];
+
 const flattenSearchValues = (value) => {
   if (value === null || value === undefined) return [];
   if (Array.isArray(value)) return value.flatMap(flattenSearchValues);
@@ -42,10 +47,31 @@ const flattenSearchValues = (value) => {
 
 const providerMatchesSearch = (provider, searchTerm) => {
   const term = normalizeSearch(searchTerm).trim();
+  const digitTerm = normalizeDigits(searchTerm);
   if (!term) return true;
 
   if (['activo', 'activos'].includes(term)) return provider.activo === true;
   if (['inactivo', 'inactivos'].includes(term)) return provider.activo === false;
+
+  const parts = term.split(/\s+/).filter(Boolean);
+  const providerDocumentType = normalizeSearch(provider.tipo).trim();
+  const providerDocumentNumber = normalizeSearch(provider.numero).trim();
+  const providerDocumentDigits = normalizeDigits(provider.numero);
+
+  if (parts.length === 1 && DOCUMENT_TYPES.includes(parts[0])) {
+    return providerDocumentType === parts[0];
+  }
+
+  if (parts.length > 1 && DOCUMENT_TYPES.includes(parts[0])) {
+    const documentSearch = parts.slice(1).join(' ');
+    return (
+      providerDocumentType === parts[0] &&
+      (
+        providerDocumentNumber.includes(documentSearch) ||
+        (normalizeDigits(documentSearch) && providerDocumentDigits.includes(normalizeDigits(documentSearch)))
+      )
+    );
+  }
 
   const statusText = provider.activo ? 'Activo' : 'Inactivo';
   const searchable = [
@@ -55,7 +81,14 @@ const providerMatchesSearch = (provider, searchTerm) => {
     `${provider.nombres || ''} ${provider.apellidos || ''}`,
   ];
 
-  return searchable.some((value) => normalizeSearch(value).includes(term));
+  return searchable.some((value) => {
+    const normalizedValue = normalizeSearch(value);
+    const digitValue = normalizeDigits(value);
+    return (
+      normalizedValue.includes(term) ||
+      (digitTerm && digitValue.includes(digitTerm))
+    );
+  });
 };
 
 const toNumber = (value) => {
@@ -126,6 +159,7 @@ function ProvidersPage() {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const debouncedSearchTerm = useDebouncedValue(searchTerm);
 
@@ -159,6 +193,7 @@ function ProvidersPage() {
     } catch (error) {
       showError('Error', error.message || 'No se pudieron cargar los proveedores');
     } finally {
+      setHasLoadedOnce(true);
       setLoading(false);
     }
   }, [currentPage, debouncedSearchTerm, statusFilter, showError]);
@@ -305,7 +340,7 @@ function ProvidersPage() {
 
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
 
-  if (loading && providers.length === 0) {
+  if (loading && !hasLoadedOnce) {
     return (
       <Spinner message="Cargando proveedores..." />
     );

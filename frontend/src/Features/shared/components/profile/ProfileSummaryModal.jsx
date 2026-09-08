@@ -4,6 +4,7 @@ import CreditSummaryCards from "./CreditSummaryCards.jsx";
 import CreditStatusCard from "./CreditStatusCard.jsx";
 import FavorBalanceCard from "./FavorBalanceCard.jsx";
 import useProfileSummary from "../../hooks/useProfileSummary.js";
+import useBodyScrollLock from "../../hooks/useBodyScrollLock.js";
 
 const getProfileValue = (data, keys, fallback = null) => {
   for (const key of keys) {
@@ -17,6 +18,7 @@ const getProfileValue = (data, keys, fallback = null) => {
 export default function ProfileSummaryModal({ isOpen, onClose }) {
   const { profileSummary, loading, error, refreshProfileSummary } =
     useProfileSummary();
+  useBodyScrollLock(isOpen);
 
   if (!isOpen) return null;
 

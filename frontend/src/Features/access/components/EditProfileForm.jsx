@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useAlert } from "../../shared/alerts/useAlert.js";
 import { getSession } from "../helpers/authStorage.js";
 import { checkEmailAvailability } from "../services/authService.js";
+import useBodyScrollLock from "../../shared/hooks/useBodyScrollLock.js";
 import {
   normalizeDigits,
   normalizeEmailInput,
@@ -81,6 +82,7 @@ function EditProfileForm({ onClose, isModal = false }) {
   const navigate = useNavigate();
   const location = useLocation();
   const isAdminContext = location.pathname.startsWith("/admin");
+  useBodyScrollLock(isModal || isAdminContext);
   const { showSuccess, showError, showWarning, showInfo } = useAlert();
   const sessionClient = getSession()?.client ?? null;
   const clientData = client ?? sessionClient;

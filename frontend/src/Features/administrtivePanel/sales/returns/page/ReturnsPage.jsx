@@ -24,6 +24,18 @@ import Spinner from '../../../../shared/spinner';
 
 const RECORDS_PER_PAGE = 11;
 const RETURNS_FETCH_LIMIT = 100;
+const SEARCH_DEBOUNCE_MS = 350;
+
+const useDebouncedValue = (value, delay = SEARCH_DEBOUNCE_MS) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedValue(value), delay);
+    return () => window.clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+};
 
 const getReturnSaveError = (error) => {
   const response = error?.response?.data || {};
@@ -76,7 +88,13 @@ const normalizeReturn = (item = {}) => {
     description: detail.description || detail.descripcionMotivo || '',
     imageUrl: detail.imageUrl || detail.imagen || null,
     applyCredit: detail.applyCredit === true,
-    creditApplied: detail.creditApplied === true
+    creditApplied: detail.creditApplied === true,
+    creditReversed: detail.creditReversed === true,
+    stockApplied: detail.stockApplied === true,
+    stockDelta: Number(detail.stockDelta || 0),
+    stockReversed: detail.stockReversed === true,
+    cancellationReason: detail.cancellationReason || detail.motivoAnulacion || '',
+    cancelledAt: detail.cancelledAt || null
   }));
 
   const evidences = item.evidences || item.evidencias || item.sale_return_evidence || [];
@@ -133,7 +151,9 @@ function ReturnsPage() {
   const [returnToCancel, setReturnToCancel] = useState(null);
   const [preselectedSale, setPreselectedSale] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const openedNavigationSaleRef = useRef('');
+  const debouncedSearchTerm = useDebouncedValue(searchTerm);
 
   const { showConfirm, showSuccess, showError } = useAlert();
 
@@ -154,6 +174,7 @@ function ReturnsPage() {
       showError('Error', error.message || 'No se pudieron cargar las devoluciones');
       setReturns([]);
     } finally {
+      setHasLoadedOnce(true);
       setLoading(false);
     }
   }, [showError]);
@@ -305,6 +326,14 @@ function ReturnsPage() {
     loadReturns();
   };
 
+  const handleDetailCancelled = async (returnId) => {
+    await loadReturns();
+    const fullReturn = await loadFullReturn({ id: returnId });
+    if (fullReturn) {
+      setSelectedReturn(fullReturn);
+    }
+  };
+
   const handleSave = async (formData) => {
     if (!formData) {
       showError('Error', 'No se recibieron datos del formulario');
@@ -383,8 +412,8 @@ function ReturnsPage() {
   };
 
   const filteredReturns = useMemo(
-    () => filterReturnsByDateAndSearch(returns, searchTerm, startDate, endDate),
-    [returns, searchTerm, startDate, endDate]
+    () => filterReturnsByDateAndSearch(returns, debouncedSearchTerm, startDate, endDate),
+    [returns, debouncedSearchTerm, startDate, endDate]
   );
 
   const paginatedResult = useMemo(
@@ -395,7 +424,7 @@ function ReturnsPage() {
   const startIndex = paginatedResult.startIndex || 0;
   const hasActiveFilters = searchTerm !== '' || startDate !== '' || endDate !== '';
 
-  if (loading) {
+  if (loading && !hasLoadedOnce) {
     return <Spinner message="Cargando devoluciones..." />;
   }
 
@@ -441,6 +470,7 @@ function ReturnsPage() {
           onInfo={handleInfo}
           onEdit={handleEdit}
           onCancel={handleCancelClick}
+          onCreateReturn={handleNew}
         />
       </div>
 
@@ -463,12 +493,14 @@ function ReturnsPage() {
         returnData={selectedReturn}
         preselectedSale={preselectedSale}
         onSave={handleSave}
+        onDetailCancelled={handleDetailCancelled}
       />
 
       <DetailReturn
         isOpen={detailOpen}
         onClose={() => { setDetailOpen(false); setSelectedReturn(null); }}
         devolucion={selectedReturn}
+        onDetailCancelled={handleDetailCancelled}
       />
 
       <CancelReturn
