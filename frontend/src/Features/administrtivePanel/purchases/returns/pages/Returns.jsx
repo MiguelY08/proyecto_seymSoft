@@ -41,7 +41,7 @@ function Returns() {
   const navigate = useNavigate();
   const { showError, showSuccess, showWarning } = useAlert();
   const { hasPermission } = usePermissions();
-  const canCreateReturn = hasPermission("devoluciones_en_compras.crear");
+  const canCreateReturn = hasPermission("compras.crear_devolucion");
 
   const [returns, setReturns] = useState([]);
   const [metrics, setMetrics] = useState(DEFAULT_METRICS);
