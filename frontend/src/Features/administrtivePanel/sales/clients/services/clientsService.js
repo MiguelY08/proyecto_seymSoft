@@ -58,6 +58,7 @@ export const clientsService = {
     
     const clients = result.data.map(client => ({
       id: client.id,
+      idUser: client.idUser ?? client.id_user ?? client.userId ?? client.user?.id ?? client.users?.id_user,
       documentType: client.documentType,
       document: client.document,
       fullName: client.fullName,

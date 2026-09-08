@@ -285,6 +285,14 @@ export default function RoleModal({
           }
         });
 
+        if (
+          Object.entries(accionesIniciales).some(
+            ([key, selected]) => key !== "read" && selected,
+          )
+        ) {
+          accionesIniciales.read = true;
+        }
+
         return {
           id: modulo.id,
 

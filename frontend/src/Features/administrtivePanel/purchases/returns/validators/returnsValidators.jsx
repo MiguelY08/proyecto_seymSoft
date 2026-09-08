@@ -1,7 +1,7 @@
 import {
   getEstadosByTipo,
   getReturnMethodIdByLabel,
-  getReturnReasonIdByLabel,
+  getReturnReasonId,
   getReturnStatusIdByLabel,
   isValidReturnStatusTransition,
   isEstadoTerminal,
@@ -40,6 +40,11 @@ const getReturnMethodId = (line) =>
   line?.returnMethodId ??
   getReturnMethodIdByLabel(line?.tipoDevolucion);
 
+const getLineReturnReasonId = (line) =>
+  getReturnReasonId(
+    line?.idReturnReason ?? line?.returnReasonId ?? line?.motivo,
+  );
+
 const isExistingReturnLine = (line) =>
   getPurchaseReturnDetailId(line) !== undefined ||
   line?.lineaId?.startsWith("existing-");
@@ -50,12 +55,15 @@ const toSafeNumber = (value, fallback = 0) => {
 };
 
 const getReturnAvailableQuantity = (product) =>
-  Math.max(0, toSafeNumber(
-    product?.cantidadDisponibleDevolucion ??
-    product?.returnAvailability?.availableQuantity ??
-    product?.cantidadComprada,
-    0
-  ));
+  Math.max(
+    0,
+    toSafeNumber(
+      product?.cantidadDisponibleDevolucion ??
+        product?.returnAvailability?.availableQuantity ??
+        product?.cantidadComprada,
+      0,
+    ),
+  );
 
 const getExistingReturnQuantity = (product) =>
   (product?.lineas ?? [])
@@ -80,9 +88,10 @@ export const validateProducto = (producto) => {
     errores.cantidadDevolver = `Maximo ${availableQuantity} unidades disponibles.`;
   }
 
-  if (!producto.motivo?.trim()) {
+  const returnReasonId = getLineReturnReasonId(producto);
+  if (!producto.motivo?.trim() && !returnReasonId) {
     errores.motivo = "El motivo es obligatorio.";
-  } else if (!getReturnReasonIdByLabel(producto.motivo)) {
+  } else if (!returnReasonId) {
     errores.motivo = "Selecciona un motivo válido.";
   }
 
@@ -95,7 +104,10 @@ export const validateProducto = (producto) => {
   if (!producto.estado?.trim()) {
     errores.estado = "El estado es obligatorio.";
   } else if (producto.tipoDevolucion) {
-    const estadosValidos = getEstadosByTipo(producto.tipoDevolucion, producto.motivo);
+    const estadosValidos = getEstadosByTipo(
+      producto.tipoDevolucion,
+      returnReasonId,
+    );
     if (!estadosValidos.includes(producto.estado)) {
       errores.estado = `Estado inválido para el tipo "${producto.tipoDevolucion}".`;
     }
@@ -109,7 +121,9 @@ export const validateReturnForm = (productosSeleccionados) => {
   const erroresProducto = {};
 
   if (!productosSeleccionados || productosSeleccionados.length === 0) {
-    erroresGenerales.push("Debes seleccionar al menos un producto para devolver.");
+    erroresGenerales.push(
+      "Debes seleccionar al menos un producto para devolver.",
+    );
   }
 
   (productosSeleccionados ?? []).forEach((producto) => {
@@ -120,7 +134,9 @@ export const validateReturnForm = (productosSeleccionados) => {
   });
 
   return {
-    valid: erroresGenerales.length === 0 && Object.keys(erroresProducto).length === 0,
+    valid:
+      erroresGenerales.length === 0 &&
+      Object.keys(erroresProducto).length === 0,
     erroresGenerales,
     erroresProducto,
   };
@@ -142,7 +158,11 @@ export const validateLinea = (linea, cantidadMaxima) => {
   const errores = {};
   const cantidad = Number(linea.cantidadDevolver);
 
-  if (linea.cantidadDevolver === undefined || linea.cantidadDevolver === null || linea.cantidadDevolver === "") {
+  if (
+    linea.cantidadDevolver === undefined ||
+    linea.cantidadDevolver === null ||
+    linea.cantidadDevolver === ""
+  ) {
     errores.cantidadDevolver = "La cantidad es obligatoria.";
   } else if (isNaN(cantidad) || !Number.isInteger(cantidad)) {
     errores.cantidadDevolver = "Debe ser un numero entero.";
@@ -152,9 +172,10 @@ export const validateLinea = (linea, cantidadMaxima) => {
     errores.cantidadDevolver = `Maximo ${cantidadMaxima} unidades disponibles.`;
   }
 
-  if (!linea.motivo?.trim()) {
+  const returnReasonId = getLineReturnReasonId(linea);
+  if (!linea.motivo?.trim() && !returnReasonId) {
     errores.motivo = "El motivo es obligatorio.";
-  } else if (!getReturnReasonIdByLabel(linea.motivo)) {
+  } else if (!returnReasonId) {
     errores.motivo = "Selecciona un motivo válido.";
   }
 
@@ -167,7 +188,10 @@ export const validateLinea = (linea, cantidadMaxima) => {
   if (!linea.estado?.trim()) {
     errores.estado = "El estado es obligatorio.";
   } else if (linea.tipoDevolucion) {
-    const estadosValidos = getEstadosByTipo(linea.tipoDevolucion, linea.motivo);
+    const estadosValidos = getEstadosByTipo(
+      linea.tipoDevolucion,
+      returnReasonId,
+    );
     if (!estadosValidos.includes(linea.estado)) {
       errores.estado = `Estado inválido para "${linea.tipoDevolucion}".`;
     }
@@ -176,16 +200,23 @@ export const validateLinea = (linea, cantidadMaxima) => {
   return errores;
 };
 
-export const validateReturnFormConLineas = (productosSeleccionados, purchase = null) => {
+export const validateReturnFormConLineas = (
+  productosSeleccionados,
+  purchase = null,
+) => {
   const erroresGenerales = [];
   const erroresProducto = {};
 
   if (purchase && !isPositiveInteger(getPurchaseId(purchase))) {
-    erroresGenerales.push("No se pudo identificar la compra para registrar la devolución.");
+    erroresGenerales.push(
+      "No se pudo identificar la compra para registrar la devolución.",
+    );
   }
 
   if (!productosSeleccionados || productosSeleccionados.length === 0) {
-    erroresGenerales.push("Debes seleccionar al menos un producto para devolver.");
+    erroresGenerales.push(
+      "Debes seleccionar al menos un producto para devolver.",
+    );
     return { valid: false, erroresGenerales, erroresProducto };
   }
 
@@ -193,20 +224,27 @@ export const validateReturnFormConLineas = (productosSeleccionados, purchase = n
     const lineas = producto.lineas ?? [];
 
     if (lineas.length === 0) {
-      erroresGenerales.push(`"${producto.nombre}" debe tener al menos una línea de devolución.`);
+      erroresGenerales.push(
+        `"${producto.nombre}" debe tener al menos una línea de devolución.`,
+      );
       erroresProducto[producto.codigoBarras] = { lineas: [] };
       continue;
     }
 
     if (!isPositiveInteger(getPurchaseDetailId(producto))) {
-      erroresGenerales.push(`"${producto.nombre}" no tiene un detalle de compra válido.`);
+      erroresGenerales.push(
+        `"${producto.nombre}" no tiene un detalle de compra válido.`,
+      );
     }
 
-    const totalCantidad = lineas.reduce((sum, line) => sum + (Number(line.cantidadDevolver) || 0), 0);
+    const totalCantidad = lineas.reduce(
+      (sum, line) => sum + (Number(line.cantidadDevolver) || 0),
+      0,
+    );
     const cantidadLimite = getReturnQuantityLimit(producto);
     if (totalCantidad > cantidadLimite) {
       erroresGenerales.push(
-        `"${producto.nombre}": la suma de cantidades (${totalCantidad}) supera las ${cantidadLimite} unidades disponibles.`
+        `"${producto.nombre}": la suma de cantidades (${totalCantidad}) supera las ${cantidadLimite} unidades disponibles.`,
       );
     }
 
@@ -218,20 +256,25 @@ export const validateReturnFormConLineas = (productosSeleccionados, purchase = n
       const erroresLinea = validateLinea(linea, maxParaEstaLinea);
 
       if (!isPositiveInteger(getPurchaseDetailId(producto, linea))) {
-        erroresLinea.purchaseDetailId = "No se pudo identificar el detalle de compra.";
+        erroresLinea.purchaseDetailId =
+          "No se pudo identificar el detalle de compra.";
       }
 
       return erroresLinea;
     });
 
-    const hayErroresLinea = erroresLineas.some((errors) => Object.keys(errors).length > 0);
+    const hayErroresLinea = erroresLineas.some(
+      (errors) => Object.keys(errors).length > 0,
+    );
     if (hayErroresLinea || totalCantidad > cantidadLimite) {
       erroresProducto[producto.codigoBarras] = { lineas: erroresLineas };
     }
   }
 
   return {
-    valid: erroresGenerales.length === 0 && Object.keys(erroresProducto).length === 0,
+    valid:
+      erroresGenerales.length === 0 &&
+      Object.keys(erroresProducto).length === 0,
     erroresGenerales,
     erroresProducto,
   };
@@ -249,7 +292,9 @@ export const validateReturnUpdateForm = (productosSeleccionados) => {
       hasChanges: false,
       detailsToUpdateCount,
       detailsToAddCount,
-      erroresGenerales: ["La devolución no contiene productos para actualizar."],
+      erroresGenerales: [
+        "La devolución no contiene productos para actualizar.",
+      ],
       erroresProducto,
     };
   }
@@ -259,7 +304,9 @@ export const validateReturnUpdateForm = (productosSeleccionados) => {
     const productKey = producto?.codigoBarras ?? `producto-${productIndex}`;
 
     if (lineas.length === 0) {
-      erroresGenerales.push(`"${producto?.nombre ?? "Producto"}" debe tener al menos una línea.`);
+      erroresGenerales.push(
+        `"${producto?.nombre ?? "Producto"}" debe tener al menos una línea.`,
+      );
       erroresProducto[productKey] = { lineas: [] };
       return;
     }
@@ -267,13 +314,13 @@ export const validateReturnUpdateForm = (productosSeleccionados) => {
     const newLines = lineas.filter((line) => !isExistingReturnLine(line));
     const newQuantity = newLines.reduce(
       (sum, line) => sum + (Number(line?.cantidadDevolver) || 0),
-      0
+      0,
     );
     const availableForNewLines = getReturnAvailableQuantity(producto);
 
     if (newQuantity > availableForNewLines) {
       erroresGenerales.push(
-        `"${producto?.nombre ?? "Producto"}": las nuevas cantidades (${newQuantity}) superan las ${availableForNewLines} unidades disponibles.`
+        `"${producto?.nombre ?? "Producto"}": las nuevas cantidades (${newQuantity}) superan las ${availableForNewLines} unidades disponibles.`,
       );
     }
 
@@ -286,10 +333,12 @@ export const validateReturnUpdateForm = (productosSeleccionados) => {
         const returnMethodId = Number(getReturnMethodId(linea));
 
         if (!isPositiveInteger(getPurchaseReturnDetailId(linea))) {
-          erroresLinea.idPurchaseReturnDetail = "No se pudo identificar el detalle de devolución.";
+          erroresLinea.idPurchaseReturnDetail =
+            "No se pudo identificar el detalle de devolución.";
         }
         if (!isPositiveInteger(originalStatusId)) {
-          erroresLinea.originalReturnStatusId = "No se pudo identificar el estado original.";
+          erroresLinea.originalReturnStatusId =
+            "No se pudo identificar el estado original.";
         }
         if (!isPositiveInteger(currentStatusId)) {
           erroresLinea.estado = "Selecciona un estado válido.";
@@ -301,16 +350,18 @@ export const validateReturnUpdateForm = (productosSeleccionados) => {
           currentStatusId !== originalStatusId
         ) {
           if (!isPositiveInteger(returnMethodId)) {
-            erroresLinea.tipoDevolucion = "No se pudo identificar el método de devolución.";
+            erroresLinea.tipoDevolucion =
+              "No se pudo identificar el método de devolución.";
           } else if (
             !isValidReturnStatusTransition(
               returnMethodId,
               originalStatusId,
               currentStatusId,
-              linea.idReturnReason ?? linea.returnReasonId ?? linea.motivo
+              linea.idReturnReason ?? linea.returnReasonId ?? linea.motivo,
             )
           ) {
-            erroresLinea.estado = "La transicion de estado seleccionada no esta permitida.";
+            erroresLinea.estado =
+              "La transicion de estado seleccionada no esta permitida.";
           } else {
             detailsToUpdateCount += 1;
           }
@@ -322,24 +373,29 @@ export const validateReturnUpdateForm = (productosSeleccionados) => {
       detailsToAddCount += 1;
       const otherNewQuantity = newLines
         .filter((otherLine) => otherLine !== linea)
-        .reduce((sum, otherLine) => sum + (Number(otherLine?.cantidadDevolver) || 0), 0);
+        .reduce(
+          (sum, otherLine) => sum + (Number(otherLine?.cantidadDevolver) || 0),
+          0,
+        );
       const maxForLine = Math.max(availableForNewLines - otherNewQuantity, 0);
       Object.assign(erroresLinea, validateLinea(linea, maxForLine));
 
       if (!isPositiveInteger(getPurchaseDetailId(producto, linea))) {
-        erroresLinea.purchaseDetailId = "No se pudo identificar el detalle de compra.";
+        erroresLinea.purchaseDetailId =
+          "No se pudo identificar el detalle de compra.";
       }
 
       const currentStatusId = Number(getCurrentReturnStatusId(linea));
       if (currentStatusId !== RETURN_STATUS_IDS.PENDING_SHIPMENT) {
-        erroresLinea.estado = "Los detalles nuevos deben iniciar en Pend. envio.";
+        erroresLinea.estado =
+          "Los detalles nuevos deben iniciar en Pend. envio.";
       }
 
       return erroresLinea;
     });
 
     const hasLineErrors = erroresLineas.some(
-      (lineErrors) => Object.keys(lineErrors).length > 0
+      (lineErrors) => Object.keys(lineErrors).length > 0,
     );
 
     if (hasLineErrors || newQuantity > availableForNewLines) {
@@ -368,7 +424,9 @@ export const validateReturnUpdateForm = (productosSeleccionados) => {
 export const productoTieneErrorConLineas = (codigoBarras, erroresProducto) => {
   const err = erroresProducto?.[codigoBarras];
   if (!err) return false;
-  return (err.lineas ?? []).some((lineErrors) => lineErrors && Object.keys(lineErrors).length > 0);
+  return (err.lineas ?? []).some(
+    (lineErrors) => lineErrors && Object.keys(lineErrors).length > 0,
+  );
 };
 
 export const productoTieneError = (codigoBarras, erroresProducto) =>

@@ -112,7 +112,7 @@ export const PurchasesTable = ({
   annullingId = null,
 }) => {
   const { hasPermission } = usePermissions();
-  const canCreateReturn = hasPermission("devoluciones_en_compras.crear");
+  const canCreateReturn = hasPermission("compras.crear_devolucion");
 
   if (currentData.length === 0) {
     return <EmptyState isSearching={isSearching} onCreatePurchase={onCreatePurchase} />;
@@ -221,7 +221,7 @@ export const PurchasesTable = ({
                     </button>
                     </Permission>
 
-                    <Permission permission="compras.devolver">
+                    <Permission permission="compras.crear_devolucion">
                     <button
                       type="button"
                       onClick={() => canReturn && handleReturn?.(purchase)}

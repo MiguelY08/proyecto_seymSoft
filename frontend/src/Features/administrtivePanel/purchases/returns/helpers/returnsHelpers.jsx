@@ -10,7 +10,9 @@ export const RETURN_REASON_OPTIONS = [
   { id: 10, label: "Otro motivo", code: "OTRO" },
 ];
 
-export const MOTIVOS_DEVOLUCION = RETURN_REASON_OPTIONS.map((reason) => reason.label);
+export const MOTIVOS_DEVOLUCION = RETURN_REASON_OPTIONS.map(
+  (reason) => reason.label,
+);
 
 export const getReturnReasonIdByLabel = (label) =>
   RETURN_REASON_OPTIONS.find((reason) => reason.label === label)?.id ?? null;
@@ -31,7 +33,9 @@ export const RETURN_METHOD_OPTIONS = [
   { id: 2, label: "Reembolso" },
 ];
 
-export const TIPOS_DEVOLUCION = RETURN_METHOD_OPTIONS.map((method) => method.label);
+export const TIPOS_DEVOLUCION = RETURN_METHOD_OPTIONS.map(
+  (method) => method.label,
+);
 
 export const RETURN_METHOD_IDS = {
   REPLACEMENT: 1,
@@ -47,7 +51,9 @@ export const normalizeReturnMethod = (label) =>
   LEGACY_RETURN_METHOD_LABELS[label] ?? label;
 
 export const getReturnMethodIdByLabel = (label) =>
-  RETURN_METHOD_OPTIONS.find((method) => method.label === normalizeReturnMethod(label))?.id ?? null;
+  RETURN_METHOD_OPTIONS.find(
+    (method) => method.label === normalizeReturnMethod(label),
+  )?.id ?? null;
 
 export const getReturnMethodLabelById = (id) =>
   RETURN_METHOD_OPTIONS.find((method) => method.id === Number(id))?.label ?? "";
@@ -64,12 +70,28 @@ export const RETURN_STATUS_IDS = {
 };
 
 export const RETURN_STATUS_OPTIONS = [
-  { id: RETURN_STATUS_IDS.PENDING_SHIPMENT, label: "Pend. envío", terminal: false },
-  { id: RETURN_STATUS_IDS.PENDING_REPLACEMENT, label: "Pend. reemplazo", terminal: false },
-  { id: RETURN_STATUS_IDS.PENDING_REFUND, label: "Pend. reembolso", terminal: false },
+  {
+    id: RETURN_STATUS_IDS.PENDING_SHIPMENT,
+    label: "Pend. envío",
+    terminal: false,
+  },
+  {
+    id: RETURN_STATUS_IDS.PENDING_REPLACEMENT,
+    label: "Pend. reemplazo",
+    terminal: false,
+  },
+  {
+    id: RETURN_STATUS_IDS.PENDING_REFUND,
+    label: "Pend. reembolso",
+    terminal: false,
+  },
   { id: RETURN_STATUS_IDS.READY, label: "Listo", terminal: true },
   { id: RETURN_STATUS_IDS.ANNULLED, label: "Anulado", terminal: true },
-  { id: RETURN_STATUS_IDS.SUPPLIER_REJECTION, label: "Prov. rechazó", terminal: true },
+  {
+    id: RETURN_STATUS_IDS.SUPPLIER_REJECTION,
+    label: "Prov. rechazó",
+    terminal: true,
+  },
 ];
 
 export const getReturnStatusIdByLabel = (label) =>
@@ -83,7 +105,10 @@ export const getReturnStatusLabelById = (id) =>
 
 const getReturnMethodId = (method) => {
   if (typeof method === "object" && method !== null) {
-    return Number(method.id ?? method.returnMethodId ?? method.idReturnMethod) || null;
+    return (
+      Number(method.id ?? method.returnMethodId ?? method.idReturnMethod) ||
+      null
+    );
   }
 
   const numericId = Number(method);
@@ -94,7 +119,10 @@ const getReturnMethodId = (method) => {
 
 const getReturnStatusId = (status) => {
   if (typeof status === "object" && status !== null) {
-    return Number(status.id ?? status.returnStatusId ?? status.idReturnStatus) || null;
+    return (
+      Number(status.id ?? status.returnStatusId ?? status.idReturnStatus) ||
+      null
+    );
   }
 
   const numericId = Number(status);
@@ -105,7 +133,9 @@ const getReturnStatusId = (status) => {
 
 const RETURN_STATUS_FLOW_BY_METHOD = {
   [RETURN_METHOD_IDS.REPLACEMENT]: {
-    [RETURN_STATUS_IDS.PENDING_SHIPMENT]: [RETURN_STATUS_IDS.PENDING_REPLACEMENT],
+    [RETURN_STATUS_IDS.PENDING_SHIPMENT]: [
+      RETURN_STATUS_IDS.PENDING_REPLACEMENT,
+    ],
     [RETURN_STATUS_IDS.PENDING_REPLACEMENT]: [
       RETURN_STATUS_IDS.READY,
       RETURN_STATUS_IDS.SUPPLIER_REJECTION,
@@ -126,9 +156,12 @@ const RETURN_STATUS_FLOW_BY_METHOD = {
 
 const SUPPLIER_REJECTION_REASON_IDS = new Set([5, 8]);
 
-const getReturnReasonId = (reason) => {
+export const getReturnReasonId = (reason) => {
   if (typeof reason === "object" && reason !== null) {
-    return Number(reason.id ?? reason.returnReasonId ?? reason.idReturnReason) || null;
+    return (
+      Number(reason.id ?? reason.returnReasonId ?? reason.idReturnReason) ||
+      null
+    );
   }
 
   const numericId = Number(reason);
@@ -140,10 +173,15 @@ const getReturnReasonId = (reason) => {
 export const canUseSupplierRejection = (reason) =>
   SUPPLIER_REJECTION_REASON_IDS.has(getReturnReasonId(reason));
 
-export const getAllowedNextReturnStatusIds = (method, currentStatus, reason) => {
+export const getAllowedNextReturnStatusIds = (
+  method,
+  currentStatus,
+  reason,
+) => {
   const methodId = getReturnMethodId(method);
   const currentStatusId = getReturnStatusId(currentStatus);
-  const allowedIds = RETURN_STATUS_FLOW_BY_METHOD[methodId]?.[currentStatusId] ?? [];
+  const allowedIds =
+    RETURN_STATUS_FLOW_BY_METHOD[methodId]?.[currentStatusId] ?? [];
 
   return canUseSupplierRejection(reason)
     ? allowedIds
@@ -151,13 +189,26 @@ export const getAllowedNextReturnStatusIds = (method, currentStatus, reason) => 
 };
 
 export const getAllowedNextReturnStatuses = (method, currentStatus, reason) => {
-  const allowedIds = getAllowedNextReturnStatusIds(method, currentStatus, reason);
-  return RETURN_STATUS_OPTIONS.filter((status) => allowedIds.includes(status.id));
+  const allowedIds = getAllowedNextReturnStatusIds(
+    method,
+    currentStatus,
+    reason,
+  );
+  return RETURN_STATUS_OPTIONS.filter((status) =>
+    allowedIds.includes(status.id),
+  );
 };
 
-export const isValidReturnStatusTransition = (method, currentStatus, nextStatus, reason) => {
+export const isValidReturnStatusTransition = (
+  method,
+  currentStatus,
+  nextStatus,
+  reason,
+) => {
   const nextStatusId = getReturnStatusId(nextStatus);
-  return getAllowedNextReturnStatusIds(method, currentStatus, reason).includes(nextStatusId);
+  return getAllowedNextReturnStatusIds(method, currentStatus, reason).includes(
+    nextStatusId,
+  );
 };
 
 /**
@@ -196,11 +247,16 @@ export const getEstadosByTipo = (tipo, motivo) => {
 
   const withConditionalRejection = (statuses) =>
     canUseSupplierRejection(motivo)
-      ? [...statuses, getReturnStatusLabelById(RETURN_STATUS_IDS.SUPPLIER_REJECTION)]
+      ? [
+          ...statuses,
+          getReturnStatusLabelById(RETURN_STATUS_IDS.SUPPLIER_REJECTION),
+        ]
       : statuses;
 
-  if (method === "Reemplazo") return withConditionalRejection(ESTADOS_REEMPLAZO);
-  if (method === "Reembolso") return withConditionalRejection(ESTADOS_REEMBOLSO);
+  if (method === "Reemplazo")
+    return withConditionalRejection(ESTADOS_REEMPLAZO);
+  if (method === "Reembolso")
+    return withConditionalRejection(ESTADOS_REEMBOLSO);
   if (method === "Saldo a favor") return ESTADOS_SALDO_A_FAVOR;
 
   return [];
@@ -278,7 +334,10 @@ export const getBadgeEstadoDevolucionClasses = (estado = "") => {
   if (isEstadoProveedorRechazado(normalizedStatus)) {
     return "bg-orange-100 text-orange-700 border-orange-300";
   }
-  if (normalizedStatus === "Pend. envio" || normalizedStatus === "Pend. envío") {
+  if (
+    normalizedStatus === "Pend. envio" ||
+    normalizedStatus === "Pend. envío"
+  ) {
     return "bg-amber-100 text-amber-700 border-amber-300";
   }
   if (normalizedStatus === "Pend. reemplazo") {
@@ -316,12 +375,12 @@ export const getBadgeEstadoProducto = (estado = "") => {
 
   switch (estado) {
     case "Listo":
-      return { background: "#dcfce7", color: "#15803d" };    // verde — terminal
+      return { background: "#dcfce7", color: "#15803d" }; // verde — terminal
     case "Pend. reemplazo":
     case "Pend. reembolso":
-      return { background: "#fef9c3", color: "#a16207" };    // amarillo — en curso
+      return { background: "#fef9c3", color: "#a16207" }; // amarillo — en curso
     case "Pend. envío":
-      return { background: "#fce7f3", color: "#9d174d" };    // rosa — inicial
+      return { background: "#fce7f3", color: "#9d174d" }; // rosa — inicial
     default:
       return { background: "#f3f4f6", color: "#374151" };
   }
@@ -360,9 +419,7 @@ export const getBadgeEstadoCompra = (estado = "") => {
  * @returns {string} Valor formateado o "-" si no es número.
  */
 export const formatCurrency = (value) =>
-  typeof value === "number"
-    ? `$${value.toLocaleString("es-CO")}`
-    : "-";
+  typeof value === "number" ? `$${value.toLocaleString("es-CO")}` : "-";
 
 /**
  * Calcula el subtotal, IVA y total de un producto.
@@ -372,7 +429,7 @@ export const formatCurrency = (value) =>
 export const calcularTotalesProducto = (producto) => {
   const subtotal = producto.valorUnit * producto.cantidadDevolver;
   const ivaValor = Math.round(subtotal * (producto.iva / 100));
-  const total    = subtotal + ivaValor;
+  const total = subtotal + ivaValor;
   return { subtotal, ivaValor, total };
 };
 
@@ -383,7 +440,10 @@ const cleanProviderName = (value) => String(value ?? "").trim();
 const isGenericProviderName = (value) =>
   GENERIC_PROVIDER_NAMES.has(cleanProviderName(value).toLowerCase());
 
-export const getPurchaseReturnProviderName = (source, fallback = "Sin proveedor") => {
+export const getPurchaseReturnProviderName = (
+  source,
+  fallback = "Sin proveedor",
+) => {
   const directCandidates = [
     source?.purchase?.provider?.name,
     source?.purchase?.provider?.name_provider,
