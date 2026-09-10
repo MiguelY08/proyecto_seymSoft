@@ -803,7 +803,13 @@ const getProfileAddress = (user, client) => firstText(
 );
 
 const getCartItemStock = (item) => {
-  const stock = Number(item?.totalStock ?? item?.stock ?? 0);
+  const resolvedStock = item?.variantStock
+    ?? item?.product?.variantStock
+    ?? item?.totalStock
+    ?? item?.stock
+    ?? 0;
+
+  const stock = Number(resolvedStock);
   return Number.isFinite(stock) ? Math.max(0, stock) : 0;
 };
 

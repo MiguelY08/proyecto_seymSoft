@@ -7,7 +7,7 @@ import { ArrowLeft, Save } from 'lucide-react';
 import OrdersService, { PaymentService, PaymentReceiptService, LocationService, ESTADOS_LOGISTICOS, ESTADOS_PAGO, ORIGENES, METODOS_PAGO, PAYMENT_METHOD_IDS } from '../services/ordersService';
 import { SalesServices } from '../../vendings/services/salesServices';
 import ProductsService from '../../../purchases/products/services/productsServices';
-import { clientsService } from '../../clients/services/clientsService';
+import { clientsService, SYSTEM_CLIENT_ID } from '../../clients/services/clientsService';
 import { getCreditCustomers } from '../../paymentsAndCredits/services/paymentsServices';
 import { mapCustomers as mapCreditCustomers } from '../../paymentsAndCredits/mappers/paymentsMapper';
 import { useAlert } from '../../../../shared/alerts/useAlert';
@@ -462,7 +462,7 @@ function OrdersForm() {
         if (formData.tipoEntrega === 'recoge') {
           setFormData(prev => ({ ...prev, direccionEntrega: 'El cliente lo recoge' }));
         } else {
-          const direccionSugerida = cliente.id === 0
+          const direccionSugerida = Number(cliente.id) === SYSTEM_CLIENT_ID
             ? 'El cliente lo recoge'
             : (cliente.address || cliente.direccion || '');
           setFormData(prev => ({ ...prev, direccionEntrega: direccionSugerida }));

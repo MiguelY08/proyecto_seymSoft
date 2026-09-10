@@ -378,6 +378,54 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
     return duplicate ? 'Este documento ya está registrado' : '';
   };
 
+  const formatThousands = (value = '') => {
+    if (value === null || value === undefined || value === '') return '';
+
+    const rawValue = String(value).trim();
+    if (!rawValue) return '';
+
+    const negative = rawValue.startsWith('-');
+    const unsignedValue = negative ? rawValue.slice(1) : rawValue;
+    const [integerPart, decimalPart] = unsignedValue.split('.');
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+    return `${negative ? '-' : ''}${formattedInteger}${decimalPart !== undefined ? `.${decimalPart}` : ''}`;
+  };
+
+  const normalizeNumericInput = (value = '') => {
+    if (value === null || value === undefined || value === '') return '';
+
+    const rawValue = String(value).trim().replace(/\s/g, '');
+    const negative = rawValue.startsWith('-');
+    const unsignedValue = (negative ? rawValue.slice(1) : rawValue).replace(/-/g, '');
+    if (!/\d/.test(unsignedValue)) return '';
+
+    let normalizedInteger = unsignedValue;
+    let normalizedDecimal = '';
+
+    if (unsignedValue.includes(',')) {
+      // Comma remains the decimal separator; dots are visual thousands separators.
+      const [integerPart, decimalPart = ''] = unsignedValue.split(',');
+      normalizedInteger = integerPart.replace(/\./g, '').replace(/\D/g, '');
+      normalizedDecimal = decimalPart.replace(/\D/g, '');
+    } else {
+      const dotParts = unsignedValue.split('.');
+      const lastPart = dotParts[dotParts.length - 1];
+      const hasDecimalPart = dotParts.length > 1 && lastPart.length <= 2;
+
+      normalizedInteger = (hasDecimalPart ? dotParts.slice(0, -1) : dotParts)
+        .join('')
+        .replace(/\D/g, '');
+      normalizedDecimal = hasDecimalPart ? lastPart.replace(/\D/g, '') : '';
+    }
+
+    if (!normalizedDecimal) {
+      return `${negative ? '-' : ''}${normalizedInteger || '0'}`;
+    }
+
+    return `${negative ? '-' : ''}${normalizedInteger}.${normalizedDecimal}`;
+  };
+
   // ============================================
   // VALIDACIÓN PARA numeric(10,2) DE POSTGRESQL
   // ============================================
@@ -699,8 +747,8 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
     // VALIDACIÓN PARA clientCredit y saldoFavor
     // ============================================
     if (name === 'clientCredit' || name === 'saldoFavor') {
-      const formattedValue = formatNumericValue(nextValue);
-      newFormData[name] = formattedValue;
+      const normalizedValue = normalizeNumericInput(nextValue);
+      newFormData[name] = formatNumericValue(normalizedValue);
     }
 
     if (name === 'personType' && value === 'juridica') {
@@ -1364,7 +1412,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                     icon={CreditCard}
                     type="text"
                     name="clientCredit"
-                    value={formData.clientCredit}
+                    value={formatThousands(formData.clientCredit)}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     placeholder="100000"
@@ -1381,7 +1429,7 @@ function FormClient({ isOpen, onClose, client, onSave, initialData = null, linke
                       icon={CreditCard}
                       type="text"
                       name="saldoFavor"
-                      value={formData.saldoFavor || '0'}
+                      value={formatThousands(formData.saldoFavor || '0')}
                       disabled
                       readOnly
                       autoComplete="off"

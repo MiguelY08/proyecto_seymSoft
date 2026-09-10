@@ -100,6 +100,7 @@ const CreateSidebar = ({
   });
   const [priceErrors, setPriceErrors] = useState({});
   const [loadingPrices, setLoadingPrices] = useState(false);
+  const [focusedPriceField, setFocusedPriceField] = useState(null);
 
   const [showBarcodeForm, setShowBarcodeForm] = useState(false);
   const [barcodeValue, setBarcodeValue] = useState("");
@@ -454,9 +455,40 @@ const CreateSidebar = ({
     }, 1800);
   };
 
+  const formatThousands = (value = "") => {
+    if (value === null || value === undefined || value === "") return "";
+
+    const sanitized = String(value).replace(/[^\d.]/g, "");
+    if (!sanitized) return "";
+
+    const [integerPart, ...decimalParts] = sanitized.split(".");
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const decimalPart = decimalParts.length ? `.${decimalParts.join("")}` : "";
+
+    return `${formattedInteger}${decimalPart}`;
+  };
+
+  const displayPriceValue = (field, value) =>
+    focusedPriceField === field ? value : formatThousands(value);
+
+  const normalizeNumericInput = (value = "") => {
+    if (value === null || value === undefined || value === "") return "";
+
+    const sanitized = String(value).replace(/[^\d.]/g, "");
+    if (!sanitized) return "";
+
+    const lastDotIndex = sanitized.lastIndexOf(".");
+    if (lastDotIndex === -1) return sanitized;
+
+    const integerPart = sanitized.slice(0, lastDotIndex).replace(/\./g, "");
+    const decimalPart = sanitized.slice(lastDotIndex + 1).replace(/\./g, "");
+
+    return decimalPart ? `${integerPart}.${decimalPart}` : integerPart;
+  };
+
   // ========== PRECIO DE COMPRA - SIEMPRE EDITABLE ==========
   const handlePurchasePriceChange = (e) => {
-    const value = e.target.value.replace(',', '.');
+    const value = normalizeNumericInput(e.target.value);
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
       setPurchasePrice(value);
       setPriceErrors({});
@@ -533,8 +565,9 @@ const CreateSidebar = ({
   };
 
   const handlePriceInputChange = (field, value) => {
-    if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
-      const newPrices = { ...editingPrices, [field]: value };
+    const normalizedValue = normalizeNumericInput(value);
+    if (normalizedValue === '' || /^[0-9]*\.?[0-9]*$/.test(normalizedValue)) {
+      const newPrices = { ...editingPrices, [field]: normalizedValue };
       setEditingPrices(newPrices);
       
       const errors = validateSalePricesAgainstPurchase(newPrices);
@@ -1008,8 +1041,10 @@ const CreateSidebar = ({
                 <input
                   ref={purchasePriceInputRef}
                   type="text"
-                  value={purchasePrice}
+                  value={displayPriceValue("purchasePrice", purchasePrice)}
                   onChange={handlePurchasePriceChange}
+                  onFocus={() => setFocusedPriceField("purchasePrice")}
+                  onBlur={() => setFocusedPriceField(null)}
                   placeholder="Precio de compra"
                   disabled={!selectedProduct}
                   className={`w-full rounded-lg border bg-white py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none transition-colors focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 ${
@@ -1084,8 +1119,10 @@ const CreateSidebar = ({
                     </label>
                     <input
                       type="text"
-                      value={editingPrices.retailPrice}
+                      value={displayPriceValue("retailPrice", editingPrices.retailPrice)}
                       onChange={(e) => handlePriceInputChange('retailPrice', e.target.value)}
+                      onFocus={() => setFocusedPriceField("retailPrice")}
+                      onBlur={() => setFocusedPriceField(null)}
                       placeholder="0"
                       className={priceInputClass(priceErrors.retailPrice)}
                     />
@@ -1108,8 +1145,10 @@ const CreateSidebar = ({
                     </label>
                     <input
                       type="text"
-                      value={editingPrices.wholesalePrice}
+                      value={displayPriceValue("wholesalePrice", editingPrices.wholesalePrice)}
                       onChange={(e) => handlePriceInputChange('wholesalePrice', e.target.value)}
+                      onFocus={() => setFocusedPriceField("wholesalePrice")}
+                      onBlur={() => setFocusedPriceField(null)}
                       placeholder="0"
                       className={priceInputClass(priceErrors.wholesalePrice)}
                     />
@@ -1132,8 +1171,10 @@ const CreateSidebar = ({
                     </label>
                     <input
                       type="text"
-                      value={editingPrices.partnerPrice}
+                      value={displayPriceValue("partnerPrice", editingPrices.partnerPrice)}
                       onChange={(e) => handlePriceInputChange('partnerPrice', e.target.value)}
+                      onFocus={() => setFocusedPriceField("partnerPrice")}
+                      onBlur={() => setFocusedPriceField(null)}
                       placeholder="0"
                       className={priceInputClass(priceErrors.partnerPrice)}
                     />
@@ -1156,8 +1197,10 @@ const CreateSidebar = ({
                     </label>
                     <input
                       type="text"
-                      value={editingPrices.bulkPrice}
+                      value={displayPriceValue("bulkPrice", editingPrices.bulkPrice)}
                       onChange={(e) => handlePriceInputChange('bulkPrice', e.target.value)}
+                      onFocus={() => setFocusedPriceField("bulkPrice")}
+                      onBlur={() => setFocusedPriceField(null)}
                       placeholder="0"
                       className={priceInputClass(priceErrors.bulkPrice)}
                     />

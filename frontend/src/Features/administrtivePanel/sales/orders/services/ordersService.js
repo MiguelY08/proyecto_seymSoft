@@ -142,6 +142,8 @@ const normalizeProduct = (product = {}) => {
     productData.productImages ??
     [];
   const image =
+    product.variantImageUrl ??
+    product.variant_image_url ??
     product.image ??
     product.imageUrl ??
     product.image_url ??
@@ -460,6 +462,7 @@ const buildCreateOrderPayload = (data = {}) => {
     ),
     items: (data.productos || []).map((product) => ({
       idProduct: product.id,
+      idBarcode: product.idBarcode ?? product.barcodeId ?? null,
       barcode: product.codBarras || product.barcode || '',
       quantity: product.cantidad,
     })),

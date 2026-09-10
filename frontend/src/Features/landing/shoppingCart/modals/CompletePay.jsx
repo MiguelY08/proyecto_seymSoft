@@ -12,6 +12,8 @@ import useBodyScrollLock from '../../../shared/hooks/useBodyScrollLock';
 import { getProductBarcode } from '../../orders/helpers/customerOrderHelpers';
 
 const INITIAL_SECONDS = 48 * 60 * 60;
+const parseAmountInput = (value) => Number(String(value || '').replace(/\./g, '')) || 0;
+const formatAmountInput = (value) => Math.max(0, Number(value) || 0).toLocaleString('es-CO').replace(/,/g, '.');
 
 function PaymentTransferInfo({ className = '' }) {
   return (
@@ -83,12 +85,13 @@ function CompletePay({
   const orderTotal = Number(totalAmount) || 0;
   const availableFavorBalance = Math.max(0, Number(favorBalance) || 0);
   const appliedFavorBalance = Math.min(
-    Math.max(0, Number(favorBalanceAmount) || 0),
+    Math.max(0, parseAmountInput(favorBalanceAmount)),
     availableFavorBalance,
     orderTotal,
   );
   const pendingTransferAmount = Math.max(0, orderTotal - appliedFavorBalance);
-  const requiresReceipt = pendingTransferAmount > 0;
+  const requiresReceipt = pendingTransferAmount > 0 && appliedFavorBalance <= 0;
+  const hasPartialFavorPayment = appliedFavorBalance > 0 && pendingTransferAmount > 0;
 
   if (!isOpen) return null;
 
@@ -98,14 +101,12 @@ function CompletePay({
     const maxAmount = Math.min(availableFavorBalance, orderTotal);
 
     setFavorBalanceAmount(
-      amount > maxAmount
-        ? String(maxAmount)
-        : rawValue
+      formatAmountInput(amount > maxAmount ? maxAmount : amount)
     );
   };
 
   const handleUseAllFavorBalance = () => {
-    setFavorBalanceAmount(String(Math.min(availableFavorBalance, orderTotal)));
+    setFavorBalanceAmount(formatAmountInput(Math.min(availableFavorBalance, orderTotal)));
   };
 
   const handleClose = () => {
@@ -175,6 +176,7 @@ function CompletePay({
 
     const products = cartItems.map((item) => ({
       id: Number(item.id),
+      idBarcode: Number(item.barcodeId) || null,
       codBarras: getProductBarcode(item),
       cantidad: Number(item.quantity) || 1,
     }));
@@ -210,7 +212,7 @@ function CompletePay({
         setPendingOrder(createdOrder);
       }
 
-      if (requiresReceipt) {
+      if (receipt) {
         await PaymentReceiptService.upload(
           createdOrder.id,
           receipt,
@@ -367,8 +369,16 @@ function CompletePay({
             <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-amber-800">
             <AlertTriangle size={17} className="mt-0.5 shrink-0" />
             <p className="text-xs font-semibold leading-relaxed">
-              El comprobante debe cubrir el total pendiente del pedido. Si aplicas saldo a favor, transfiere solo el valor restante.
+              No tienes saldo a favor aplicado. Sube el comprobante de la transferencia por el total del pedido.
             </p>
+            </div>
+          ) : hasPartialFavorPayment ? (
+            <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-amber-800">
+              <AlertTriangle size={17} className="mt-0.5 shrink-0" />
+              <p className="text-xs font-semibold leading-relaxed">
+                Se registrará un abono de {appliedFavorBalance.toLocaleString('es-CO')} COP con tu saldo a favor.
+                El pedido quedará pendiente por {pendingTransferAmount.toLocaleString('es-CO')} COP. Puedes transferir ese valor y adjuntar el comprobante ahora o hacerlo después desde el detalle del pedido.
+              </p>
             </div>
           ) : (
             <div className="flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-800">
@@ -381,9 +391,11 @@ function CompletePay({
           </div>
 
           <div className="flex flex-col space-y-4">
-          {requiresReceipt && (
+          {(requiresReceipt || hasPartialFavorPayment) && (
             <div className="flex-1">
-            <p className="mb-2 text-xs font-bold text-slate-700">Comprobante de transferencia</p>
+            <p className="mb-2 text-xs font-bold text-slate-700">
+              Comprobante de transferencia {hasPartialFavorPayment ? '(opcional)' : ''}
+            </p>
             <div className="relative">
               <label className={`flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed p-4 text-center transition ${
                 receipt

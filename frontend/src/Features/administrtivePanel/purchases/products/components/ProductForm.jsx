@@ -96,6 +96,8 @@ function PriceCard({ label, fieldMain, fieldPaca, valueMain, valuePaca, placehol
   );
 }
 
+const PRODUCT_NAME_MAX_LENGTH = 100;
+
 const initialForm = {
   nombre: '',
   codBarras: '',
@@ -375,6 +377,10 @@ function ProductForm({
     if (!d.idUnitMeasure) e.idUnitMeasure = 'Selecciona una unidad de medida.';
     if (!d.nombre?.trim()) e.nombre = 'El nombre del producto es obligatorio.';
     else if (d.nombre.trim().length < 3) e.nombre = 'El nombre debe tener al menos 3 caracteres.';
+    else if (d.nombre.trim().length > 100) e.nombre = 'El nombre no puede superar los 100 caracteres.';
+    if (d.variantNamePrincipal && d.variantNamePrincipal.trim().length > 100) {
+      e.variantNamePrincipal = 'El estilo del codigo principal no puede superar los 100 caracteres.';
+    }
     if (!d.codBarras?.trim()) e.codBarras = 'El codigo de barras es obligatorio.';
     else if (d.codBarras.trim().length < 8) e.codBarras = 'El codigo de barras debe tener minimo 8 caracteres.';
     else if (d.codBarras.trim().length > 13) e.codBarras = 'El codigo de barras no puede superar los 13 caracteres.';
@@ -396,6 +402,13 @@ function ProductForm({
     });
     if (invalidExtraLength) {
       e.codsBarrasExtra = 'Los codigos adicionales deben tener entre 8 y 13 caracteres.';
+    }
+    const invalidExtraVariantNameLength = (d.codsBarrasExtra || []).find((item) => {
+      const length = String(item?.variantName || '').trim().length;
+      return length > 100;
+    });
+    if (invalidExtraVariantNameLength) {
+      e.codsBarrasExtra = 'Los estilos de los codigos adicionales no pueden superar los 100 caracteres.';
     }
     if (isEditMode ? d.referencia === '' : !d.referencia.trim()) {
       e.referencia = 'La referencia es obligatoria.';
@@ -740,7 +753,7 @@ function ProductForm({
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre <span className="text-red-500">*</span></label>
                 <div className="relative">
                   <Package className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                  <input type="text" name="nombre" value={formData.nombre || ''} onChange={handleChange} placeholder="Ej: Lapicero Bic Azul" className={`${inputCls('nombre')} pl-10`} />
+                  <input type="text" name="nombre" value={formData.nombre || ''} onChange={handleChange} maxLength={PRODUCT_NAME_MAX_LENGTH} placeholder="Ej: Lapicero Bic Azul" className={`${inputCls('nombre')} pl-10`} />
                 </div>
                 <ErrMsg field="nombre" />
               </div>
@@ -846,7 +859,7 @@ function ProductForm({
                         </div>
                         <div className="relative border-t border-gray-200 md:border-l md:border-t-0">
                           <Tag className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                          <input type="text" value={item.variantName || ''} onChange={(e) => updateVariantRow(i, 'variantName', e.target.value)} maxLength={120} placeholder="Estilo" className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400" />
+                          <input type="text" value={item.variantName || ''} onChange={(e) => updateVariantRow(i, 'variantName', e.target.value)} maxLength={100} placeholder="Estilo" className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400" />
                         </div>
                         <div className="relative border-t border-gray-200 bg-gray-50 md:border-l md:border-t-0">
                           <Boxes className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />

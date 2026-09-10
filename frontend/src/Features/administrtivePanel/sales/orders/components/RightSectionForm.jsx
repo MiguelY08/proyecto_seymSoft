@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Trash2, Search, X, ChevronDown, CheckCircle, ShoppingBag, Users, Phone, Mail, IdCard, Plus } from 'lucide-react';
 import { ScannerStatus, findProductByBarcode, normalizeBarcode, productMatchesBarcodeSearch, useBarcodeScanner } from '../../../../shared/scanner';
+import { SYSTEM_CLIENT_ID } from '../../clients/services/clientsService';
 
 const isProductActive = (product) => product?.isActive === true;
 
@@ -243,7 +244,7 @@ function RightSectionForm({
                 <div className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg overscroll-contain">
                   {clientesFiltrados.length > 0 ? <ul className="py-1">{clientesFiltrados.map((cliente) => (
                     <li key={cliente.id}><button type="button" onClick={() => handleClienteSelect(cliente.id)} className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-[#004D77]/10">
-                      <div className="font-medium text-gray-800">{cliente.name || cliente.fullName}{cliente.id === 0 && <span className="ml-2 text-xs text-blue-600">(Cliente de Caja)</span>}</div>
+                      <div className="font-medium text-gray-800">{cliente.name || cliente.fullName}{Number(cliente.id) === SYSTEM_CLIENT_ID && <span className="ml-2 text-xs text-blue-600">(Cliente del sistema)</span>}</div>
                       <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
                         {cliente.phone && <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" strokeWidth={1.5} />{cliente.phone}</span>}
                         {cliente.email && <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3" strokeWidth={1.5} />{cliente.email}</span>}
