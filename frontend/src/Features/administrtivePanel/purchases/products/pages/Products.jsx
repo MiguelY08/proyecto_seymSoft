@@ -24,7 +24,7 @@ import ProductsService from "../services/productsServices";
 import { getProductAlertError } from "../helpers/productAlertMessages";
 import { HighlightText } from "../helpers/productsHelpers";
 import {
-  findProductByBarcode,
+  findProductBarcodeMatch,
   normalizeBarcode,
   productMatchesBarcodeSearch,
   useBarcodeScanner,
@@ -521,24 +521,33 @@ function Products() {
     numericOnly: true,
     minLength: 6,
     maxLength: 20,
+    maxIntervalMs: 120,
     scannerFields: [PRODUCTS_SEARCH_SCANNER_FIELD],
     duplicateDelayMs: 800,
     preventDefault: false,
-    onScan: ({ code, scannerField }) => {
+    onScan: ({ code, event, scannerField }) => {
       if (scannerField !== PRODUCTS_SEARCH_SCANNER_FIELD) return;
 
-      const normalizedCode = normalizeBarcode(code, { numericOnly: true });
-      const product = findProductByBarcode(data, normalizedCode);
+      const scannerOptions = { numericOnly: true };
+      const normalizedCode = normalizeBarcode(code, scannerOptions);
+      const inputValue = normalizeBarcode(event?.target?.value, scannerOptions);
+      const productMatch =
+        findProductBarcodeMatch(data, normalizedCode, scannerOptions) ??
+        findProductBarcodeMatch(data, inputValue, scannerOptions);
+      const matchedProduct =
+        productMatch?.product ??
+        data.find((product) => productMatchesBarcodeSearch(product, normalizedCode));
+      const displayedCode = productMatch?.barcode?.normalizedBarcode || normalizedCode;
 
-      if (!product) {
+      if (!matchedProduct) {
         showError(
           "Producto no encontrado",
-          `No se encontró ningún producto con el código de barras ${normalizedCode}.`,
+          `No se encontró ningún producto con el código de barras ${displayedCode}.`,
         );
         return;
       }
 
-      handleVerDetalles(product);
+      handleVerDetalles(matchedProduct);
     },
   });
 

@@ -9,6 +9,7 @@ export {
   shouldCaptureScannerEvent,
 } from './scanner.helpers';
 export {
+  findProductBarcodeMatch,
   findProductByBarcode,
   findProductBarcodeOwner,
   getDuplicateBarcodesInValues,

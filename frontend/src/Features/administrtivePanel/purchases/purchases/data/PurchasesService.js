@@ -331,6 +331,16 @@ export const getProducts = async (searchTerm = '') => {
     return products.map(p => ({
       id: p.id,
       nombre: p.name,
+      barcodes: Array.isArray(p.barcodes)
+        ? p.barcodes.map(barcode => ({
+            id: barcode.id,
+            barcode: barcode.barcode,
+            variantName: barcode.variantName || barcode.variant_name || '',
+            stock: barcode.stock ?? 0,
+            isActive: barcode.isActive !== false && barcode.is_active !== false,
+            isDefault: barcode.isDefault === true || barcode.is_default === true,
+          }))
+        : [],
       codigoBarras: p.barcodes?.[0]?.barcode || '',
       proveedor: p.providerName || '',
       supplierPrice: p.supplierPrice ?? null,

@@ -68,6 +68,12 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
 
   const hasErrors = codigoError || cantidadError || motivoError;
   const isStockEmpty = productInfo && productInfo.stock <= 0;
+  const productDisplayName = productInfo
+    ? [productInfo.nombre, productInfo.variantName]
+        .map((value) => String(value || "").trim())
+        .filter((value) => value && value.toLowerCase() !== "estilo pendiente")
+        .join(" - ")
+    : "";
 
   // Buscar producto por código de barras
   const handleSearchProduct = async (barcode = form.codigo) => {
@@ -86,12 +92,16 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
       if (product) {
         setProductInfo(product);
         setCantidadTouched(true);
+        const variantLabel = product.variantName && product.variantName.toLowerCase() !== "estilo pendiente"
+          ? ` - ${product.variantName}`
+          : "";
+        const productLabel = `${product.nombre}${variantLabel}`;
         
         // ✅ Mostrar advertencia si el stock está agotado
         if (product.stock <= 0) {
-          showWarning("Producto agotado", `"${product.nombre}" no tiene stock disponible para reportar.`);
+          showWarning("Producto agotado", `"${productLabel}" no tiene stock disponible para reportar.`);
         } else {
-          showSuccess("Producto encontrado", `"${product.nombre}" - Stock: ${product.stock}`);
+          showSuccess("Producto encontrado", `"${productLabel}" - Stock: ${product.stock}`);
         }
       } else {
         setProductInfo(null);
@@ -211,10 +221,11 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
 
         {/* BODY */}
         <div className="min-h-0 flex flex-1 flex-col gap-5 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
+          <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2">
           {/* CÓDIGO DE BARRAS */}
-          <div>
+          <div className="min-w-0">
             <label className="text-sm font-medium text-gray-700">Código de Barras</label>
-            <div className="flex gap-2 mt-1">
+            <div className="mt-1 flex min-w-0">
               <div className="relative flex-1">
                 <input
                   type="text"
@@ -227,7 +238,7 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
                   }}
                   onBlur={() => setCodigoTouched(true)}
                   placeholder="Código de barras del producto"
-                  className={inputClass(codigoError)}
+                  className={`${inputClass(codigoError)} rounded-r-none`}
                   disabled={submitting}
                 />
                 {codigoTouched && codigoError && (
@@ -240,7 +251,7 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
                 type="button"
                 onClick={() => handleSearchProduct()}
                 disabled={loadingProduct || submitting}
-                className="px-4 py-2 bg-[#0E5679] text-white rounded-xl hover:bg-[#0a435c] transition disabled:opacity-50"
+                className="flex shrink-0 items-center justify-center rounded-r-xl border border-l-0 border-[#0E5679] bg-[#0E5679] px-4 text-white transition hover:bg-[#0a435c] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Search size={18} />
               </button>
@@ -252,49 +263,10 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
               </p>
             )}
 
-            {/* Información del producto encontrado */}
-            {productInfo && !codigoError && (
-              <div className={`mt-2 p-3 rounded-lg border ${
-                isStockEmpty 
-                  ? "bg-red-50 border-red-200" 
-                  : "bg-green-50 border-green-200"
-              }`}>
-                <div className="flex items-center gap-2">
-                  {isStockEmpty ? (
-                    <PackageX size={16} className="text-red-600" />
-                  ) : (
-                    <Check size={16} className="text-green-600" />
-                  )}
-                  <span className={`text-sm font-semibold ${
-                    isStockEmpty ? "text-red-800" : "text-green-800"
-                  }`}>
-                    {isStockEmpty ? "Producto agotado" : "Producto verificado"}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-700 mt-1">
-                  <strong>{productInfo.nombre}</strong>
-                  <br />
-                  <span className="text-xs text-gray-500">Categoría: {productInfo.categoria}</span>
-                  <br />
-                  <span className={`text-xs font-semibold ${
-                    isStockEmpty ? "text-red-600" : "text-green-600"
-                  }`}>
-                    Stock disponible: {productInfo.stock}
-                    {isStockEmpty && " (Agotado)"}
-                  </span>
-                </p>
-                {isStockEmpty && (
-                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                    <AlertCircle size={12} />
-                    No se puede reportar este producto porque no tiene stock disponible.
-                  </p>
-                )}
-              </div>
-            )}
           </div>
 
           {/* CANTIDAD */}
-          <div className="w-1/2">
+          <div className="min-w-0">
             <label className="text-sm font-medium text-gray-700">Cantidad Afectada</label>
             <div className="relative mt-1">
               <input
@@ -330,6 +302,47 @@ function FormNonConformingProduct({ onClose, onSuccess }) {
               </p>
             )}
           </div>
+          </div>
+
+          {/* Información del producto encontrado */}
+          {productInfo && !codigoError && (
+            <div className={`col-span-1 mt-[-0.5rem] rounded-lg border p-3 sm:col-span-2 ${
+              isStockEmpty
+                ? "bg-red-50 border-red-200"
+                : "bg-green-50 border-green-200"
+            }`}>
+              <div className="flex items-center gap-2">
+                {isStockEmpty ? (
+                  <PackageX size={16} className="text-red-600" />
+                ) : (
+                  <Check size={16} className="text-green-600" />
+                )}
+                <span className={`text-sm font-semibold ${
+                  isStockEmpty ? "text-red-800" : "text-green-800"
+                }`}>
+                  {isStockEmpty ? "Producto agotado" : "Producto verificado"}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-gray-700">
+                <strong>{productDisplayName}</strong>
+                <br />
+                <span className="text-xs text-gray-500">Categoría: {productInfo.categoria}</span>
+                <br />
+                <span className={`text-xs font-semibold ${
+                  isStockEmpty ? "text-red-600" : "text-green-600"
+                }`}>
+                  Stock disponible: {productInfo.stock}
+                  {isStockEmpty && " (Agotado)"}
+                </span>
+              </p>
+              {isStockEmpty && (
+                <p className="mt-1 flex items-center gap-1 text-xs text-red-600">
+                  <AlertCircle size={12} />
+                  No se puede reportar este producto porque no tiene stock disponible.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* MOTIVO */}
           <div>

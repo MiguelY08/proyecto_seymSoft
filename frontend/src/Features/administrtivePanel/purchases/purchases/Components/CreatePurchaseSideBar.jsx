@@ -25,7 +25,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import {
-  findProductByBarcode,
+  findProductBarcodeMatch,
   getProductBarcodeValues,
   normalizeBarcode,
   productMatchesBarcodeSearch,
@@ -85,6 +85,7 @@ const CreateSidebar = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedProductLabel, setSelectedProductLabel] = useState("");
   const [purchasePrice, setPurchasePrice] = useState("");
   const [purchaseType, setPurchaseType] = useState(PURCHASE_TYPES.UNIT);
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
@@ -320,7 +321,9 @@ const CreateSidebar = ({
       ? Math.max(0, productBarcodes.findIndex((code) => code === normalizedActiveBarcode))
       : 0;
 
-    setSearchProduct(product.nombre);
+    const selectedLabel = getScannedProductLabel(product);
+    setSearchProduct(selectedLabel);
+    setSelectedProductLabel(selectedLabel);
     setSelectedProduct(product);
     setShowSuggestions(false);
     setShowBarcodeForm(false);
@@ -341,6 +344,17 @@ const CreateSidebar = ({
     setPriceErrors({});
   };
 
+  const getScannedProductLabel = (product, barcodeEntry = null) => {
+    const variantName = barcodeEntry?.variantName?.trim();
+    const productName = product?.nombre || product?.name || "Producto sin nombre";
+
+    if (variantName && variantName.toLowerCase() !== "estilo pendiente") {
+      return `${productName} - ${variantName}`;
+    }
+
+    return productName;
+  };
+
   const handleSearchChange = (e) => {
     const val = e.target.value;
     if (isEditing && val !== editingProductData?.nombre) {
@@ -350,6 +364,7 @@ const CreateSidebar = ({
     setShowSuggestions(true);
     if (selectedProduct && val !== selectedProduct.nombre) {
       setSelectedProduct(null);
+      setSelectedProductLabel("");
       setShowBarcodeForm(false);
       setShowPriceEditor(false);
       setBarcodeValue("");
@@ -365,11 +380,17 @@ const CreateSidebar = ({
 
   const handleScannedProduct = (code) => {
     const normalizedCode = normalizeBarcode(code, { numericOnly: true });
-    const product = findProductByBarcode(productsDB.map(getProductWithLocalBarcodes), normalizedCode);
+    const match = findProductBarcodeMatch(
+      productsDB.map(getProductWithLocalBarcodes),
+      normalizedCode,
+      { numericOnly: true }
+    );
+    const product = match?.product;
 
     if (!product) {
       setSearchProduct(normalizedCode);
       setSelectedProduct(null);
+      setSelectedProductLabel("");
       setShowSuggestions(true);
       setShowBarcodeForm(false);
       setShowPriceEditor(false);
@@ -383,7 +404,13 @@ const CreateSidebar = ({
     }
 
     handleSelectProduct(product, normalizedCode);
-    setScannerMessage({ type: 'success', message: `Seleccionado: ${product.nombre}` });
+    const scannedProductLabel = getScannedProductLabel(product, match.barcode);
+    setSearchProduct(scannedProductLabel);
+    setSelectedProductLabel(scannedProductLabel);
+    setScannerMessage({
+      type: 'success',
+      message: `Seleccionado: ${scannedProductLabel}`,
+    });
   };
 
   useBarcodeScanner({
@@ -959,7 +986,7 @@ const CreateSidebar = ({
             {selectedProduct && (
               <div className="mt-2 flex items-center gap-2 flex-wrap">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-lg text-xs text-[#004D77] font-medium">
-                  <Check size={11} className="text-green-500" /> {selectedProduct.nombre}
+                  <Check size={11} className="text-green-500" /> {selectedProductLabel || selectedProduct.nombre}
                 </span>
                 {availableBarcodes.length > 1 && (
                   <span className="text-xs text-gray-400">Codigo activo: <span className="ml-1 font-mono font-semibold text-[#004D77]">{resolvedBarcode}</span></span>

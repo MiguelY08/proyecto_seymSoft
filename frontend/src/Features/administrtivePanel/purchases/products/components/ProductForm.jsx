@@ -26,6 +26,9 @@ import FormSelect from '../../../../shared/FormSelect';
 import {
   findProductBarcodeOwner,
   getDuplicateBarcodesInValues,
+  normalizeBarcode,
+  ScannerStatus,
+  useBarcodeScanner,
 } from '../../../../shared/scanner';
 
 function PriceCard({ label, fieldMain, fieldPaca, valueMain, valuePaca, placeholderMain, placeholderPaca, onChange, errMain, errPaca }) {
@@ -137,6 +140,7 @@ function ProductForm({
   const [imagenesActuales, setImagenesActuales] = useState([]);
   const [imagenesNuevas, setImagenesNuevas] = useState([]);
   const [errors, setErrors] = useState({});
+  const [scannerMessage, setScannerMessage] = useState(null);
   const [priceErrors, setPriceErrors] = useState({});
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
@@ -254,12 +258,6 @@ function ProductForm({
   const block = (e) => { if (['e', 'E', '+', '-', '.'].includes(e.key)) e.preventDefault(); };
   const preventBarcodeSubmit = (e) => {
     if (e.key === 'Enter') e.preventDefault();
-  };
-
-  const calcStock = (d) => {
-    const principal = Number(d.stockPrincipal) || 0;
-    const extras = (d.codsBarrasExtra || []).reduce((acc, item) => acc + (Number(item.stock) || 0), 0);
-    return principal + extras;
   };
 
   const validatePrices = (d) => {
@@ -558,6 +556,64 @@ function ProductForm({
     });
   };
 
+  useBarcodeScanner({
+    enabled: !isSubmitting,
+    numericOnly: true,
+    minLength: 6,
+    maxLength: 20,
+    maxIntervalMs: 120,
+    scannerFields: ['product-form-barcode'],
+    duplicateDelayMs: 800,
+    preventDefault: true,
+    onScan: ({ code, event, scannerField }) => {
+      if (scannerField !== 'product-form-barcode') return;
+
+      const normalizedCode = normalizeBarcode(code, { numericOnly: true });
+      const barcodeIndex = Number(event?.target?.dataset?.barcodeIndex);
+      if (!normalizedCode || !Number.isInteger(barcodeIndex)) return;
+
+      const nextData = { ...formData };
+      if (barcodeIndex === 0) {
+        nextData.codBarras = normalizedCode;
+      } else {
+        const updatedExtras = [...(nextData.codsBarrasExtra || [])];
+        updatedExtras[barcodeIndex - 1] = {
+          ...updatedExtras[barcodeIndex - 1],
+          cod: normalizedCode,
+        };
+        nextData.codsBarrasExtra = updatedExtras;
+      }
+
+      const conflictMessage = getBarcodeConflictMessage(normalizedCode);
+      const duplicateMessage = getInternalDuplicateMessage(getFormBarcodeValues(nextData));
+      const validationMessage = conflictMessage || duplicateMessage;
+
+      setFormData(nextData);
+      setErrors((prev) => {
+        const next = { ...prev };
+        if (barcodeIndex === 0) {
+          if (validationMessage) next.codBarras = validationMessage;
+          else delete next.codBarras;
+        } else {
+          if (validationMessage) next.codsBarrasExtra = validationMessage;
+          else delete next.codsBarrasExtra;
+        }
+        return next;
+      });
+      setScannerMessage(
+        validationMessage
+          ? { type: 'error', message: validationMessage }
+          : { type: 'success', message: `Código ${normalizedCode} disponible.` }
+      );
+    },
+  });
+
+  useEffect(() => {
+    if (!scannerMessage) return undefined;
+    const timeout = window.setTimeout(() => setScannerMessage(null), 2800);
+    return () => window.clearTimeout(timeout);
+  }, [scannerMessage]);
+
 
 
   const handleSubmit = async (e) => {
@@ -747,47 +803,47 @@ function ProductForm({
                 <p className="text-xs text-gray-400">Identificación y clasificación principal del producto</p>
               </div>
             </div>
-            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr)_minmax(280px,1fr)_minmax(220px,0.7fr)] gap-4 p-4">
-              <div className="grid min-w-0 grid-cols-1 md:grid-cols-12 gap-3 content-start">
-              <div className="md:col-span-6">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre <span className="text-red-500">*</span></label>
-                <div className="relative">
-                  <Package className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                  <input type="text" name="nombre" value={formData.nombre || ''} onChange={handleChange} maxLength={PRODUCT_NAME_MAX_LENGTH} placeholder="Ej: Lapicero Bic Azul" className={`${inputCls('nombre')} pl-10`} />
+            <div className="grid grid-cols-1 gap-4 p-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(280px,1fr)]">
+              <div className="grid min-w-0 grid-cols-1 content-start gap-3 md:grid-cols-12">
+                <div className="md:col-span-6">
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">Nombre <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <Package className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
+                    <input type="text" name="nombre" value={formData.nombre || ''} onChange={handleChange} maxLength={PRODUCT_NAME_MAX_LENGTH} placeholder="Ej: Lapicero Bic Azul" className={`${inputCls('nombre')} pl-10`} />
+                  </div>
+                  <ErrMsg field="nombre" />
                 </div>
-                <ErrMsg field="nombre" />
-              </div>
-              <div className="md:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Referencia <span className="text-red-500">*</span></label>
-                <div className="relative">
-                  <Tag className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                  <input type="text" name="referencia" value={formData.referencia || ''} onChange={handleChange} maxLength={50} placeholder="REF-001" className={`${inputCls('referencia')} pl-10 pr-14`} />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">
-                    {(formData.referencia || '').length}/50
-                  </span>
+                <div className="md:col-span-3">
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">Referencia <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
+                    <input type="text" name="referencia" value={formData.referencia || ''} onChange={handleChange} maxLength={50} placeholder="REF-001" className={`${inputCls('referencia')} pl-10 pr-14`} />
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">
+                      {(formData.referencia || '').length}/50
+                    </span>
+                  </div>
+                  <ErrMsg field="referencia" />
                 </div>
-                <ErrMsg field="referencia" />
-              </div>
-              <div className="md:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Unidad de medida <span className="text-red-500">*</span></label>
-                <FormSelect
-                  value={formData.idUnitMeasure}
-                  options={unitMeasureOptions}
-                  onChange={(value) => handleChange({ target: { name: 'idUnitMeasure', value } })}
-                  icon={Ruler}
-                  error={errors.idUnitMeasure}
-                  placeholder="Selecciona una unidad"
-                  ariaLabel="Unidad de medida"
-                />
-                <ErrMsg field="idUnitMeasure" />
-              </div>
-              <div className="md:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">IVA %</label>
-                <div className="relative">
-                  <Percent className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                  <input type="text" inputMode="numeric" name="ivaPercentage" value={formData.ivaPercentage} onChange={(e) => handleChange({ target: { name: 'ivaPercentage', value: percentage(e.target.value) } })} onKeyDown={block} maxLength={3} placeholder="19" className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 text-sm transition-colors duration-200" />
+                <div className="md:col-span-3">
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">Unidad de medida <span className="text-red-500">*</span></label>
+                  <FormSelect
+                    value={formData.idUnitMeasure}
+                    options={unitMeasureOptions}
+                    onChange={(value) => handleChange({ target: { name: 'idUnitMeasure', value } })}
+                    icon={Ruler}
+                    error={errors.idUnitMeasure}
+                    placeholder="Selecciona una unidad"
+                    ariaLabel="Unidad de medida"
+                  />
+                  <ErrMsg field="idUnitMeasure" />
                 </div>
-              </div>
+                <div className="md:col-span-3">
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">IVA %</label>
+                  <div className="relative">
+                    <Percent className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
+                    <input type="text" inputMode="numeric" name="ivaPercentage" value={formData.ivaPercentage} onChange={(e) => handleChange({ target: { name: 'ivaPercentage', value: percentage(e.target.value) } })} onKeyDown={block} maxLength={3} placeholder="19" className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-3 text-sm outline-none transition-colors duration-200 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20" />
+                  </div>
+                </div>
               </div>
 
               <div className="min-w-0">
@@ -803,26 +859,6 @@ function ProductForm({
                   error={errors.categorias}
                   idPrefix={`${mode}-product-essential`}
                 />
-              </div>
-
-              <div className="self-stretch rounded-lg border border-[#004D77]/15 bg-[#004D77]/[0.03] p-4">
-                <p className="text-sm font-semibold text-gray-800">Resumen inicial</p>
-                <p className="mt-1 text-xs text-gray-500">Se actualiza al agregar presentaciones adicionales.</p>
-                <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-1">
-                  <div className="min-w-0 overflow-hidden rounded-lg border border-gray-200 bg-white p-3">
-                    <p className="text-xs text-gray-500">Stock general</p>
-                    <p
-                      className="mt-1 max-w-full break-all text-base font-semibold leading-tight text-[#004D77] tabular-nums sm:text-lg"
-                      title={calcStock(formData).toLocaleString('es-CO')}
-                    >
-                      {calcStock(formData).toLocaleString('es-CO')}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-gray-200 bg-white p-3">
-                    <p className="text-xs text-gray-500">Códigos</p>
-                    <p className="mt-1 text-lg font-semibold text-[#004D77]">{1 + (formData.codsBarrasExtra || []).length}</p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -855,7 +891,7 @@ function ProductForm({
                       <div className="grid min-w-0 flex-1 grid-cols-1 overflow-hidden rounded-lg border border-gray-300 bg-white md:grid-cols-[minmax(150px,1.1fr)_minmax(120px,1fr)_105px_minmax(150px,0.9fr)]">
                         <div className="relative min-w-0">
                           <Barcode className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                          <input type="text" value={item.cod || ''} onChange={(e) => updateVariantRow(i, 'cod', e.target.value)} onKeyDown={preventBarcodeSubmit} maxLength={13} placeholder="Código de barras" className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400" />
+                          <input type="text" value={item.cod || ''} onChange={(e) => updateVariantRow(i, 'cod', e.target.value)} onKeyDown={preventBarcodeSubmit} data-scanner-field="product-form-barcode" data-barcode-index={i} maxLength={13} placeholder="Código de barras" className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400" />
                         </div>
                         <div className="relative border-t border-gray-200 md:border-l md:border-t-0">
                           <Tag className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
@@ -875,7 +911,9 @@ function ProductForm({
                     </div>
                   ))}
                 </div>
+                <ErrMsg field="codBarras" />
                 <ErrMsg field="codsBarrasExtra" />
+                <ScannerStatus status={scannerMessage} className="self-start" />
                 <div className="border-t border-gray-100 pt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     Cantidad x paca <span className="text-xs font-normal text-gray-400">(opcional)</span>
@@ -1086,5 +1124,3 @@ function ProductForm({
 }
 
 export default ProductForm;
-
-

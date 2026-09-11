@@ -26,11 +26,6 @@ const normalizeSearchValue = (value) =>
     .toLowerCase()
     .trim();
 
-const findReportByBarcode = (reports, barcode) =>
-  reports.find(
-    (report) => normalizeBarcode(report.codigoBarras, { numericOnly: true }) === barcode
-  );
-
 export const NonConformingProducts = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -50,30 +45,22 @@ export const NonConformingProducts = () => {
     const normalizedCode = normalizeBarcode(code, { numericOnly: true });
     setSearch(normalizedCode);
     setCurrentPage(1);
-
-    const localReport = findReportByBarcode(reports, normalizedCode);
-    if (localReport) {
-      setSelectedReport(localReport);
-      return;
-    }
-
-    showError(
-      "Código no registrado",
-      `No se encontró ningún reporte con el código de barras ${normalizedCode}.`
-    );
-  }, [reports, showError]);
+  }, []);
 
   useBarcodeScanner({
     enabled: !showModal,
     numericOnly: true,
     minLength: 6,
     maxLength: 20,
+    maxIntervalMs: 120,
     scannerFields: [NON_CONFORMING_SEARCH_SCANNER_FIELD],
     duplicateDelayMs: 800,
     preventDefault: false,
-    onScan: ({ code, scannerField }) => {
+    onScan: ({ code, scannerField, event }) => {
       if (scannerField !== NON_CONFORMING_SEARCH_SCANNER_FIELD) return;
-      handleScannedReportSearch(code);
+      const inputValue = event?.target?.value;
+      const scannedCode = inputValue || code;
+      handleScannedReportSearch(scannedCode);
     },
   });
 
