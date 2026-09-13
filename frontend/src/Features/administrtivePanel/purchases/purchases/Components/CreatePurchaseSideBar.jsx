@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
   ArrowLeft,
-  Barcode,
   Calendar,
   Check,
   ChevronDown,
@@ -39,6 +38,69 @@ const PURCHASE_TYPES = {
   PACK: { value: "pack", label: "X Paca", icon: Ruler, allowDecimals: false, quantityLabel: "Cantidad de pacas" },
   LITER: { value: "liter", label: "Litros", icon: Droplet, allowDecimals: true, quantityLabel: "Cantidad (litros)" },
   KILO: { value: "kilo", label: "Kilos", icon: Scale, allowDecimals: true, quantityLabel: "Cantidad (kilos)" },
+};
+
+const getAvailablePurchaseTypes = (product) => {
+  const unitName = String(
+    product?.unitMeasure?.name ||
+    product?.unitMeasure?.name_unit_measure ||
+    product?.unitMeasure?.abbreviation ||
+    ""
+  ).trim().toLowerCase();
+
+  let baseType = PURCHASE_TYPES.UNIT;
+  if (unitName.includes("litro") || unitName === "l") baseType = PURCHASE_TYPES.LITER;
+  if (unitName.includes("kilo") || unitName === "kg") baseType = PURCHASE_TYPES.KILO;
+
+  const types = [baseType];
+  const quantityPerPack = Number(product?.quantityPerPack);
+  if (Number.isInteger(quantityPerPack) && quantityPerPack > 0) {
+    types.push(PURCHASE_TYPES.PACK);
+  }
+  return types;
+};
+
+const getPurchaseBarcodeOptions = (product) => {
+  const productWithLocalBarcodes = {
+    ...product,
+    codigosExtra: [
+      ...(Array.isArray(product?.codigosExtra) ? product.codigosExtra : []),
+    ],
+  };
+  const options = [
+    ...(Array.isArray(productWithLocalBarcodes.barcodes)
+      ? productWithLocalBarcodes.barcodes
+      : []),
+    ...(Array.isArray(productWithLocalBarcodes.codigosExtra)
+      ? productWithLocalBarcodes.codigosExtra.map((barcode) => (
+        typeof barcode === "string" || typeof barcode === "number"
+          ? { barcode, variantName: "Código adicional", isActive: true }
+          : {
+            id: barcode.id,
+            barcode: barcode.barcode || barcode.cod,
+            variantName: barcode.variantName || barcode.variant_name,
+            isActive: barcode.isActive !== false && barcode.is_active !== false,
+          }
+      ))
+      : []),
+  ].filter((barcode) => barcode?.barcode && barcode.isActive !== false);
+
+  const uniqueOptions = [];
+  const seenBarcodes = new Set();
+  options.forEach((option) => {
+    const normalized = normalizeBarcode(option.barcode);
+    if (normalized && !seenBarcodes.has(normalized)) {
+      seenBarcodes.add(normalized);
+      uniqueOptions.push({ ...option, barcode: normalized });
+    }
+  });
+
+  if (uniqueOptions.length > 0) return uniqueOptions;
+
+  const fallbackBarcode = getProductBarcodeValues(product || {})[0] || "";
+  return fallbackBarcode
+    ? [{ id: product?.idBarcode || product?.id, barcode: fallbackBarcode, variantName: "Estilo principal" }]
+    : [];
 };
 
 const CreateSidebar = ({
@@ -83,6 +145,7 @@ const CreateSidebar = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchProvider, setSearchProvider] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [expandedProductId, setExpandedProductId] = useState(null);
 
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedProductLabel, setSelectedProductLabel] = useState("");
@@ -105,9 +168,11 @@ const CreateSidebar = ({
 
   const [showBarcodeForm, setShowBarcodeForm] = useState(false);
   const [barcodeValue, setBarcodeValue] = useState("");
+  const [barcodeVariantName, setBarcodeVariantName] = useState("");
   const [barcodeSaved, setBarcodeSaved] = useState(false);
   const [barcodeError, setBarcodeError] = useState("");
   const [activeBarcodeIndex, setActiveBarcodeIndex] = useState(0);
+  const [activeBarcodeValue, setActiveBarcodeValue] = useState("");
   const [scannerMessage, setScannerMessage] = useState(null);
   const providerWrapperRef = useRef(null);
   const productWrapperRef = useRef(null);
@@ -149,20 +214,21 @@ const CreateSidebar = ({
           product.editingPurchaseTypeValue ||
           typeMap[normalizedPurchaseType] ||
           "unit";
+        const availableTypes = getAvailablePurchaseTypes(fullProduct);
         const foundType =
-          Object.values(PURCHASE_TYPES).find(t => t.value === typeValue) ||
-          Object.values(PURCHASE_TYPES).find(
+          availableTypes.find(t => t.value === typeValue) ||
+          availableTypes.find(
             t => t.label.toLowerCase() === normalizedPurchaseType
-          );
-        if (foundType) {
-          setPurchaseType(foundType);
-        }
+          ) ||
+          availableTypes[0];
+        setPurchaseType(foundType);
         
         if (product.editingBarcode) {
           const barcodes = getProductBarcodeValues(fullProduct);
           const barcodeIndex = barcodes.findIndex(code => code === product.editingBarcode);
           if (barcodeIndex !== -1) {
             setActiveBarcodeIndex(barcodeIndex);
+            setActiveBarcodeValue(barcodes[barcodeIndex]);
           }
         }
         
@@ -226,7 +292,7 @@ const CreateSidebar = ({
         bulkPrice: selectedProduct.bulkPrice?.toString() || "",
       });
       setPurchasePrice((selectedProduct.supplierPrice ?? selectedProduct.wholesalePrice ?? "").toString());
-      setPurchaseType(PURCHASE_TYPES.UNIT);
+      setPurchaseType(getAvailablePurchaseTypes(selectedProduct)[0]);
       setProductQuantityPerPack(selectedProduct.quantityPerPack || 0);
       setPriceErrors({});
     }
@@ -246,15 +312,26 @@ const CreateSidebar = ({
 
   const filteredProducts = productsDB.filter((p) => {
     const product = getProductWithLocalBarcodes(p);
+    const term = searchProduct.trim().toLowerCase();
+    const categories = [
+      ...(Array.isArray(p.categorias) ? p.categorias : []),
+      ...(Array.isArray(p.categories) ? p.categories.flatMap((category) => [category, category?.name]) : []),
+    ];
     return (
-      p.nombre.toLowerCase().includes(searchProduct.toLowerCase()) ||
-      productMatchesBarcodeSearch(product, searchProduct)
+      !term ||
+      String(p.nombre || p.name || "").toLowerCase().includes(term) ||
+      String(p.proveedor || p.provider || "").toLowerCase().includes(term) ||
+      String(p.referencia || p.reference || "").toLowerCase().includes(term) ||
+      categories.some((category) => String(category || "").toLowerCase().includes(term)) ||
+      productMatchesBarcodeSearch(product, term)
     );
   });
 
   const allUsedBarcodes = [
     ...productsDB.flatMap((p) => getProductBarcodeValues(getProductWithLocalBarcodes(p))),
-    ...Object.values(extraBarcodes).flat(),
+    ...Object.values(extraBarcodes).flat().map((code) => (
+      typeof code === "object" ? code.barcode : code
+    )),
   ].map((code) => normalizeBarcode(code));
 
   const availableBarcodes = selectedProduct
@@ -262,8 +339,13 @@ const CreateSidebar = ({
     : [];
 
   const resolvedBarcode = selectedProduct && availableBarcodes[activeBarcodeIndex]
-    ? availableBarcodes[activeBarcodeIndex]
-    : selectedProduct?.codigoBarras;
+    ? activeBarcodeValue || availableBarcodes[activeBarcodeIndex]
+    : activeBarcodeValue || availableBarcodes[0] || selectedProduct?.codigoBarras;
+  const selectedBarcodeEntry = getPurchaseBarcodeOptions(
+    selectedProduct ? getProductWithLocalBarcodes(selectedProduct) : null
+  ).find(
+    (barcode) => normalizeBarcode(barcode.barcode) === normalizeBarcode(resolvedBarcode)
+  );
 
   const providerError = (() => {
     if (!providerTouched) return null;
@@ -316,24 +398,32 @@ const CreateSidebar = ({
     }
 
     const normalizedActiveBarcode = normalizeBarcode(activeBarcode);
-    const productBarcodes = getProductBarcodeValues(getProductWithLocalBarcodes(product));
+    const productBarcodes = [
+      ...new Set(getProductBarcodeValues(getProductWithLocalBarcodes(product))),
+    ];
     const nextActiveBarcodeIndex = normalizedActiveBarcode
       ? Math.max(0, productBarcodes.findIndex((code) => code === normalizedActiveBarcode))
       : 0;
 
-    const selectedLabel = getScannedProductLabel(product);
+    const selectedBarcodeEntry = getPurchaseBarcodeOptions(
+      getProductWithLocalBarcodes(product)
+    ).find((barcode) => normalizeBarcode(barcode.barcode) === normalizedActiveBarcode);
+    const selectedLabel = getScannedProductLabel(product, selectedBarcodeEntry);
     setSearchProduct(selectedLabel);
     setSelectedProductLabel(selectedLabel);
     setSelectedProduct(product);
-    setShowSuggestions(false);
+    setExpandedProductId(product.id);
+    setShowSuggestions(true);
     setShowBarcodeForm(false);
     setShowPriceEditor(false);
     setBarcodeValue("");
+    setBarcodeVariantName("");
     setBarcodeError("");
     setBarcodeSaved(false);
     setActiveBarcodeIndex(nextActiveBarcodeIndex);
+    setActiveBarcodeValue(normalizedActiveBarcode || productBarcodes[0] || "");
     setPurchasePrice((product.supplierPrice ?? product.wholesalePrice ?? "").toString());
-    setPurchaseType(PURCHASE_TYPES.UNIT);
+    setPurchaseType(getAvailablePurchaseTypes(product)[0]);
     setProductQuantityPerPack(product.quantityPerPack || 0);
     setEditingPrices({
       retailPrice: product.retailPrice?.toString() || "",
@@ -362,15 +452,18 @@ const CreateSidebar = ({
     }
     setSearchProduct(val);
     setShowSuggestions(true);
+    setExpandedProductId(null);
     if (selectedProduct && val !== selectedProduct.nombre) {
       setSelectedProduct(null);
       setSelectedProductLabel("");
       setShowBarcodeForm(false);
       setShowPriceEditor(false);
       setBarcodeValue("");
+      setBarcodeVariantName("");
       setBarcodeError("");
       setBarcodeSaved(false);
       setActiveBarcodeIndex(0);
+      setActiveBarcodeValue("");
       setPurchasePrice("");
       setPurchaseType(PURCHASE_TYPES.UNIT);
       setProductQuantityPerPack(0);
@@ -413,17 +506,38 @@ const CreateSidebar = ({
     });
   };
 
+  const handleExpandProduct = (productId) => {
+    setExpandedProductId((currentId) => (
+      Number(currentId) === Number(productId) ? null : productId
+    ));
+    setShowSuggestions(true);
+  };
+
   useBarcodeScanner({
     enabled: true,
     numericOnly: true,
     minLength: 6,
     maxLength: 20,
+    maxIntervalMs: 120,
     scannerFields: ["purchase-product-search"],
     duplicateDelayMs: 800,
     preventTerminatorDefault: true,
-    onScan: ({ code, scannerField }) => {
+    onScan: ({ code, event, scannerField }) => {
       if (scannerField !== "purchase-product-search") return;
-      handleScannedProduct(code);
+
+      // Algunos lectores escriben el valor completo en el input aunque el
+      // buffer del Scanner no reciba todos los caracteres a tiempo.
+      const inputValue = event?.target?.value;
+      const scannedCode = normalizeBarcode(code, { numericOnly: true });
+      const products = productsDB.map(getProductWithLocalBarcodes);
+      const inputCandidates = String(inputValue ?? '')
+        .match(/\d{6,20}/g)
+        ?.reverse() || [];
+      const resolvedCode = [scannedCode, ...inputCandidates].find((candidate) => (
+        findProductBarcodeMatch(products, candidate, { numericOnly: true })
+      )) || scannedCode;
+
+      handleScannedProduct(resolvedCode);
     },
   });
 
@@ -444,6 +558,30 @@ const CreateSidebar = ({
     }
   };
 
+  const handleAddBarcodeForProduct = (product) => {
+    setSelectedProduct(product);
+    setSelectedProductLabel(product.nombre || product.name || "Producto sin nombre");
+    setSearchProduct(product.nombre || product.name || "");
+    setPurchasePrice((product.supplierPrice ?? product.wholesalePrice ?? "").toString());
+    setPurchaseType(getAvailablePurchaseTypes(product)[0]);
+    setProductQuantityPerPack(product.quantityPerPack || 0);
+    setEditingPrices({
+      retailPrice: product.retailPrice?.toString() || "",
+      wholesalePrice: product.wholesalePrice?.toString() || "",
+      partnerPrice: product.partnerPrice?.toString() || "",
+      bulkPrice: product.bulkPrice?.toString() || "",
+    });
+    setActiveBarcodeIndex(0);
+    setBarcodeValue("");
+    setBarcodeVariantName("");
+    setBarcodeError("");
+    setBarcodeSaved(false);
+    setShowPriceEditor(false);
+    setShowBarcodeForm(true);
+    setExpandedProductId(product.id);
+    setShowSuggestions(true);
+  };
+
   const handleTogglePriceEditor = () => {
     if (!selectedProduct) return;
     if (showBarcodeForm) setShowBarcodeForm(false);
@@ -453,6 +591,7 @@ const CreateSidebar = ({
 
   const handleSaveBarcode = () => {
     const trimmed = barcodeValue.trim();
+    const trimmedVariantName = barcodeVariantName.trim();
     if (!trimmed) {
       setBarcodeError("El codigo de barras es obligatorio");
       return;
@@ -461,17 +600,50 @@ const CreateSidebar = ({
       setBarcodeError("El codigo debe tener entre 8 y 13 digitos numericos");
       return;
     }
+    if (!trimmedVariantName) {
+      setBarcodeError("El estilo o nombre de la referencia es obligatorio");
+      return;
+    }
     if (allUsedBarcodes.includes(trimmed)) {
       setBarcodeError("Este codigo de barras ya esta registrado");
       return;
     }
 
     const key = selectedProduct.codigoBarras;
+    const newBarcodeEntry = {
+      barcode: trimmed,
+      variantName: trimmedVariantName,
+      stock: 0,
+      isActive: true,
+    };
+
+    const nextBarcodeValues = getProductBarcodeValues({
+      ...getProductWithLocalBarcodes(selectedProduct),
+      codigosExtra: [
+        ...getProductWithLocalBarcodes(selectedProduct).codigosExtra,
+        newBarcodeEntry,
+      ],
+    });
+    const newBarcodeIndex = nextBarcodeValues.findIndex(
+      (barcode) => normalizeBarcode(barcode) === trimmed
+    );
+
     onExtraBarcodesChange((prev) => ({
       ...prev,
-      [key]: [...new Set([...(prev[key] || []), trimmed])],
+      [key]: [
+        ...(prev[key] || []),
+        newBarcodeEntry,
+      ].filter((entry, index, entries) => (
+        entries.findIndex((candidate) => (
+          normalizeBarcode(candidate.barcode || candidate) === trimmed
+        )) === index
+      )),
     }));
 
+    setActiveBarcodeIndex(newBarcodeIndex);
+    setActiveBarcodeValue(trimmed);
+    setSearchProduct(getScannedProductLabel(selectedProduct, newBarcodeEntry));
+    setSelectedProductLabel(getScannedProductLabel(selectedProduct, newBarcodeEntry));
     setBarcodeError("");
     setBarcodeSaved(true);
     showSuccess("Código agregado", "El código se guardará cuando confirmes la compra.");
@@ -479,7 +651,25 @@ const CreateSidebar = ({
       setBarcodeSaved(false);
       setShowBarcodeForm(false);
       setBarcodeValue("");
+      setBarcodeVariantName("");
     }, 1800);
+  };
+
+  const handleBarcodeValueChange = (event) => {
+    const value = event.target.value.replace(/\D/g, "").slice(0, 13);
+    setBarcodeValue(value);
+
+    if (!value) {
+      setBarcodeError("");
+      return;
+    }
+
+    if (allUsedBarcodes.includes(normalizeBarcode(value))) {
+      setBarcodeError("Este codigo de barras ya esta registrado");
+      return;
+    }
+
+    setBarcodeError("");
   };
 
   const formatThousands = (value = "") => {
@@ -777,8 +967,34 @@ const CreateSidebar = ({
         label: purchaseType.label,
         quantity: finalQuantity,
         quantityPerPack: productQuantityPerPack,
+        idBarcode: selectedBarcodeEntry?.id ?? null,
       }
     );
+
+    setSelectedProduct(null);
+    setSelectedProductLabel("");
+    setSearchProduct("");
+    setShowSuggestions(false);
+    setExpandedProductId(null);
+    setShowBarcodeForm(false);
+    setShowPriceEditor(false);
+    setBarcodeValue("");
+    setBarcodeVariantName("");
+    setBarcodeError("");
+    setBarcodeSaved(false);
+    setActiveBarcodeIndex(0);
+    setActiveBarcodeValue("");
+    setPurchasePrice("");
+    setPurchaseType(PURCHASE_TYPES.UNIT);
+    setProductQuantityPerPack(0);
+    setEditingPrices({
+      retailPrice: "",
+      wholesalePrice: "",
+      partnerPrice: "",
+      bulkPrice: "",
+    });
+    setPriceErrors({});
+    setQuantity(1);
   };
 
   const currentType = purchaseType;
@@ -941,9 +1157,6 @@ const CreateSidebar = ({
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
                 <input type="text" value={searchProduct} onChange={handleSearchChange} data-scanner-field="purchase-product-search" placeholder="Buscar producto o codigo" className={`w-full rounded-lg border bg-white py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none transition-colors focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 ${searchProduct && !selectedProduct && filteredProducts.length === 0 ? "border-red-400" : "border-gray-300"}`} />
               </div>
-              <button type="button" onClick={handleToggleBarcodeForm} disabled={!selectedProduct} title={!selectedProduct ? "Primero selecciona un producto" : "Agregar codigo de barras adicional"} className={`flex h-[42px] w-10 shrink-0 items-center justify-center rounded-lg border transition-colors ${!selectedProduct ? "border-gray-200 bg-gray-100 text-gray-300 cursor-not-allowed" : showBarcodeForm ? "border-blue-600 bg-blue-600 text-white" : "border-blue-500 bg-white text-blue-600 hover:bg-blue-50 hover:border-blue-600"}`}>
-                <Barcode size={16} />
-              </button>
               <button type="button" onClick={openCreateProduct} title="Crear producto" className="flex h-[42px] w-10 shrink-0 items-center justify-center rounded-lg border border-[#004D77] bg-white text-[#004D77] transition-colors hover:bg-[#004D77] hover:text-white">
                 <Plus size={16} />
               </button>
@@ -958,8 +1171,22 @@ const CreateSidebar = ({
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1.5">Nuevo codigo de barras</label>
-                  <input type="text" value={barcodeValue} onChange={(e) => { const val = e.target.value.replace(/\D/g, "").slice(0, 13); setBarcodeValue(val); setBarcodeError(""); }} placeholder="Ej: 7701234000099" maxLength={13} className={`w-full px-3 py-2 bg-white border rounded-lg text-sm text-gray-700 outline-none transition-all font-mono tracking-wider ${barcodeError ? "border-red-400 focus:ring-2 focus:ring-red-300" : "border-gray-300 focus:ring-2 focus:ring-[#004D77]"}`} />
+                  <input type="text" value={barcodeValue} onChange={handleBarcodeValueChange} placeholder="Ej: 7701234000099" maxLength={13} className={`w-full px-3 py-2 bg-white border rounded-lg text-sm text-gray-700 outline-none transition-all font-mono tracking-wider ${barcodeError ? "border-red-400 focus:ring-2 focus:ring-red-300" : "border-gray-300 focus:ring-2 focus:ring-[#004D77]"}`} />
                   <p className="text-right text-xs text-gray-400 mt-1">{barcodeValue.length}/13 digitos</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Estilo o nombre de la referencia</label>
+                  <input
+                    type="text"
+                    value={barcodeVariantName}
+                    onChange={(e) => {
+                      setBarcodeVariantName(e.target.value);
+                      setBarcodeError("");
+                    }}
+                    placeholder="Ej: Rojo, Grande, Presentacion x10"
+                    maxLength={100}
+                    className={`w-full px-3 py-2 bg-white border rounded-lg text-sm text-gray-700 outline-none transition-all ${barcodeError && !barcodeVariantName.trim() ? "border-red-400 focus:ring-2 focus:ring-red-300" : "border-gray-300 focus:ring-2 focus:ring-[#004D77]"}`}
+                  />
                 </div>
                 {barcodeError && <p className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={12} /> {barcodeError}</p>}
                 <button type="button" onClick={handleSaveBarcode} className={`w-full py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all ${barcodeSaved ? "bg-green-500 text-white" : "bg-blue-600 text-white hover:bg-blue-700"}`}>
@@ -974,12 +1201,61 @@ const CreateSidebar = ({
 
             {showSuggestions && searchProduct && filteredProducts.length > 0 && (
               <div className="absolute z-50 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-xl">
-                {filteredProducts.slice(0, 6).map((product) => (
-                  <div key={product.id} onClick={() => handleSelectProduct(product)} className="cursor-pointer px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-[#004D77]/10">
-                    <div className="font-semibold">{product.nombre}</div>
-                    <div className="text-xs opacity-70">Codigo: {product.codigoBarras}</div>
-                  </div>
-                ))}
+                {(expandedProductId === null
+                  ? filteredProducts.slice(0, 6)
+                  : filteredProducts.filter((product) => (
+                    Number(product.id) === Number(expandedProductId)
+                  ))
+                ).map((product) => {
+                  const barcodeOptions = getPurchaseBarcodeOptions(
+                    getProductWithLocalBarcodes(product)
+                  );
+                  return (
+                    <div key={product.id} className="px-4 py-2 text-sm text-gray-700">
+                      <button
+                        type="button"
+                        onClick={() => handleExpandProduct(product.id)}
+                        className="flex w-full items-center justify-between text-left"
+                      >
+                        <span className="font-semibold">{product.nombre || product.name}</span>
+                        <span className="text-[10px] text-[#004D77]">
+                          {expandedProductId === product.id ? "Ocultar" : "Ver códigos"}
+                        </span>
+                      </button>
+                      {expandedProductId === product.id && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {barcodeOptions.map((barcodeOption) => (
+                            <button
+                              key={`${product.id}-${barcodeOption.id || barcodeOption.barcode}`}
+                              type="button"
+                              onClick={() => handleSelectProduct(product, barcodeOption.barcode)}
+                              className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-700 transition-colors hover:border-[#004D77] hover:bg-[#004D77]/10"
+                            >
+                              {barcodeOption.variantName || "Estilo"} · {barcodeOption.barcode}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => handleAddBarcodeForProduct(product)}
+                            className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 transition-colors hover:border-blue-400 hover:bg-blue-100"
+                          >
+                            <span className="mr-1">+</span>
+                            Nuevo código
+                          </button>
+                        </div>
+                      )}
+                      {expandedProductId === product.id && (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedProductId(null)}
+                          className="mt-2 text-xs font-medium text-[#004D77] underline underline-offset-2 hover:text-[#003653]"
+                        >
+                          Mostrar menos
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -988,6 +1264,14 @@ const CreateSidebar = ({
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-lg text-xs text-[#004D77] font-medium">
                   <Check size={11} className="text-green-500" /> {selectedProductLabel || selectedProduct.nombre}
                 </span>
+                {selectedBarcodeEntry && (
+                  <span className="text-xs text-gray-400">
+                    Stock actual:
+                    <span className="ml-1 font-semibold text-[#004D77]">
+                      {Number(selectedBarcodeEntry.stock) || 0}
+                    </span>
+                  </span>
+                )}
                 {availableBarcodes.length > 1 && (
                   <span className="text-xs text-gray-400">Codigo activo: <span className="ml-1 font-mono font-semibold text-[#004D77]">{resolvedBarcode}</span></span>
                 )}
@@ -1008,7 +1292,7 @@ const CreateSidebar = ({
               </button>
               {showTypeDropdown && selectedProduct && (
                 <div className="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-xl py-1 overflow-hidden">
-                  {Object.values(PURCHASE_TYPES).map((type) => {
+                  {getAvailablePurchaseTypes(selectedProduct).map((type) => {
                     const Icon = type.icon;
                     const isActive = purchaseType.value === type.value;
                     return (
@@ -1252,20 +1536,6 @@ const CreateSidebar = ({
               </div>
             </div>
           </div>
-
-          {/* SELECTOR CODIGO ACTIVO */}
-          {selectedProduct && availableBarcodes.length > 1 && (
-            <div className="mb-2 mt-3">
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Selecciona el codigo a usar al agregar</label>
-              <div className="flex flex-wrap gap-1.5">
-                {availableBarcodes.map((code, i) => (
-                  <button key={code} type="button" onClick={() => setActiveBarcodeIndex(i)} className={`px-2.5 py-1 rounded-lg text-xs font-mono border transition-all ${activeBarcodeIndex === i ? "bg-[#004D77] text-white border-[#004D77] shadow-sm" : "bg-white text-gray-600 border-gray-300 hover:border-[#004D77]"}`}>
-                    {i === 0 ? "Original" : `Nuevo ${i}`}: {code}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* CANTIDAD */}
           <div className="flex flex-col gap-1.5">

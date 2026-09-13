@@ -38,11 +38,13 @@ function PriceCard({ label, fieldMain, fieldPaca, valueMain, valuePaca, placehol
     const digits = numeric(v);
     return digits === '' ? '' : String(Math.min(100, Number(digits)));
   };
+
   const formatCop = (value) => {
     const digits = numeric(String(value ?? ''));
     if (!digits) return '';
     return `$ ${Number(digits).toLocaleString('es-CO')}`;
   };
+
   const hm = !!errMain;
   const hp = !!errPaca;
 
@@ -139,6 +141,7 @@ function ProductForm({
   const [formData, setFormData] = useState(initialForm);
   const [imagenesActuales, setImagenesActuales] = useState([]);
   const [imagenesNuevas, setImagenesNuevas] = useState([]);
+  const [imagenesEliminadas, setImagenesEliminadas] = useState([]);
   const [errors, setErrors] = useState({});
   const [scannerMessage, setScannerMessage] = useState(null);
   const [priceErrors, setPriceErrors] = useState({});
@@ -146,6 +149,7 @@ function ProductForm({
   const [subcategories, setSubcategories] = useState([]);
   const [unitMeasures, setUnitMeasures] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [checkingBarcodeIds, setCheckingBarcodeIds] = useState({});
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
   const [selectedSubcategoryIds, setSelectedSubcategoryIds] = useState([]);
   const [expandedCategoryIds, setExpandedCategoryIds] = useState({});
@@ -211,6 +215,7 @@ function ProductForm({
 
     setImagenesActuales(producto.images || []);
     setImagenesNuevas([]);
+    setImagenesEliminadas([]);
     setSelectedCategoryIds(categoryIds);
     setSelectedSubcategoryIds(subcategoryIds);
     setExpandedCategoryIds(expanded);
@@ -413,7 +418,7 @@ function ProductForm({
     } else if (d.referencia.trim().length > 50) {
       e.referencia = 'La referencia no puede superar los 50 caracteres.';
     }
-    if (isExistingProduct) {
+    if (isExistingProduct && !isEditMode) {
       if (d.stockPrincipal === '') e.stockPrincipal = 'El stock es obligatorio.';
       else if (!Number.isInteger(Number(d.stockPrincipal)) || Number(d.stockPrincipal) < 0) e.stockPrincipal = 'El stock debe ser un numero entero mayor o igual a 0.';
     }
@@ -484,6 +489,13 @@ function ProductForm({
     }
   };
 
+  const handleRemoveCurrentImage = (image) => {
+    setImagenesActuales((prev) => prev.filter((item) => item.id !== image.id));
+    if (image.id) {
+      setImagenesEliminadas((prev) => (prev.includes(image.id) ? prev : [...prev, image.id]));
+    }
+  };
+
   const handleAddCodBarras = () => {
     setFormData((prev) => ({ ...prev, codsBarrasExtra: [...(prev.codsBarrasExtra || []), { cod: '', stock: '', variantName: '', variantImage: null, variantImageUrl: null }] }));
   };
@@ -506,6 +518,31 @@ function ProductForm({
       .filter((variant) => variant.cod?.trim())
       .map((variant, index) => ({ index, file: variant.variantImage }));
 
+  const closePreviewImage = () => {
+    if (previewImage?.isObjectUrl) {
+      URL.revokeObjectURL(previewImage.src);
+    }
+    setPreviewImage(null);
+  };
+
+  const previewVariantImage = (item) => {
+    if (item.variantImage) {
+      setPreviewImage({
+        src: URL.createObjectURL(item.variantImage),
+        alt: item.variantImage.name,
+        isObjectUrl: true,
+      });
+      return;
+    }
+
+    if (item.variantImageUrl) {
+      setPreviewImage({
+        src: item.variantImageUrl,
+        alt: `Imagen de ${item.variantName || item.cod || 'la variante'}`,
+      });
+    }
+  };
+
   const updateVariantRow = (index, field, value) => {
     if (index === 0) {
       setFormData((prev) => ({
@@ -518,6 +555,20 @@ function ProductForm({
       return;
     }
     handleCodBarrasExtraChange(index - 1, field, value);
+  };
+
+  const removeVariantImage = (index) => {
+    updateVariantRow(index, 'variantImage', null);
+    if (index === 0) {
+      setFormData((prev) => ({ ...prev, variantImagePrincipalUrl: null }));
+      return;
+    }
+
+    setFormData((prev) => {
+      const updated = [...(prev.codsBarrasExtra || [])];
+      updated[index - 1] = { ...updated[index - 1], variantImageUrl: null };
+      return { ...prev, codsBarrasExtra: updated };
+    });
   };
 
   const handleCodBarrasExtraChange = (index, field, value) => {
@@ -556,6 +607,45 @@ function ProductForm({
     });
   };
 
+  const handleRemoveVariant = async (index) => {
+    const barcode = formData.codsBarrasExtra?.[index];
+    if (!barcode) return;
+
+    if (!isEditMode || !barcode.id) {
+      setFormData((prev) => ({
+        ...prev,
+        codsBarrasExtra: (prev.codsBarrasExtra || []).filter((_, idx) => idx !== index),
+      }));
+      return;
+    }
+
+    setCheckingBarcodeIds((prev) => ({ ...prev, [barcode.id]: true }));
+    try {
+      const relation = await ProductsService.checkBarcodeRelations(barcode.id);
+      if (relation?.hasRelations) {
+        showError(
+          'Variante con movimientos asociados',
+          `El código ${relation.barcode || barcode.cod} no se puede quitar porque está relacionado con otros procesos.`,
+        );
+        return;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        codsBarrasExtra: (prev.codsBarrasExtra || []).filter((item) => item.id !== barcode.id),
+      }));
+    } catch (error) {
+      const alert = getProductAlertError(error, 'update');
+      showError(alert.title, alert.text);
+    } finally {
+      setCheckingBarcodeIds((prev) => {
+        const next = { ...prev };
+        delete next[barcode.id];
+        return next;
+      });
+    }
+  };
+
   useBarcodeScanner({
     enabled: !isSubmitting,
     numericOnly: true,
@@ -564,7 +654,8 @@ function ProductForm({
     maxIntervalMs: 120,
     scannerFields: ['product-form-barcode'],
     duplicateDelayMs: 800,
-    preventDefault: true,
+    // Permite que el input reciba la digitación manual; el Scanner procesa la misma secuencia.
+    preventDefault: false,
     onScan: ({ code, event, scannerField }) => {
       if (scannerField !== 'product-form-barcode') return;
 
@@ -658,6 +749,7 @@ function ProductForm({
           descripcion: formData.descripcion,
           cantidadXPaca: Number(formData.cantidadXPaca),
           id_category: selectedPrimaryCategoryId,
+          codBarrasId: formData.codBarrasId,
           codBarras: formData.codBarras,
           codBarrasVariantName: formData.variantNamePrincipal,
           codBarrasVariantImageUrl: formData.variantImagePrincipalUrl,
@@ -667,6 +759,7 @@ function ProductForm({
           categories: selectedCategoryIds,
           subcategories: selectedSubcategoryIds,
           images: imagenesNuevas,
+          deletedImageIds: imagenesEliminadas,
         });
         showSuccess('Producto actualizado', `Los datos de "${saved.name}" quedaron guardados correctamente.`);
       } else {
@@ -878,7 +971,12 @@ function ProductForm({
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-gray-700">Variantes y códigos de barras</p>
-                    <p className="text-xs text-gray-400">Cada código puede tener estilo, stock e imagen propia.</p>
+                    <p className="text-xs text-gray-400">
+                      Cada código puede tener estilo e imagen propia.
+                      {isEditMode
+                        ? ' El stock se gestiona desde los movimientos de inventario.'
+                        : ' El stock inicial se define al crear el producto.'}
+                    </p>
                   </div>
                   <button type="button" onClick={handleAddCodBarras} className="flex shrink-0 items-center gap-1 text-sm font-medium text-[#004D77] px-2 py-1 rounded-md hover:bg-[#004D77]/10 transition-colors duration-200 cursor-pointer">
                     <Plus className="w-3 h-3" />
@@ -899,15 +997,45 @@ function ProductForm({
                         </div>
                         <div className="relative border-t border-gray-200 bg-gray-50 md:border-l md:border-t-0">
                           <Boxes className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                          <input type="text" inputMode="numeric" value={item.stock ?? ''} onChange={(e) => updateVariantRow(i, 'stock', numeric(e.target.value))} onKeyDown={block} placeholder="Stock" className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm font-semibold text-gray-700 outline-none placeholder-gray-400" />
+                          <input type="text" inputMode="numeric" value={item.stock ?? ''} onChange={(e) => updateVariantRow(i, 'stock', numeric(e.target.value))} onKeyDown={block} readOnly={isEditMode} aria-readonly={isEditMode} placeholder="Stock" className={`h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm font-semibold outline-none placeholder-gray-400 ${isEditMode ? 'cursor-not-allowed text-gray-500' : 'text-gray-700'}`} />
                         </div>
-                        <label className="flex h-[42px] cursor-pointer items-center gap-2 border-t border-gray-200 px-3 text-xs text-gray-500 md:border-l md:border-t-0">
-                          <ImagePlus className="h-4 w-4 shrink-0 text-[#004D77]" />
-                          <span className="truncate">{item.variantImage?.name || (item.variantImageUrl ? 'Imagen asignada' : 'Asignar imagen')}</span>
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => updateVariantRow(i, 'variantImage', e.target.files?.[0] || null)} />
-                        </label>
+                        <div className={`flex h-[42px] items-center gap-1 border-t border-gray-200 px-3 text-xs md:border-l md:border-t-0 ${item.variantImage ? 'text-[#004D77]' : item.variantImageUrl ? 'text-emerald-700' : 'text-gray-500'}`}>
+                          <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-1" title={item.variantImage?.name || (item.variantImageUrl ? 'Esta variante ya tiene una imagen asignada.' : 'Esta variante aún no tiene una imagen asignada.')}>
+                            <ImagePlus className={`h-4 w-4 shrink-0 ${item.variantImage ? 'text-[#004D77]' : item.variantImageUrl ? 'text-emerald-600' : 'text-gray-400'}`} />
+                            <span className="truncate">
+                              {item.variantImage?.name
+                                ? `Nueva imagen: ${item.variantImage.name}`
+                                : item.variantImageUrl
+                                  ? 'Cambiar imagen'
+                                  : 'Sin imagen asignada'}
+                            </span>
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => updateVariantRow(i, 'variantImage', e.target.files?.[0] || null)} />
+                          </label>
+                          {(item.variantImage || item.variantImageUrl) && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => previewVariantImage(item)}
+                                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md font-semibold hover:bg-gray-100"
+                                title="Ver imagen"
+                                aria-label="Ver imagen"
+                              >
+                                <Maximize2 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeVariantImage(i)}
+                                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md font-semibold text-red-600 hover:bg-red-50"
+                                title="Quitar imagen"
+                                aria-label="Quitar imagen"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      {i > 0 && <button type="button" onClick={() => setFormData((prev) => ({ ...prev, codsBarrasExtra: (prev.codsBarrasExtra || []).filter((_, idx) => idx !== i - 1) }))} className="mt-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-red-100 text-red-500 hover:bg-red-200"><X className="h-3.5 w-3.5" /></button>}
+                      {i > 0 && <button type="button" onClick={() => handleRemoveVariant(i - 1)} disabled={Boolean(item.id && checkingBarcodeIds[item.id])} className="mt-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-red-100 text-red-500 hover:bg-red-200 disabled:cursor-wait disabled:opacity-50" title="Quitar variante"><X className="h-3.5 w-3.5" /></button>}
                     </div>
                   ))}
                 </div>
@@ -1027,6 +1155,14 @@ function ProductForm({
                               >
                                 <Maximize2 className="h-4 w-4" />
                               </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveCurrentImage(img)}
+                                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-red-500 text-white shadow hover:bg-red-600"
+                                title="Quitar imagen"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
                             </div>
                           </div>
                         ))}
@@ -1105,12 +1241,12 @@ function ProductForm({
       </div>
     </div>
     {previewImage && (
-      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 p-4" onClick={() => setPreviewImage(null)}>
+      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 p-4" onClick={closePreviewImage}>
         <div className="relative max-h-[92vh] max-w-5xl" onClick={(event) => event.stopPropagation()}>
           <img src={previewImage.src} alt={previewImage.alt} className="max-h-[88vh] max-w-full rounded-xl object-contain shadow-2xl" />
           <button
             type="button"
-            onClick={() => setPreviewImage(null)}
+            onClick={closePreviewImage}
             className="absolute -right-3 -top-3 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white text-gray-700 shadow-lg hover:bg-gray-100"
             title="Cerrar imagen"
           >

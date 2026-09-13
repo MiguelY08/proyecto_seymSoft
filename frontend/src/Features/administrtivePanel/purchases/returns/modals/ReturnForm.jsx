@@ -410,11 +410,12 @@ const LineaConfig = ({
   isEditMode,
   disabled = false,
 }) => {
+  const esExistente = isExistingReturnLine(linea);
   const esTerminal =
-    isEstadoTerminal(linea.estado) || isEstadoProveedorRechazado(linea.estado);
+    esExistente &&
+    (isEstadoTerminal(linea.estado) || isEstadoProveedorRechazado(linea.estado));
   const esRechazoProveedor = isEstadoProveedorRechazado(linea.estado);
   const badgeStyle = getBadgeEstadoProducto(linea.estado);
-  const esExistente = isExistingReturnLine(linea);
   const estadoBase = linea.estadoOriginal || linea.estado;
   const estadosDisp = !isEditMode
     ? linea.tipoDevolucion
@@ -654,6 +655,9 @@ const ProductConfig = ({
           <div className="flex items-center gap-2 flex-wrap">
             <h4 className="text-sm font-semibold text-gray-800 truncate">
               {producto.nombre}
+              {producto.variantName && (
+                <span className="font-normal text-gray-500"> - {producto.variantName}</span>
+              )}
             </h4>
             <span
               className="px-2 py-0.5 rounded-full text-xs font-semibold"
@@ -663,6 +667,7 @@ const ProductConfig = ({
             </span>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+            <span className="font-mono">Código: {producto.codigoBarras || "-"}</span>
             <span>
               Devolución: {totalUsado}/{cantidadLimite} u.
             </span>
@@ -701,9 +706,7 @@ const ProductConfig = ({
                 const erroresLinea = errores?.lineas?.[idx] ?? {};
                 const esNueva = !isExistingReturnLine(linea);
                 const canRemove =
-                  esNueva &&
-                  !isEstadoTerminal(linea.estado) &&
-                  !isEstadoProveedorRechazado(linea.estado);
+                  esNueva;
                 const editableCompleto = !isEditMode || esNueva;
 
                 return (
@@ -776,6 +779,7 @@ const ReturnForm = ({
         idProduct: p.idProduct ?? p.productId,
         productId: p.productId ?? p.idProduct,
         nombre: p.nombre ?? p.producto ?? "Producto",
+        variantName: p.variantName ?? "",
         codigoBarras: p.codigoBarras,
         valorUnit: p.valorUnit,
         iva: p.iva ?? 0,
@@ -829,6 +833,7 @@ const ReturnForm = ({
             idProduct: p.idProduct ?? p.productId ?? original?.idProduct,
             productId: p.productId ?? p.idProduct ?? original?.productId,
             nombre: p.nombre,
+            variantName: original?.variantName ?? p.variantName ?? "",
             codigoBarras: p.codigoBarras,
             valorUnit: p.valorUnit,
             iva: p.iva ?? 0,
@@ -1328,6 +1333,12 @@ const ReturnForm = ({
                         <div className="flex items-center justify-between gap-1 mb-1">
                           <p className="text-xs font-semibold text-gray-800 truncate">
                             {p.nombre}
+                            {p.variantName && (
+                              <span className="font-normal text-gray-500"> - {p.variantName}</span>
+                            )}
+                          </p>
+                          <p className="mt-0.5 font-mono text-[10px] text-gray-500">
+                            Código: {p.codigoBarras || "-"}
                           </p>
                           {isSelected && tieneError && (
                             <AlertCircle className="w-3 h-3 text-red-500" />

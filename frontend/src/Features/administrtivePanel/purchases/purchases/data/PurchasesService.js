@@ -128,6 +128,7 @@ export const mapPurchaseToFrontend = (purchase) => {
       idProduct: detail.productId,
       productId: detail.productId,
       nombre: detail.productName || 'Producto sin nombre',
+      variantName: detail.variantName || detail.barcodeVariantName || '',
       codigoBarras: detail.barcode || '',
       cantidad: cantidadComprada,
       cantidadComprada,
@@ -247,6 +248,8 @@ export const createPurchase = async (purchaseData) => {
       idProvider: purchaseData.idProvider,
       details: purchaseData.productos.map(product => ({
         idProduct: product.idProduct,
+        idBarcode: product.idBarcode,
+        barcode: product.barcode,
         quantity: product.cantidad,
         supplierPrice: product.supplierPrice,
         purchaseType: product.purchaseType || "Unidad",
@@ -331,6 +334,8 @@ export const getProducts = async (searchTerm = '') => {
     return products.map(p => ({
       id: p.id,
       nombre: p.name,
+      referencia: p.reference || '',
+      unitMeasure: p.unitMeasure || null,
       barcodes: Array.isArray(p.barcodes)
         ? p.barcodes.map(barcode => ({
             id: barcode.id,

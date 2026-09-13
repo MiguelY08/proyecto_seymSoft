@@ -105,29 +105,9 @@ const BarcodeCell = ({ codigoBarras, codigosExtra = [] }) => (
   <div className="flex items-center justify-center gap-1.5">
     <span className="font-mono text-xs text-gray-600">{codigoBarras ?? "-"}</span>
     {codigosExtra.length > 0 && (
-      <div className="group relative">
-        <span className="inline-flex cursor-default select-none items-center rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-[#004D77]">
-          +{codigosExtra.length}
-        </span>
-        <div className="absolute bottom-full left-1/2 z-50 mb-2 hidden min-w-[190px] -translate-x-1/2 rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-xl group-hover:block">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-gray-400">
-            Códigos adicionales
-          </p>
-          <ul className="flex flex-col gap-1.5">
-            {codigosExtra.map((code, index) => (
-              <li
-                key={`${code}-${index}`}
-                className="flex items-center gap-2 text-xs font-mono text-gray-700"
-              >
-                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#004D77] text-[9px] font-bold text-white">
-                  {index + 1}
-                </span>
-                {code}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+      <span className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-[#004D77]">
+        +{codigosExtra.length}
+      </span>
     )}
   </div>
 );
@@ -345,6 +325,9 @@ const DetailPurchases = ({ purchase, onClose, loading = false }) => {
                         >
                           <td className="px-3 py-2 text-xs font-medium text-gray-800">
                             {product.nombre ?? "-"}
+                            {product.variantName && (
+                              <span className="font-normal text-gray-500"> - {product.variantName}</span>
+                            )}
                           </td>
                           <td className="px-3 py-2">
                             <BarcodeCell

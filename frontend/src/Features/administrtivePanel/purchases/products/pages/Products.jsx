@@ -17,6 +17,7 @@ import { usePermissions } from "../../../configuration/roles/hooks/usePermission
 import ActiveToggle from "../components/ActiveToggle";
 import PaginationAdmin from "../../../../shared/PaginationAdmin";
 import ProductsToolbar from "../components/ProductsToolbar";
+import ProductStockHover from "../components/ProductStockHover";
 import DetailProduct from "../modals/DetailProduct";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import Spinner from "../../../../shared/spinner";
@@ -53,8 +54,14 @@ const getProductSubcategoryNames = (product) =>
 const getProductTotalStock = (product) =>
   Number(product?.totalStock ?? product?.stock ?? 0) || 0;
 
-const hasLowStock = (product) =>
-  getProductTotalStock(product) < LOW_STOCK_THRESHOLD;
+const hasLowStock = (product) => {
+  if (getProductTotalStock(product) < LOW_STOCK_THRESHOLD) return true;
+
+  return Array.isArray(product?.barcodes)
+    && product.barcodes.some(
+      (barcode) => Number(barcode?.stock ?? 0) < LOW_STOCK_THRESHOLD,
+    );
+};
 
 function EmptyState({ onCreateProduct, canCreate, isSearching }) {
   return (
@@ -613,8 +620,8 @@ function Products() {
               <p className="text-sm font-semibold">Productos con stock bajo</p>
               <p className="text-xs leading-relaxed text-amber-700">
                 {lowStockCount === 1
-                  ? "Hay 1 producto con menos de 10 unidades disponibles."
-                  : `Hay ${lowStockCount} productos con menos de 10 unidades disponibles.`}
+                ? "Hay 1 producto con stock total o alguna presentación por debajo de 10 unidades."
+                : `Hay ${lowStockCount} productos con stock total o alguna presentación por debajo de 10 unidades.`}
                 {" Revisa el inventario para programar una compra."}
               </p>
             </div>
@@ -733,29 +740,12 @@ function Products() {
                         </td>
                         <td className="px-3 py-2 text-center text-xs text-gray-700 whitespace-nowrap">
                           <div className="flex items-center justify-center gap-1.5">
-                            <div className={`flex h-7 w-24 items-center justify-center gap-1.5 rounded-md border bg-white px-2 shadow-sm ${
-                              lowStock ? "border-amber-300" : "border-[#004D77]/15"
-                            }`}>
-                              <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${
-                                lowStock ? "bg-amber-100 text-amber-700" : "bg-[#004D77]/10 text-[#004D77]"
-                              }`}>
-                                {lowStock ? (
-                                  <AlertTriangle className="h-3.5 w-3.5" strokeWidth={2} />
-                                ) : (
-                                  <Package className="h-3.5 w-3.5" strokeWidth={2} />
-                                )}
-                              </span>
-                              <span className={`min-w-0 truncate font-semibold ${
-                                lowStock ? "text-amber-800" : "text-gray-800"
-                              }`}>
-                                <HighlightText
-                                  text={getProductTotalStock(row).toLocaleString(
-                                    "es-CO",
-                                  )}
-                                  highlight={search}
-                                />
-                              </span>
-                            </div>
+                            <ProductStockHover
+                              product={row}
+                              totalStock={getProductTotalStock(row)}
+                              lowStock={lowStock}
+                              search={search}
+                            />
                           </div>
                         </td>
                         <td className="px-3 py-2 text-center text-xs text-gray-800 whitespace-nowrap font-semibold">

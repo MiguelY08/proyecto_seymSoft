@@ -32,14 +32,11 @@ const BarcodeCell = ({ codigoBarras, codigosExtra = [] }) => (
           </p>
           <ul className="flex flex-col gap-1.5">
             {codigosExtra.map((code, index) => (
-              <li
-                key={`${code}-${index}`}
-                className="flex items-center gap-2 text-xs font-mono text-gray-700"
-              >
+              <li key={`${typeof code === "object" ? code.barcode : code}-${index}`} className="flex items-center gap-2 text-xs font-mono text-gray-700">
                 <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#004D77] text-[9px] font-bold text-white">
                   {index + 1}
                 </span>
-                {code}
+                {typeof code === "object" ? code.barcode || code.cod : code}
               </li>
             ))}
           </ul>
@@ -75,7 +72,12 @@ const CreateTable = ({ currentData, handleDeleteItem, handleEditItem }) => (
               index % 2 === 0 ? "bg-white" : "bg-gray-50"
             } transition-colors hover:bg-blue-50`}
           >
-            <td className="px-3 py-2 text-xs font-medium text-gray-800">{item.producto}</td>
+            <td className="px-3 py-2 text-xs font-medium text-gray-800">
+              {item.producto}
+              {item.variantName && (
+                <span className="font-normal text-gray-500"> - {item.variantName}</span>
+              )}
+            </td>
             <td className="px-3 py-2">
               <BarcodeCell
                 codigoBarras={item.codigoBarras}
