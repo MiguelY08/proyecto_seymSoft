@@ -5,7 +5,7 @@ import NonConformingProductsTable from "../components/NonConformingProductsTable
 import FormNonConformingProduct from "./FormNonConformingProduct";
 import ViewDetailsPN from "./ViewDetailsPN";
 import { PurchasesFilters } from "../../../../shared/DateFilter";
-import { Plus, FileSpreadsheet } from "lucide-react";
+import { Plus, FileSpreadsheet, Loader2 } from "lucide-react";
 import { getNonConforming, cancelNonConforming } from "../data/nonConformingService";
 import Spinner from "../../../../shared/spinner";
 import { normalizeBarcode, useBarcodeScanner } from "../../../../shared/scanner";
@@ -13,6 +13,7 @@ import Permission from "../../../configuration/roles/components/Permission";
 import { exportStyledWorkbook } from "../../../../shared/excel/exportStyledWorkbook";
 import { getApiErrorMessage } from "../../../../shared/utils/apiErrorMessage";
 import PaginationAdmin from "../../../../shared/PaginationAdmin";
+import ButtonComponent from "../../../../shared/ButtonComponent";
 
 const NON_CONFORMING_SEARCH_SCANNER_FIELD = "non-conforming-product-search";
 const RECORDS_PER_PAGE = 11;
@@ -25,11 +26,6 @@ const normalizeSearchValue = (value) =>
     .toLowerCase()
     .trim();
 
-const findReportByBarcode = (reports, barcode) =>
-  reports.find(
-    (report) => normalizeBarcode(report.codigoBarras, { numericOnly: true }) === barcode
-  );
-
 export const NonConformingProducts = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -41,6 +37,7 @@ export const NonConformingProducts = () => {
   const [fechaFinal, setFechaFinal] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   const { showConfirm, showSuccess, showError, showInfo } = useAlert();
 
@@ -48,30 +45,22 @@ export const NonConformingProducts = () => {
     const normalizedCode = normalizeBarcode(code, { numericOnly: true });
     setSearch(normalizedCode);
     setCurrentPage(1);
-
-    const localReport = findReportByBarcode(reports, normalizedCode);
-    if (localReport) {
-      setSelectedReport(localReport);
-      return;
-    }
-
-    showError(
-      "Código no registrado",
-      `No se encontró ningún reporte con el código de barras ${normalizedCode}.`
-    );
-  }, [reports, showError]);
+  }, []);
 
   useBarcodeScanner({
     enabled: !showModal,
     numericOnly: true,
     minLength: 6,
     maxLength: 20,
+    maxIntervalMs: 120,
     scannerFields: [NON_CONFORMING_SEARCH_SCANNER_FIELD],
     duplicateDelayMs: 800,
     preventDefault: false,
-    onScan: ({ code, scannerField }) => {
+    onScan: ({ code, scannerField, event }) => {
       if (scannerField !== NON_CONFORMING_SEARCH_SCANNER_FIELD) return;
-      handleScannedReportSearch(code);
+      const inputValue = event?.target?.value;
+      const scannedCode = inputValue || code;
+      handleScannedReportSearch(scannedCode);
     },
   });
 
@@ -387,13 +376,18 @@ export const NonConformingProducts = () => {
           />
           <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
             <Permission permission="producto_no_conforme.exportar">
-            <button
-              onClick={handleDownloadExcel}
-              className="flex flex-1 items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-400 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap sm:flex-none"
-            >
-              <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
-              <span className="hidden sm:inline">Exportar Excel</span>
-            </button>
+              <ButtonComponent
+                className="flex-1 sm:flex-none bg-white text-green-600 border-green-600 hover:bg-green-400 px-3 flex items-center justify-center gap-2"
+                onClick={handleDownloadExcel}
+                disabled={exporting}
+              >
+                {exporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="w-4 h-4" />
+                )}
+                <span className="hidden sm:inline">Exportar Excel</span> 
+              </ButtonComponent>
             </Permission>
             <Permission permission="producto_no_conforme.crear">
             <button

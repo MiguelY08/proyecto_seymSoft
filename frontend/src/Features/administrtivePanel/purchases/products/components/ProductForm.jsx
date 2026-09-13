@@ -26,6 +26,9 @@ import FormSelect from '../../../../shared/FormSelect';
 import {
   findProductBarcodeOwner,
   getDuplicateBarcodesInValues,
+  normalizeBarcode,
+  ScannerStatus,
+  useBarcodeScanner,
 } from '../../../../shared/scanner';
 
 function PriceCard({ label, fieldMain, fieldPaca, valueMain, valuePaca, placeholderMain, placeholderPaca, onChange, errMain, errPaca }) {
@@ -35,11 +38,13 @@ function PriceCard({ label, fieldMain, fieldPaca, valueMain, valuePaca, placehol
     const digits = numeric(v);
     return digits === '' ? '' : String(Math.min(100, Number(digits)));
   };
+
   const formatCop = (value) => {
     const digits = numeric(String(value ?? ''));
     if (!digits) return '';
     return `$ ${Number(digits).toLocaleString('es-CO')}`;
   };
+
   const hm = !!errMain;
   const hp = !!errPaca;
 
@@ -96,6 +101,8 @@ function PriceCard({ label, fieldMain, fieldPaca, valueMain, valuePaca, placehol
   );
 }
 
+const PRODUCT_NAME_MAX_LENGTH = 100;
+
 const initialForm = {
   nombre: '',
   codBarras: '',
@@ -134,12 +141,15 @@ function ProductForm({
   const [formData, setFormData] = useState(initialForm);
   const [imagenesActuales, setImagenesActuales] = useState([]);
   const [imagenesNuevas, setImagenesNuevas] = useState([]);
+  const [imagenesEliminadas, setImagenesEliminadas] = useState([]);
   const [errors, setErrors] = useState({});
+  const [scannerMessage, setScannerMessage] = useState(null);
   const [priceErrors, setPriceErrors] = useState({});
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [unitMeasures, setUnitMeasures] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [checkingBarcodeIds, setCheckingBarcodeIds] = useState({});
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
   const [selectedSubcategoryIds, setSelectedSubcategoryIds] = useState([]);
   const [expandedCategoryIds, setExpandedCategoryIds] = useState({});
@@ -205,6 +215,7 @@ function ProductForm({
 
     setImagenesActuales(producto.images || []);
     setImagenesNuevas([]);
+    setImagenesEliminadas([]);
     setSelectedCategoryIds(categoryIds);
     setSelectedSubcategoryIds(subcategoryIds);
     setExpandedCategoryIds(expanded);
@@ -252,12 +263,6 @@ function ProductForm({
   const block = (e) => { if (['e', 'E', '+', '-', '.'].includes(e.key)) e.preventDefault(); };
   const preventBarcodeSubmit = (e) => {
     if (e.key === 'Enter') e.preventDefault();
-  };
-
-  const calcStock = (d) => {
-    const principal = Number(d.stockPrincipal) || 0;
-    const extras = (d.codsBarrasExtra || []).reduce((acc, item) => acc + (Number(item.stock) || 0), 0);
-    return principal + extras;
   };
 
   const validatePrices = (d) => {
@@ -375,6 +380,10 @@ function ProductForm({
     if (!d.idUnitMeasure) e.idUnitMeasure = 'Selecciona una unidad de medida.';
     if (!d.nombre?.trim()) e.nombre = 'El nombre del producto es obligatorio.';
     else if (d.nombre.trim().length < 3) e.nombre = 'El nombre debe tener al menos 3 caracteres.';
+    else if (d.nombre.trim().length > 100) e.nombre = 'El nombre no puede superar los 100 caracteres.';
+    if (d.variantNamePrincipal && d.variantNamePrincipal.trim().length > 100) {
+      e.variantNamePrincipal = 'El estilo del codigo principal no puede superar los 100 caracteres.';
+    }
     if (!d.codBarras?.trim()) e.codBarras = 'El codigo de barras es obligatorio.';
     else if (d.codBarras.trim().length < 8) e.codBarras = 'El codigo de barras debe tener minimo 8 caracteres.';
     else if (d.codBarras.trim().length > 13) e.codBarras = 'El codigo de barras no puede superar los 13 caracteres.';
@@ -397,12 +406,19 @@ function ProductForm({
     if (invalidExtraLength) {
       e.codsBarrasExtra = 'Los codigos adicionales deben tener entre 8 y 13 caracteres.';
     }
+    const invalidExtraVariantNameLength = (d.codsBarrasExtra || []).find((item) => {
+      const length = String(item?.variantName || '').trim().length;
+      return length > 100;
+    });
+    if (invalidExtraVariantNameLength) {
+      e.codsBarrasExtra = 'Los estilos de los codigos adicionales no pueden superar los 100 caracteres.';
+    }
     if (isEditMode ? d.referencia === '' : !d.referencia.trim()) {
       e.referencia = 'La referencia es obligatoria.';
     } else if (d.referencia.trim().length > 50) {
       e.referencia = 'La referencia no puede superar los 50 caracteres.';
     }
-    if (isExistingProduct) {
+    if (isExistingProduct && !isEditMode) {
       if (d.stockPrincipal === '') e.stockPrincipal = 'El stock es obligatorio.';
       else if (!Number.isInteger(Number(d.stockPrincipal)) || Number(d.stockPrincipal) < 0) e.stockPrincipal = 'El stock debe ser un numero entero mayor o igual a 0.';
     }
@@ -473,6 +489,13 @@ function ProductForm({
     }
   };
 
+  const handleRemoveCurrentImage = (image) => {
+    setImagenesActuales((prev) => prev.filter((item) => item.id !== image.id));
+    if (image.id) {
+      setImagenesEliminadas((prev) => (prev.includes(image.id) ? prev : [...prev, image.id]));
+    }
+  };
+
   const handleAddCodBarras = () => {
     setFormData((prev) => ({ ...prev, codsBarrasExtra: [...(prev.codsBarrasExtra || []), { cod: '', stock: '', variantName: '', variantImage: null, variantImageUrl: null }] }));
   };
@@ -495,6 +518,31 @@ function ProductForm({
       .filter((variant) => variant.cod?.trim())
       .map((variant, index) => ({ index, file: variant.variantImage }));
 
+  const closePreviewImage = () => {
+    if (previewImage?.isObjectUrl) {
+      URL.revokeObjectURL(previewImage.src);
+    }
+    setPreviewImage(null);
+  };
+
+  const previewVariantImage = (item) => {
+    if (item.variantImage) {
+      setPreviewImage({
+        src: URL.createObjectURL(item.variantImage),
+        alt: item.variantImage.name,
+        isObjectUrl: true,
+      });
+      return;
+    }
+
+    if (item.variantImageUrl) {
+      setPreviewImage({
+        src: item.variantImageUrl,
+        alt: `Imagen de ${item.variantName || item.cod || 'la variante'}`,
+      });
+    }
+  };
+
   const updateVariantRow = (index, field, value) => {
     if (index === 0) {
       setFormData((prev) => ({
@@ -507,6 +555,20 @@ function ProductForm({
       return;
     }
     handleCodBarrasExtraChange(index - 1, field, value);
+  };
+
+  const removeVariantImage = (index) => {
+    updateVariantRow(index, 'variantImage', null);
+    if (index === 0) {
+      setFormData((prev) => ({ ...prev, variantImagePrincipalUrl: null }));
+      return;
+    }
+
+    setFormData((prev) => {
+      const updated = [...(prev.codsBarrasExtra || [])];
+      updated[index - 1] = { ...updated[index - 1], variantImageUrl: null };
+      return { ...prev, codsBarrasExtra: updated };
+    });
   };
 
   const handleCodBarrasExtraChange = (index, field, value) => {
@@ -544,6 +606,104 @@ function ProductForm({
       return { ...prev, codsBarrasExtra: updated };
     });
   };
+
+  const handleRemoveVariant = async (index) => {
+    const barcode = formData.codsBarrasExtra?.[index];
+    if (!barcode) return;
+
+    if (!isEditMode || !barcode.id) {
+      setFormData((prev) => ({
+        ...prev,
+        codsBarrasExtra: (prev.codsBarrasExtra || []).filter((_, idx) => idx !== index),
+      }));
+      return;
+    }
+
+    setCheckingBarcodeIds((prev) => ({ ...prev, [barcode.id]: true }));
+    try {
+      const relation = await ProductsService.checkBarcodeRelations(barcode.id);
+      if (relation?.hasRelations) {
+        showError(
+          'Variante con movimientos asociados',
+          `El código ${relation.barcode || barcode.cod} no se puede quitar porque está relacionado con otros procesos.`,
+        );
+        return;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        codsBarrasExtra: (prev.codsBarrasExtra || []).filter((item) => item.id !== barcode.id),
+      }));
+    } catch (error) {
+      const alert = getProductAlertError(error, 'update');
+      showError(alert.title, alert.text);
+    } finally {
+      setCheckingBarcodeIds((prev) => {
+        const next = { ...prev };
+        delete next[barcode.id];
+        return next;
+      });
+    }
+  };
+
+  useBarcodeScanner({
+    enabled: !isSubmitting,
+    numericOnly: true,
+    minLength: 6,
+    maxLength: 20,
+    maxIntervalMs: 120,
+    scannerFields: ['product-form-barcode'],
+    duplicateDelayMs: 800,
+    // Permite que el input reciba la digitación manual; el Scanner procesa la misma secuencia.
+    preventDefault: false,
+    onScan: ({ code, event, scannerField }) => {
+      if (scannerField !== 'product-form-barcode') return;
+
+      const normalizedCode = normalizeBarcode(code, { numericOnly: true });
+      const barcodeIndex = Number(event?.target?.dataset?.barcodeIndex);
+      if (!normalizedCode || !Number.isInteger(barcodeIndex)) return;
+
+      const nextData = { ...formData };
+      if (barcodeIndex === 0) {
+        nextData.codBarras = normalizedCode;
+      } else {
+        const updatedExtras = [...(nextData.codsBarrasExtra || [])];
+        updatedExtras[barcodeIndex - 1] = {
+          ...updatedExtras[barcodeIndex - 1],
+          cod: normalizedCode,
+        };
+        nextData.codsBarrasExtra = updatedExtras;
+      }
+
+      const conflictMessage = getBarcodeConflictMessage(normalizedCode);
+      const duplicateMessage = getInternalDuplicateMessage(getFormBarcodeValues(nextData));
+      const validationMessage = conflictMessage || duplicateMessage;
+
+      setFormData(nextData);
+      setErrors((prev) => {
+        const next = { ...prev };
+        if (barcodeIndex === 0) {
+          if (validationMessage) next.codBarras = validationMessage;
+          else delete next.codBarras;
+        } else {
+          if (validationMessage) next.codsBarrasExtra = validationMessage;
+          else delete next.codsBarrasExtra;
+        }
+        return next;
+      });
+      setScannerMessage(
+        validationMessage
+          ? { type: 'error', message: validationMessage }
+          : { type: 'success', message: `Código ${normalizedCode} disponible.` }
+      );
+    },
+  });
+
+  useEffect(() => {
+    if (!scannerMessage) return undefined;
+    const timeout = window.setTimeout(() => setScannerMessage(null), 2800);
+    return () => window.clearTimeout(timeout);
+  }, [scannerMessage]);
 
 
 
@@ -589,6 +749,7 @@ function ProductForm({
           descripcion: formData.descripcion,
           cantidadXPaca: Number(formData.cantidadXPaca),
           id_category: selectedPrimaryCategoryId,
+          codBarrasId: formData.codBarrasId,
           codBarras: formData.codBarras,
           codBarrasVariantName: formData.variantNamePrincipal,
           codBarrasVariantImageUrl: formData.variantImagePrincipalUrl,
@@ -598,6 +759,7 @@ function ProductForm({
           categories: selectedCategoryIds,
           subcategories: selectedSubcategoryIds,
           images: imagenesNuevas,
+          deletedImageIds: imagenesEliminadas,
         });
         showSuccess('Producto actualizado', `Los datos de "${saved.name}" quedaron guardados correctamente.`);
       } else {
@@ -734,47 +896,47 @@ function ProductForm({
                 <p className="text-xs text-gray-400">Identificación y clasificación principal del producto</p>
               </div>
             </div>
-            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr)_minmax(280px,1fr)_minmax(220px,0.7fr)] gap-4 p-4">
-              <div className="grid min-w-0 grid-cols-1 md:grid-cols-12 gap-3 content-start">
-              <div className="md:col-span-6">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre <span className="text-red-500">*</span></label>
-                <div className="relative">
-                  <Package className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                  <input type="text" name="nombre" value={formData.nombre || ''} onChange={handleChange} placeholder="Ej: Lapicero Bic Azul" className={`${inputCls('nombre')} pl-10`} />
+            <div className="grid grid-cols-1 gap-4 p-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(280px,1fr)]">
+              <div className="grid min-w-0 grid-cols-1 content-start gap-3 md:grid-cols-12">
+                <div className="md:col-span-6">
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">Nombre <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <Package className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
+                    <input type="text" name="nombre" value={formData.nombre || ''} onChange={handleChange} maxLength={PRODUCT_NAME_MAX_LENGTH} placeholder="Ej: Lapicero Bic Azul" className={`${inputCls('nombre')} pl-10`} />
+                  </div>
+                  <ErrMsg field="nombre" />
                 </div>
-                <ErrMsg field="nombre" />
-              </div>
-              <div className="md:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Referencia <span className="text-red-500">*</span></label>
-                <div className="relative">
-                  <Tag className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                  <input type="text" name="referencia" value={formData.referencia || ''} onChange={handleChange} maxLength={50} placeholder="REF-001" className={`${inputCls('referencia')} pl-10 pr-14`} />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">
-                    {(formData.referencia || '').length}/50
-                  </span>
+                <div className="md:col-span-3">
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">Referencia <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
+                    <input type="text" name="referencia" value={formData.referencia || ''} onChange={handleChange} maxLength={50} placeholder="REF-001" className={`${inputCls('referencia')} pl-10 pr-14`} />
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">
+                      {(formData.referencia || '').length}/50
+                    </span>
+                  </div>
+                  <ErrMsg field="referencia" />
                 </div>
-                <ErrMsg field="referencia" />
-              </div>
-              <div className="md:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Unidad de medida <span className="text-red-500">*</span></label>
-                <FormSelect
-                  value={formData.idUnitMeasure}
-                  options={unitMeasureOptions}
-                  onChange={(value) => handleChange({ target: { name: 'idUnitMeasure', value } })}
-                  icon={Ruler}
-                  error={errors.idUnitMeasure}
-                  placeholder="Selecciona una unidad"
-                  ariaLabel="Unidad de medida"
-                />
-                <ErrMsg field="idUnitMeasure" />
-              </div>
-              <div className="md:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">IVA %</label>
-                <div className="relative">
-                  <Percent className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                  <input type="text" inputMode="numeric" name="ivaPercentage" value={formData.ivaPercentage} onChange={(e) => handleChange({ target: { name: 'ivaPercentage', value: percentage(e.target.value) } })} onKeyDown={block} maxLength={3} placeholder="19" className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 text-sm transition-colors duration-200" />
+                <div className="md:col-span-3">
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">Unidad de medida <span className="text-red-500">*</span></label>
+                  <FormSelect
+                    value={formData.idUnitMeasure}
+                    options={unitMeasureOptions}
+                    onChange={(value) => handleChange({ target: { name: 'idUnitMeasure', value } })}
+                    icon={Ruler}
+                    error={errors.idUnitMeasure}
+                    placeholder="Selecciona una unidad"
+                    ariaLabel="Unidad de medida"
+                  />
+                  <ErrMsg field="idUnitMeasure" />
                 </div>
-              </div>
+                <div className="md:col-span-3">
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">IVA %</label>
+                  <div className="relative">
+                    <Percent className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
+                    <input type="text" inputMode="numeric" name="ivaPercentage" value={formData.ivaPercentage} onChange={(e) => handleChange({ target: { name: 'ivaPercentage', value: percentage(e.target.value) } })} onKeyDown={block} maxLength={3} placeholder="19" className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-3 text-sm outline-none transition-colors duration-200 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20" />
+                  </div>
+                </div>
               </div>
 
               <div className="min-w-0">
@@ -790,26 +952,6 @@ function ProductForm({
                   error={errors.categorias}
                   idPrefix={`${mode}-product-essential`}
                 />
-              </div>
-
-              <div className="self-stretch rounded-lg border border-[#004D77]/15 bg-[#004D77]/[0.03] p-4">
-                <p className="text-sm font-semibold text-gray-800">Resumen inicial</p>
-                <p className="mt-1 text-xs text-gray-500">Se actualiza al agregar presentaciones adicionales.</p>
-                <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-1">
-                  <div className="min-w-0 overflow-hidden rounded-lg border border-gray-200 bg-white p-3">
-                    <p className="text-xs text-gray-500">Stock general</p>
-                    <p
-                      className="mt-1 max-w-full break-all text-base font-semibold leading-tight text-[#004D77] tabular-nums sm:text-lg"
-                      title={calcStock(formData).toLocaleString('es-CO')}
-                    >
-                      {calcStock(formData).toLocaleString('es-CO')}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-gray-200 bg-white p-3">
-                    <p className="text-xs text-gray-500">Códigos</p>
-                    <p className="mt-1 text-lg font-semibold text-[#004D77]">{1 + (formData.codsBarrasExtra || []).length}</p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -829,7 +971,12 @@ function ProductForm({
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-gray-700">Variantes y códigos de barras</p>
-                    <p className="text-xs text-gray-400">Cada código puede tener estilo, stock e imagen propia.</p>
+                    <p className="text-xs text-gray-400">
+                      Cada código puede tener estilo e imagen propia.
+                      {isEditMode
+                        ? ' El stock se gestiona desde los movimientos de inventario.'
+                        : ' El stock inicial se define al crear el producto.'}
+                    </p>
                   </div>
                   <button type="button" onClick={handleAddCodBarras} className="flex shrink-0 items-center gap-1 text-sm font-medium text-[#004D77] px-2 py-1 rounded-md hover:bg-[#004D77]/10 transition-colors duration-200 cursor-pointer">
                     <Plus className="w-3 h-3" />
@@ -842,27 +989,59 @@ function ProductForm({
                       <div className="grid min-w-0 flex-1 grid-cols-1 overflow-hidden rounded-lg border border-gray-300 bg-white md:grid-cols-[minmax(150px,1.1fr)_minmax(120px,1fr)_105px_minmax(150px,0.9fr)]">
                         <div className="relative min-w-0">
                           <Barcode className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                          <input type="text" value={item.cod || ''} onChange={(e) => updateVariantRow(i, 'cod', e.target.value)} onKeyDown={preventBarcodeSubmit} maxLength={13} placeholder="Código de barras" className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400" />
+                          <input type="text" value={item.cod || ''} onChange={(e) => updateVariantRow(i, 'cod', e.target.value)} onKeyDown={preventBarcodeSubmit} data-scanner-field="product-form-barcode" data-barcode-index={i} maxLength={13} placeholder="Código de barras" className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400" />
                         </div>
                         <div className="relative border-t border-gray-200 md:border-l md:border-t-0">
                           <Tag className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                          <input type="text" value={item.variantName || ''} onChange={(e) => updateVariantRow(i, 'variantName', e.target.value)} maxLength={120} placeholder="Estilo" className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400" />
+                          <input type="text" value={item.variantName || ''} onChange={(e) => updateVariantRow(i, 'variantName', e.target.value)} maxLength={100} placeholder="Estilo" className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none placeholder-gray-400" />
                         </div>
                         <div className="relative border-t border-gray-200 bg-gray-50 md:border-l md:border-t-0">
                           <Boxes className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.8} />
-                          <input type="text" inputMode="numeric" value={item.stock ?? ''} onChange={(e) => updateVariantRow(i, 'stock', numeric(e.target.value))} onKeyDown={block} placeholder="Stock" className="h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm font-semibold text-gray-700 outline-none placeholder-gray-400" />
+                          <input type="text" inputMode="numeric" value={item.stock ?? ''} onChange={(e) => updateVariantRow(i, 'stock', numeric(e.target.value))} onKeyDown={block} readOnly={isEditMode} aria-readonly={isEditMode} placeholder="Stock" className={`h-[42px] w-full border-0 bg-transparent py-2.5 pl-10 pr-3 text-sm font-semibold outline-none placeholder-gray-400 ${isEditMode ? 'cursor-not-allowed text-gray-500' : 'text-gray-700'}`} />
                         </div>
-                        <label className="flex h-[42px] cursor-pointer items-center gap-2 border-t border-gray-200 px-3 text-xs text-gray-500 md:border-l md:border-t-0">
-                          <ImagePlus className="h-4 w-4 shrink-0 text-[#004D77]" />
-                          <span className="truncate">{item.variantImage?.name || (item.variantImageUrl ? 'Imagen asignada' : 'Asignar imagen')}</span>
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => updateVariantRow(i, 'variantImage', e.target.files?.[0] || null)} />
-                        </label>
+                        <div className={`flex h-[42px] items-center gap-1 border-t border-gray-200 px-3 text-xs md:border-l md:border-t-0 ${item.variantImage ? 'text-[#004D77]' : item.variantImageUrl ? 'text-emerald-700' : 'text-gray-500'}`}>
+                          <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-1" title={item.variantImage?.name || (item.variantImageUrl ? 'Esta variante ya tiene una imagen asignada.' : 'Esta variante aún no tiene una imagen asignada.')}>
+                            <ImagePlus className={`h-4 w-4 shrink-0 ${item.variantImage ? 'text-[#004D77]' : item.variantImageUrl ? 'text-emerald-600' : 'text-gray-400'}`} />
+                            <span className="truncate">
+                              {item.variantImage?.name
+                                ? `Nueva imagen: ${item.variantImage.name}`
+                                : item.variantImageUrl
+                                  ? 'Cambiar imagen'
+                                  : 'Sin imagen asignada'}
+                            </span>
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => updateVariantRow(i, 'variantImage', e.target.files?.[0] || null)} />
+                          </label>
+                          {(item.variantImage || item.variantImageUrl) && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => previewVariantImage(item)}
+                                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md font-semibold hover:bg-gray-100"
+                                title="Ver imagen"
+                                aria-label="Ver imagen"
+                              >
+                                <Maximize2 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeVariantImage(i)}
+                                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md font-semibold text-red-600 hover:bg-red-50"
+                                title="Quitar imagen"
+                                aria-label="Quitar imagen"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      {i > 0 && <button type="button" onClick={() => setFormData((prev) => ({ ...prev, codsBarrasExtra: (prev.codsBarrasExtra || []).filter((_, idx) => idx !== i - 1) }))} className="mt-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-red-100 text-red-500 hover:bg-red-200"><X className="h-3.5 w-3.5" /></button>}
+                      {i > 0 && <button type="button" onClick={() => handleRemoveVariant(i - 1)} disabled={Boolean(item.id && checkingBarcodeIds[item.id])} className="mt-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-red-100 text-red-500 hover:bg-red-200 disabled:cursor-wait disabled:opacity-50" title="Quitar variante"><X className="h-3.5 w-3.5" /></button>}
                     </div>
                   ))}
                 </div>
+                <ErrMsg field="codBarras" />
                 <ErrMsg field="codsBarrasExtra" />
+                <ScannerStatus status={scannerMessage} className="self-start" />
                 <div className="border-t border-gray-100 pt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     Cantidad x paca <span className="text-xs font-normal text-gray-400">(opcional)</span>
@@ -976,6 +1155,14 @@ function ProductForm({
                               >
                                 <Maximize2 className="h-4 w-4" />
                               </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveCurrentImage(img)}
+                                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-red-500 text-white shadow hover:bg-red-600"
+                                title="Quitar imagen"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
                             </div>
                           </div>
                         ))}
@@ -1054,12 +1241,12 @@ function ProductForm({
       </div>
     </div>
     {previewImage && (
-      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 p-4" onClick={() => setPreviewImage(null)}>
+      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 p-4" onClick={closePreviewImage}>
         <div className="relative max-h-[92vh] max-w-5xl" onClick={(event) => event.stopPropagation()}>
           <img src={previewImage.src} alt={previewImage.alt} className="max-h-[88vh] max-w-full rounded-xl object-contain shadow-2xl" />
           <button
             type="button"
-            onClick={() => setPreviewImage(null)}
+            onClick={closePreviewImage}
             className="absolute -right-3 -top-3 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white text-gray-700 shadow-lg hover:bg-gray-100"
             title="Cerrar imagen"
           >
@@ -1073,5 +1260,3 @@ function ProductForm({
 }
 
 export default ProductForm;
-
-

@@ -1,4 +1,4 @@
-﻿﻿// features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx
+﻿// features/administrtivePanel/purchases/purchases/pages/CreatePurchase.jsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -326,10 +326,15 @@ const CreatePurchase = () => {
     const ivaValor = (subtotal * foundProduct.iva) / 100;
     const total = subtotal + ivaValor;
     const currentExtraBarcodes = extraBarcodes[foundProduct.codigoBarras] || [];
+    const variantName = getBarcodeVariantName(
+      getProductWithLocalBarcodes(foundProduct),
+      resolvedBarcode || currentItem.codigoBarras
+    );
 
     const updatedItems = [...purchaseItems];
     updatedItems[itemIndex] = {
       ...updatedItems[itemIndex],
+      variantName: variantName || currentItem.variantName || "",
       cantidad: finalQuantity,
       stockTotal: stockToAdd,
       valorUnit: unitPrice,
@@ -385,6 +390,23 @@ const CreatePurchase = () => {
     ],
   });
 
+  const getBarcodeVariantName = (product, barcode) => {
+    if (!barcode) return "";
+
+    const barcodeEntries = [
+      ...(Array.isArray(product?.barcodes) ? product.barcodes : []),
+      ...(Array.isArray(product?.codigosExtra) ? product.codigosExtra : []),
+    ];
+    const selectedEntry = barcodeEntries.find((entry) => {
+      const value = typeof entry === "object" ? entry.barcode || entry.cod : entry;
+      return String(value) === String(barcode);
+    });
+
+    return typeof selectedEntry === "object"
+      ? selectedEntry.variantName || selectedEntry.variant_name || ""
+      : "";
+  };
+
   // ========== HANDLE ADD PRODUCT ==========
   const handleAddProduct = async (resolvedBarcode, purchasePrice, salePrices = {}, purchaseTypeInfo = null) => {
     const searchTerm = searchProduct.trim();
@@ -409,7 +431,19 @@ const CreatePurchase = () => {
       return;
     }
 
-    const codigosExtra = extraBarcodes[foundProduct.codigoBarras] ?? [];
+    const selectedBarcodeValue = String(resolvedBarcode || "").trim();
+    const selectedBarcode = foundProduct.barcodes?.find(
+      (barcode) => String(barcode.barcode) === String(resolvedBarcode)
+    );
+    const selectedBarcodeId = purchaseTypeInfo?.idBarcode ?? selectedBarcode?.id;
+    const codigosExtra = (extraBarcodes[foundProduct.codigoBarras] ?? []).filter((extraCode) => {
+      const extraBarcode = typeof extraCode === "string" ? extraCode : extraCode?.barcode;
+      // Un código nuevo aún no tiene ID: debe conservarse para que el backend
+      // lo cree antes de resolverlo como código principal.
+      if (!selectedBarcodeId) return true;
+      return String(extraBarcode || "").trim() !== selectedBarcodeValue;
+    });
+    const variantName = getBarcodeVariantName(foundProduct, resolvedBarcode);
     const unitPrice = Number(purchasePrice) || foundProduct.supplierPrice || foundProduct.wholesalePrice || foundProduct.valorUnit;
 
     const salePricesToSave = {
@@ -443,14 +477,18 @@ const CreatePurchase = () => {
 
     const existingItem = purchaseItems.find(
       (item) =>
-        item.codigoBarras === foundProduct.codigoBarras &&
+        (item.idBarcode && selectedBarcodeId
+          ? Number(item.idBarcode) === Number(selectedBarcodeId)
+          : item.codigoBarras === resolvedBarcode) &&
         (item.purchaseTypeValue || "unit") === purchaseTypeValue
     );
 
     if (existingItem) {
       const updatedItems = purchaseItems.map((item) => {
         if (
-          item.codigoBarras === foundProduct.codigoBarras &&
+          (item.idBarcode && selectedBarcodeId
+            ? Number(item.idBarcode) === Number(selectedBarcodeId)
+            : item.codigoBarras === resolvedBarcode) &&
           (item.purchaseTypeValue || "unit") === purchaseTypeValue
         ) {
           const nuevaCantidad = item.cantidad + finalQuantity;
@@ -460,6 +498,10 @@ const CreatePurchase = () => {
           const total = subtotal + ivaValor;
           return {
             ...item,
+            idBarcode: selectedBarcodeId,
+            codigoBarras: resolvedBarcode,
+            variantName,
+            producto: foundProduct.nombre,
             cantidad: nuevaCantidad,
             stockTotal: nuevoStockTotal,
             subtotal,
@@ -490,7 +532,9 @@ const CreatePurchase = () => {
         id: Date.now(),
         idProduct: foundProduct.id,
         producto: foundProduct.nombre,
-        codigoBarras: foundProduct.codigoBarras,
+        variantName,
+        codigoBarras: resolvedBarcode,
+        idBarcode: selectedBarcodeId,
         proveedor: foundProduct.proveedor,
         cantidad: finalQuantity,
         stockTotal: stockToAdd,
@@ -555,6 +599,8 @@ const CreatePurchase = () => {
         idProvider: selectedProviderId,
         productos: purchaseItems.map(item => ({
           idProduct: item.idProduct,
+          idBarcode: item.idBarcode,
+          barcode: item.codigoBarras,
           cantidad: item.cantidad,
           supplierPrice: item.supplierPrice,
           purchaseType: item.purchaseType || "Unidad",

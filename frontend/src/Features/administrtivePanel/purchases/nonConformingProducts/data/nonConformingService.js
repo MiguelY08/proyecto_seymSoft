@@ -143,6 +143,7 @@ export const getProductByBarcode = async (barcode) => {
       id_barcode: product.id_barcode,
       id_product: product.id_product,
       nombre: product.productName || 'Producto sin nombre',
+      variantName: product.variantName || '',
       codigoBarras: product.barcode || '',
       categoria: product.categoryName || 'Sin categoría',
       precio: product.price || 0,

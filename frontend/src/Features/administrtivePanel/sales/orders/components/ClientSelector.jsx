@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, IdCard, Mail, Phone, Plus, Users, X } from 'lucide-react';
+import { SYSTEM_CLIENT_ID } from '../../clients/services/clientsService';
 
 function ClientSelector({ formData, errors, clientes, loading, readOnly = false, isEditMode, onClienteChange, onCreateClient }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,7 +54,7 @@ function ClientSelector({ formData, errors, clientes, loading, readOnly = false,
           </div>
           {isDropdownOpen && !isDisabled && (
             <div className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg overscroll-contain">
-              {filteredClients.length ? <ul className="py-1">{filteredClients.map((client) => <li key={client.id}><button type="button" onClick={() => selectClient(client.id)} className="w-full px-4 py-2 text-left text-sm transition-colors duration-150 hover:bg-[#004D77]/10"><div className="font-medium text-gray-800">{client.name || client.fullName}{client.id === 0 && <span className="ml-2 text-xs text-blue-600">(Cliente de Caja)</span>}</div><div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">{client.phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" strokeWidth={1.5} />{client.phone}</span>}{client.email && <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" strokeWidth={1.5} />{client.email}</span>}{client.document && <span className="inline-flex items-center gap-1"><IdCard className="h-3 w-3" strokeWidth={1.5} />{client.document}</span>}</div></button></li>)}</ul> : <div className="px-4 py-3 text-center text-sm text-gray-500">No se encontraron clientes</div>}
+              {filteredClients.length ? <ul className="py-1">{filteredClients.map((client) => <li key={client.id}><button type="button" onClick={() => selectClient(client.id)} className="w-full px-4 py-2 text-left text-sm transition-colors duration-150 hover:bg-[#004D77]/10"><div className="font-medium text-gray-800">{client.name || client.fullName}{Number(client.id) === SYSTEM_CLIENT_ID && <span className="ml-2 text-xs text-blue-600">(Cliente del sistema)</span>}</div><div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">{client.phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" strokeWidth={1.5} />{client.phone}</span>}{client.email && <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" strokeWidth={1.5} />{client.email}</span>}{client.document && <span className="inline-flex items-center gap-1"><IdCard className="h-3 w-3" strokeWidth={1.5} />{client.document}</span>}</div></button></li>)}</ul> : <div className="px-4 py-3 text-center text-sm text-gray-500">No se encontraron clientes</div>}
             </div>
           )}
         </div>

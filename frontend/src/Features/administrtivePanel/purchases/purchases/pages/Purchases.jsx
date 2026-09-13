@@ -7,7 +7,7 @@ import PurchasesTable from "../Components/TablePurchases";
 import { useAlert } from "../../../../shared/alerts/useAlert";
 import DetailPurchases from "../pages/DetailPurchases";
 import Anulatepurchase from "../pages/Anulatepurchase";
-import { Plus, FileSpreadsheet, ArrowUpDown, Calendar, Clock } from "lucide-react";
+import { Plus, FileSpreadsheet, ArrowUpDown, Calendar, Clock, Loader2 } from "lucide-react";
 import { getAllPurchases, annulPurchase, getPurchaseById } from "../data/PurchasesService";
 import Spinner from "../../../../shared/spinner";
 import PaginationAdmin from "../../../../shared/PaginationAdmin";
@@ -15,6 +15,7 @@ import { exportPurchasesExcel } from "../helpers/purchasesExcel";
 import FullScreenSpinner from "../../../../shared/spinner/FullScreenSpinner";
 import Permission from "../../../configuration/roles/components/Permission";
 import { getApiErrorMessage } from "../../../../shared/utils/apiErrorMessage";
+import ButtonComponent from "../../../../shared/ButtonComponent";
 
 // ========== TIPOS DE ORDENAMIENTO ==========
 const SORT_OPTIONS = {
@@ -71,6 +72,7 @@ export const Purchases = () => {
   const [selectedPurchaseDetail, setSelectedPurchaseDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [annulLoading, setAnnulLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   // ========== NUEVO: Estado para ordenamiento ==========
   const [sortBy, setSortBy] = useState("CREATION_DESC");
   const [showSortDropdown, setShowSortDropdown] = useState(false);
@@ -361,13 +363,18 @@ export const Purchases = () => {
           
           <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
             <Permission permission="compras.exportar">
-              <button
+              <ButtonComponent
+                className="flex-1 sm:flex-none bg-white text-green-600 border-green-600 hover:bg-green-400 px-3 flex items-center justify-center gap-2"
                 onClick={handleDownloadExcel}
-                className="flex flex-1 items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold border border-green-600 rounded-lg text-green-600 bg-white hover:bg-green-400 active:scale-95 transition-all duration-200 cursor-pointer whitespace-nowrap sm:flex-none"
+                disabled={exporting}
               >
-                <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
+                {exporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="w-4 h-4" />
+                )}
                 <span className="hidden sm:inline">Exportar Excel</span>
-              </button>
+              </ButtonComponent>
             </Permission>
             <Permission permission="compras.crear">
               <Link

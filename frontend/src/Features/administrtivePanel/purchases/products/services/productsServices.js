@@ -5,7 +5,7 @@ const hasValue = (value) => value !== undefined && value !== null && value !== '
 
 const toOptionalNumber = (value) => (hasValue(value) ? Number(value) : 0);
 
-const buildBarcodesPayload = (data) => {
+const buildBarcodesPayload = (data, includeStock = true) => {
   const barcodes = [];
 
   if (data.codBarras) {
@@ -13,7 +13,7 @@ const buildBarcodesPayload = (data) => {
         id: data.codBarrasId,
       barcode: data.codBarras,
       barcode_type: 'EAN13',
-      stock: Number(data.stock) || 0,
+      ...(includeStock ? { stock: Number(data.stock) || 0 } : {}),
         variant_name: data.codBarrasVariantName,
         variant_image_url: data.codBarrasVariantImageUrl,
         is_default: true,
@@ -27,7 +27,7 @@ const buildBarcodesPayload = (data) => {
           id: barcode.id,
           barcode: barcode.cod,
           barcode_type: 'SKU',
-          stock: Number(barcode.stock) || 0,
+          ...(includeStock ? { stock: Number(barcode.stock) || 0 } : {}),
           variant_name: barcode.variantName,
           variant_image_url: barcode.variantImageUrl,
           is_default: barcode.isDefault === true,
@@ -75,6 +75,11 @@ export const ProductsService = {
     return product ? normalizeProduct(product) : null;
   },
 
+  async checkBarcodeRelations(barcodeId) {
+    const response = await apiClient.get(`/products/barcodes/${barcodeId}/relations`);
+    return response.data.data;
+  },
+
   /**
    * Crear un nuevo producto
    * @param {Object|FormData} data - Datos del producto
@@ -104,7 +109,7 @@ export const ProductsService = {
     formData.append('quantityPerPack', data.cantidadXPaca ? Number(data.cantidadXPaca) : 0);
     formData.append('codBarras', data.codBarras);
     formData.append('stock', Number(data.stock) || 0);
-    formData.append('barcodes', JSON.stringify(buildBarcodesPayload(data)));
+    formData.append('barcodes', JSON.stringify(buildBarcodesPayload(data, false)));
 
     if (data.categories !== undefined) {
       formData.append('categories', JSON.stringify(data.categories));
@@ -114,12 +119,15 @@ export const ProductsService = {
       formData.append('subcategories', JSON.stringify(data.subcategories));
     }
 
+    if (data.deletedImageIds?.length > 0) {
+      formData.append('deletedImageIds', JSON.stringify(data.deletedImageIds));
+    }
+
     if (data.images?.length > 0) {
       data.images.forEach((img) => {
         formData.append('images', img);
       });
     }
-
     (data.variantImages || []).forEach(({ index, file }) => {
       if (file) formData.append(`variantImage_${index}`, file);
     });
@@ -172,6 +180,10 @@ export const ProductsService = {
 
     if (data.subcategories !== undefined) {
       formData.append('subcategories', JSON.stringify(data.subcategories));
+    }
+
+    if (data.deletedImageIds?.length > 0) {
+      formData.append('deletedImageIds', JSON.stringify(data.deletedImageIds));
     }
 
     if (data.images?.length > 0) {

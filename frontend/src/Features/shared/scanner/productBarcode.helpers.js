@@ -46,13 +46,77 @@ export const getProductBarcodeValues = (product = {}) => {
 export const getPrimaryProductBarcode = (product = {}) =>
   getProductBarcodeValues(product)[0] ?? '';
 
-export const findProductByBarcode = (products = [], code) => {
-  const normalizedCode = normalizeBarcode(code);
+const getProductBarcodeEntries = (product = {}, options = {}) => {
+  const directValues = [
+    product.codBarras,
+    product.codigoBarras,
+    product.barcode,
+    product.mainBarcode,
+  ];
+  const barcodeCollections = [
+    product.barcodes,
+    product.productBarcodes,
+    product.codigosExtra,
+    product.extraBarcodes,
+  ];
+
+  const directEntries = directValues
+    .filter((value) => value !== undefined && value !== null)
+    .map((value) => ({ barcode: value }));
+
+  const nestedEntries = barcodeCollections.flatMap((collection) => (
+    Array.isArray(collection)
+      ? collection.flatMap((item) => {
+          if (typeof item === 'string' || typeof item === 'number') {
+            return [{ barcode: item }];
+          }
+
+          return item ? [item] : [];
+        })
+      : []
+  ));
+
+  return [...directEntries, ...nestedEntries]
+    .map((entry) => ({
+      ...entry,
+      normalizedBarcode: normalizeBarcode(
+        entry.barcode ??
+          entry.codBarras ??
+          entry.codigoBarras ??
+          entry.code ??
+          entry.cod ??
+          entry.value,
+        options
+      ),
+    }))
+    .filter((entry) => entry.normalizedBarcode);
+};
+
+export const findProductBarcodeMatch = (products = [], code, options = {}) => {
+  const normalizedCode = normalizeBarcode(code, options);
   if (!normalizedCode) return null;
 
-  return products.find((product) =>
-    getProductBarcodeValues(product).some((barcode) => barcode === normalizedCode)
-  ) ?? null;
+  for (const product of products) {
+    const barcode = getProductBarcodeEntries(product, options).find(
+      (entry) => entry.normalizedBarcode === normalizedCode
+    );
+
+    if (barcode) {
+      return {
+        product,
+        barcode: {
+          ...barcode,
+          barcode: barcode.barcode ?? barcode.codBarras ?? barcode.codigoBarras,
+        },
+      };
+    }
+  }
+
+  return null;
+};
+
+export const findProductByBarcode = (products = [], code) => {
+  return findProductBarcodeMatch(products, code)?.product ?? null;
 };
 
 export const productMatchesBarcodeSearch = (product = {}, searchTerm = '') => {

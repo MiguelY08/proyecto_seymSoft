@@ -1,6 +1,7 @@
 ﻿// src/features/orders/components/LeftSectionForm.jsx
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { ESTADOS_LOGISTICOS } from '../services/ordersService';
+import { SYSTEM_CLIENT_ID } from '../../clients/services/clientsService';
 import {
   Users, Truck, MapPin, PackageCheck, FileX, ChevronDown, Home, X,
   Phone, Mail, IdCard, FileText, Plus
@@ -254,7 +255,7 @@ function LeftSectionForm({
                         >
                           <div className="font-medium text-gray-800">
                             {cliente.name || cliente.fullName}
-                            {cliente.id === 0 && <span className="ml-2 text-xs text-blue-600">(Cliente de Caja)</span>}
+                            {Number(cliente.id) === SYSTEM_CLIENT_ID && <span className="ml-2 text-xs text-blue-600">(Cliente del sistema)</span>}
                           </div>
                           <div className="text-xs text-gray-500 flex flex-wrap gap-x-3 gap-y-1 mt-0.5">
                             {cliente.phone && (
@@ -429,7 +430,7 @@ function LeftSectionForm({
                   onClick={() => {
                     const cliente = clientes.find(c => c.id === formData.clienteId);
                     if (cliente) {
-                      const direccionSugerida = cliente.id === 0
+                      const direccionSugerida = Number(cliente.id) === SYSTEM_CLIENT_ID
                         ? 'El cliente lo recoge'
                         : (cliente.address || cliente.direccion || '');
                       onDireccionManualChange({ target: { value: direccionSugerida } });

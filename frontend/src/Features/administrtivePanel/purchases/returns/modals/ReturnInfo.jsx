@@ -311,8 +311,13 @@ const ReturnInfo = ({ devolucion, onClose, onEdit }) => {
                           }
                           className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
                         >
-                          <td className="max-w-[190px] truncate px-3 py-2 text-xs font-medium text-gray-800">
+                          <td className="max-w-[190px] px-3 py-2 text-xs font-medium text-gray-800">
                             {product.nombre ?? "-"}
+                            {product.variantName && (
+                              <span className="font-normal text-gray-500">
+                                {" - "}{product.variantName}
+                              </span>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">
                             {product.referencia || "-"}

@@ -42,6 +42,12 @@ export const getProductAlertError = (error, action = 'load') => {
   if (normalized.includes('imagen') || normalized.includes('archivo') || normalized.includes('formato')) {
     return { title: 'No se pudo guardar la imagen', text: `${message} Verifica el formato y el tamaño de las imágenes seleccionadas.` };
   }
+  if (action === 'update' && (status === 409 || normalized.includes('movimientos asociados') || normalized.includes('movimientos u otros') || normalized.includes('relacionados'))) {
+    return {
+      title: 'Variante con movimientos asociados',
+      text: `${message || 'Una variante no se puede quitar porque tiene relaciones con otros procesos.'} Conserva el código de barras y déjalo inactivo si ya no debe utilizarse.`,
+    };
+  }
   if (action === 'delete' && (status === 409 || normalized.includes('asociad') || normalized.includes('movimiento'))) {
     return { title: 'Producto con movimientos asociados', text: `${message || 'El producto tiene movimientos asociados.'} Consérvalo inactivo en lugar de eliminarlo.` };
   }

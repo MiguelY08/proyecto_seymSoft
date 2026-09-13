@@ -374,6 +374,7 @@ export const mapPurchaseReturnToDetail = (purchaseReturn) => {
         idProduct: product?.id ?? detail.productId ?? null,
         productId: product?.id ?? detail.productId ?? null,
         referencia: product?.reference ?? "",
+        variantName: barcode?.variantName ?? "",
         codigoBarras: detail.barcode ?? barcode?.code ?? "",
         idBarcode:
           detail.barcodeId ??

@@ -104,11 +104,11 @@ function DetailProduct({ producto, isOpen, onClose }) {
 
   const selectedImage = images[selectedImageIndex] || images[0];
   const hasMultipleBarcodes = producto.barcodes?.length > 1;
-  const variantImages = hasMultipleBarcodes
+  const hasBarcodes = producto.barcodes?.length > 0;
+  const variantImages = hasBarcodes
     ? producto.barcodes
-        .filter((barcode) => barcode.variantImageUrl)
         .map((barcode) => ({
-          url: barcode.variantImageUrl,
+          url: barcode.variantImageUrl || null,
           alt: barcode.variantName || barcode.barcode,
           barcode: barcode.barcode,
           variantName: barcode.variantName || 'Estilo sin nombre',
@@ -223,27 +223,44 @@ function DetailProduct({ producto, isOpen, onClose }) {
                 </div>
               )}
 
-              {hasMultipleBarcodes && (
+              {hasBarcodes && (
                 <div className="mt-5 border-t border-gray-100 pt-5">
                   <SectionTitle>Imágenes por presentación</SectionTitle>
 
                   {variantImages.length > 0 ? (
-                    <div className="space-y-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       {variantImages.map((image) => (
-                        <button
-                          key={`${image.barcode}-${image.url}`}
-                          type="button"
-                          onClick={() => {
+                        <div
+                          key={image.barcode}
+                          role={image.url ? 'button' : undefined}
+                          tabIndex={image.url ? 0 : undefined}
+                          onClick={image.url ? () => {
                             setExpandedImage(image);
                             setIsImageExpanded(true);
-                          }}
-                          className="group flex w-full items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-2 text-left transition hover:border-[#004D77]/50 hover:bg-[#004D77]/5"
+                          } : undefined}
+                          onKeyDown={image.url ? (event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              setExpandedImage(image);
+                              setIsImageExpanded(true);
+                            }
+                          } : undefined}
+                          className={`group flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-1.5 text-left transition ${
+                            image.url ? 'cursor-zoom-in hover:border-[#004D77]/50 hover:bg-[#004D77]/5' : ''
+                          }`}
+                          aria-label={image.url ? `Ampliar imagen de ${image.variantName}` : undefined}
                         >
-                          <img
-                            src={image.url}
-                            alt={image.alt}
-                            className="h-14 w-14 shrink-0 rounded-md border border-gray-200 bg-white object-contain"
-                          />
+                          {image.url ? (
+                            <img
+                              src={image.url}
+                              alt={image.alt}
+                              className="h-10 w-10 shrink-0 rounded-md border border-gray-200 bg-white object-contain"
+                            />
+                          ) : (
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-dashed border-gray-300 bg-white" title="Sin imagen asignada">
+                              <ImageOff className="h-4 w-4 text-gray-300" aria-hidden="true" />
+                            </div>
+                          )}
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-xs font-bold text-gray-800">
                               {image.variantName}
@@ -252,8 +269,10 @@ function DetailProduct({ producto, isOpen, onClose }) {
                               {image.barcode}
                             </span>
                           </span>
-                          <Maximize2 className="h-4 w-4 shrink-0 text-[#004D77]/60 transition group-hover:text-[#004D77]" />
-                        </button>
+                          {image.url && (
+                            <Maximize2 className="h-3.5 w-3.5 shrink-0 text-[#004D77]/60 transition group-hover:text-[#004D77]" />
+                          )}
+                        </div>
                       ))}
                     </div>
                   ) : (
@@ -399,9 +418,10 @@ function DetailProduct({ producto, isOpen, onClose }) {
 
                           <div className="min-w-0">
                             <span className="block text-[9px] font-semibold text-gray-400 uppercase tracking-wide leading-none mb-0.5">
-                              {hasMultipleBarcodes
-                                ? barcode.variantName || `Código #${i + 1}`
-                                : i === 0 ? 'Principal' : `Código #${i + 1}`}
+                              {String(barcode.variantName || '').trim()
+                                || (hasMultipleBarcodes
+                                  ? `Código #${i + 1}`
+                                  : i === 0 ? 'Principal' : `Código #${i + 1}`)}
                             </span>
                             <span className="block text-xs text-gray-700 font-mono truncate">
                               {barcode.barcode}
@@ -437,7 +457,7 @@ function DetailProduct({ producto, isOpen, onClose }) {
         </footer>
       </div>
     </div>
-    {isImageExpanded && selectedImage?.url && (
+    {isImageExpanded && (expandedImage?.url || selectedImage?.url) && (
       <div
         className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4"
         onClick={() => {

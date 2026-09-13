@@ -10,7 +10,7 @@ import { getClientFavorBalanceValue } from '../../shared/utils/clientFavorBalanc
 // Servicios
 import { SalesServices } from '../services/salesServices';
 import ProductsService from '../../../purchases/products/services/productsServices';
-import { clientsService } from '../../clients/services/clientsService';
+import { clientsService, SYSTEM_CLIENT_ID } from '../../clients/services/clientsService';
 import { getCreditCustomers } from '../../paymentsAndCredits/services/paymentsServices';
 import { mapCustomers as mapCreditCustomers } from '../../paymentsAndCredits/mappers/paymentsMapper';
 import { useAuth } from '../../../../access/context/AuthContext';
@@ -372,7 +372,7 @@ function SaleForm() {
     if (clienteId !== '') {
       const cliente = clientes.find(c => Number(c.id) === Number(clienteId));
       if (cliente) {
-        const direccionSugerida = cliente.id === 0
+        const direccionSugerida = Number(cliente.id) === SYSTEM_CLIENT_ID
           ? 'El cliente lo recoge'
           : (cliente.address || cliente.direccion || '');
         setFormData(prev => ({ ...prev, direccionEntrega: direccionSugerida }));
@@ -773,6 +773,7 @@ function SaleForm() {
           deliveryCityName: formData.tipoEntrega === 'domicilio' ? formData.ciudadEntregaNombre : null,
           items: formData.productos.map((producto) => ({
             idProduct: producto.id,
+            idBarcode: producto.idBarcode ?? producto.barcodeId ?? null,
             barcode: producto.barcode,
             quantity: producto.cantidad,
           })),

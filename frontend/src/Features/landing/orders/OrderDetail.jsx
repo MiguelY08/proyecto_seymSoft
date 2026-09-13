@@ -18,9 +18,11 @@ import {
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import OrdersService, {
+  PaymentService,
   PaymentReceiptService,
 } from '../../administrtivePanel/sales/orders/services/ordersService';
 import { useAlert } from '../../shared/alerts/useAlert';
+import { getProfileSummary } from '../../shared/services/profileService';
 import useAuthenticatedClient from '../../shared/hooks/useAuthenticatedClient';
 import useBodyScrollLock from '../../shared/hooks/useBodyScrollLock';
 import ShopHero from '../shop/components/ShopHero';
@@ -34,6 +36,8 @@ import {
 import { ORDER_FONT_FAMILY, injectOrderTypography } from './orderTypography';
 
 const normalizeReceiptStatus = (status) => String(status || 'Pendiente').trim().toLowerCase();
+const parseAmountInput = (value) => Number(String(value || '').replace(/\./g, '')) || 0;
+const formatAmountInput = (value) => Math.max(0, Number(value) || 0).toLocaleString('es-CO').replace(/,/g, '.');
 
 const formatRemainingTime = (milliseconds) => {
   const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
@@ -102,11 +106,16 @@ function OrderDetail() {
   const [error, setError] = useState('');
   const [receipt, setReceipt] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [favorBalance, setFavorBalance] = useState(0);
+  const [favorAmount, setFavorAmount] = useState('');
+  const [favorSubmitting, setFavorSubmitting] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [proofPreview, setProofPreview] = useState(null);
   useBodyScrollLock(qrOpen || Boolean(proofPreview));
   const [now, setNow] = useState(Date.now());
   const fileInputRef = useRef(null);
+  const orderStatus = String(order?.estadoLogistico || '').trim().toLowerCase();
+  const isOrderPaymentClosed = ['anulado', 'cancelado', 'entregado'].includes(orderStatus);
   const isDeliveryAwaitingShipping = Boolean(
     order &&
     order.tipoEntrega !== 'recoge' &&
@@ -118,7 +127,7 @@ function OrderDetail() {
     order &&
     Number(order.shippingAmount || 0) > 0 &&
     Number(order.saldoPendiente || 0) > 0 &&
-    order.estadoLogistico !== 'cancelado' &&
+    !isOrderPaymentClosed &&
     hasPaymentDeadline
   );
   const remainingPaymentMs = shouldShowPaymentCountdown
@@ -174,6 +183,87 @@ function OrderDetail() {
       active = false;
     };
   }, [authLoading, clientId, id, isAuthenticated]);
+
+  useEffect(() => {
+    if (authLoading || !isAuthenticated || !clientId) {
+      return undefined;
+    }
+
+    let active = true;
+    const loadFavorBalance = async () => {
+      try {
+        const profile = await getProfileSummary();
+        const financialSummary = profile?.financialSummary || profile || {};
+        const balance = Number(
+          financialSummary.favorBalance ??
+          financialSummary.saldoFavor ??
+          financialSummary.credit_balance ??
+          financialSummary.saldo_a_favor ??
+          financialSummary.balance ??
+          0
+        );
+        if (active) {
+          setFavorBalance(Math.max(0, Number.isFinite(balance) ? balance : 0));
+        }
+      } catch (requestError) {
+        console.error('No fue posible cargar el saldo a favor:', requestError);
+        if (active) setFavorBalance(0);
+      }
+    };
+
+    void loadFavorBalance();
+    return () => {
+      active = false;
+    };
+  }, [authLoading, clientId, isAuthenticated]);
+
+  const handleFavorAmountChange = (event) => {
+    const rawValue = event.target.value.replace(/[^\d]/g, '');
+    const amount = Number(rawValue || 0);
+    const maximum = Math.min(favorBalance, Number(order?.saldoPendiente || 0));
+    setFavorAmount(formatAmountInput(Math.min(amount, maximum)));
+  };
+
+  const handleFavorPayment = async () => {
+    const pendingAmount = Number(order?.saldoPendiente || 0);
+    const amount = Math.min(
+      Math.max(0, parseAmountInput(favorAmount)),
+      favorBalance,
+      pendingAmount
+    );
+
+    if (amount <= 0) {
+      showWarning('Monto inválido', 'Ingresa un valor de saldo a favor mayor que cero.');
+      return;
+    }
+
+    try {
+      setFavorSubmitting(true);
+      await PaymentService.add(order.id, {
+        metodoPago: 'Saldo a favor',
+        monto: amount,
+        observations: 'Abono aplicado con saldo a favor desde el detalle del pedido.',
+      });
+      const updatedOrder = await OrdersService.findById(order.id);
+      setOrder(updatedOrder);
+      setFavorBalance((current) => Math.max(0, current - amount));
+      setFavorAmount('');
+      const isComplete = amount >= pendingAmount;
+      showSuccess(
+        isComplete ? 'Pedido pagado' : 'Abono aplicado',
+        isComplete
+          ? 'El saldo a favor cubrió el saldo pendiente y el pedido quedó pagado.'
+          : `Se aplicó el abono. El saldo pendiente ahora es ${formatMoney(pendingAmount - amount)}.`
+      );
+    } catch (requestError) {
+      showError(
+        'No se pudo aplicar el saldo a favor',
+        requestError?.response?.data?.message ?? requestError?.message ?? 'Intenta nuevamente.'
+      );
+    } finally {
+      setFavorSubmitting(false);
+    }
+  };
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
@@ -277,7 +367,8 @@ function OrderDetail() {
   const hasPendingReceipt = order.comprobantesPago?.some(
     (proof) => normalizeReceiptStatus(proof.status) === 'pendiente'
   );
-  const paymentDataHidden = Boolean(order.paymentDataHidden);
+  const paymentDataHidden = Boolean(order.paymentDataHidden || isOrderPaymentClosed);
+  const isOrderCancelled = orderStatus === 'anulado' || orderStatus === 'cancelado';
   const favorBalanceRestoredAmount = Number(order.favorBalanceRestoredAmount || 0);
   const orderNumber = order.numeroPedido || order.id;
   const returnWhatsAppUrl = `https://api.whatsapp.com/send/?phone=%2B573212828628&text=${encodeURIComponent(
@@ -366,7 +457,7 @@ function OrderDetail() {
               )}
             </section>
 
-            {paymentDataHidden && (
+            {isOrderCancelled && (
               <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:rounded-3xl sm:p-6">
                 <h2 className="flex items-center gap-2 text-xl font-black text-amber-900">
                   <AlertTriangle size={21} /> Pedido anulado
@@ -393,7 +484,7 @@ function OrderDetail() {
               </section>
             )}
 
-            {!isDeliveryAwaitingShipping && order.saldoPendiente > 0 && order.estadoLogistico !== 'cancelado' && (
+            {!paymentDataHidden && !isDeliveryAwaitingShipping && order.saldoPendiente > 0 && (
               <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
                 <h2 className="flex items-center gap-2 text-xl font-black text-slate-800">
                   <CreditCard size={21} className="text-[#004D77]" /> Completar pago
@@ -418,6 +509,45 @@ function OrderDetail() {
                           ? 'El pedido puede ser cancelado por vencimiento de pago.'
                           : 'El contador comenzó cuando el asesor asignó el valor del envío.'}
                       </p>
+                    </div>
+                  </div>
+                )}
+                {favorBalance > 0 && !paymentCountdownExpired && (
+                  <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                    <p className="text-sm font-black text-emerald-900">Pagar con saldo a favor</p>
+                    <p className="mt-1 text-xs font-semibold leading-relaxed text-emerald-800">
+                      Puedes aplicar todo o una parte de tu saldo a favor. Si no cubre todo el saldo pendiente, el pedido continuará pendiente por la diferencia.
+                    </p>
+                    <p className="mt-2 text-xs font-bold text-emerald-700">
+                      Disponible: {formatMoney(favorBalance)}
+                    </p>
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={favorAmount}
+                        onChange={handleFavorAmountChange}
+                        disabled={favorSubmitting}
+                        placeholder="Monto a aplicar"
+                        className="min-w-0 flex-1 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFavorAmount(formatAmountInput(Math.min(favorBalance, Number(order.saldoPendiente || 0))))}
+                        disabled={favorSubmitting}
+                        className="rounded-xl bg-white px-3 py-2 text-xs font-black text-emerald-700 shadow-sm disabled:opacity-60"
+                      >
+                        Usar máximo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleFavorPayment}
+                        disabled={favorSubmitting || !favorAmount}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black text-white disabled:opacity-50"
+                      >
+                        {favorSubmitting && <LoaderCircle size={14} className="animate-spin" />}
+                        {favorSubmitting ? 'Aplicando...' : 'Aplicar saldo'}
+                      </button>
                     </div>
                   </div>
                 )}
@@ -720,4 +850,3 @@ function Summary({ label, value, strong = false, className = '' }) {
 }
 
 export default OrderDetail;
-

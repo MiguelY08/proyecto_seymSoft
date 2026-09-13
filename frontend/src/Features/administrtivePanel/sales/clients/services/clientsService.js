@@ -84,7 +84,7 @@ export const clientsService = {
       clientSince: client.clientSince,
       credit_balance: client.credit_balance,
       saldoFavor: client.credit_balance,
-      isSystem: client.id === SYSTEM_CLIENT_ID
+      isSystem: Number(client.id) === SYSTEM_CLIENT_ID
     }));
     
     return {
@@ -115,10 +115,19 @@ export const clientsService = {
       new Map(clients.map((client) => [client.id, client])).values()
     );
 
-    return uniqueClients.filter((client) => {
-      const statusName = String(client.status?.name ?? client.status ?? '').toLowerCase();
-      return client.active === true || statusName === 'activo';
-    });
+    return uniqueClients
+      .filter((client) => {
+        if (Number(client.id) === SYSTEM_CLIENT_ID) return true;
+        const statusName = String(client.status?.name ?? client.status ?? '').toLowerCase();
+        return client.active === true || statusName === 'activo';
+      })
+      .sort((firstClient, secondClient) => (
+        Number(firstClient.id) === SYSTEM_CLIENT_ID
+          ? -1
+          : Number(secondClient.id) === SYSTEM_CLIENT_ID
+            ? 1
+            : 0
+      ));
   },
 
   getById: async (id) => {
