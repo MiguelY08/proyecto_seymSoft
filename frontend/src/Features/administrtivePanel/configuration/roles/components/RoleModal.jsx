@@ -91,24 +91,74 @@ export default function RoleModal({
       permisosSistema,
     ).permissions;
 
-  const getRemoteValidationData = (response) =>
-    response?.data || response || {};
+  const hasAllSelectablePermissions = (permissions) => {
+    const selectedKeys = new Set(
+      getPermissionsPayload(permissions)
+        .filter(({ id_privilege }) => {
+          const action = permisosSistema
+            .flatMap((modulo) => modulo.acciones)
+            .find((item) => item.id_privilege === id_privilege);
+
+          return action?.key !== "read";
+        })
+        .map(({ id_module, id_privilege }) => `${id_module}:${id_privilege}`),
+    );
+
+    const availableKeys = new Set(
+      permisosSistema.flatMap((modulo) =>
+        modulo.acciones
+          .filter((accion) => accion.key !== "read")
+          .map((accion) => `${modulo.id}:${accion.id_privilege}`),
+      ),
+    );
+
+    return (
+      availableKeys.size > 0 &&
+      selectedKeys.size === availableKeys.size &&
+      [...availableKeys].every((key) => selectedKeys.has(key))
+    );
+  };
+
+  const getRemoteValidationData = (response) => {
+    const data = response?.data || response || {};
+
+    return data?.data && typeof data.data === "object" ? data.data : data;
+  };
 
   const getValidationMessage = (data, defaultMessage) => {
     if (data?.name?.valid === false) {
       return data?.name?.message || defaultMessage;
     }
 
-    if (data?.permissions?.valid === false) {
-      return data?.permissions?.message || defaultMessage;
+    if (
+      data?.permissions === false ||
+      data?.permissions?.valid === false ||
+      data?.permissions?.isValid === false ||
+      data?.permissions?.duplicate === true ||
+      data?.duplicate === true ||
+      data?.isDuplicate === true
+    ) {
+      return (
+        data?.permissions?.message ||
+        data?.message ||
+        "Ya existe un rol con los mismos permisos y privilegios"
+      );
     }
 
-    if (data?.valid === false) {
+    if (data?.valid === false || data?.success === false) {
       return data?.message || defaultMessage;
     }
 
     return defaultMessage;
   };
+
+  const isPermissionsValidationRejected = (data) =>
+    data?.permissions === false ||
+    data?.permissions?.valid === false ||
+    data?.permissions?.isValid === false ||
+    data?.permissions?.duplicate === true ||
+    data?.duplicate === true ||
+    data?.isDuplicate === true;
 
   const getInputStyle = (hasError) =>
     `w-full mt-2 rounded-lg px-3 sm:px-4 py-2 text-sm outline-none transition-colors border ${
@@ -175,8 +225,18 @@ export default function RoleModal({
     }).name;
 
     if (!nombre.trim() || localNameError) {
-      setNameAvailable(true);
+      const protectedName = ["administrator", "administrador"].includes(
+        nombre.trim().toLowerCase(),
+      );
+
+      setNameAvailable(!protectedName);
       nameValidationRef.current += 1;
+
+      setErrors((prev) => ({
+        ...prev,
+        name: localNameError || "",
+      }));
+
       return;
     }
 
@@ -312,7 +372,6 @@ export default function RoleModal({
 
   const handleNombreChange = (value) => {
     setNombre(value);
-    setNameAvailable(true);
 
     const validation = validateCurrentRole({
       name: value,
@@ -322,10 +381,22 @@ export default function RoleModal({
       permissions: permisosRol,
     });
 
+    const protectedName = ["administrator", "administrador"].includes(
+      value.trim().toLowerCase(),
+    );
+
+    setNameAvailable(!protectedName);
+
+    const nameError = protectedName
+      ? mode === "edit"
+        ? "No puedes editar el rol Administrador"
+        : "No puedes crear un rol Administrador"
+      : validation.name || "";
+
     setErrors((prev) => ({
       ...prev,
 
-      name: validation.name || "",
+      name: nameError,
     }));
   };
 
@@ -379,7 +450,14 @@ export default function RoleModal({
         return;
       }
 
-      const valid = data?.valid ?? true;
+      const valid =
+        !isPermissionsValidationRejected(data) &&
+        data?.valid !== false &&
+        data?.success !== false;
+      const validationMessage =
+        valid
+          ? ""
+          : "Ya existe un rol con esos permisos y privilegios";
 
       setPermissionsValid(valid);
 
@@ -389,12 +467,29 @@ export default function RoleModal({
           validation.permissions ||
           (valid
             ? ""
-            : data?.permissions?.message ||
-              data?.message ||
-              "Uno o más permisos no son válidos"),
+            : validationMessage),
       }));
+
+      if (!valid && !validation.permissions) {
+        await showWarning("Permisos duplicados", validationMessage);
+      }
     } catch (error) {
       console.error("Error validando permisos de rol:", error);
+
+      if (
+        error.response?.status === 409 &&
+        currentRequestId === permissionValidationRef.current
+      ) {
+        const duplicateMessage =
+          "Ya existe un rol con esos permisos y privilegios";
+
+        setPermissionsValid(false);
+        setErrors((prev) => ({
+          ...prev,
+          permissions: duplicateMessage,
+        }));
+        await showWarning("Permisos duplicados", duplicateMessage);
+      }
     } finally {
       if (currentRequestId === permissionValidationRef.current) {
         setCheckingPermissions(false);
@@ -434,6 +529,20 @@ export default function RoleModal({
     try {
       setSaving(true);
 
+      if (hasAllSelectablePermissions(permisosRol)) {
+        const fullPermissionsMessage =
+          "No puedes crear o editar un rol con todos los permisos y privilegios del administrador";
+
+        setErrors((previous) => ({
+          ...previous,
+          permissions: fullPermissionsMessage,
+        }));
+        await showWarning("Permisos no permitidos", fullPermissionsMessage);
+        setSaving(false);
+        submitLockRef.current = false;
+        return;
+      }
+
       const remoteValidation = await validateRoleBeforeSave(
         {
           id: roleData?.id,
@@ -446,11 +555,7 @@ export default function RoleModal({
 
       const remoteData = getRemoteValidationData(remoteValidation);
 
-      const nameValid =
-        remoteData?.available ?? remoteData?.name?.valid ?? true;
-      const permissionsValidRemote = remoteData?.permissions?.valid ?? true;
-      const formValid =
-        remoteData?.valid !== false && nameValid && permissionsValidRemote;
+      const formValid = remoteData?.valid === true;
 
       if (!formValid) {
         const message = getValidationMessage(
@@ -460,8 +565,12 @@ export default function RoleModal({
 
         setErrors((prev) => ({
           ...prev,
-          name: !nameValid ? message : prev.name,
-          permissions: !permissionsValidRemote ? message : prev.permissions,
+          name: remoteData?.name?.valid === false ? message : prev.name,
+          permissions:
+            remoteData?.permissions?.valid === false ||
+            remoteData?.valid === false
+              ? message
+              : prev.permissions,
         }));
 
         await showWarning("Validación de rol", message);
@@ -472,8 +581,33 @@ export default function RoleModal({
       }
     } catch (error) {
       console.error("Error validando rol antes de guardar:", error);
+
+      if (error.response?.status === 409) {
+        await showWarning(
+          "Permisos duplicados",
+          "Ya existe otro rol con los mismos permisos y privilegios",
+        );
+        setSaving(false);
+        submitLockRef.current = false;
+        return;
+      }
+
+      const errorInfo = getRoleErrorInfo(
+        error,
+        mode === "edit" ? "update" : "create",
+      );
+
+      setErrors((previous) => ({
+        ...previous,
+        ...errorInfo.fieldErrors,
+      }));
+
+      const showAlert = errorInfo.type === "error" ? showError : showWarning;
+
+      await showAlert("Validación de rol", errorInfo.message);
       setSaving(false);
       submitLockRef.current = false;
+
       return;
     }
 
@@ -523,6 +657,19 @@ export default function RoleModal({
       }
     } catch (error) {
       console.error("Error guardando rol:", error);
+
+      if (error.response?.status === 409) {
+        setErrors((previous) => ({
+          ...previous,
+          permissions: "Ya existe otro rol con los mismos permisos y privilegios",
+        }));
+
+        showWarning(
+          "Permisos duplicados",
+          "Ya existe otro rol con los mismos permisos y privilegios",
+        );
+        return;
+      }
 
       const errorInfo = getRoleErrorInfo(
         error,
@@ -680,8 +827,10 @@ export default function RoleModal({
               disabled={
                 saving ||
                 loadingPermissions ||
+                checkingPermissions ||
                 permisosSistema.length === 0 ||
-                nameAvailable === false
+                nameAvailable === false ||
+                permissionsValid === false
               }
               className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
             >
