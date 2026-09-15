@@ -55,7 +55,7 @@ const AdminLayout = () => {
           isDesktop={isDesktop}
         />
 
-        <main className="flex-1 overflow-y-auto bg-white p-2">
+        <main className="min-h-0 flex-1 overflow-y-auto bg-white p-2">
           <Outlet />
         </main>
       </div>

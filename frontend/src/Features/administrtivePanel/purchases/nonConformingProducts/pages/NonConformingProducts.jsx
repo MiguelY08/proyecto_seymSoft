@@ -361,7 +361,7 @@ export const NonConformingProducts = () => {
 
   return (
     <>
-      <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-hidden p-3 sm:p-4">
+      <div className="flex min-h-full w-full min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto p-3 sm:p-4">
         <div className="flex shrink-0 flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <PurchasesFilters
             search={search}

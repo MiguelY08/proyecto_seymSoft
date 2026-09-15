@@ -338,8 +338,8 @@ export const getProducts = async (searchTerm = '') => {
       unitMeasure: p.unitMeasure || null,
       barcodes: Array.isArray(p.barcodes)
         ? p.barcodes.map(barcode => ({
-            id: barcode.id,
-            barcode: barcode.barcode,
+            id: barcode.id ?? barcode.id_barcode ?? barcode.idBarcode,
+            barcode: barcode.barcode ?? barcode.cod ?? barcode.code,
             variantName: barcode.variantName || barcode.variant_name || '',
             stock: barcode.stock ?? 0,
             isActive: barcode.isActive !== false && barcode.is_active !== false,

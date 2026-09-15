@@ -76,8 +76,8 @@ const getPurchaseBarcodeOptions = (product) => {
         typeof barcode === "string" || typeof barcode === "number"
           ? { barcode, variantName: "Código adicional", isActive: true }
           : {
-            id: barcode.id,
-            barcode: barcode.barcode || barcode.cod,
+            id: barcode.id ?? barcode.id_barcode ?? barcode.idBarcode,
+            barcode: barcode.barcode || barcode.cod || barcode.code || barcode.codigoBarras,
             variantName: barcode.variantName || barcode.variant_name,
             isActive: barcode.isActive !== false && barcode.is_active !== false,
           }
@@ -387,7 +387,7 @@ const CreateSidebar = ({
     navigate("/admin/purchases");
   };
 
-  const handleSelectProduct = (product, activeBarcode = "") => {
+  const handleSelectProduct = (product, activeBarcode = "", { closeSuggestions = false } = {}) => {
     const editingProductId = editingProductData?.id;
     if (
       isEditing &&
@@ -413,7 +413,7 @@ const CreateSidebar = ({
     setSelectedProductLabel(selectedLabel);
     setSelectedProduct(product);
     setExpandedProductId(product.id);
-    setShowSuggestions(true);
+    setShowSuggestions(!closeSuggestions);
     setShowBarcodeForm(false);
     setShowPriceEditor(false);
     setBarcodeValue("");
@@ -496,7 +496,7 @@ const CreateSidebar = ({
       return;
     }
 
-    handleSelectProduct(product, normalizedCode);
+    handleSelectProduct(product, normalizedCode, { closeSuggestions: true });
     const scannedProductLabel = getScannedProductLabel(product, match.barcode);
     setSearchProduct(scannedProductLabel);
     setSelectedProductLabel(scannedProductLabel);
