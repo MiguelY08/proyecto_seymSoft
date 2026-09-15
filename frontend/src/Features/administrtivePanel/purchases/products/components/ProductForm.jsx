@@ -302,15 +302,22 @@ function ProductForm({
   const getCurrentProductId = () =>
     isEditMode ? producto?.id ?? producto?.idProduct ?? null : null;
 
-  const getFormBarcodeValues = (data = formData) => [
-    data.codBarras,
-    ...(data.codsBarrasExtra || []).map((item) => item?.cod),
-  ];
+  const getFormBarcodeValues = (data = formData, options = {}) => {
+    const { excludePrimary = false, excludeExtraIndex = null } = options;
+    const values = [
+      data.codBarras,
+      ...(data.codsBarrasExtra || []).map((item) => item?.cod),
+    ];
+
+    return values.filter((_, index) => {
+      if (excludePrimary && index === 0) return false;
+      if (excludeExtraIndex !== null && index === excludeExtraIndex + 1) return false;
+      return true;
+    });
+  };
 
 
-
-  const getBarcodeConflictMessage = (code) => {
-    const owner = findProductBarcodeOwner(existingProducts, code, {
+  const getBarcodeConflictMessage = (code) => {    const owner = findProductBarcodeOwner(existingProducts, code, {
       excludeProductId: getCurrentProductId(),
     });
     if (!owner) return '';
@@ -327,14 +334,23 @@ function ProductForm({
     return `Hay codigos repetidos en el formulario: ${duplicates.join(', ')}.`;
   };
 
-  const getBarcodeValidationMessage = (code, data = formData, { required = false } = {}) => {
+  const getBarcodeValidationMessage = (
+    code,
+    data = formData,
+    { required = false, excludePrimary = false, excludeExtraIndex = null } = {},
+  ) => {
     const value = String(code ?? '').trim();
     if (!value) return required ? 'El codigo de barras es obligatorio.' : '';
     if (value.length < 8) return 'El codigo de barras debe tener minimo 8 caracteres.';
     if (value.length > 13) return 'El codigo de barras no puede superar los 13 caracteres.';
 
+    const duplicateValues = [
+      ...getFormBarcodeValues(data, { excludePrimary, excludeExtraIndex }),
+      value,
+    ];
+
     return getBarcodeConflictMessage(value) ||
-      getInternalDuplicateMessage(getFormBarcodeValues({ ...data, codBarras: value }));
+      getInternalDuplicateMessage(duplicateValues);
   };
 
   const getReferenceConflictMessage = (reference) => {
@@ -355,7 +371,7 @@ function ProductForm({
 
   const validateField = (name, value, data = formData) => {
     if (name === 'codBarras') {
-      return getBarcodeValidationMessage(value, data, { required: true });
+      return getBarcodeValidationMessage(value, data, { required: true, excludePrimary: true });
     }
 
     if (name === 'referencia') {
@@ -592,8 +608,9 @@ function ProductForm({
 
     if (field !== 'cod') return;
 
-    const extraError = getBarcodeValidationMessage(value, nextFormData) ||
-      getInternalDuplicateMessage(getFormBarcodeValues(nextFormData));
+    const extraError = getBarcodeValidationMessage(value, nextFormData, {
+      excludeExtraIndex: index,
+    });
 
     setErrors((prev) => {
       const next = { ...prev };
@@ -683,7 +700,10 @@ function ProductForm({
         nextData.codsBarrasExtra = updatedExtras;
       }
 
-      const validationMessage = getBarcodeValidationMessage(normalizedCode, nextData);
+      const validationMessage = getBarcodeValidationMessage(normalizedCode, nextData, {
+        excludePrimary: barcodeIndex === 0,
+        excludeExtraIndex: barcodeIndex > 0 ? barcodeIndex - 1 : null,
+      });
 
       setFormData(nextData);
       setErrors((prev) => {
