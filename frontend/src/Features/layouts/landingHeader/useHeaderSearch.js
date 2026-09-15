@@ -3,6 +3,11 @@ import { useNavigate } from "react-router-dom";
 
 import ProductsService from "../../administrtivePanel/purchases/products/services/productsServices.js";
 import categoriesService from "../../administrtivePanel/purchases/categories/services/categoriesService.js";
+import {
+  findProductBarcodeMatch,
+  normalizeBarcode,
+  useBarcodeScanner,
+} from "../../shared/scanner";
 
 import {
   addStoredRecentSearch,
@@ -28,6 +33,44 @@ function useHeaderSearch() {
   const [recentSearches, setRecentSearches] = useState(() =>
     getStoredRecentSearches()
   );
+
+  useBarcodeScanner({
+    enabled: true,
+    numericOnly: true,
+    minLength: 6,
+    maxLength: 20,
+    maxIntervalMs: 120,
+    scannerFields: ["landing-product-search"],
+    duplicateDelayMs: 800,
+    preventTerminatorDefault: true,
+    onScan: ({ code, event, scannerField }) => {
+      if (scannerField !== "landing-product-search") return;
+
+      const scannedCode = normalizeBarcode(code, { numericOnly: true });
+      const inputCandidates = String(event?.target?.value ?? "")
+        .match(/\d{6,20}/g)
+        ?.reverse() || [];
+      const match = [scannedCode, ...inputCandidates]
+        .map(candidate => findProductBarcodeMatch(products, candidate, { numericOnly: true }))
+        .find(Boolean);
+
+      if (!match?.product?.id) return;
+
+      const result = createHeaderSearchResults({
+        products: [match.product],
+        categories: [],
+      }).find(item => item.type === "product");
+
+      if (!result?.href) return;
+
+      setRecentSearches(currentSearches =>
+        addStoredRecentSearch(currentSearches, scannedCode)
+      );
+      setQuery("");
+      setIsOpen(false);
+      navigate(result.href);
+    },
+  });
 
   useEffect(() => {
     let isMounted = true;

@@ -160,6 +160,7 @@ function HeaderSearch({
           aria-label="Buscar productos"
           placeholder="Buscar"
           value={searchQuery}
+          data-scanner-field="landing-product-search"
           onFocus={onFocus}
           onKeyDown={handleKeyDown}
           onChange={(e) =>

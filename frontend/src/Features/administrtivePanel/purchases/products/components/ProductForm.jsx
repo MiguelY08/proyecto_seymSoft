@@ -102,6 +102,7 @@ function PriceCard({ label, fieldMain, fieldPaca, valueMain, valuePaca, placehol
 }
 
 const PRODUCT_NAME_MAX_LENGTH = 100;
+const PRODUCT_DESCRIPTION_MAX_LENGTH = 250;
 
 const initialForm = {
   nombre: '',
@@ -301,15 +302,22 @@ function ProductForm({
   const getCurrentProductId = () =>
     isEditMode ? producto?.id ?? producto?.idProduct ?? null : null;
 
-  const getFormBarcodeValues = (data = formData) => [
-    data.codBarras,
-    ...(data.codsBarrasExtra || []).map((item) => item?.cod),
-  ];
+  const getFormBarcodeValues = (data = formData, options = {}) => {
+    const { excludePrimary = false, excludeExtraIndex = null } = options;
+    const values = [
+      data.codBarras,
+      ...(data.codsBarrasExtra || []).map((item) => item?.cod),
+    ];
+
+    return values.filter((_, index) => {
+      if (excludePrimary && index === 0) return false;
+      if (excludeExtraIndex !== null && index === excludeExtraIndex + 1) return false;
+      return true;
+    });
+  };
 
 
-
-  const getBarcodeConflictMessage = (code) => {
-    const owner = findProductBarcodeOwner(existingProducts, code, {
+  const getBarcodeConflictMessage = (code) => {    const owner = findProductBarcodeOwner(existingProducts, code, {
       excludeProductId: getCurrentProductId(),
     });
     if (!owner) return '';
@@ -324,6 +332,25 @@ function ProductForm({
     if (duplicates.length === 0) return '';
 
     return `Hay codigos repetidos en el formulario: ${duplicates.join(', ')}.`;
+  };
+
+  const getBarcodeValidationMessage = (
+    code,
+    data = formData,
+    { required = false, excludePrimary = false, excludeExtraIndex = null } = {},
+  ) => {
+    const value = String(code ?? '').trim();
+    if (!value) return required ? 'El codigo de barras es obligatorio.' : '';
+    if (value.length < 8) return 'El codigo de barras debe tener minimo 8 caracteres.';
+    if (value.length > 13) return 'El codigo de barras no puede superar los 13 caracteres.';
+
+    const duplicateValues = [
+      ...getFormBarcodeValues(data, { excludePrimary, excludeExtraIndex }),
+      value,
+    ];
+
+    return getBarcodeConflictMessage(value) ||
+      getInternalDuplicateMessage(duplicateValues);
   };
 
   const getReferenceConflictMessage = (reference) => {
@@ -344,19 +371,7 @@ function ProductForm({
 
   const validateField = (name, value, data = formData) => {
     if (name === 'codBarras') {
-      const trimmed = value?.trim() ?? '';
-      if (!trimmed) return 'El codigo de barras es obligatorio.';
-      if (trimmed.length < 8) return 'El codigo de barras debe tener minimo 8 caracteres.';
-      if (trimmed.length > 13) return 'El codigo de barras no puede superar los 13 caracteres.';
-
-      const conflictMessage = getBarcodeConflictMessage(trimmed);
-      if (conflictMessage) return conflictMessage;
-
-      const duplicateMessage = getInternalDuplicateMessage([
-        trimmed,
-        ...(data.codsBarrasExtra || []).map((item) => item?.cod),
-      ]);
-      if (duplicateMessage) return duplicateMessage;
+      return getBarcodeValidationMessage(value, data, { required: true, excludePrimary: true });
     }
 
     if (name === 'referencia') {
@@ -545,13 +560,23 @@ function ProductForm({
 
   const updateVariantRow = (index, field, value) => {
     if (index === 0) {
-      setFormData((prev) => ({
-        ...prev,
+      const nextData = {
+        ...formData,
         ...(field === 'cod' ? { codBarras: value } : {}),
         ...(field === 'stock' ? { stockPrincipal: value } : {}),
         ...(field === 'variantName' ? { variantNamePrincipal: value } : {}),
         ...(field === 'variantImage' ? { variantImagePrincipal: value } : {}),
-      }));
+      };
+      setFormData(nextData);
+      if (field === 'cod') {
+        const fieldError = validateField('codBarras', value, nextData);
+        setErrors((prev) => {
+          const next = { ...prev };
+          if (fieldError) next.codBarras = fieldError;
+          else delete next.codBarras;
+          return next;
+        });
+      }
       return;
     }
     handleCodBarrasExtraChange(index - 1, field, value);
@@ -583,13 +608,9 @@ function ProductForm({
 
     if (field !== 'cod') return;
 
-    const extraConflictMessage = updated
-      .map((item) => item?.cod)
-      .filter(Boolean)
-      .map((code) => getBarcodeConflictMessage(code))
-      .find(Boolean);
-    const duplicateMessage = getInternalDuplicateMessage(getFormBarcodeValues(nextFormData));
-    const extraError = extraConflictMessage || duplicateMessage;
+    const extraError = getBarcodeValidationMessage(value, nextFormData, {
+      excludeExtraIndex: index,
+    });
 
     setErrors((prev) => {
       const next = { ...prev };
@@ -659,7 +680,11 @@ function ProductForm({
     onScan: ({ code, event, scannerField }) => {
       if (scannerField !== 'product-form-barcode') return;
 
-      const normalizedCode = normalizeBarcode(code, { numericOnly: true });
+      const scannedCode = normalizeBarcode(code, { numericOnly: true });
+      const inputCode = normalizeBarcode(event?.target?.value, { numericOnly: true });
+      const normalizedCode = inputCode.length >= 6 && inputCode.length <= 20
+        ? inputCode
+        : scannedCode;
       const barcodeIndex = Number(event?.target?.dataset?.barcodeIndex);
       if (!normalizedCode || !Number.isInteger(barcodeIndex)) return;
 
@@ -675,15 +700,17 @@ function ProductForm({
         nextData.codsBarrasExtra = updatedExtras;
       }
 
-      const conflictMessage = getBarcodeConflictMessage(normalizedCode);
-      const duplicateMessage = getInternalDuplicateMessage(getFormBarcodeValues(nextData));
-      const validationMessage = conflictMessage || duplicateMessage;
+      const validationMessage = getBarcodeValidationMessage(normalizedCode, nextData, {
+        excludePrimary: barcodeIndex === 0,
+        excludeExtraIndex: barcodeIndex > 0 ? barcodeIndex - 1 : null,
+      });
 
       setFormData(nextData);
       setErrors((prev) => {
         const next = { ...prev };
         if (barcodeIndex === 0) {
-          if (validationMessage) next.codBarras = validationMessage;
+          const fieldError = validationMessage || validateField('codBarras', normalizedCode, nextData);
+          if (fieldError) next.codBarras = fieldError;
           else delete next.codBarras;
         } else {
           if (validationMessage) next.codsBarrasExtra = validationMessage;
@@ -1212,8 +1239,22 @@ function ProductForm({
                 <ErrMsg field="imagen" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Descripción <span className="text-gray-400 font-normal">(opcional)</span></label>
-                <textarea name="descripcion" value={formData.descripcion || ''} onChange={handleChange} placeholder="Descripción del producto..." className="w-full px-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 resize-none text-sm text-gray-700 placeholder-gray-400 min-h-[200px] transition-colors duration-200" />
+                <div className="mb-1.5 flex items-center justify-between gap-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Descripción <span className="font-normal text-gray-400">(opcional)</span>
+                  </label>
+                  <span className="text-xs text-gray-400">
+                    {(formData.descripcion || '').length}/{PRODUCT_DESCRIPTION_MAX_LENGTH}
+                  </span>
+                </div>
+                <textarea
+                  name="descripcion"
+                  value={formData.descripcion || ''}
+                  onChange={handleChange}
+                  maxLength={PRODUCT_DESCRIPTION_MAX_LENGTH}
+                  placeholder="Descripción del producto..."
+                  className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-700 outline-none transition-colors duration-200 placeholder-gray-400 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 min-h-[200px]"
+                />
               </div>
             </div>
           </div>
