@@ -24,6 +24,13 @@ export default function PermissionsGrid({
       .join(" ");
   };
 
+  const getSelectableActions = (selectedActions = {}) => {
+    const actions = Object.entries(selectedActions);
+    const visibleActions = actions.filter(([key]) => key !== "read");
+
+    return visibleActions.length > 0 ? visibleActions : actions;
+  };
+
   // ─────────────────────────────
   // TOGGLE ACCIÓN
   // ─────────────────────────────
@@ -36,25 +43,18 @@ export default function PermissionsGrid({
         return modulo;
       }
 
+      const selectedActions = {
+        ...modulo.selectedActions,
+        [accionKey]: !modulo.selectedActions?.[accionKey],
+      };
+
+      selectedActions.read = Object.entries(selectedActions).some(
+        ([key, selected]) => key !== "read" && selected,
+      );
+
       return {
         ...modulo,
-
-        // ✅ NUEVO OBJETO
-        selectedActions: {
-          ...modulo.selectedActions,
-
-          [accionKey]: !modulo.selectedActions?.[accionKey],
-          ...(accionKey !== "read" && !modulo.selectedActions?.[accionKey]
-            ? { read: true }
-            : {}),
-          ...(accionKey === "read" &&
-          modulo.selectedActions?.[accionKey] &&
-          Object.entries(modulo.selectedActions).some(
-            ([key, selected]) => key !== "read" && selected,
-          )
-            ? { read: true }
-            : {}),
-        },
+        selectedActions,
       };
     });
 
@@ -73,9 +73,8 @@ export default function PermissionsGrid({
         return modulo;
       }
 
-      const allSelected = Object.values(modulo.selectedActions || {}).every(
-        Boolean,
-      );
+      const selectableActions = getSelectableActions(modulo.selectedActions);
+      const allSelected = selectableActions.every(([, selected]) => selected);
 
       const nuevasAcciones = Object.keys(modulo.selectedActions || {}).reduce(
         (acc, key) => {
@@ -86,12 +85,12 @@ export default function PermissionsGrid({
         {},
       );
 
-      if (
-        Object.entries(nuevasAcciones).some(
+      if (selectableActions.length === 1 && selectableActions[0][0] === "read") {
+        nuevasAcciones.read = !allSelected;
+      } else {
+        nuevasAcciones.read = selectableActions.some(
           ([key, selected]) => key !== "read" && selected,
-        )
-      ) {
-        nuevasAcciones.read = true;
+        );
       }
 
       return {
@@ -111,9 +110,14 @@ export default function PermissionsGrid({
   const toggleAllModules = () => {
     if (readOnly) return;
 
-    const allSelected = permisosRol.every((modulo) =>
-      Object.values(modulo.selectedActions || {}).every(Boolean),
-    );
+    const allSelected = permisosRol.every((modulo) => {
+      const selectableActions = getSelectableActions(modulo.selectedActions);
+
+      return (
+        selectableActions.length > 0 &&
+        selectableActions.every(([, selected]) => selected)
+      );
+    });
 
     const updated = permisosRol.map((modulo) => {
       const nuevasAcciones = Object.keys(modulo.selectedActions || {}).reduce(
@@ -125,12 +129,14 @@ export default function PermissionsGrid({
         {},
       );
 
-      if (
-        Object.entries(nuevasAcciones).some(
+      const hasVisibleAction = Object.keys(nuevasAcciones).some(
+        (key) => key !== "read",
+      );
+
+      if (hasVisibleAction) {
+        nuevasAcciones.read = Object.entries(nuevasAcciones).some(
           ([key, selected]) => key !== "read" && selected,
-        )
-      ) {
-        nuevasAcciones.read = true;
+        );
       }
 
       return {
@@ -166,11 +172,16 @@ export default function PermissionsGrid({
 
           const hasPermission =
             rolModulo &&
-            Object.values(rolModulo.selectedActions || {}).some(Boolean);
+            getSelectableActions(rolModulo.selectedActions).some(
+              ([, selected]) => selected,
+            );
 
           const allChecked =
             rolModulo &&
-            Object.values(rolModulo.selectedActions || {}).every(Boolean);
+            getSelectableActions(rolModulo.selectedActions).length > 0 &&
+            getSelectableActions(rolModulo.selectedActions).every(
+              ([, selected]) => selected,
+            );
 
           return (
             <div

@@ -17,11 +17,11 @@ export const validateRole = (data, { mode = "create" } = {}) => {
   } else if (!ROLE_NAME_PATTERN.test(name)) {
     errors.name =
       "El nombre debe iniciar con una letra y solo puede contener letras, números y espacios";
-  } else if (name.toLowerCase() === "administrator") {
+  } else if (["administrator", "administrador"].includes(name.toLowerCase())) {
     errors.name =
       mode === "edit"
-        ? "No puedes editar el rol Administrator"
-        : "No puedes crear un rol Administrator";
+        ? "No puedes editar el rol Administrador"
+        : "No puedes crear un rol Administrador";
   }
 
   if (description && description.length < 10) {
