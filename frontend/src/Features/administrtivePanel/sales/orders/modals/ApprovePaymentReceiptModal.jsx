@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  AlertTriangle,
   CheckCircle,
   CreditCard,
   ExternalLink,
@@ -7,8 +8,10 @@ import {
   Image as ImageIcon,
   Loader2,
   X,
+  XCircle,
 } from 'lucide-react';
 import { METODOS_PAGO, PAYMENT_METHOD_IDS } from '../services/ordersService';
+import useBodyScrollLock from '../../../../shared/hooks/useBodyScrollLock';
 
 const roundMoney = (value) =>
   Math.round((Number(value) || 0) * 100) / 100;
@@ -28,6 +31,13 @@ const formatCurrency = (value) =>
     minimumFractionDigits: 0,
   }).format(Number(value) || 0);
 
+const MIN_ANALYSIS_CONFIDENCE = 0.55;
+
+const formatConfidence = (value) => {
+  const confidence = Number(value);
+  return Number.isFinite(confidence) ? `${Math.round(confidence * 100)}%` : 'No disponible';
+};
+
 function ApprovePaymentReceiptModal({
   order,
   receipt,
@@ -35,8 +45,11 @@ function ApprovePaymentReceiptModal({
   isSubmitting = false,
   onClose,
   onConfirm,
+  onReject,
 }) {
   const [visible, setVisible] = useState(false);
+  const [reviewMode, setReviewMode] = useState('approve');
+  useBodyScrollLock(isOpen && Boolean(receipt));
   const pendingBalance = useMemo(() => {
     const explicitBalance = Number(order?.saldoPendiente);
     if (Number.isFinite(explicitBalance)) return Math.max(0, roundMoney(explicitBalance));
@@ -47,6 +60,11 @@ function ApprovePaymentReceiptModal({
   }, [order]);
 
   const initialReference = receipt?.fileName ? `Comprobante ${receipt.fileName}` : '';
+  const analysis = receipt?.analysis ?? {};
+  const hasReliableAmount =
+    Number.isFinite(Number(analysis.amount)) &&
+    Number(analysis.amount) > 0 &&
+    Number(analysis.confidence) >= MIN_ANALYSIS_CONFIDENCE;
   const [amount, setAmount] = useState('');
   const [reference, setReference] = useState(initialReference);
   const [reviewObservations, setReviewObservations] = useState('');
@@ -55,12 +73,22 @@ function ApprovePaymentReceiptModal({
   useEffect(() => {
     if (!isOpen || !receipt) return;
 
-    setAmount('');
-    setReference(receipt.fileName ? `Comprobante ${receipt.fileName}` : '');
-    setReviewObservations('');
-    const animationId = requestAnimationFrame(() => setVisible(true));
+    const animationId = requestAnimationFrame(() => {
+      setAmount(
+        hasReliableAmount
+          ? formatAmountInput(analysis.amount)
+          : ''
+      );
+      setReference(
+        analysis.transactionReference ||
+        (receipt.fileName ? `Comprobante ${receipt.fileName}` : '')
+      );
+      setReviewObservations('');
+      setReviewMode('approve');
+      setVisible(true);
+    });
     return () => cancelAnimationFrame(animationId);
-  }, [isOpen, receipt]);
+  }, [analysis.amount, analysis.transactionReference, hasReliableAmount, isOpen, receipt]);
 
   if (!isOpen || !receipt) return null;
 
@@ -73,6 +101,8 @@ function ApprovePaymentReceiptModal({
     ? Math.max(0, roundMoney(pendingBalance - roundMoney(numericAmount)))
     : pendingBalance;
   const canSubmit = !hasNoPendingBalance && hasValidAmount;
+  const rejectionObservationLength = reviewObservations.trim().length;
+  const canReject = rejectionObservationLength >= 10;
 
   const handleClose = () => {
     if (isSubmitting) return;
@@ -82,6 +112,14 @@ function ApprovePaymentReceiptModal({
 
   const handleSubmit = (event) => {
     event.preventDefault();
+    if (reviewMode === 'reject') {
+      if (!canReject) return;
+      onReject?.({
+        status: 'Rechazado',
+        reviewObservations: reviewObservations.trim(),
+      });
+      return;
+    }
     if (!canSubmit) return;
 
     const payload = {
@@ -113,7 +151,9 @@ function ApprovePaymentReceiptModal({
               <CheckCircle className="h-5 w-5 text-white" strokeWidth={1.8} />
             </span>
             <div className="min-w-0">
-              <h2 className="truncate text-lg font-bold text-[#f9f9f9] sm:text-xl">Aprobar comprobante</h2>
+              <h2 className="truncate text-lg font-bold text-[#f9f9f9] sm:text-xl">
+                {reviewMode === 'approve' ? 'Revisar comprobante' : 'Rechazar comprobante'}
+              </h2>
               <p className="mt-0.5 truncate text-xs text-white/60">Pedido #{order?.numeroPedido || order?.id}</p>
             </div>
           </div>
@@ -121,7 +161,7 @@ function ApprovePaymentReceiptModal({
             type="button"
             onClick={handleClose}
             disabled={isSubmitting}
-            aria-label="Cerrar aprobación de comprobante"
+            aria-label="Cerrar revisión de comprobante"
             className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/80 transition hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <X size={20} />
@@ -129,30 +169,78 @@ function ApprovePaymentReceiptModal({
           </div>
         </header>
 
-        <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-4 sm:gap-5 sm:p-6 md:grid-cols-[220px_1fr]">
-          <button
-            type="button"
-            onClick={() => receipt.imageUrl && setIsPreviewOpen(true)}
-            className="group w-full overflow-hidden rounded-lg border border-gray-200 bg-gray-50 text-left"
-          >
-            {receipt.imageUrl ? (
-              <img
-                src={receipt.imageUrl}
-                alt={receipt.fileName || 'Comprobante de pago'}
-                className="h-64 w-full object-cover transition group-hover:scale-[1.02] sm:h-56"
-              />
-            ) : (
-              <div className="flex h-64 items-center justify-center sm:h-56">
-                <ImageIcon className="h-8 w-8 text-gray-300" />
+        <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-4 sm:gap-5 sm:p-6 md:grid-cols-[250px_1fr]">
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => receipt.imageUrl && setIsPreviewOpen(true)}
+              className="group block w-full overflow-hidden rounded-lg border border-gray-200 bg-gray-50 text-left"
+            >
+              {receipt.imageUrl ? (
+                <img
+                  src={receipt.imageUrl}
+                  alt={receipt.fileName || 'Comprobante de pago'}
+                  className="h-44 w-full object-contain transition group-hover:scale-[1.02] sm:h-40"
+                />
+              ) : (
+                <div className="flex h-44 items-center justify-center sm:h-40">
+                  <ImageIcon className="h-8 w-8 text-gray-300" />
+                </div>
+              )}
+              <div className="flex items-center justify-between gap-2 border-t border-gray-200 bg-white px-3 py-2">
+                <span className="truncate text-xs font-bold text-gray-600">
+                  {receipt.fileName || 'Ver comprobante'}
+                </span>
+                <ExternalLink size={14} className="shrink-0 text-[#004D77]" />
               </div>
-            )}
-            <div className="flex items-center justify-between gap-2 border-t border-gray-200 bg-white px-3 py-2">
-              <span className="truncate text-xs font-bold text-gray-600">
-                {receipt.fileName || 'Ver comprobante'}
-              </span>
-              <ExternalLink size={14} className="shrink-0 text-[#004D77]" />
+            </button>
+
+            <div className={`rounded-lg border p-3 ${
+              hasReliableAmount
+                ? 'border-emerald-200 bg-emerald-50'
+                : 'border-amber-200 bg-amber-50'
+            }`}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className={`text-[11px] font-bold leading-tight ${
+                    hasReliableAmount ? 'text-emerald-800' : 'text-amber-800'
+                  }`}>
+                    {hasReliableAmount ? 'Monto sugerido' : 'Verificación manual requerida'}
+                  </p>
+                  <p className="mt-1 text-base font-black text-slate-800">
+                    {analysis.amount ? formatCurrency(analysis.amount) : 'No identificado'}
+                  </p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-black ${
+                  hasReliableAmount
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {formatConfidence(analysis.confidence)}
+                </span>
+              </div>
+              <div className="mt-2 space-y-1 text-[10px] text-slate-600">
+                {analysis.bank && <p>Entidad: <strong>{analysis.bank}</strong></p>}
+                {analysis.transactionReference && (
+                  <p>Referencia: <strong>{analysis.transactionReference}</strong></p>
+                )}
+                {analysis.transactionDate && (
+                  <p>Fecha: <strong>{analysis.transactionDate}</strong></p>
+                )}
+                {analysis.statusText && (
+                  <p>Estado: <strong>{analysis.statusText}</strong></p>
+                )}
+              </div>
+              {analysis.warnings?.length > 0 && (
+                <ul className="mt-2 list-disc space-y-1 pl-3 text-[10px] font-semibold text-amber-800">
+                  {analysis.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+                </ul>
+              )}
+              <p className="mt-2 text-[9px] font-semibold leading-snug text-slate-500">
+                Confirma estos datos con la imagen antes de tomar una decisión.
+              </p>
             </div>
-          </button>
+          </div>
 
           <div className="space-y-4">
             <div className="rounded-lg border border-[#004D77]/20 bg-[#004D77]/5 p-3">
@@ -170,7 +258,7 @@ function ApprovePaymentReceiptModal({
               )}
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            {reviewMode === 'approve' ? <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-semibold text-gray-700">Método de pago</label>
                 <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-semibold text-gray-700">
@@ -192,19 +280,31 @@ function ApprovePaymentReceiptModal({
                   required
                 />
               </div>
-            </div>
-            {exceedsPendingBalance && (
+            </div> : (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <div>
+                    <p className="text-xs font-semibold text-amber-800">El cliente verá este motivo.</p>
+                    <p className="mt-1 text-xs text-amber-700">
+                      Explica claramente por qué debe enviar un nuevo comprobante.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {reviewMode === 'approve' && exceedsPendingBalance && (
               <p className="text-xs font-semibold text-red-500">
                 El monto no puede superar el saldo pendiente de {formatCurrency(pendingBalance)}.
               </p>
             )}
-            {hasNoPendingBalance && (
+            {reviewMode === 'approve' && hasNoPendingBalance && (
               <p className="text-xs font-semibold text-red-500">
                 Este pedido no tiene saldo pendiente para aprobar.
               </p>
             )}
 
-            <div className="flex flex-col gap-1.5">
+            {reviewMode === 'approve' && <div className="flex flex-col gap-1.5">
               <label className="text-sm font-semibold text-gray-700">Referencia</label>
               <div className="relative">
                 <FileText className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -217,22 +317,33 @@ function ApprovePaymentReceiptModal({
                   className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-3 text-sm text-gray-700 outline-none transition focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 disabled:bg-gray-100"
                 />
               </div>
-            </div>
+            </div>}
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-semibold text-gray-700">Observación interna</label>
+              <label className="text-sm font-semibold text-gray-700">
+                {reviewMode === 'reject' ? 'Motivo del rechazo' : 'Observación interna'}
+              </label>
               <textarea
                 value={reviewObservations}
                 onChange={(event) => setReviewObservations(event.target.value)}
                 maxLength={255}
                 rows={3}
                 disabled={isSubmitting}
-                placeholder="Ej: comprobante legible y pago completo"
+                placeholder={reviewMode === 'reject'
+                  ? 'Ej: el monto no coincide con el saldo pendiente.'
+                  : 'Ej: comprobante legible y pago completo'}
                 className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20 disabled:bg-gray-100"
               />
               <p className="text-right text-[10px] font-semibold text-gray-400">
                 {reviewObservations.length}/255
               </p>
+              {reviewMode === 'reject' && (
+                <p className={`text-xs font-semibold ${
+                  rejectionObservationLength < 10 ? 'text-red-500' : 'text-gray-400'
+                }`}>
+                  Mínimo 10 caracteres.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -247,12 +358,38 @@ function ApprovePaymentReceiptModal({
             Cancelar
           </button>
           <button
-            type="submit"
-            disabled={isSubmitting || !canSubmit}
-            className="order-1 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            type="button"
+            onClick={() => {
+              if (reviewMode === 'reject') {
+                setReviewMode('approve');
+                return;
+              }
+              handleSubmit({ preventDefault: () => {} });
+            }}
+            disabled={isSubmitting || (reviewMode === 'approve' && !canSubmit)}
+            className="order-1 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-green-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >
-            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-            Aprobar comprobante
+            {isSubmitting && reviewMode === 'approve'
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : <CheckCircle className="h-4 w-4" />}
+            {reviewMode === 'approve' ? 'Aprobar comprobante' : 'Volver a aprobar'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (reviewMode === 'approve') {
+                setReviewMode('reject');
+                return;
+              }
+              handleSubmit({ preventDefault: () => {} });
+            }}
+            disabled={isSubmitting || (reviewMode === 'reject' && !canReject)}
+            className="order-1 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-red-500 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+          >
+            {isSubmitting && reviewMode === 'reject'
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : <XCircle className="h-4 w-4" />}
+            {reviewMode === 'reject' ? 'Rechazar comprobante' : 'Rechazar'}
           </button>
         </div>
       </form>

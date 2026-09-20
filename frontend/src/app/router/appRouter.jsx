@@ -19,7 +19,6 @@ import ShopDetail from "../../Features/landing/shop/pages/ShopDetails.jsx";
 import OrdersL from "../../Features/landing/orders/Orders.jsx";
 import OrderDetail from "../../Features/landing/orders/OrderDetail.jsx";
 import ReturnsOnOrders from "../../Features/landing/orders/Returns_On_Orders.jsx";
-import RegisterReturn from "../../Features/landing/orders/RegisterReturnOnDetail.jsx";
 import DetailReturnsOnOrders from "../../Features/landing/orders/DetailReturnsOnOrders.jsx";
 import EditReturn from "../../Features/landing/orders/EditReturn.jsx";
 
@@ -96,7 +95,6 @@ const AppRouter = () => {
         <Route path="orders-l/:id" element={<OrderDetail />} />
 
         <Route path="returnsOnOrders" element={<ReturnsOnOrders />} />
-        <Route path="registerReturn/:id" element={<RegisterReturn />} />
         <Route path="returns/:id" element={<DetailReturnsOnOrders />} />
         <Route path="edit/:id" element={<EditReturn />} />
 

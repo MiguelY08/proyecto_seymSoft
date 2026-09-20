@@ -2,18 +2,85 @@ import { Info, Layers, Loader2, Plus, SquarePen, Trash2 } from "lucide-react";
 import { useState } from "react";
 import ActiveToggle from "./ActiveToggle";
 import Permission from "../../../configuration/roles/components/Permission";
+import { calculateHoverPosition } from "../../../sales/orders/helpers/hoverPositionHelper";
 
-function SubcategoriesBadge({ count }) {
-  const total = Number(count) || 0;
-  const classes = total > 0
-    ? "border-sky-200 bg-sky-50 text-[#004D77]"
-    : "border-gray-200 bg-gray-100 text-gray-500";
+function SubcategoriesTooltip({ subcategories = [], position = null }) {
+  const opensAbove = position?.placement === "top";
+  const positionStyle = position
+    ? {
+        left: `${position.left}px`,
+        ...(opensAbove ? { bottom: `${position.bottom}px` } : { top: `${position.top}px` }),
+        ...(position.maxHeight ? { maxHeight: `${position.maxHeight}px` } : {}),
+      }
+    : {};
 
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${classes}`}>
-      <Layers size={11} />
-      {total}
-    </span>
+    <div
+      className={`pointer-events-none fixed z-[9999] min-w-[220px] max-w-[260px] -translate-x-1/2 overflow-y-auto overscroll-contain rounded-xl p-3 opacity-100 shadow-2xl transition-all duration-150 ${
+        opensAbove ? "-translate-y-1" : "translate-y-1"
+      }`}
+      style={{ background: "#1e293b", ...positionStyle }}
+    >
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "#94a3b8" }}>
+        Subcategorías
+      </p>
+      <div className="flex max-h-44 flex-col gap-1.5">
+        {subcategories.length === 0 ? (
+          <div className="rounded-lg px-2 py-2" style={{ background: "rgba(15, 23, 42, 0.72)" }}>
+            <p className="text-xs italic" style={{ color: "#cbd5e1" }}>
+              No hay subcategorías
+            </p>
+          </div>
+        ) : (
+          subcategories.map((subcategory) => {
+            const isActive = subcategory.estado === "Activo";
+            return (
+              <div
+                key={subcategory.id ?? `${subcategory.nombre}-${subcategory.estado}`}
+                className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5"
+                style={{ background: "rgba(15, 23, 42, 0.72)" }}
+              >
+                <span className="flex items-center gap-2 truncate text-xs font-medium" style={{ color: "#f8fafc" }}>
+                  <span className={`h-2 w-2 rounded-full ${isActive ? "bg-green-500" : "bg-red-500"}`} />
+                  <span className="truncate">{subcategory.nombre || "Sin nombre"}</span>
+                </span>
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                    isActive ? "bg-green-400/15 text-green-200" : "bg-red-400/15 text-red-200"
+                  }`}
+                >
+                  {subcategory.estado || "Inactivo"}
+                </span>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SubcategoriesBadge({ subcategories = [] }) {
+  const total = subcategories.length;
+  const [hoverPosition, setHoverPosition] = useState(null);
+
+  const handleMouseEnter = (event) => {
+    setHoverPosition(calculateHoverPosition(event.currentTarget, {
+      tooltipWidth: 240,
+      tooltipMaxHeight: 260,
+      margin: 12,
+      gap: 8,
+    }));
+  };
+
+  return (
+    <div className="group/sub relative inline-flex justify-center" onMouseEnter={handleMouseEnter} onMouseLeave={() => setHoverPosition(null)}>
+      <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-[#004D77]">
+        <Layers size={11} />
+        {total}
+      </span>
+      {hoverPosition && <SubcategoriesTooltip subcategories={subcategories} position={hoverPosition} />}
+    </div>
   );
 }
 
@@ -108,7 +175,7 @@ export const CategoriesTable = ({
                 {highlightText(category.nombre || "")}
               </td>
               <td className="px-3 py-2 text-center whitespace-nowrap">
-                <SubcategoriesBadge count={category.subcategorias} />
+                <SubcategoriesBadge subcategories={category.subcategoriasDetalle || []} />
               </td>
               <td className="px-3 py-2 text-center whitespace-nowrap">
                 <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${

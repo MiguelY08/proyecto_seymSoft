@@ -218,28 +218,86 @@ function RightSectionForm({
             Cliente <span className="text-red-500">*</span>
           </label>
           <div className="flex flex-col items-stretch gap-2 sm:flex-row">
-            <div className="relative min-w-0 flex-1" ref={clienteWrapperRef}>
-              <Users className="pointer-events-none absolute left-3 top-1/2 z-10 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
-              <input
-                type="text"
-                placeholder="Buscar cliente por nombre, teléfono, email..."
-                value={clienteInputValue}
-                onChange={(event) => {
-                  setClienteSearchTerm(event.target.value);
-                  setIsClienteDropdownOpen(true);
-                }}
-                onFocus={() => {
-                  if (isClienteDisabled) return;
-                  setClienteSearchTerm(nombreClienteSeleccionado);
-                  setIsClienteDropdownOpen(true);
-                }}
-                disabled={isClienteDisabled}
-                className={`w-full rounded-lg border py-2.5 pl-10 pr-8 text-sm outline-none transition-colors ${showClienteError ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-gray-300 focus:border-[#004D77] focus:ring-2 focus:ring-[#004D77]/20'} ${isClienteDisabled ? 'cursor-not-allowed bg-gray-100 text-gray-600' : 'bg-white text-gray-700'}`}
-              />
-              <div className="absolute right-2 top-1/2 z-10 flex -translate-y-1/2 items-center gap-1">
-                {clienteSearchTerm && !isClienteDisabled && <button type="button" onClick={() => { setClienteSearchTerm(''); onClienteChange?.({ target: { value: '' } }); }} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" strokeWidth={1.8} /></button>}
-                {!isClienteDisabled && <ChevronDown className="pointer-events-none w-4 text-gray-400" strokeWidth={2} />}
-              </div>
+            <div
+              className={`relative min-w-0 flex-1 rounded-lg border transition-colors ${
+                showClienteError
+                  ? 'border-red-500 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-200'
+                  : 'border-gray-300 focus-within:border-[#004D77] focus-within:ring-2 focus-within:ring-[#004D77]/20'
+              } ${isClienteDisabled ? 'bg-gray-100' : 'bg-white'}`}
+              ref={clienteWrapperRef}
+            >
+              {clienteSeleccionado && !isClienteDropdownOpen ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isClienteDisabled) return;
+                    setClienteSearchTerm(nombreClienteSeleccionado);
+                    setIsClienteDropdownOpen(true);
+                  }}
+                  disabled={isClienteDisabled}
+                  className="flex min-h-20 w-full items-start gap-2.5 rounded-lg px-3 py-2.5 pr-9 text-left disabled:cursor-not-allowed"
+                  aria-label="Cliente seleccionado"
+                >
+                  <Users className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" strokeWidth={1.8} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-gray-800">
+                      {nombreClienteSeleccionado}
+                      {Number(clienteSeleccionado.id) === SYSTEM_CLIENT_ID && (
+                        <span className="ml-2 text-xs font-normal text-blue-600">(Cliente del sistema)</span>
+                      )}
+                    </span>
+                    <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                      {clienteSeleccionado.phone && (
+                        <span className="inline-flex items-center gap-1">
+                          <Phone className="h-3 w-3" strokeWidth={1.5} />
+                          {clienteSeleccionado.phone}
+                        </span>
+                      )}
+                      {clienteSeleccionado.email && (
+                        <span className="inline-flex min-w-0 items-center gap-1">
+                          <Mail className="h-3 w-3 shrink-0" strokeWidth={1.5} />
+                          <span className="truncate">{clienteSeleccionado.email}</span>
+                        </span>
+                      )}
+                      {clienteSeleccionado.document && (
+                        <span className="inline-flex items-center gap-1">
+                          <IdCard className="h-3 w-3" strokeWidth={1.5} />
+                          {clienteSeleccionado.document}
+                        </span>
+                      )}
+                      {(clienteSeleccionado.address || clienteSeleccionado.direccion) && (
+                        <span className="basis-full truncate">
+                          Dirección: {clienteSeleccionado.address || clienteSeleccionado.direccion}
+                        </span>
+                      )}
+                    </span>
+                  </span>
+                </button>
+              ) : (
+                <>
+                  <Users className="pointer-events-none absolute left-3 top-3 z-10 h-4 w-4 text-gray-400" strokeWidth={1.8} />
+                  <input
+                    type="text"
+                    placeholder="Buscar cliente por nombre, teléfono, email..."
+                    value={clienteInputValue}
+                    onChange={(event) => {
+                      setClienteSearchTerm(event.target.value);
+                      setIsClienteDropdownOpen(true);
+                    }}
+                    onFocus={() => {
+                      if (isClienteDisabled) return;
+                      setClienteSearchTerm(nombreClienteSeleccionado);
+                      setIsClienteDropdownOpen(true);
+                    }}
+                    disabled={isClienteDisabled}
+                    className={`w-full rounded-lg border-0 py-2.5 pl-10 pr-8 text-sm outline-none transition-colors focus:ring-0 ${isClienteDisabled ? 'cursor-not-allowed bg-gray-100 text-gray-600' : 'bg-white text-gray-700'}`}
+                  />
+                  <div className="absolute right-2 top-2.5 z-10 flex items-center gap-1">
+                    {clienteSearchTerm && !isClienteDisabled && <button type="button" onClick={() => { setClienteSearchTerm(''); onClienteChange?.({ target: { value: '' } }); }} className="text-gray-400 transition-colors hover:text-gray-600"><X className="h-4 w-4" strokeWidth={1.8} /></button>}
+                    {!isClienteDisabled && <ChevronDown className="pointer-events-none h-4 w-4 text-gray-400" strokeWidth={2} />}
+                  </div>
+                </>
+              )}
               {isClienteDropdownOpen && !isClienteDisabled && (
                 <div className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg overscroll-contain">
                   {clientesFiltrados.length > 0 ? <ul className="py-1">{clientesFiltrados.map((cliente) => (
@@ -255,7 +313,7 @@ function RightSectionForm({
                 </div>
               )}
             </div>
-            {onCreateClient && !readOnly && !isEditMode && <button type="button" onClick={onCreateClient} disabled={loading} title="Crear cliente" className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-[#004D77] bg-white text-[#004D77] transition-colors hover:bg-[#004D77] hover:text-white disabled:cursor-not-allowed disabled:opacity-50 sm:w-10 sm:shrink-0"><Plus className="w-4 h-4" strokeWidth={2} /></button>}
+            {onCreateClient && !readOnly && !isEditMode && <button type="button" onClick={onCreateClient} disabled={loading} title="Crear cliente" className={`inline-flex w-full items-center justify-center rounded-lg border border-[#004D77] bg-white text-[#004D77] transition-colors hover:bg-[#004D77] hover:text-white disabled:cursor-not-allowed disabled:opacity-50 sm:w-10 sm:shrink-0 ${clienteSeleccionado ? 'h-20' : 'h-10'}`}><Plus className="h-4 w-4" strokeWidth={2} /></button>}
           </div>
           {showClienteError && <p className="mt-0.5 text-xs text-red-500">{errors.clienteId}</p>}
         </div>
@@ -352,15 +410,16 @@ function RightSectionForm({
         {/* Tabla de productos agregados */}
         {productos.length > 0 ? (
           <div className="overflow-x-auto rounded-lg border border-gray-200 [-webkit-overflow-scrolling:touch] lg:overflow-x-visible">
-            <table className="min-w-[720px] w-full table-fixed divide-y divide-gray-200 lg:min-w-0">
+            <table className="min-w-[780px] w-full table-fixed divide-y divide-gray-200 lg:min-w-0">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="w-[27%] px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase sm:px-3">Producto</th>
-                  <th className="w-[9%] px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase sm:px-3">Stock</th>
-                  <th className="w-[17%] px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase sm:px-3">Cantidad</th>
-                  <th className="w-[18%] px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase sm:px-3">Precio Unit.</th>
-                  <th className="w-[18%] px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase sm:px-3">Total</th>
-                  <th className="w-[11%] whitespace-nowrap px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase sm:px-3">Acciones</th>
+                  <th className="w-[22%] px-2 py-2 text-left text-xs font-medium uppercase text-gray-500 sm:px-3">Producto</th>
+                  <th className="w-[8%] px-2 py-2 text-left text-xs font-medium uppercase text-gray-500 sm:px-3">Stock</th>
+                  <th className="w-[13%] px-2 py-2 text-left text-xs font-medium uppercase text-gray-500 sm:px-3">Cantidad</th>
+                  <th className="w-[15%] px-2 py-2 text-left text-xs font-medium uppercase text-gray-500 sm:px-3">Precio Unit.</th>
+                  <th className="w-[13%] px-2 py-2 text-left text-xs font-medium uppercase text-gray-500 sm:px-3">IVA</th>
+                  <th className="w-[16%] px-2 py-2 text-left text-xs font-medium uppercase text-gray-500 sm:px-3">Total</th>
+                  <th className="w-[13%] px-1 py-2 text-center text-[11px] font-medium uppercase text-gray-500">Acciones</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -389,6 +448,12 @@ function RightSectionForm({
                     </td>
                     <td className="whitespace-nowrap px-2 py-2 text-sm text-gray-700 sm:px-3">
                       {formatCurrency(prod.precioUnitario)}
+                    </td>
+                    <td className="px-2 py-2 text-sm text-gray-700 sm:px-3">
+                      <span className="block whitespace-nowrap">{formatCurrency(prod.iva)}</span>
+                      {prod.ivaPercentage !== undefined && prod.ivaPercentage !== null && (
+                        <span className="block text-xs text-gray-500">{prod.ivaPercentage}%</span>
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-2 py-2 text-sm font-medium text-gray-900 sm:px-3">
                       {formatCurrency(prod.subtotal)}

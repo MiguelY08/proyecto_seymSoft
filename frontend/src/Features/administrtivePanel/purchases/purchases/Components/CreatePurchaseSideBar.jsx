@@ -8,11 +8,14 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
+  IdCard,
+  Mail,
   Minus,
   PanelLeftClose,
   Plus,
   Search,
   Truck,
+  Phone,
   DollarSign,
   ChevronRight,
   Package,
@@ -306,9 +309,57 @@ const CreateSidebar = ({
     ],
   });
 
-  const filteredProviders = providersList.filter((p) =>
-    p.nombre?.toLowerCase().includes(searchProvider.toLowerCase())
-  );
+  const normalizeProviderSearch = (value) => String(value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+  const normalizeProviderDigits = (value) => String(value ?? "").replace(/\D/g, "");
+
+  const getProviderSearchValues = (provider) => {
+    const categoryValues = Array.isArray(provider.categorias)
+      ? provider.categorias.flatMap((category) => (
+        typeof category === "object"
+          ? [category.name, category.nombre]
+          : [category]
+      ))
+      : [];
+
+    return [
+      provider.nombre,
+      provider.nombres,
+      provider.apellidos,
+      `${provider.nombres || ""} ${provider.apellidos || ""}`,
+      provider.tipoDocumento,
+      provider.documento,
+      provider.tipoPersona,
+      provider.telefono,
+      provider.correo,
+      provider.nombreContacto,
+      provider.numeroContacto,
+      provider.codigoCIU,
+      ...categoryValues,
+    ];
+  };
+
+  const normalizedProviderSearch = normalizeProviderSearch(searchProvider);
+  const numericProviderSearch = normalizeProviderDigits(searchProvider);
+  const filteredProviders = providersList.filter((provider) => {
+    if (!normalizedProviderSearch) return true;
+
+    return getProviderSearchValues(provider).some((value) => {
+      const normalizedValue = normalizeProviderSearch(value);
+      const numericValue = normalizeProviderDigits(value);
+
+      return normalizedValue.includes(normalizedProviderSearch) ||
+        (numericProviderSearch && numericValue.includes(numericProviderSearch));
+    });
+  });
+
+  const selectedProviderData = providersList.find(
+    (provider) => Number(provider.id) === Number(selectedProviderId)
+  ) || null;
 
   const filteredProducts = productsDB.filter((p) => {
     const product = getProductWithLocalBarcodes(p);
@@ -1007,9 +1058,9 @@ const CreateSidebar = ({
   const hasEmptySalePrices = validationStatus === 'empty' && parseFloat(purchasePrice) > 0;
 
   return (
-    <div ref={sidebarRef} className="col-span-3">
+    <div ref={sidebarRef}>
       <div className="sticky top-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="flex items-center gap-3 border-b border-gray-100 bg-gray-50 px-5 py-3.5">
+        <div className="flex items-center gap-3 border-b border-gray-100 bg-gray-50 px-4 py-3.5 sm:px-5">
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#004D77]">
             <FileText className="h-4 w-4 text-white" strokeWidth={2} />
           </div>
@@ -1021,7 +1072,7 @@ const CreateSidebar = ({
             <PanelLeftClose className="h-4 w-4" strokeWidth={1.8} />
           </button>
         </div>
-        <div className="flex flex-col gap-4 p-5">
+        <div className="flex flex-col gap-3 p-4 sm:p-5">
 
           {/* ========== INDICADOR DE EDICION ========== */}
           {isEditing && (
@@ -1048,21 +1099,77 @@ const CreateSidebar = ({
           {/* PROVEEDOR */}
           <div ref={providerWrapperRef} className="relative flex flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">Proveedor <span className="text-red-500">*</span></label>
-            <div onClick={() => { setIsOpen(!isOpen); setProviderTouched(true); }} className={`relative flex w-full cursor-pointer items-center justify-between rounded-lg border bg-white py-2.5 pl-10 pr-3 text-sm text-gray-700 transition-colors ${providerError ? "border-red-500" : "border-gray-300 hover:border-[#004D77]"}`}>
-              <Truck className="pointer-events-none absolute left-3 h-4 w-4 text-gray-400" strokeWidth={1.8} />
-              <span className="truncate">{selectedProvider || "Seleccione el proveedor"}</span>
-              <div className="flex items-center gap-2">
-                {providerTouched && providerError && <AlertCircle size={16} className="text-red-400" />}
-                <span className="text-gray-500">▾</span>
-              </div>
+            <div
+              onClick={() => { setIsOpen(!isOpen); setProviderTouched(true); }}
+              className={`relative w-full cursor-pointer rounded-lg border bg-white text-sm text-gray-700 transition-colors ${
+                providerError ? "border-red-500" : "border-gray-300 hover:border-[#004D77]"
+              }`}
+            >
+              {selectedProviderData && !isOpen ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setIsOpen(true);
+                  }}
+                  className="flex min-h-20 w-full items-start gap-2.5 rounded-lg px-3 py-2.5 pr-9 text-left"
+                  aria-label="Proveedor seleccionado"
+                >
+                  <Truck className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" strokeWidth={1.8} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-gray-800">
+                      {selectedProviderData.nombre}
+                    </span>
+                    <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                      {selectedProviderData.documento && (
+                        <span className="inline-flex items-center gap-1">
+                          <IdCard className="h-3 w-3" strokeWidth={1.5} />
+                          {selectedProviderData.tipoDocumento ? `${selectedProviderData.tipoDocumento} ` : ""}
+                          {selectedProviderData.documento}
+                        </span>
+                      )}
+                      {selectedProviderData.telefono && (
+                        <span className="inline-flex items-center gap-1">
+                          <Phone className="h-3 w-3" strokeWidth={1.5} />
+                          {selectedProviderData.telefono}
+                        </span>
+                      )}
+                      {selectedProviderData.correo && (
+                        <span className="inline-flex min-w-0 items-center gap-1">
+                          <Mail className="h-3 w-3 shrink-0" strokeWidth={1.5} />
+                          <span className="truncate">{selectedProviderData.correo}</span>
+                        </span>
+                      )}
+                    </span>
+                  </span>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-3 h-4 w-4 text-gray-400" strokeWidth={2} />
+                </button>
+              ) : (
+                <div className="relative flex items-center">
+                  <Truck className="pointer-events-none absolute left-3 h-4 w-4 text-gray-400" strokeWidth={1.8} />
+                  <span className="w-full truncate py-2.5 pl-10 pr-9">
+                    {selectedProvider || "Seleccione el proveedor"}
+                  </span>
+                  <div className="absolute right-3 flex items-center gap-2">
+                    {providerTouched && providerError && <AlertCircle size={16} className="text-red-400" />}
+                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} strokeWidth={2} />
+                  </div>
+                </div>
+              )}
             </div>
             {isOpen && (
               <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-gray-200 bg-white p-2 shadow-xl">
-                <h3 className="text-center font-semibold text-gray-800 mb-3">Seleccione un Proveedor</h3>
-                <div className="flex items-center gap-2 mb-3">
+                <div className="mb-3 flex items-center gap-2">
                   <div className="flex w-full items-center rounded-lg border border-gray-300 bg-white px-3 py-2">
-                    <Search size={16} className="text-gray-500 mr-2" />
-                    <input type="text" placeholder="Buscar" value={searchProvider} onChange={(e) => setSearchProvider(e.target.value)} className="bg-transparent outline-none text-sm w-full" />
+                    <Search size={16} className="mr-2 shrink-0 text-gray-500" />
+                    <input
+                      type="text"
+                      placeholder="Buscar por nombre, documento, teléfono o correo"
+                      value={searchProvider}
+                      onChange={(e) => setSearchProvider(e.target.value)}
+                      onClick={(event) => event.stopPropagation()}
+                      className="w-full bg-transparent text-sm outline-none"
+                    />
                   </div>
                   <button onClick={openCreateProvider} title="Crear proveedor" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#004D77] bg-white text-[#004D77] transition-colors hover:bg-[#004D77] hover:text-white">
                     <Plus size={14} />
@@ -1070,11 +1177,47 @@ const CreateSidebar = ({
                 </div>
                 <div className="max-h-44 overflow-y-auto">
                   {filteredProviders.map((provider, index) => (
-                    <label key={provider.id || index} className="flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm text-gray-700 transition-colors hover:bg-[#004D77]/10">
-                      <input type="checkbox" checked={selectedProvider === provider.nombre} onChange={() => { setSelectedProvider(provider.nombre); setSelectedProviderId(provider.id); setProviderTouched(true); setIsOpen(false); }} className="accent-[#004D77]" />
-                      {provider.nombre}
-                    </label>
+                    <button
+                      type="button"
+                      key={provider.id || index}
+                      onClick={() => {
+                        setSelectedProvider(provider.nombre);
+                        setSelectedProviderId(provider.id);
+                        setProviderTouched(true);
+                        setSearchProvider("");
+                        setIsOpen(false);
+                      }}
+                      className="w-full rounded-lg p-2 text-left text-sm text-gray-700 transition-colors hover:bg-[#004D77]/10"
+                    >
+                      <div className="font-medium text-gray-800">{provider.nombre}</div>
+                      <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                        {provider.documento && (
+                          <span className="inline-flex items-center gap-1">
+                            <IdCard className="h-3 w-3" strokeWidth={1.5} />
+                            {provider.tipoDocumento ? `${provider.tipoDocumento} ` : ""}
+                            {provider.documento}
+                          </span>
+                        )}
+                        {provider.telefono && (
+                          <span className="inline-flex items-center gap-1">
+                            <Phone className="h-3 w-3" strokeWidth={1.5} />
+                            {provider.telefono}
+                          </span>
+                        )}
+                        {provider.correo && (
+                          <span className="inline-flex min-w-0 items-center gap-1">
+                            <Mail className="h-3 w-3 shrink-0" strokeWidth={1.5} />
+                            <span className="truncate">{provider.correo}</span>
+                          </span>
+                        )}
+                      </div>
+                    </button>
                   ))}
+                  {filteredProviders.length === 0 && (
+                    <div className="px-3 py-3 text-center text-sm text-gray-500">
+                      No se encontraron proveedores
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1083,8 +1226,9 @@ const CreateSidebar = ({
             </div>
           </div>
 
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {/* ========== FACTURA CON VALIDACIÓN EN TIEMPO REAL ========== */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">
               No. factura <span className="text-red-500">*</span>
             </label>
@@ -1119,16 +1263,6 @@ const CreateSidebar = ({
                 </div>
               )}
             </div>
-            <div className={`overflow-hidden transition-all duration-300 ${
-              invoiceTouched && (invoiceError || invoiceValid) ? "max-h-10 mt-1.5 opacity-100" : "max-h-0 opacity-0"
-            }`}>
-              <p className={`text-xs flex items-center gap-1 ${
-                invoiceError ? "text-red-500" : "text-green-500"
-              }`}>
-                {invoiceError ? <AlertCircle size={12} /> : <Check size={12} />}
-                {invoiceError || (invoiceValid && "✓ Número de factura disponible")}
-              </p>
-            </div>
             {invoiceTouched && !invoiceError && !invoiceValid && !isCheckingInvoice && invoiceNumber.trim().length > 0 && (
               <p className="text-xs text-gray-400 mt-1 text-right">
                 {invoiceNumber.trim().length}/20 caracteres
@@ -1137,7 +1271,7 @@ const CreateSidebar = ({
           </div>
 
           {/* FECHA */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-1.5">
             <label className="block text-sm font-medium text-gray-700">Fecha de compra <span className="text-red-500">*</span></label>
             <div className="relative">
               <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.8} />
@@ -1148,9 +1282,10 @@ const CreateSidebar = ({
               <p className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={12} /> {dateError}</p>
             </div>
           </div>
+          </div>
 
           {/* BUSCAR PRODUCTO */}
-          <div ref={productWrapperRef} className="relative border-t border-gray-100 pt-4">
+          <div ref={productWrapperRef} className="relative border-t border-gray-100 pt-3">
             <label className="mb-1.5 block text-sm font-medium text-gray-700">Producto</label>
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
@@ -1279,8 +1414,10 @@ const CreateSidebar = ({
             )}
           </div>
 
+          {selectedProduct && (
+            <div className="flex flex-col gap-3 border-t border-gray-100 pt-3">
           {/* TIPO DE COMPRA */}
-          <div className="border-t border-gray-100 pt-3">
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo de compra</label>
             <div className="relative" ref={typeDropdownRef}>
               <button onClick={() => setShowTypeDropdown(!showTypeDropdown)} disabled={!selectedProduct} className={`flex w-full items-center justify-between rounded-lg border bg-white py-2.5 px-3 text-sm text-gray-700 transition-colors ${!selectedProduct ? "bg-gray-100 cursor-not-allowed text-gray-400 border-gray-200" : showTypeDropdown ? "border-[#004D77] ring-2 ring-[#004D77]/20" : "border-gray-300 hover:border-[#004D77]"}`}>
@@ -1550,6 +1687,8 @@ const CreateSidebar = ({
               </button>
             </div>
           </div>
+            </div>
+          )}
 
           {/* BOTONES */}
           <button 

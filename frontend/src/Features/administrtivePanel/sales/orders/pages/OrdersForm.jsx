@@ -39,6 +39,7 @@ const roundMoney = (value) =>
 
 const MIN_PHONE_DIGITS = 7;
 const MAX_PHONE_DIGITS = 10;
+const MINIMUM_DELIVERY_AMOUNT = 13000;
 
 const cleanRecipientPhoneInput = (value) => {
   let digitsCount = 0;
@@ -78,6 +79,18 @@ const calculateLineSubtotal = (cantidad, precioUnitario) =>
 
 const calculateLineIva = (subtotal, ivaPercentage = 19) =>
   roundMoney(subtotal - (subtotal / (1 + (toNumber(ivaPercentage, 19) / 100))));
+
+const getLineAmounts = (line = {}) => {
+  const iva = roundMoney(toNumber(line.iva));
+  const total = roundMoney(
+    line.subtotal ?? calculateLineSubtotal(line.cantidad, line.precioUnitario)
+  );
+  const subtotalSinIva = roundMoney(
+    line.subtotalSinIva ?? (total - iva)
+  );
+
+  return { subtotalSinIva, iva, total: roundMoney(subtotalSinIva + iva) };
+};
 
 const getCreditSummary = (creditAccount, client) => {
   const assignedCredit = toNumber(creditAccount?.creditoAsignado ?? creditAccount?.assignedCredit ?? client?.assignedCredit ?? client?.clientCredit);
@@ -148,7 +161,7 @@ function OrdersForm() {
     departamentoEntregaNombre: '',
     ciudadEntregaCodigo: '',
     ciudadEntregaNombre: '',
-    shippingAmount: 0,
+    shippingAmount: MINIMUM_DELIVERY_AMOUNT,
     productos: [],
     estadoLogistico: ESTADOS_LOGISTICOS.EN_PROCESO,
     origen: ORIGENES.MANUAL,
@@ -178,11 +191,17 @@ function OrdersForm() {
   const [favorBalance, setFavorBalance] = useState(0);
   const [creditAccounts, setCreditAccounts] = useState([]);
 
-  const productosTotal = roundMoney(formData.productos.reduce((sum, p) => sum + toNumber(p.subtotal), 0));
+  const productosTotal = roundMoney(
+    formData.productos.reduce((sum, product) => sum + getLineAmounts(product).total, 0)
+  );
   const shippingAmount = formData.tipoEntrega === 'domicilio' ? roundMoney(formData.shippingAmount) : 0;
   const total = roundMoney(productosTotal + shippingAmount);
-  const iva = roundMoney(formData.productos.reduce((sum, p) => sum + toNumber(p.iva), 0));
-  const subtotal = roundMoney(productosTotal - iva);
+  const iva = roundMoney(
+    formData.productos.reduce((sum, product) => sum + getLineAmounts(product).iva, 0)
+  );
+  const subtotal = roundMoney(
+    formData.productos.reduce((sum, product) => sum + getLineAmounts(product).subtotalSinIva, 0)
+  );
   const selectedClient = clientes.find((cliente) => Number(cliente.id) === Number(formData.clienteId)) ?? null;
   const selectedCreditAccount = creditAccounts.find((account) => Number(account.id) === Number(formData.clienteId)) ?? null;
   const creditSummary = useMemo(
@@ -340,7 +359,11 @@ function OrdersForm() {
             const stock = toNumber(p.stock) > 0
               ? toNumber(p.stock)
               : toNumber(variant?.stock) || catalogStock || toNumber(p.cantidad);
-            const subtotalLinea = toNumber(p.subtotal, calculateLineSubtotal(p.cantidad, p.precioUnitario));
+            const lineAmounts = getLineAmounts({
+              ...p,
+              subtotal: p.subtotal ?? calculateLineSubtotal(p.cantidad, p.precioUnitario),
+              iva: p.iva ?? calculateLineIva(p.subtotal, p.ivaPercentage),
+            });
 
             return {
               ...p,
@@ -348,8 +371,9 @@ function OrdersForm() {
               codBarras: barcodeValue || variant?.barcode || getPrimaryBarcode(catalogProduct || {}),
               variantName: p.variantName || variant?.variantName || 'Estilo pendiente',
               precioUnitario: toNumber(p.precioUnitario),
-              subtotal: subtotalLinea,
-              iva: toNumber(p.iva, calculateLineIva(subtotalLinea, p.ivaPercentage)),
+              subtotal: lineAmounts.total,
+              subtotalSinIva: lineAmounts.subtotalSinIva,
+              iva: lineAmounts.iva,
               stock,
             };
           });
@@ -438,12 +462,14 @@ function OrdersForm() {
 
         const precioUnitario = getProductPriceForClient(product, selectedClient);
         const lineTotal = calculateLineSubtotal(line.cantidad, precioUnitario);
+        const ivaAmount = calculateLineIva(lineTotal, line.ivaPercentage);
 
         return {
           ...line,
           precioUnitario,
           subtotal: lineTotal,
-          iva: calculateLineIva(lineTotal, line.ivaPercentage),
+          subtotalSinIva: roundMoney(lineTotal - ivaAmount),
+          iva: ivaAmount,
         };
       }),
     }));
@@ -509,10 +535,16 @@ function OrdersForm() {
     }
     setFormData(prev => {
       const nuevaDireccion = nuevoTipo === 'recoge' ? 'El cliente lo recoge' : prev.direccionEntrega;
+      const shouldApplyDefaultShipping = nuevoTipo === 'domicilio'
+        && toNumber(prev.shippingAmount) <= 0
+        && (!isEditMode || String(prev.origen || '').toLowerCase() !== ORIGENES.WEB);
       return {
         ...prev,
         tipoEntrega: nuevoTipo,
         direccionEntrega: nuevaDireccion,
+        ...(shouldApplyDefaultShipping && {
+          shippingAmount: MINIMUM_DELIVERY_AMOUNT,
+        }),
         ...(nuevoTipo === 'recoge' && {
           departamentoEntregaCodigo: '',
           departamentoEntregaNombre: '',
@@ -587,7 +619,16 @@ function OrdersForm() {
     if (pedidoInmutable) return;
     const value = String(e.target.value ?? '').replace(/\D/g, '');
     setFormData(prev => ({ ...prev, shippingAmount: value }));
-    if (errors.shippingAmount) setErrors(prev => ({ ...prev, shippingAmount: null }));
+    const amount = toNumber(value);
+    const isPendingWebShipping = isEditMode
+      && String(formData.origen || '').toLowerCase() === ORIGENES.WEB
+      && amount <= 0;
+    const shippingError = amount <= 0 && !isPendingWebShipping
+      ? 'Debe ingresar un valor de envío mayor a cero.'
+      : amount > 0 && amount < MINIMUM_DELIVERY_AMOUNT
+        ? `El valor mínimo de envío es $${MINIMUM_DELIVERY_AMOUNT.toLocaleString('es-CO')}.`
+        : null;
+    setErrors(prev => ({ ...prev, shippingAmount: shippingError }));
   };
 
   const handleEstadoLogisticoChange = async (e) => {
@@ -639,6 +680,7 @@ function OrdersForm() {
 
     const precio = getProductPriceForClient(producto, selectedClient);
     const subtotalLinea = calculateLineSubtotal(1, precio);
+    const ivaAmount = calculateLineIva(subtotalLinea, producto.ivaPercentage);
     const nuevoProducto = {
       id: producto.id,
       idBarcode: variante.id,
@@ -647,8 +689,9 @@ function OrdersForm() {
       variantName: variante.variantName || 'Estilo pendiente',
       cantidad: 1,
       precioUnitario: precio,
-      ivaPercentage: toNumber(producto.ivaPercentage),
-      iva: calculateLineIva(subtotalLinea, producto.ivaPercentage),
+      ivaPercentage: toNumber(producto.ivaPercentage, 19),
+      subtotalSinIva: roundMoney(subtotalLinea - ivaAmount),
+      iva: ivaAmount,
       subtotal: subtotalLinea,
       stock: variantStock,
     };
@@ -688,6 +731,13 @@ function OrdersForm() {
               ...p,
               cantidad,
               subtotal: calculateLineSubtotal(cantidad, p.precioUnitario),
+              subtotalSinIva: roundMoney(
+                calculateLineSubtotal(cantidad, p.precioUnitario) -
+                calculateLineIva(
+                  calculateLineSubtotal(cantidad, p.precioUnitario),
+                  p.ivaPercentage
+                )
+              ),
               iva: calculateLineIva(
                 calculateLineSubtotal(cantidad, p.precioUnitario),
                 p.ivaPercentage
@@ -804,8 +854,16 @@ function OrdersForm() {
       if (!formData.ciudadEntregaCodigo || !formData.ciudadEntregaNombre) {
         newErrors.ciudadEntregaCodigo = 'Debe seleccionar un municipio/ciudad.';
       }
-      if (toNumber(formData.shippingAmount) <= 0) {
+      const shippingAmount = toNumber(formData.shippingAmount);
+      const isPendingWebShipping = isEditMode
+        && String(formData.origen || '').toLowerCase() === ORIGENES.WEB
+        && shippingAmount <= 0;
+      if (shippingAmount <= 0 && !isPendingWebShipping) {
         newErrors.shippingAmount = 'Debe ingresar un valor de envío mayor a cero.';
+      } else if (shippingAmount < MINIMUM_DELIVERY_AMOUNT) {
+        if (shippingAmount > 0) {
+          newErrors.shippingAmount = `El valor mínimo de envío es $${MINIMUM_DELIVERY_AMOUNT.toLocaleString('es-CO')}.`;
+        }
       }
     }
     if (formData.productos.length === 0) {
@@ -1261,6 +1319,7 @@ function OrdersForm() {
               if (isPendingReceipt(receipt)) setReceiptToReject(receipt);
             }}
             reviewingReceiptId={reviewingReceiptId}
+            listView
           />
         </div>
       )}
@@ -1328,6 +1387,13 @@ function OrdersForm() {
               receiptToApprove,
               payload,
               'El comprobante fue aprobado y el abono quedo registrado.'
+            )
+          }
+          onReject={(payload) =>
+            handleReviewReceipt(
+              receiptToApprove,
+              payload,
+              'El comprobante fue rechazado y el cliente podra enviar uno nuevo.'
             )
           }
         />

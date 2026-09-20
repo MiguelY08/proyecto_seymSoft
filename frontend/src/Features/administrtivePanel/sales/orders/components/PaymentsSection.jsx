@@ -281,38 +281,54 @@ function PaymentsSection({
       </div>
 
       <div className="flex flex-col gap-4 p-4 sm:p-5">
-        {/* Resumen de montos */}
-        <div className="grid grid-cols-1 gap-3 rounded-lg bg-gray-50 p-4 sm:grid-cols-3 sm:gap-4">
-          <div>
-            <p className="text-xs text-gray-500">Total del pedido</p>
-            <p className="text-base font-semibold sm:text-lg">{formatCurrency(total)}</p>
+        {/* Resumen financiero del pedido */}
+        <section className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+          <div className="border-b border-gray-200 bg-gray-50 px-4 py-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+              Resumen del pedido
+            </h3>
+            <p className="mt-0.5 text-xs text-gray-400">Estado de los valores asociados a este pedido</p>
           </div>
-          <div>
-            <p className="text-xs text-gray-500">Total pagado</p>
-            <p className="text-base font-semibold text-green-600 sm:text-lg">{formatCurrency(totalPagado)}</p>
+          <div className="grid grid-cols-1 divide-y divide-gray-200 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            <div className="px-4 py-3">
+              <p className="text-xs font-medium text-gray-500">Total del pedido</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums text-gray-900">{formatCurrency(total)}</p>
+            </div>
+            <div className="px-4 py-3">
+              <p className="text-xs font-medium text-gray-500">Total pagado</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums text-emerald-700">{formatCurrency(totalPagado)}</p>
+            </div>
+            <div className="px-4 py-3">
+              <p className="text-xs font-medium text-gray-500">Saldo pendiente</p>
+              <p className={`mt-1 text-lg font-semibold tabular-nums ${saldoPendiente > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                {formatCurrency(saldoPendiente)}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs text-gray-500">Saldo pendiente</p>
-            <p className={`text-base font-semibold sm:text-lg ${saldoPendiente > 0 ? 'text-amber-600' : 'text-green-600'}`}>
-              {formatCurrency(saldoPendiente)}
-            </p>
-          </div>
-        </div>
+        </section>
 
         {financialSummary && (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <section className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+            <div className="border-b border-gray-200 bg-gray-50 px-4 py-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                Situación financiera del cliente
+              </h3>
+              <p className="mt-0.5 text-xs text-gray-400">Saldos y cupos disponibles para este cliente</p>
+            </div>
+            <div className="grid grid-cols-1 divide-y divide-gray-200 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
             {[
-              ['Saldo a favor', financialSummary.favorBalance, 'text-emerald-700', 'bg-emerald-50 border-emerald-100'],
-              ['Crédito', financialSummary.assignedCredit, 'text-sky-700', 'bg-sky-50 border-sky-100'],
-              ['Crédito disponible', financialSummary.availableCredit, 'text-indigo-700', 'bg-indigo-50 border-indigo-100'],
-              ['Monto ocupado', financialSummary.usedCredit, 'text-amber-700', 'bg-amber-50 border-amber-100'],
-            ].map(([label, amount, textClass, backgroundClass]) => (
-              <div key={label} className={`rounded-lg border p-3 ${backgroundClass}`}>
+              ['Saldo a favor', financialSummary.favorBalance, 'text-emerald-700'],
+              ['Crédito asignado', financialSummary.assignedCredit, 'text-gray-900'],
+              ['Crédito disponible', financialSummary.availableCredit, 'text-[#004D77]'],
+              ['Monto ocupado', financialSummary.usedCredit, 'text-gray-900'],
+            ].map(([label, amount, textClass]) => (
+              <div key={label} className="px-4 py-3">
                 <p className="text-xs font-medium text-gray-500">{label}</p>
-                <p className={`mt-1 text-base font-semibold ${textClass}`}>{formatCurrency(amount)}</p>
+                <p className={`mt-1 text-base font-semibold tabular-nums ${textClass}`}>{formatCurrency(amount)}</p>
               </div>
             ))}
-          </div>
+            </div>
+          </section>
         )}
 
         {/* Formulario para agregar pago */}

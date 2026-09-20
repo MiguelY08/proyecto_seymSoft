@@ -471,7 +471,7 @@ function LeftSectionForm({
                 inputMode="numeric"
                 value={formatShippingAmount(formData.shippingAmount)}
                 onChange={onShippingAmountChange}
-                placeholder="0"
+                placeholder="13.000"
                 disabled={loading || readOnly}
                 className={`w-full pl-10 pr-4 py-2.5 text-sm border rounded-lg outline-none bg-white text-gray-700 placeholder-gray-400 transition-colors duration-200
                   ${errors.shippingAmount
@@ -485,7 +485,8 @@ function LeftSectionForm({
             </div>
             {showShippingAmountHighlight && !errors.shippingAmount && (
               <p className="text-xs font-semibold text-amber-800">
-                Este pedido web a domicilio necesita que el asesor registre el valor del envío.
+                Este pedido web a domicilio necesita que el asesor registre el valor real del envío.
+                El valor base es $13.000 y no puede ser inferior.
               </p>
             )}
             {errorMsg('shippingAmount')}

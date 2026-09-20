@@ -7,6 +7,7 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
+import useBodyScrollLock from '../../../../shared/hooks/useBodyScrollLock';
 
 const OBSERVATION_MIN_LENGTH = 10;
 const OBSERVATION_MAX_LENGTH = 255;
@@ -20,6 +21,7 @@ function RejectPaymentReceiptModal({
   onConfirm,
 }) {
   const [visible, setVisible] = useState(false);
+  useBodyScrollLock(isOpen && Boolean(receipt));
   const [reviewObservations, setReviewObservations] = useState('');
   const [touched, setTouched] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);

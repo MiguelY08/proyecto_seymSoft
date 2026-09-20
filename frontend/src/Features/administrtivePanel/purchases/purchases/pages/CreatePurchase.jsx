@@ -20,11 +20,11 @@ import Spinner from "../../../../shared/spinner";
 import FullScreenSpinner from "../../../../shared/spinner/FullScreenSpinner";
 import { getApiErrorMessage } from "../../../../shared/utils/apiErrorMessage";
 import {
+  ArrowLeft,
   CalendarDays,
-  CircleDollarSign,
+  FileText,
   PackageOpen,
   PanelLeftOpen,
-  ReceiptText,
   Save,
   ShoppingBag,
   X,
@@ -250,6 +250,10 @@ const CreatePurchase = () => {
 
   const totalCompra = purchaseItems.reduce((sum, item) => sum + item.total, 0);
   const totalIVA = purchaseItems.reduce((sum, item) => sum + item.ivaValor, 0);
+  const subtotalCompra = totalCompra - totalIVA;
+  const formattedPurchaseDate = purchaseDate
+    ? new Date(`${purchaseDate}T00:00:00`).toLocaleDateString("es-CO")
+    : "Selecciona una fecha";
 
   const handleQuantityChange = (value) => {
     setQuantity((prev) => Math.max(1, prev + value));
@@ -315,6 +319,10 @@ const CreatePurchase = () => {
 
     const unitPrice = Number(purchasePrice) || foundProduct.supplierPrice || foundProduct.wholesalePrice || foundProduct.valorUnit;
     const currentItem = purchaseItems[itemIndex];
+    const currentBarcode = foundProduct.barcodes?.find(
+      (barcode) => String(barcode.barcode) === String(resolvedBarcode || currentItem.codigoBarras)
+    );
+    const stockActual = Number(currentItem.stockActual ?? currentBarcode?.stock ?? foundProduct.stock ?? 0);
     const selectedPurchaseType = purchaseTypeInfo?.type || currentItem.purchaseTypeValue || "unit";
     const selectedPurchaseTypeLabel = purchaseTypeInfo?.label || currentItem.purchaseType || "Unidad";
     const finalQuantity = purchaseTypeInfo?.quantity || currentItem.cantidad || quantity;
@@ -336,6 +344,7 @@ const CreatePurchase = () => {
       ...updatedItems[itemIndex],
       variantName: variantName || currentItem.variantName || "",
       cantidad: finalQuantity,
+      stockActual,
       stockTotal: stockToAdd,
       valorUnit: unitPrice,
       supplierPrice: unitPrice,
@@ -435,6 +444,7 @@ const CreatePurchase = () => {
     const selectedBarcode = foundProduct.barcodes?.find(
       (barcode) => String(barcode.barcode) === String(resolvedBarcode)
     );
+    const stockActual = Number(selectedBarcode?.stock ?? foundProduct.stock ?? 0);
     const selectedBarcodeId = purchaseTypeInfo?.idBarcode ?? selectedBarcode?.id;
     const codigosExtra = (extraBarcodes[foundProduct.codigoBarras] ?? []).filter((extraCode) => {
       const extraBarcode = typeof extraCode === "string" ? extraCode : extraCode?.barcode;
@@ -503,6 +513,7 @@ const CreatePurchase = () => {
             variantName,
             producto: foundProduct.nombre,
             cantidad: nuevaCantidad,
+            stockActual: item.stockActual ?? stockActual,
             stockTotal: nuevoStockTotal,
             subtotal,
             ivaValor,
@@ -537,6 +548,7 @@ const CreatePurchase = () => {
         idBarcode: selectedBarcodeId,
         proveedor: foundProduct.proveedor,
         cantidad: finalQuantity,
+        stockActual,
         stockTotal: stockToAdd,
         valorUnit: unitPrice,
         supplierPrice: unitPrice,
@@ -663,11 +675,47 @@ const CreatePurchase = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white px-4 py-6">
+    <div className="w-full px-3 py-4 sm:px-6 lg:px-8">
       {loading && <FullScreenSpinner message="Guardando compra..." />}
 
-      <div className="max-w-1400px mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className={isSidebarVisible ? "lg:col-span-4" : "hidden"}>
+      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+          <button
+            type="button"
+            onClick={handleCancelPurchase}
+            className="shrink-0 rounded-full p-2 transition-colors duration-200 hover:bg-gray-100"
+            title="Volver a compras"
+          >
+            <ArrowLeft className="h-5 w-5 text-gray-600" strokeWidth={1.8} />
+          </button>
+          <h1 className="min-w-0 truncate text-xl font-bold text-gray-900 sm:text-2xl">
+            Nueva compra
+          </h1>
+        </div>
+        <div className="sticky top-0 z-30 -mx-3 grid grid-cols-1 gap-2 bg-white px-3 py-3 shadow-sm sm:-mx-6 sm:px-6 sm:py-3 lg:static lg:mx-0 lg:flex lg:bg-transparent lg:p-0 lg:shadow-none lg:gap-3">
+          <button
+            type="button"
+            onClick={handleCancelPurchase}
+            disabled={loading}
+            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+          >
+            <X className="h-4 w-4" strokeWidth={2} />
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handleSavePurchase}
+            disabled={loading}
+            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+          >
+            <Save className="h-4 w-4" strokeWidth={2} />
+            {loading ? "Guardando..." : "Guardar compra"}
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <div className={isSidebarVisible ? "" : "hidden"}>
           <CreateSidebar
             productsDB={productsDB}
             providersList={providersList}
@@ -706,9 +754,9 @@ const CreatePurchase = () => {
           />
         </div>
 
-        <div className={isSidebarVisible ? "lg:col-span-8" : "lg:col-span-12"}>
+        <div className={isSidebarVisible ? "" : "lg:col-span-2"}>
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-            <div className="flex items-center gap-3 border-b border-gray-100 bg-gray-50 px-5 py-3.5">
+            <div className="flex items-center gap-3 border-b border-gray-100 bg-gray-50 px-4 py-3.5 sm:px-5">
               {!isSidebarVisible && (
                 <button
                   type="button"
@@ -727,25 +775,25 @@ const CreatePurchase = () => {
               </div>
             </div>
 
-            <div className="flex flex-col gap-4 p-5">
+            <div className="flex flex-col gap-4 p-4 sm:p-5">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#004D77]/10">
-                    <CircleDollarSign className="h-4 w-4 text-[#004D77]" strokeWidth={1.8} />
+                    <FileText className="h-4 w-4 text-[#004D77]" strokeWidth={1.8} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Total compra</p>
-                    <p className="truncate text-base font-bold text-gray-800">${totalCompra.toLocaleString("es-CO")}</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Número de factura</p>
+                    <p className="truncate text-base font-bold text-gray-800">{invoiceNumber || "Sin registrar"}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
-                    <ReceiptText className="h-4 w-4 text-emerald-600" strokeWidth={1.8} />
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#004D77]/10">
+                    <CalendarDays className="h-4 w-4 text-[#004D77]" strokeWidth={1.8} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">IVA incluido</p>
-                    <p className="truncate text-base font-bold text-gray-800">${totalIVA.toLocaleString("es-CO")}</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Fecha de compra</p>
+                    <p className="truncate text-base font-bold text-gray-800">{formattedPurchaseDate}</p>
                   </div>
                 </div>
 
@@ -801,35 +849,33 @@ const CreatePurchase = () => {
                   </div>
                 </div>
               ) : (
-                <CreateTable 
-                  currentData={purchaseItems} 
-                  handleDeleteItem={handleDeleteItem} 
-                  handleEditItem={handleEditItem}
-                />
+                <>
+                  <CreateTable
+                    currentData={purchaseItems}
+                    handleDeleteItem={handleDeleteItem}
+                    handleEditItem={handleEditItem}
+                  />
+                  <div className="border-t border-gray-200 pt-3">
+                    <div className="ml-auto w-full max-w-sm space-y-1.5 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm">
+                      <div className="flex justify-between gap-4 text-gray-600">
+                        <span>Subtotal:</span>
+                        <span className="font-medium text-gray-800">${subtotalCompra.toLocaleString("es-CO")}</span>
+                      </div>
+                      <div className="flex justify-between gap-4 text-gray-600">
+                        <span>IVA incluido:</span>
+                        <span className="font-medium text-gray-800">${totalIVA.toLocaleString("es-CO")}</span>
+                      </div>
+                      <div className="flex justify-between gap-4 border-t border-gray-300 pt-2 text-base font-bold text-gray-900">
+                        <span>Total compra:</span>
+                        <span>${totalCompra.toLocaleString("es-CO")}</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
               )}
 
             </div>
 
-            <div className="flex flex-col gap-2 border-t border-gray-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-5">
-              <button
-                type="button"
-                onClick={handleCancelPurchase}
-                className="order-2 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-[#004D77] bg-white px-6 py-2.5 text-sm font-bold text-[#004D77] shadow-sm transition hover:bg-sky-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                disabled={loading}
-              >
-                <X className="h-4 w-4" strokeWidth={2} />
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleSavePurchase}
-                className="order-1 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#004D77] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003b5c] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#004D77]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                disabled={loading}
-              >
-                <Save className="h-4 w-4" strokeWidth={2} />
-                {loading ? "Guardando..." : "Guardar compra"}
-              </button>
-            </div>
           </div>
         </div>
       </div>

@@ -18,48 +18,16 @@ const TypeBadge = ({ type }) => {
   );
 };
 
-const BarcodeCell = ({ codigoBarras, codigosExtra = [] }) => (
-  <div className="flex items-center gap-1.5">
-    <span className="font-mono text-xs text-gray-600">{codigoBarras}</span>
-    {codigosExtra.length > 0 && (
-      <div className="group relative">
-        <span className="inline-flex cursor-default select-none items-center rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-[#004D77]">
-          +{codigosExtra.length}
-        </span>
-        <div className="absolute bottom-full left-0 z-50 mb-2 hidden min-w-[190px] rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-xl group-hover:block">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-gray-400">
-            Códigos adicionales
-          </p>
-          <ul className="flex flex-col gap-1.5">
-            {codigosExtra.map((code, index) => (
-              <li key={`${typeof code === "object" ? code.barcode : code}-${index}`} className="flex items-center gap-2 text-xs font-mono text-gray-700">
-                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#004D77] text-[9px] font-bold text-white">
-                  {index + 1}
-                </span>
-                {typeof code === "object" ? code.barcode || code.cod : code}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    )}
-  </div>
-);
-
 const CreateTable = ({ currentData, handleDeleteItem, handleEditItem }) => (
   <div className="overflow-x-auto rounded-lg border border-gray-200">
-    <table className="min-w-[1050px] w-full">
+    <table className="min-w-[660px] w-full">
       <thead className="bg-[#004D77]/5">
         <tr>
           <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Producto</th>
-          <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Código de barras</th>
           <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Tipo</th>
           <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Cant.</th>
-          <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Stock a sumar</th>
-          <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Valor unit.</th>
           <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Subtotal</th>
           <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">IVA</th>
-          <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Valor IVA</th>
           <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Total</th>
           <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#004D77]">Acciones</th>
         </tr>
@@ -78,42 +46,33 @@ const CreateTable = ({ currentData, handleDeleteItem, handleEditItem }) => (
                 <span className="font-normal text-gray-500"> - {item.variantName}</span>
               )}
             </td>
-            <td className="px-3 py-2">
-              <BarcodeCell
-                codigoBarras={item.codigoBarras}
-                codigosExtra={item.codigosExtra || []}
-              />
-            </td>
             <td className="px-3 py-2 text-center">
               <TypeBadge type={item.purchaseType || "Unidad"} />
             </td>
-            <td className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
-              {item.cantidad}
-            </td>
-            <td className="px-3 py-2 text-center text-xs font-semibold text-[#004D77]">
-              {item.stockTotal?.toLocaleString() || item.cantidad}
-              {item.purchaseTypeValue === "pack" && item.quantityPerPack > 0 && (
-                <span className="block text-[8px] text-gray-400 font-normal">
-                  ({item.cantidad} pacas × {item.quantityPerPack} und/paca)
+            <td className="px-3 py-2 text-center text-xs">
+              {item.purchaseTypeValue === "pack" && item.quantityPerPack > 0 ? (
+                <>
+                  <span className="font-semibold text-gray-700">
+                    {Number(item.cantidad).toLocaleString("es-CO")} pacas
+                  </span>
+                  <span className="block text-[10px] text-[#004D77]">
+                    = {Number(item.stockTotal).toLocaleString("es-CO")} unidades
+                  </span>
+                </>
+              ) : (
+                <span className="font-semibold text-gray-700">
+                  {Number(item.cantidad).toLocaleString("es-CO")}
                 </span>
               )}
-              {item.purchaseTypeValue === "pack" && item.quantityPerPack === 0 && (
-                <span className="block text-[8px] text-amber-500 font-normal">
-                  ⚠️ Sin cantidad por paca
-                </span>
-              )}
-            </td>
-            <td className="px-3 py-2 text-right text-xs text-gray-600">
-              ${item.valorUnit.toLocaleString("es-CO")}
             </td>
             <td className="px-3 py-2 text-right text-xs text-gray-600">
               ${item.subtotal.toLocaleString("es-CO")}
             </td>
             <td className="px-3 py-2 text-center text-xs text-gray-600">
-              {item.iva}%
-            </td>
-            <td className="px-3 py-2 text-right text-xs text-gray-600">
-              ${item.ivaValor.toLocaleString("es-CO")}
+              <span className="font-semibold text-gray-700">{item.iva}%</span>
+              <span className="block text-[10px] text-[#004D77]">
+                ${Number(item.ivaValor || 0).toLocaleString("es-CO")}
+              </span>
             </td>
             <td className="px-3 py-2 text-right text-xs font-semibold text-gray-800">
               ${item.total.toLocaleString("es-CO")}

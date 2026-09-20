@@ -1,6 +1,8 @@
 ﻿import { useEffect, useRef, useState } from 'react';
 import {
   ChevronLeft,
+  ChevronDown,
+  ChevronUp,
   AlertTriangle,
   CheckCircle,
   Clock,
@@ -87,6 +89,13 @@ function PaymentTransferInfo({ className = '' }) {
           <p className="mt-0.5 font-semibold">Magic piso 11</p>
         </div>
       </div>
+      <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-800">
+        <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+        <p className="text-[11px] font-semibold leading-relaxed">
+          Verifica cuidadosamente el destinatario, el monto y la referencia antes de pagar.
+          La empresa no se hace responsable por pagos enviados a datos incorrectos.
+        </p>
+      </div>
     </div>
   );
 }
@@ -109,8 +118,10 @@ function OrderDetail() {
   const [favorBalance, setFavorBalance] = useState(0);
   const [favorAmount, setFavorAmount] = useState('');
   const [favorSubmitting, setFavorSubmitting] = useState(false);
+  const [showFavorOptions, setShowFavorOptions] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [proofPreview, setProofPreview] = useState(null);
+  const [showAllProofs, setShowAllProofs] = useState(false);
   useBodyScrollLock(qrOpen || Boolean(proofPreview));
   const [now, setNow] = useState(Date.now());
   const fileInputRef = useRef(null);
@@ -374,6 +385,9 @@ function OrderDetail() {
   const returnWhatsAppUrl = `https://api.whatsapp.com/send/?phone=%2B573212828628&text=${encodeURIComponent(
     `Hola, necesito ayuda con una devolución de mi pedido No. ${orderNumber}`
   )}&type=phone_number&app_absent=0`;
+  const orderHelpWhatsAppUrl = `https://wa.me/573212828628?text=${encodeURIComponent(
+    `Hola, necesito ayuda con mi pedido No. ${orderNumber}`
+  )}`;
 
   return (
     <div className="min-h-screen bg-[#f6f9fc]" style={{ fontFamily: ORDER_FONT_FAMILY }}>
@@ -477,7 +491,8 @@ function OrderDetail() {
                   <Clock size={21} /> Valor de envio pendiente
                 </h2>
                 <p className="mt-3 text-sm font-semibold leading-relaxed text-amber-800">
-                  El administrador debe asignar el valor del envio antes de que realices la transferencia.
+                  En Medellín, el envío tiene un precio base de $13.000 COP, sujeto a cambios según la zona.
+                  El administrador debe confirmar el valor real antes de que realices la transferencia.
                   Cuando esté listo, recibirás una notificación y aquí verás el total definitivo para enviar
                   un único comprobante.
                 </p>
@@ -514,12 +529,24 @@ function OrderDetail() {
                 )}
                 {favorBalance > 0 && !paymentCountdownExpired && (
                   <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                    <p className="text-sm font-black text-emerald-900">Pagar con saldo a favor</p>
-                    <p className="mt-1 text-xs font-semibold leading-relaxed text-emerald-800">
-                      Puedes aplicar todo o una parte de tu saldo a favor. Si no cubre todo el saldo pendiente, el pedido continuará pendiente por la diferencia.
-                    </p>
-                    <p className="mt-2 text-xs font-bold text-emerald-700">
-                      Disponible: {formatMoney(favorBalance)}
+                    <button
+                      type="button"
+                      onClick={() => setShowFavorOptions((current) => !current)}
+                      disabled={favorSubmitting}
+                      className="flex w-full items-center justify-between gap-3 text-left disabled:opacity-60"
+                      aria-expanded={showFavorOptions}
+                    >
+                      <div>
+                        <p className="text-sm font-black text-emerald-900">Pagar con saldo a favor</p>
+                        <p className="mt-1 text-xs font-semibold text-emerald-700">
+                          Disponible: {formatMoney(favorBalance)}
+                        </p>
+                      </div>
+                      <ChevronDown size={18} className={`shrink-0 text-emerald-700 transition-transform ${showFavorOptions ? 'rotate-180' : ''}`} />
+                    </button>
+                    {showFavorOptions && <div className="mt-3 border-t border-emerald-200 pt-3">
+                    <p className="text-xs font-semibold leading-relaxed text-emerald-800">
+                      Puedes aplicar todo o una parte. Si no cubre todo el saldo pendiente, pagarás la diferencia mediante transferencia.
                     </p>
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                       <input
@@ -549,6 +576,7 @@ function OrderDetail() {
                         {favorSubmitting ? 'Aplicando...' : 'Aplicar saldo'}
                       </button>
                     </div>
+                    </div>}
                   </div>
                 )}
                 {hasRejectedReceipt && (
@@ -645,13 +673,27 @@ function OrderDetail() {
 
             <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
               <h2 className="text-lg font-black text-slate-800">Ayuda con el pedido</h2>
-              <button
-                type="button"
-                onClick={() => navigate(`/registerReturn/${order.id}`)}
-                className="mt-2 text-sm font-bold text-[#004D77] hover:underline"
+              <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
+                Las devoluciones de un pedido-venta se gestionan directamente con un asesor a través de WhatsApp
+                o en el punto físico.
+              </p>
+              <a
+                href={orderHelpWhatsAppUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 flex w-full items-center justify-between gap-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2.5 text-left transition hover:border-green-300 hover:bg-green-100"
               >
-                Tengo un problema con el pedido
-              </button>
+                <span className="flex min-w-0 items-center gap-2">
+                  <MessageCircle size={17} className="shrink-0 text-[#25D366]" />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-black text-green-800">WhatsApp</span>
+                    <span className="block break-words text-xs font-semibold text-green-700 [overflow-wrap:anywhere]">
+                      (+57) 321 282 8628
+                    </span>
+                  </span>
+                </span>
+                <span className="shrink-0 text-xs font-black text-green-700">Contactar</span>
+              </a>
             </section>
           </div>
 
@@ -707,7 +749,7 @@ function OrderDetail() {
               <div className="mt-5 border-t border-slate-200 pt-5">
                 <h3 className="text-sm font-black text-slate-800">Comprobantes enviados</h3>
                 <div className="mt-3 space-y-3">
-                  {order.comprobantesPago.map((proof) => {
+                  {(showAllProofs ? order.comprobantesPago : order.comprobantesPago.slice(0, 4)).map((proof) => {
                     const statusView = getReceiptStatusView(proof.status);
                     const normalizedStatus = normalizeReceiptStatus(proof.status);
                     const reviewedAt = proof.reviewedAt
@@ -727,7 +769,7 @@ function OrderDetail() {
                         <img
                           src={proof.imageUrl}
                           alt={proof.fileName || 'Comprobante de pago'}
-                          className="h-28 w-full object-cover"
+                          className="h-20 w-full object-cover sm:h-24"
                         />
                         <div className="space-y-2 p-3">
                           <span className={`inline-flex max-w-full rounded-full px-2 py-1 text-[10px] font-black uppercase ${statusView.className}`}>
@@ -759,6 +801,16 @@ function OrderDetail() {
                     );
                   })}
                 </div>
+                {order.comprobantesPago.length > 4 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllProofs((current) => !current)}
+                    className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black uppercase text-[#004D77] transition hover:border-[#004D77] hover:bg-slate-50"
+                  >
+                    {showAllProofs ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                    {showAllProofs ? 'Ver menos' : `Ver más (${order.comprobantesPago.length - 4})`}
+                  </button>
+                )}
               </div>
             )}
 
@@ -822,8 +874,49 @@ function OrderDetail() {
             <img
               src={proofPreview.imageUrl}
               alt={proofPreview.fileName || 'Comprobante de pago'}
-              className="mx-auto max-h-[76vh] w-full rounded-2xl object-contain"
+              className="mx-auto max-h-[58vh] w-full rounded-2xl object-contain sm:max-h-[62vh]"
             />
+            <div className="mt-4 space-y-3 border-t border-slate-200 pt-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Comprobante enviado</p>
+                  <p className="mt-1 break-words text-sm font-bold text-slate-800 [overflow-wrap:anywhere]">
+                    {proofPreview.fileName || 'Comprobante de pago'}
+                  </p>
+                </div>
+                <span className={`inline-flex shrink-0 rounded-full px-2 py-1 text-[10px] font-black uppercase ${getReceiptStatusView(proofPreview.status).className}`}>
+                  {getReceiptStatusView(proofPreview.status).label}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+                <div className="rounded-lg bg-slate-50 px-3 py-2">
+                  <p className="font-bold text-slate-400">Fecha de envío</p>
+                  <p className="mt-1 font-semibold text-slate-700">
+                    {proofPreview.uploadedAt
+                      ? formatOrderDate(proofPreview.uploadedAt, { hour: '2-digit', minute: '2-digit' })
+                      : 'No disponible'}
+                  </p>
+                </div>
+                {proofPreview.reviewedAt && (
+                  <div className="rounded-lg bg-slate-50 px-3 py-2">
+                    <p className="font-bold text-slate-400">Fecha de revisión</p>
+                    <p className="mt-1 font-semibold text-slate-700">
+                      {formatOrderDate(proofPreview.reviewedAt, { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                )}
+              </div>
+              {proofPreview.reviewObservations && (
+                <div className={`rounded-lg p-3 text-xs font-semibold leading-relaxed ${
+                  normalizeReceiptStatus(proofPreview.status) === 'rechazado'
+                    ? 'bg-red-50 text-red-700'
+                    : 'bg-slate-50 text-slate-600'
+                }`}>
+                  <span className="font-black">Observaciones: </span>
+                  {proofPreview.reviewObservations}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

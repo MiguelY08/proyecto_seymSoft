@@ -14,11 +14,13 @@ export default function useBodyScrollLock(isLocked) {
       originalStyles = {
         overflow: body.style.overflow,
         paddingRight: body.style.paddingRight,
+        documentOverflow: documentElement.style.overflow,
         overscrollBehavior: documentElement.style.overscrollBehavior,
       };
 
       const scrollbarWidth = window.innerWidth - documentElement.clientWidth;
       body.style.overflow = 'hidden';
+      documentElement.style.overflow = 'hidden';
       if (scrollbarWidth > 0) body.style.paddingRight = `${scrollbarWidth}px`;
       documentElement.style.overscrollBehavior = 'none';
     }
@@ -31,6 +33,7 @@ export default function useBodyScrollLock(isLocked) {
       if (activeLocks === 0 && originalStyles) {
         body.style.overflow = originalStyles.overflow;
         body.style.paddingRight = originalStyles.paddingRight;
+        documentElement.style.overflow = originalStyles.documentOverflow;
         documentElement.style.overscrollBehavior = originalStyles.overscrollBehavior;
         originalStyles = null;
       }
