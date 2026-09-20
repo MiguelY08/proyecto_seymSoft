@@ -56,6 +56,13 @@ const CategoriesPage = () => {
             nombre: cat.name ?? cat.nombre,
             estado: normalizeCategoryStatus(cat),
             subcategorias: subs.length,
+            subcategoriasDetalle: subs.map((sub) => ({
+              ...sub,
+              id: sub.id,
+              nombre: sub.nombre ?? sub.name,
+              descripcion: sub.descripcion ?? sub.description,
+              estado: normalizeCategoryStatus(sub),
+            })),
             searchableSubcategories: subs.flatMap((sub) => [
               sub.id,
               sub.nombre ?? sub.name,

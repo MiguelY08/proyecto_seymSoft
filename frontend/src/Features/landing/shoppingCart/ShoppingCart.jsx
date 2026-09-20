@@ -79,6 +79,28 @@ const buildCheckoutProducts = (items = []) =>
     precioUnitario: Number(item.price || 0),
   }));
 
+const getCartItemDisplayName = (item = {}) => {
+  const matchingVariant = Array.isArray(item.barcodes)
+    ? item.barcodes.find((variant) => (
+        (item.barcodeId && Number(variant.id) === Number(item.barcodeId))
+        || (item.barcode && variant.barcode === item.barcode)
+      ))
+    : null;
+  const baseName = String(item.name || '').trim();
+  const variantName = String(
+    item.variantName
+    || matchingVariant?.variantName
+    || matchingVariant?.variant_name
+    || '',
+  ).trim();
+
+  if (baseName && variantName && baseName.toLowerCase() !== variantName.toLowerCase()) {
+    return `${baseName} - ${variantName}`;
+  }
+
+  return baseName || variantName || 'Producto';
+};
+
 const pickNumber = (source, keys = []) => {
   for (const key of keys) {
     const parsed = Number(source?.[key]);
@@ -1631,20 +1653,23 @@ function ShoppingCart() {
 
         <div className="grid lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 space-y-2.5">
-            {displayCartItems.map((item, idx) => (
-              <div
+            {displayCartItems.map((item, idx) => {
+              const displayName = getCartItemDisplayName(item);
+
+              return (
+                <div
                 key={`${item.id}-${item.idBarcode || item.barcode || item.presentation || idx}`}
                 className={`cart-item-card ${getCartItemStock(item) <= 0 ? 'out-of-stock' : ''}`}
                 style={{ animationDelay: `${idx * 0.05}s` }}
-              >
-                <div className="cart-item-inner">
+                >
+                  <div className="cart-item-inner">
                   <div
                     className="cart-item-img"
                     onClick={() => navigate(`/shop/detail/${item.id}`)}
                   >
                     <img
                       src={item.image || item.mainImage?.url || item.images?.[0]?.url}
-                      alt={item.name}
+                      alt={displayName}
                     />
                   </div>
                   <div className="cart-item-info">
@@ -1657,7 +1682,7 @@ function ShoppingCart() {
                       className="cart-item-name"
                       onClick={() => navigate(`/shop/detail/${item.id}`)}
                     >
-                      {item.name}
+                      {displayName}
                     </div>
                     <div className="cart-item-category">
                       {item.category || item.mainCategory?.name || item.categories?.[0]?.name || 'Sin categoría'}
@@ -1690,7 +1715,7 @@ function ShoppingCart() {
                         max={getCartItemStock(item) || undefined}
                         value={item.quantity}
                         disabled={getCartItemStock(item) <= 0}
-                        aria-label={`Cantidad de ${item.name}`}
+                        aria-label={`Cantidad de ${displayName}`}
                         onFocus={(event) => event.currentTarget.select()}
                         onChange={(event) => handleQuantityChange(item.id, event.target.value)}
                         className="qty-number w-12 bg-transparent text-center outline-none"
@@ -1713,9 +1738,10 @@ function ShoppingCart() {
                       <Trash2 size={12} /> Eliminar
                     </button>
                   </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div>
@@ -1900,7 +1926,8 @@ function ShoppingCart() {
                   <div className="shipping-pending-note">
                     <AlertCircle size={15} />
                     <span>
-                      Al enviar tu pedido, un asesor asignará el valor del envío y te indicará el total final a pagar.
+                      En Medellín, el envío tiene un precio base de $13.000 COP, sujeto a cambios según la zona.
+                      Un asesor confirmará el valor real y te indicará el total final antes de realizar el pago.
                     </span>
                   </div>
               <button

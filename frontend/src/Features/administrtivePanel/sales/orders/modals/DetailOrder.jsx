@@ -662,7 +662,9 @@ function DetailOrder({
                       compact
                       onApprove={!esModoVenta ? handleOpenApproveReceipt : undefined}
                       onReject={!esModoVenta ? handleOpenRejectReceipt : undefined}
+                      onView={(receipt) => setPaymentReceiptPreview(receipt)}
                       reviewingReceiptId={!esModoVenta ? reviewingReceiptId : null}
+                      listView
                     />
                   </div>
                 )}
@@ -715,6 +717,13 @@ function DetailOrder({
               receiptToApprove,
               payload,
               'El comprobante fue aprobado y el pago pendiente quedo registrado.'
+            )
+          }
+          onReject={(payload) =>
+            handleReviewReceipt(
+              receiptToApprove,
+              payload,
+              'El comprobante fue rechazado y el cliente podra enviar uno nuevo.'
             )
           }
         />

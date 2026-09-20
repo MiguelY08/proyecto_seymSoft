@@ -374,8 +374,20 @@ export const getProviders = async () => {
     const providers = response.data.data || [];
     return providers.map(p => ({
       id: p.id,
-      nombre: p.fullName || `${p.nameProvider} ${p.lastname || ''}`.trim(),
-      documento: p.documentNumber,
+      nombre: p.fullName || `${p.nameProvider || ''} ${p.lastname || ''}`.trim(),
+      tipoDocumento: p.documentType || '',
+      documento: p.documentNumber || '',
+      tipoPersona: p.personType || '',
+      nombres: p.nameProvider || '',
+      apellidos: p.lastname || '',
+      telefono: p.phone || '',
+      correo: p.email || '',
+      direccion: p.address || '',
+      nombreContacto: p.contactPersonName || '',
+      numeroContacto: p.contactPersonNumber || '',
+      categorias: p.categories || [],
+      activo: p.active,
+      codigoCIU: p.ciuCode || '',
       maxReturnPeriod: p.maxReturnPeriod || 0,
     }));
   } catch (error) {

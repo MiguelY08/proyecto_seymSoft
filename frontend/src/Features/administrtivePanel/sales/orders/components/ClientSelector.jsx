@@ -7,12 +7,36 @@ function ClientSelector({ formData, errors, clientes, loading, readOnly = false,
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const wrapperRef = useRef(null);
   const isDisabled = loading || readOnly || isEditMode;
+  const selectedClient = clientes.find((item) => Number(item.id) === Number(formData.clienteId)) ?? null;
   const showError = errors.clienteId && (formData.clienteId === undefined || formData.clienteId === null || formData.clienteId === '');
 
   useEffect(() => {
     const client = clientes.find((item) => Number(item.id) === Number(formData.clienteId));
     setSearchTerm(client ? (client.name || client.fullName || '') : '');
   }, [formData.clienteId, clientes]);
+
+  const renderClientMeta = (client) => (
+    <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+      {client.phone && (
+        <span className="inline-flex items-center gap-1">
+          <Phone className="h-3 w-3" strokeWidth={1.5} />
+          {client.phone}
+        </span>
+      )}
+      {client.email && (
+        <span className="inline-flex items-center gap-1">
+          <Mail className="h-3 w-3" strokeWidth={1.5} />
+          {client.email}
+        </span>
+      )}
+      {client.document && (
+        <span className="inline-flex items-center gap-1">
+          <IdCard className="h-3 w-3" strokeWidth={1.5} />
+          {client.document}
+        </span>
+      )}
+    </div>
+  );
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -52,9 +76,18 @@ function ClientSelector({ formData, errors, clientes, loading, readOnly = false,
             {searchTerm && !isDisabled && <button onClick={() => { setSearchTerm(''); onClienteChange({ target: { value: '' } }); }} className="text-gray-400 transition-colors hover:text-gray-600" type="button"><X className="h-4 w-4" strokeWidth={1.8} /></button>}
             {!isDisabled && <ChevronDown className="pointer-events-none h-4 w-4 text-gray-400" strokeWidth={2} />}
           </div>
+          {selectedClient && !isDropdownOpen && (
+            <div className="mt-2 rounded-lg border border-[#004D77]/10 bg-[#004D77]/5 px-3 py-2 text-left">
+              <div className="font-medium text-gray-800">
+                {selectedClient.name || selectedClient.fullName}
+                {Number(selectedClient.id) === SYSTEM_CLIENT_ID && <span className="ml-2 text-xs text-blue-600">(Cliente del sistema)</span>}
+              </div>
+              {renderClientMeta(selectedClient)}
+            </div>
+          )}
           {isDropdownOpen && !isDisabled && (
             <div className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg overscroll-contain">
-              {filteredClients.length ? <ul className="py-1">{filteredClients.map((client) => <li key={client.id}><button type="button" onClick={() => selectClient(client.id)} className="w-full px-4 py-2 text-left text-sm transition-colors duration-150 hover:bg-[#004D77]/10"><div className="font-medium text-gray-800">{client.name || client.fullName}{Number(client.id) === SYSTEM_CLIENT_ID && <span className="ml-2 text-xs text-blue-600">(Cliente del sistema)</span>}</div><div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">{client.phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" strokeWidth={1.5} />{client.phone}</span>}{client.email && <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" strokeWidth={1.5} />{client.email}</span>}{client.document && <span className="inline-flex items-center gap-1"><IdCard className="h-3 w-3" strokeWidth={1.5} />{client.document}</span>}</div></button></li>)}</ul> : <div className="px-4 py-3 text-center text-sm text-gray-500">No se encontraron clientes</div>}
+              {filteredClients.length ? <ul className="py-1">{filteredClients.map((client) => <li key={client.id}><button type="button" onClick={() => selectClient(client.id)} className="w-full px-4 py-2 text-left text-sm transition-colors duration-150 hover:bg-[#004D77]/10"><div className="font-medium text-gray-800">{client.name || client.fullName}{Number(client.id) === SYSTEM_CLIENT_ID && <span className="ml-2 text-xs text-blue-600">(Cliente del sistema)</span>}</div>{renderClientMeta(client)}</button></li>)}</ul> : <div className="px-4 py-3 text-center text-sm text-gray-500">No se encontraron clientes</div>}
             </div>
           )}
         </div>

@@ -131,6 +131,65 @@ const normalizePaymentReceipt = (receipt = {}, pedidoId = null) => ({
     receipt.reviewedBy ??
     receipt.reviewed_by ??
     null,
+  analysis: {
+    status:
+      receipt.analysis?.status ??
+      receipt.aiAnalysisStatus ??
+      receipt.ai_analysis_status ??
+      'No analizado',
+    analyzedAt:
+      receipt.analysis?.analyzedAt ??
+      receipt.aiAnalyzedAt ??
+      receipt.ai_analyzed_at ??
+      null,
+    model: receipt.analysis?.model ?? receipt.aiModel ?? receipt.ai_model ?? null,
+    confidence: toNumber(
+      receipt.analysis?.confidence ??
+      receipt.aiConfidence ??
+      receipt.ai_confidence,
+      null
+    ),
+    amount: toNumber(
+      receipt.analysis?.amount ??
+      receipt.aiAmount ??
+      receipt.ai_amount,
+      null
+    ),
+    currency: receipt.analysis?.currency ?? receipt.aiCurrency ?? receipt.ai_currency ?? null,
+    transactionReference:
+      receipt.analysis?.transactionReference ??
+      receipt.aiTransactionReference ??
+      receipt.ai_transaction_reference ??
+      null,
+    transactionDate:
+      receipt.analysis?.transactionDate ??
+      receipt.aiTransactionDate ??
+      receipt.ai_transaction_date ??
+      null,
+    transactionTime:
+      receipt.analysis?.transactionTime ??
+      receipt.aiTransactionTime ??
+      receipt.ai_transaction_time ??
+      null,
+    bank: receipt.analysis?.bank ?? receipt.aiBank ?? receipt.ai_bank ?? null,
+    senderName:
+      receipt.analysis?.senderName ??
+      receipt.aiSenderName ??
+      receipt.ai_sender_name ??
+      null,
+    recipientName:
+      receipt.analysis?.recipientName ??
+      receipt.aiRecipientName ??
+      receipt.ai_recipient_name ??
+      null,
+    statusText: receipt.analysis?.statusText ?? receipt.aiStatus ?? receipt.ai_status ?? null,
+    warnings:
+      receipt.analysis?.warnings ??
+      receipt.aiWarnings ??
+      receipt.ai_warnings ??
+      [],
+    error: receipt.analysis?.error ?? null,
+  },
 });
 
 const normalizeProduct = (product = {}) => {

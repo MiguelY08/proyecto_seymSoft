@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle, Clock, LoaderCircle, Store, Upload, X, ZoomIn } from 'lucide-react';
+import { AlertTriangle, CheckCircle, ChevronDown, Clock, LoaderCircle, Store, Upload, X, ZoomIn } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import qrMagic from '../../../../assets/QR_Magic.jpg';
 import {
@@ -30,6 +30,13 @@ function PaymentTransferInfo({ className = '' }) {
           <p className="mt-1 font-extrabold">00 904 854 26</p>
           <p className="mt-0.5 font-semibold">Magic piso 11</p>
         </div>
+      </div>
+      <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-800">
+        <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+        <p className="text-[11px] font-semibold leading-relaxed">
+          Verifica cuidadosamente el destinatario, el monto y la referencia antes de pagar.
+          La empresa no se hace responsable por pagos enviados a datos incorrectos.
+        </p>
       </div>
     </div>
   );
@@ -78,6 +85,7 @@ function CompletePay({
   const [pendingOrder, setPendingOrder] = useState(null);
   const [qrOpen, setQrOpen] = useState(false);
   const [favorBalanceAmount, setFavorBalanceAmount] = useState('');
+  const [showFavorOptions, setShowFavorOptions] = useState(false);
   const fileInputRef = useRef(null);
 
   useBodyScrollLock(isOpen);
@@ -327,41 +335,54 @@ function CompletePay({
 
           {availableFavorBalance > 0 && (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
-              <div className="mb-2 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setShowFavorOptions((current) => !current)}
+                disabled={submitting || Boolean(pendingOrder)}
+                className="flex w-full items-center justify-between gap-3 text-left disabled:opacity-60"
+                aria-expanded={showFavorOptions}
+              >
                 <div>
                   <p className="text-xs font-black text-emerald-900">Usar saldo a favor</p>
                   <p className="text-[11px] font-semibold text-emerald-700">
                     Disponible: ${availableFavorBalance.toLocaleString('es-CO')} COP
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleUseAllFavorBalance}
-                  disabled={submitting}
-                  className="rounded-full bg-white px-3 py-1 text-[11px] font-extrabold text-emerald-700 shadow-sm disabled:opacity-50"
-                >
-                  Usar máximo
-                </button>
-              </div>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={favorBalanceAmount}
-                onChange={handleFavorBalanceChange}
-                disabled={submitting || pendingOrder}
-                placeholder="0"
-                className="w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60"
-              />
-              <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] font-bold">
-                <div className="rounded-xl bg-white px-3 py-2 text-slate-600">
-                  Total pedido
-                  <p className="text-slate-900">${orderTotal.toLocaleString('es-CO')}</p>
+                <ChevronDown size={17} className={`shrink-0 text-emerald-700 transition-transform ${showFavorOptions ? 'rotate-180' : ''}`} />
+              </button>
+              {showFavorOptions && (
+                <div className="mt-3 border-t border-emerald-200 pt-3">
+                  <div className="mb-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleUseAllFavorBalance}
+                      disabled={submitting}
+                      className="rounded-full bg-white px-3 py-1 text-[11px] font-extrabold text-emerald-700 shadow-sm disabled:opacity-50"
+                    >
+                      Usar máximo
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={favorBalanceAmount}
+                    onChange={handleFavorBalanceChange}
+                    disabled={submitting || pendingOrder}
+                    placeholder="0"
+                    className="w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60"
+                  />
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] font-bold">
+                    <div className="rounded-xl bg-white px-3 py-2 text-slate-600">
+                      Total pedido
+                      <p className="text-slate-900">${orderTotal.toLocaleString('es-CO')}</p>
+                    </div>
+                    <div className="rounded-xl bg-white px-3 py-2 text-slate-600">
+                      Pendiente
+                      <p className="text-[#004D77]">${pendingTransferAmount.toLocaleString('es-CO')}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="rounded-xl bg-white px-3 py-2 text-slate-600">
-                  Pendiente
-                  <p className="text-[#004D77]">${pendingTransferAmount.toLocaleString('es-CO')}</p>
-                </div>
-              </div>
+              )}
             </div>
           )}
 
