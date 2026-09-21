@@ -202,11 +202,14 @@ const handleSubmit = async (e) => {
         <button
           type="button"
           onClick={() => {
-            const apiBaseUrl = (import.meta.env.VITE_API_URL || "http://localhost:3000")
-              .replace(/\/$/, "");
+            const apiBaseUrl = (
+              import.meta.env.VITE_API_BASE_URL || "http://localhost:3000"
+            ).replace(/\/$/, "");
+
             const backendUrl = apiBaseUrl.endsWith("/api")
               ? apiBaseUrl
               : `${apiBaseUrl}/api`;
+
             window.location.href = `${backendUrl}/auth/google`;
           }}
           disabled={loading}

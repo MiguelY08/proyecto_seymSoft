@@ -120,7 +120,9 @@ export const buildRoleValidationPayload = (roleData, permisosSistema = []) => {
 };
 
 export const validateRoleName = async ({ name, id }) => {
-  const apiUrl = (import.meta.env.VITE_API_URL || "http://localhost:3000").replace(/\/$/, "");
+  const apiUrl = (
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:3000"
+  ).replace(/\/$/, "");
   const baseUrl = apiUrl.endsWith("/api") ? apiUrl : `${apiUrl}/api`;
   const params = new URLSearchParams({
     name_role: name,
